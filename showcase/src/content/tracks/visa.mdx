@@ -88,9 +88,15 @@ status:
   - part: CAD prices against US-cent budgets
     state: simulated
     note: A fixed rate of 0.73.
+  - part: Face ID approvals
+    state: live
+    note: 'Real WebAuthn passkeys, verified on the box. The merge gate uses a software authenticator.'
+  - part: Cybersource sandbox
+    state: test
+    note: 'Real REST calls to the sandbox host with the public sample merchant, tested on Oct 24: a charge, a partial refund and a full refund. Test cards only.'
   - part: Visa Intelligent Commerce
     state: not-built
-    note: Access needs a Visa representative, so nothing here depends on it.
+    note: 'An adapter is written against Visa''s toolkit but has never been called, because it needs onboarding with a Visa representative. Nothing here depends on it.'
 ---
 
 ## Why GurtOS, and what each part is for
@@ -102,14 +108,20 @@ the laptop is closed. On either, the portal and the phone show live what every a
 | Feature | Why it is there | Visa criterion | From | Today |
 |---|---|---|---|---|
 | The agent never sees your card: the card and the signing key stay in the root-only vault, and only the buy tool in the core reads them | A prompt injection or a bad model cannot leak what it never had | Trust (15) | GurtOS (vault and broker) | Shipped. The merge gate checks no card, key or password is anywhere in the log |
-| Every purchase waits for your tap, with the price against your limit | You stay the one who spends; the agent only proposes | Trust (15), UX (25) | GurtOS (the approval pause) | Shipped. The tap is Approve on the phone or portal; a Face ID (passkey) tap is being built |
+| Every purchase waits for your tap, with the price against your limit | You stay the one who spends; the agent only proposes | Trust (15), UX (25) | GurtOS (the approval pause) | Shipped. The tap is Approve on the phone or portal, or Face ID once a passkey is set up (next rows) |
 | Each checkout is signed with Visa's Trusted Agent Protocol, including the order body | The store can verify a real, unchanged agent order instead of blocking every bot | Commerce impact (15), Technical (20) | The Shopper app | Shipped. The store refuses unsigned, changed and replayed orders |
 | Undo refunds the order | A purchase you regret is one tap to reverse | UX (25), Trust (15) | GurtOS (undo) and the store (refund) | Shipped |
 | Standing instructions: "when it's under $16", "keep us stocked" | Shopping becomes a rule you set once, not a session you sit through | Innovation (25) | The Shopper app, with Claude in Droid | Shipped |
 | Live store prices through Apify, prices from the store not the model | A confused or hijacked model cannot invent a price | Technical (20), Trust (15) | The Shopper app and the Apify app | Shipped |
 | Each agent is its own Linux user with its own budget and network rule | One shopping agent cannot touch another task's files or spend another's money | Trust (15) | GurtOS | Shipped |
 | Live view of every agent on the portal and the phone, and Pause all agents | You can see and stop what your agents are doing | UX (25), Trust (15) | GurtOS | Shipped |
-| Signed shopping mandates the store verifies, a merchant dashboard (verified agents, conversion, chargebacks), comparison across stores, savings after purchase, card-style spending rules | Next steps for each criterion; this page adds each one with its reason when it ships | All five | The Shopper app | Being built; not on main yet |
+| Approve with Face ID: a WebAuthn passkey signs the exact question and amount, the box verifies the signature, and once a passkey is set up the buy tool refuses a purchase approved without one | A stolen pairing token can press Approve and nothing is paid | Trust (15), UX (25) | GurtOS (the approval pause, the box verifying) and the Shopper app (the passkey) | Shipped. The demo uses a software authenticator; a passkey belongs to the https address it was made on, and there is no remove button yet |
+| A signed shopping mandate: the item words, the stores, the price per item, the quantity, the total and an expiry of at most 30 days, signed by the box's agent key and enforced by the store | The store refuses another item, a higher price, another store, more items, a later date or an edited mandate | Innovation (25), Trust (15) | The Shopper app, with the box's signing key in the vault | Shipped. Mirrors the payment instruction in Visa Intelligent Commerce with open tools; it is not a Visa product |
+| The store's merchant dashboard: verified agent orders, unknown bots refused by reason, conversion from agent shoppers, and chargebacks | A merchant sees why trusting verified agents costs nothing | Commerce impact (15) | The Shopper app (the GurtOS Test Store) | Shipped. Zero chargebacks, because every order carried a valid signature, a mandate it fits and a person's approval |
+| Comparison across Best Buy Canada and Gold Roast through Apify: the best total with shipping wins, with the reason | Real prices from two real stores, ranked in one sentence | Technical (20), UX (25) | The Shopper app and the Apify app | Shipped. Best Buy Canada's Conditions of Use prohibit scraping; see Limits |
+| Price protection for 30 days after a purchase, and unused subscriptions found and cancelled with your OK | Saving money after the sale is part of shopping | Innovation (25) | The Shopper app | Shipped at the GurtOS Test Store, which knows its own price; the subscriptions are three samples in a demo mailbox |
+| Spending rules like a card app: a monthly cap, a cap per store and per category, and never-buy words, checked before asking and again before paying; saving them needs Face ID | The box enforces your limits, not the prompt | Trust (15), UX (25) | The Shopper app, on the box's approval pause | Shipped |
+| Payments behind one interface: Stripe test mode, the Cybersource sandbox and a Visa Intelligent Commerce adapter | The agent never learns which processor pays | Technical (20) | The Shopper app | Shipped for Stripe test mode and Cybersource, tested live on Oct 24 against Cybersource's public sandbox (a charge, a partial refund, a full refund). The Visa Intelligent Commerce adapter has never been called, because it needs onboarding with Visa |
 
 ## Real attacks on financial companies
 
@@ -217,6 +229,9 @@ Apify, Droid and devnet USDC).
 
 ## Limits
 
+- **Best Buy Canada's Conditions of Use (section 7) prohibit scraping.** The Apify track reads its public product JSON through Apify; we disclose it here and in the app. Gold Roast's robots.txt and terms do not prohibit it.
+- The Visa Intelligent Commerce adapter has never been called; its request values are placeholders until Visa onboards us.
+- The GurtOS Test Store stands in for every merchant and trusts the store label on a line; in real use each store would check the mandate against its own id.
 - A watch closes after one purchase, or when you deny it. Watch again for another.
 - The running-low estimate assumes each purchase lasts until the next, whatever the quantity.
 - The test store keeps price and stock changes in memory; they reset when the box restarts. Orders are on disk.

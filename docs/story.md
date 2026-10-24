@@ -66,7 +66,7 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 | Fetch.ai | GurtOS Server (always reachable), and GurtOS Personal too | decided |
 | SpacetimeDB | All three editions, strongest in GurtOS Business | to review with Ben |
 | Elastic | GurtOS Business and GurtOS Server | decided |
-| Moss | GurtOS Personal | to review with Ben |
+| Moss | GurtOS Personal | decided |
 | Apify | GurtOS Personal and GurtOS Server | decided |
 | CRS | GurtOS Business | decided |
 | Solana | GurtOS Server, and GurtOS Business | decided |
@@ -280,21 +280,26 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 | Feature | Why it is there | Visa criterion | From | Today |
 |---|---|---|---|---|
 | The agent never sees your card: the card and the signing key stay in the root-only vault, and only the buy tool in the core reads them | A prompt injection or a bad model cannot leak what it never had | Trust (15) | GurtOS (vault and broker) | Shipped. The merge gate checks no card, key or password is anywhere in the log |
-| Every purchase waits for your tap, with the price against your limit | You stay the one who spends; the agent only proposes | Trust (15), UX (25) | GurtOS (the approval pause) | Shipped. The tap is Approve on the phone or portal; a Face ID (passkey) tap is being built |
+| Every purchase waits for your tap, with the price against your limit | You stay the one who spends; the agent only proposes | Trust (15), UX (25) | GurtOS (the approval pause) | Shipped. The tap is Approve on the phone or portal, or Face ID once a passkey is set up (next rows) |
 | Each checkout is signed with Visa's Trusted Agent Protocol, including the order body | The store can verify a real, unchanged agent order instead of blocking every bot | Commerce impact (15), Technical (20) | The Shopper app | Shipped. The store refuses unsigned, changed and replayed orders |
 | Undo refunds the order | A purchase you regret is one tap to reverse | UX (25), Trust (15) | GurtOS (undo) and the store (refund) | Shipped |
 | Standing instructions: "when it's under $16", "keep us stocked" | Shopping becomes a rule you set once, not a session you sit through | Innovation (25) | The Shopper app, with Claude in Droid | Shipped |
 | Live store prices through Apify, prices from the store not the model | A confused or hijacked model cannot invent a price | Technical (20), Trust (15) | The Shopper app and the Apify app | Shipped |
 | Each agent is its own Linux user with its own budget and network rule | One shopping agent cannot touch another task's files or spend another's money | Trust (15) | GurtOS | Shipped |
 | Live view of every agent on the portal and the phone, and Pause all agents | You can see and stop what your agents are doing | UX (25), Trust (15) | GurtOS | Shipped |
-| Signed shopping mandates the store verifies, a merchant dashboard (verified agents, conversion, chargebacks), comparison across stores, savings after purchase, card-style spending rules | Next steps for each criterion; this page adds each one with its reason when it ships | All five | The Shopper app | Being built; not on main yet |
+| Approve with Face ID: a WebAuthn passkey signs the exact question and amount, the box verifies the signature, and once a passkey is set up the buy tool refuses a purchase approved without one | A stolen pairing token can press Approve and nothing is paid | Trust (15), UX (25) | GurtOS (the approval pause, the box verifying) and the Shopper app (the passkey) | Shipped. The demo uses a software authenticator; a passkey belongs to the https address it was made on, and there is no remove button yet |
+| A signed shopping mandate: the item words, the stores, the price per item, the quantity, the total and an expiry of at most 30 days, signed by the box's agent key and enforced by the store | The store refuses another item, a higher price, another store, more items, a later date or an edited mandate | Innovation (25), Trust (15) | The Shopper app, with the box's signing key in the vault | Shipped. Mirrors the payment instruction in Visa Intelligent Commerce with open tools; it is not a Visa product |
+| The store's merchant dashboard: verified agent orders, unknown bots refused by reason, conversion from agent shoppers, and chargebacks | A merchant sees why trusting verified agents costs nothing | Commerce impact (15) | The Shopper app (the GurtOS Test Store) | Shipped. Zero chargebacks, because every order carried a valid signature, a mandate it fits and a person's approval |
+| Comparison across Best Buy Canada and Gold Roast through Apify: the best total with shipping wins, with the reason | Real prices from two real stores, ranked in one sentence | Technical (20), UX (25) | The Shopper app and the Apify app | Shipped. Best Buy Canada's Conditions of Use prohibit scraping; see Limits |
+| Price protection for 30 days after a purchase, and unused subscriptions found and cancelled with your OK | Saving money after the sale is part of shopping | Innovation (25) | The Shopper app | Shipped at the GurtOS Test Store, which knows its own price; the subscriptions are three samples in a demo mailbox |
+| Spending rules like a card app: a monthly cap, a cap per store and per category, and never-buy words, checked before asking and again before paying; saving them needs Face ID | The box enforces your limits, not the prompt | Trust (15), UX (25) | The Shopper app, on the box's approval pause | Shipped |
+| Payments behind one interface: Stripe test mode, the Cybersource sandbox and a Visa Intelligent Commerce adapter | The agent never learns which processor pays | Technical (20) | The Shopper app | Shipped for Stripe test mode and Cybersource, tested live on Oct 24 against Cybersource's public sandbox (a charge, a partial refund, a full refund). The Visa Intelligent Commerce adapter has never been called, because it needs onboarding with Visa |
 
 **Demo moment and proof:** In the live run on Oct 23, Apify read Chemex filters at Best Buy Canada for $15.36 CAD, the box asked, and after the tap it bought them at that price with a Stripe test-mode charge on a Visa test card. Undoing the household reorder refunded it in Stripe test mode. Every payment was test money.
 
 **Still to do:**
 
 - Visa Intelligent Commerce (not built)
-- Signed shopping mandates the store verifies, a merchant dashboard (verified agents, conversion, chargebacks), comparison across stores, savings after purchase, card-style spending rules
 
 ## Coinbase: x402 Payment Agents
 
@@ -424,25 +429,39 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 
 ## Moss: A personal agent that remembers you
 
-**Status:** to review with Ben. **Page:** https://calhacks.gurtos.com/tracks/moss/
+**Status:** decided. **Page:** https://calhacks.gurtos.com/tracks/moss/
 
 **Best shown in:** GurtOS Personal
 
-**Pitch:** Your photos, files and task history are personal. /find keeps its index on your own machine, and only text, never a photo, goes to Moss's cloud copy.
+**Pitch:** A personal agent is only useful if it remembers you, and today that means uploading your life to someone's cloud. On GurtOS the index lives in your own computer's memory, agents search it with no network and no keys, and undoing a task takes its files out. Only text goes to Moss's cloud copy, including what a vision model wrote about your photos. Next (being built): talking to your computer, memory that cannot be poisoned, one preference honoured across apps, photos described by a local model only, and a forget button.
 
-**The problem:** Draft: a personal agent is only useful if it remembers your photos, files and past work, and today that memory means uploading your life to someone's cloud.
+**The problem:** A personal agent is only useful if it remembers you, and today that means uploading your life to someone's cloud, and any web page an agent reads can plant false memories.
 
-**Features, by the sponsor's criteria** (no OS-vs-track table yet; to write when reviewed):
+**Features** (from the page's table):
 
-- *Fit one of their three examples.* (met): The second: a personal agent that remembers you, works across your apps and handles everyday tasks on its own. GurtOS is a computer where agents do everyday work (shopping, paperwork, code), and through Moss the owner and every agent can find what any of them did, filed or wrote, by meaning.
-- *A voice agent, a personal agent that works across your apps, or a social post.* (met): One index across every app's workspace: photos (described by a vision model), text files, and the history of every task the box ran. The owner searches through the box's API (GET /t/find/search, with a paired token from off the box); agents search with the find.search tool.
+| Feature | Why it is there | Moss criterion | From | Today |
+|---|---|---|---|---|
+| One index of photos, text files and finished tasks, in the box's memory, searched in about 3 ms | The agent remembers you, fast enough to use | A personal agent that remembers you | Moss (the index) and the Find app | Shipped. Median 3.1 ms through the box on both test VMs, under 1 ms inside Moss |
+| An agent searches through the broker with no network and no Moss key | An agent that reads a hostile page cannot send your memory anywhere | Works across your apps | GurtOS (the broker, the network rule) | Shipped. The merge gate checks it every run |
+| Undo a task and its files leave the index while the photos stay | Remembering must not be permanent against your wishes | A personal agent that remembers you | GurtOS (undo of one task) | Shipped |
+| A symlink to the vault is neither indexed nor served, and no path leaves the workspaces | The index cannot become a way to read your secrets | A personal agent that remembers you | GurtOS (the vault) and the Find app | Shipped |
+| Photos described by a vision model when they arrive: gemma4 in Ollama on the laptop, or Claude in a Droid task as the backup | A photo's name says nothing, its description does | A personal agent that remembers you | The Find app | Shipped. The Claude backup sends the photo to Anthropic |
+| Talk to your computer: Moss's voice-agent example | Asking out loud is how people expect to use memory | A voice agent | The Find app and Moss | Being built; not on main yet |
+| Agent memory that cannot be poisoned: what an agent reads from a web page or photo is labelled untrusted and cannot overwrite what you told it | A planted false memory would steer every later task | A personal agent that remembers you | GurtOS (per-task scope, untrusted data) and the Find app | Being built; not on main yet |
+| One preference honoured across apps: say it once and every app's agent follows it | Works across your apps | Works across your apps | The Find app and GurtOS (the shared index) | Being built; not on main yet |
+| Photos described by a local model only, with Claude used only if the owner opts in | Your photos stay on your computer unless you decide otherwise | A personal agent that remembers you | The Find app and GurtOS (the network rule) | Being built; not on main yet |
+| A forget button: remove one memory, or everything, from the index and the cloud copy | You decide what is remembered | A personal agent that remembers you | The Find app and GurtOS | Being built; not on main yet |
 
 **Demo moment and proof:** A search through the box takes a median of 3.1 ms on both test VMs (ARM64 and x86), under 1 ms of it inside Moss, because Moss runs in the box's own memory. In every merge-gate run, an agent with no network asks find.search through the broker and gets the same whiteboard photo; undo a task and its files leave the index while the photos stay.
 
 **Still to do:**
 
-- Review the story with Ben: problem, features with their why, OS vs track
 - Vultr's hosted vision model (not built)
+- Talk to your computer: Moss's voice-agent example
+- Agent memory that cannot be poisoned: what an agent reads from a web page or photo is labelled untrusted and cannot overwrite what you told it
+- One preference honoured across apps: say it once and every app's agent follows it
+- Photos described by a local model only, with Claude used only if the owner opts in
+- A forget button: remove one memory, or everything, from the index and the cloud copy
 
 ## Apify: Best Use of Apify (top 5)
 
