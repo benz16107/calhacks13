@@ -54,7 +54,7 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 | Hyphenate | GurtOS Business (preview) | decided |
 | Factory | GurtOS Server and GurtOS Personal | to review with Ben |
 | Armadin | All three editions | to review with Ben |
-| Microsoft | GurtOS Business (preview) | to review with Ben |
+| Microsoft | GurtOS Business (preview) | decided |
 | Visa | GurtOS Personal, plus GurtOS Server for routines that keep running when you close your laptop | decided |
 | Coinbase | GurtOS Server, and GurtOS Business | decided |
 | Fetch.ai | GurtOS Server (always reachable), and GurtOS Personal too | decided |
@@ -215,29 +215,39 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 
 ## Microsoft: Built for the Real World, and the Customer Impact Award
 
-**Status:** to review with Ben. **Page:** https://calhacks.gurtos.com/tracks/microsoft/
+**Status:** decided. **Page:** https://calhacks.gurtos.com/tracks/microsoft/
 
 **Best shown in:** GurtOS Business (preview)
 
-**Pitch:** Agents today run as you, with your keys and no separation of duties, so no company lets one near the books. In a company, production for an agent means roles, approvals routed to the right person, budgets and an audit trail. GurtOS already separates users, keys, approvals and the log; Business adds the people. GurtOS Business is not built yet. Today's demo runs on GurtOS Server, with the credit desk's human controller seat approving from a phone.
+**Pitch:** Companies want agents on finance work, but an ordinary OS gives an agent its owner's keys, no separation of duties, no record and no undo, so pilots stay pilots. GurtOS Business gives each seat its own user, routes approvals to the right person, keeps a full audit and a kill switch, on a box the company owns. Next (being built): shadow mode, Entra ID sign-in, measured impact, a Responsible AI mapping, sourced facts and an incident drill. GurtOS Business is not built yet. Today's demo runs on GurtOS Server, with the credit desk's human controller seat approving from a phone.
 
-**The problem:** Draft: companies want production AI agents for real finance work, but there is no environment that gives an agent separation of duties, approvals, an audit trail and undo, so pilots never reach production.
+**The problem:** Companies want agents doing finance work, but an ordinary OS gives an agent its owner's keys, no separation of duties, no record and no undo, so pilots never reach production.
 
-**Features, by the sponsor's criteria** (no OS-vs-track table yet; to write when reviewed):
+**Features** (from the page's table):
 
-- *A production-minded AI agent for finance, productivity, healthcare or similar.* (met): Finance: trade credit and collections at Fogline Supply Co., a made-up Oakland wholesaler with 26 employees, about $8.1M revenue and 38 accounts on trade credit. Two agent seats (Droid running Claude) and a human controller.
-- *Customer understanding.* (met): A small wholesaler's credit desk is one or two people doing credit checks and collections by hand, where one fake customer or one misapplied payment costs real money. The case is built from those everyday failures: a synthetic identity, a payment applied to the wrong customer, a post-dated check booked as cash, an invoice billed twice, a limit nobody reviewed in 29 months.
-- *Measurable usefulness.* (met): Every run is scored from its log: planted errors caught out of 14, false alarms, and decisions matched on 6 applications, 11 customers and 6 orders. Three live Droid runs caught 13, 13 and 14 of 14 and decided all six applications right. The simple rule is the baseline on the same data.
-- *Path to production.* (met): It runs on GurtOS: each seat is its own Linux user with its own copy of the files, keys stay in a root-only vault, every action is in an append-only log, approvals reach a phone, the box resumes after a power cut, and the OS updates as a whole and rolls itself back. The rules are a file, so the controller changes policy without code.
-- *Responsible design.* (met): The agent cannot approve its own large proposals, clear a fraud flag, or decide before the checks run. It never sees the answer key. Every decision names the rule and the data behind it. It pulls only what trade credit needs (no criminal or eviction searches) and never tells an applicant which check failed.
-- *End-to-end function.* (met): Application in, seven CRS checks, a decision by rule, the controller's approval on a phone, the decision in the log, the run scored. The merge gate runs this path on every merge, live against CRS and Nessie.
-- *Customer Impact Award.* (met): The customer is the controller at a small business: the desk does the checking and the paperwork, stops the one application that would have cost $20,000 of credit, and brings only the decisions that need a person to their phone, with the reason and the data attached.
+| Feature | Why it is there | Microsoft criterion | From | Today |
+|---|---|---|---|---|
+| Each seat is its own Linux user with its own copy of the files; keys stay in a root-only vault | A finance agent holds nothing it could leak or misuse | Path to production, Responsible design | GurtOS | Shipped. The merge gate checks no key appears in the log |
+| A seat cannot approve its own large proposal; fraud holds always go to a person, on the portal or a phone | Separation of duties for an agent | Responsible design | GurtOS (the approval pause) and the desk (where the line is) | Shipped. Above $10,000 the controller answers; the log names who |
+| One append-only record of every call, decision, rule id and approver | Something an auditor can read | Path to production | GurtOS (the log) and the desk (rule ids, CRS request ids) | Shipped |
+| Undo one seat's file changes; pause every agent at once; resume after a power cut with nothing paid twice; whole-system updates that roll back | A bad hour is recoverable | Path to production | GurtOS | Shipped (pause is a setting; Business adds the kill switch) |
+| Shadow mode and a one-week pilot plan: the desk runs beside the people, changes nothing, and is compared with what they did | A company starts with a pilot it can switch off | Path to production | GurtOS Business (shadow mode) and the desk (the plan) | Being built; not on main yet |
+| Sign-in with Entra ID work accounts, roles taken from groups | Nobody makes new passwords or a second list of who may approve | Path to production | GurtOS Business | Being built; not on main yet |
+| Measured impact: human minutes saved, dollars stopped and cost per application | A controller can say what the desk is worth | Measurable usefulness | The desk | Being built; not on main yet |
+| A mapping to Microsoft's Responsible AI Standard, a protected-attribute test and a plain decline letter | An applicant gets an honest reason and the desk can show it does not use what it must not | Responsible design | The desk | Being built; not on main yet |
+| Sourced customer facts: each fact in a decision carries where it came from | A decision can be checked, not just trusted | Customer understanding | The desk | Being built; not on main yet |
+| A measured incident drill: pull the kill switch, undo a seat, resume, and time each | The answer to "what if it goes wrong" is a number | Path to production | GurtOS Business (kill switch, undo, resume) | Being built; not on main yet |
 
 **Demo moment and proof:** Scored from the action log against an answer key, the latest live run caught 14 of 14 planted errors with 0 false alarms and decided all 6 credit applications as the key does. A simple rule on the same CRS data approves all six for $153,000, including $20,000 to a fake applicant whose $18,500 rush order would have shipped to a freight forwarder.
 
 **Still to do:**
 
-- Review the story with Ben: problem, features with their why, OS vs track
+- Shadow mode and a one-week pilot plan: the desk runs beside the people, changes nothing, and is compared with what they did
+- Sign-in with Entra ID work accounts, roles taken from groups
+- Measured impact: human minutes saved, dollars stopped and cost per application
+- A mapping to Microsoft's Responsible AI Standard, a protected-attribute test and a plain decline letter
+- Sourced customer facts: each fact in a decision carries where it came from
+- A measured incident drill: pull the kill switch, undo a seat, resume, and time each
 
 ## Visa: Reimagining Shopping
 

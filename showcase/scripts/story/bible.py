@@ -4,7 +4,7 @@ root = sys.argv[1]
 import os
 HERE = os.path.dirname(os.path.abspath(__file__))
 exec(open(os.path.join(HERE, 'pitches.py')).read().split("if __name__")[0])
-DECIDED = {'hyphenate', 'visa', 'fetch', 'coinbase', 'solana', 'apify', 'anthropic'}
+DECIDED = {'hyphenate', 'visa', 'fetch', 'coinbase', 'solana', 'apify', 'anthropic', 'microsoft'}
 EXTRA_TODO = {'anthropic': ['How to enter: pending; Ben will ask a director (the prize is not on Devpost yet)']}
 PROBLEM = {
  'hyphenate': "Companies want AI employees, but today's computers and clouds weren't built for them. An agent runs as you, with your keys, on one shared filesystem, with no separation of duties, no record you can trust and no undo, so nobody lets one do real finance work.",
@@ -15,7 +15,7 @@ PROBLEM = {
  'anthropic': "Solo developers already leave agents (Claude Code, OpenClaw) running at home as themselves, with every key and file. An ordinary OS can't separate them, record them or undo them, and the alternative is renting a cloud you can't see into.",
  'factory': "Draft: coding agents need keys to work, and tools keep leaking them (the OpenCode Console breach, OpenClaw's plaintext key file, CVE-2026-25253). Today the agent runs as you, on your files, with your keys in its environment.",
  'armadin': "Draft: a web page can carry hidden instructions, and an agent that obeys them can read every key on the machine and send it anywhere, because nothing in a normal OS stands between the agent and your secrets.",
- 'microsoft': "Draft: companies want production AI agents for real finance work, but there is no environment that gives an agent separation of duties, approvals, an audit trail and undo, so pilots never reach production.",
+ 'microsoft': "Companies want agents doing finance work, but an ordinary OS gives an agent its owner's keys, no separation of duties, no record and no undo, so pilots never reach production.",
  'atlassian': "Draft: when an agent acts for you overnight, nobody can see the next morning exactly what it did and why, or roll back only the wrong part.",
  'crs': "Draft: identity and fraud checks are exactly where a fooled or hijacked agent costs real money, and today the agent that runs them holds the keys and can approve its own work.",
  'nessie': "Draft: an agent that reconciles a company's bank against its books needs bank access, and today that means handing it the key and trusting whatever it changes.",

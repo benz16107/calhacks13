@@ -14,7 +14,7 @@ E = {
  'nessie': ("GurtOS Business (preview), then GurtOS Personal",
    "Agents today run as you, with your keys and no separation of duties, so no company lets one near the books. A collections clerk agent reconciles the ledger against the bank for a finance team, and only a controller releases a hold. On Personal the same pattern becomes a bill-paying agent for your own accounts that asks before it pays (not built). " + BIZ),
  'microsoft': ("GurtOS Business (preview)",
-   "Agents today run as you, with your keys and no separation of duties, so no company lets one near the books. In a company, production for an agent means roles, approvals routed to the right person, budgets and an audit trail. GurtOS already separates users, keys, approvals and the log; Business adds the people. " + BIZ),
+   "Companies want agents on finance work, but an ordinary OS gives an agent its owner's keys, no separation of duties, no record and no undo, so pilots stay pilots. GurtOS Business gives each seat its own user, routes approvals to the right person, keeps a full audit and a kill switch, on a box the company owns. Next (being built): shadow mode, Entra ID sign-in, measured impact, a Responsible AI mapping, sourced facts and an incident drill. " + BIZ),
  'atlassian': ("GurtOS Business (preview)",
    "Teams already review work in Jira. With Business, every agent task is an issue a teammate can approve or roll back, and Jira's own permissions decide who may. Business is not built yet: today the Forge app drives a GurtOS Server box, and it already checks that the Jira user may edit the issue."),
  'visa': ("GurtOS Personal, plus GurtOS Server for routines that keep running when you close your laptop",

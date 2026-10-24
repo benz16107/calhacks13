@@ -3,9 +3,9 @@ order: 6
 sponsor: Microsoft
 prize: Built for the Real World, and the Customer Impact Award
 editions: 'GurtOS Business (preview)'
-pitch: 'Agents today run as you, with your keys and no separation of duties, so no company lets one near the books. In a company, production for an agent means roles, approvals routed to the right person, budgets and an audit trail. GurtOS already separates users, keys, approvals and the log; Business adds the people. GurtOS Business is not built yet. Today''s demo runs on GurtOS Server, with the credit desk''s human controller seat approving from a phone.'
+pitch: 'Companies want agents on finance work, but an ordinary OS gives an agent its owner''s keys, no separation of duties, no record and no undo, so pilots stay pilots. GurtOS Business gives each seat its own user, routes approvals to the right person, keeps a full audit and a kill switch, on a box the company owns. Next (being built): shadow mode, Entra ID sign-in, measured impact, a Responsible AI mapping, sourced facts and an incident drill. GurtOS Business is not built yet. Today''s demo runs on GurtOS Server, with the credit desk''s human controller seat approving from a phone.'
 title: A finance agent with a path to production
-summary: 'The credit desk is a production-minded finance agent for a small wholesaler: a credit analyst agent and a collections clerk agent, with a human controller who signs off on anything large or suspicious. GurtOS is its path to production. Each seat runs as its own Linux user without keys, every action lands in an append-only log, approvals reach a phone, and the box picks up where it was after a power cut.'
+summary: 'Companies want agents doing finance work, but an ordinary operating system gives an agent its owner''s keys, no separation of duties, no record and no undo, so pilots never reach production. The credit desk is a small wholesaler''s credit analyst agent and collections clerk agent with a human controller, and GurtOS is its path to production: each seat is its own Linux user without keys, every action lands in an append-only log, approvals reach a phone, and the box picks up where it was after a power cut. It runs on a computer the company owns.'
 proof: 'Scored from the action log against an answer key, the latest live run caught <strong>14 of 14 planted errors with 0 false alarms</strong> and decided all 6 credit applications as the key does. A simple rule on the same CRS data approves all six for $153,000, including $20,000 to a fake applicant whose $18,500 rush order would have shipped to a freight forwarder.'
 criteriaSource: "From Microsoft's track description and judging criteria, as copied into the project's track plan (docs/tracks.md)."
 video: hyphenate
@@ -86,6 +86,39 @@ status:
     state: simulated
     note: 'Fogline Supply Co. is fictional. No money moves: the desk decides credit and records collection steps.'
 ---
+
+## Why GurtOS, and what each part is for
+
+**The problem.** A company will not let an agent near its books while the agent runs as its owner, with the owner's
+keys, no separation of duties, no record it can show an auditor and no way to undo one thing. That is why finance
+pilots stay pilots. This page is about whether a real company could switch the desk on. How well the desk decides is
+on the [Hyphenate page](/tracks/hyphenate/).
+
+**GurtOS Business is the answer for a company:** seats with their own users, approvals routed to the right person, a
+full audit and a kill switch, on a box the company owns. Business is a preview: it is not on main yet, so today's
+demo runs on GurtOS Server, where the credit desk's human controller seat approves from the portal or a phone. The OS
+is light (one Node service, 4 GB of memory) and open source under Apache-2.0, so a company can read what it runs.
+
+| Feature | Why it is there | Microsoft criterion | From | Today |
+|---|---|---|---|---|
+| Each seat is its own Linux user with its own copy of the files; keys stay in a root-only vault | A finance agent holds nothing it could leak or misuse | Path to production, Responsible design | GurtOS | Shipped. The merge gate checks no key appears in the log |
+| A seat cannot approve its own large proposal; fraud holds always go to a person, on the portal or a phone | Separation of duties for an agent | Responsible design | GurtOS (the approval pause) and the desk (where the line is) | Shipped. Above $10,000 the controller answers; the log names who |
+| One append-only record of every call, decision, rule id and approver | Something an auditor can read | Path to production | GurtOS (the log) and the desk (rule ids, CRS request ids) | Shipped |
+| Undo one seat's file changes; pause every agent at once; resume after a power cut with nothing paid twice; whole-system updates that roll back | A bad hour is recoverable | Path to production | GurtOS | Shipped (pause is a setting; Business adds the kill switch) |
+| Shadow mode and a one-week pilot plan: the desk runs beside the people, changes nothing, and is compared with what they did | A company starts with a pilot it can switch off | Path to production | GurtOS Business (shadow mode) and the desk (the plan) | Being built; not on main yet |
+| Sign-in with Entra ID work accounts, roles taken from groups | Nobody makes new passwords or a second list of who may approve | Path to production | GurtOS Business | Being built; not on main yet |
+| Measured impact: human minutes saved, dollars stopped and cost per application | A controller can say what the desk is worth | Measurable usefulness | The desk | Being built; not on main yet |
+| A mapping to Microsoft's Responsible AI Standard, a protected-attribute test and a plain decline letter | An applicant gets an honest reason and the desk can show it does not use what it must not | Responsible design | The desk | Being built; not on main yet |
+| Sourced customer facts: each fact in a decision carries where it came from | A decision can be checked, not just trusted | Customer understanding | The desk | Being built; not on main yet |
+| A measured incident drill: pull the kill switch, undo a seat, resume, and time each | The answer to "what if it goes wrong" is a number | Path to production | GurtOS Business (kill switch, undo, resume) | Being built; not on main yet |
+
+## The Customer Impact Award
+
+The customer is the controller at a small business. Today the desk stops the one application that would have cost
+$20,000 of credit and brings only the decisions that need a person to a phone, with the reason and the data attached.
+The measured-impact feature (being built) will put human minutes, dollars stopped and cost per application on the
+same page, from the log, so the award case is a number the controller can check and not a claim. Fogline Supply Co. is
+made up and no money moves.
 
 ## Evidence
 
