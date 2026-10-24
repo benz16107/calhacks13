@@ -323,7 +323,7 @@ const prizes = [
             <tr>
               <td><strong>GurtOS Business</strong></td>
               <td>One box shared by a team: people with roles, rules in plain words that route each approval to the right person, a Waiting for me inbox, an audit with CSV export, and a kill switch.</td>
-              <td>Built and on main, checked by a merge-gate step. Sign-in with a work account (Microsoft Entra ID, roles from groups) is built and tested against a stand-in provider. Shadow mode is not built.</td>
+              <td>Built and on main, checked by a merge-gate step. Sign-in with a work account (Microsoft Entra ID, roles from groups) is Entra-ready and tested with a standards test provider. Shadow mode is not built.</td>
             </tr>
           </tbody>
         </table>
@@ -465,7 +465,7 @@ const prizes = [
         <li>The bootable image is tested in QEMU (x86 with BIOS and UEFI, ARM64 emulated). It has not run on real Apple hardware, a real PC or Vultr's own ISO boot yet.</li>
         <li>System slots are writable ext4 without dm-verity, and updates are signed with one key with no rotation.</li>
         <li>Agents are Droid with Claude. Other agents would need a worker adapter in the core.</li>
-        <li>GurtOS Business has no shadow mode yet, its work-account sign-in has not been tried against a live Entra tenant, and its screens here are from a seeded box with scripted seats and sandbox data.</li>
+        <li>GurtOS Business has no shadow mode yet, its work-account sign-in has been tested with a standards test provider and not a real Entra tenant, and its screens here are from a seeded box with scripted seats and sandbox data.</li>
       </ul>
     </section>
   </div>
