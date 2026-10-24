@@ -87,6 +87,7 @@ copies them into each run's vault.
 |---|---|
 | `GET /tasks`, `POST /tasks {TaskSpec}` | Tasks, or the new task |
 | `GET /tasks/<id>` | `{task, events}` |
+| `GET /tasks/<id>/diff` | `{changes: [{path, change}], diff}`: what it added, modified or deleted, and a unified diff |
 | `POST /tasks/<id>/undo` | The task |
 | `GET /approvals`, `POST /approvals/<id> {approved, by}` | Approvals |
 | `GET /log?after=<seq>` | Log events |

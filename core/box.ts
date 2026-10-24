@@ -381,6 +381,8 @@ class Core {
             return this.createTask(body);
           case 'GET /tasks/:id':
             return { task: this.must(id), events: this.log.events.filter((e) => e.task === id) };
+          case 'GET /tasks/:id/diff':
+            return sandbox.diff(this.must(id));
           case 'POST /tasks/:id/undo':
             return this.undo(id);
           case 'GET /approvals':

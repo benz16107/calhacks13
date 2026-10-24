@@ -9,7 +9,7 @@
 //     upper/           the task's changes (its layer)    work/  overlayfs scratch
 //     root/            the task's copy of the workspace, only its user can enter
 //     home/            the task user's home              broker.sock  worker.log
-import { execFileSync, spawn, type ChildProcess } from 'node:child_process';
+import { execFileSync, spawn, spawnSync, type ChildProcess } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import type { Task } from './contract.ts';
@@ -96,6 +96,35 @@ export function spawnWorker(task: Task, ids: { uid: number; gid: number }, extra
   );
   fs.closeSync(out);
   return child;
+}
+
+export type Change = { path: string; change: 'added' | 'modified' | 'deleted' };
+
+/** What a task changed, from its own layer only, and a unified diff of it. Cost: the number of changes. */
+export function diff(task: Task, maxBytes = 200_000): { changes: Change[]; diff: string } {
+  const upper = dirs.upper(task.id);
+  const lowers = [...task.layers.map(dirs.upper), dirs.workspace(task.workspace)];
+  const below = (rel: string) => lowers.map((l) => path.join(l, rel)).find((f) => fs.existsSync(f));
+  const changes: Change[] = [];
+  const walk = (rel: string) => {
+    for (const name of fs.readdirSync(path.join(upper, rel)).sort()) {
+      const r = path.join(rel, name);
+      const st = fs.lstatSync(path.join(upper, r));
+      if (st.isCharacterDevice() && st.rdev === 0) changes.push({ path: r, change: 'deleted' }); // overlayfs whiteout
+      else if (st.isDirectory()) walk(r);
+      else changes.push({ path: r, change: below(r) ? 'modified' : 'added' });
+    }
+  };
+  if (fs.existsSync(upper)) walk('');
+  let text = '';
+  for (const c of changes) {
+    if (text.length > maxBytes) break;
+    const before = c.change === 'added' ? '/dev/null' : below(c.path)!;
+    const after = c.change === 'deleted' ? '/dev/null' : path.join(upper, c.path);
+    const r = spawnSync('diff', ['-u', '--label', `a/${c.path}`, '--label', `b/${c.path}`, before, after], { encoding: 'utf8' });
+    text += r.stdout;
+  }
+  return { changes, diff: text.slice(0, maxBytes) };
 }
 
 /** Put the task's file changes on disk, so a step the log calls done survives a power cut. */

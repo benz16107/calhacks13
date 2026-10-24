@@ -142,6 +142,9 @@ await moment('moment 1: undo one task', async () => {
   check(whoA === A.user && whoB === B.user && whoA !== whoB, `each ran as its own Linux user (${whoA}, ${whoB})`);
   check(true, "neither saw the other's changes while running (A: no b.txt, B: original a.txt)");
   check(view('notes', 'a.txt') === 'changed by A' && view('notes', 'b.txt') === 'made by B', 'the workspace shows both tasks\' changes');
+  const d = await api<{ changes: { path: string; change: string }[]; diff: string }>('GET', `/tasks/${A.id}/diff`);
+  const listed = d.changes.map((c) => `${c.change} ${c.path}`).join(', ');
+  check(listed === 'modified a.txt, added done-a.txt, added who-a.txt' && d.diff.includes('+changed by A'), `A's diff, from its own layer: ${listed}`);
 
   await api('POST', `/tasks/${A.id}/undo`);
   check(view('notes', 'a.txt') === 'original a' && !view('notes', 'done-a.txt'), "undo removed A's changes");
