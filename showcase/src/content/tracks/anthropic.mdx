@@ -14,11 +14,11 @@ criteria:
   - ask: 'A problem you lived or heard first-hand.'
     how: 'Ben runs agents unattended on an always-on Linux box at home: a job-application pipeline that fills in forms in a real browser, price and listing watchers, and overnight queues of coding work. Each ran as his own user with his keys in its environment, and the only record of what it did was its own output. One bad page or one wrong edit could reach everything. GurtOS is the computer he wanted for that work.'
   - ask: 'One thing that works and is usable Monday.'
-    how: 'On an Ubuntu 24.04 machine, <code>sudo core/install.sh</code> installs the box service, Droid and SpacetimeDB, and the portal opens at <code>http://&lt;box&gt;:7700/</code>. Add a Factory key to the vault and start a task from the portal, a phone, a schedule or a webhook. The bootable image installs on a blank disk in about a minute (tested in QEMU, x86 BIOS and UEFI, and ARM64).'
+    how: 'On an Ubuntu 24.04 machine, <code>sudo core/install.sh</code> installs the box service, Droid and SpacetimeDB, and the portal opens at <code>http://&lt;box&gt;:7700/</code>. Add one model key (Anthropic or Factory) and start a task from the portal, a phone, a schedule or a webhook. The bootable image installs on a blank disk in about a minute (tested in QEMU, x86 BIOS and UEFI, and ARM64).'
   - ask: 'Claude doing something that matters.'
     how: 'Claude does the work in every task: fixes code and runs its tests, reads receipts and proposes a reorder, works a credit desk with live CRS and bank data (14 of 14 planted errors caught in its best run), describes photos for search. Each tool call is a step in the log, and its model cost is priced from real token counts.'
   - ask: 'Knowing where it could go wrong.'
-    how: 'The page names three failures: injected pages, wrong edits and spending. Each has a control the merge gate checks on every run (below). The limits the box does not cover yet, such as a shared kernel and an unauthenticated local API, are listed at the end of this page.'
+    how: 'The page names three failures: injected pages, wrong edits and spending. Each has a control the merge gate checks on every run (below). The limits the box does not cover yet, such as a shared kernel and a log that root can edit, are listed at the end of this page.'
 video: main
 clip: moment-2-blocked
 shots:
@@ -134,7 +134,7 @@ the workspace. Undo takes that one layer out of the stack, and the base files ar
 ## Try it
 
 1. On an Ubuntu 24.04 machine set aside for agents: `sudo core/install.sh`.
-2. Add a Factory key: `FACTORY_API_KEY=...` in `/etc/box/vault.env` (root only), then restart `box.service`.
+2. Add one model key, an Anthropic API key or a Factory API key, in setup or Settings (it goes into the root-only vault).
 3. Open `http://<box>:7700/` and start a task, or:
 
    ```sh
