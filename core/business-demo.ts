@@ -179,7 +179,9 @@ except Exception as e: print(e.code, json.loads(e.read())['error'])`;
   const stepsOf = async (t: Task) => (ok(await screen('GET', `/api/tasks/${t.id}`), 'task').events as LogEvent[]).filter((e) => e.type === 'task.step').length;
   await d.waitFor('both seats at work', async () => (await stepsOf(k1)) >= 2 && (await stepsOf(k2)) >= 2);
   const seq0 = (ok(await owen('GET', '/api/log'), 'log') as LogEvent[]).at(-1)!.seq; // earlier steps pull the same switch from Settings
+  const t0 = performance.now();
   const paused = { ...ok(await priya('POST', '/api/pause'), 'pause'), seq0 };
+  const stopMs = Math.round(performance.now() - t0);
   await sleep(300); // a step already on its way when the switch was pulled still lands
   const before = [await stepsOf(k1), await stepsOf(k2)];
   const k3 = await start(sam, 'Credit analyst', 'Credit analyst: APP-1049', 'write APP-1049.txt queued');
@@ -189,7 +191,7 @@ except Exception as e: print(e.code, json.loads(e.read())['error'])`;
   const k3State = (ok(await screen('GET', `/api/tasks/${k3.id}`), 'task').task as Task).state;
   const seen = [ok(await rosa('GET', '/api/system'), 'system').paused, ok(await rosa('GET', '/api/me'), 'me').paused];
   d.check(paused.paused && paused.by === 'Priya Nair' && before.join() === after.join() && k3State === 'queued',
-    `Priya (IT admin) pulls the kill switch: both seats stop mid-task (no step in 2 s; ${freezer === 'frozen' ? 'frozen by systemd' : 'stopped by signal'}), and a new task waits in the queue`);
+    `Priya (IT admin) pulls the kill switch: both seats stop mid-task in ${stopMs} ms (no step in 2 s; ${freezer === 'frozen' ? 'frozen by systemd' : 'stopped by signal'}), and a new task waits in the queue`);
   d.check(seen[0].paused && seen[0].by === 'Priya Nair' && seen[1]?.by === 'Priya Nair', 'every screen and phone sees it: GET /api/system and /api/me say "paused by Priya Nair"');
   ok(await priya('POST', '/api/resume'), 'resume');
   await d.settled([k1.id, k2.id, k3.id]);

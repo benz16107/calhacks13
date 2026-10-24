@@ -505,6 +505,9 @@ frozen at once (SIGSTOP to its user where the freezer is missing), a task that w
 waits, a new task stays `queued`, and a reboot keeps it paused. Approvals can still be answered. Resuming thaws every
 task and starts the queued ones. Each pull is a `kill-switch` note with who pulled it and from which phone or screen.
 `GET /api/pause` (`{paused, by, at, via}`), `GET /api/system` (`paused`) and `GET /api/health` say whether it is on.
+Measured on a live run with 10 agents (3 Droid seats on Claude): stopped in 137 ms, every unit frozen in 271 ms, no
+agent event while paused, a bad batch undone in 48 ms. `docs/drill.md` has the drill and how to run it
+(`core/drill.ts`).
 
 ## The API for the portal and the phone
 
