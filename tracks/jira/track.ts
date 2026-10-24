@@ -11,7 +11,8 @@ import type { Approval, Box, LogEvent, Task, Track } from '../../core/contract.t
 const HOME = process.env.BOX_HOME ?? '/var/lib/box';
 const DIR = path.join(HOME, 'jira');
 
-/** BOX_HOME/jira/config.json turns syncing on for one box. No file, no sync, so test runs never touch Jira. */
+/** BOX_HOME/jira/config.json turns syncing on for one box. No file, no sync, so test runs never touch Jira.
+ *  skipSources leaves out tasks whose source starts with any of them, such as a watcher's periodic checks. */
 type Config = { project: string; site?: string; skipSources?: string[] };
 const config = (): Config | undefined => {
   try {
@@ -257,7 +258,7 @@ export default {
       async read(e, box) {
         const c = config();
         const t = e.task && box.task(e.task);
-        if (!c || !t || c.skipSources?.includes(t.source)) return;
+        if (!c || !t || c.skipSources?.some((p) => t.source.startsWith(p))) return;
         if (!MILESTONES.has(e.type) && Date.now() - (lastSync.get(t.id) ?? 0) < 3000) return;
         lastSync.set(t.id, Date.now());
         try {

@@ -162,8 +162,9 @@ On the box (a test VM), as root:
    API token, for Jira REST) and `JIRA_BOX_SECRET` (`openssl rand -hex 32`).
 2. Turn syncing on for this box. Without this file the track writes nothing to Jira, which keeps test runs out
    of it:
-   `echo '{"project":"BOX","skipSources":["schedule"]}' > /var/lib/box/jira/config.json`
-   (`skipSources` leaves out the example track's hourly task.)
+   `echo '{"project":"BOX","skipSources":["schedule","shopper:check:"]}' > /var/lib/box/jira/config.json`
+   (`skipSources` leaves out tasks whose source starts with one of these: the example track's hourly task and
+   the Shopper track's periodic price checks. Shopper's purchases, which ask for an OK, still get issues.)
 3. Public HTTPS for the panel: Caddy with this site block, and ports 80 and 443 open.
 
    ```
