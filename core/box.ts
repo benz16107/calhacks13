@@ -1762,12 +1762,12 @@ data: ${JSON.stringify(e)}
         const chunks: Buffer[] = [];
         for await (const c of req) chunks.push(c as Buffer);
         const hasBody = req.method !== 'GET' && req.method !== 'HEAD';
-        const request = new Request(url, {
-          method: req.method,
-          headers: { ...(req.headers as Record<string, string>), 'x-box-caller': this.callerOf(req) }, // set by the box, never by the caller
-          body: hasBody ? Buffer.concat(chunks) : undefined,
-        });
-        const r = await entry.route(request, this.boxFor(entry.track, this.personOf(req)));
+        const person = this.personOf(req);
+        const headers: Record<string, string> = { ...(req.headers as Record<string, string>), 'x-box-caller': this.callerOf(req) }; // set by the box, never by the caller
+        delete headers['x-box-person']; // Business: the person's id, set by the box below, never by the caller
+        if (person) headers['x-box-person'] = person.id;
+        const request = new Request(url, { method: req.method, headers, body: hasBody ? Buffer.concat(chunks) : undefined });
+        const r = await entry.route(request, this.boxFor(entry.track, person));
         res.writeHead(r.status, Object.fromEntries(r.headers)).end(Buffer.from(await r.arrayBuffer()));
       } catch (e) {
         res.writeHead(500, { 'content-type': 'application/json' }).end(JSON.stringify({ error: (e as Error).message }));
