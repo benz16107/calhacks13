@@ -76,8 +76,21 @@ const list = (field: string, v: unknown, max: number, each: (item: string) => st
   if (!Array.isArray(v) || v.length > max) fail(field, `must be a list of at most ${max} entries`);
   return [...new Set((v as unknown[]).map((x) => (typeof x === 'string' ? each(x.trim()) : fail(field, 'entries must be text'))))];
 };
+/**
+ * Why `s` is not a host a task may be allowed to reach, or undefined. A name, *.domain, or either with :port.
+ * Not "*", "*.*", a range like 0.0.0.0/0, or an address on the box itself (loopback, link-local, 0.x).
+ */
+export function hostProblem(s: unknown): string | undefined {
+  if (typeof s !== 'string') return 'hosts are text, like example.com';
+  if (!/^(\*\.)?[a-z0-9]([a-z0-9.-]{0,251}[a-z0-9])?(:\d{1,5})?$/i.test(s)) return `"${s.slice(0, 80)}" is not a host name (use example.com, *.example.com or example.com:8080)`;
+  const name = s.replace(/:\d+$/, '');
+  if (/^(127\.|0\.|169\.254\.)/.test(name) || name === 'localhost') return `"${s}" is the box itself; tasks never get it`;
+  if (/^\*\.[^.]+$/.test(name)) return `"${s}" is a whole top-level domain; name the site`;
+  return undefined;
+}
 const host = (s: string) => {
-  if (!/^(\*\.)?[a-z0-9]([a-z0-9.-]{0,251}[a-z0-9])?(:\d{1,5})?$/i.test(s)) fail('defaultHosts', `"${s}" is not a host name (use example.com, *.example.com or example.com:8080)`);
+  const problem = hostProblem(s);
+  if (problem) fail('defaultHosts', problem);
   return s.toLowerCase();
 };
 /**

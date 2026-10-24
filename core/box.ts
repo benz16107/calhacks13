@@ -11,11 +11,11 @@ import path from 'node:path';
 import type { App, Approval, Box, FullSpec, Ctx, LogEvent, LogReader, ModelJob, NewEvent, Route, Task, TaskSpec, TaskState, Tool, Track } from './contract.ts';
 import { DB, Live } from './live.ts';
 import { Log, apply, canMove, doneLayers, fold, type State } from './log.ts';
-import { PLACEHOLDER_KEY, firewall, logBlocked, stopLoggingBlocked, relayCert, reservePort, startProxy } from './net.ts';
+import { PLACEHOLDER_KEY, firewall, logBlocked, stopLoggingBlocked, uidOf, relayCert, reservePort, startProxy } from './net.ts';
 import * as sandbox from './sandbox.ts';
 import { HOME, dirs } from './sandbox.ts';
 import { usageCents } from './pricing.ts';
-import { DEFAULT_SETTINGS, SETUP_STEPS, applyPatch, folderRefusal, hadHumanUse, insideAny, neverFolder, loadDisabled, loadSetup, loadSettings, recordStep, saveDisabled, saveSettings, saveSetup, type Settings, type SetupState } from './config.ts';
+import { DEFAULT_SETTINGS, SETUP_STEPS, applyPatch, folderRefusal, hadHumanUse, hostProblem, insideAny, neverFolder, loadDisabled, loadSetup, loadSettings, recordStep, saveDisabled, saveSettings, saveSetup, type Settings, type SetupState } from './config.ts';
 import * as system from './system.ts';
 import { VAULT_NAME, loadVault, writeVaultKey } from './vault.ts';
 
@@ -30,7 +30,13 @@ function jsonServer(handler: Handler, raw?: (req: http.IncomingMessage, res: htt
     let status = 200;
     let out: unknown;
     try {
-      out = await handler(req.method ?? 'GET', new URL(req.url ?? '/', 'http://box'), text ? JSON.parse(text) : {}, req.headers, req);
+      let body: unknown = {};
+      try {
+        body = text ? JSON.parse(text) : {};
+      } catch {
+        throw new Error("the request body isn't valid JSON");
+      }
+      out = await handler(req.method ?? 'GET', new URL(req.url ?? '/', 'http://box'), body, req.headers, req);
       if (out === undefined) [status, out] = [404, { error: 'not found' }];
     } catch (e) {
       status = (e as { status?: number }).status ?? 400;
@@ -105,6 +111,13 @@ class Core {
   vaultMetaPath = path.join(HOME, 'vault-meta.json');
   vaultMeta: Record<string, string> = fs.existsSync(this.vaultMetaPath) ? JSON.parse(fs.readFileSync(this.vaultMetaPath, 'utf8')) : {};
   startedAt = new Date().toISOString();
+  // Was the last stop clean (a restart or deploy), so the screen should not say it came back from a power cut?
+  cleanStart = (() => {
+    const marker = path.join(HOME, 'clean-stop');
+    const clean = fs.existsSync(marker);
+    fs.rmSync(marker, { force: true });
+    return clean;
+  })();
   resumed: string[] = []; // tasks boot() restarted after a power cut, for the screen's banner
   linksPath = path.join(HOME, 'links.json');
   links: Record<string, string | Record<string, string>> = fs.existsSync(this.linksPath) ? JSON.parse(fs.readFileSync(this.linksPath, 'utf8')) : {};
@@ -164,6 +177,17 @@ class Core {
     const dflt = { hosts: this.settings.networkDefault === 'allowlist' ? this.settings.defaultHosts : [], budgetCents: this.settings.defaultBudgetCents };
     const s: FullSpec = { workspace: 'home', worker: 'droid', tools: [], source: 'api', ...spec, hosts: spec.hosts ?? dflt.hosts, budgetCents: spec.budgetCents ?? dflt.budgetCents };
     if (!s.title || !s.prompt) throw new Error('a task needs a title and a prompt');
+    // Checked here, at the one door every task comes through (the API, tracks, triggers).
+    if (typeof s.title !== 'string' || s.title.length > 200) throw new Error('title: text, at most 200 characters');
+    if (typeof s.prompt !== 'string' || s.prompt.length > 100_000) throw new Error('prompt: text, at most 100,000 characters');
+    if (!Number.isInteger(s.budgetCents) || s.budgetCents < 0 || s.budgetCents > 100_000) throw new Error('budgetCents: a whole number of cents from 0 to 100000 ($1,000)');
+    if (!Array.isArray(s.hosts) || s.hosts.length > 50) throw new Error('hosts: a list of at most 50 host names');
+    for (const h of s.hosts) {
+      const problem = hostProblem(h);
+      if (problem) throw new Error(`hosts: ${problem}`);
+    }
+    s.hosts = s.hosts.map((h) => h.toLowerCase());
+    if (!Array.isArray(s.tools) || s.tools.some((x) => typeof x !== 'string')) throw new Error('tools: a list of tool names');
     if (!/^[\w.-]+$/.test(s.workspace) || !fs.existsSync(dirs.workspace(s.workspace))) throw new Error(`no workspace ${s.workspace}`);
     if (!['droid', 'fake'].includes(s.worker)) throw new Error(`no worker ${s.worker}`);
     // A demo run spends no Factory credit unless it was asked to: a track that wants a real agent must be gated behind DEMO_LIVE=droid.
@@ -932,7 +956,18 @@ class Core {
 
   /** The box's own screen, or a device that was paired as the owner. */
   isOwner(req: http.IncomingMessage): boolean {
-    return this.isLocal(req) || !!this.deviceOf(req)?.owner;
+    return (this.isLocal(req) && !this.serviceCaller(req)) || !!this.deviceOf(req)?.owner;
+  }
+
+  /**
+   * A loopback caller that runs as `nobody` or as a task user: a helper service on the box (the ASI:One agent
+   * runs as nobody), not the box's own screen. It may still use the API like the screen does, but never the
+   * owner's controls (vault, settings, folders, Keep), so a flaw in a helper cannot become the owner's rights.
+   */
+  serviceCaller(req: http.IncomingMessage): boolean {
+    if (req.socket.remoteAddress === undefined) return false; // the root-only socket
+    const uid = uidOf(req.socket);
+    return uid === 65534 || (uid !== undefined && uid >= 30000 && uid <= 39999);
   }
 
   /** Setup, settings, apps on and off, and the vault are for the owner only. */
@@ -1112,7 +1147,7 @@ class Core {
             return { name: id, setAt: this.vaultMeta[id] };
           }
           case 'GET /health':
-            return { ok: true, startedAt: this.startedAt, resumed: this.resumed, tasks: this.state.tasks.size, tools: [...this.tools.keys()], spacetime: { port: 3000, database: DB } };
+            return { ok: true, startedAt: this.startedAt, cleanStart: this.cleanStart, resumed: this.resumed, tasks: this.state.tasks.size, tools: [...this.tools.keys()], spacetime: { port: 3000, database: DB } };
         }
       },
       (req, res) => this.cors(req, res) || this.gate(req, res) || this.pairing(req, res) || this.logStream(req, res) || this.webhook(req, res) || this.trackRoute(req, res) || this.portal(req, res),
@@ -1124,7 +1159,7 @@ class Core {
     const allowed = (process.env.BOX_ORIGINS ?? '').split(',').map((o) => o.trim());
     if (!origin || !(allowed.includes(origin) || allowed.includes('*'))) return false;
     res.setHeader('access-control-allow-origin', origin);
-    res.setHeader('access-control-allow-headers', 'content-type');
+    res.setHeader('access-control-allow-headers', 'content-type, authorization');
     res.setHeader('access-control-allow-methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
     if (req.method !== 'OPTIONS') return false;
     res.writeHead(204).end();
@@ -1237,7 +1272,6 @@ data: ${JSON.stringify(e)}
     if (m === 'OPTIONS' || (m === 'GET' && p === '/health') || (m === 'POST' && p === '/pair') || this.portalTarget(req)) return false;
     // A track route that is public on purpose, or checks its own secret, is reachable through a proxy.
     if (this.routes.get(`${m} ${new URL(req.url ?? '/', 'http://box').pathname}`)?.open) return false;
-    if (this.routes.get(`${m} ${new URL(req.url ?? '/', 'http://box').pathname}`)?.open) return false; // a track route that is public or checks its own secret
     if (this.deviceOf(req)) return false;
     res.writeHead(401, { 'content-type': 'application/json' }).end(JSON.stringify({ error: 'pair this phone with the box first' }));
     return true;
@@ -1290,6 +1324,13 @@ data: ${JSON.stringify(e)}
 
 // One bad connection or task must not take the box down. The log keeps the truth either way.
 process.on('uncaughtException', (e) => console.error('uncaught:', e));
+// A clean stop (systemctl restart, a deploy) leaves a marker, so the next boot is not announced as a power cut.
+process.on('SIGTERM', () => {
+  try {
+    fs.writeFileSync(path.join(HOME, 'clean-stop'), new Date().toISOString());
+  } catch {} // the marker is a courtesy for the screen
+  process.exit(0);
+});
 process.on('unhandledRejection', (e) => console.error('unhandled:', e));
 sandbox.init();
 await new Core().boot();

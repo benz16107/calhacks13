@@ -487,6 +487,7 @@ await moment('moment 4: pull the plug', async () => {
   await startBox();
   const r = await task(R.id);
   check(r.state === 'running' || r.state === 'done', `the box came back and picked up the long job (${r.state})`);
+  check((await api<{ cleanStart: boolean }>('GET', '/api/health')).cleanStart === false, 'the box knows this was not a clean stop, so its screen may say it came back from a power cut');
   await settled([R.id]);
   check(view('long', 'progress.txt') === '1\n2\n3\n4', 'the long job carried on from where it was: no step done twice, none skipped');
   const ask = (await stdbRows(`SELECT * FROM approval WHERE task = '${W.id}'`))[0];
@@ -791,6 +792,24 @@ await moment('security: an outside caller gets nothing, and a folder cannot be t
   const mana = await out('GET', '/t/mana/status');
   const jira = await out('GET', '/t/jira/task?id=none');
   check(mana.status === 200 && jira.body?.error !== 'pair this phone with the box first' && (await out('GET', '/t/example/secret-check')).status === 401, `through a proxy, Mana's public status answers (${mana.status}) and Jira's routes reach their own secret check (${jira.status}); other track routes still need a phone`);
+
+  // Every task field is checked at the door.
+  const badSpecs: Record<string, unknown>[] = [
+    { budgetCents: -5 }, { budgetCents: 'abc' }, { budgetCents: 0.5 }, { budgetCents: 1e15 },
+    { hosts: ['*'] }, { hosts: ['*.*'] }, { hosts: ['0.0.0.0/0'] }, { hosts: ['127.0.0.1:7700'] }, { hosts: 'example.com' },
+    { title: 'x'.repeat(201) }, { prompt: 'x'.repeat(100_001) },
+  ];
+  const badAnswers = await Promise.all(badSpecs.map((b) => api('POST', '/tasks', { title: 'Checked', prompt: 'x', worker: 'fake', workspace: 'probe', ...b }).then(() => 'ALLOWED', (e: Error) => e.message)));
+  check(badAnswers.every((m) => m !== 'ALLOWED'), `bad budgets, hosts ("*", "*.*", a range, the box's own port, a bare string) and oversized titles and prompts are refused ("${badAnswers[4]}")`);
+  const notJson = await new Promise<string>((resolve) => {
+    const r = http.request({ socketPath: API, method: 'POST', path: '/api/tasks', headers: { 'content-type': 'application/json' } }, (res) => {
+      let t = '';
+      res.on('data', (c) => (t += c));
+      res.on('end', () => resolve(JSON.parse(t).error));
+    });
+    r.end('{not json');
+  });
+  check(notJson === "the request body isn't valid JSON", `a body that isn't JSON gets a plain answer ("${notJson}")`);
 
   // The box's own files cannot be handed to an agent, however it is asked.
   workspace('probe', {});

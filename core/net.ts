@@ -107,7 +107,7 @@ export function relayCert(home: string) {
 }
 
 /** The uid that owns the other end of a loopback connection, from /proc/net/tcp. */
-function uidOf(sock: net.Socket): number | undefined {
+export function uidOf(sock: net.Socket): number | undefined {
   const hex = (port: number) => `0100007F:${port.toString(16).toUpperCase().padStart(4, '0')}`;
   const [client, server] = [hex(sock.remotePort ?? 0), hex(sock.localPort ?? 0)];
   for (const line of fs.readFileSync('/proc/net/tcp', 'utf8').split('\n').slice(1)) {

@@ -82,3 +82,10 @@ test('setup: tasks a track starts at boot do not make a fresh install look alrea
   assert.equal(hadHumanUse([created('find'), { type: 'approval.answered' }], tracks, 0), true, 'a person answered an approval');
   assert.equal(hadHumanUse([created('find')], tracks, 1), true, 'a phone was paired');
 });
+
+import { hostProblem } from './config.ts';
+
+test('hosts a task may reach: names, *.domain and :port; never "*", ranges, a whole TLD or the box itself', () => {
+  for (const ok of ['example.com', 'api.apify.com', '*.cdn.example.com', 'example.com:8443', 'api.localhost:4021']) assert.equal(hostProblem(ok), undefined, ok);
+  for (const bad of ['*', '*.*', '*.com', '0.0.0.0/0', '127.0.0.1', '127.0.0.1:7700', 'localhost', '169.254.169.254', 'http://x.com', '', 42]) assert.ok(hostProblem(bad), String(bad));
+});
