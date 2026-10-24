@@ -73,6 +73,7 @@ screen or the owner's phone.
 | `windows/app-center-shopper-detail.png` | `79:4398` | One app: what it does, Turn off, every host it reaches (`access.hosts`), every key it needs (`access.secrets`), and the tools, windows and triggers it adds |
 | `windows/task-detail.png` | `84:4845` | One task: state, time, cost of budget, the blocked-attempts alert, its steps from the log (blocked ones red), the files it changed, and what it was allowed. `GET /api/tasks/<id>` (`task`, `events`), `GET /api/tasks/<id>/diff`. Undo task is the header bar's main action |
 | `windows/task-detail-undo-confirm.png` | `84:5090` | The alert dialog before `POST /api/tasks/<id>/undo`: Cancel first, "Undo task" in red |
+| `windows/task-detail-undone.png` | `95:8588` | After Undo: the Undone badge, files marked removed, the new log line 1384, and a toast. The prototype's end state |
 | `windows/activity.png` | `84:5312` | The action log as an event viewer: filters in the sidebar, one row per event (`seq`, time, task, `type` as a chip, text), blocked events red, approvals amber, and the selected event's fields below. `GET /api/log?after=<seq>` over SSE |
 | `windows/time-machine.png` | `85:5256` | One workspace's layers as a stack, newest on top, the base files at the bottom; for the selected layer, what comes out and what stays, and Undo this task |
 
@@ -128,6 +129,11 @@ task's `folder` (`POST /api/tasks {folder}`).
 | `personal/setup-5-apps.png` | `94:8359` | Apps with what they reach and the keys they need |
 | `personal/setup-6-pair-a-phone.png` | `94:8720` | Optional pairing with a QR and the code |
 | `personal/setup-7-done.png` | `94:8897` | A four-card tour: Ask an Agent, the top bar, Keep or Undo, Time Machine |
+
+## Prototype
+
+The page has four flow starting points: "Setup, Server (12 steps)" (`54:86`), "Phone: approve a spend" (`90:6534`),
+"Box: undo one task" (`57:722`) and "Desktop and Settings" (`83:4401`). The flows are described in `../../figma.md`.
 
 ## System sheets
 

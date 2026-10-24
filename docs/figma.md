@@ -32,11 +32,11 @@ direction A screens further down stay as the reference for anything v2 has not r
 
 | File | Link | What is in it |
 |---|---|---|
-| Design system and screens | https://www.figma.com/design/oppzH621OOOMA31rgLbxbM | Pages "GurtOS system" and "GurtOS screens v2": the OS design system and its first screens (see below). Page "OS screens": the direction A screens the portal is built from today. Page "Design system": tokens, text styles, components. Page "Directions": the three OS directions. Page "Screens": the first, dashboard-style screens (superseded) |
+| Design system and screens | https://www.figma.com/design/oppzH621OOOMA31rgLbxbM | Pages "GurtOS system" and "GurtOS screens v2": the OS design system and every v2 screen (index in `figma/os-v2/README.md`). Page "OS screens": the direction A screens. Page "Design system": the first tokens and components. Page "Directions": the three OS directions. Page "Screens": the first, dashboard-style screens (superseded) |
 | Ideation board (FigJam) | https://www.figma.com/board/KvHiDv5HIJuGYOZDDkp8VG | Architecture, the four demo moments, the 25 tracks by slot, the moodboard |
-| Prototype (Figma Design) | Phone: https://www.figma.com/proto/oppzH621OOOMA31rgLbxbM/?node-id=23-304&starting-point-node-id=23%3A304 · Server: https://www.figma.com/proto/oppzH621OOOMA31rgLbxbM/?node-id=24-454&starting-point-node-id=24%3A454 | The two flows below, wired between the real screens |
+| Prototype (Figma Design) | Setup: https://www.figma.com/proto/oppzH621OOOMA31rgLbxbM/?node-id=54-86&starting-point-node-id=54%3A86 · Phone: https://www.figma.com/proto/oppzH621OOOMA31rgLbxbM/?node-id=90-6534&starting-point-node-id=90%3A6534 · Box, undo: https://www.figma.com/proto/oppzH621OOOMA31rgLbxbM/?node-id=57-722&starting-point-node-id=57%3A722 · Desktop and Settings: https://www.figma.com/proto/oppzH621OOOMA31rgLbxbM/?node-id=83-4401&starting-point-node-id=83%3A4401 | Four flows wired between the v2 screens on "GurtOS screens v2" (136 links). The direction A prototype is still on "OS screens" |
 | Prototype (Figma Make) | https://www.figma.com/make/PuKKW48akjbEKogpI59pdL | The same two flows as a small working web page, in direction A's tokens. It replaces the first Make file (`19hhCgh3CFsgfi1eBienAS`), which still says Box |
-| Pitch deck (Figma Slides) | https://www.figma.com/slides/SBrJtJiY20k88X3IGzKwZW | 14 slides: the GurtOS wordmark, OpenClaw's demand and security record (sourced), doing it by hand, the box, the three editions, the four moments with their real screens, architecture, tracks, the Figma workflow |
+| Pitch deck (Figma Slides) | https://www.figma.com/slides/SBrJtJiY20k88X3IGzKwZW | 16 slides in Atkinson Hyperlegible with the v2 screens: the GurtOS wordmark, OpenClaw's demand and security record (sourced), doing it by hand, the box, the three editions, the setup wizard, the four moments, architecture, tracks, the design system, the Figma workflow |
 
 File key for MCP calls: `oppzH621OOOMA31rgLbxbM`. Open a node with
 `https://www.figma.com/design/oppzH621OOOMA31rgLbxbM/?node-id=<id with a dash>`.
@@ -82,7 +82,19 @@ pairing.
 
 ## Prototype
 
-Two flows, in Figma Design (page "OS screens", flow starting points) and as a Figma Make file:
+**v2 (current).** Four flows on the page "GurtOS screens v2", each a flow starting point (links in the Files table):
+
+1. **Setup, Server.** Next and Back walk all 12 steps (Skip on the optional ones); "Start using GurtOS" lands on the
+   desktop.
+2. **Phone: approve a spend.** The phone home; after 1.2 s the approval arrives on the lock screen; Approve shows the
+   island "running again, paid once" and the Live Activities; then the task list and a task's detail. Deny returns home.
+3. **Box: undo one task.** Tasks, then the row "Find me a road bike", then its detail; Undo task opens the confirm
+   dialog; Undo task shows the undone state (`95:8588`) with the new log line and a toast. Cancel goes back.
+4. **Desktop and Settings.** On the home screen, the clock opens Notification Center and the system menu opens Control
+   Center; the banner's Approve opens Tasks. In Settings, every sidebar item opens its page, and Replace on a key
+   opens the sheet.
+
+**Direction A (earlier).** Two flows, in Figma Design (page "OS screens", flow starting points) and as a Figma Make file:
 
 1. **Phone: approve from a notification** (start `23:304`). The phone home; after 1.2 s the approval drops in as a
    banner (`33:1893`); Approve leads to "running again" (`33:1969`), then the Live Activity and the task list. Deny

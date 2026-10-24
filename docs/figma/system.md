@@ -264,9 +264,21 @@ On the page "GurtOS system" (`47:86`).
 Variables: "GurtOS Color" (Light, Dark) and "GurtOS Size" (spacing, radius, sizes, motion), each with its CSS name as
 code syntax.
 
+Added after the checkpoint, on the same page: Toast (`69:208`), Notification (`69:254`, Desktop and Phone sizes),
+AlertDialog (`69:280`), MenuItem (`69:293`), StatusPage (`69:294`), QuickToggle (`69:315`), PhoneStatusBar (`88:240`),
+PhoneTabBar (`88:337`), LiveActivity (`88:338`), and the app icons for Elastic insights, Mana status and Web pages.
+
+## On GNOME (Personal)
+
+- GNOME Shell draws the top bar, the indicator menu and notifications. They keep Ubuntu Sans and Shell's look; GurtOS
+  gives them content, its app icon and the amber count. GurtOS's own windows (review, Ask an Agent, setup) use this
+  system, which is built on libadwaita's patterns, so they sit naturally among GNOME apps.
+- The indicator is an AppIndicator, so its menu is a plain menu: items, separators and icons, no progress bars or
+  buttons. Approvals are answered in the notification or the GurtOS window.
+- Notification titles use GNOME's header capitalization ("Buy a GPU Hour Needs Your OK"), as GNOME's HIG asks. That
+  is the one place GurtOS text is not in sentence case.
+
 ## Not built yet
 
-This is the checkpoint. Next, after Ben's review: sheets and alert dialogs, menus and context menus, popovers,
-toasts, notifications and Notification Center, Control Center, the lock screen, status pages, and the screens: the
-rest of Settings, App Center, Activity, Time Machine, the track apps (Credit desk, Shopper, Wallet, Find, Jira,
-ASI:One), session restore, the other ten Server setup steps, Personal setup, and the phone.
+The Business edition (one shared box with roles) is not designed. The phone's Activity and Settings tabs reuse the
+desktop's pages in the phone layout; they are not drawn separately.
