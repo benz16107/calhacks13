@@ -18,7 +18,7 @@ PROBLEM = {
  'microsoft': "Companies want agents doing finance work, but an ordinary OS gives an agent its owner's keys, no separation of duties, no record and no undo, so pilots never reach production.",
  'atlassian': "Draft: when an agent acts for you overnight, nobody can see the next morning exactly what it did and why, or roll back only the wrong part.",
  'crs': "Credit bureaus and lenders are what attackers go after, and on an ordinary OS an agent doing identity and fraud checks holds the keys, can approve its own work and can pull any report.",
- 'spacetime': "Draft: when agents run unattended, the people responsible need to see every request live, on every screen at once, and answer from wherever they are.",
+ 'spacetime': "Live agent state usually needs a database, a websocket server, a cache and auth glue, which is heavy and fragile, and an ordinary OS has nothing for it.",
  'elastic': "After a week of agents working, an ordinary OS cannot tell you what they did: its logs are scattered and anyone with root can edit them.",
  'moss': "A personal agent is only useful if it remembers you, and today that means uploading your life to someone's cloud, and any web page an agent reads can plant false memories.",
  'apify': "Web agents today drive your logged-in browser with your accounts, read booby-trapped pages, and you can't see what they spend.",

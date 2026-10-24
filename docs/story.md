@@ -388,23 +388,24 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 
 **Best shown in:** All three editions, strongest in GurtOS Business
 
-**Pitch:** Live shared state is what each edition's screen reads: the box screen on Server, the desktop on Personal. It matters most in Business, where several people see the same approvals at once and the first answer wins.
+**Pitch:** The usual stack for live agent state, a database, a websocket server, a cache and auth glue, is heavy and fragile. GurtOS runs one self-hosted SpacetimeDB per box as its live nervous system, with the security enforced in the database: agents share a work queue, each person is sent only their own requests, and the first answer wins. It is light, open source and part of the GurtOS suite. The Maincloud multi-machine view is written but not running yet.
 
-**The problem:** Draft: when agents run unattended, the people responsible need to see every request live, on every screen at once, and answer from wherever they are.
+**The problem:** Live agent state usually needs a database, a websocket server, a cache and auth glue, which is heavy and fragile, and an ordinary OS has nothing for it.
 
 **Features, by the sponsor's criteria** (no OS-vs-track table yet; to write when reviewed):
 
 - *SpacetimeDB as the core real-time backend.* (met): SpacetimeDB is the box screen's live view of the box. The screen reads the task and approval tables and answers through the answer reducer. The box writes through putTask and putApproval, which refuse anyone but the box, and vouches for the screen and paired phones with registerDevice.
 - *Used meaningfully, not on the side: live shared state.* (met): One shared state for every person and every task on the box: what each task is doing now (step), its cost against its budget, and every pending approval with its question, amount, payee and purpose.
 - *Instant sync.* (met): An approval appears on the box screen the moment the box writes it. Approve there and the box picks up the answer from its subscription and writes it to its log within milliseconds; a phone that approved first through the API clears the screen's banner the same way.
-- *Agents coordinating.* (partly): Agents and people meet in the approval table: a paused agent's request is a row, and whoever answers first, from any screen or a chat, lets it carry on. The credit desk's two agent seats run side by side and both stop there for the controller. Agents do not message each other through SpacetimeDB yet.
+- *Agents coordinating.* (met): Agents share a work queue in SpacetimeDB: a job table and a claimJob procedure that takes the oldest open job in one transaction, so two agents asking at the same instant get different jobs. They reach it through four broker tools (spacetime.claim, finish, post and team), and the box names the task, so one agent cannot claim as another. The merge gate shows 3 agents making 15 claims on 12 jobs at once: 12 distinct jobs, none twice, and 30 simultaneous claims on 10 jobs gave 10 distinct jobs. An agent whose task ends holding a job gives it back. Presence is in the agent table.
 
 **Demo moment and proof:** In every merge-gate run, a task stops over its budget and SpacetimeDB shows the request live with its amount, payee and purpose. Another task keeps running and finishes meanwhile. The OK goes through SpacetimeDB's answer reducer into the box's log under the name the box vouched for, a stranger's identity is refused, and the task spends its $8.00 of test money and finishes, and SpacetimeDB shows it done with its cost.
 
 **Still to do:**
 
 - Review the story with Ben: problem, features with their why, OS vs track
-- Agents coordinating. (partly)
+- Maincloud fleet view (not built)
+- The credit desk using the shared queue (not built)
 
 ## Elastic: Best use of Elastic Agent Builder on Serverless
 

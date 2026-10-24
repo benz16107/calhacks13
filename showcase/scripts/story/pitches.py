@@ -26,7 +26,7 @@ E = {
  'vultr': ("GurtOS Server",
    "GurtOS Server runs wherever a VM does. On Vultr it is the public, always-on box: Jira and Mana reach it, and the rest of its API stays closed."),
  'spacetime': ("All three editions, strongest in GurtOS Business",
-   "Live shared state is what each edition's screen reads: the box screen on Server, the desktop on Personal. It matters most in Business, where several people see the same approvals at once and the first answer wins."),
+   "The usual stack for live agent state, a database, a websocket server, a cache and auth glue, is heavy and fragile. GurtOS runs one self-hosted SpacetimeDB per box as its live nervous system, with the security enforced in the database: agents share a work queue, each person is sent only their own requests, and the first answer wins. It is light, open source and part of the GurtOS suite. The Maincloud multi-machine view is written but not running yet."),
  'elastic': ("GurtOS Business and GurtOS Server",
    "After a week of agents working, an ordinary OS cannot tell you what they did, and anyone with root can edit its logs. GurtOS keeps one action log of every action and chains each entry to the one before, and Elastic keeps a copy the box cannot rewrite, so a changed entry is caught. Elastic's agent answers and investigates, and its alert rules and the agent can only leave a request: the box turns it into one approval on your phone."),
  'moss': ("GurtOS Personal",

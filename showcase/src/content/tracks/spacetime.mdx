@@ -3,9 +3,9 @@ order: 10
 sponsor: SpacetimeDB
 prize: SpacetimeDB as the core real-time backend
 editions: 'All three editions, strongest in GurtOS Business'
-pitch: 'Live shared state is what each edition''s screen reads: the box screen on Server, the desktop on Personal. It matters most in Business, where several people see the same approvals at once and the first answer wins.'
+pitch: 'The usual stack for live agent state, a database, a websocket server, a cache and auth glue, is heavy and fragile. GurtOS runs one self-hosted SpacetimeDB per box as its live nervous system, with the security enforced in the database: agents share a work queue, each person is sent only their own requests, and the first answer wins. It is light, open source and part of the GurtOS suite. The Maincloud multi-machine view is written but not running yet.'
 title: Live tasks and approvals on every screen at once
-summary: Each GurtOS box runs its own SpacetimeDB, with a TypeScript module the box publishes at boot. It holds the live state of every task and every approval. The box's own screen subscribes to it, so an agent's request for an OK lands the moment it is asked, and the screen answers through a reducer that takes calls only from connections the box has vouched for. The first answer wins, whether it comes from the screen, a paired phone or a chat.
+summary: 'The usual stack for live agent state is a database, a websocket server, a cache and auth glue, which is heavy and fragile. GurtOS uses one self-hosted SpacetimeDB per box as the OS''s live nervous system, with the security enforced in the database. Agents share a work queue through it, each person is sent only their own requests, the first answer to a request wins, timers and meters live in it, and the box''s own screens subscribe to it. It is one engine on the box, open source, and part of the GurtOS suite. The action log on disk stays the record of truth.'
 proof: 'In every merge-gate run, a task stops over its budget and SpacetimeDB shows the request live with its amount, payee and purpose. Another task keeps running and finishes meanwhile. The OK goes through SpacetimeDB''s answer reducer into the box''s log under the name the box vouched for, a stranger''s identity is refused, and the task spends its $8.00 of test money and finishes, and SpacetimeDB shows it done with its cost.'
 criteriaSource: "From SpacetimeDB's track description, as copied into the project's track plan."
 criteria:
@@ -16,16 +16,21 @@ criteria:
   - ask: 'Instant sync.'
     how: 'An approval appears on the box screen the moment the box writes it. Approve there and the box picks up the answer from its subscription and writes it to its log within milliseconds; a phone that approved first through the API clears the screen''s banner the same way.'
   - ask: 'Agents coordinating.'
-    how: 'Agents and people meet in the <code>approval</code> table: a paused agent''s request is a row, and whoever answers first, from any screen or a chat, lets it carry on. The credit desk''s two agent seats run side by side and both stop there for the controller. Agents do not message each other through SpacetimeDB yet.'
-    status: partly
+    how: 'Agents share a work queue in SpacetimeDB: a <code>job</code> table and a <code>claimJob</code> procedure that takes the oldest open job in one transaction, so two agents asking at the same instant get different jobs. They reach it through four broker tools (<code>spacetime.claim</code>, <code>finish</code>, <code>post</code> and <code>team</code>), and the box names the task, so one agent cannot claim as another. The merge gate shows 3 agents making 15 claims on 12 jobs at once: 12 distinct jobs, none twice, and 30 simultaneous claims on 10 jobs gave 10 distinct jobs. An agent whose task ends holding a job gives it back. Presence is in the <code>agent</code> table.'
 video: main
 shots:
+  - src: ../../assets/repo/portal/live-agents.png
+    alt: 'The Live window, Agents view: meters across the top, and a queue of credit applications as Open, In hand and Done columns, with each agent''s status, such as Working, or Waiting for an OK.'
+    caption: 'The Live window, Agents: a queue as Open, In hand and Done, and what each agent is doing, all arriving over SpacetimeDB subscriptions. Demo data. The credit desk''s own use of the queue is not on main yet.'
+  - src: ../../assets/repo/portal/live-requests.png
+    alt: 'The Live window, Requests view: two waiting requests with Deny and Approve, one marked "Rosa''s phone is viewing".'
+    caption: 'The Live window, Requests: every waiting request, and who is viewing it. The first answer wins and the later one is told who answered.'
   - src: ../../assets/repo/portal/notification-center.png
     alt: 'The GurtOS desktop with Notification Center open: two requests waiting for an OK, each with Deny and Approve, and earlier notices below, including a blocked attempt.'
     caption: 'The box''s screen: requests waiting for an OK, live from the approval table, while other tasks keep running. The amounts are test money.'
   - src: ../../assets/repo/portal/phone-home.png
     alt: 'GurtOS on a phone: a Needs you list with two requests, each with Deny and Approve, three running tasks, and an Ask the box button.'
-    caption: 'The phone follows the box over its token-checked API and log stream, not SpacetimeDB. Its answer lands in the same approval row, so the box screen updates at once.'
+    caption: 'The phone follows the box over its token-checked API, not SpacetimeDB. Its answer lands in the same approval row, so the box screen updates at once.'
     tall: true
   - src: ../../assets/repo/portal/phone-tasks.png
     alt: 'The task list on a phone, with each task''s state and live step.'
@@ -35,9 +40,12 @@ shots:
     alt: 'The Tasks window listing tasks with their state, what each is doing now and its cost.'
     caption: 'The Tasks app: each row''s live status and cost.'
 links:
+  - label: The track README, tracks/spacetime/
+    href: https://github.com/benz16107/calhacks13/tree/main/tracks/spacetime
+    note: 'The six features, why each is there, the queue tools, the Live window and the demo steps.'
   - label: The module, core/spacetime/src/index.ts
     href: https://github.com/benz16107/calhacks13/blob/main/core/spacetime/src/index.ts
-    note: 'The public tables and five reducers, in 88 lines.'
+    note: 'The public tables and reducers the box''s screens use.'
   - label: The box's mirror, core/live.ts
     href: https://github.com/benz16107/calhacks13/blob/main/core/live.ts
   - label: The portal's client, portal/src/live.ts
@@ -55,10 +63,10 @@ flow:
     detail: The box writes <code>approval.asked</code> to its log, then calls <code>putApproval</code>.
   - zone: you
     label: Every screen sees it
-    detail: The box screen subscribes to the <code>approval</code> table; phones follow the log stream.
+    detail: The box screen subscribes to the <code>approval</code> table; phones use the API and see the same data every 2 seconds.
   - zone: you
     label: Someone answers
-    detail: The screen calls <code>answer</code> from a vouched connection; a phone posts to the API. A pending row changes once; the first answer wins.
+    detail: The screen calls <code>answer</code> from a vouched connection; a phone posts to the API. A pending row changes once; the first answer wins and a later one is refused.
   - zone: core
     label: The box picks it up
     detail: Its subscription sees the update and writes the answer, with who gave it, to the log.
@@ -72,10 +80,32 @@ status:
   - part: The amounts in the demo
     state: test
     note: 'The $8.00 is test money (<code>example.spend</code>).'
-  - part: Phones through a tunnel
+  - part: Phones
     state: live
-    note: 'When port 3000 is out of reach, the portal falls back to the action log stream and says so in Settings.'
+    note: 'Phones do not connect to SpacetimeDB: SpacetimeDB listens on the box only, so phones use the token-checked API, and the Live window on a phone is shown the same data every 2 seconds.'
+  - part: Maincloud fleet view
+    state: not-built
+    note: 'The module and the opt-in reporter (counts only) are written, but it is not published: it waits on one sign-in to SpacetimeDB. It is not running.'
+  - part: The credit desk using the shared queue
+    state: not-built
+    note: 'The queue and its tools are on main and checked in the merge gate. The credit desk''s own Coordinate option, with two analysts, is not on main yet.'
 ---
+
+## Why SpacetimeDB, and what each part is for
+
+**The problem.** Live agent state usually needs a database, a websocket server, a cache and auth glue, which is heavy, fragile and breaks in the gaps between them. An ordinary operating system has nothing for it: agents on one machine collide, and the people responsible cannot see every request at once.
+
+**GurtOS runs one self-hosted SpacetimeDB per box as the OS's live nervous system.** The box mirrors tasks and approvals into it, agents share work through it, people answer through it, and the rules about who may see and do what are enforced inside the database, in the same transaction as the change. It is one engine on the box, open source, and part of the GurtOS suite. For several machines, each box can publish a status summary to Maincloud: that part is written but not running yet. The action log on disk stays the record of truth.
+
+| Feature | Why it is there | Criterion | From | Today |
+|---|---|---|---|---|
+| Tasks and approvals mirrored live; the box's screens answer through the `answer` reducer from connections the box vouched for | Every screen shows the same request the moment it is asked | Live shared state, instant sync | GurtOS (the module) | Shipped |
+| A shared work queue with atomic claims and four broker tools (`spacetime.claim`, `finish`, `post`, `team`), and agent presence | Several agents split one job without colliding | Agents coordinating | GurtOS (the module, the broker) | Shipped. 3 agents made 15 claims on 12 jobs at once, 12 distinct jobs and none twice; 30 simultaneous claims on 10 jobs gave 10 distinct jobs; a task that ends holding a job gives it back. The credit desk's own use of the queue is not on main yet |
+| Each person is sent only their own requests (Business): private `request` and `routed_to` tables and a per-connection `my_requests` view | A request routed to Rosa must not reach Priya | Meaningful use, security | GurtOS Business and the module | Shipped. Rosa's client is sent what is routed to her, Priya's and a stranger's get nothing, and the request table cannot be read. This is enforced by the database for any connection that reaches it; today only the box's own screens and local helpers reach SpacetimeDB, and phones use the API |
+| No double approvals, with presence: the later answer is refused with "already approved by" and the name, and "Rosa's phone is viewing" shows while someone has a request open | Two people can open the same request, and the second should know who won | Instant sync | GurtOS (the reducers) | Shipped. Presence clears when the connection drops |
+| Timers in the database: a scheduled reducer brings a second person into a request that is still pending | A request nobody has answered reaches someone else | Meaningful use | GurtOS (the module) | Shipped as the mechanism: the demo brought Priya in after 3 seconds. It only nudges screens, phone pushes still come from the core, and the Business policy has no reminder rule yet |
+| Live meters: running, waiting, done, failed and spend, plus activity per minute, kept by the reducers | No screen adds anything up | Instant sync | GurtOS (the module) | Shipped. The demo checks the meter against the box's own task list |
+| One live view across machines on Maincloud, counts only, with each viewer sent only the machines that let them in | An owner with several boxes wants one view | Meaningful use | GurtOS (the module and reporter) | Building: written, not published, not running |
 
 ## Evidence
 
@@ -99,7 +129,9 @@ moment 4: pull the plug
   ok    approved after the restart, it finished
 ```
 
-The test plays the box screen through SpacetimeDB itself: it reads the rows with SQL over SpacetimeDB's HTTP API and
+The `track spacetime` step of the merge gate (32 passed in the last full run) adds the queue, the per-person requests, the double-answer refusal, the timer and the meter: 15 claims on 12 jobs gave 12 distinct jobs; a request routed to Rosa reached only Rosa's live client; a second answer was refused; a scheduled reducer brought Priya in after 3 seconds; and the meter matched the box's task list.
+
+The moment-3 test plays the box screen through SpacetimeDB itself: it reads the rows with SQL over SpacetimeDB's HTTP API and
 calls the `answer` reducer from an identity the box vouched for, then checks that an identity nobody vouched for is
 refused. A task's own user cannot answer at all: SpacetimeDB listens on loopback, the firewall keeps task users away
 from it, and moment 2 checks it ("it could not reach SpacetimeDB or the box's API to approve itself").
@@ -108,16 +140,7 @@ from it, and moment 2 checks it ("it could not reach SpacetimeDB or the box's AP
 
 <Flow steps={frontmatter.flow} />
 
-**The module** (`core/spacetime/src/index.ts`, SpacetimeDB 2.13):
-
-| Table or reducer | Who | What |
-|---|---|---|
-| `task` (public) | read by everyone | `id, title, state, source, workspace, worker, costCents, budgetCents, updatedAt, step, note` |
-| `approval` (public) | read by everyone | `id, task, question, costCents, payee, purpose, state, by` |
-| `owner` (private) | set at `init` | The identity that published the module. That is the box. |
-| `putTask`, `putApproval` | the box only | Insert or update a row. Anyone else gets "only the box may do this". An answered approval never goes back to pending. |
-| `registerDevice`, `removeDevice` | the box only | Vouch for a SpacetimeDB identity (the box screen, or a paired phone that told the box its identity), or take it back |
-| `answer({id, approved, by})` | vouched connections only | Sets a pending approval to approved or denied, recorded under the vouched name, not the `by` it sends. A second answer does nothing. |
+**The module** (`core/spacetime/src/index.ts`, SpacetimeDB 2.13) holds the public `task`, `approval`, `job`, `agent`, `meter` and `activity` tables that the box's screens read, and private tables (`person`, `request`, `routed_to`, `viewer`, `device`, `owner`) that nobody reads directly. The `my_requests` view sends each connection only the requests routed to its person. The box alone writes the mirror (`putTask`, `putApproval`), vouches for screens (`registerDevice`), and posts and claims jobs for a named task. A vouched connection can `answer`: the first answer wins, recorded under the vouched name, and the later one is refused with "already approved by" and the name. `tracks/spacetime/README.md` has the full table.
 
 **The log stays the truth.** The action log on disk is fsynced line by line, and undo and resume are rebuilt from it.
 SpacetimeDB is the live mirror: the box writes every task and approval change to it as it happens. If SpacetimeDB is
@@ -125,10 +148,11 @@ down, the box keeps working and catches up when it returns, and an answer given 
 when its subscription reconnects. After a power cut, the box republishes the module and refills the tables from the
 log, which is why the deploy in moment 4 is "still waiting for its OK, live in SpacetimeDB".
 
-**Clients.** The box's own screen calls the HTTP API once, then subscribes to both tables over `ws://127.0.0.1:3000`
+**Clients.** The box's own screen calls the HTTP API once, then subscribes to the tables over `ws://127.0.0.1:3000`
 and tells the box its identity so its answers count. A phone or laptop elsewhere never reaches SpacetimeDB: it sends
-its paired token to the API and follows `GET /api/log/stream`, and the log names the phone that answered. Either way
-the answer lands in the same row, so every screen agrees.
+its paired token to the API, and the Live window shows it the same data every 2 seconds. Either way the answer lands in
+the same row, so every screen agrees. A task never connects to SpacetimeDB at all: it reaches the queue only through the
+broker tools, and the box calls the database for it.
 
 ## Try it
 
@@ -161,11 +185,18 @@ Or open the box screen and a paired phone, and approve on one.
 
 ## Limits
 
-- **SpacetimeDB has no login of its own.** It listens on loopback only, and `answer` accepts only vouched
-  connections; anyone who could read the port could still read the tables. Exposing it on a network
-  (`STDB_LISTEN`) is opt-in, for a network you trust.
-- **Phones do not subscribe to SpacetimeDB.** They are live through the log stream, which is a refetch per event
-  rather than a row update.
-- **One database per box.** Two boxes show in one portal through each box's own SpacetimeDB, not a shared one.
-- **Agents do not coordinate with each other here yet.** The shared state is between the box, its paused agents and
-  the people who answer them.
+- **SpacetimeDB has no login of its own.** It listens on loopback only, and `answer` accepts only vouched connections;
+  anyone who could read the port could still read the public tables. Exposing it on a network (`STDB_LISTEN`) is opt-in,
+  for a network you trust.
+- **Phones do not connect to SpacetimeDB.** Only the box's own screens and local helpers do. A phone uses the
+  token-checked API, and its Live window is refreshed every 2 seconds. Per-person visibility is enforced by the database
+  for any connection that reaches it, and the public `approval` table, which the box's screens read, still holds every
+  approval.
+- **The module is republished at every boot** (and emptied if its schema changed), and the box refills tasks,
+  approvals, people and the meter. Open jobs and agent rows live only in SpacetimeDB: after a reset they are gone, and
+  the log still records every post, claim and result. Reminders restart their clock when the box refills a pending
+  request.
+- **The Maincloud fleet view is not running.** It is written, not published, and waits on one sign-in to SpacetimeDB.
+- **The credit desk's own use of the shared queue is not on main yet.** The queue, its four tools and the proof above
+  are.
+- Each box keeps its own SpacetimeDB login, which fixed a bug where boxes sharing a VM broke each other's republish.
