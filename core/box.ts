@@ -1034,6 +1034,13 @@ class Core {
     }
   }
 
+  /** One test push per device every 10 s, so a phone can't use up the box's push allowance at the relay. */
+  lastTest = new Map<string, number>();
+  testThrottle(d: Device) {
+    if (Date.now() - (this.lastTest.get(d.id) ?? 0) < 10_000) throw Object.assign(new Error('one test every 10 seconds'), { status: 429 });
+    this.lastTest.set(d.id, Date.now());
+  }
+
   /** GET, POST and DELETE /api/remote, GET /api/remote/name/<name>; GET, PUT and DELETE /api/push, POST /api/push/test. */
   remoteRoutes(req: http.IncomingMessage, res: http.ServerResponse) {
     const p = new URL(req.url ?? '/', 'http://box').pathname.replace(/^\/api(?=\/)/, '');
@@ -1050,7 +1057,7 @@ class Core {
     else if (p === '/push' && m === 'PUT') act = (b) => ((phone().push = push.parseSub(b)), this.saveDevices(), { subscribed: true });
     else if (p === '/push' && m === 'DELETE') act = () => (delete phone().push, this.saveDevices(), { subscribed: false });
     else if (p === '/push/test' && m === 'POST')
-      act = async () => (await this.pushTo(phone(), { type: 'test', id: `test-${Date.now()}`, task: '', title: 'Notifications work', body: `${BOX_NAME} will tell this phone when a task needs your OK.` }, 'test'), { sent: 1 });
+      act = async () => (this.testThrottle(phone()), await this.pushTo(phone(), { type: 'test', id: `test-${Date.now()}`, task: '', title: 'Notifications work', body: `${BOX_NAME} will tell this phone when a task needs your OK.` }, 'test'), { sent: 1 });
     if (!act) return false;
     void (async () => {
       const json = (status: number, obj: unknown) => res.writeHead(status, { 'content-type': 'application/json' }).end(JSON.stringify(obj));

@@ -107,6 +107,10 @@ export class Remote {
     const r = await fetch(`${RELAY}/v1/names`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name }), signal: AbortSignal.timeout(15_000) });
     const out = (await r.json().catch(() => ({}))) as any;
     if (!r.ok) throw err(r.status === 409 || r.status === 400 || r.status === 429 ? r.status : 502, out.error ?? `the relay answered ${r.status}`);
+    // What the relay sends goes into config files: accept only plain host names, a port and a token-like secret.
+    const hostOk = (h: unknown) => typeof h === 'string' && /^[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(h);
+    if (out.host !== `${name}.${new URL(RELAY).host}` || !hostOk(out.tunnel?.host) || !hostOk(out.tunnel?.serverName) || !Number.isInteger(out.tunnel?.port) || !/^[A-Za-z0-9_-]{20,200}$/.test(out.secret ?? ''))
+      throw err(502, 'the relay sent an answer this box does not accept');
     this.deps.setSecret(out.secret);
     this.saved = { name: out.name, host: out.host, url: `https://${out.host}`, tunnel: { host: out.tunnel.host, port: out.tunnel.port, serverName: out.tunnel.serverName }, ports: await freePorts(), at: new Date().toISOString() };
     fs.writeFileSync(this.file, JSON.stringify(this.saved, null, 2), { mode: 0o600 });
