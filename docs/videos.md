@@ -96,23 +96,50 @@ requests have merged, add them after the stock check.
 After recording: share the chat link, and submit the project through the **ASI:One Submission Agent** as Fetch.ai
 asks.
 
-## 3. Atlassian (3 minutes or less)
+## 3. Atlassian: two videos, 3 minutes or less each
 
-Shoot in Jira on the demo site, signed in. Use BOX-2 for the roll back and BOX-5 for
-the approval, or run `DEMO_LIVE=jira ./demo` just before to make fresh issues (it deletes them at the end, so pause it
-or make new ones by hand).
+Both tracks are entered, so there are two videos: Track 2 (security for agents acting for a user) and Track 1 (agents
+that do the work). Shoot in Jira and Confluence on the demo site, signed in, against the always-on Vultr box. Both
+open with the problem, show GurtOS as the environment, and say once which parts are the OS and which the Forge app
+("the box does X; the Forge app shows it in Jira"). Best shown as GurtOS Business: one box for a team, the team's
+agents in the team's Jira. Say "test money" once wherever a cost shows.
+
+**Setting up the scene** (a few minutes before recording, on the box, as in "Helpers" above, with `worker: fake`
+and `workspace: handbook`): two `shopper` tasks that write files under `orders/`; an `overnight` task that changes a
+service config, fetches `https://paste.example.net/...` and asks "Push the new deploy settings to production?"
+(that opens a JSM request); two more `overnight` tasks for the bulk roll back. The README's screenshots came from
+exactly this: BOX-17/18 (shopper), BOX-19 and SECOPS-168 (JSM), BOX-21/22 (bulk), PLAT-33510 (started from Jira).
+
+### 3a. Track 2: security for agents acting for a user
 
 | Time | On screen | Say |
 |---|---|---|
-| 0:00 | Title card: "An agent ran overnight with write access. What did it do, and how do you undo only the wrong part?" | Read it. |
-| 0:15 | The BOX board: issues in To Do, In Progress, In Review, Done | "Every task an agent runs on my box is an issue here, and it moves across the board as it runs." |
-| 0:35 | BOX-2's description: the prompt, what it was allowed, the blocked attempt to reach a paste site, the diff touching three configs | "This one was told to change one retry rule. It changed three services, and it tried to send the repo to a paste site, which the box blocked." |
-| 1:05 | The Box agent task panel: waiting for an OK, the blocked attempt, the audit trail | "The panel is a Forge app. It shows the task live from the box." |
-| 1:20 | Press Roll back this task, confirm, "Rolled back" and the comment naming who did it | "Roll back removes only this task's changes on the box." |
-| 1:45 | The box's files (portal Time Machine or the task window): the three configs are back, the README fix from BOX-1 is still there | "The other task's fix stays." |
-| 2:05 | BOX-5: a Droid task asking to spend $3.00 of test money; Approve in the panel; the audit trail says "Approved by jira" | "Approvals work from Jira too." |
-| 2:25 | JQL: `project = BOX AND boxBlocked > 0` | "And the morning-after question is one search, on fields the Forge app indexes." |
-| 2:40 | The diagram from the showcase's Atlassian page | "The resolver runs in Atlassian's cloud, checks you may edit the issue, and is the only place that holds the box's secret." |
+| 0:00 | Title card: "Agents act for your team. Last night one misread a rule and another followed a planted link. What did they do, and how do you undo only the wrong part?" | Read it. |
+| 0:15 | The GurtOS agent tasks page in the BOX project: the list, blocked hosts, cost | "Every task an agent runs on our GurtOS box is a Jira issue. GurtOS runs each one as its own user, in its own copy of the files, with no keys and only the hosts it needs." |
+| 0:35 | BOX-19: the description (the prompt, the blocked attempt on paste.example.net, the diff), then the GurtOS agent task panel | "This one changed a deploy setting and tried to send our handbook to a paste site. The box refused the connection and logged it. The issue is written from the box's own log, not the agent's story." |
+| 1:00 | Confluence: the incident page for that attempt | "Every blocked attempt also gets an incident page: what was tried, from where, and what GurtOS did." |
+| 1:15 | SECOPS-168 in Jira Service Management: Approve | "It also asked to push to production. That's risky, so GurtOS made it a JSM request for the approvers, and the agent waits. On GurtOS Business only someone with the Jira permission and the GurtOS role, within their limit, can approve." |
+| 1:35 | Rovo chat: "@GurtOS what got blocked this week?" then "Roll back everything the shopper did today", Confirm, the report | "The Rovo agent answers from the box's log. It finds the shopper's two tasks, asks first, then rolls back exactly those and says which files came back." |
+| 2:05 | An issue search, pick BOX-21 and BOX-22, Apps, Roll back with GurtOS, the report | "For the morning after: pick the wrong ones in any search, confirm, and only those come back. Every other task keeps its work." |
+| 2:30 | The GurtOS agents dashboard with the gadget | "And the dashboard shows agent activity, blocked attempts and cost per project." |
+| 2:45 | Diagram: box log, the jira track, Jira, JSM, Confluence; the Forge app calling back with the secret | "The OS isolates and records; the Forge app is the team's control room. Both are open source." |
+
+### 3b. Track 1: agents that do the work
+
+| Time | On screen | Say |
+|---|---|---|
+| 0:00 | Title card: "Hand a Jira issue to an agent, and let it do the work somewhere it can't do harm." | Read it. |
+| 0:10 | PLAT-33510, a normal teammate issue: "Document how to change a service config" | "A teammate files an issue like any other." |
+| 0:20 | Add the label `gurtos-agent` (or show the Automation rule with "Run in GurtOS") | "Handing it to the GurtOS agent is a label, an assignment, or a step in a Jira Automation rule." |
+| 0:35 | The first comment: "GurtOS started task ... no hosts, budget $0.25" | "GurtOS starts a task from the issue's text. That text could come from anyone, so the task gets its own copy of the files, no network, no keys and a small budget." |
+| 0:55 | The result comment: what the agent says it did, and the diff | "Droid, running Claude, does the work and reports back on the issue, with the exact diff." |
+| 1:20 | The GurtOS agent task panel on the issue: Keep or Roll back | "If it's wrong, Roll back removes only this task's changes." |
+| 1:40 | An agent asking for an OK: the panel's Approve, or the JSM request | "If the work needs something risky, like a production change or spending over budget, it stops and asks, in Jira or in Jira Service Management." |
+| 2:00 | Rovo: "@GurtOS what did agents change this week?" | "And anyone can ask what the agents did, in plain words." |
+| 2:20 | Confluence: "What our agents did" for today | "Every day GurtOS writes the team a page of what its agents did." |
+| 2:40 | The repo and the README's table of the seven parts | "Seven parts, each in the README with why it's there. GurtOS and the Forge app are open source." |
+
+Cut list if long: the gadget shot in 3a, the Rovo shot in 3b.
 
 ## 4. Figma (3 minutes or less)
 

@@ -174,7 +174,34 @@ The box's routes, all behind the shared secret: `GET /task`, `POST /answer`, `PO
 `./demo` is everyone's merge gate, so by default this step stays offline: a stand-in for Jira, JSM and
 Confluence on the test machine takes the box's REST calls, and the step calls the same routes the Forge app does.
 
-OFFLINE_OUTPUT
+From the merge gate on 2026-10-24:
+
+```
+track jira
+  ok    BOX-1: task A is an issue in Done, with its diff
+  ok    BOX-2: task B waits for an OK, in In Review
+  ok    BOX-2 holds B's prompt, steps and diff
+  ok    BOX-2 has a comment for the blocked attempt on attacker.example
+  ok    BOX-2 has a comment asking for the OK
+  ok    without the shared secret the panel routes refuse to approve or roll back (401)
+  ok    an approval can't be answered through another task's issue
+  ok    approved from Jira, task B finished
+  ok    rolled back from Jira: B's settings change is gone, A's fix stays
+  ok    the panel's audit view shows the block, who approved, the roll back and the diff it undid
+  ok    BOX-2 says who rolled it back, in a comment and the description
+  ok    BOX-2 still shows the diff it undid, though the box deleted those files
+  ok    no vault secret is in anything the box sent to Jira
+  ok    B's production push opened Jira Service Management request SEC-1 for its approvers
+  ok    C waited for SEC-2; approved in JSM, it shipped (jira:Approver via JSM SEC-2)
+  ok    SEC-1 was closed with a note: B was already answered in GurtOS
+  ok    Confluence incident page: "Blocked: Tidy the settings tried to reach attacker.example:443 (2026-10-24)"
+  ok    Confluence daily page "What our agents did, 2026-10-24" lists the tasks and the blocked attempt
+  ok    activity: 42 tasks, 6 blocked, by project BOX 3, Not in Jira 39
+  ok    assigned OPS-1 to the GurtOS agent: the task ran, the diff came back as a comment, a second start did not run it twice
+  ok    pause all from Jira held a new task in the queue; resume ran it
+  ok    bulk roll back of BOX-1 and BOX-3: both came back (README.md, hotfix.txt), NOPE-1 was refused, the on-call notes stayed
+  skip  a Jira user acting as their GurtOS Business person: needs GurtOS Business on main
+```
 
 `DEMO_LIVE=jira ./demo` runs the same steps against the real site (reports go to a scratch Confluence space), then
 deletes what it made.
