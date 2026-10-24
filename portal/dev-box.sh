@@ -14,6 +14,7 @@
 #   DEV_NAME='lab box'                          the box's name (default "dev box")
 #   DEV_ORIGINS='*'                             let pages on other origins call it (the hosted app, app.gurtos.com)
 #   DEV_SEED=business                           seed it as GurtOS Business instead: Fogline Supply (portal/dev-business.ts)
+#   DEV_SEED=home                               seed it as a home server for screenshots (portal/dev-home.ts)
 set -euo pipefail
 cd "$(dirname "$0")/.."
 read -r -a vm_cmd <<< "${DEV_VM:-limactl shell --workdir / box --}"
@@ -35,7 +36,7 @@ wipe="$kill
   flock /run/lock/box-spacetime-cli.lock spacetime delete --server local -y box-$name >/dev/null 2>&1 || true"
 start="cd $dest
   BOX_ID=${DEV:-dev-box} BOX_NAME='${DEV_NAME:-dev box}' BOX_URL=${DEV_URL:-http://192.168.1.20:7700} BOX_PEERS='[{\"id\":\"peer\",\"name\":\"second box\",\"stdb\":\"box\"}]' \
-  BOX_ORIGINS='${DEV_ORIGINS:-}' BOX_HOME=$home BOX_PORT=$port BOX_VAULT=$home/vault.env BOX_STDB_DB=box-$name BOX_PROXY_PORT=auto \
+  BOX_DEMO=1 BOX_ORIGINS='${DEV_ORIGINS:-}' BOX_HOME=$home BOX_PORT=$port BOX_VAULT=$home/vault.env BOX_STDB_DB=box-$name BOX_PROXY_PORT=auto \
   BOX_PORTAL=$dest/portal/dist setsid nohup node --experimental-strip-types --disable-warning=ExperimentalWarning core/box.ts \
   >> $home/box.log 2>&1 < /dev/null &
   echo \$! > /run/box-$name.pid
@@ -61,7 +62,7 @@ printf '# Notes\n\nNothing yet.\n' > $home/workspaces/notes/notes.md
 chmod -R a+rwX $home/workspaces
 grep -v "^ELASTIC_" /etc/box/vault.env > $home/vault.env && echo DEMO_SECRET=portal-dev-test >> $home/vault.env && chmod 600 $home/vault.env
 $start
-if [ "${DEV_SEED:-}" = business ]; then node --experimental-strip-types --disable-warning=ExperimentalWarning portal/dev-business.ts $port $home; echo "dev box up: http://127.0.0.1:$port (log: $home/box.log)"; exit; fi
+if [ -n "${DEV_SEED:-}" ]; then node --experimental-strip-types --disable-warning=ExperimentalWarning portal/dev-${DEV_SEED}.ts $port $home; echo "dev box up: http://127.0.0.1:$port (log: $home/box.log)"; exit; fi
 task() { curl -fs 127.0.0.1:$port/api/tasks -H 'content-type: application/json' -d "\$1" | sed 's/.*"id":"\([^"]*\)".*/\1/'; }
 f='"worker":"fake","source":"portal-dev"'
 task '{"title":"Write the weekly notes",'"\$f"',"workspace":"notes","prompt":"write notes.md # Notes\nappend notes.md Groceries came in under budget.\nappend notes.md The deploy went out on Tuesday."}' >/dev/null
