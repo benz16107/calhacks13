@@ -2,7 +2,7 @@
 #  - "Ask an Agent…" on folders: GurtOS's dialog with the folders you right-clicked (up to 10, all in one task), or the
 #    folder you are in when you right-click its background.
 #  - Before Keep, nothing in the folder is marked: the changes live in the task's copy until you keep them.
-#  - On a folder with changes waiting: Keep agent changes, and Undo agent changes… (the review window asks first).
+#  - On a folder with changes waiting: Keep agent changes, and Undo agent changes… (the task page in the GurtOS app asks first).
 #  - After Keep, the "changed by an agent" emblem on each file an agent added or changed, and Put files back… on the
 #    folder and on those files (Figma "GurtOS Personal OS", screens 8a and 8b).
 import json
@@ -80,7 +80,7 @@ def keep(task, file):
     try:
         with urllib.request.urlopen(req, timeout=10) as r:
             if json.loads(r.read() or b'{}').get('conflicts'):
-                ui('review', task['id'])  # you edited the same files: the review window explains
+                ui('review', task['id'])  # you edited the same files: the task page explains
     except Exception:  # noqa: BLE001
         ui('review', task['id'])
     _cache[0] = 0
