@@ -11,9 +11,13 @@ import type { Approval, DemoKit, Task } from '../../core/contract.ts';
 const HERE = path.dirname(new URL(import.meta.url).pathname);
 type Card = { kind: string; payload: Record<string, any> };
 type Out = { id: string; to: string; session: string; text: string; card?: Card };
+/** The box's ASI:One page, as the box's own screen sees it. */
+const page = async (d: DemoKit) => (await fetch(`http://127.0.0.1:${fs.readFileSync(path.join(d.home, 'api.port'), 'utf8').trim()}/t/fetch/`)).text();
 
 export default async function (d: DemoKit) {
   d.check(d.view('project', 'split.js')?.includes('Math.floor'), 'the track made the "project" workspace: a small repo with a failing test');
+  const off = await page(d);
+  d.check(off.includes('agent is off') && !off.includes('Pairing code'), "the box's ASI:One page says the agent is off and how to turn it on, with no pairing code to misread");
 
   const state = fs.mkdtempSync(path.join(d.home, 'fetch-chat-'));
   const port = fs.readFileSync(path.join(d.home, 'api.port'), 'utf8').trim();
@@ -89,6 +93,17 @@ export default async function (d: DemoKit) {
     const shipped = await reply(owner, 'with the ship result');
     d.check(shipped.text.startsWith('Done'), "a click relayed in the planner's words answered the chat's last card, and the task finished");
 
+    // The box takes the chat agent for its own screen, so the chat holds itself to the tasks it started.
+    const other = await d.api<Task>('POST', '/tasks', { title: 'A task from the portal', workspace: 'project', worker: 'fake', prompt: 'ask Deploy from the portal?' });
+    const otherAsk = await d.waitFor('the portal task to ask', async () => (await d.api<Approval[]>('GET', '/approvals?state=pending')).find((a) => a.task === other.id));
+    say(owner, JSON.stringify({ action: 'approve', approval: otherAsk.id }));
+    const notYours = await reply(owner, "to approving the portal's task");
+    say(owner, JSON.stringify({ action: 'undo', task: other.id }));
+    await reply(owner, "to undoing the portal's task");
+    const untouched = await d.api<{ task: Task; approvals: Approval[] }>('GET', `/tasks/${other.id}`);
+    d.check(notYours.text.startsWith('That is not') && untouched.approvals[0]?.state === 'pending' && untouched.task.state === 'waiting', 'the chat cannot approve or undo a task it did not start');
+    await d.api('POST', `/tasks/${other.id}/undo`);
+
     say(owner, 'status');
     const st = await reply(owner, 'to status');
     d.check(st.text.includes(t.id) && st.text.includes('undone'), '"status" lists the owner\'s tasks and their states');
@@ -125,17 +140,18 @@ async function live(d: DemoKit) {
       return s.connected ? s : undefined;
     }, 120_000);
     d.check(String(agent.address).startsWith('agent1'), `the box's agent is on Agentverse with a mailbox: ${agent.address}`);
+    d.check((await page(d)).includes(`pair ${agent.code}`), "the box's ASI:One page shows the agent's address and its pairing code");
 
-    let hello = { reply: '' } as Awaited<ReturnType<typeof planner>>;
-    for (let i = 0; i < 3 && !hello.reply; i++) {
-      if (i) await new Promise((r) => setTimeout(r, 15_000)); // ASI:One can take a moment to see an agent that just came up
-      hello = await planner(asiKey!, agent.address, ['Send the agent this exact message: hello']);
-    }
+    const hello = await planner(asiKey!, agent.address, ['Send the agent this exact message: hello']);
     d.check(hello.reply.includes('pair'), `ASI:One's planner reached the box through Agentverse, and the box answered: "${hello.reply.slice(0, 70)}..."`);
     const code = (await d.api('GET', '/t/fetch/agent')).code;
     const paired = await planner(asiKey!, agent.address, [`Send the agent this exact message: pair ${code}`]);
     d.check(paired.reply.startsWith('Paired'), 'the pairing code went through ASI:One and paired it as the owner');
 
+    if (!/\bdroid\b/.test(process.env.DEMO_LIVE ?? '')) {
+      console.log('  skip  the two chats that run real Droid tasks: DEMO_LIVE=fetch,droid ./demo runs them');
+      return;
+    }
     // The planner waits for the box's reply, and usually checks back until the task is done.
     const fix = await planner(asiKey!, agent.address, ['Ask the agent to fix the failing test in my project.']);
     const fixed = await finished(d, () => true); // the only Droid task so far
@@ -178,8 +194,21 @@ const delivered = (d: DemoKit, task: string) =>
     return s.outbox.length === 0 && s.chats[task]?.closed;
   }, 60_000);
 
-/** Ask ASI:One's planner to work with one agent: what that agent last said, and the card it last showed. */
+/**
+ * Ask ASI:One's planner to work with one agent: what that agent last said, and the card it last showed.
+ * The planner sometimes answers on its own without messaging the agent, or misses an agent that just came up,
+ * so an empty answer is asked again, up to three times.
+ */
 async function planner(key: string, address: string, messages: string[], session = randomUUID()) {
+  let out = await plannerOnce(key, address, messages, session);
+  for (let i = 0; i < 2 && !out.reply && !out.card; i++) {
+    await new Promise((r) => setTimeout(r, 10_000));
+    out = await plannerOnce(key, address, messages, session);
+  }
+  return out;
+}
+
+async function plannerOnce(key: string, address: string, messages: string[], session: string) {
   const r = await fetch('https://api.asi1.ai/v1/chat/completions', {
     method: 'POST',
     headers: { authorization: `Bearer ${key}`, 'content-type': 'application/json', 'x-session-id': session },

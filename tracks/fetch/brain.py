@@ -257,7 +257,7 @@ class Brain:
         last = self.s['cards'].get(session)
         if last and word in last['actions'] and (last['ref'] in text or 'card' in t):
             return self.act(sender, session, word, last['ref'])
-        pending = call('GET', '/approvals?state=pending')
+        pending = [a for a in call('GET', '/approvals?state=pending') if a['task'] in dict(mine)]  # this person's own
         named = next((a['id'] for a in pending if a['id'] in text), None)
         if named and word in ('approve', 'deny'):
             return self.act(sender, session, word, named)
@@ -265,12 +265,11 @@ class Brain:
         if named and word in ('undo', 'keep'):
             return self.act(sender, session, word, named)
         if re.fullmatch(r'\W*(yes|ok|okay|approve[d]?|go ahead|confirm|no|deny|reject|cancel)\W*', t):
-            ours = [a for a in pending if a['task'] in dict(mine)]
-            if not ours:
+            if not pending:
                 return self.say(sender, session, 'Nothing from you is waiting for an OK.')
-            if len(ours) == 1:
-                return self.act(sender, session, word, ours[0]['id'])
-            for a in ours:
+            if len(pending) == 1:
+                return self.act(sender, session, word, pending[0]['id'])
+            for a in pending:
                 self.say(sender, session, 'This is waiting for your OK:', approval_card(a, self.task_title(a['task'])))
             return
         if re.fullmatch(r'\W*undo( it| that)?\W*', t):
@@ -291,10 +290,12 @@ class Brain:
     def act(self, sender, session, action, ref):
         ref = str(ref or '')
         self.forget(ref)
+        # The box takes this process for its own screen, so the chat must hold itself to its own tasks.
+        mine = dict(self.mine(sender))
         if action in ('approve', 'deny'):
-            a = next((x for x in call('GET', '/approvals') if x['id'] == ref), None)
+            a = next((x for x in call('GET', '/approvals') if x['id'] == ref and x['task'] in mine), None)
             if not a:
-                return self.say(sender, session, 'That request is not on the box any more.')
+                return self.say(sender, session, 'That is not a request from one of your chat tasks.')
             if a['state'] != 'pending':
                 return self.say(sender, session, f"That was already {a['state']} ({a.get('by') or 'on the box'}).")
             answer(a['id'], action == 'approve')
@@ -306,8 +307,8 @@ class Brain:
                 self.say(sender, session, 'Approved. The task carries on.' if action == 'approve' else 'Denied. The task will not do that.')
             return
         if action in ('undo', 'keep'):
-            if not re.fullmatch(r't\w+', ref):
-                return self.say(sender, session, 'Which task? I did not get its id.')
+            if ref not in mine:
+                return self.say(sender, session, 'That is not one of your chat tasks.')
             if action == 'keep':
                 return self.say(sender, session, 'Kept. Its changes stay in the workspace; you can still undo it from the portal.')
             t = call('POST', f'/tasks/{ref}/undo')

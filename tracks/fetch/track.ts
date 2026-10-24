@@ -119,13 +119,29 @@ export default {
 
   routes: {
     // A plain page until the portal shows this app. It has the pairing code the owner types into ASI:One.
-    'GET /': () => {
+    'GET /': (_req, box) => {
       const s = status();
       const esc = (v: unknown) => String(v ?? '').replace(/[&<>"]/g, (c) => `&#${c.charCodeAt(0)};`);
-      const state = !s.on ? 'off' : s.connected ? 'on, with its Agentverse mailbox' : s.running ? `starting (${esc(s.error ?? 'connecting')})` : 'stopped';
+      let hasKey = true;
+      try {
+        box.secret('AGENTVERSE_API_KEY');
+      } catch {
+        hasKey = false;
+      }
+      const agent = s.address ? ` <strong>${esc(s.name)}</strong> <code>${esc(s.address)}</code>` : '';
+      const state = s.connected && s.running
+        ? `The agent${agent} is on, with its Agentverse mailbox.`
+        : !hasKey
+          ? 'The agent is off: the vault has no AGENTVERSE_API_KEY, which its Agentverse mailbox needs.'
+          : !s.on
+            ? 'The agent is off. Turn it on from the box with <code>POST /t/fetch/agent {"on": true}</code>.'
+            : `The agent${agent} is starting: ${esc(s.running ? (s.error ?? 'connecting to Agentverse') : 'it stopped and starts again in a few seconds')}.`;
+      // The code is useful only while the agent can take it.
+      const pairing = s.connected && s.running && s.code
+        ? `<p>Pairing code: <strong>${esc(s.code)}</strong>. Send <code>pair ${esc(s.code)}</code> to the agent in ASI:One. It works once.</p>`
+        : '';
       const html = `<!doctype html><title>ASI:One agent</title><h1>ASI:One agent</h1>
-<p>Agent: ${esc(s.name)} <code>${esc(s.address ?? 'not started yet')}</code>, ${state}.</p>
-<p>Pairing code: <strong>${esc(s.code ?? '-')}</strong>. Send <code>pair ${esc(s.code ?? '123456')}</code> to the agent in ASI:One. It works once.</p>
+<p>${state}</p>${pairing}
 <p>Owners paired: ${s.owners}.</p>`;
       return new Response(html, { headers: { 'content-type': 'text/html' } });
     },

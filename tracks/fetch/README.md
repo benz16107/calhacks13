@@ -91,7 +91,11 @@ After a click, the task's next messages go to the chat the click came from.
 
 - Only paired owners give work, and only they can answer cards. A code works once, and the box takes at most
   ten wrong codes a minute from everyone together.
-- The agent runs as `nobody`. It can use the box's API, but cannot read the vault or the workspaces.
+- The box takes the agent's calls from 127.0.0.1 as its own screen, so `brain.py` holds itself to a fixed list.
+  It starts tasks only in the `project` workspace, with the web tools, no network of their own and a 25 cent
+  budget, and chat text goes only into a task's title and prompt. It answers approvals and undoes only the
+  tasks its own chat started, and it never calls the vault, settings or folder routes. The agent runs as
+  `nobody`, so it cannot read the vault file or the box's files directly.
 - Tasks hold no keys and have no network of their own. Web work goes through box tools that run in the core.
 - Any spending above the task's 25 cent budget waits for the owner's OK.
 
@@ -160,8 +164,6 @@ model use. The box counts each Apify search at its $0.50 cap, the most it can co
 - Droid may search the web more than once, and each search above the budget asks again.
 - To reply into a chat session from a timer, `agent.py` sets a private uAgents field (`ctx._session`).
   uAgents is pinned to 0.26.1 for that reason.
-- The box's API does not decode ids in its paths, so an approval whose id has spaces (Droid's own questions)
-  is answered through SpacetimeDB instead, the way the phone does.
 - One agent per box. Two boxes with the same seed would split one mailbox.
 - Strangers are refused. A guest mode, where the owner approves a stranger's request, is not built.
 
