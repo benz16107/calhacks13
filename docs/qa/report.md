@@ -19,7 +19,7 @@ a private notes file outside the repo. **Delete them and their custom ISOs after
 
 ## Summary
 
-Status at 02:35 PT Saturday. The feature ledger and merge collisions are tracked in `docs/features.md`. **8 P0 found, all 8 fixed and verified.** 20 P1 and 18 P2 found in the product, plus 7 in
+Status at 02:35 PT Saturday. The feature ledger and merge collisions are tracked in `docs/features.md`. **8 P0 found, all 8 fixed and verified.** 20 P1 and 19 P2 found in the product, plus 7 in
 the docs site and 9 in the showcase. The four moments, Shopper, the wallet, the credit desk and a phone paired over the
 network all work on main as of 717bc3f.
 
@@ -378,9 +378,15 @@ install script.
 **P2-32. A fresh box's setup clock reads UTC until the time-zone step.** Owner: image, portal. From the image thread's boot test
 of the published Server arm64 ISO: it reaches GurtOS Setup and the home screen, but the clock shows UTC until step 3.
 
-**Backup needs `age`, and the published Server ISOs don't have it.** Owner: release. The Vultr thread proved the encrypted
-backup with a hand-added `age`; the image has it from commit 016c4dc, not in the v0.1.0-preview ISOs (built from d8620e9).
-Sent to the release thread.
+**P2-33. A release ISO says "build dev" in About, Updates and the setup's Updates step.** Owner: core, image. Found on a fresh
+install of `gurtos-server-x86_64.iso` from the public mirror (v0.1.0-preview, e36a6cc): About shows "Version 0.1.0, build dev".
+`core/system.ts` reads the build from a `VERSION` file that only `./deploy` writes; the image writes its build id to
+`/etc/box-os/release` (`BUILD=`) and `os-release` instead, so the box screen never shows it. A judge comparing builds, or a
+bug report, has no build to quote. Fix: fall back to `/etc/box-os/release` before "dev".
+
+**Backup needs `age`: fixed in the rebuilt ISOs, not yet seen by QA.** Owner: release. The first v0.1.0-preview ISOs (d8620e9) lacked it. The release thread
+rebuilt all four from e36a6cc and says `/usr/bin/age` is in both editions. QA can't confirm it from the box: a release image has no
+shell and Settings has no Backup section to read. It stays "unverified by QA" until a debug build or the Personal image shows it.
 
 ## Docs site (gurtos.com)
 
@@ -514,3 +520,5 @@ on the pages or in OCR of all 61 images; no em dashes; every page fits 390 x 844
 | 00:27 | Pairing from the QR address on a fresh phone (P0-8); two phones racing (P2-1) | 73 to 76 |
 | 00:33 | Main a427291: validation, clean-stop marker, no /find boot task, /find on a phone | 77 |
 | 00:53 | Main d64cb80: QR pairing on fresh phones, the live moment 2 banner, task source | 78, 79 |
+| 09:23 | Public mirror's Server x86_64 ISO (e36a6cc): SHA256SUMS signature good, mirror sha256 matches; reinstalled the QA box over its old disk: the installer asks for `erase` first, then installs in about 10 min and boots straight into setup | |
+| 09:47 | Setup, all 13 steps; model key skipped; the home screen; a task with no key fails at once with "No model key. Add one in Settings, Agents & Models" and $0.00 | |
