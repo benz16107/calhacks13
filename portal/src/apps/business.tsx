@@ -5,6 +5,7 @@ import { box, nameOf, useBox, type Approval, type LogEvent } from '../live.ts';
 import { AppIcon, Badge, Icon, IconButton, StatusPage } from '../kit/ui.tsx';
 import { HeaderBar, open, phone, useWin } from '../wm.tsx';
 import { AnswerButtons } from './answer.tsx';
+import { openMachines } from './machines.tsx';
 import { appOf, hhmm } from '../util.ts';
 import { useState } from 'preact/hooks';
 
@@ -91,7 +92,7 @@ const who = () => {
 };
 
 /** Waiting for me and My requests: the phone's home on a Business box, and the left of the desktop window. */
-export function WaitingList({ selected, onPick }: { selected?: string; onPick?: (a: Approval) => void }) {
+export function WaitingList({ selected, onPick, home }: { selected?: string; onPick?: (a: Approval) => void; home?: boolean }) {
   const b = useBox();
   const me = b.business.me;
   const pick = onPick ?? ((a: Approval) => open(`request/${a.id}`));
@@ -108,6 +109,13 @@ export function WaitingList({ selected, onPick }: { selected?: string; onPick?: 
   return (
     <div class="biz-waiting">
       <header class="biz-waiting-head">
+        {home && (
+          // The phone's home: the company opens the Machines sheet, as on the other homes.
+          <button type="button" class="gos-plain gos-home-box biz-company" aria-haspopup="dialog" onClick={openMachines}>
+            <span class="t-heading">{b.business.company || 'This box'}</span>
+            <Icon name="pan-down" />
+          </button>
+        )}
         <h1 class="t-title1">Waiting for me</h1>
         <p class="t-caption t-secondary">{who()}</p>
       </header>

@@ -49,3 +49,4 @@
   .biz-answer { padding-bottom: var(--space-md); }
 }
 .biz-loading { margin: var(--space-lg) var(--space-md); height: 180px; }
+.biz-company { display: inline-flex; align-items: center; gap: var(--space-xs); margin-bottom: var(--space-xs); color: var(--color-text-secondary); }

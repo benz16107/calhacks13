@@ -809,7 +809,7 @@ export function PhoneHome() {
   if (b.business.on)
     return (
       <main class="gos-home gos-home-business" aria-label="Waiting for me">
-        <WaitingList />
+        <WaitingList home />
         <InstallCard />
         <NotificationsCard />
       </main>
