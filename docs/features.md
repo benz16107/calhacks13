@@ -126,7 +126,7 @@ answers nothing until a person is picked from the top bar.
 
 | Feature | Owner | Status | Commit | Demo step | Tracks |
 |---|---|---|---|---|---|
-| Credit analyst and collections clerk, CRS and Nessie live, fraud hold for the controller | credit desk | verified Oct 24 00:11 (Quick run on a phone) | 525f630, 7cdd64e | tracks/credit-desk/demo.ts | Hyphenate, CRS, Nessie, Microsoft |
+| Credit analyst and collections clerk, CRS and Nessie live, fraud hold for the controller | credit desk | verified Oct 24 00:11 (Quick run on a phone) | 525f630, 7cdd64e | tracks/credit-desk/demo.ts | Hyphenate, CRS, Microsoft |
 | Credit desk window | credit desk | verified Oct 24 00:10 | 7cdd64e | credit-desk demo | Hyphenate |
 | Score against the answer key | credit desk | verified (2 of 14 with scripted seats, by design) | 525f630 | credit-desk demo | Hyphenate |
 | Bring your own case (folder or POST /run) | credit desk | merged | 7cdd64e | none | Hyphenate |
@@ -253,6 +253,13 @@ Owner: the Figma thread. `docs/figma-products.md` is not on main yet; its items 
 | A Community playbook | figma | planned | | | Figma |
 | App-vs-Figma comparisons (the built screen next to its frame) | figma, portal | planned | | | Figma |
 | A Figma Sites landing page | figma | planned (named on the showcase's Figma page) | | | Figma, GoDaddy |
+
+## Not pursued
+
+- **Capital One (Nessie) prize track.** Ben is not entering it (Oct 24). No ledger row was only for it. Nessie stays as
+  the credit desk's bank (payments, bills, AP payments in test money), so its rows are checked as part of the credit
+  desk. The showcase still has a Nessie page and `docs/tracks.md` still lists the track; both are for the owners of
+  those files to update.
 
 ## Collisions
 
