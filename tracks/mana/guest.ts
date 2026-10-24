@@ -153,7 +153,7 @@ three plain sentences for the guest.`;
 const webHint = (tools: string[]) =>
   tools.includes('apify.run')
     ? // apify.run reserves its cap against the budget (default $0.50), so a guest's search names a cap under 25 cents
-      ': for a web search, apify.run with actor "apify/rag-web-browser", input {"query": "...", "maxResults": 3} and "maxUsd": 0.2, which fits your budget. Make one search and answer from what it found'
+      ': for a web search, call apify.run with exactly {"actor": "apify/rag-web-browser", "input": {"query": "...", "maxResults": 3}, "fields": ["metadata", "markdown"], "maxItems": 3, "maxUsd": 0.2}, which fits your budget. Make one search and answer from what it found'
     : '';
 
 /** After the owner's OK, start the run. Called from the log reader, so it runs once per gate, after restarts too. */

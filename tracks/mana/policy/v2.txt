@@ -1,0 +1,26 @@
+# GurtOS policy from Mana
+# source: https://www.mana.space/shared-chats/x5CqxyjcOgVCAyrvUBqK2LNRcMJ2/0017928365556691b0fcbf607c944e98acb
+# version: 2
+# Fogline Supply: who approves what. The ceiling applies first; then the first matching rule decides.
+# Nothing this big is approved on the box by anyone, the owner included.
+Over $50,000 can't be approved in GurtOS.
+# Guests come in through the mana app; the owner answers for them, and their wording can't steer them to anyone else.
+Requests from mana go to the owner.
+# Fraud calls go to the fraud reviewer before any other rule can catch them.
+Fraud referrals go to the fraud reviewer.
+# Bank details decide where money goes; only the owner approves them, so the person who approves refunds can't also redirect them.
+Bank details go to the owner.
+# All other agent work is credit work; matching by app can't be steered by wording or customer names.
+Requests from the credit desk go to the Controller.
+# Deploys are IT's call, not finance's.
+Production goes to IT.
+# Write-offs from any other source (for example Sales) are the Controller's call at any size.
+Write off goes to the Controller.
+# Refunds send money out, so the Controller approves them at any size.
+Refund goes to the Controller.
+# Releasing an order on a late account is a credit decision, even when Sales asks.
+Release order goes to the Controller.
+# Amounts over $5,000 from any source, like Sales' one-off rush orders, are seen by finance.
+Over $5,000 goes to the Controller.
+# Anything unforeseen goes to the most accountable person, not whoever is free.
+Everything else goes to the owner.
