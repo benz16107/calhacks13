@@ -107,6 +107,7 @@ Make `tracks/<name>/track.ts` and default-export a `Track` with any of these slo
 | `routes` | `'POST /hook': (req, box) => Response`, served at `/t/<name>/hook` on the box's API. Webhooks go here. |
 | `secrets` | Vault keys this track's routes and triggers may read with `box.secret(name)`. Tools and jobs declare their own. |
 | `optionalSecrets` | Keys among the app's declared secrets it can run without (it falls back to test mode). A new box turns the app on when only these are missing; the App Center marks them `optional: true`. |
+| `x-box-caller` | Not a slot: a header on the Request every route gets, set by the box (a copy the caller sends is replaced): `screen` (the box's own screen), `owner` (a phone paired as the owner), `device:<id>` (another paired phone), `service` (a helper on the box) or `none` (an open route reached through a proxy with no token). |
 | `openRoutes` | Route keys (like `'GET /status'`) that need no paired-phone token, even for a request that arrives through a public proxy. For a route that is public on purpose, or checks its own secret (the Jira panel's routes). Every other route needs a phone. An open route must return nothing private unless its own check passes. |
 
 Rules:
