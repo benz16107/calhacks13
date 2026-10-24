@@ -62,6 +62,8 @@ and how its screen and controls are presented.
 - `personal/` the GurtOS Personal desktop layer (notifications, top-bar indicator, Files action, Keep and Undo).
 - `image/` the bootable images and their installer, updates and rollback.
 - `site/` the public docs at gurtos.com. `showcase/` the Cal Hacks showcase at calhacks.gurtos.com.
+- `native/` the GurtOS apps for iPhone, Apple Watch and Mac (one SwiftUI project, `native/apple`) and the Android APK
+  (`native/android`). They use the box API like the portal; `native/demo.ts` checks their calls.
 - `release/` how releases are built, signed and published, and the public-readiness audit.
 - `docs/` design notes and the Figma log. `spikes/` throwaway experiments from the first night.
 - `demo` the merge gate (below). `deploy` installs origin/main as the box service on a machine you name.

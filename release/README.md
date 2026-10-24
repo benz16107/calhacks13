@@ -74,7 +74,8 @@ verified release, plus the owners' page updates.
    Personal x86_64 with `SSH_PORT=<free port> ISO=<file> image/test --personal` where memory allows.
 5. **Sign.** On the machine that holds the release key: download the four staged ISOs (about 17 minutes from a
    Mac-class home link; do it while step 3 runs), `sha256sum` them against the build hosts' hashes, write
-   `SHA256SUMS`, and `ssh-keygen -Y sign -f <release key> -n gurtos-release SHA256SUMS`. Verify with
+   `SHA256SUMS` (the four ISOs plus `gurtos-android-0.1.0.apk`, which the native apps thread publishes on the release;
+   download it and keep its line), and `ssh-keygen -Y sign -f <release key> -n gurtos-release SHA256SUMS`. Verify with
    `release/allowed_signers`.
 6. **Publish.** `s3cmd mv --acl-public` each staged ISO into `<version>/` and put `SHA256SUMS`, `SHA256SUMS.sig` and
    `allowed_signers` there. Move the tag to the commit (`git tag -f -a`, `git push -f origin <tag>`), update
