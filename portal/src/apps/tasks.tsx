@@ -2,7 +2,7 @@
 // its state, what it does now, its cost of its budget, and a summary strip. And one task's own window.
 import type { JSX } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
-import { api, box, undo, useBox, type Task } from '../live.ts';
+import { api, box, pairing, surface, undo, useBox, type Task } from '../live.ts';
 import { Alert, AppIcon, Badge, Button, ContextMenu, Icon, IconButton, Menu, Popover, Progress, Sheet, StatusPage, ToggleGroup, type MenuItem } from '../kit/ui.tsx';
 import { HeaderBar, InWindow, open, useWin } from '../wm.tsx';
 import { STATE, appOf, approvalFor, dollars, hhmm, needsModelKey, ofState, pending, plural } from '../util.ts';
@@ -275,6 +275,8 @@ function NewTaskSheet({ onClose }: { onClose: () => void }) {
       const t = await api<Task>('POST', '/tasks', {
         title: title.trim(),
         prompt: prompt.trim(),
+        // Who started it, for the log, the task window and Jira: the paired device's name, else "box screen" or "portal".
+        source: pairing()?.device.name ?? surface,
         hosts: hosts.split(/[\s,]+/).filter(Boolean),
         ...(budget.trim() ? { budgetCents: Math.round(parseFloat(budget) * 100) } : {}),
       });

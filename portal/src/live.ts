@@ -167,9 +167,10 @@ async function refresh() {
   changed();
 }
 let refreshTimer = 0;
+/** At most one refresh every 250 ms, even while events keep coming. */
 function refreshSoon() {
-  clearTimeout(refreshTimer);
-  refreshTimer = setTimeout(() => refresh().catch(() => {}), 250);
+  if (refreshTimer) return;
+  refreshTimer = setTimeout(() => ((refreshTimer = 0), refresh().catch(() => {})), 250);
 }
 
 // ---------- the log over SSE ----------
@@ -186,6 +187,11 @@ function take(e: LogEvent) {
     if (e.type === 'tool.result') box.today.cents += e.cents ?? 0;
     if (e.type === 'net.blocked') box.today.blocked++;
   }
+  // A task can show up in the log before the task list catches up (a phone follows the log, and a burst of events
+  // keeps pushing the refresh back). Its creation event carries the title and hosts; any other event fetches it.
+  if (e.type === 'task.created' && !box.tasks.has(e.task))
+    box.tasks.set(e.task, { ...e.spec, id: e.task, state: 'queued', user: e.user, layers: [], costCents: 0, createdAt: e.at, updatedAt: e.at } as Task);
+  else if (e.task && !box.tasks.has(e.task)) fetchTask(e.task);
   // A block from the last minute is news; older ones are history the log replays on load.
   if (e.type === 'net.blocked' && Date.now() - Date.parse(e.at) < 60_000) box.blockedLive.push(e);
   if (box.live !== 'spacetimedb' && e.type !== 'note') refreshSoon();
@@ -197,6 +203,15 @@ function take(e: LogEvent) {
   }
   for (const l of eventListeners) l(e);
   changed();
+}
+const fetching = new Set<string>();
+function fetchTask(id: string) {
+  if (fetching.has(id)) return;
+  fetching.add(id);
+  api<{ task: Task }>('GET', `/tasks/${id}`)
+    .then(({ task }) => (box.tasks.set(id, { ...task, ...box.tasks.get(id) }), changed()))
+    .catch(() => {})
+    .finally(() => fetching.delete(id));
 }
 const eventListeners = new Set<(e: LogEvent) => void>();
 /** Follow log events as they arrive (a task window refetches its own task). */

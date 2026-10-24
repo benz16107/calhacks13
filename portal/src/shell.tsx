@@ -828,7 +828,10 @@ export function useIdleLock(enabled: boolean) {
 /** Off the box's own screen the box answers only paired devices. Pair with the code from the box's screen. */
 export function PairFirst() {
   const guess = /iPhone/.test(navigator.userAgent) ? 'iPhone' : /Android/.test(navigator.userAgent) ? 'Android phone' : 'Laptop';
-  const [code, setCode] = useState('');
+  // The QR opens /pair#<code> (or /#pair/<code>): the code is already in the address.
+  const h = location.hash.slice(1);
+  const fromLink = h.startsWith('pair/') ? h.slice(5) : location.pathname === '/pair' ? h : '';
+  const [code, setCode] = useState(decodeURIComponent(fromLink));
   const [name, setName] = useState(guess);
   const [state, setState] = useState<'ask' | 'busy' | string>('ask');
   const revoked = !!localStorage.getItem('gurtos.was-paired');
@@ -839,7 +842,7 @@ export function PairFirst() {
       .then((p) => {
         localStorage.setItem('pairing', JSON.stringify(p));
         localStorage.setItem('gurtos.was-paired', '1');
-        location.replace(location.pathname);
+        location.replace('/');
       })
       .catch((err) => setState((err as Error).message));
   };
@@ -863,7 +866,7 @@ export function PairFirst() {
           </label>
           <label class="gos-field">
             <span class="t-body-strong">Name this {surface === 'phone' ? 'phone' : 'device'}</span>
-            <input class="g-field" value={name} maxLength={40} onInput={(e) => setName((e.target as HTMLInputElement).value)} />
+            <input class="g-field" value={name} maxLength={40} autoFocus={!!fromLink} onInput={(e) => setName((e.target as HTMLInputElement).value)} />
           </label>
           <button type="submit" class="g-btn g-btn-suggested g-btn-large" disabled={code.replace(/[^0-9a-z]/gi, '').length < 4 || state === 'busy'}>
             Pair
