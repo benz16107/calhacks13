@@ -1,6 +1,7 @@
-# The portal: the box's screen, the portal and the phone
+# The portal: GurtOS on the box's screen, a laptop and a phone
 
-One web app in three places. The box serves it on the same address as its API, so every call is same-origin and a
+GurtOS is the product's name (`src/product.ts`, one constant; the page title is filled from it at build time).
+Code, API paths and the service still say "box". One web app in three places. The box serves it on the same address as its API, so every call is same-origin and a
 phone needs one address.
 
 - **The box's own screen** at `http://127.0.0.1:7700/screen`, full screen in the image's kiosk (WebKitGTK under
@@ -28,7 +29,7 @@ Every screen shows the box's real state. Nothing is mocked.
 | One task | `24:554` | `GET /api/tasks/<id>` (steps in `seq` order, blocked attempts, approvals), `GET /api/tasks/<id>/diff`, Undo is `POST /api/tasks/<id>/undo`, Keep (Personal edition) is `POST /api/tasks/<id>/keep` |
 | Activity | `26:1223` | The action log over SSE (`GET /api/log/stream`): per-task steps, tool calls, blocked attempts and cost; spending per hour today; the live tail of `log.jsonl` |
 | Time Machine | `27:1163` | Finished tasks as layers per workspace. The preview shows what comes back (the layer's diff, reversed) and what stays (other layers' files) |
-| Settings: pair a phone | `31:1736` | `POST /api/pair/new` for a one-time code, `GET /api/pair/devices`, revoke with `POST /api/pair/devices/<id>/revoke` |
+| Settings: pair a phone | `31:1736` | `POST /api/pair/start` for a one-time code, `GET /api/devices`, revoke with `DELETE /api/devices/<id>` |
 | Track apps | | `GET /api/apps`; each opens `/t/<track><href>` in a window |
 
 **Live updates.** SpacetimeDB first (`ws://<box>:3000`, the database named in `/api/health`). If that port is out
@@ -58,8 +59,10 @@ goes away.
 
 ![The same request on a phone](screenshots/phone-approval-arrives.png)
 
-**4. Pull the plug.** A screen that stays open through the outage says "The box is out of reach" while it is down,
-then lists the tasks that picked up where they stopped. Tested with `portal/dev-box.sh restart`, which kills the
+**4. Pull the plug.** After a restart the box reports when it started and which tasks it resumed (`/api/health`),
+so even the box's own screen, which reboots with it, opens on "Welcome back. The box went down after 00:29 and
+booted at 00:30" with a "Restored after a power cut" banner listing them, and the running widget says "resumed". A screen that stays open through the outage says
+"The box is out of reach" while it is down, then shows the same list. Tested with `portal/dev-box.sh restart`, which kills the
 box and every task process at once and boots it on the same data.
 
 ![After a restart](screenshots/box-after-power-cut.png)
@@ -71,6 +74,7 @@ box and every task process at once and boots it on the same data.
 | ![Tasks](screenshots/box-tasks.png) | ![Activity](screenshots/box-activity.png) |
 | ![Notification Center](screenshots/box-notifications.png) | ![Pairing on a laptop](screenshots/laptop-pair.png) |
 | ![The box screen rendered in WebKit, the kiosk's engine](screenshots/kiosk-webkit.png) | ![The box screen at 1280 x 800, the image VM's display](screenshots/kiosk-1280x800.png) |
+| ![Pairing on the box's own screen, with BOX_URL set](screenshots/box-pair.png) | ![Home](screenshots/box-home.png) |
 
 | Phone home | Tasks | Pairing | Blocked |
 |---|---|---|---|
@@ -126,17 +130,12 @@ state words), `src/style.css` (the design's tokens and layout).
 - `prefers-reduced-motion` turns off the banner slide, the window zoom and the running bars' motion.
 - Phone and box-screen buttons are 48 px tall.
 
-## Still stubbed or waiting on the core
+## Limits
 
-- **"Welcome back" after a real power cut.** The box doesn't yet report when it started or which tasks it resumed.
-  A page that stays open through the outage notices and lists them ("back in reach"); the box's own screen, which
-  reboots with the box, can't. Asked of the core: `startedAt` and `resumed` in `/api/health`. The greeting, the
-  "resumed" widget and the "Restored after a power cut" banner are built and switch on when those fields appear.
-- **The QR code on the box's own screen.** The kiosk runs on `127.0.0.1`, so it doesn't know the address a phone
-  should open; it shows the code, and a laptop's Settings shows the QR. Asked of the core: `BOX_URL`.
-- **Switching to the Vultr box.** `GET /api/boxes` lists it, but peers carry no address yet, so the dock and the
-  switcher show it as "no address yet". Asked of the core: `url` on each peer.
-- **`./demo` doesn't run `portal/demo.ts` yet.** Asked of the core (one line); the step passes against a dev box.
+- **The QR code on the box's own screen** needs `BOX_URL` in box.service (the address phones use, such as the box's
+  Tailscale name). Without it the kiosk, which runs on `127.0.0.1`, shows the code and a laptop's Settings shows
+  the QR.
+- **Switching boxes** needs each `BOX_PEERS` entry to carry its `url`; a peer without one shows "no address yet".
 - Progress bars on running tasks move but don't measure progress: the box doesn't know how many steps a task
   will take. Figma's "of a $5.00 daily limit" is "on tools and models": the box has no daily limit.
 - Find (Moss) shows in the grid only if its track registers an app. Figma's Live Activities and Dynamic Island are

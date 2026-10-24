@@ -5,6 +5,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import type { DemoKit } from '../core/contract.ts';
 import { sourceHash } from './source-hash.ts';
+import { PRODUCT } from './src/product.ts';
 
 export default async (d: DemoKit) => {
   const built = fs.readFileSync(new URL('./dist/source.txt', import.meta.url), 'utf8').trim();
@@ -14,7 +15,8 @@ export default async (d: DemoKit) => {
   const get = (p: string, accept = '*/*') => fetch(base + p, { headers: { accept } });
 
   const page = await get('/', 'text/html');
-  d.check(page.ok && (await page.text()).includes('/app.js'), 'the box serves the portal at / on the same address as its API');
+  const html = await page.text();
+  d.check(page.ok && html.includes('/app.js') && html.includes(`<title>${PRODUCT}</title>`), `the box serves ${PRODUCT} at / on the same address as its API`);
   const js = await get('/app.js');
   const size = (await js.text()).length;
   d.check(js.ok && js.headers.get('content-type')?.includes('javascript') && size > 50_000, `its script loads (${Math.round(size / 1024)} KB with the SpacetimeDB client)`);

@@ -5,12 +5,13 @@
 import * as esbuild from 'esbuild';
 import fs from 'node:fs';
 import { sourceHash } from './source-hash.ts';
+import { PRODUCT } from './src/product.ts';
 
 const dir = new URL('.', import.meta.url).pathname;
 const watch = process.argv.includes('--watch');
 fs.rmSync(`${dir}dist`, { recursive: true, force: true });
 fs.mkdirSync(`${dir}dist`);
-fs.copyFileSync(`${dir}src/index.html`, `${dir}dist/index.html`);
+fs.writeFileSync(`${dir}dist/index.html`, fs.readFileSync(`${dir}src/index.html`, 'utf8').replaceAll('%PRODUCT%', PRODUCT));
 // The demo step compares this with the sources, so a dist/ built from older code (or older bindings) fails it.
 fs.writeFileSync(`${dir}dist/source.txt`, sourceHash() + '\n');
 

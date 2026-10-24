@@ -22,7 +22,7 @@ wipe="$kill
   rm -rf $home
   flock /run/lock/box-spacetime-cli.lock spacetime delete --server local -y box-portal-dev >/dev/null 2>&1 || true"
 start="cd $dest
-  BOX_ID=dev-box BOX_NAME='dev box' BOX_PEERS='[{\"id\":\"vultr\",\"name\":\"vultr box\",\"stdb\":\"box\"}]' \
+  BOX_ID=dev-box BOX_NAME='dev box' BOX_URL=http://linuxbox.tailb51682.ts.net:7791 BOX_PEERS='[{\"id\":\"vultr\",\"name\":\"vultr box\",\"stdb\":\"box\"}]' \
   BOX_HOME=$home BOX_PORT=$port BOX_VAULT=$home/vault.env BOX_STDB_DB=box-portal-dev BOX_PROXY_PORT=auto \
   BOX_PORTAL=$dest/portal/dist setsid nohup node --experimental-strip-types --disable-warning=ExperimentalWarning core/box.ts \
   >> $home/box.log 2>&1 < /dev/null &

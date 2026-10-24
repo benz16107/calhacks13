@@ -159,9 +159,7 @@ async function loadHealth() {
   // A box that started in the last ten minutes and resumed tasks: say so, even on a screen that just booted.
   const h = box.health;
   if (h.resumed?.length && h.startedAt && Date.now() - Date.parse(h.startedAt) < 600_000 && !box.restored) {
-    const boot = Date.parse(h.startedAt);
-    const before = box.events.findLast((e) => Date.parse(e.at) < boot);
-    box.restored = { at: boot, tasks: h.resumed, restarted: true, lostAt: before && Date.parse(before.at) };
+    box.restored = { at: Date.parse(h.startedAt), tasks: h.resumed, restarted: true };
   }
 }
 

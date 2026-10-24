@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import qrcode from 'qrcode-generator';
 import { api, box, onEvent, pairing, surface, undo, useBox, type Approval, type LogEvent, type Pairing, type Task } from './live.ts';
 import { appList, boxList, ofState } from './home.tsx';
+import { PRODUCT } from './product.ts';
 import { ApprovalBanner, CloseIcon, Glyph, STATE_WORDS, StatePill, askedAt, clock, dollars, hhmm, plural, taskTitle } from './ui.tsx';
 
 interface Diff {
@@ -38,7 +39,7 @@ export function Window({ route, onClose }: { route: string; onClose: () => void 
       case 'settings':
         return { title: 'Pair a phone', sub: 'Settings · approvals and live tasks on your phone', glyph: 'pair', body: <SettingsApp /> };
       case 'pair':
-        return { title: 'Pair this phone', sub: `with ${boxList().find((x) => x.self)?.name ?? location.host}`, glyph: 'pair', body: <PairApp code={arg} /> };
+        return { title: 'Pair this phone', sub: `with ${PRODUCT} on ${boxList().find((x) => x.self)?.name ?? location.host}`, glyph: 'pair', body: <PairApp code={arg} /> };
       case 'app': {
         const a = box.apps.find((x) => `${x.track}/${x.name}` === arg);
         const def = appList().find((x) => x.hash === `#${route}`);
@@ -57,6 +58,10 @@ export function Window({ route, onClose }: { route: string; onClose: () => void 
 
   const heading = useRef<HTMLHeadingElement>(null);
   useEffect(() => heading.current?.focus(), [route]);
+  useEffect(() => {
+    document.title = `${view.title} · ${PRODUCT}`;
+    return () => void (document.title = PRODUCT);
+  }, [view.title]);
   return (
     <div class="window-layer">
       <section class={`window${view.wide ? ' window-wide' : ''}`} role="dialog" aria-labelledby="window-title">
@@ -737,7 +742,7 @@ const loopback = ['127.0.0.1', 'localhost'].includes(location.hostname);
 interface PairCode {
   code: string;
   url: string;
-  expiresInSec: number;
+  expiresAt: string;
 }
 interface Device {
   id: string;
@@ -749,12 +754,12 @@ function SettingsApp() {
   const b = useBox();
   const [code, setCode] = useState<PairCode | string>();
   const [devices, setDevices] = useState<Device[]>();
-  const fresh = () => api<PairCode>('POST', '/pair/new').then(setCode, (e) => setCode((e as Error).message));
+  const fresh = () => api<PairCode>('POST', '/pair/start').then(setCode, (e) => setCode((e as Error).message));
   useEffect(() => {
     void fresh();
     let count = -1;
     const poll = () =>
-      api<Device[]>('GET', '/pair/devices').then((d) => {
+      api<Device[]>('GET', '/devices').then((d) => {
         if (count >= 0 && d.length > count) void fresh(); // the code was used: show a new one
         count = d.length;
         setDevices(d);
@@ -765,12 +770,14 @@ function SettingsApp() {
   }, []);
   useEffect(() => {
     if (typeof code !== 'object') return;
-    const t = setTimeout(fresh, code.expiresInSec * 1000);
+    const t = setTimeout(fresh, Math.max(5000, Date.parse(code.expiresAt) - Date.now()));
     return () => clearTimeout(t);
   }, [code]);
-  const remove = (id: string) => api('POST', `/pair/devices/${id}/revoke`).then(() => setDevices(devices?.filter((d) => d.id !== id)));
+  const remove = (id: string) => api('DELETE', `/devices/${id}`).then(() => setDevices(devices?.filter((d) => d.id !== id)));
   // The phone opens the app's own pairing route. The box's /pair answers API calls, not page loads.
-  const origin = typeof code === 'object' ? (/^https?:/.test(code.url) ? new URL(code.url).origin : loopback ? undefined : location.origin) : undefined;
+  const selfUrl = boxList().find((x) => x.self)?.url;
+  const origin =
+    typeof code === 'object' ? (/^https?:/.test(code.url) ? new URL(code.url).origin : selfUrl ? new URL(selfUrl).origin : loopback ? undefined : location.origin) : undefined;
   const url = origin && typeof code === 'object' ? `${origin}/#pair/${code.code}` : undefined;
   const h = b.health;
   const mine = pairing();
@@ -781,13 +788,13 @@ function SettingsApp() {
           {url ? (
             <Qr text={url} label="Pairing code as a QR code" />
           ) : (
-            <p class="muted small">{typeof code === 'string' ? `Pairing is not available on this box: ${code}` : code ? 'This screen does not know the address phones use to reach the box. Open the portal from a laptop to show the QR code, or type the address below on the phone.' : 'Making a code…'}</p>
+            <p class="muted small">{typeof code === 'string' ? `Pairing is not available on this box: ${code}` : code ? `This screen does not know the address phones use to reach the box (set BOX_URL). Open ${PRODUCT} from a laptop to show the QR code.` : 'Making a code…'}</p>
           )}
         </div>
         <div class="pair-text">
           <h3>Point your phone's camera at the code.</h3>
           <ol>
-            <li>The portal opens on your phone, on this box's own address.</li>
+            <li>{PRODUCT} opens on your phone, on this box's own address.</li>
             <li>Check that the phone shows the same code as this screen.</li>
             <li>Approvals and running tasks now reach that phone. It never holds a key: it can only answer.</li>
           </ol>
@@ -862,7 +869,7 @@ function PairApp({ code }: { code: string }) {
     return (
       <div class="section">
         <p class="lede">
-          This phone is paired with {state.box.name} as <b>{state.device.name}</b>. When a task asks for an OK, it shows here, and your answer goes in the log under that name.
+          This phone is paired with {PRODUCT} on {state.box.name} as <b>{state.device.name}</b>. When a task asks for an OK, it shows here, and your answer goes in the log under that name.
         </p>
         <div class="actions">
           <a class="btn btn-primary" href="/">
@@ -876,7 +883,7 @@ function PairApp({ code }: { code: string }) {
     );
   return (
     <form class="section" onSubmit={go}>
-      <p class="lede">Check that the box's screen shows this code:</p>
+      <p class="lede">Pair this phone with {PRODUCT}. Check that the box's screen shows this code:</p>
       <p class="pair-code mono">{code ? formatCode(code) : 'no code in the link'}</p>
       <label class="field">
         <span class="label">Name this phone</span>

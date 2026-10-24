@@ -2,6 +2,7 @@
 // notification as a floating banner, and Notification Center (25:804) with everything else.
 import { useEffect, useState } from 'preact/hooks';
 import { box, changed, undo, useBox, type Task } from './live.ts';
+import { PRODUCT } from './product.ts';
 import { ApprovalBanner, Banner, CloseIcon, Glyph, ago, askedAt, dollars, hasGlyph, hhmm, plural, taskTitle, trackOf } from './ui.tsx';
 
 /** The box's owner, for the greeting. */
@@ -93,7 +94,7 @@ export function MenuBar() {
   return (
     <header class="menubar">
       <div class="menubar-group">
-        <span class="menubar-name desk-only">Box</span>
+        <span class="menubar-name desk-only">{PRODUCT}</span>
         <div class="switcher-wrap">
           <button class="switcher" aria-expanded={menu} aria-haspopup="true" onClick={() => setMenu(!menu)}>
             <span class="tile-28" aria-hidden="true">
@@ -169,12 +170,14 @@ function BoxMenu({ onClose }: { onClose: () => void }) {
 function Greeting() {
   const b = useBox();
   const w = welcome();
+  // The last log line before the boot: the outage began after it.
+  const lost = w && (w.lostAt ?? box.events.findLast((e) => Date.parse(e.at) < w.at)?.at);
   if (w) {
     return (
       <section class="greeting">
         <h1>Welcome back.</h1>
         <p>
-          {w.lostAt ? `The box lost power at ${hhmm(w.lostAt)} and booted at ${hhmm(w.at)}.` : `The box booted at ${hhmm(w.at)}.`} Every task is where it was.
+          {lost ? `The box went down after ${hhmm(lost)} and booted at ${hhmm(w.at)}.` : `The box booted at ${hhmm(w.at)}.`} Every task is where it was.
         </p>
       </section>
     );
