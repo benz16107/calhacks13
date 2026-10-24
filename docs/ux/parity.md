@@ -182,6 +182,13 @@ Fix: show the network page in `gnome-initial-setup` (upstream has one; this imag
 Evidence: warm first-change time on GurtOS 0.55 to 0.72 s against stock 0.39 to 0.45 s for Files, Settings, Terminal and Text Editor (table above), the same ssh launch path on both. The extra time is in the Shell, not the apps. One cold Settings launch took 6.0 s (the earlier, discarded boot-2 run took 1.1 s), likely host noise, but check it on the demo machine.
 Fix: profile the GurtOS session mode (`gnome-shell --mode=gurtos`): look at the extension's window-open hook, the blurred dock (`transparency-mode FIXED`, `background-opacity 0.86`) and the custom window animation; compare with `GNOME_SHELL_SESSION_MODE=ubuntu`.
 
+**Re-measured 2026-10-24 evening, inconclusive.** On one install of the released ISO, while linuxbox was swapping:
+GurtOS as shipped, warm first change 0.56 to 0.92 s; the same install with `GNOME_SHELL_SESSION_MODE=ubuntu`, Files
+0.67 to 0.69 s (other apps cut short when the VM was stopped for memory); GurtOS with the dock's `transparency-mode
+DEFAULT` and intellihide off, 0.57 to 0.99 s. The dock settings don't close the gap, and the session mode doesn't
+clearly either. The Personal thread measured 10 to 40 ms between the two session modes up to the window mapping.
+Measure once more on the rebuilt ISO on a quiet host; the scripts are in `~/.cache/ux-audit/parity/bin/` on linuxbox.
+
 ### E-15 P1, image: no language, keyboard, or disk choice before install
 Stock asks language, accessibility, keyboard, network, update, install type, apps, drivers and codecs, disk, account, time zone. GurtOS asks nothing until after install, then GNOME setup asks language, typing, time zone and account. That is faster (1 min against 7) but the person cannot pick a disk or keep Windows. Not a P0 because README states it; list it on the download page.
 
