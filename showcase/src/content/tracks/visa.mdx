@@ -22,6 +22,25 @@ criteria:
 clip: shopper
 video: visa
 shots:
+  - src: ../../assets/repo/shopper/face-id-purchase.png
+    alt: 'A purchase approval: Buy 1 Chemex Natural Coffee Filters from Best Buy Canada for $15.36 CAD, down from $20.36 CAD, inside your mandate, with the two-store comparison and an Approve with Face ID button.'
+    caption: 'Approving a purchase with Face ID. The price is Best Buy Canada''s live price through Apify; checkout is at the GurtOS Test Store and the charge is Stripe test mode. The screenshots were taken in Chromium with a virtual authenticator standing in for Face ID.'
+  - src: ../../assets/repo/shopper/face-id-mandate.png
+    alt: 'A shopping mandate waiting for approval: Chemex filters up to $16.00 CAD each, at most 1 and $16.00 CAD in all, from Best Buy Canada or Gold Roast, until Oct 30, with Deny and Approve with Face ID.'
+    caption: 'A signed shopping mandate with every limit spelled out. The store refuses anything outside it. Test payments only.'
+  - src: ../../assets/repo/shopper/stolen-session.png
+    alt: 'The Activity list: a household reorder that was approved with a plain tap shows Failed, with the message "approved without Face ID: this box has a passkey, so a purchase needs it".'
+    caption: 'A stolen session: a plain tap approves the reorder, and the buy tool refuses at payment ("approved without Face ID"), so nothing is paid.'
+  - src: ../../assets/repo/shopper/store-dashboard.png
+    alt: 'The GurtOS Test Store merchant''s view: 2 verified agent orders, 8 unknown bots kept out, 100% conversion from agent shoppers, 0 chargebacks, 1 price protection and 1 cancellation, and a table of refused requests by reason.'
+    caption: 'The store''s side: verified agent orders, bots kept out, conversion and zero chargebacks, with the reason there is nothing to dispute. This is our own stand-in store, with test payments.'
+  - src: ../../assets/repo/shopper/store-refusals.png
+    alt: 'Refused requests by reason: three unsigned bots, one over price, one wrong item, one over quantity and one edited mandate, with the latest refusals listed, including "4 items is more than the mandate''s 2 (2 already bought under it)".'
+    caption: 'What the store refused and why: unsigned bots, a price over the mandate, the wrong item, too many items over the mandate''s lifetime, and a mandate edited after signing.'
+  - src: ../../assets/repo/shopper/phone-approval.png
+    alt: 'The Shopper app on a phone: a test payments only notice and a household reorder of Hario V60 filters and paper towels for $20.48 at the GurtOS Test Store, with Deny and Approve with Face ID.'
+    caption: 'On the phone: the approval at the top, with the agent''s reason and Approve with Face ID.'
+    tall: true
   - src: ../../assets/shots/app-shopper.png
     alt: 'The Shopper app running on the box screen: a TEST PAYMENTS ONLY notice, which secrets the vault holds, and a form to watch a product in words or by store, product, price and quantity.'
     caption: 'The Shopper app on the box, running: say what you want in words, or fill in the store, product, price limit and quantity. Claude can set a watch but cannot buy.'
