@@ -1,6 +1,6 @@
 ---
 title: Editions
-description: GurtOS comes in three editions. GurtOS Server is an always-on box, GurtOS Personal is your own computer with agents beside you, and GurtOS Business is planned.
+description: GurtOS comes in three editions. GurtOS Server is an always-on box, GurtOS Personal is your own computer with agents beside you, and GurtOS Business is a preview you turn on from either.
 ---
 
 GurtOS has one core: the service that runs tasks as separate users, keeps the vault, and writes the action log.
@@ -39,29 +39,33 @@ needs the box's address set by hand. See [Install GurtOS Personal](/get-started/
 
 ## GurtOS Business
 
-A company's agents on the company's machines. **Status: Planned.** Nothing on this page is built yet. The
-intent is:
+One box shared by a company. **Status: Preview.** It is not a separate image. You turn it on from a GurtOS Server or
+GurtOS Personal box, and the same core then adds:
 
-- **Roles.** People get roles that decide what they may start, approve and undo.
-- **Routed approvals.** An approval goes to the person or team that owns that kind of decision, such as
-  finance for spending above a limit.
-- **Audit.** The action log of every box, searchable in one place, with exports.
-- **Fleet.** Many boxes managed together, with staged whole-system updates.
+- **Roles.** People are an owner, admin, approver, requester or auditor, and the role decides what they may start,
+  approve and undo.
+- **Routed approvals.** A policy in plain words sends each approval to the person who may answer it, such as
+  "Over $10,000 goes to the Controller", with a limit per person.
+- **Audit.** Every request, answer and change is in the action log, with a CSV export and a kill switch for all agents.
+- **A phone app and a desktop portal** that sign in as a person.
+
+Turn it on with [Turn on GurtOS Business](/guides/turn-on-business/). The data in the preview is sandbox data.
+**Planned:** managing many boxes together as a fleet, with staged whole-system updates.
 
 ## Compare the editions
 
 | | GurtOS Server | GurtOS Personal | GurtOS Business |
 |---|---|---|---|
-| Status | Preview | Preview | Planned |
+| Status | Preview | Preview | Preview, on top of either |
 | Runs on | A spare PC, a VM or a cloud instance | Your own laptop or desktop | The company's machines |
-| Install | The GurtOS Server ISO, or the box service on Ubuntu 24.04 | The GurtOS Personal ISO | Planned |
-| Base system | Ubuntu 24.04 packages, no desktop | Ubuntu 24.04 with GNOME | Planned |
-| Human login | None. No shell, no `sudo` on the OS image | Your own account, with `sudo` | Planned: people with roles |
-| Agents run as | One Linux user per task | One Linux user per task | Planned: the same |
-| Agents work on | Workspaces on the box | Copies of your own folders | Planned |
-| Undo | Undo any one task | Keep or Undo after each task, and undo a Keep | Planned |
-| Approvals | Portal, phone, and apps such as Jira or a chat | Desktop notifications, portal, phone | Planned: routed by role |
-| Screen | The portal, full screen on the box's display | Your GNOME desktop | Planned |
+| Install | The GurtOS Server ISO, or the box service on Ubuntu 24.04 | The GurtOS Personal ISO | Not a separate image: turned on from Server or Personal |
+| Base system | Ubuntu 24.04 packages, no desktop | Ubuntu 24.04 with GNOME | The base of the edition it is turned on from |
+| Human login | None. No shell, no `sudo` on the OS image | Your own account, with `sudo` | People with roles |
+| Agents run as | One Linux user per task | One Linux user per task | The same |
+| Agents work on | Workspaces on the box | Copies of your own folders | The same as its base |
+| Undo | Undo any one task | Keep or Undo after each task, and undo a Keep | The same as its base |
+| Approvals | Portal, phone, and apps such as Jira or a chat | Desktop notifications, portal, phone | Routed by role, amount and a written policy |
+| Screen | The portal, full screen on the box's display | Your GNOME desktop | The portal on any desktop, and the phone app |
 | Updates | Whole-system A/B updates with automatic rollback | The same. Your files, accounts and settings stay; software installed with `apt` does not | Planned: staged across a fleet |
 | Many machines | One portal can list several boxes (Preview) | One computer | Planned: fleet management |
 

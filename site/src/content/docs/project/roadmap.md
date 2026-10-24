@@ -49,9 +49,10 @@ intended. **Not built** means a known gap with no plan yet; it is listed so you 
 
 | Item | Status |
 |---|---|
-| Roles that decide who may start, approve and undo | Planned |
-| Approvals routed to the person or team that owns the decision | Planned |
-| One audit view across boxes, with exports | Planned |
+| Roles that decide who may start, approve and undo | Preview |
+| Approvals routed by a written policy to the person who owns the decision | Preview |
+| Audit with CSV export and a kill switch, on one box | Preview |
+| One audit view across boxes | Planned |
 | Fleet management with staged whole-system updates | Planned |
 
 ## More than one box

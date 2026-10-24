@@ -12,7 +12,7 @@ can undo any single task.
 
 | Part | What it is | Status |
 |---|---|---|
-| **The OS, in three editions** | [GurtOS Server](/get-started/install-server/) for an always-on box, [GurtOS Personal](/get-started/install-personal/) for your own computer, and GurtOS Business for a company's agents. See [Editions](/introduction/editions/). | Server and Personal: Preview. Business: Planned |
+| **The OS, in three editions** | [GurtOS Server](/get-started/install-server/) for an always-on box, [GurtOS Personal](/get-started/install-personal/) for your own computer, and GurtOS Business for a company's agents. See [Editions](/introduction/editions/). | All three: Preview. Business is turned on from Server or Personal |
 | **The portal and phone app** | One web app on the box's own screen, in a browser and on your phone. A phone can install it to its home screen. It shows tasks, their steps and diffs, and the requests waiting for you. | Preview |
 | **Remote access** | Reach your box from your phone when you are away from its network, through a GurtOS relay. | In development |
 | **An app platform** | Apps add tools, triggers, windows and log readers through a small [app SDK](/reference/app-sdk/). Jira, Elastic, Stripe test mode, x402 payments, ASI:One, Apify and Moss are connected this way. See [Apps](/reference/apps/). | Preview |
