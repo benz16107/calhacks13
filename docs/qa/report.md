@@ -21,8 +21,8 @@ quota was used up; /find searched locally and the find thread is fixing the sync
 
 ## Summary
 
-Status at 23:55 PT Friday. **6 P0, 21 P1 (15 product, 6 docs), 18 P2.** Fixed and verified: P0-1, P0-3, P1-1 (core
-c6f747e), P0-5 (portal 3ae539b), P0-2 and P0-6 (core 6879fb9). Open P0: P0-4 (portal rebuild pending). The image's
+Status at 00:08 PT Saturday. **7 P0, 20 P1 (14 product, 6 docs), 18 P2.** Fixed and verified: P0-1, P0-3, P1-1 (core
+c6f747e), P0-5 (portal 3ae539b), P0-2 and P0-6 (core 6879fb9). Open P0s: P0-4 (portal rebuild pending), P0-7 (core, found 00:05 PT). The image's
 firewall is on main (881318a); the rebuilt ISO is still to be installed on Vultr. Portal batch 1 is fixed in a rebuild not yet on
 main.
 
@@ -36,6 +36,7 @@ phone demo needs:
 4. P0-4: a quick second tap on the phone approves the next request, unseen.
 5. P0-5: after core's token fix, a paired phone gets no live updates and no apps.
 6. P0-6: after core's token fix, the public Mana app and the Jira panel would get 401 once deployed to Vultr.
+7. P0-7: one task can read another task's copy of the owner's private files.
 
 ## Findings
 
@@ -96,6 +97,15 @@ Mana app and the Jira Forge panel. The Vultr box still ran an older main at 23:3
 `./deploy vultr` until this is fixed.** **Fixed in 6879fb9, verified 23:47 PT:** through a proxy, `/t/mana/status`
 answers 200 and Jira's three routes reach the track's own secret check; other track routes and the API still need a
 phone's token. Vultr can be deployed once a build with 6879fb9 passes the gate.
+
+**P0-7. One task can read another task's copy of the owner's private files.** Owner: core. Reported by the docs
+thread, reproduced by QA at 00:05 PT on main 4540913. With Settings agentFolders set to a person's folder holding a
+0600 file, task A runs on that folder. Its copy `tasks/<A>/base` is a 0777 folder holding the file at 0666, under
+0711 parents. Task B, an ordinary task with a different user, read the file with `steal
+/var/lib/box/tasks/<A>/base/note.txt`. The real file and A's own layer were refused (EACCES). The copy stays while A
+runs and while it waits for review (on Personal, until Keep or Undo); Undo removes it. Task ids aren't secret
+(find.search returns them). Expected: base keeps the real file's mode and belongs to A's user, and other tasks can't
+walk into tasks/<A>.
 
 ### P1
 
@@ -165,9 +175,6 @@ The Vultr box's agent is off (no Agentverse key in its vault), which is fine if 
 tools and workers, and workspaces like `../../etc` are refused correctly. Core was asked to validate both fields
 and check what each accepted value lets a task reach.
 
-**P1-15. A Personal task's copy of the owner's folder may be readable by other tasks (unverified).** Owner: core.
-Found by the docs thread: `tasks/<id>/base` is a+rwX under 0711 parents, so another task's user who knows the id could
-read it. Not reproduced by QA yet.
 
 ### P2
 
@@ -331,3 +338,5 @@ dashes. Search works. Nothing scrolls sideways at 390 x 844. No form collects da
 | 23:42 | Portal's 3ae539b installed; P0-5 re-tested on the paired phone | 56 |
 | 23:50 | HTML in task text on every screen; bad input to the task API | |
 | 23:46 | core's 6879fb9 installed: proxied track routes, the vouched reducer, box screen Deny | 57, 58 |
+| 00:00 | Docs fixes spot-checked on gurtos.com | |
+| 00:05 | Cross-task read of a folder task's copy (P0-7) | |
