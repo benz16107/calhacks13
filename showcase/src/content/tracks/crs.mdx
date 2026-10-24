@@ -213,6 +213,7 @@ P12 identity mismatch, P14 deceased SSN, P16 fraud alert), check it with `check-
 
 ## Limits
 
+- **Checked in the merge gate:** no guest task can pay: the guest gates have no tools and a $0 budget, guest web runs have only web tools and at most 25 cents, and the credit analyst holds no wallet, Shopper or x402 tool.
 - **Not built:** a payment gate for guests (wallet and Shopper payments do not yet ask for a verified guest), the controller's clear-the-flag path (nothing in the box clears a fraud stop, so a real false positive has no way out yet), and an ASI:One chat intent for credit.
 - A guest's credit request waits in memory between the identity check and the owner's OK, so a restart loses it and the guest asks again. After the OK the application is a file in the box's own folder, because CRS needs it, and the seats get the redacted copy. Failed identity checks are counted in memory: 3 an hour per guest and 6 overall.
 - The purpose rule is not FCRA compliance.
