@@ -270,6 +270,10 @@ PhoneTabBar (`88:337`), LiveActivity (`88:338`), and the app icons for Elastic i
 
 ## On GNOME (Personal)
 
+**Proposed, waiting for Ben:** GurtOS Personal gets its own shell theme, accent, icon theme, cursor, font,
+wallpapers, login and boot splash, and a native top-bar item and Quick Settings tile in place of the AppIndicator
+below. See `personal-os/README.md`.
+
 - GNOME Shell draws the top bar, the indicator menu and notifications. They keep Ubuntu Sans and Shell's look; GurtOS
   gives them content, its app icon and the amber count. GurtOS's own windows (review, Ask an Agent, setup) use this
   system, which is built on libadwaita's patterns, so they sit naturally among GNOME apps.

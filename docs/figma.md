@@ -28,6 +28,12 @@ popover, a toast or a notification. The research is in `figma/refs/os-system/` a
 Done so far: the whole Server setup wizard, all ten Settings pages, App Center, the desktop (home, Notification Center, Control Center, lock screen, boot and session restore), Tasks, the task detail with Undo, Activity, Time Machine, the eight track apps, and the phone (home, approval, Live Activity, tasks, task detail, pairing, setup), and Personal on GNOME (indicator, notification, review, Ask an Agent, a seven-step setup). The
 direction A screens further down stay as the reference for anything v2 has not reached yet.
 
+## GurtOS Personal OS (checkpoint, waiting for Ben)
+
+GurtOS Personal as its own system on GNOME 46: a shell theme, accent, icon theme, cursor, font, wallpapers, login and
+boot splash, and the GurtOS top-bar item and Quick Settings tile. The identity, how each part ships and four screens
+are in [`figma/personal-os/README.md`](figma/personal-os/README.md) (page "GurtOS Personal OS").
+
 ## Files
 
 | File | Link | What is in it |
