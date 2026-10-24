@@ -201,3 +201,18 @@ These are examples in the mockups; the real values come from the running box.
 - The Vultr box in the switcher and dock: the second box is planned, not running yet.
 - Credit desk scores: score the desk's log against `answer_key.json` (see its `scoring` field).
 - "Box" is a placeholder product name until Ben names the OS (MenuBar `Product name`).
+
+## Sharing
+
+The Figma connector cannot change who can open a file, so Ben does this by hand. For each file: open it, click
+**Share** (top right), set **Anyone with the link** to **can view**, and close.
+
+| File | Link | Also |
+|---|---|---|
+| Ideation board (FigJam) | https://www.figma.com/board/KvHiDv5HIJuGYOZDDkp8VG | |
+| Design system and screens | https://www.figma.com/design/oppzH621OOOMA31rgLbxbM | The Design prototype links follow this file's access |
+| Prototype (Figma Make) | https://www.figma.com/make/19hhCgh3CFsgfi1eBienAS | Open it once and check the preview runs (the import could not verify it). Click **Publish** for a public URL to embed on Devpost |
+| Pitch deck (Figma Slides) | https://www.figma.com/slides/SBrJtJiY20k88X3IGzKwZW | |
+
+Optional: to add Weave art, link the Figma account to Weave at https://app.weavy.ai/settings?section=profile. Each
+Weave run then quotes its credit cost and needs Ben's OK before it runs.

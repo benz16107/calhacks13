@@ -18,3 +18,23 @@ One line per Figma step: stage, Figma tool, minutes, rating 1 to 5, how the outp
 | Fri Oct 23, 8:41 to 8:47 PM | Prototyping | Figma Design prototype, wired by Claude Code through Figma's MCP server (`use_figma`: `setReactionsAsync` and flow starting points); and Figma Make, imported with `send_code_to_figma` | 8 | 4 | Two flows: approve from a phone notification (the banner arrives after 1.2 s, Approve, the task runs again) and undo one task on the box (Undo, confirm, undone). Four in-between frames, links and node IDs in `docs/figma.md`, screenshots in `docs/figma/os/prototype-*.png`. The Make file holds the same flows as a static page in the A tokens, tested in a browser before import; its preview inside Figma was not verified by the import. |
 | Fri Oct 23, 8:47 to 8:53 PM | Pitch deck | Figma Slides, built by Claude Code through Figma's MCP server (`use_figma` with the figma-use-slides skill, `upload_assets` for the screens) | 6 | 4 | [Pitch deck](https://www.figma.com/slides/SBrJtJiY20k88X3IGzKwZW), 13 slides in direction A's look. Every product image is a real OS screen from the design file. OpenClaw figures are sourced on the slides: the star count read from the GitHub API and the CVE from NVD; the exposed-instance and malicious-skill counts credit Censys and Koi Security as reported in the press. |
 | Fri Oct 23, 8:53 to 8:54 PM | Box art: boot screen | Figma Design via Claude Code and Figma's MCP server (`use_figma`). Figma Weave was tried first: its connector refused because Ben's Figma account is not linked to Weave yet, so no Weave run happened | 1 | 3 | The boot screen (`Box / Boot`, `docs/figma/os/box-boot.png`) reuses the vector wallpaper: dusk hills and a crescent moon as flat layers bound to variables. Weave can add a raster variant once the account is linked and Ben approves the credit cost. |
+
+## For Devpost (up to 200 words per stage)
+
+**Ideation (FigJam and Figma Design, 18 minutes, 4 of 5).** Claude Code built the FigJam board through Figma's MCP
+server: the architecture and the four demo moments with `generate_diagram`, and the 25 sponsor tracks grouped by the
+slot each plugs into. When the first screens looked like a B2B dashboard, it collected 15 OS references from
+official pages into a moodboard on the same board, then drew three OS directions (home-server OS, across-the-room
+console, hardware OS) on the box screen and the phone. Ben picked the home-server OS. Output reached the project as
+`docs/figma/refs/` and `docs/figma/directions/`.
+
+**Prototyping (Figma Design and Figma Make, 8 minutes, 4 of 5).** Two flows wired between the real screens with
+prototype reactions: an approval arriving on the phone, Approve, the task running again; and undo one task on the
+box, with a confirm step. The same flows went into a Figma Make file as a small web page in the design's tokens,
+tested in a browser first. Links are in `docs/figma.md`.
+
+**Handoff (Figma's MCP server, 4 minutes, 4 of 5).** Every color and size is a variable with CSS code syntax, every
+screen and component is named, and `docs/figma.md` lists each screen's node ID and the API data behind it. The
+portal thread reads them with `get_design_context`.
+
+**Code generation.** Logged by the portal thread.
