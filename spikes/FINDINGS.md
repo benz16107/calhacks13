@@ -16,9 +16,9 @@ Run a script: `tar c spikes/NN-*.sh | ssh benmac 'limactl shell box -- bash -c "
 | 1 | Per-task file copies (overlayfs) | Works, as root |
 | 2 | Tasks as separate users | Works |
 | 3 | Per-task network limits | Works, matched by uid. Cgroup matching fails open |
-| 4 | SpacetimeDB on ARM | pending |
+| 4 | SpacetimeDB on ARM | Works (2.13.0, aarch64) |
 | 5 | Droid as its own user | pending |
-| 6 | Vision model for /find | pending |
+| 6 | Vision model for /find | Works, Mac Ollama `gemma4`, 1.4 to 4 s a photo |
 
 ## 1. Per-task file copies
 
@@ -156,6 +156,82 @@ proxy work. It cannot limit ports, so the task still reached the other localhost
 **For the core thread:** load the way A rules at boot from `/etc/nftables.conf` with a fixed task uid range,
 add `RestrictAddressFamilies=AF_INET AF_INET6` to every task unit, and give each task a host allowlist in the
 proxy keyed by uid. Do not match on cgroups.
+
+## 4. SpacetimeDB on ARM
+
+**Ran:** `bash 04-spacetime/run.sh` as the normal VM user, after
+`curl -sSf https://install.spacetimedb.com | sh -s -- --yes`. It installed SpacetimeDB **2.13.0** (aarch64)
+to `~/.local/bin/spacetime`. The script starts `spacetime start --non-interactive`, creates a project with
+`spacetime init --non-interactive --local -t nodejs-ts`, swaps in a `task` table (`id`, `name`, `status`)
+with reducers `addTask` and `setStatus` (`04-spacetime/module.ts`), publishes it, generates bindings, and runs
+a Node client that subscribes (`04-spacetime/watch.ts`). Node is 24.22.1 from NodeSource.
+
+**Worked:**
+- Publishing took 0.7 s. `spacetime generate` worked.
+- The watcher saw each change live, about 20 to 30 ms after the CLI call started, which includes the CLI's
+  own startup:
+  ```
+  18:23:33.103 call add_task            ->  01:23:33.132 [insert] #1 fix the failing test queued
+  18:23:33.134 call set_status running  ->  01:23:33.153 [update] #1 queued -> running
+                                            01:23:33.169 [update] #1 running -> waiting for your OK
+  ```
+  (The CLI prints local time and the client prints UTC.)
+- A second client calling `conn.reducers.setStatus({ id, status })` and waiting for its own `onUpdate`:
+  **median 1.1 ms, max 4.7 ms** over 20 runs.
+- After `kill -9` of the server and a restart, the row was still there (`spacetime sql`).
+
+**Gotchas:**
+- **`spacetime start` listens on `0.0.0.0:3000` by default**, so every task could reach it. Any client can
+  call any reducer unless the reducer checks `ctx.sender`, so a task could approve its own request. The
+  spike 3 rules block tasks from it. Reducers that approve things should still check the caller's identity.
+- `spacetime init` names the database `spike4-<random>` in `spacetime.local.json`. `spacetime call` and
+  `spacetime sql` use that name, even with an explicit name and `--no-config` ("failed to find database
+  spike4-60cjs"). Write the name you want into `spacetime.local.json`.
+- `spacetime.json` from the template says `"server": "maincloud"` even with `--local`. Pass
+  `--server local` on publish.
+- In 2.x the client uses `.withDatabaseName()` (not `.withModuleName()`). Reducers take one object
+  (`setStatus({ id, status })`). The CLI calls them in snake_case (`set_status 1 '"running"'`).
+- `spacetime dev` is interactive. For scripts use `init`, `publish -y`, `generate -y`.
+- Run the server as a systemd unit with a fixed `--data-dir`, not `nohup`.
+
+**For the core thread:** SpacetimeDB 2.13 runs self-hosted on the ARM laptop VM with no workarounds. Use it for
+live task status and approvals, keep the action log on disk as planned, and block tasks from port 3000.
+
+## 6. Vision model for /find
+
+**Ran:** `bash 06-vision.sh [photo]` as the normal VM user. It sends the photo as base64 to Ollama's
+`/api/generate` on the Mac at `http://host.lima.internal:11434`, with `think:false`, and prints the timings
+Ollama reports.
+
+**Found:** the Mac already has a vision model, so nothing was pulled. `gemma4:latest` is 8.0B at Q4_K_M,
+with capabilities completion, vision, audio, tools and thinking. Ollama 0.40.9 runs from Ollama.app.
+
+**Worked with no change to Ben's Ollama setup.** Ollama listens only on the Mac's `127.0.0.1:11434`, and Lima
+(`vz`, default network) forwards the VM's `host.lima.internal` (192.168.5.2) to the Mac's localhost. So
+`OLLAMA_HOST=0.0.0.0` is not needed and nothing has to be reverted.
+
+| Photo | Model state | Wall time | Breakdown |
+|---|---|---|---|
+| Labrador, 640 px, 83 KB | cold | 6.5 s | 4.9 s model load, 209 prompt tokens in 0.5 s, 70 output tokens at 66 tok/s |
+| Same photo again | warm, cached | 1.4 s | prompt cached (0.04 s), 84 tokens at 64 tok/s |
+| Golden Gate, 3 MB | warm, new photo | 4.0 s | 1093 prompt tokens in 2.5 s, 71 tokens at 63 tok/s |
+| Labrador, thinking on | warm | 8.9 s | 537 output tokens: thinking costs about 6x |
+
+Descriptions were accurate: "A light-colored Labrador Retriever is standing outdoors on green grass..." with
+keywords such as `Labrador Retriever, dog portrait, yellow labrador`. The bridge photo got "Golden Gate
+Bridge, San Francisco, suspension bridge". It ran 100% on the Mac's GPU.
+
+**Gotchas:**
+- **Send `"think": false`.** gemma4 thinks by default, which took 8.9 s instead of 1.4 s.
+- Photo size drives the time. Resize photos to about 1024 px before sending: the 3 MB one spent 2.5 s on
+  the prompt alone. A 3 MB photo is 4 MB of base64, too big to pass as a shell argument.
+- The first call after Ollama unloads the model pays about 5 s to load it. Send `keep_alive` (the script
+  uses `10m`) while indexing.
+- The Mac must be awake. On Sunday the laptop is the demo box, so that is fine. Overnight indexing is not.
+
+**For the core thread:** call `http://host.lima.internal:11434/api/generate` with `model: "gemma4"`,
+`think: false` and photos resized to about 1024 px. Expect about 1.5 s a photo while warm. The photo stays on
+the laptop.
 
 ## Not tested yet
 
