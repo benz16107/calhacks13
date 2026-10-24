@@ -33,3 +33,20 @@ Partial, to watch in the build:
 - **A and C** have corner radii of 10 to 14 px on windows and callouts; B uses 8 and ledger rules. Do not round everything.
 - **All**: a screenshot of the OS inside the OS (A's Tasks window) is on purpose. No hover or entry animation on every element: motion only where the OS has it (the Motion sheet).
 - **Trust gaps for the real site**: it still needs terms and a privacy page (the footer has no link yet) and loading skeletons, not spinners, for the video.
+
+## Option B2: Ben's picks, revised (Sat Oct 24)
+
+Ben chose B. `b2-1-home-desktop.png` (`162:546`), `b2-2-home-mobile.png` (`162:807`) and `b2-3-track-armadin.png` (`162:979`) replace B.
+Changes: "case files" are now "tracks"; the title block and "What was checked" are gone; the page opens with the GurtOS
+ecosystem (one core, three editions, then the portal, phone app, remote access and open source); each edition has a real
+screenshot; the ruled track list, one readable column and numbered sections stay; the footer links Terms and Privacy.
+
+Screenshots in B2:
+- **Server:** `portal/screenshots/kiosk.png`, the box's own screen. Real.
+- **Business:** `portal/screenshots/business/3-waiting-rosa-desktop.png` with `3-waiting-rosa-phone.png` as a laptop-and-phone pair. Real.
+- **Personal:** a dashed placeholder labelled "Real screenshot coming" for the everyday desktop (mail, a browser and Files open,
+  the top-bar pill, an approval notification), plus a real inset of the new native app, `personal/screenshots/app/1-agents.png`.
+  Swap the placeholder when the Personal thread captures it.
+- The portal thread may replace the Business pair with a dedicated capture; the frame is the same size.
+
+The Terms and Privacy pages do not exist yet; the footer links need targets before the site ships.
