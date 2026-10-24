@@ -42,9 +42,9 @@ Undo is `POST /api/tasks/<id>/undo`. The portal's Undo button and Time Machine b
 
 Once no running task still reads the undone layer, the core deletes it from disk. An undone task's diff is empty, because its changes are gone.
 
-![Time Machine showing three task layers stacked over the base files, with a preview of what comes back and what stays](../../../assets/screens/box-time-machine.png)
+![Time Machine: a workspace's task layers over its base files, with the selected layer's files that would come out, what stays as it is, and an Undo this task button.](../../../assets/screens/time-machine.png)
 
-*Time Machine, from the portal's design. It shows one workspace's layers, newest first, and previews an undo before you confirm it. Names and times are examples.*
+*Time Machine, from a test box running scripted tasks.*
 
 ### What undo does not do
 

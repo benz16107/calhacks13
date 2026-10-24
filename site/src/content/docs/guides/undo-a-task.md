@@ -14,20 +14,20 @@ Every task works in its own copy of a workspace, and its changes become one laye
 
 1. Open **Time Machine** from the app grid. It lists each workspace's layers, newest first. Each layer is a finished task.
 
-   ![Time Machine: a stack of task layers on top of the base files, with the selected layer's changes and an Undo button](../../../assets/screens/box-time-machine.png)
+   ![Time Machine: a workspace's task layers over its base files, with the selected layer's files that would come out, what stays as it is, and an Undo this task button.](../../../assets/screens/time-machine.png)
 
-   *Time Machine, from the portal's design. Task names and ids are examples.*
+   *Time Machine, from a test box running scripted tasks.*
 
-2. Click the task's layer. The panel beside the list asks **Undo "<task title>"?** and shows what comes back (its
-   diff, reversed) and which files from other tasks stay as they are.
-3. Click **Undo <task title>**, or **Keep it** to back out.
+2. Click the task's layer. The panel beside the list shows **Undo <task title>**: the files that come out, and what
+   stays as it is.
+3. Click **Undo this task**. An alert asks **Undo <task title>?**. Click **Undo task** to confirm, or **Cancel**.
 
-   ![A dialog asking to confirm undoing one task, with Undo and Keep it buttons](../../../assets/screens/prototype-box-2-confirm-undo.png)
+   ![A dialog asking to undo one task, saying its 4 files leave the workspace and every other task keeps its changes, with Cancel and Undo task buttons.](../../../assets/screens/task-undo.png)
 
-   *The confirm step, from the portal's design. The built portal asks the same question in the Time Machine panel.*
+   *Undo asks first, from a test box running scripted tasks.*
 
-You can also open the task from **Tasks**, or from a notification. In the task's window, click **Undo this task**,
-then **Yes, undo it** within 6 seconds to confirm.
+You can also open the task from **Tasks**, or from a notification. In the task's window, click **Undo task** in the
+header, then **Undo task** in the alert.
 
 ## Undo with the API
 

@@ -13,8 +13,9 @@ npm run check     # after a build: every internal link resolves, and nothing pri
   (`src/product-name.ts`) and the route middleware (`src/routeData.ts`) put `NAME` into every page, title and
   OpenGraph image. The OpenAPI spec and the screenshots hold the name as literal text.
 - The HTTP API pages are generated from `openapi/box-api.yaml`.
-- Screenshots in `src/assets/screens/` are the portal's Figma design (`docs/figma/os/`), edited to show the
-  product name and example values in place of personal ones.
+- Screenshots in `src/assets/screens/` are the running portal (`portal/screenshots/`) on a test box with scripted
+  tasks, the GurtOS Personal desktop (`personal/screenshots/`), and three `design-*` frames from `docs/figma/os-v2/`.
+  Check every new one for machine names, addresses and personal names before adding it.
 - Theme: `src/styles/theme.css`, from the design tokens in `docs/figma.md`. Diagrams are SVG in
   `src/assets/diagrams/` and take their colours from the theme.
 

@@ -59,9 +59,9 @@ Every refusal by the proxy is a `net.blocked` event in the action log, with the 
 
 The portal shows these as red lines in the task's log, and counts them on the home screen. Apps that follow the log can act on them too: the Jira app comments on the task's issue, and the Elastic app makes them searchable. Direct connections that the firewall drops are rejected and counted by nftables, but they are not in the action log.
 
-![A task window listing four blocked attempts in red, including sending to attacker.example](../../../assets/screens/box-task-detail.png)
+![A task window: a red alert saying the task tried to reach a host it was not allowed and was blocked, its steps from the action log with the blocked step in red, the files it changed, what it was allowed, and an Undo task button.](../../../assets/screens/task.png)
 
-*A task that read a page with hidden instructions. Each attempt to follow them was blocked and logged. From the portal's design; names and times are examples.*
+*A task's window, from a test box running scripted tasks.*
 
 ## The model's own traffic
 

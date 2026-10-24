@@ -67,9 +67,9 @@ how the agent behaves: the limits above hold whether the agent follows its instr
 
 ## What you see
 
-![A task's detail window: its title, state, the user it runs as, the hosts it may reach, steps from the action log with blocked attempts highlighted, and the files it changed.](../../../assets/screens/box-task-detail.png)
+![A task window: a red alert saying the task tried to reach a host it was not allowed and was blocked, its steps from the action log with the blocked step in red, the files it changed, what it was allowed, and an Undo task button.](../../../assets/screens/task.png)
 
-*A task's detail window, from the portal's design. The task, steps and files are examples.*
+*A task's window, from a test box running scripted tasks.*
 
 The **portal** is one web app that shows on the box's own screen, in a browser and on a phone. It lists tasks
 and what each is doing now, shows each task's steps and file changes, and holds the approvals waiting for you.

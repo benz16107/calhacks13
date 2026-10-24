@@ -14,11 +14,11 @@ box screen. For GurtOS on your own desktop computer, see [Install GurtOS Persona
 This page covers getting the ISO and installing it four ways: a real machine, UTM on a Mac, QEMU on Linux, and a
 cloud instance. If you would rather keep an existing Ubuntu system, see [Install on Ubuntu](/get-started/install-on-ubuntu/).
 
-:::caution[Preview]
-In this release a standard (release) build has no way to add keys to the vault. The box has an API for the vault,
-but the portal has no screen for it yet, and a release build has no shell. To run real agent tasks today, use a
-**debug build** (below) or [install on Ubuntu](/get-started/install-on-ubuntu/). A setup screen in the portal is
-[planned](/project/roadmap/).
+:::note[What you need]
+One model key, so agents can think: an **Anthropic API key** from
+[console.anthropic.com](https://console.anthropic.com), or a **Factory API key** from
+[app.factory.ai](https://app.factory.ai). Either is enough. Every app (Jira, Elastic, Apify, the wallet and the rest)
+is optional and stays off until you add its keys.
 :::
 
 ## Requirements
@@ -41,10 +41,17 @@ after you type `erase` on the screen, but check which machine you are booting be
 
 ## Get the ISO
 
-GurtOS has no public downloads yet. If you have the source, build the ISO on any Ubuntu 24.04 machine or VM where
-you have root. The build runs there, not on your own computer:
+Download the ISO from the [Download](/download/) page. Use `gurtos-server-x86_64.iso` for a PC or an x86_64 cloud
+instance, and `gurtos-server-arm64.iso` for a Mac with Apple silicon in UTM or an arm64 machine. Check its checksum
+before you use it; the Download page shows how.
+
+### Build it yourself
+
+You can also build the ISO from the [source](https://github.com/benz16107/calhacks13) on any Ubuntu 24.04 machine or
+VM where you have root. The build runs there, not on your own computer:
 
 ```sh
+git clone https://github.com/benz16107/calhacks13.git gurtos && cd gurtos
 BUILD_SHELL='ssh my-build-vm' image/build          # GurtOS Server, x86_64: about 12 minutes the first time, 3 after
 BUILD_SHELL='ssh my-build-vm' image/build arm64    # GurtOS Server, arm64, for Apple silicon and arm64 servers
 ```
@@ -58,11 +65,11 @@ emulation on x86_64 in about an hour. The results stay on the build machine in `
 | `gurtos-server-<arch>.sqfs` | The whole system as one image. It is on the disc, and it is also the update file. |
 | `gurtos-server-<arch>.sqfs.sha256`, `.sig` | Its hash, and the hash signed with the build machine's update key |
 
-`BOX_SSH_KEY=~/.ssh/id_ed25519.pub` makes a **debug build**. It adds an SSH server and lets that key log in as root.
-Use it while the portal cannot yet set keys. A debug build is named with `-debug`, for example
+`BOX_SSH_KEY=~/.ssh/id_ed25519.pub` makes a **debug build**. It adds an SSH server and lets that key log in as root,
+for development. A debug build is named with `-debug`, for example
 `gurtos-server-x86_64-debug.iso`, and says so in `/etc/box-os/release`, so it cannot be mistaken for a release.
 
-Only images signed by the same build machine can update a box later. See [System updates](/concepts/system-updates/).
+Only images signed by the same build key can update a box later. See [System updates](/concepts/system-updates/).
 
 ## Install on a real machine
 
@@ -134,10 +141,23 @@ console, or put the box on a private network such as Tailscale. See
 [Approve from your phone](/guides/approve-from-your-phone/).
 :::
 
+## Set it up
+
+The first time the box starts, its screen runs the setup wizard: network, the box's name and time zone, who owns the
+box (pair your phone, or keep the owner on this screen), the model key, what agents may do, which apps to turn on and
+their keys, updates, privacy and appearance. You can change all of it later in **Settings**.
+
+Paste your Anthropic or Factory key at the **AI models** step. It goes straight into the vault, and no screen shows it
+again. If you skip it, tasks cannot run until you add a key in **Settings**, **Accounts & Keys**.
+
+**On a cloud instance, run setup in the provider's web console.** The box's firewall lets its API in only from
+private networks, so a cloud instance with only a public address cannot be reached from your browser or phone.
+The console shows the box's own screen. Use the keyboard and mouse there to finish setup. To reach the box from a
+phone afterwards, put both on a private network such as Tailscale.
+
 ## Check the install
 
-When the box is up, its screen shows the portal's box screen: the home screen with its widgets, the app grid and the
-dock. Its clock uses Pacific time. The box names itself `gurt-<id>`, from the first 6 hex digits of a hash of its own key, for example
+After setup, the screen shows the GurtOS desktop: widgets for what needs you and what is running, and a dock. Its clock uses Pacific time. The box names itself `gurt-<id>`, from the first 6 hex digits of a hash of its own key, for example
 `gurt-bf07fe`.
 
 On a debug build you can also log in over SSH and ask the box directly:
@@ -158,7 +178,7 @@ release ISO has also been installed on a Vultr instance with BIOS: from a blank 
 3 minutes, and back on screen about 25 seconds after a hard power-off. UTM, Parallels and real PCs follow the same
 steps but have not been tested yet.
 
-Next, set the box up: [First boot and pairing](/get-started/first-boot/).
+Next: [First boot and pairing](/get-started/first-boot/) explains what the box set up, and how to pair more phones.
 
 ## Related
 

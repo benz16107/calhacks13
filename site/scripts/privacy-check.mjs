@@ -8,7 +8,7 @@ const files = walk(root).filter((f) => /\.(html|txt|xml|json|svg|css|js|yaml)$/.
 const checks = [
   ['machine name', /linuxbox|macserver|benmac|vultrbox|gx10|dellserver|estella/gi],
   ['tailnet', /tailb51682|\.ts\.net\b/gi],
-  ['personal name', /\bBen\b|Ben Zhou|benz16107|benzhou|thebenzhou/g],
+  ['personal name', /\bBen\b|Ben Zhou|benz16107(?!\/calhacks13)|benzhou|thebenzhou/g],
   ['email', /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g, (m) => /@example\.(com|org|net)$/.test(m)],
   ['jira site', /[a-z0-9-]+\.atlassian\.net/gi, (m) => /^(your-site|your-org|example)\.atlassian\.net$/i.test(m)],
   ['lima/sslip', /sslip\.io|lima\.internal|limactl/gi],
@@ -18,7 +18,7 @@ const checks = [
   ['secret prefix', /sk_(live|test)_[A-Za-z0-9]{6,}|\bpi_[A-Za-z0-9]{12,}|\bre_[A-Za-z0-9]{12,}|AKIA[0-9A-Z]{12,}|ghp_[A-Za-z0-9]{10,}|xox[bp]-[A-Za-z0-9-]+|-----BEGIN [A-Z ]*PRIVATE/g],
   ['long hex', /\b[0-9a-f]{32,}\b/g, (m) => /^(0123456789abcdef)+$/.test(m)],
   ['uuid', /\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/gi],
-  ['event word', /hackathon|cal ?hacks|sponsor|devpost|demo moment/gi],
+  ['event word', /hackathon|cal ?hacks|sponsor|devpost|demo moment/gi, (m, at) => /benz16107\/calhacks13/.test(at)],
   ['private link', /mana\.space|figma\.com|docs\.google|one-atlas/gi],
 ];
 let hits = 0;
@@ -26,8 +26,8 @@ for (const f of files) {
   const text = fs.readFileSync(f, 'utf8');
   for (const [label, re, allowed] of checks) {
     for (const m of text.matchAll(re)) {
-      if (allowed?.(m[0])) continue;
       const at = text.slice(Math.max(0, m.index - 50), m.index + m[0].length + 30).replace(/\s+/g, ' ');
+      if (allowed?.(m[0], at)) continue;
       console.log(`${label}: ${path.relative(root, f)}: ${m[0]}  …${at}…`);
       hits++;
     }

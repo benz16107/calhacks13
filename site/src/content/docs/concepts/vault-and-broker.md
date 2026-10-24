@@ -24,9 +24,7 @@ Who may read which key is declared in code, not decided at run time:
 
 Asking for any other key throws an error. A tool that declares `STRIPE_SECRET_KEY` cannot read `WALLET_SOLANA_KEY`, even though both are in the same file.
 
-:::caution[Planned]
-In this release you add keys through the vault API or by editing the file as root. A screen in the portal for adding keys is planned. See [add a secret](/guides/add-a-secret/).
-:::
+You add keys on the box's screen: in setup, or in **Settings**, **Accounts & Keys**. The portal sends each key straight to the vault and never shows it again; it shows only which keys are set. Programs use the vault API, and root can edit the file. See [add a secret](/guides/add-a-secret/).
 
 ## The broker
 

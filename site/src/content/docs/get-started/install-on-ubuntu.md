@@ -22,11 +22,17 @@ computer you use every day.
 - At least 4 GB of memory and 10 GB of free disk. Each task may use up to 2 GB of memory.
 - Internet access during the install, to download Node.js, Droid and SpacetimeDB.
 - No other software using user ids 30000 to 39999, TCP port 7700, port 3000, or ports 8800 to 8899.
-- A Factory API key, which Droid needs to run Claude. Tasks never see it.
+- One model key: an Anthropic API key from [console.anthropic.com](https://console.anthropic.com), or a Factory API
+  key from [app.factory.ai](https://app.factory.ai). Tasks never see it. Every app is optional and stays off until
+  you add its keys.
 
 ## Install
 
-1. Get the GurtOS source on the machine. The source is not public yet; use the copy you were given access to.
+1. Get the GurtOS source on the machine:
+
+   ```sh
+   git clone https://github.com/benz16107/calhacks13.git gurtos && cd gurtos
+   ```
 2. From the top folder of the source, run the install script as root:
 
    ```sh
@@ -39,7 +45,9 @@ computer you use every day.
    `/etc/box/vault.env` with mode `0600`, and installs and starts `box.service`.
    It prints `active` when the service is up. Running it again is safe.
 
-3. Add your Factory key to the vault through the box's API. A request from the machine itself is allowed to set
+3. Add your model key to the vault, in the portal's **Settings**, **Accounts & Keys** (see [Open the portal](#open-the-portal))
+   or through the API. The command below sets a Factory key;
+   for an Anthropic key, use the name `ANTHROPIC_API_KEY` instead. A request from the machine itself is allowed to set
    keys, the key takes effect at once, and the box never returns it:
 
    ```sh

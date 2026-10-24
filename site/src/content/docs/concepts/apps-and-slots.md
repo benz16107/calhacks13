@@ -92,7 +92,7 @@ routes: {
 
 ## Turning apps on and off
 
-The owner can turn an app off and on without a reinstall, through the API from the box's own machine or a phone paired as the owner. An App Center screen in the portal is planned.
+The owner can turn an app off and on without a reinstall, in the portal's **App Center** or through the API, from the box's own screen or a phone paired as the owner. App Center shows each app's description, the tools, hosts and keys it uses, and one action: **Open**, **Set key**, **Details** or **Turn on**.
 
 | Request | Does |
 |---|---|

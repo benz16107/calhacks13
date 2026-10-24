@@ -4,7 +4,7 @@ import starlight from '@astrojs/starlight';
 import { satteri } from '@astrojs/markdown-satteri';
 import starlightLlmsTxt from 'starlight-llms-txt';
 import starlightOpenAPI, { openAPISidebarGroups } from 'starlight-openapi';
-import { NAME, DESCRIPTION } from './src/product.ts';
+import { NAME, DESCRIPTION, REPO } from './src/product.ts';
 import { productName } from './src/product-name.ts';
 
 // The canonical address, used for canonical links, OpenGraph images, the sitemap and llms.txt.
@@ -24,6 +24,8 @@ export default defineConfig({
       description: DESCRIPTION,
       logo: { src: './src/assets/logo.svg', replacesTitle: false, alt: '' },
       favicon: '/favicon.svg',
+      social: [{ icon: 'github', label: 'Source code on GitHub', href: REPO }],
+      components: { Footer: './src/components/Footer.astro' },
       customCss: [
         '@fontsource/instrument-sans/400.css',
         '@fontsource/instrument-sans/500.css',
@@ -64,6 +66,7 @@ export default defineConfig({
         }),
       ],
       sidebar: [
+        { label: 'Download', link: '/download/' },
         {
           label: 'Introduction',
           items: ['introduction/overview', 'introduction/editions'],
@@ -137,7 +140,13 @@ export default defineConfig({
         },
         {
           label: 'Project',
-          items: ['project/changelog', 'project/roadmap', 'project/contributing', 'project/licence'],
+          items: [
+            'project/changelog',
+            'project/roadmap',
+            'project/contributing',
+            'project/licence',
+            { label: 'Source code', link: REPO, attrs: { rel: 'noopener' } },
+          ],
         },
       ],
     }),

@@ -69,13 +69,13 @@ a private network such as Tailscale, or use the provider's console.
    trust. `BOX_URL` is the address the phone will use; with it, the pairing code comes with a QR code that opens on
    the phone.
 
-3. **Show a pairing code.** On the box's own screen, open **Settings**. It shows a one-time code that works for
+3. **Show a pairing code.** On the box's own screen, open **Settings**, **Devices**. It shows a one-time code that works for
    5 minutes, and a QR code when `BOX_URL` is set. Only the box itself, or a phone paired as the owner, can make a
    pairing code.
 
-   ![The Pair a phone window: a QR code, the code to compare, and the list of paired phones with a Remove button.](../../../assets/screens/box-pair.png)
+   ![The setup wizard's Owner step: pair my phone, or only this screen, with a paired test phone shown.](../../../assets/screens/setup-owner.png)
 
-   *Pairing in Settings, from the portal's design. The code and phone are examples.*
+   *Pairing the owner's phone during setup. You can pair more phones later in Settings, Devices.*
 
 4. **Pair the phone.** Scan the QR code with the phone's camera, or open `http://192.0.2.10:7700/#pair/<code>` on
    it. Check that the phone shows the same code as the box's screen, give the phone a name under
@@ -85,9 +85,9 @@ a private network such as Tailscale, or use the provider's console.
    answer wins, from any device. The phone sends its device token with the answer, so the log records the phone's
    name. Anything else the phone puts in the answer's `by` field is ignored.
 
-   ![A phone lock screen with an approval card that has Approve and Deny buttons, and two more requests stacked below.](../../../assets/screens/phone-approval.png)
+   ![The portal on a phone: two requests under Needs you, each with Deny and Approve, running tasks below, and an Ask the box button.](../../../assets/screens/phone-home.png)
 
-   *An approval on a phone, from the portal's design. Amounts are examples.*
+   *The portal on a phone, from a test box running scripted tasks. Amounts are test money.*
 
 ### Pair with the API
 

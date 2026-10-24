@@ -1,0 +1,24 @@
+---
+// Starlight's footer (edit link, pagination), plus the licence and the source link on every page.
+import Default from '@astrojs/starlight/components/Footer.astro';
+import { NAME, REPO, LICENSE_NAME, LICENSE_URL } from '../product.ts';
+---
+
+<Default />
+<p class="licence">
+  {NAME} is open source under the <a href={LICENSE_URL}>{LICENSE_NAME}</a>.
+  <a href={REPO}>Source code on GitHub</a>.
+</p>
+
+<style>
+  .licence {
+    margin-top: 2rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--sl-color-gray-5);
+    font-size: var(--sl-text-sm);
+    color: var(--sl-color-gray-3);
+  }
+  .licence a {
+    color: var(--sl-color-gray-2);
+  }
+</style>

@@ -13,12 +13,10 @@ intended. **Not built** means a known gap with no plan yet; it is listed so you 
 
 | Item | Status | Why |
 |---|---|---|
-| Authentication on the HTTP API | Preview | Built: from anywhere but the box itself, every request needs a paired device's token, and setup, settings, the vault and the owner's folders need the owner. Pairing a phone as the owner still takes a command on the box. |
-| First-run setup, Settings and App Center screens in the portal | Planned | The box's API for them is built (`/api/setup`, `/api/settings`, `/api/apps`, `/api/vault`). The portal has no screens for them yet, so a release build of the OS image still cannot take keys. |
-| Starting a task from the portal | Planned | Today tasks start from the API, apps and triggers, or Files on GurtOS Personal. |
+| Authentication on the HTTP API | Preview | Built: from anywhere but the box itself, every request needs a paired device's token, and setup, settings, the vault and the owner's folders need the owner. Pair the owner's phone in setup or in Settings, Devices. |
 | A setting for the API's listen address and the phone address | Planned | GurtOS Server from the ISO sets them by itself for private networks. On the Ubuntu install and GurtOS Personal they are the `BOX_LISTEN` and `BOX_URL` environment variables, set by hand. |
 | Push notifications to phones | Not built | A request shows when the portal is open on the phone. |
-| Public downloads of the ISO | Planned | Today the ISO is built from source. |
+| Public downloads of the ISO | Preview | v0.1.0-preview images on the [Download](/download/) page. |
 
 ## The OS image
 
@@ -44,7 +42,6 @@ intended. **Not built** means a known gap with no plan yet; it is listed so you 
 | Item | Status | Why |
 |---|---|---|
 | The GurtOS Personal ISO, desktop layer, Keep and Undo Keep | Preview | Built and walked end to end on a fresh install in a virtual machine. |
-| Filling the vault from the desktop | Planned | A fresh install has an empty vault; today it takes a terminal command. |
 | Pairing a phone on Personal | Planned | Needs `BOX_LISTEN` and `BOX_URL` set by hand. |
 | GurtOS Personal on arm64 and real laptops | Planned | Tested on x86_64 virtual machines only. |
 

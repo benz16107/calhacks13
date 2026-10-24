@@ -16,9 +16,8 @@ It installs from its own ISO, like [GurtOS Server](/get-started/install-server/)
 whole system at once, with an automatic rollback if the new system is not healthy.
 
 :::caution[Preview]
-GurtOS Personal installs and runs, and has been walked end to end on a fresh install. Two things are not finished:
-a fresh install has an empty vault and nothing on the desktop to fill it yet, and pairing a phone needs the box's
-address set by hand. See [What is not finished](#what-is-not-finished).
+GurtOS Personal installs and runs, and has been walked end to end on a fresh install. Pairing a phone still needs the
+box's address set by hand. See [What is not finished](#what-is-not-finished).
 :::
 
 ## Requirements
@@ -39,8 +38,10 @@ on it is erased only after you type `erase` on the screen, but back up first.
 
 ## Get the ISO
 
-GurtOS has no public downloads yet. If you have the source, build it on an Ubuntu 24.04 build machine where you have
-root:
+Download `gurtos-personal-x86_64.iso` from the [Download](/download/) page and check its checksum.
+
+Or build it from the [source](https://github.com/benz16107/calhacks13) on an Ubuntu 24.04 build machine where you
+have root:
 
 ```sh
 BUILD_SHELL='ssh my-build-vm' image/build personal          # gurtos-personal-x86_64.iso
@@ -66,16 +67,12 @@ The build leaves `gurtos-personal-<arch>.iso` and its update file `gurtos-person
 
 ## Add your model key
 
-Agent tasks need a Factory API key in the vault. The desktop has no screen for it yet. Open a terminal and run:
+Agents need one model key: an **Anthropic API key** from [console.anthropic.com](https://console.anthropic.com), or a
+**Factory API key** from [app.factory.ai](https://app.factory.ai). Open the GurtOS app from the dock, then
+**Settings**, **Accounts & Keys**, paste the key and choose **Save to vault**. The key never shows on screen again,
+and agents never see it. Every app, such as Jira or the wallet, is optional and stays off until you add its keys.
 
-```sh
-read -rs -p 'FACTORY_API_KEY: ' v && echo
-printf '{"value":"%s"}' "$v" | curl -s -X PUT http://127.0.0.1:7700/api/vault/FACTORY_API_KEY \
-  -H 'content-type: application/json' -d @- && unset v
-```
-
-A request from the computer itself counts as the owner, so this needs no `sudo`. The key never shows on screen or
-in the process list, and the box never returns it. See [Add a secret to the vault](/guides/add-a-secret/).
+If you start a task before adding a key, it fails at once and a notification says the vault has no model key.
 
 ## Use it
 
@@ -116,8 +113,6 @@ installed and can update the running system, but the next GurtOS update replaces
 
 ## What is not finished
 
-- **Keys.** A fresh install has an empty vault, and the desktop has no screen to fill it. Use the terminal command
-  above.
 - **Phones.** The box listens on `127.0.0.1` and has no address set for phones, so pairing a phone needs
   `BOX_LISTEN` and `BOX_URL` set by hand. See [Approve from your phone](/guides/approve-from-your-phone/).
 - **Testing.** Tested on x86_64 in virtual machines. Not tested on arm64 or on a real laptop.

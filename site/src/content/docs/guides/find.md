@@ -44,9 +44,9 @@ The Find app keeps one index of every photo, text file and finished task on the 
    curl -s 'http://127.0.0.1:7700/t/find/search?q=whiteboard%20photo&kind=photo&k=3'
    ```
 
-![A search panel over the desktop with results from photos, files and tasks](../../../assets/screens/box-find.png)
+![A search panel over the desktop with results from tasks, the action log, files and photos.](../../../assets/screens/design-find.png)
 
-*Find, from the portal's design. The results are examples.*
+*Find, from the current design. The data and photos are examples.*
 
 :::caution[Planned]
 A Find window in the portal is designed, as above, but not built in this release. Search with the route or, from a task, with `find.search`.

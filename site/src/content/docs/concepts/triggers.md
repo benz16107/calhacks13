@@ -3,7 +3,7 @@ title: Triggers
 description: Triggers start GurtOS tasks without you, on a schedule, from a webhook, when a file arrives or from a chat. Each turns an event into a task spec.
 ---
 
-You can start a task by hand through the [HTTP API](/reference/http-api/), and the apps on the box start tasks from their own pages and chats. The portal has no button for a new task yet. Most agent work on an always-on box starts some other way: at night, when a ticket is filed, when a receipt lands in a folder, when you ask in a chat. A trigger is the code that turns such an event into a task.
+You can start a task by hand: **New task** in the portal's Tasks window, **Ask the box** on a phone, or the [HTTP API](/reference/http-api/). The apps on the box start tasks from their own pages and chats too. Most agent work on an always-on box starts some other way: at night, when a ticket is filed, when a receipt lands in a folder, when you ask in a chat. A trigger is the code that turns such an event into a task.
 
 ## How triggers work
 

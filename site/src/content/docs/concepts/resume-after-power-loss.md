@@ -20,9 +20,9 @@ them to show a notice after a restart that lists the tasks that picked up where 
 
 A task that was waiting for an OK stays waiting. Its approval is still in your inbox, and you can answer it from the portal or phone as if nothing happened.
 
-![The box's home screen after a power cut, with a Welcome back banner listing the tasks that resumed](../../../assets/screens/box-after-power-cut.png)
+![The desktop after a power cut, titled Welcome back: 2 requests still need you, 5 tasks resumed, and 0 calls paid twice.](../../../assets/screens/restored.png)
 
-*The home screen after a restart, from the portal's design. Task names are examples.*
+*After a power cut, from a test box running scripted tasks.*
 
 ## Why nothing runs twice
 
@@ -55,9 +55,9 @@ See [the test suite](/reference/test-suite/).
 
 Everything the core needs to resume lives on the data partition: the log, workspaces, task layers, the vault and SpacetimeDB's data. A whole-system update copies the task users into the new system, so a task resumed after an update keeps its uid. See [system updates](/concepts/system-updates/).
 
-![The box's boot screen with the product name and a progress line while tasks are rebuilt from the log](../../../assets/screens/box-boot.png)
+![The boot screen: the GurtOS name, Restoring after a power cut, a progress bar, and a line saying it reads log.jsonl and resumes every task.](../../../assets/screens/boot.png)
 
-*The boot screen, from the portal's design. The box's screen does not show this progress view yet. After a restart it shows the home screen with the notice above.*
+*The boot screen while the box restarts, from a test box running scripted tasks.*
 
 ## Limits
 

@@ -3,6 +3,11 @@
 // Two places hold the name as literal text and need a hand edit: openapi/box-api.yaml and the screenshots.
 export const NAME = 'GurtOS';
 
+/** The public source repository, its licence, and where release ISOs are published. */
+export const REPO = 'https://github.com/benz16107/calhacks13';
+export const LICENSE_NAME = 'Apache License 2.0';
+export const LICENSE_URL = `${REPO}/blob/main/LICENSE`;
+
 /** The word the docs are written with. Leave it alone when renaming; change NAME instead. */
 const WRITTEN = 'GurtOS';
 

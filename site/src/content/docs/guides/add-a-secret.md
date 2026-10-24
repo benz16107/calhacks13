@@ -5,20 +5,24 @@ description: Put an API key in the box's vault so tools can use it on a task's b
 
 The vault is where the box keeps keys and tokens. Agents never read it. A tool that runs inside the box service reads
 the keys it declared, makes the call, and hands the task only the result. In this guide you add a key to the vault,
-either through the box's API, which takes effect at once, or by editing the file.
+on the box's screen, through the box's API, or by editing the file. All three take effect at once except the file.
 
 ## Before you start
 
 - The key's name, as the app that uses it expects. See [Vault keys](/reference/vault-keys/).
-- One of these:
-  - A shell on the box: on Ubuntu, on GurtOS Personal (a terminal on the desktop), or over SSH on a debug build of
-    GurtOS Server.
-  - A phone paired as the owner. See [pair a phone as the owner](/guides/approve-from-your-phone/#pair-a-phone-as-the-owner).
+- For the screen: the box's own screen, or a phone paired as the owner.
+- For the API or the file: a shell on the box (on Ubuntu, a terminal on GurtOS Personal, or SSH on a debug build of
+  GurtOS Server), or a phone paired as the owner for the API. See
+  [pair a phone as the owner](/guides/approve-from-your-phone/#pair-a-phone-as-the-owner).
 
-:::caution[Planned]
-A screen in the portal for adding keys is planned. Until then, a release build of GurtOS Server has no shell and no
-screen to fill its vault.
-:::
+## On the box's screen
+
+1. Open **Settings**, then **Accounts & Keys**. During first-run setup, the **AI models** and **Keys for apps** steps
+   show the same fields.
+2. Paste the key and choose **Save to vault**.
+
+The screen shows only whether a key is set. It never shows a key again; to change one, paste a new key over it. On
+GurtOS Personal, the GurtOS app on your desktop has the same Settings. A phone paired as the owner can do it too.
 
 ## With the API
 

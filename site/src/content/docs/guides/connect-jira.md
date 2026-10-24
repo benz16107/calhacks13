@@ -3,7 +3,7 @@ title: Connect Jira
 description: Turn every agent task into a Jira issue with its prompt, steps, approvals and diff, and approve, deny or roll back a task from a panel in Jira.
 ---
 
-The Jira app writes each task on the box to a Jira issue, and keeps it up to date as the task runs. A Forge app adds a **Box agent task** panel to those issues, where people who may edit the issue can approve, deny or roll back the task. In this guide you connect a box to a Jira Cloud site and install the panel.
+The Jira app writes each task on the box to a Jira issue, and keeps it up to date as the task runs. A Forge app adds a **GurtOS agent task** panel to those issues, where people who may edit the issue can approve, deny or roll back the task. In this guide you connect a box to a Jira Cloud site and install the panel.
 
 The panel reaches the box through a reverse proxy. The box asks every request from off the machine for a paired
 device's token, except routes an app marks as open. The Jira app marks its three panel routes open, because each one
@@ -69,7 +69,7 @@ checks the app's shared secret itself.
    forge install --non-interactive --site your-site.atlassian.net --product jira --environment production
    ```
 
-6. **Show the panel on every issue.** As a Jira admin, open any `BOX` issue, open the **Box agent task** panel's menu and pick **Show for all work items**.
+6. **Show the panel on every issue.** As a Jira admin, open any `BOX` issue, open the **GurtOS agent task** panel's menu and pick **Show for all work items**.
 
 ## Check it worked
 

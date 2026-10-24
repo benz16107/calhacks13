@@ -6,7 +6,7 @@ description: Set up the Shopper app so an agent watches prices and restocks, pro
 The Shopper app turns shopping into standing instructions. "Get me the coffee filters when they're under $7." The box checks the store on a schedule. When the item is in stock at or under your price, it asks for your OK, and pays only after you approve. It can also read household receipts and propose a reorder. In this guide you set up the app and run one watch from start to purchase.
 
 :::caution[Test payments only]
-Every payment here is a test payment: Stripe test mode with Stripe's Visa test card. No real money moves and nothing ships. Checkout happens at the **Box Test Store**, a small store the app runs on the box, because no real store accepts a test card. Where a payment is simulated instead, the app, the log and the order say so.
+Every payment here is a test payment: Stripe test mode with Stripe's Visa test card. No real money moves and nothing ships. Checkout happens at the **GurtOS Test Store**, a small store the app runs on the box, because no real store accepts a test card. Where a payment is simulated instead, the app, the log and the order say so.
 :::
 
 ## Before you start
@@ -57,7 +57,7 @@ Every payment here is a test payment: Stripe test mode with Stripe's Visa test c
      -d '{"store": "test", "product": "HV60-100", "maxCents": 700, "qty": 2}'
    ```
 
-   `HV60-100` is the test store's Hario V60 filters. `store` is `test` for the Box Test Store, or `bestbuy.ca` for a
+   `HV60-100` is the test store's Hario V60 filters. `store` is `test` for the GurtOS Test Store, or `bestbuy.ca` for a
    live check through Apify, where `product` is a Best Buy SKU or search words.
 
 6. **Wait for the price.** The box checks the store on a schedule. Each check is a task with no network and no secrets, and its result goes into the action log. To try it now, drop the test store's price:
@@ -73,11 +73,11 @@ Every payment here is a test payment: Stripe test mode with Stripe's Visa test c
    Buy 2 × Hario V60 02 paper filters, 100 count for $13.00? $6.50 each, down from $8.99, under your $7.00 limit. TEST PAYMENT.
    ```
 
-   Tap **Approve** on the phone or in the portal. Only then does `shopper.buy` sign the order and pay the Box Test Store.
+   Tap **Approve** on the phone or in the portal. Only then does `shopper.buy` sign the order and pay the GurtOS Test Store.
 
-![The Shopper app with its watch list and orders, a standing test payments notice, and a purchase banner asking to approve a $13.00 test payment](../../../assets/screens/box-shopper.png)
+![The Shopper app: a test payments notice, a watch list with a request to approve a $13.00 test payment, and recent orders paid with a Visa test card.](../../../assets/screens/design-shopper.png)
 
-*Shopper, from the portal's design. Products and prices are examples.*
+*Shopper, from the current design. Every payment is test money.*
 
 ## Reorder from receipts
 
@@ -114,7 +114,7 @@ All under `/t/shopper/` on the box's API.
 | `POST /ask {text}` | Droid turns your words into a watch |
 | `POST /reorder` | Droid reads the receipts and proposes a reorder |
 | `POST /supplies {url, cents}` | An agent buys a supply from an x402 API within `cents`, through the wallet app |
-| `GET /store`, `GET /store/products` | The Box Test Store |
+| `GET /store`, `GET /store/products` | The GurtOS Test Store |
 | `POST /store/checkout` | Checkout. A signature and an idempotency key are required |
 | `POST /store/admin {sku, priceCents?, inStock?}` | Test controls: change a price or the stock |
 | `GET /keys/box-shopper` | The box's public signing key |

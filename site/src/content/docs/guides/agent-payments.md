@@ -84,9 +84,9 @@ The wallet pays only in USDC on Solana devnet, a test network where tokens have 
 - The task's log has a quote step, a step like "Paid $0.01 in Solana devnet USDC (test money) to `<payee>`", and a `tool.result` with `cents`. The task's `costCents` includes the payment.
 - Each payment links to the Solana Explorer on devnet.
 
-![The Wallet app: a devnet USDC balance labelled test money, the wallet address, and a list of payments with their task, API, amount and transaction](../../../assets/screens/box-wallet.png)
+![The Wallet app: a devnet USDC balance labelled test money, how it pays, and a list of payments with their task, amount, status and transaction.](../../../assets/screens/design-wallet.png)
 
-*The Wallet app, from the portal's design. Balances and payments are examples.*
+*Wallet, from the current design. Devnet USDC is test money.*
 
 ## How the wallet stays safe
 

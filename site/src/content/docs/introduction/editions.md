@@ -19,8 +19,8 @@ work that arrives from a webhook, a chat or another app.
 - Or install the box service on an existing Ubuntu 24.04 machine.
   See [Install on Ubuntu](/get-started/install-on-ubuntu/).
 
-**Status: Preview.** The core, the portal and the OS image work and are tested on x86_64 and arm64 virtual
-machines. Some setup steps, such as entering keys from the portal, are not built yet.
+**Status: Preview.** The core, the portal with its setup wizard, and the OS image work and are tested on x86_64 and
+arm64 virtual machines.
 
 ## GurtOS Personal
 
@@ -33,8 +33,8 @@ account the owner. Approvals arrive as desktop notifications, a top-bar indicato
 GurtOS app opens the portal in a window, and **Ask an Agent** in Files hands an agent a folder. You can undo a Keep
 later, too.
 
-**Status: Preview.** It installs and runs, and has been walked end to end on a fresh install. Filling the vault and
-pairing a phone still take a terminal. See [Install GurtOS Personal](/get-started/install-personal/).
+**Status: Preview.** It installs and runs, and has been walked end to end on a fresh install. Pairing a phone still
+needs the box's address set by hand. See [Install GurtOS Personal](/get-started/install-personal/).
 
 ## GurtOS Business
 

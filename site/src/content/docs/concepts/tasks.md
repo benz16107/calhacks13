@@ -100,13 +100,13 @@ Every task has the same three views, which the portal shows as its task window:
 - `GET /api/tasks/<id>/diff` returns what the task added, modified or deleted, and a unified diff.
 - `POST /api/tasks/<id>/undo` undoes it.
 
-![A task window with its steps from the action log, the files it changed, and an Undo button](../../../assets/screens/box-task-detail.png)
+![A task window: a red alert saying the task tried to reach a host it was not allowed and was blocked, its steps from the action log with the blocked step in red, the files it changed, what it was allowed, and an Undo task button.](../../../assets/screens/task.png)
 
-*A task window, from the portal's design. The task tried four things it was not allowed to do, and each is a red line in its log. Names and times are examples.*
+*A task's window, from a test box running scripted tasks.*
 
 ## Who starts tasks
 
-The box's own screen and any paired device can start a task with `POST /api/tasks`. The portal has no button for it yet. Apps can also start tasks from inside the core with `box.createTask()`: on a schedule, from a webhook, when a file arrives, or from a chat. The task's `source` records which. See [triggers](/concepts/triggers/).
+The box's own screen and any paired device can start a task. In the portal, **New task** in the Tasks window asks for a title, what to do, the hosts it may reach and a budget. On a phone, **Ask the box** does the same. Programs use `POST /api/tasks`. Apps can also start tasks from inside the core with `box.createTask()`: on a schedule, from a webhook, when a file arrives, or from a chat. The task's `source` records which. See [triggers](/concepts/triggers/).
 
 Tasks run side by side. One task waiting for an OK, failing or being undone does not stop any other.
 

@@ -7,13 +7,13 @@ If you find a way for an agent, a web page, an app or a person to get past one o
 
 ## How to report
 
-GurtOS does not have a public repository or a published security address yet. Until a security contact is published on this page:
+Report it through GitHub's private vulnerability reporting: open the
+[repository's Security tab](https://github.com/benz16107/calhacks13/security) and choose **Report a vulnerability**.
+Only the maintainers can read the report.
 
-- Report privately to the maintainers, through the channel you received access to GurtOS from.
-- Mark the message as a security report.
-- Do not share the details anywhere public.
-
-This page will list a dedicated address and an encryption key once they exist.
+- Mark it as a security report, and do not share the details anywhere public.
+- If that button is not there, open a public issue that says only that you have a security report and asks for a
+  private contact. Put no details in the issue.
 
 ## What to include
 

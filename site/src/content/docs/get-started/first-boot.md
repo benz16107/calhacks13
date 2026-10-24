@@ -7,8 +7,8 @@ sidebar:
     variant: note
 ---
 
-The first time a box starts from its disk, it sets itself up. You do not log in, and there is no setup wizard.
-This page explains what happens, what the screen shows, and what to do next.
+The first time a box starts from its disk, it sets itself up. You do not log in. The screen then runs a setup wizard.
+This page explains what happens, what the screen shows, and how to pair phones.
 
 ## What first boot sets up
 
@@ -43,22 +43,26 @@ browser window as an unprivileged `kiosk` user. It shows the portal's box screen
 banners when a task needs you. You can approve, deny and undo from the screen with a keyboard and mouse or a touch
 screen.
 
-![The GurtOS home screen: a greeting, widgets for requests waiting, running tasks, money spent today and Time Machine layers, the app grid and the dock.](../../../assets/screens/box-home.png)
+![The GurtOS desktop: a greeting, widgets for what needs you, what is running and what was spent today, and a dock of apps.](../../../assets/screens/desktop.png)
 
-*The home screen, from the portal's design. Names, tasks and amounts are examples.*
+*The box's screen, from a test box running scripted tasks. Money is test money.*
 
 After a power cut, the screen lists the tasks that picked up where they stopped.
 
-## Add your keys
+## Setup and your keys
 
-Agent tasks need `FACTORY_API_KEY` in the vault, and some apps need their own keys. The box sets a key with
-`PUT /api/vault/<NAME>`, which only the box itself or a phone paired as the owner may call, and never returns a
-value. The portal has no screen for it yet, and a release build has no shell, so for now:
+Until setup is done, the screen shows the setup wizard instead of the desktop. It asks for the network, the box's name
+and time zone, the owner, one model key, what agents may do, which apps to turn on and their keys, updates, privacy
+and appearance.
 
-- build a **debug** image (`BOX_SSH_KEY=~/.ssh/id_ed25519.pub image/build`) and set keys over SSH, or
-- use [the Ubuntu install](/get-started/install-on-ubuntu/).
+GurtOS needs exactly one model key: an **Anthropic API key** from
+[console.anthropic.com](https://console.anthropic.com), or a **Factory API key** from
+[app.factory.ai](https://app.factory.ai). Every app is optional and stays off until you add its keys. Keys go
+straight into the vault, and no screen shows them again. Change them later in **Settings**, **Accounts & Keys**. See
+[Add a secret to the vault](/guides/add-a-secret/).
 
-See [Add a secret to the vault](/guides/add-a-secret/). A settings screen for keys is [planned](/project/roadmap/).
+On a cloud instance, run setup in the provider's web console, which shows the box's screen. The firewall keeps the
+API away from the public internet.
 
 ## Pair a phone
 
@@ -71,7 +75,9 @@ In outline:
 1. Put the phone on the same private network as the box: your home network, or a VPN such as Tailscale. GurtOS
    Server listens on every address, sets its own phone address (`BOX_URL`) at each start, and its firewall lets the
    API in from private networks only, never from the public internet.
-2. On the box's own screen, open **Settings**. It shows a one-time code that works for 5 minutes, and a QR code.
+2. On the box's own screen, open **Settings**, **Devices**. It shows a one-time code that works for 5 minutes, and a
+   QR code. Turn on **It is the owner's phone** if this phone may change settings and keys. Setup's **Owner** step
+   does the same for your first phone.
 3. Scan the QR code with the phone, or open `http://<box address>:7700/#pair/<code>` on it. Check the code matches,
    name the phone and pair it.
 
