@@ -26,10 +26,10 @@ box's address set by hand. See [What is not finished](#what-is-not-finished).
 |---|---|---|
 | CPU | x86_64 | 4 cores |
 | Memory | 4 GB | 8 GB or more. The desktop needs room, and each task may use up to 2 GB. |
-| Disk | 29 GB | 48 GB. The two system slots take 24 GB. |
+| Disk | 32 GB | 48 GB. The two system slots take 24 GB. |
 | Firmware | BIOS or UEFI, with **Secure Boot off** | |
 
-An arm64 build exists but has not been tested.
+The arm64 image builds natively and was boot-tested in a VM on a Mac.
 
 :::danger
 The installer takes the whole disk. Dual boot with another operating system is not supported. A disk with anything
@@ -38,14 +38,14 @@ on it is erased only after you type `erase` on the screen, but back up first.
 
 ## Get the ISO
 
-Download `gurtos-personal-x86_64.iso` from the [Download](/download/) page and check its checksum.
+Download `gurtos-personal-x86_64.iso` (Intel or AMD), or `gurtos-personal-arm64.iso` (Apple silicon in UTM or Parallels), from the [Download](/download/) page and check its checksum.
 
 Or build it from the [source](https://github.com/benz16107/calhacks13) on an Ubuntu 24.04 build machine where you
 have root:
 
 ```sh
 BUILD_SHELL='ssh my-build-vm' image/build personal          # gurtos-personal-x86_64.iso
-BUILD_SHELL='ssh my-build-vm' image/build personal arm64    # gurtos-personal-arm64.iso, untested
+BUILD_SHELL='ssh my-build-vm' image/build personal arm64    # gurtos-personal-arm64.iso
 ```
 
 The build leaves `gurtos-personal-<arch>.iso` and its update file `gurtos-personal-<arch>.sqfs` (with `.sha256` and
@@ -115,7 +115,7 @@ installed and can update the running system, but the next GurtOS update replaces
 
 - **Phones.** The box listens on `127.0.0.1` and has no address set for phones, so pairing a phone needs
   `BOX_LISTEN` and `BOX_URL` set by hand. See [Approve from your phone](/guides/approve-from-your-phone/).
-- **Testing.** Tested on x86_64 in virtual machines. Not tested on arm64 or on a real laptop.
+- **Testing.** Personal x86_64 installs, comes up healthy and survives a power cut in a virtual machine. The arm64 image was boot-tested in a VM on a Mac. Neither has run on a real laptop.
 
 ## Related
 

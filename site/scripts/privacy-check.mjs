@@ -6,7 +6,7 @@ const root = process.argv[2];
 const walk = (d) => fs.readdirSync(d, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? walk(path.join(d, e.name)) : [path.join(d, e.name)]));
 const files = walk(root).filter((f) => /\.(html|txt|xml|json|svg|css|js|yaml)$/.test(f) && !f.includes('/pagefind/') && !/\/_astro\/.*\.js$/.test(f));
 // Published release checksums and the release signing key's public fingerprint (the Download page): public on purpose.
-const PUBLIC_SUMS = ['FWKFb1eAvEBmMhVJwMwTnLnhrmZ5yQZ5947pDvFKcpY', '159753d9a02e546f215c9553512c0bfb43e3b4b3f82f1fc92569a8eef1796a07', 'c9444fe07f2405c21e23ba700b1e8bac97517a630f1a21d6ede61210e08c8b28'];
+const PUBLIC_SUMS = ['FWKFb1eAvEBmMhVJwMwTnLnhrmZ5yQZ5947pDvFKcpY', '1676fa7183f35b3ab7b5a9c695adb6d795efc0925aef32c314c884ba42d08c0a', '07e3daca006faf892b9a3c2574536303888f36dbf29f38c8651f6a195b712377', '0ba7ff5caa1bcc73073c94435131b48434a2128a46576320878ea77b2616bca3', '4d78deb9c879b9cc5325208d2e9e18c1d63e0620a7ebbbd2a559449ba8e7bbce'];
 const checks = [
   ['machine name', /linuxbox|macserver|benmac|vultrbox|gx10|dellserver|estella/gi],
   ['tailnet', /tailb51682|\.ts\.net\b/gi],
