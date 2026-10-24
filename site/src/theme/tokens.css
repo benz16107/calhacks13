@@ -7,9 +7,18 @@
 @font-face { font-family: 'Atkinson Hyperlegible Next'; font-weight: 700; font-display: swap; src: url('./fonts/atkinson-hyperlegible-next-latin-700-normal.woff2') format('woff2'); }
 @font-face { font-family: 'Atkinson Hyperlegible Mono'; font-weight: 400; font-display: swap; src: url('./fonts/atkinson-hyperlegible-mono-latin-400-normal.woff2') format('woff2'); }
 
+/* Plain zeros (UX P-29). Atkinson draws 0 with a slash and has no plain form, so these faces hold only the 0
+   (see fonts/OFL.txt). Code blocks use --gw-code, which leaves them out and keeps the slash. */
+@font-face { font-family: 'GurtOS Digits'; font-weight: 400; font-display: swap; unicode-range: U+0030; src: url('./fonts/digits-400.woff2') format('woff2'); }
+@font-face { font-family: 'GurtOS Digits'; font-weight: 500; font-display: swap; unicode-range: U+0030; src: url('./fonts/digits-500.woff2') format('woff2'); }
+@font-face { font-family: 'GurtOS Digits'; font-weight: 600; font-display: swap; unicode-range: U+0030; src: url('./fonts/digits-600.woff2') format('woff2'); }
+@font-face { font-family: 'GurtOS Digits'; font-weight: 700; font-display: swap; unicode-range: U+0030; src: url('./fonts/digits-700.woff2') format('woff2'); }
+@font-face { font-family: 'GurtOS Mono Digits'; font-weight: 400; font-display: swap; unicode-range: U+0030; src: url('./fonts/mono-digits-400.woff2') format('woff2'); }
+
 :root {
-  --gw-font: 'Atkinson Hyperlegible Next', system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --gw-mono: 'Atkinson Hyperlegible Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  --gw-font: 'GurtOS Digits', 'Atkinson Hyperlegible Next', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --gw-mono: 'GurtOS Mono Digits', 'Atkinson Hyperlegible Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  --gw-code: 'Atkinson Hyperlegible Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
 
   /* Type scale: 17px body, ratio about 1.25 */
   --gw-text-sm: 0.875rem;
@@ -90,6 +99,7 @@
 :root {
   --font-sans: var(--gw-font);
   --font-mono: var(--gw-mono);
+  --font-code: var(--gw-code);
   --measure: var(--gw-measure);
   --page: var(--gw-page);
   --space-1: var(--gw-space-1); --space-2: var(--gw-space-2); --space-3: var(--gw-space-3); --space-4: var(--gw-space-4);

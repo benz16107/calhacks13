@@ -3,7 +3,7 @@
 
 :root {
   --sl-font: var(--gw-font);
-  --sl-font-mono: var(--gw-mono);
+  --sl-font-mono: var(--gw-code);
   --sl-text-base: var(--gw-text-base);
   --sl-color-bg-nav: var(--gw-glass);
   --sl-nav-height: 3.5rem;

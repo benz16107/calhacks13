@@ -13,7 +13,7 @@ h1 { font-size: var(--gw-h1); letter-spacing: -0.02em; }
 h2 { font-size: var(--gw-h2); }
 h3 { font-size: var(--gw-h3); }
 p { margin: 0 0 var(--gw-space-4); text-wrap: pretty; }
-code, kbd, pre, samp { font-family: var(--gw-mono); font-size: 0.86em; }
+code, kbd, pre, samp { font-family: var(--gw-code); font-size: 0.86em; }
 :not(pre) > code { background: var(--gw-sunken); padding: 0.1em 0.35em; border-radius: var(--gw-radius-sm); }
 pre { background: var(--gw-code-bg); border: 1px solid var(--gw-rule); border-radius: var(--gw-radius); padding: var(--gw-space-4); overflow-x: auto; }
 hr { border: 0; border-top: 1px solid var(--gw-rule); margin: var(--gw-space-6) 0; }
