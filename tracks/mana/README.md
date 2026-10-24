@@ -71,6 +71,10 @@ it filtered on a result field the search doesn't return (the prompt now uses the
 price check got only a store's listing page (price checks now use `apify.checkPrice`); and "a $0.25 budget" read as a
 cap on the whole run, when it caps tool spending (the question now says so). QA's re-test on main: one approval, then
 the run finished with no second question.
+Second live run, Oct 24 at 04:35 PT, on build `da08615`: a signed-out browser asked for a Chemex 6-cup price at Best
+Buy Canada, we approved once, and the run finished with no second question. Its answer was honest: Best Buy Canada
+doesn't sell that model (it found the filters at $15.36 CAD). Its closing lines about Amazon.ca prices came from the
+model's own knowledge, not from the tools. The run cost 27.8 cents, tools plus the model.
 
 ### GurtOS guide: an agent that answers from the docs
 
