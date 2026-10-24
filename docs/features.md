@@ -5,6 +5,7 @@ that merging many threads' work drops nothing. Sources: `docs/story.md`, the tra
 Devpost text, and Ben's approved list.
 
 **Status.**
+- **not pursued**: Ben decided not to enter it; kept so nothing looks lost.
 - **planned**: promised, but no code on main or any branch yet.
 - **building**: code exists on a branch or in a thread's worktree.
 - **merged**: on main and its `./demo` step passes, but QA hasn't tried it by hand.
@@ -14,7 +15,7 @@ Devpost text, and Ben's approved list.
 **Demo step** names the check in `./demo` (`core/demo.ts` moments, or `tracks/<name>/demo.ts`). "none" means no
 automated check yet.
 
-Checked against main `8a4cbf4`, Sat Oct 24 05:00 PT. `./demo` on that tree: 26 passed, 0 failed, 1 pending (real Droid, off by default).
+Checked against main `8a4cbf4`, Sat Oct 24 05:10 PT. `./demo` on that tree: 26 passed, 0 failed, 1 pending (real Droid, off by default).
 
 ## Freeze plan
 
@@ -31,10 +32,11 @@ Checked against main `8a4cbf4`, Sat Oct 24 05:00 PT. `./demo` on that tree: 26 p
 |---|---|
 | verified (ISO) | 3 |
 | verified | 42 |
-| merged | 55 |
-| building | 26 |
-| planned | 26 |
-| **Total** | **152** |
+| merged | 54 |
+| building | 29 |
+| planned | 25 |
+| not pursued | 3 |
+| **Total** | **156** |
 
 **Collisions** (detail below): none open at 03:27. The three found at 02:25 are resolved and Business is on main. Still
 watched: portal/dist rebuilt from merged sources (C-4).
@@ -214,6 +216,19 @@ Gate: 22 Jira checks against offline stand-ins for Jira, JSM and Confluence. Liv
 | Jira dashboard gadget ("GurtOS agents") | jira | merged (live: dashboard 10100) | 21dad13, 7cf9701 | tracks/jira/demo.ts | Atlassian Track 2 |
 | Jira-to-GurtOS people mapping in Business (accountId to a Business person, acting through `x-box-person`) | jira, business | merged (built; the gate skips it; Business is on main since 276bb32, so it can be tested now) | 7cf9701 | skip in tracks/jira/demo.ts | Atlassian, Hyphenate |
 
+## Armadin (Best Security Hack)
+
+Owner: the Armadin thread. On branch `armadin-push` (pushed, not merged to main). It depends on a `sh <out> <command>` line
+in `core/workers/fake.ts` that the core thread is landing; the branch won't merge before it. Until then, QA notes
+`tracks/armadin` as pending that line, not a defect.
+
+| Feature | Owner | Status | Commit | Demo step | Tracks |
+|---|---|---|---|---|---|
+| The poisoned package: a harmless imitation of the Shai-Hulud npm worm run by a real `npm install` in a task; its postinstall's 10 attempts (env, dotfiles, vault, cloud metadata, exfil, raw connect, publish, other tasks' files, persistence) are blocked or contained; undo removes it; no canary secret in the log | armadin | building (branch `armadin-push`; the Armadin thread's demo box passed 1 of 1) | | tracks/armadin/demo.ts on branch | Armadin |
+| Attack scoreboard: 15 OS-level attacks, 13 caught, 2 published as not covered (no per-task disk quota; an allowed host's payload isn't inspected, reported to core) | armadin | building (branch) | | | Armadin |
+| Hijacked payment: a lookalike-sender bank-change invoice refused in code (AP-4) before anyone is asked; a second over-limit bill pauses for the controller, who says no | armadin, credit desk | building (branch; the credit desk's cases) | | demo on branch | Armadin, Hyphenate |
+| OWASP mapping (LLM Top 10 2025 and Agentic Top 10 2026, with a not-covered column) | armadin | building (branch) | | none | Armadin |
+
 ## Mana
 
 Owner: the Mana thread.
@@ -273,9 +288,9 @@ instance through the disc menu instead.
 | Boot the real GurtOS disc on Vultr from a script (`tracks/vultr/up.ts`) | vultr | building (script written, **blocked**: no Vultr credit; QA installed the disc by hand twice, Oct 23 22:29 and Oct 24 00:02) | | none | Vultr |
 | Encrypted backup to Object Storage (age; the owner holds the key) | vultr | building (code, unit test, demo step on the branch; live restore **blocked** by the credit error) | | demo step on branch | Vultr |
 | Vultr firewall managed from the box | vultr | building (group create, add, remove and delete proven against the real API; attaching to an instance **blocked**) | | | Vultr |
-| Vultr Serverless Inference as a hosted model for /find | vultr, find | planned (no subscription; a paid one is the conductor's call) | | | Vultr, Moss |
-| gurtos.co short pairing links (the code stays in the URL fragment) | vultr | building (redirect rules, test, go-live script; domain **not registered**, the conductor registers it) | | test on branch | GoDaddy |
-| Domain story text for the showcase | vultr, submission | merged into the submission's text | | none | GoDaddy |
+| Vultr Serverless Inference as a hosted model for /find | vultr, find | not pursued (needs a paid subscription; Ben's call, Oct 24) | | | Vultr, Moss |
+| gurtos.co short pairing links (the code stays in the URL fragment) | vultr | not pursued (Ben is not entering the MLH GoDaddy prize, Oct 24; the redirect code stays on its branch) | | | GoDaddy |
+| Domain story text for the showcase | vultr, submission | not pursued as a prize entry (GoDaddy); the showcase page for it should go (submission thread) | | none | GoDaddy |
 
 ## Factory (Droid SDK)
 
@@ -295,6 +310,7 @@ the Vultr test box passed every Factory check). QA has not walked them by hand y
 
 ## Not pursued
 
+- **MLH GoDaddy Registry prize and Vultr Serverless Inference** (Oct 24). Their rows above are marked "not pursued".
 - **Capital One (Nessie) prize track.** Ben is not entering it (Oct 24). No ledger row was only for it. Nessie stays as
   the credit desk's bank (payments, bills, AP payments in test money), so its rows are checked as part of the credit
   desk. The showcase still has a Nessie page and `docs/tracks.md` still lists the track; both are for the owners of
