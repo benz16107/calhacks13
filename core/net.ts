@@ -24,15 +24,30 @@ export const TASK_UIDS = '30000-39999'; // the range sandbox.ts gives task users
 export const PLACEHOLDER_KEY = 'fk-placeholder-the-box-adds-the-key';
 const FACTORY = /^([a-z0-9-]+\.)*factory\.ai$/;
 
-/** Load the firewall rule. Same rule for every box on the machine, so loading it again is harmless. */
+/**
+ * Load the firewall: a task user may reach the box's proxy and nothing else. Boxes on one machine share the
+ * rule, so a table that is already right is left alone (rewriting it would drop the per-task rules below).
+ */
 export function firewall() {
+  const has = (() => {
+    try {
+      const t = execFileSync('nft', ['list', 'table', 'inet', 'box'], { encoding: 'utf8', stdio: 'pipe' });
+      return t.includes('jump blocked') && t.includes(`dport ${PROXY_PORTS}`);
+    } catch {
+      return false; // no such table yet
+    }
+  })();
+  if (has) return;
   const rules = `add table inet box
 delete table inet box
 table inet box {
+  chain blocked {
+    meta skuid ${TASK_UIDS} counter log prefix "box-block " reject
+  }
   chain out {
     type filter hook output priority filter; policy accept;
     meta skuid ${TASK_UIDS} ip daddr 127.0.0.1 tcp dport ${PROXY_PORTS} accept
-    meta skuid ${TASK_UIDS} counter log prefix "box-block " reject
+    meta skuid ${TASK_UIDS} jump blocked
   }
 }
 `;
@@ -40,6 +55,34 @@ table inet box {
   fs.writeFileSync(file, rules);
   execFileSync('nft', ['-f', file]);
   fs.rmSync(path.dirname(file), { recursive: true });
+}
+
+/**
+ * Log this task's refused connections with its uid in the prefix. The kernel does not print the uid of a refused
+ * connection, so each task gets its own log rule ahead of the general one; the box reads the log and turns each
+ * line into a net.blocked event.
+ */
+export function logBlocked(uid: number, taskId: string) {
+  const insert = () =>
+    execFileSync('nft', ['insert', 'rule', 'inet', 'box', 'blocked', 'meta', 'skuid', String(uid), 'counter', 'log', 'prefix', `"box-block:${uid} "`, 'reject', 'comment', `"task-${taskId}"`], { stdio: 'pipe' });
+  try {
+    insert();
+  } catch {
+    try {
+      firewall(); // another box on this machine (older code) may have put back the old table; make ours again
+      insert();
+    } catch {} // no firewall on this machine: nothing is refused, so nothing to log
+  }
+}
+
+export function stopLoggingBlocked(taskId: string) {
+  try {
+    const out = execFileSync('nft', ['-a', 'list', 'chain', 'inet', 'box', 'blocked'], { encoding: 'utf8', stdio: 'pipe' });
+    for (const line of out.split('\n')) {
+      const handle = line.includes(`comment "task-${taskId}"`) ? /# handle (\d+)/.exec(line)?.[1] : undefined;
+      if (handle) execFileSync('nft', ['delete', 'rule', 'inet', 'box', 'blocked', 'handle', handle], { stdio: 'pipe' });
+    }
+  } catch {} // already gone
 }
 
 /**
@@ -91,12 +134,25 @@ function onTheBox(ip: string) {
 }
 
 /**
+ * BOX_HOSTS (JSON, like {"shop.demo":"127.0.0.1"}) names hosts for the proxy to resolve itself: a way for a
+ * test or the demo to serve a page on a name that tools send through the proxy. (Names under .localhost are not
+ * sent through a proxy by curl, so an agent using them tries to go around it.) Not for production.
+ */
+function aliasOf(host: string): string | undefined {
+  try {
+    return (JSON.parse(process.env.BOX_HOSTS ?? '{}') as Record<string, string>)[host];
+  } catch {
+    return undefined;
+  }
+}
+
+/**
  * The address a task may connect to for host:port, resolved once so the name cannot change in between.
  * A name that lands on the box itself needs host:port listed exactly, and never reaches a box port.
  */
 export async function destination(hosts: string[], host: string, port: string): Promise<string | undefined> {
   if (!allowed(hosts, host, port)) return;
-  const address = (await dns.lookup(host).catch(() => undefined))?.address;
+  const address = aliasOf(host) ?? (await dns.lookup(host).catch(() => undefined))?.address;
   if (!address) return;
   if (onTheBox(address) && (!hosts.includes(`${host}:${port}`) || boxPort(Number(port)))) return;
   return address;

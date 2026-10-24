@@ -1,7 +1,7 @@
 // The box service. Runs as root: replays the log, resumes tasks, loads tracks, serves the API.
 //   node --experimental-strip-types core/box.ts
 // Env: BOX_HOME (default /var/lib/box), BOX_VAULT, BOX_PORT (default 7700, 0 = off), BOX_LISTEN (default 127.0.0.1).
-import type { ChildProcess } from 'node:child_process';
+import { spawn, type ChildProcess } from 'node:child_process';
 import { execFileSync } from 'node:child_process';
 import { createHash, randomBytes } from 'node:crypto';
 import fs from 'node:fs';
@@ -11,7 +11,7 @@ import path from 'node:path';
 import type { App, Approval, Box, FullSpec, Ctx, LogEvent, LogReader, ModelJob, NewEvent, Route, Task, TaskSpec, TaskState, Tool, Track } from './contract.ts';
 import { DB, Live } from './live.ts';
 import { Log, apply, canMove, doneLayers, fold, type State } from './log.ts';
-import { PLACEHOLDER_KEY, firewall, relayCert, reservePort, startProxy } from './net.ts';
+import { PLACEHOLDER_KEY, firewall, logBlocked, stopLoggingBlocked, relayCert, reservePort, startProxy } from './net.ts';
 import * as sandbox from './sandbox.ts';
 import { HOME, dirs } from './sandbox.ts';
 import { usageCents } from './pricing.ts';
@@ -209,6 +209,7 @@ class Core {
       const ids = sandbox.prepare(t);
       sandbox.snapshotBase(t);
       this.uidTask.set(ids.uid, t.id);
+      logBlocked(ids.uid, t.id);
       await this.openBroker(t, ids);
       const child = sandbox.spawnWorker(t, ids, env);
       this.workers.set(t.id, child);
@@ -230,11 +231,44 @@ class Core {
 
   finish(t: Task) {
     this.closePending(t, 'task ended'); // nothing waits on a task that has stopped
+    stopLoggingBlocked(t.id);
     this.brokers.get(t.id)?.close();
     this.brokers.delete(t.id);
     sandbox.seal(t);
     if ((t.state === 'done' || t.state === 'undone') && !sandbox.isLinked(t.workspace)) this.refreshView(t.workspace);
     this.sweepUndone();
+  }
+
+  /**
+   * The firewall refuses a task's direct connections (the ones that go around the proxy) and logs each with the
+   * task's uid. Follow that kernel log and write a net.blocked event for each, so the action log shows an
+   * attempt the proxy never saw. One event per task and destination every few seconds, not one per retry.
+   */
+  watchBlocked() {
+    const child = spawn('journalctl', ['-k', '-f', '-n', '0', '-o', 'cat'], { stdio: ['ignore', 'pipe', 'ignore'] });
+    child.on('error', () => {}); // no journal on this machine: the proxy's refusals are still logged
+    child.unref();
+    const lastSeen = new Map<string, number>();
+    let buf = '';
+    child.stdout?.on('data', (chunk: Buffer) => {
+      buf += chunk.toString();
+      const lines = buf.split('\n');
+      buf = lines.pop() ?? '';
+      for (const line of lines) {
+        if (!line.includes('box-block')) continue;
+        const uid = Number(/box-block:(\d+)/.exec(line)?.[1]); // the per-task rule's prefix carries the uid
+        const dst = /DST=(\S+)/.exec(line)?.[1];
+        const dpt = /DPT=(\d+)/.exec(line)?.[1];
+        const task = this.state.tasks.get(this.uidTask.get(uid) ?? '');
+        if (!task || !dst) continue; // not one of this box's tasks (another box on the machine, or a stray)
+        const host = dpt ? `${dst}:${dpt}` : dst;
+        const key = `${task.id}|${host}`;
+        if (Date.now() - (lastSeen.get(key) ?? 0) < 5000) continue;
+        lastSeen.set(key, Date.now());
+        this.write({ type: 'net.blocked', task: task.id, host });
+      }
+    });
+    return child;
   }
 
   /** Delete the files of undone tasks that no running task still reads as a lower layer. */
@@ -441,7 +475,7 @@ class Core {
     if (this.links[name] && this.links[name] !== real) throw new Error(`workspace ${name} already points at ${this.links[name]}`); // never repoint: Keep would write into the wrong folder
     this.links[name] = real;
     sandbox.linkBase(name, real);
-    fs.writeFileSync(this.linksPath, JSON.stringify(this.links, null, 2));
+    fs.writeFileSync(this.linksPath, JSON.stringify(this.links, null, 2), { mode: 0o600 });
   }
 
   /** Link several of the owner's folders as one workspace. Each shows up as a top-level folder named by its label. */
@@ -453,7 +487,7 @@ class Core {
     fs.mkdirSync(dirs.workspace(name), { recursive: true }); // a marker, so the workspace exists; the folders are the real ones
     this.links[name] = folders;
     sandbox.linkMulti(name, folders);
-    fs.writeFileSync(this.linksPath, JSON.stringify(this.links, null, 2));
+    fs.writeFileSync(this.linksPath, JSON.stringify(this.links, null, 2), { mode: 0o600 });
   }
 
   folderRefusal(real: string): string | undefined {
@@ -1213,6 +1247,7 @@ data: ${JSON.stringify(e)}
     sandbox.workspace('home');
     try {
       firewall();
+      this.watchBlocked();
     } catch (e) {
       console.error(`WARNING: the firewall rule did not load, so tasks are not network-limited: ${(e as Error).message}`);
     }

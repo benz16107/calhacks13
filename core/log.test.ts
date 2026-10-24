@@ -58,3 +58,15 @@ test('state changes follow the rules', () => {
   assert.ok(!canMove('done', 'running'));
   assert.ok(!canMove('undone', 'done'));
 });
+
+test('a worker\'s closing step becomes the task summary', () => {
+  const file = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'log-')), 'log.jsonl');
+  const log = new Log(file);
+  log.append({ type: 'task.created', task: 'a', spec, user: 'box-a' });
+  log.append({ type: 'task.step', task: 'a', text: 'Read page.html', data: { tool: 'Read' } });
+  assert.equal(fold(log.events).tasks.get('a')?.summary, undefined);
+  log.append({ type: 'task.step', task: 'a', text: 'Summarized the listing: a used road bike.', data: { summary: true } });
+  const t = fold(new Log(file).events).tasks.get('a');
+  assert.equal(t?.summary, 'Summarized the listing: a used road bike.');
+  assert.equal(t?.step, 'Summarized the listing: a used road bike.');
+});

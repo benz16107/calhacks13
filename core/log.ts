@@ -70,7 +70,10 @@ export function apply(s: State, e: LogEvent): void {
       if (e.summary) t.summary = e.summary;
       break;
     case 'task.step':
-      if (t) t.step = e.text.slice(0, 200);
+      if (t) {
+        t.step = e.text.slice(0, 200);
+        if ((e.data as { summary?: boolean } | undefined)?.summary) t.summary = e.text; // the worker's closing message
+      }
       break;
     case 'keep':
       if (t) t.review = e.result === 'kept' ? 'kept' : e.result === 'reverted' ? 'undone' : e.result;

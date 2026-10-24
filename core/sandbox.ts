@@ -113,7 +113,11 @@ export function prepare(task: Task): { uid: number; gid: number } {
   }
   const uid = Number(run('id', '-u', task.user));
   const gid = Number(run('id', '-g', task.user));
-  fs.mkdirSync(t, { recursive: true, mode: 0o711 });
+  fs.mkdirSync(t, { recursive: true, mode: 0o710 });
+  // Only this task's own group can walk into its folder: another task that learns this id gets EACCES, not a
+  // listing. (tasks/ itself lets everyone pass through but not list.)
+  fs.chownSync(t, 0, gid);
+  fs.chmodSync(t, 0o710);
   for (const d of ['upper', 'work', 'root', 'home']) fs.mkdirSync(path.join(t, d), { recursive: true, mode: 0o700 });
   // The overlay's top directory takes the upper dir's owner, so only this task's user can enter its copy.
   fs.chownSync(dirs.upper(task.id), uid, gid);
@@ -128,7 +132,11 @@ export function prepare(task: Task): { uid: number; gid: number } {
     fs.mkdirSync(base, { recursive: true });
     // shortcut: whole-folder copies; fine for document folders, chunk it for huge trees
     for (const [label, real] of rootsOf(task.workspace)) fs.cpSync(real, label ? path.join(base, label) : base, { recursive: true });
-    run('chmod', '-R', 'a+rwX', base);
+    // The copy belongs to this task's user alone and is closed to everyone else, with the owner's files keeping
+    // their own modes (a 0600 file stays 0600). The user can still change every file in it: overlayfs checks the
+    // caller against the file's own owner and mode, so the owner bits are made writable, no one else's.
+    run('chown', '-R', `${uid}:${gid}`, base);
+    run('chmod', '-R', 'u+rwX,go-rwx', base);
   }
   mountOverlay(dirs.root(task.id), [...task.layers.map(dirs.upper), base], dirs.upper(task.id));
   return { uid, gid };
@@ -287,7 +295,8 @@ export function keep(task: Task): { kept?: Change[]; conflicts?: string[] } {
   if (conflicts.length) return { conflicts };
 
   const saveDir = path.join(HOME, 'timemachine', task.id);
-  fs.mkdirSync(saveDir, { recursive: true });
+  fs.mkdirSync(path.join(HOME, 'timemachine'), { recursive: true, mode: 0o700 }); // copies of the owner's old files: root only
+  fs.mkdirSync(saveDir, { recursive: true, mode: 0o700 });
   const meta: KeepMeta[] = [];
   for (const c of cs) {
     const real = realOf(task.workspace, c.path);
@@ -385,6 +394,14 @@ export function seal(task: Task) {
     tryRun('chmod', '-R', 'a+rwX', dirs.upper(task.id));
     tryRun('chown', 'root:root', dirs.upper(task.id));
     tryRun('chmod', '0700', dirs.upper(task.id));
+  }
+  // User and group ids are handed out again, so once the task ends nothing of it may stay readable by "its" id.
+  // The snapshot of a folder lingers until the owner decides (days, on Personal); it is root's alone from now on.
+  const base = path.join(dirs.task(task.id), 'base');
+  if (fs.existsSync(base)) tryRun('chown', '-R', 'root:root', base);
+  if (fs.existsSync(dirs.task(task.id))) {
+    tryRun('chown', 'root:root', dirs.task(task.id));
+    tryRun('chmod', '0700', dirs.task(task.id));
   }
   if (tryRun('id', '-u', task.user)) {
     try {
