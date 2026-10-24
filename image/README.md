@@ -46,7 +46,8 @@ The disc's menu says GurtOS Server or GurtOS Personal. On a machine without Gurt
 installs. On a machine that already has GurtOS on its disk it waits 30 seconds, then starts that; pick Install to
 install again. A blank disk is used straight away. A
 disk with anything on it is erased only after someone types `erase` on the screen. The installer then restarts
-into GurtOS. Server shows the portal's box screen. Personal shows GNOME's welcome, which makes the first account.
+into GurtOS. Server's screen opens GurtOS's setup wizard; Personal shows GNOME's welcome, which makes the first
+account, and then GurtOS Setup (see First-run setup below).
 
 **linuxbox, in a VM** (no root): `image/test` fetches the ISO, installs it on an empty QEMU disk, restarts into
 it and waits for the box to report healthy on the serial console. Then it removes the disc and pulls the plug,
@@ -79,8 +80,7 @@ console, or put the box on a private network (Tailscale's addresses are allowed)
 4. Before you start it, open the VM's settings. If UTM shows a Secure Boot option, turn it off: the boot loader
    is not signed.
 5. Start it. The menu waits 5 seconds and installs on the empty disk (about a minute), then restarts into
-   GurtOS. Server shows the portal's box screen; to pair a phone, open Settings there. Personal shows GNOME's
-   welcome.
+   GurtOS. Server opens the setup wizard on its screen. Personal shows GNOME's welcome, then GurtOS Setup.
 6. To start over, delete the VM's disk. Or start from the ISO, pick "Install" in its menu, and type `erase`.
 
 **Parallels** also works (File, New, "Install Windows, Linux or macOS from an image file", the arm64 ISO, then
@@ -135,6 +135,22 @@ after the rollback. An update also copies over `/etc/machine-id`, SSH host keys,
 - The two 6 GB slots cost 12 GB of disk (24 GB on Personal).
 - Updates are signed with one ed25519 key on one build VM. There is no key rotation and no rollback protection
   (an old signed image installs fine).
+
+## First-run setup
+
+The wizard is the portal's (`portal/src/setup.tsx`), and whether setup is done is the box's (`GET /api/setup`,
+in `core/`). The image only gets a person to it:
+
+- **Server:** the kiosk opens the portal's box screen (`/screen`), which shows the wizard until setup is done.
+  Its "pair your phone" step is the pairing QR code. `BOX_URL` is the box's own address from the first start
+  (`box-env`), so the QR opens on a phone on the same network.
+- **Personal:** GNOME's own setup makes the account first. At that person's first login, once GNOME's
+  first-login pages are done, the "GurtOS Setup" autostart (`rootfs-personal/etc/xdg/autostart/gurtos-setup.desktop`)
+  asks the box whether setup is done, and if not opens the Box window (`personal/box-ui.py app`), which shows the
+  wizard to the owner. It only runs for the person in the `sudo` group, and does nothing once setup is done. A
+  build without `personal/` opens the portal in GNOME Web instead.
+
+Updates do not touch it: setup's state lives with the box on the data partition.
 
 ## Network and firewall
 

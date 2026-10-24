@@ -119,6 +119,12 @@ if [[ $edition == personal- ]]; then
   owner() { for _ in $(seq 30); do vm 'grep -q BOX_OWNER=ana /etc/systemd/system/box.service.d/personal.conf' 2>/dev/null && return; sleep 2; done
     echo "test: FAILED, the box did not learn its owner ($1)"; exit 1; }
   owner "after the first account" && echo "test: the box knows its owner: ana"
+  # GurtOS Setup at ana's first login: with GNOME's pages done and setup not done, it opens the wizard.
+  vm 'sed -e "s#^if \[ -x /opt/box/personal/box-ui.py \]; then exec .*#echo would-open-the-wizard; exit 0#" \
+    /usr/local/lib/box-os/gurtos-setup > /tmp/gs && install -d -o ana -g ana /home/ana/.config &&
+    sudo -u ana touch /home/ana/.config/gnome-initial-setup-done && sudo -u ana HOME=/home/ana bash /tmp/gs' |
+    grep -q would-open-the-wizard || { echo "test: FAILED, GurtOS Setup would not open the wizard"; exit 1; }
+  echo "test: GurtOS Setup opens the wizard at the owner's first login"
 fi
 
 echo "test: system update to slot B"
