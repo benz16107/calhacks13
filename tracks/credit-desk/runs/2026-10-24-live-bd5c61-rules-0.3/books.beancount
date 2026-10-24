@@ -1,0 +1,638 @@
+; Fogline Supply Co. books, as a Beancount ledger (plain-text double-entry accounting).
+; This file mirrors the accounting system as recorded, mistakes included: an invoice is posted at its header total,
+; a payment is posted to the customer that owns the invoice it was keyed to, a duplicate invoice is posted twice,
+; and a post-dated check counts as cash on the day it arrived. Nothing here has been corrected.
+; Assets:Bank:Operating is the operating account at Capital One (the Nessie sandbox). Amounts are USD.
+
+option "title" "Fogline Supply Co."
+option "operating_currency" "USD"
+
+2025-01-01 open Assets:Bank:Operating USD
+2025-01-01 open Assets:Receivable:C-1001 USD
+2025-01-01 open Assets:Receivable:C-1002 USD
+2025-01-01 open Assets:Receivable:C-1003 USD
+2025-01-01 open Assets:Receivable:C-1004 USD
+2025-01-01 open Assets:Receivable:C-1005 USD
+2025-01-01 open Assets:Receivable:C-1006 USD
+2025-01-01 open Assets:Receivable:C-1007 USD
+2025-01-01 open Assets:Receivable:C-1008 USD
+2025-01-01 open Assets:Receivable:C-1009 USD
+2025-01-01 open Assets:Receivable:C-1010 USD
+2025-01-01 open Assets:Receivable:C-1011 USD
+2025-01-01 open Assets:Receivable:C-1012 USD
+2025-01-01 open Income:Sales USD
+2025-01-01 open Income:Discounts USD
+2025-01-01 open Liabilities:Payable:SUP-201 USD
+2025-01-01 open Liabilities:Payable:SUP-202 USD
+2025-01-01 open Liabilities:Payable:SUP-203 USD
+2025-01-01 open Liabilities:Payable:SUP-204 USD
+2025-01-01 open Liabilities:Payable:SUP-205 USD
+2025-01-01 open Liabilities:Payable:SUP-206 USD
+2025-01-01 open Expenses:Purchases USD
+2025-01-01 open Equity:Opening-Balances USD
+
+2025-09-29 * "Piedmont Provisions Catering" "Invoice INV-24111"
+  invoice: "INV-24111"
+  po: "PPC-2247"
+  terms: "Net 30"
+  due: "2025-10-29"
+  Assets:Receivable:C-1012                 3905.60 USD
+  Income:Sales                            -3905.60 USD
+
+2026-08-01 * "Harborview Oyster House" "Invoice INV-24044"
+  invoice: "INV-24044"
+  po: "HV-0731"
+  terms: "Net 30"
+  due: "2026-08-31"
+  Assets:Receivable:C-1002                 4410.00 USD
+  Income:Sales                            -4410.00 USD
+
+2026-08-04 * "Harborview Oyster House" "Invoice INV-24047"
+  invoice: "INV-24047"
+  po: "HV-0803"
+  terms: "Net 30"
+  due: "2026-09-03"
+  Assets:Receivable:C-1002                 6240.00 USD
+  Income:Sales                            -6240.00 USD
+
+2026-08-06 * "Dogpatch Deli" "Invoice INV-24049"
+  invoice: "INV-24049"
+  terms: "Net 30"
+  due: "2026-09-05"
+  Assets:Receivable:C-1010                 1845.30 USD
+  Income:Sales                            -1845.30 USD
+
+2026-08-07 * "Piedmont Provisions Catering" "Invoice INV-24050"
+  invoice: "INV-24050"
+  po: "PPC-2208"
+  terms: "Net 30"
+  due: "2026-09-06"
+  Assets:Receivable:C-1012                 5310.20 USD
+  Income:Sales                            -5310.20 USD
+
+2026-08-11 * "Telegraph Ave Pizza LLC" "Invoice INV-24054"
+  invoice: "INV-24054"
+  terms: "Net 30"
+  due: "2026-09-10"
+  Assets:Receivable:C-1005                 4880.40 USD
+  Income:Sales                            -4880.40 USD
+
+2026-08-14 * "Golden Gate Bagel Co." "Invoice INV-24058"
+  invoice: "INV-24058"
+  po: "GGB-814"
+  terms: "Net 30"
+  due: "2026-09-13"
+  Assets:Receivable:C-1001                 3120.40 USD
+  Income:Sales                            -3120.40 USD
+
+2026-08-18 * "Harborview Oyster House" "Invoice INV-24062"
+  invoice: "INV-24062"
+  po: "HV-0817"
+  terms: "Net 30"
+  due: "2026-09-17"
+  Assets:Receivable:C-1002                 8115.50 USD
+  Income:Sales                            -8115.50 USD
+
+2026-08-21 * "Mission Street Taqueria Inc." "Invoice INV-24066"
+  invoice: "INV-24066"
+  terms: "Net 30"
+  due: "2026-09-20"
+  Assets:Receivable:C-1003                 1284.60 USD
+  Income:Sales                            -1284.60 USD
+
+2026-08-25 * "Sunset Noodle Bar LLC" "Invoice INV-24071"
+  invoice: "INV-24071"
+  terms: "Net 30"
+  due: "2026-09-24"
+  Assets:Receivable:C-1007                 2940.50 USD
+  Income:Sales                            -2940.50 USD
+
+2026-08-27 * "Rockridge Ramen" "Invoice INV-24074"
+  invoice: "INV-24074"
+  terms: "2/10 Net 30"
+  due: "2026-09-26"
+  Assets:Receivable:C-1009                 2318.40 USD
+  Income:Sales                            -2318.40 USD
+
+2026-08-29 * "Telegraph Ave Pizza LLC" "Invoice INV-24077"
+  invoice: "INV-24077"
+  terms: "Net 30"
+  due: "2026-09-28"
+  Assets:Receivable:C-1005                 5212.90 USD
+  Income:Sales                            -5212.90 USD
+
+2026-08-29 * "Harborview Oyster House" "Payment PMT-8781 applied to INV-24044"
+  payment: "PMT-8781"
+  invoice: "INV-24044"
+  payer: "HARBORVIEW OYSTER HSE"
+  method: "ACH"
+  reference: "ACH 0829 HVOH"
+  memo: "INV-24044 + INV-24047"
+  Assets:Bank:Operating                   10650.00 USD
+  Assets:Receivable:C-1002               -10650.00 USD
+
+2026-09-01 * "Bluebird Bakery & Cafe" "Invoice INV-24083"
+  invoice: "INV-24083"
+  po: "BB-0901"
+  terms: "2/10 Net 30"
+  due: "2026-10-01"
+  Assets:Receivable:C-1006                 2214.00 USD
+  Income:Sales                            -2214.00 USD
+
+2026-09-03 * "Greenleaf Juice Co." "Invoice INV-24089"
+  invoice: "INV-24089"
+  terms: "Net 30"
+  due: "2026-10-03"
+  Assets:Receivable:C-1004                 1490.00 USD
+  Income:Sales                            -1490.00 USD
+
+2026-09-03 * "Dogpatch Deli" "Payment PMT-8784 applied to INV-24049"
+  payment: "PMT-8784"
+  invoice: "INV-24049"
+  payer: "Dogpatch Deli"
+  method: "check"
+  reference: "Check 4398"
+  memo: "inv 24049"
+  check_date: "2026-09-01"
+  Assets:Bank:Operating                    1845.30 USD
+  Assets:Receivable:C-1010                -1845.30 USD
+
+2026-09-04 * "Dogpatch Deli" "Invoice INV-24091"
+  invoice: "INV-24091"
+  terms: "Net 30"
+  due: "2026-10-04"
+  Assets:Receivable:C-1010                 2036.75 USD
+  Income:Sales                            -2036.75 USD
+
+2026-09-04 * "Piedmont Provisions Catering" "Payment PMT-8785 applied to INV-24050"
+  payment: "PMT-8785"
+  invoice: "INV-24050"
+  payer: "Piedmont Provisions"
+  method: "ACH"
+  reference: "ACH 0904 PPC"
+  memo: "PPC-2208 / INV-24050"
+  Assets:Bank:Operating                    5310.20 USD
+  Assets:Receivable:C-1012                -5310.20 USD
+
+2026-09-05 * "Fruitvale Food Truck Collective" "Invoice INV-24092"
+  invoice: "INV-24092"
+  po: "FFTC-0904"
+  terms: "Net 15"
+  due: "2026-09-20"
+  Assets:Receivable:C-1008                 1620.00 USD
+  Income:Sales                            -1620.00 USD
+
+2026-09-07 * "Harborview Oyster House" "Invoice INV-24094"
+  invoice: "INV-24094"
+  po: "HV-0906"
+  terms: "Net 30"
+  due: "2026-10-07"
+  Assets:Receivable:C-1002                 7380.00 USD
+  Income:Sales                            -7380.00 USD
+
+2026-09-08 * "Rockridge Ramen" "Invoice INV-24095"
+  invoice: "INV-24095"
+  terms: "2/10 Net 30"
+  due: "2026-10-08"
+  Assets:Receivable:C-1009                 2460.00 USD
+  Income:Sales                            -2460.00 USD
+
+2026-09-10 * "Bluebird Bakery & Cafe" "Payment PMT-8789 applied to INV-24083"
+  payment: "PMT-8789"
+  invoice: "INV-24083"
+  payer: "Bluebird Bakery"
+  method: "ACH"
+  reference: "ACH 0910 BBK"
+  memo: "INV 24083 less 2%"
+  Assets:Bank:Operating                    2169.72 USD
+  Income:Discounts                           44.28 USD
+  Assets:Receivable:C-1006                -2214.00 USD
+
+2026-09-11 * "Golden Gate Bagel Co." "Payment PMT-8790 applied to INV-24058"
+  payment: "PMT-8790"
+  invoice: "INV-24058"
+  payer: "Golden Gate Bagels"
+  method: "ACH"
+  reference: "ACH 0911 GGB"
+  memo: "GGB-814"
+  Assets:Bank:Operating                    3120.40 USD
+  Assets:Receivable:C-1001                -3120.40 USD
+
+2026-09-12 * "Golden Gate Bagel Co." "Invoice INV-24098"
+  invoice: "INV-24098"
+  po: "GGB-912"
+  terms: "Net 30"
+  due: "2026-10-12"
+  Assets:Receivable:C-1001                 1940.00 USD
+  Income:Sales                            -1940.00 USD
+
+2026-09-15 * "Piedmont Provisions Catering" "Invoice INV-24100"
+  invoice: "INV-24100"
+  po: "PPC-2231"
+  terms: "Net 30"
+  due: "2026-10-15"
+  Assets:Receivable:C-1012                 3968.75 USD
+  Income:Sales                            -3968.75 USD
+
+2026-09-18 * "Sunset Noodle Bar LLC" "Invoice INV-24102"
+  invoice: "INV-24102"
+  terms: "Net 30"
+  due: "2026-10-18"
+  Assets:Receivable:C-1007                 3615.20 USD
+  Income:Sales                            -3615.20 USD
+
+2026-09-18 * "Mission Street Taqueria Inc." "Payment PMT-8795 applied to INV-24066"
+  payment: "PMT-8795"
+  invoice: "INV-24066"
+  payer: "MISSION ST TAQ INC"
+  method: "check"
+  reference: "Check 2210"
+  check_date: "2026-09-15"
+  Assets:Bank:Operating                    1284.60 USD
+  Assets:Receivable:C-1003                -1284.60 USD
+
+2026-09-19 * "Fruitvale Food Truck Collective" "Payment PMT-8796 applied to INV-24092"
+  payment: "PMT-8796"
+  invoice: "INV-24092"
+  payer: "FRUITVALE FTC"
+  method: "card"
+  reference: "Card ending 4417"
+  memo: "FFTC-0904"
+  Assets:Bank:Operating                    1620.00 USD
+  Assets:Receivable:C-1008                -1620.00 USD
+
+2026-09-21 * "Mission Street Taqueria Inc." "Invoice INV-24104"
+  invoice: "INV-24104"
+  terms: "Net 30"
+  due: "2026-10-21"
+  Assets:Receivable:C-1003                 1512.75 USD
+  Income:Sales                            -1512.75 USD
+
+2026-09-22 * "Piedmont Provisions Catering" "Invoice INV-24105"
+  invoice: "INV-24105"
+  po: "PPC-2240"
+  terms: "Net 30"
+  due: "2026-10-22"
+  Assets:Receivable:C-1012                 4862.40 USD
+  Income:Sales                            -4862.40 USD
+
+2026-09-22 * "Sunset Noodle Bar LLC" "Payment PMT-8799 applied to INV-24071"
+  payment: "PMT-8799"
+  invoice: "INV-24071"
+  payer: "Sunset Noodle Bar LLC"
+  method: "ACH"
+  reference: "ACH 0922 SNB"
+  memo: "INV-24071"
+  Assets:Bank:Operating                    2940.50 USD
+  Assets:Receivable:C-1007                -2940.50 USD
+
+2026-09-24 * "Telegraph Ave Pizza LLC" "Invoice INV-24107"
+  invoice: "INV-24107"
+  terms: "Net 30"
+  due: "2026-10-24"
+  Assets:Receivable:C-1005                 4407.30 USD
+  Income:Sales                            -4407.30 USD
+
+2026-09-25 * "Rockridge Ramen" "Payment PMT-8802 applied to INV-24074"
+  payment: "PMT-8802"
+  invoice: "INV-24074"
+  payer: "ROCKRIDGE RAMEN"
+  method: "ACH"
+  reference: "ACH 0925 RRM"
+  memo: "Inv 24074"
+  Assets:Bank:Operating                    2318.40 USD
+  Assets:Receivable:C-1009                -2318.40 USD
+
+2026-09-25 * "Altamira Green Coffee Importers" "Bill B-3301: Green coffee, 60 bags, Colombia Huila"
+  bill: "B-3301"
+  supplier_invoice: "AGC-5512"
+  po: "PO-8841"
+  entered_by: "Luis Romero"
+  due: "2026-10-25"
+  Expenses:Purchases                      12480.00 USD
+  Liabilities:Payable:SUP-201            -12480.00 USD
+
+2026-09-29 * "Sunset Noodle Bar" "Invoice INV-24110"
+  invoice: "INV-24110"
+  terms: "Net 30"
+  due: "2026-10-29"
+  Assets:Receivable:C-1011                 3180.00 USD
+  Income:Sales                            -3180.00 USD
+
+2026-09-30 * "Greenleaf Juice Co." "Invoice INV-24113"
+  invoice: "INV-24113"
+  terms: "Net 30"
+  due: "2026-10-30"
+  Assets:Receivable:C-1004                 1126.80 USD
+  Income:Sales                            -1126.80 USD
+
+2026-09-30 * "Coastal Freight Lines" "Bill B-3302: Freight, September deliveries"
+  bill: "B-3302"
+  supplier_invoice: "CFL-20931"
+  po: "PO-8850"
+  entered_by: "Luis Romero"
+  due: "2026-10-15"
+  Expenses:Purchases                       1260.00 USD
+  Liabilities:Payable:SUP-203             -1260.00 USD
+
+2026-10-01 * "Bay Cup & Lid Co." "Bill B-3307: 12 oz hot cups and sip lids, 85 cases"
+  bill: "B-3307"
+  supplier_invoice: "BCL-77120"
+  po: "PO-8859"
+  entered_by: "Luis Romero"
+  due: "2026-10-29"
+  Expenses:Purchases                       6845.00 USD
+  Liabilities:Payable:SUP-202             -6845.00 USD
+
+2026-10-02 * "Fruitvale Food Truck Collective" "Invoice INV-24116"
+  invoice: "INV-24116"
+  po: "FFTC-0930"
+  terms: "Net 15"
+  due: "2026-10-17"
+  Assets:Receivable:C-1008                 1486.40 USD
+  Income:Sales                            -1486.40 USD
+
+2026-10-02 * "Fruitvale Food Truck Collective" "Invoice INV-24117"
+  invoice: "INV-24117"
+  po: "FFTC-0930"
+  terms: "Net 15"
+  due: "2026-10-17"
+  Assets:Receivable:C-1008                 1486.40 USD
+  Income:Sales                            -1486.40 USD
+
+2026-10-02 * "Rockridge Ramen" "Payment PMT-8806 applied to INV-24095"
+  payment: "PMT-8806"
+  invoice: "INV-24095"
+  payer: "ROCKRIDGE RAMEN"
+  method: "ACH"
+  reference: "ACH 1002 RRM"
+  memo: "Inv 24095 - 2% disc"
+  Assets:Bank:Operating                    2410.80 USD
+  Income:Discounts                           49.20 USD
+  Assets:Receivable:C-1009                -2460.00 USD
+
+2026-10-03 * "Bay Cup & Lid Co." "Bill B-3311: Cups and lids (resent invoice)"
+  bill: "B-3311"
+  supplier_invoice: "BCL77120"
+  po: "PO-8859"
+  entered_by: "Mia Ito (temp)"
+  due: "2026-10-31"
+  Expenses:Purchases                       6845.00 USD
+  Liabilities:Payable:SUP-202             -6845.00 USD
+
+2026-10-05 * "Harborview Oyster House" "Invoice INV-24119"
+  invoice: "INV-24119"
+  po: "HV-1004"
+  terms: "Net 30"
+  due: "2026-11-04"
+  Assets:Receivable:C-1002                 5920.25 USD
+  Income:Sales                            -5920.25 USD
+
+2026-10-06 * "Bluebird Bakery & Cafe" "Invoice INV-24121"
+  invoice: "INV-24121"
+  po: "BB-1006"
+  terms: "2/10 Net 30"
+  due: "2026-11-05"
+  Assets:Receivable:C-1006                 1875.00 USD
+  Income:Sales                            -1875.00 USD
+
+2026-10-06 * "Oak Hill Oat Co." "Bill B-3309: Barista oat milk, 100 cases"
+  bill: "B-3309"
+  supplier_invoice: "OHO-4410"
+  po: "PO-8866"
+  entered_by: "Luis Romero"
+  due: "2026-10-27"
+  Expenses:Purchases                       3960.00 USD
+  Liabilities:Payable:SUP-204             -3960.00 USD
+
+2026-10-07 * "Sunset Noodle Bar LLC" "Invoice INV-24122"
+  invoice: "INV-24122"
+  terms: "Net 30"
+  due: "2026-11-06"
+  Assets:Receivable:C-1007                 4234.80 USD
+  Income:Sales                            -4234.80 USD
+
+2026-10-08 * "Golden Gate Bagel Co." "Invoice INV-24124"
+  invoice: "INV-24124"
+  po: "GGB-1008V"
+  terms: "Net 30"
+  due: "2026-11-07"
+  Assets:Receivable:C-1001                 2655.30 USD
+  Income:Sales                            -2655.30 USD
+
+2026-10-08 * "Coastal Freight Lines" "Bill B-3304: Freight, early October deliveries"
+  bill: "B-3304"
+  supplier_invoice: "CFL-21177"
+  po: "PO-8873"
+  entered_by: "Luis Romero"
+  due: "2026-10-23"
+  Expenses:Purchases                       1385.00 USD
+  Liabilities:Payable:SUP-203             -1385.00 USD
+
+2026-10-09 * "Greenleaf Juice Co." "Payment PMT-8812 applied to INV-24089"
+  payment: "PMT-8812"
+  invoice: "INV-24089"
+  payer: "Golden Gate Bagel Co"
+  method: "ACH"
+  reference: "ACH 1009 GGB"
+  memo: "INV-24098"
+  Assets:Bank:Operating                    1940.00 USD
+  Assets:Receivable:C-1004                -1940.00 USD
+
+2026-10-09 * "East Bay Dairy & Butter" "Bill B-3313: Unsalted butter, 16 cases"
+  bill: "B-3313"
+  supplier_invoice: "EBD-90812"
+  po: "PO-8877"
+  entered_by: "Luis Romero"
+  due: "2026-11-08"
+  Expenses:Purchases                       2275.00 USD
+  Liabilities:Payable:SUP-206             -2275.00 USD
+
+2026-10-10 * "Telegraph Ave Pizza LLC" "Invoice INV-24127"
+  invoice: "INV-24127"
+  terms: "Net 30"
+  due: "2026-11-09"
+  Assets:Receivable:C-1005                 3740.00 USD
+  Income:Sales                            -3740.00 USD
+
+2026-10-10 * "Pacific Paper & Packaging" "Bill B-3315: Napkins, kraft bags and pastry boxes, Q4 stock"
+  bill: "B-3315"
+  supplier_invoice: "PPP-11873"
+  po: "PO-8880"
+  entered_by: "Luis Romero"
+  due: "2026-10-24"
+  Expenses:Purchases                      18940.00 USD
+  Liabilities:Payable:SUP-205            -18940.00 USD
+
+2026-10-12 * "Mission Street Taqueria Inc." "Invoice INV-24129"
+  invoice: "INV-24129"
+  terms: "Net 30"
+  due: "2026-11-11"
+  Assets:Receivable:C-1003                 1398.20 USD
+  Income:Sales                            -1398.20 USD
+
+2026-10-13 * "Piedmont Provisions Catering" "Payment PMT-8815 applied to INV-24100"
+  payment: "PMT-8815"
+  invoice: "INV-24100"
+  payer: "Piedmont Provisions"
+  method: "ACH"
+  reference: "ACH 1013 PPC"
+  memo: "PPC-2231 / INV-24100"
+  Assets:Bank:Operating                    3968.75 USD
+  Assets:Receivable:C-1012                -3968.75 USD
+
+2026-10-14 * "Rockridge Ramen" "Invoice INV-24131"
+  invoice: "INV-24131"
+  terms: "2/10 Net 30"
+  due: "2026-11-13"
+  Assets:Receivable:C-1009                 2186.90 USD
+  Income:Sales                            -2186.90 USD
+
+2026-10-14 * "Bluebird Bakery & Cafe" "Payment PMT-8817 applied to INV-24121"
+  payment: "PMT-8817"
+  invoice: "INV-24121"
+  payer: "Bluebird Bakery"
+  method: "ACH"
+  reference: "ACH 1014 BBK"
+  memo: "INV 24121 less 2%"
+  Assets:Bank:Operating                    1837.50 USD
+  Income:Discounts                           37.50 USD
+  Assets:Receivable:C-1006                -1875.00 USD
+
+2026-10-14 * "Coastal Freight Lines" "Payment of bill B-3302"
+  bill: "B-3302"
+  supplier_invoice: "CFL-20931"
+  Liabilities:Payable:SUP-203              1260.00 USD
+  Assets:Bank:Operating                   -1260.00 USD
+
+2026-10-16 * "Dogpatch Deli" "Invoice INV-24132"
+  invoice: "INV-24132"
+  terms: "Net 30"
+  due: "2026-11-15"
+  Assets:Receivable:C-1010                 1792.60 USD
+  Income:Sales                            -1792.60 USD
+
+2026-10-16 * "Mission Street Taqueria Inc." "Payment PMT-8819 applied to INV-24104"
+  payment: "PMT-8819"
+  invoice: "INV-24104"
+  payer: "Mission St Taqueria"
+  method: "check"
+  reference: "Check 2251"
+  check_date: "2026-10-14"
+  Assets:Bank:Operating                    1512.75 USD
+  Assets:Receivable:C-1003                -1512.75 USD
+
+2026-10-19 * "Bluebird Bakery & Cafe" "Invoice INV-24134"
+  invoice: "INV-24134"
+  po: "BB-1019"
+  terms: "2/10 Net 30"
+  due: "2026-11-18"
+  Assets:Receivable:C-1006                 2048.60 USD
+  Income:Sales                            -2048.60 USD
+
+2026-10-20 * "Sunset Noodle Bar" "Invoice INV-24136"
+  invoice: "INV-24136"
+  terms: "Net 30"
+  due: "2026-11-19"
+  Assets:Receivable:C-1011                 3240.00 USD
+  Income:Sales                            -3240.00 USD
+
+2026-10-20 * "Dogpatch Deli" "Payment PMT-8823 applied to INV-24091"
+  payment: "PMT-8823"
+  invoice: "INV-24091"
+  payer: "Dogpatch Deli"
+  method: "check"
+  reference: "Check 4471"
+  memo: "inv 24091"
+  check_date: "2026-11-06"
+  Assets:Bank:Operating                    2036.75 USD
+  Assets:Receivable:C-1010                -2036.75 USD
+
+; ---- posted through the credit desk (rebuilt from the box's log) ----
+
+; entered by the AP clerk (task tmachv55190, log entry 586)
+2026-10-21 * "Coastal Freight Lines" "Bill B-3316, invoice CFL-21390"
+  bill: "B-3316"
+  Expenses:Purchases  1140.00 USD
+  Liabilities:Payable:SUP-203  -1140.00 USD
+
+; posted by the AP clerk (task tmachv55190, log entry 598); rules AP-1
+2026-10-21 * "Coastal Freight Lines" "Bill B-3316: Freight deliveries 10/19 and 10/20"
+  bill: "B-3316"
+  supplier_invoice: "CFL-21390"
+  po: "PO-8902"
+  entered_by: "AP clerk"
+  due: "2026-10-28"
+  Expenses:Purchases                       1140.00 USD
+  Liabilities:Payable:SUP-203             -1140.00 USD
+
+; posted by the AP clerk (task tmachv55190, log entry 609), fixes B-3311; rules AP-3
+2026-10-23 * "Bay Cup & Lid Co." "Void duplicate bill B-3311 — reversal (duplicate of B-3307)"
+  Liabilities:Payable:SUP-202              6845.00 USD
+  Expenses:Purchases                      -6845.00 USD
+
+; paid by the AP clerk (task tmachv55190, log entry 644); Nessie sandbox, test money
+2026-10-23 * "Coastal Freight Lines" "Pay B-3304"
+  bill: "B-3304"
+  Liabilities:Payable:SUP-203  1385.00 USD
+  Assets:Bank:Operating  -1385.00 USD
+
+; paid by the AP clerk (task tmachv55190, log entry 650); Nessie sandbox, test money
+2026-10-23 * "Oak Hill Oat Co." "Pay B-3309"
+  bill: "B-3309"
+  Liabilities:Payable:SUP-204  3960.00 USD
+  Assets:Bank:Operating  -3960.00 USD
+
+; posted by the AP clerk (task tmachv55190, log entry 661); rules AP-1, AP-2, AP-3, AP-4, AP-5
+2026-10-23 * "Coastal Freight Lines" "Payment of bill B-3304 (CFL-21177)"
+  bill: "B-3304"
+  supplier_invoice: "CFL-21177"
+  Liabilities:Payable:SUP-203              1385.00 USD
+  Assets:Bank:Operating                   -1385.00 USD
+
+2026-10-23 * "Oak Hill Oat Co." "Payment of bill B-3309 (OHO-4410)"
+  bill: "B-3309"
+  supplier_invoice: "OHO-4410"
+  Liabilities:Payable:SUP-204              3960.00 USD
+  Assets:Bank:Operating                   -3960.00 USD
+
+; posted by the Collections clerk (task tmach1q031f, log entry 745), fixes PMT-8806; rules COL-4, BK-1
+2026-10-23 * "Correct PMT-8806: reverse unearned 2% discount on INV-24095 (C-1009)"
+  ; Invoice date 2026-09-08; payment received 2026-10-02 = 24 days after invoice.
+  ; 2/10 Net 30 discount window is 10 days; discount not earned per COL-4.
+  ; $49.20 remains owed by Rockridge Ramen.
+  Assets:Receivable:C-1009          49.20 USD
+  Income:Discounts                 -49.20 USD
+
+; posted by the Collections clerk (task tmach1q031f, log entry 749), fixes PMT-8812; rules COL-10, BK-1
+2026-10-23 * "Correct PMT-8812: reverse misapplication from C-1004, apply to C-1001 INV-24098"
+  ; Payer: Golden Gate Bagel Co (C-1001). ACH ref ACH 1009 GGB. Remittance: INV-24098.
+  ; INV-24098 is a C-1001 invoice for $1,940.00 (due 2026-10-12).
+  ; System wrongly posted to C-1004 / INV-24089. Bank confirms deposit from Golden Gate Bagel Co.
+  ; This entry restores C-1004 AR and closes C-1001 INV-24098.
+  Assets:Receivable:C-1004       1940.00 USD
+  Assets:Receivable:C-1001      -1940.00 USD
+
+; posted by the Collections clerk (task tmach1q031f, log entry 753), fixes PMT-8823; rules COL-5, BK-1
+2026-10-23 * "Reverse PMT-8823: post-dated check not yet cleared (check date 2026-11-06)"
+  ; Dogpatch Deli Check 4471, physically received 2026-10-20, check date 2026-11-06.
+  ; Per COL-5, a post-dated check is not cash until its date.
+  ; Bank confirms no deposit received as of 2026-10-23.
+  ; INV-24091 ($2,036.75, C-1010, due 2026-10-04) is restored to open.
+  Assets:Receivable:C-1010       2036.75 USD
+  Assets:Bank:Operating         -2036.75 USD
+
+; posted by the Collections clerk (task tmach1q031f, log entry 757), fixes INV-24105; rules COL-6, BK-1
+2026-10-23 * "Correct INV-24105: invoice header overstates total by $576.00 (C-1012)"
+  ; Line items sum: 840.00+822.00+504.00+876.00+331.20+384.00+218.40+231.00+79.80 = 4,286.40
+  ; Invoice header total: 4,862.40  Difference: 576.00 (overbilled)
+  ; Reducing C-1012 AR and reversing overbilled revenue.
+  Assets:Receivable:C-1012        -576.00 USD
+  Income:Sales                     576.00 USD
+
+; posted by the Collections clerk (task tmach1q031f, log entry 761), fixes INV-24117; rules COL-6, COL-7, BK-1
+2026-10-23 * "Void INV-24117: duplicate of INV-24116 (C-1008)"
+  ; Both invoices: customer C-1008, date 2026-10-02, PO FFTC-0930, amount $1,486.40, identical 6 lines.
+  ; INV-24117 is the duplicate; INV-24116 is the original.
+  Assets:Receivable:C-1008      -1486.40 USD
+  Income:Sales                   1486.40 USD

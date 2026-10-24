@@ -1,0 +1,127 @@
+; Fogline Supply Co. books, as a Beancount ledger (plain-text double-entry accounting).
+; This file mirrors the accounting system as recorded, mistakes included: an invoice is posted at its header total,
+; a payment is posted to the customer that owns the invoice it was keyed to, a duplicate invoice is posted twice,
+; and a post-dated check counts as cash on the day it arrived. Nothing here has been corrected.
+; Assets:Bank:Operating is the operating account at Capital One (the Nessie sandbox). Amounts are USD.
+
+option "title" "Fogline Supply Co."
+option "operating_currency" "USD"
+
+2025-01-01 open Assets:Bank:Operating USD
+2025-01-01 open Assets:Receivable:C-1001 USD
+2025-01-01 open Assets:Receivable:C-1013 USD
+2025-01-01 open Income:Sales USD
+2025-01-01 open Income:Discounts USD
+2025-01-01 open Expenses:Purchases USD
+2025-01-01 open Equity:Opening-Balances USD
+
+2026-11-02 * "Bright Harbor Catering Inc." "Invoice INV-24160"
+  invoice: "INV-24160"
+  terms: "Net 30"
+  due: "2026-12-02"
+  Assets:Receivable:C-1013                 9800.00 USD
+  Income:Sales                            -9800.00 USD
+
+2026-11-16 * "Bright Harbor Catering Inc." "Invoice INV-24188"
+  invoice: "INV-24188"
+  terms: "Net 30"
+  due: "2026-12-16"
+  Assets:Receivable:C-1013                 7420.00 USD
+  Income:Sales                            -7420.00 USD
+
+2026-12-01 * "Bright Harbor Catering Inc." "Invoice INV-24215"
+  invoice: "INV-24215"
+  terms: "Net 30"
+  due: "2026-12-31"
+  Assets:Receivable:C-1013                11250.00 USD
+  Income:Sales                           -11250.00 USD
+
+2026-12-02 * "Bright Harbor Catering Inc." "Payment PMT-8901 applied to INV-24160"
+  payment: "PMT-8901"
+  invoice: "INV-24160"
+  payer: "BRIGHT HARBOR CATERING"
+  method: "ACH"
+  reference: "ACH 1202 BHC"
+  memo: "INV-24160"
+  Assets:Bank:Operating                    9800.00 USD
+  Assets:Receivable:C-1013                -9800.00 USD
+
+2026-12-15 * "Bright Harbor Catering Inc." "Invoice INV-24246"
+  invoice: "INV-24246"
+  terms: "Net 30"
+  due: "2027-01-14"
+  Assets:Receivable:C-1013                 8960.00 USD
+  Income:Sales                            -8960.00 USD
+
+2026-12-16 * "Bright Harbor Catering Inc." "Payment PMT-8933 applied to INV-24188"
+  payment: "PMT-8933"
+  invoice: "INV-24188"
+  payer: "BRIGHT HARBOR CATERING"
+  method: "ACH"
+  reference: "ACH 1216 BHC"
+  memo: "INV-24188"
+  Assets:Bank:Operating                    7420.00 USD
+  Assets:Receivable:C-1013                -7420.00 USD
+
+2026-12-20 * "Golden Gate Bagel Co." "Invoice INV-24262"
+  invoice: "INV-24262"
+  terms: "Net 30"
+  due: "2027-01-19"
+  Assets:Receivable:C-1001                 2410.00 USD
+  Income:Sales                            -2410.00 USD
+
+2027-01-02 * "Bright Harbor Catering Inc." "Payment PMT-8967 applied to INV-24215"
+  payment: "PMT-8967"
+  invoice: "INV-24215"
+  payer: "Bright Harbor Catering Inc"
+  method: "check"
+  reference: "Check 1188"
+  memo: "INV-24215"
+  Assets:Bank:Operating                   11250.00 USD
+  Assets:Receivable:C-1013               -11250.00 USD
+
+2027-01-05 * "Bright Harbor Catering Inc." "Invoice INV-24281"
+  invoice: "INV-24281"
+  terms: "Net 30"
+  due: "2027-02-04"
+  Assets:Receivable:C-1013                10140.00 USD
+  Income:Sales                           -10140.00 USD
+
+2027-01-12 * "Golden Gate Bagel Co." "Invoice INV-24301"
+  invoice: "INV-24301"
+  terms: "Net 30"
+  due: "2027-02-11"
+  Assets:Receivable:C-1001                 2180.00 USD
+  Income:Sales                            -2180.00 USD
+
+2027-01-14 * "Golden Gate Bagel Co." "Payment PMT-9010 applied to INV-24262"
+  payment: "PMT-9010"
+  invoice: "INV-24262"
+  payer: "Golden Gate Bagels"
+  method: "ACH"
+  reference: "ACH 0114 GGB"
+  memo: "INV-24262"
+  Assets:Bank:Operating                    2410.00 USD
+  Assets:Receivable:C-1001                -2410.00 USD
+
+; ---- posted through the credit desk (rebuilt from the box's log) ----
+
+; posted by the Collections clerk (task tmarvyv5825, log entry 1110), fixes PMT-8933; rules COL-8, BK-1
+2026-12-18 * "Bright Harbor Catering Inc." "Return of PMT-8933 — ACH R01 NSF — INV-24188 reopened"
+  ; Bank returned ACH on 2026-12-18: R01 insufficient funds, exact 7420.00
+  ; This reverses the 2026-12-16 PMT-8933 receipt entry.
+  ; INV-24188 (due 2026-12-16) is reopened at its original due date.
+  returned_payment: "PMT-8933"
+  invoice: "INV-24188"
+  Assets:Receivable:C-1013                  7420.00 USD
+  Assets:Bank:Operating                    -7420.00 USD
+
+; posted by the Collections clerk (task tmarvyv5825, log entry 1115), fixes PMT-8967; rules COL-8, BK-1, REV-6
+2027-01-06 * "Bright Harbor Catering Inc." "Return of PMT-8967 — Check 1188 NSF — INV-24215 reopened"
+  ; Bank returned Check 1188 on 2027-01-06: insufficient funds, exact 11250.00
+  ; This reverses the 2027-01-02 PMT-8967 receipt entry.
+  ; INV-24215 (due 2026-12-31) is reopened at its original due date.
+  returned_payment: "PMT-8967"
+  invoice: "INV-24215"
+  Assets:Receivable:C-1013                 11250.00 USD
+  Assets:Bank:Operating                   -11250.00 USD

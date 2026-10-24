@@ -1,5 +1,5 @@
 invoice_id,customer_id,bill_to_name,invoice_date,terms,due_date,po_number,ship_to,total,amount_paid,discount_allowed,balance,status
-INV-24044,C-1002,Harborview Oyster House,2026-08-01,Net 30,2026-08-31,HV-0731,"610 Bridgeway, Sausalito CA 94965",4410.00,4410.00,0.00,0.00,paid
+INV-24044,C-1002,Harborview Oyster House,2026-08-01,Net 30,2026-08-31,HV-0731,"610 Bridgeway, Sausalito CA 94965",4410.00,10650.00,0.00,-6240.00,paid
 INV-24047,C-1002,Harborview Oyster House,2026-08-04,Net 30,2026-09-03,HV-0803,"610 Bridgeway, Sausalito CA 94965",6240.00,0.00,0.00,6240.00,open
 INV-24049,C-1010,Dogpatch Deli,2026-08-06,Net 30,2026-09-05,,"2295 3rd St, San Francisco CA 94107",1845.30,1845.30,0.00,0.00,paid
 INV-24050,C-1012,Piedmont Provisions Catering,2026-08-07,Net 30,2026-09-06,PPC-2208,"4186 Piedmont Ave, Oakland CA 94611",5310.20,5310.20,0.00,0.00,paid

@@ -18,6 +18,8 @@ import { balances } from './books.ts';
 import { bookTools, realBooks } from './bookkeeping.ts';
 import { reviewTools, why } from './review.ts';
 import { applicationCase, caseDirOf, listCases, personaList, saveUpload, templates } from './uploads.ts';
+import { impact } from './impact.ts';
+import { letter } from './letters.ts';
 import { scoreRun } from './score.ts';
 import { ACTIONS, ANALYST_TOOLS, AP_TOOLS, CLERK_TOOLS, CONTROLLER_ACTIONS, OUTCOMES, analystPrompt, apPrompt, clerkPrompt } from './seats.ts';
 
@@ -307,6 +309,25 @@ export default {
       }
     },
     'GET /templates': () => Response.json({ files: templates(), personas: personaList() }),
+
+    // Customer impact of a run, from the log (Microsoft's measurable usefulness): attention, losses stopped, model cost.
+    'GET /impact': (req, box) => {
+      const events = readLog();
+      const r = runsOf(events).find((x) => x.info.run === new URL(req.url).searchParams.get('run')) ?? runsOf(events).at(-1);
+      if (!r) return Response.json({ error: 'no run yet' }, { status: 404 });
+      const score = fs.existsSync(path.join(r.info.caseDir, 'answer_key.json')) ? scoreRun(r.info, events, box.tasks()) : null;
+      return Response.json(impact(r.info, events, box.tasks(), score));
+    },
+
+    // The letter an applicant gets after an adverse decision (DCL-1, FRR-3). {run, subject}: an application or customer id.
+    'GET /letter': (req, box) => {
+      const q = new URL(req.url).searchParams;
+      const events = readLog();
+      const r = runsOf(events).find((x) => x.info.run === q.get('run')) ?? runsOf(events).at(-1);
+      if (!r) return new Response('no run yet\n', { status: 404 });
+      const text = letterFor(r.info, events, box.tasks(), String(q.get('subject') ?? ''));
+      return new Response(text ?? 'No letter: nothing adverse was decided for this subject in this run.\n', { status: text ? 200 : 404, headers: { 'content-type': 'text/plain; charset=utf-8' } });
+    },
   },
 
   apps: [{ name: 'credit-desk', title: 'Credit desk', href: '/' }],
@@ -417,6 +438,27 @@ function windowState(events: LogEvent[], box: Box, want: string | null) {
         posted: books.posted.map((p) => ({ seq: p.seq, seat: SEAT_KEY[p.seat] ?? p.seat, kind: p.kind, text: p.text })),
       },
       score: score && { summary: score.summary, caught: score.caught, total: score.total, false_alarms: score.false_alarms.length, precision: score.precision, errors: score.errors, moment: score.moment },
+      impact: impact(r.info, events, box.tasks(), score),
     },
   };
+}
+
+/** The letter for a recorded decision or review in a run, or null when nothing adverse was decided. */
+function letterFor(info: RunInfo, events: LogEvent[], tasks: Box['tasks'] extends () => infer T ? T : never, subject: string): string | null {
+  const ids = new Set(tasks.filter((t) => runOf(t.source) === info.run).map((t) => t.id));
+  const uses = toolUses(events, ids);
+  const meta = JSON.parse(fs.readFileSync(path.join(info.caseDir, 'case.json'), 'utf8'));
+  const dec = uses.findLast((u) => u.tool === 'credit-desk.credit_decision' && u.ok && u.output?.status === 'recorded' && u.input.application_id === subject);
+  if (dec) {
+    const f = path.join(info.caseDir, 'applications', `${safeId(subject)}.json`);
+    const app = fs.existsSync(f) ? JSON.parse(fs.readFileSync(f, 'utf8')) : {};
+    const d = dec.output.decision;
+    return letter({ to: app.business?.legal_name ?? subject, date: meta.as_of, kind: 'decision', outcome: d.outcome, limit: d.limit, terms: d.terms, asked: { limit: app.request?.credit_limit ?? null, terms: app.request?.terms ?? null }, rules: d.rules, usedCreditReport: true });
+  }
+  const rev = uses.findLast((u) => u.tool === 'credit-desk.review' && u.ok && u.output?.status === 'recorded' && u.input.customer_id === subject);
+  if (rev) {
+    const v = rev.output.review;
+    return letter({ to: v.name, date: meta.as_of, kind: 'review', outcome: v.outcome, limit: v.limit, terms: v.terms, rules: v.rules, usedCreditReport: false });
+  }
+  return null;
 }

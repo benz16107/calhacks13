@@ -1,0 +1,104 @@
+{
+  "run": "35c20d",
+  "case": "fogline-2027-01",
+  "summary": "caught 2 of 2 planted errors; 0 false alarms (precision 100%); 1 of 1 reviews, 1 of 2 collection steps, 1 of 1 order decisions match the answer key",
+  "caught": 2,
+  "total": 2,
+  "precision": 1,
+  "errors": [
+    {
+      "id": "J1",
+      "title": "Two of Bright Harbor's payments bounced, but the books show them paid",
+      "caught": true,
+      "by": "Returned ACH — INV-24188 incorrectly marked paid",
+      "findings": 6
+    },
+    {
+      "id": "J2",
+      "title": "The October decision to give Bright Harbor 40,000 has to be reopened",
+      "caught": true,
+      "by": "Two returned payments within 90 days — REV-6 limit cut proposal required",
+      "findings": 1
+    }
+  ],
+  "false_alarms": [],
+  "other_findings": [
+    {
+      "problem": "Contradictory status for INV-24098 — bank bill shows pending despite matching deposit",
+      "ids": [
+        "C-1001",
+        "INV-24098",
+        "PMT-8812"
+      ]
+    },
+    {
+      "problem": "INV-24124 pending in bank bills — no matching deposit found",
+      "ids": [
+        "C-1001",
+        "INV-24124"
+      ]
+    }
+  ],
+  "decisions": {
+    "applications": [],
+    "reviews": [
+      {
+        "customer_id": "C-1013",
+        "reopens": "APP-1042",
+        "match": true,
+        "wrong": [],
+        "want": {
+          "outcome": "reduce",
+          "band": "C",
+          "limit": 7500,
+          "terms": "net 15",
+          "controller": true
+        },
+        "got": {
+          "outcome": "reduce",
+          "band": "C",
+          "limit": 7500,
+          "terms": "net 15",
+          "controller": true
+        },
+        "reopened": {
+          "application_id": "APP-1042",
+          "run": "bd5c61",
+          "case_date": "2026-10-23",
+          "log_entry": 950,
+          "limit": 40000,
+          "terms": "Net 30"
+        }
+      }
+    ],
+    "collections": [
+      {
+        "customer_id": "C-1013",
+        "match": false,
+        "want": "phone call",
+        "got": [
+          "credit hold"
+        ]
+      },
+      {
+        "customer_id": "C-1001",
+        "match": true,
+        "want": "no action",
+        "got": [
+          "no action"
+        ]
+      }
+    ],
+    "orders": [
+      {
+        "order_id": "SO-6014",
+        "match": true,
+        "want": "hold",
+        "got": "hold"
+      }
+    ],
+    "bills": []
+  },
+  "simple_rule": [],
+  "moment": []
+}

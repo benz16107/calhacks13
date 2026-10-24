@@ -74,8 +74,16 @@ export interface RunInfo { run: string; caseId: string; caseDir: string; rulesFi
 export function stageWorkspace(info: RunInfo): string {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'credit-desk-'));
   // The agent must never see the answers, nor the bank's own records when the bank (Nessie) holds them.
-  const hidden = new Set(['answer_key.json', 'controller.json', ...(info.nessie ? ['bank_events.csv'] : [])]);
+  const hidden = new Set(['answer_key.json', 'controller.json', 'guarantors.json', ...(info.nessie ? ['bank_events.csv'] : [])]);
   fs.cpSync(info.caseDir, path.join(dir, 'case'), { recursive: true, filter: (src) => !hidden.has(path.basename(src)) });
+  // The seats never see protected attributes or the guarantor's identity; the CRS tool reads those from the original.
+  const apps = path.join(dir, 'case', 'applications');
+  if (fs.existsSync(apps)) {
+    for (const f of fs.readdirSync(apps).filter((x) => x.endsWith('.json'))) {
+      const file = path.join(apps, f);
+      fs.writeFileSync(file, JSON.stringify(redactApplication(JSON.parse(fs.readFileSync(file, 'utf8'))), null, 2) + '\n');
+    }
+  }
   fs.mkdirSync(path.join(dir, 'books'));
   fs.writeFileSync(path.join(dir, 'books', 'ledger.beancount'), booksFromCase(info.caseDir));
   fs.copyFileSync(info.rulesFile, path.join(dir, 'rules.yaml'));
@@ -114,8 +122,11 @@ export const caseFile = (ctx: Ctx, ...p: string[]) => {
   if (!ctx.task) throw new Error('only a task can use this tool');
   return path.join(workspaceDir(ctx.task.workspace), ...p);
 };
+/** The full application, from the original case: only tools in the core read it. The seats get a redacted copy. */
 export const application = (ctx: Ctx, id: unknown) => {
-  const file = caseFile(ctx, 'case', 'applications', `${safeId(id)}.json`);
+  const info = runInfo(readLog(), runOf(ctx.task?.source ?? '') ?? '');
+  if (!info) throw new Error('only a credit desk task can use this tool');
+  const file = path.join(info.caseDir, 'applications', `${safeId(id)}.json`);
   if (!fs.existsSync(file)) throw new Error(`there is no application ${id} in this case`);
   return JSON.parse(fs.readFileSync(file, 'utf8'));
 };
@@ -162,6 +173,34 @@ export function ruleTexts(file: string): Map<string, string> {
     const body: string[] = [];
     for (let j = i + 2; j < lines.length && /^\s{6,}\S/.test(lines[j]); j++) body.push(lines[j].trim());
     out.set(id, body.join(' '));
+  }
+  return out;
+}
+
+// ---------- fairness and privacy ----------
+// Protected attributes under ECOA and Regulation B (12 CFR 1002.4, 1002.5): race, color, religion, national origin,
+// sex, marital status, age, receipt of public assistance. Plus the usual proxies and the guarantor's identity data.
+export const PROTECTED_KEYS = [
+  'race', 'ethnicity', 'color', 'colour', 'religion', 'national_origin', 'nationality', 'citizenship', 'sex', 'gender',
+  'marital_status', 'age', 'dob', 'date_of_birth', 'birth_date', 'public_assistance', 'disability', 'sexual_orientation', 'pregnancy',
+];
+const GUARANTOR_KEPT = ['title', 'ownership_pct'];
+
+/** What a seat may see of an application: no protected attribute anywhere, and of the guarantor only role and stake. */
+export function redactApplication(app: any): any {
+  const strip = (v: any): any => {
+    if (Array.isArray(v)) return v.map(strip);
+    if (v && typeof v === 'object') {
+      return Object.fromEntries(Object.entries(v).filter(([k]) => !PROTECTED_KEYS.includes(k.toLowerCase())).map(([k, x]) => [k, strip(x)]));
+    }
+    return v;
+  };
+  const out = strip(app);
+  if (out.guarantor) {
+    out.guarantor = {
+      ...Object.fromEntries(GUARANTOR_KEPT.filter((k) => k in out.guarantor).map((k) => [k, out.guarantor[k]])),
+      held_by_the_desk: 'Name, SSN, date of birth, address and contacts are checked through CRS by the desk\'s tools and never shown to a seat.',
+    };
   }
   return out;
 }

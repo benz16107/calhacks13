@@ -2,7 +2,7 @@
 // Nessie: the fake applicant is caught, the AP clerk's limits hold in code, entries reach the books only through the
 // desk and leave them on undo, January reopens October's decision from the log, the auditor's "why" is answered from
 // the log, and both runs are scored against their answer keys.
-// DEMO_LIVE=credit-desk ./demo also runs every seat with Droid on October then January, answers the controller's
+// DEMO_LIVE=droid,credit-desk ./demo also runs every seat with Droid on October then January, answers the controller's
 // questions from each case's controller.json (one is a no, with a reason), scores both and saves the evidence to
 // /var/lib/box-demo/credit-desk-<run>/. That takes 20 to 30 minutes of model time.
 import fs from 'node:fs';
@@ -76,7 +76,7 @@ export default async function (d: DemoKit) {
   d.check(!after.includes('fixes PMT-8812') && after.includes('"Pay B-3304"'), "undoing the clerk's task took its entry out of the books; the AP clerk's payment stayed");
 
   const octScore = await d.api('POST', '/t/credit-desk/score', { run: oct.run });
-  d.check(octScore.total === 16 && octScore.false_alarms.length === 0 && octScore.moment[0]?.simple_rule === 'approve $20,000',
+  d.check(octScore.total === 17 && octScore.false_alarms.length === 0 && octScore.moment[0]?.simple_rule === 'approve $20,000',
     `October scored from the log: ${octScore.summary}. The simple rule approves APP-1043 for $20,000; the desk held it`);
 
   // ---------- January: the desk reopens October's decision from its own log ----------
@@ -100,12 +100,14 @@ export default async function (d: DemoKit) {
   const log = JSON.stringify(await d.api('GET', '/log'));
   d.check(keys.length === 3 && keys.every((k) => !log.includes(k)), 'no CRS or Nessie key is anywhere in the log');
 
-  if ((process.env.DEMO_LIVE ?? '').split(/[\s,]+/).includes('credit-desk')) await live(d);
-  else console.log('  skip  the live Droid runs on October and January, 20 to 30 minutes of model time: DEMO_LIVE=credit-desk ./demo runs them');
+  // Real Droid only when the gate allows it too (droid in DEMO_LIVE, and Factory's 5-hour use under the core's limit).
+  const live = (process.env.DEMO_LIVE ?? '').split(/[\s,]+/);
+  if (live.includes('credit-desk') && live.includes('droid')) await liveRuns(d);
+  else console.log('  skip  the live Droid runs on October and January, 20 to 30 minutes of model time: DEMO_LIVE=droid,credit-desk ./demo runs them');
 }
 
 /** Every seat with Droid, October then January. Rosa's answers come from each case's controller.json. */
-async function live(d: DemoKit) {
+async function liveRuns(d: DemoKit) {
   for (const caseId of ['fogline-2026-10', 'fogline-2027-01']) {
     const answersFile = path.join(import.meta.dirname, 'cases', caseId, 'controller.json');
     const scripted: { match: string; approve: boolean; reason?: string }[] = fs.existsSync(answersFile) ? JSON.parse(fs.readFileSync(answersFile, 'utf8')).answers : [];

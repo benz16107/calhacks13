@@ -2,7 +2,7 @@
   "case_id": "fogline-2026-10",
   "as_of": "2026-10-23",
   "rules": "rules/credit-rules.yaml (0.2; every rule this key cites is unchanged from the 0.1 draft)",
-  "scoring": "A planted error counts as caught when the desk's log names at least one of its 'where' locations and reaches the 'correct_conclusion'. Report 'caught N of 16'. Decisions are scored separately against application_decisions, collections and order_decisions. Flagging a 'not_errors' item counts as a false positive.",
+  "scoring": "A planted error counts as caught when the desk's log names at least one of its 'where' locations and reaches the 'correct_conclusion'. Report 'caught N of 17'. Decisions are scored separately against application_decisions, collections and order_decisions. Flagging a 'not_errors' item counts as a false positive.",
   "planted_errors": [
     {
       "id": "E01",
@@ -172,8 +172,8 @@
           "id": "C-1002"
         }
       ],
-      "what_is_wrong": "Policy requires a limit review every 12 months; Harborview's was due 2025-05-20, 17 months ago. It is 50 days past due on its oldest invoice with 27,655.75 open against a 30,000 limit.",
-      "correct_conclusion": "Flag the overdue review to the credit analyst. No limit increase until reviewed. With the oldest invoice 50 days past due: phone call and hold new orders, including SO-5527 (which would also take exposure over the limit).",
+      "what_is_wrong": "Policy requires a limit review every 12 months; Harborview's was due 2025-05-20, 17 months ago. It is 36 days past due on its oldest invoice with 21,415.75 open against a 30,000 limit.",
+      "correct_conclusion": "Flag the overdue review to the credit analyst. No limit increase until reviewed. With the oldest invoice 36 days past due: phone call and hold new orders, including SO-5527.",
       "if_missed": "A slow-paying customer keeps buying on a two-year-old limit.",
       "rules": [
         "REV-1",
@@ -369,6 +369,33 @@
         "GEN-3",
         "MDC-1"
       ]
+    },
+    {
+      "id": "E17",
+      "seat": "collections clerk",
+      "category": "one payment for two invoices applied to one",
+      "title": "Harborview paid two invoices with one ACH; the system put it all on the first",
+      "where": [
+        {
+          "file": "payments.csv",
+          "id": "PMT-8781"
+        },
+        {
+          "file": "invoices.csv",
+          "id": "INV-24044"
+        },
+        {
+          "file": "invoices.csv",
+          "id": "INV-24047"
+        }
+      ],
+      "what_is_wrong": "PMT-8781 is one ACH of 10,650.00 with the remittance 'INV-24044 + INV-24047'. The system applied all of it to INV-24044, which now shows 6,240.00 overpaid, and INV-24047 still shows open.",
+      "correct_conclusion": "Split the payment as the remittance says: 4,410.00 to INV-24044 and 6,240.00 to INV-24047. Both are paid. Harborview really owes 21,415.75, and its oldest unpaid invoice is 36 days past due, not 50.",
+      "if_missed": "A paid invoice is chased, and the customer's aging looks two weeks worse than it is.",
+      "rules": [
+        "COL-10",
+        "COL-6"
+      ]
     }
   ],
   "application_decisions": [
@@ -542,15 +569,10 @@
     {
       "customer_id": "C-1002",
       "name": "Harborview Oyster House",
-      "corrected_open_balance": 27655.75,
+      "corrected_open_balance": 21415.75,
       "credit_limit": 30000,
-      "oldest_days_past_due": 50,
+      "oldest_days_past_due": 36,
       "past_due_invoices": [
-        {
-          "invoice_id": "INV-24047",
-          "balance": 6240.0,
-          "days_past_due": 50
-        },
         {
           "invoice_id": "INV-24062",
           "balance": 8115.5,
@@ -728,7 +750,7 @@
       "customer_id": "C-1002",
       "decision": "hold",
       "who_can_release": "controller",
-      "why": "50 days past due, review overdue, and the order would take exposure to 30,755.75 over a 30,000 limit (E08)."
+      "why": "36 days past due (ORD-1) and the limit review is overdue (E08)."
     },
     {
       "order_id": "SO-5528",

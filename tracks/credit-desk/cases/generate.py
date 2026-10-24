@@ -153,7 +153,8 @@ def pay(pid, recv, cust, payer, method, ref, amount, inv_id, memo, disc="0.00", 
     P.append(dict(id=pid, recv=d(recv), pdate=d(pdate) if pdate else d(recv), cust=cust, payer=payer, method=method, ref=ref,
                   amount=m(amount), disc=m(disc), inv=inv_id, memo=memo))
 
-pay("PMT-8781", "2026-08-29", "C-1002", "HARBORVIEW OYSTER HSE", "ACH", "ACH 0829 HVOH", V["INV-24044"]["total"], "INV-24044", "INV-24044")
+# One ACH for two invoices (the remittance names both); the system put all of it on the first one.
+pay("PMT-8781", "2026-08-29", "C-1002", "HARBORVIEW OYSTER HSE", "ACH", "ACH 0829 HVOH", V["INV-24044"]["total"] + V["INV-24047"]["total"], "INV-24044", "INV-24044 + INV-24047")
 pay("PMT-8784", "2026-09-03", "C-1010", "Dogpatch Deli", "check", "Check 4398", V["INV-24049"]["total"], "INV-24049", "inv 24049", pdate="2026-09-01")
 pay("PMT-8785", "2026-09-04", "C-1012", "Piedmont Provisions", "ACH", "ACH 0904 PPC", V["INV-24050"]["total"], "INV-24050", "PPC-2208 / INV-24050")
 pay("PMT-8789", "2026-09-10", "C-1006", "Bluebird Bakery", "ACH", "ACH 0910 BBK", m(V["INV-24083"]["total"] * D("0.98")), "INV-24083", "INV 24083 less 2%", disc=m(V["INV-24083"]["total"] * D("0.02")))
@@ -212,13 +213,17 @@ assert [x for x in seen.values() if len(x) > 1] == [["C-1007", "C-1011"]]
 for p in P:  # every payment's recorded customer owns the invoice it was applied to
     assert V[p["inv"]]["cust"] == p["cust"], p["id"]
 for p in P:
-    if p["id"] != "PMT-8812":
+    if p["id"] not in ("PMT-8812", "PMT-8781"):
         assert C[p["cust"]] and V[p["inv"]]["total"] == p["amount"] + p["disc"], p["id"]
 
 # ---------------------------------------------------------------- corrected view (what a correct desk concludes)
 true_paid = {}
 for p in P:
     target = "INV-24098" if p["id"] == "PMT-8812" else p["inv"]
+    if p["id"] == "PMT-8781":  # split as the remittance says
+        for i in ("INV-24044", "INV-24047"):
+            true_paid[i] = true_paid.get(i, D("0")) + V[i]["total"]
+        continue
     if p["id"] == "PMT-8823":
         continue  # post-dated: not cash until 2026-11-06
     disc = p["disc"] if p["id"] != "PMT-8806" else D("0")  # unearned discount is still owed
@@ -251,7 +256,7 @@ def step(days):
 sys_exposure_1005 = sum(v["sys_balance"] for v in I if v["cust"] == "C-1005")
 assert exposure["C-1005"] == sys_exposure_1005 == D("18240.60")
 assert exposure["C-1007"] == D("14270.00")
-assert exposure["C-1002"] == D("27655.75")
+assert exposure["C-1002"] == D("21415.75") and oldest["C-1002"] == 36
 
 fmt = lambda x: f"{x:,.2f}"
 
@@ -528,7 +533,7 @@ errors = [
     {"id": "E08", "seat": "credit analyst", "category": "stale credit review", "title": "Harborview's limit has not been reviewed since 2024-05-20",
      "where": [L("customers.csv", "C-1002")],
      "what_is_wrong": f"Policy requires a limit review every 12 months; Harborview's was due 2025-05-20, 17 months ago. It is {oldest['C-1002']} days past due on its oldest invoice with {fmt(exposure['C-1002'])} open against a 30,000 limit.",
-     "correct_conclusion": "Flag the overdue review to the credit analyst. No limit increase until reviewed. With the oldest invoice 50 days past due: phone call and hold new orders, including SO-5527 (which would also take exposure over the limit).",
+     "correct_conclusion": f"Flag the overdue review to the credit analyst. No limit increase until reviewed. With the oldest invoice {oldest['C-1002']} days past due: phone call and hold new orders, including SO-5527.",
      "if_missed": "A slow-paying customer keeps buying on a two-year-old limit.",
      "rules": ["REV-1", "COL-1", "ORD-1"]},
     {"id": "E09", "seat": "collections clerk", "category": "over limit but not on hold", "title": "Telegraph Ave Pizza is over its limit with no hold",
@@ -632,7 +637,7 @@ order_decisions = [
     {"order_id": "SO-5519", "customer_id": "C-1003", "decision": "release", "who_can_release": "collections clerk", "why": "Current, well under limit."},
     {"order_id": "SO-5521", "customer_id": "C-1005", "decision": "hold", "who_can_release": "controller", "why": "Over limit and 43 days past due (E09)."},
     {"order_id": "SO-5524", "customer_id": "C-1011", "decision": "hold", "who_can_release": "controller", "why": "C-1011 is C-1007; merged balance is over the limit (E01)."},
-    {"order_id": "SO-5527", "customer_id": "C-1002", "decision": "hold", "who_can_release": "controller", "why": f"50 days past due, review overdue, and the order would take exposure to {fmt(exposure['C-1002'] + 3100)} over a 30,000 limit (E08)."},
+    {"order_id": "SO-5527", "customer_id": "C-1002", "decision": "hold", "who_can_release": "controller", "why": f"{oldest['C-1002']} days past due (ORD-1) and the limit review is overdue (E08)."},
     {"order_id": "SO-5528", "customer_id": "C-1012", "decision": "release", "who_can_release": "collections clerk", "why": "Looks 359 days late only because of the wrong-year date (E07). Corrected, it is current."},
     {"order_id": "SO-5530", "customer_id": "C-1001", "decision": "release", "who_can_release": "collections clerk", "why": "Looks 11 days late only because PMT-8812 was misapplied (E03). Corrected, it is current."},
 ]
@@ -708,6 +713,14 @@ errors += [
      "if_missed": "18,940.00 goes to a fraudster's account and the real supplier is still unpaid.",
      "rules": ["AP-4", "GEN-3", "MDC-1"]},
 ]
+errors += [
+    {"id": "E17", "seat": "collections clerk", "category": "one payment for two invoices applied to one", "title": "Harborview paid two invoices with one ACH; the system put it all on the first",
+     "where": [L("payments.csv", "PMT-8781"), L("invoices.csv", "INV-24044"), L("invoices.csv", "INV-24047")],
+     "what_is_wrong": f"PMT-8781 is one ACH of {fmt(V['INV-24044']['total'] + V['INV-24047']['total'])} with the remittance 'INV-24044 + INV-24047'. The system applied all of it to INV-24044, which now shows {fmt(V['INV-24047']['total'])} overpaid, and INV-24047 still shows open.",
+     "correct_conclusion": f"Split the payment as the remittance says: {fmt(V['INV-24044']['total'])} to INV-24044 and {fmt(V['INV-24047']['total'])} to INV-24047. Both are paid. Harborview really owes {fmt(exposure['C-1002'])}, and its oldest unpaid invoice is {oldest['C-1002']} days past due, not 50.",
+     "if_missed": "A paid invoice is chased, and the customer's aging looks two weeks worse than it is.",
+     "rules": ["COL-10", "COL-6"]},
+]
 ap_decisions = [
     {"bill_id": "B-3301", "decision": "hold", "amount": 0, "who": "controller", "why": "Over the 5,000.00 AP limit (AP-2), so it goes to the controller, who says no (controller.json): receiving has not confirmed PO-8841. The desk holds it and does not ask again."},
     {"bill_id": "B-3304", "decision": "pay", "amount": 1385.00, "who": "AP clerk", "why": "Due 10/23, under the limit."},
@@ -726,7 +739,7 @@ not_errors += [
 
 key = {
     "case_id": "fogline-2026-10", "as_of": AS_OF.isoformat(), "rules": "rules/credit-rules.yaml (0.2; every rule this key cites is unchanged from the 0.1 draft)",
-    "scoring": "A planted error counts as caught when the desk's log names at least one of its 'where' locations and reaches the 'correct_conclusion'. Report 'caught N of 16'. Decisions are scored separately against application_decisions, collections and order_decisions. Flagging a 'not_errors' item counts as a false positive.",
+    "scoring": "A planted error counts as caught when the desk's log names at least one of its 'where' locations and reaches the 'correct_conclusion'. Report 'caught N of 17'. Decisions are scored separately against application_decisions, collections and order_decisions. Flagging a 'not_errors' item counts as a false positive.",
     "planted_errors": errors,
     "application_decisions": decisions,
     "collections": collections,

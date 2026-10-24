@@ -95,8 +95,9 @@ The talk says nothing about the video format. That comes from the written brief 
 
 ## What this means for the credit desk
 
-- **Would you hire it.** Have: run `73c47b` caught 14 of 14 with no false alarms and decided all 6 applications as
-  the key does, in 13 minutes for about $4.67. Do: state the hire case in one paragraph in the video and the
+- **Would you hire it.** Have: run `bd5c61` (three seats, current key) caught 16 of 17 with 1 false alarm and decided all 6
+  applications as the key does, in 12 minutes for about $5.24; it missed E14 (the report that disagrees with the
+  application). Do: state the hire case in one paragraph in the video and the
   README. Say what the desk replaces (a credit analyst and a clerk at a 12-customer wholesaler), what a run costs,
   and what it will not do alone. Put the simple rule's $153,000 beside the desk's $8,000 approved, $83,500 sent to
   the controller and $20,000 stopped.
@@ -138,9 +139,9 @@ The talk says nothing about the video format. That comes from the written brief 
   having: it is adversarial, it matches "bank changes" on their Payables tile, and it tests GEN-3. Add the AP seat
   only with the same depth (tools enforced, controller gate, scored). If time is short, a no, the why query and
   precision matter more.
-- **Their messy-data example.** Gap: no payment in the case covers more than one invoice. Their running example is
-  one deposit split across several invoices by its memo. One such deposit in Nessie would match it directly.
-- **A real company, an answer key, a score.** Have: Fogline, 16 planted errors, 9 items that look wrong but are fine,
+- **Their messy-data example.** Have: E17, one ACH of $10,650 that pays two invoices, which the books applied to the first.
+  Their running example is one deposit split across several invoices by its memo; this is the same shape, in Nessie.
+- **A real company, an answer key, a score.** Have: Fogline, 17 planted errors, 9 items that look wrong but are fine,
   and `POST /t/credit-desk/score`. This is their slide 19 wording almost word for word. Keep the score on screen.
 - **Their own scenario at the table.** Have: any case folder that passes `check-case.ts`. Limit: the guarantor must
   be one of CRS's 20 test people, so a judge's own applicant gets no CRS answer. Say so first and have the persona
@@ -169,4 +170,62 @@ The talk says nothing about the video format. That comes from the written brief 
 - #cohost-hyphenate, read in full (29 messages, Oct 5 to Oct 23). Besides the recording and the slides: you enter
   the track by picking it at submission (Rudraksh Awasthi, Oct 22).
 
-<!-- The story and the feature map are added by the credit desk thread. -->
+## The story
+
+**The problem.** Companies want AI employees, but today's computers and clouds were not built for them. An agent runs
+as you, with your keys and access to everything, on one shared filesystem. Nothing separates its duties from anyone
+else's, there is no record you could hand an auditor, and nothing can be undone. So nobody can safely let an AI do
+finance work.
+
+**So we built GurtOS.** Each AI employee works in its own workspace: its own Linux user and its own copy of the files,
+like a git worktree for every task. It never holds a password. It cannot approve its own work. Everything it does goes
+into one log the whole company can see from the portal or a phone. Nothing reaches the real books until the right
+person approves.
+
+**The credit desk is the job.** Three seats at Fogline Supply, a small wholesaler: a credit analyst, a collections
+clerk and an accounts payable clerk. Rosa Delgado, the controller, signs off on what only a person should decide.
+
+**Efficiency.** The seats work at the same time in their own spaces without stepping on each other, and a handoff
+survives a crash: pull the plug while a request waits for Rosa, and after the reboot nothing is asked, answered or
+paid twice.
+
+## Which parts come from GurtOS, and which from the desk
+
+| Feature | From |
+|---|---|
+| Each seat is its own Linux user in its own copy of the files; undo one seat's work without touching the others | GurtOS |
+| Keys only in the vault; tools use them in the core; a seat's network reaches nothing on its own | GurtOS |
+| A request pauses one seat and reaches the portal and phone while the others keep working; the first answer wins | GurtOS |
+| One append-only, fsynced action log; every task and request rebuilt from it after a power cut | GurtOS |
+| Business edition: people with roles and limits, a policy that routes requests, nobody answers their own, audit, kill switch | GurtOS |
+| The seats, their tools and the limits each tool enforces (CHK-1, AP-1 to AP-4, the controller gate) | the desk |
+| The rules file and its ids, cited by every decision | the desk |
+| Fogline's cases, the planted errors, the answer keys and the scorer | the desk |
+| The books gateway: entries reach the Beancount books only through the desk, fixes link to what they correct | the desk, on GurtOS's log |
+| Memory across months: "what we knew then" replayed from the log, and "why?" as one query | the desk, on GurtOS's log |
+| Live CRS checks and the bank at Capital One's Nessie | the desk |
+
+## What we built for each point above
+
+| Hyphenate said | The desk |
+|---|---|
+| Would you hire it | Three live Droid runs decided all six applications as the key does; the latest caught every planted error with no false alarm (README, Results) |
+| Precision over recall | The score reports precision; seats are told to leave unsure calls to a person; tools refuse rather than guess |
+| Asks at the right moment, and handles a no | The tool decides when the controller is needed, not the prompt. A no carries a reason, the seat revises and never asks the same question twice (`controller.json` scripts one no in the scored run) |
+| Limits enforced in code; a record of every call | AP-4 refuses a payment outright; no decision before the CRS checks; every call and result in the log; no key in the log |
+| Memory beyond the context window; time | January reopens October's $40,000 decision from the log, with what the desk knew then beside what is true now |
+| "Why?" is one query | `GET /t/credit-desk/why?subject=APP-1042`, and the window's Ask why |
+| One door, every write checked; fixes are reversals | Entries reach the books only through `post_entry`, checked as Beancount, linked to what they fix; undo takes a seat's entries out |
+| Their messy-data example: one payment for several invoices | E17: Harborview's one ACH for two invoices, applied to one |
+| Bank changes on the payables side | E16: a supplier's bank details changed from a lookalike email that tells the AP assistant to skip the call |
+| A real company, an answer key, a score; they may bring their own scenario | Fogline, 17 planted errors in October and 2 in January, `POST /score`; the window's Bring your own |
+| A benchmark | A DABstep dev slice run through GurtOS tasks (`bench/`) |
+| Not done | Learning new rules from history and corrections: the rules were written, then reviewed with Mana |
+
+## The 30-second moment
+
+A clean-looking applicant asks for $20,000. A simple credit rule approves it. The analyst runs CRS: the owner's identity
+fails and the fraud score is 88. It puts the applicant on fraud hold, and the request lands on Rosa's phone: approve
+the hold. Behind it, an $18,500 rush order to a Florida freight forwarder never ships. The score on screen: every
+planted error caught, none invented.
+

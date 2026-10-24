@@ -80,6 +80,7 @@
       <button role="tab" data-view="payables">Payables<span class="count" id="n-payables"></span></button>
       <button role="tab" data-view="books">Books</button>
       <button role="tab" data-view="score">Score</button>
+      <button role="tab" data-view="impact">Impact</button>
       <button role="tab" data-view="why">Ask why</button>
       <button role="tab" data-view="byo">Bring your own</button>
       <button role="tab" data-view="rules">Rules</button>
@@ -135,6 +136,12 @@
       <div class="wrap"><table><caption>Planted errors in the answer key</caption>
         <thead><tr><th>Id</th><th>Planted error</th><th>Status</th><th>Caught by</th></tr></thead><tbody id="errors"></tbody></table></div>
     </section>
+    <section data-panel="impact" hidden>
+      <div class="cards" id="impact-cards"></div>
+      <div class="wrap"><table><caption>The same applications three ways</caption>
+        <thead><tr><th></th><th>Time per application</th><th>Credit extended</th><th>Bad credit stopped</th><th>Model cost per application</th></tr></thead><tbody id="impact-compare"></tbody></table></div>
+      <p class="small" id="impact-notes"></p>
+    </section>
     <section data-panel="rules" hidden>
       <p class="small" id="rules-head"></p>
       <div class="wrap"><pre id="rules-text">Loading...</pre></div>
@@ -178,10 +185,11 @@
 </main>
 <script>
   // Off the box's own screen the core needs the paired token; the portal puts it in this window's URL. On a Business
-  // box, ?person= says who is signed in on the box's screen.
+  // box's own screen, the portal keeps who is signed in under gurtos.person (same origin), and answers carry it.
   const params = new URLSearchParams(location.search);
   const token = params.get('access_token');
-  const person = params.get('person');
+  let person = params.get('person');
+  try { person = person || (token ? null : localStorage.getItem('gurtos.person')); } catch {}
   const auth = { ...(token ? { authorization: 'Bearer ' + token } : {}), ...(person ? { 'x-box-person': person } : {}) };
   async function api(method, url, body) {
     const r = await fetch(url, { method, headers: { ...auth, ...(body ? { 'content-type': 'application/json' } : {}) }, body: body ? JSON.stringify(body) : undefined });
@@ -197,6 +205,7 @@
   const plain = (q) => String(q || '').replace(/^Credit desk \[[^\]]*\]: (.)/, (_, c) => c.toUpperCase());
   const clip = (t, n) => (t.length <= n ? t : t.slice(0, t.lastIndexOf(' ', n)) + '...');
   const chips = (ids) => (ids || []).map((r) => `<span class="chip">${esc(r)}</span>`).join('');
+  const letterUrl = (subject) => '/t/credit-desk/letter?run=' + encodeURIComponent(state.run.run) + '&subject=' + encodeURIComponent(subject) + (token ? '&access_token=' + encodeURIComponent(token) : '');
   const SEAT = { analyst: 'Credit analyst', clerk: 'Collections clerk', ap: 'AP clerk' };
   const STATE = { running: ['running', 'Running'], queued: ['running', 'Queued'], waiting: ['needsyou', 'Needs you'], done: ['done', 'Done'], failed: ['failed', 'Failed'], undone: ['off', 'Undone'] };
   let view = 'decisions', runId = null, state = null, rulesFor = null, denying = null;
@@ -218,7 +227,8 @@
       : [`<span class="badge needsyou">Above authority</span>`, `<span class="small">The analyst proposes to ${esc(a.proposed.outcome)}${a.proposed.limit ? ' ' + money(a.proposed.limit) : ''}. Only the controller can approve it.</span>`];
     if (!d) return [a.checks ? `<span class="badge running">Checked</span>` : `<span class="badge off">Not decided</span>`, a.checks ? `<span class="small">TransUnion ${esc(a.checks.transunion)}, identity ${a.checks.identity ? 'verified' : 'not verified'}, fraud score ${esc(a.checks.fraud)}</span>` : ''];
     const kind = d.outcome === 'approve' ? ['approved', 'Approved'] : d.outcome === 'fraud hold' ? ['held', 'Fraud hold'] : d.outcome === 'decline' ? ['held', 'Declined'] : ['off', d.outcome];
-    return [`<span class="badge ${kind[0]}">${esc(kind[1])}</span>`, `<span class="small">${esc(d.decided_by === 'credit analyst' ? 'Within the analyst\'s authority' : 'By the ' + d.decided_by)}</span>`];
+    const adverse = d.outcome !== 'approve' || (a.requested && d.limit < a.requested) || (a.terms && d.terms !== a.terms);
+    return [`<span class="badge ${kind[0]}">${esc(kind[1])}</span>`, `<span class="small">${esc(d.decided_by === 'credit analyst' ? 'Within the analyst\'s authority' : 'By the ' + d.decided_by)}</span>${adverse ? ` <a class="small" target="_blank" rel="noopener" href="${letterUrl(a.id)}">Letter</a>` : ''}`];
   }
 
   const facts = (rows) => `<dl class="facts">${rows.filter(([, v]) => v !== null && v !== undefined && v !== '').map(([k, v]) => `<dt>${esc(k)}</dt><dd>${v}</dd>`).join('')}</dl>`;
@@ -312,7 +322,7 @@
       const p = rv.proposal, rec = rv.review;
       const head = rec ? `<span class="badge approved">${esc(rec.outcome)}: ${money(rec.limit)} on ${esc(rec.terms)}</span> <span class="small">by the ${esc(rec.decided_by)}</span>`
         : rv.ask ? `<span class="badge needsyou">Needs you</span>` : rv.status === 'denied' ? `<span class="badge failed">Controller said no</span> <span class="small">${esc(rv.reason || '')}</span>` : `<span class="badge running">${esc(rv.status)}</span>`;
-      return `<div class="review"><div class="card" style="margin-bottom:12px"><h3>Review of <span class="mono">${esc(rv.customer_id)}</span> ${head}</h3>
+      return `<div class="review"><div class="card" style="margin-bottom:12px"><h3>Review of <span class="mono">${esc(rv.customer_id)}</span> ${head}${rec ? ` <a class="small" target="_blank" rel="noopener" href="${letterUrl(rv.customer_id)}">Letter</a>` : ''}</h3>
         <p class="small">The analyst proposes to ${esc(p.outcome)} the limit to ${money(p.limit)} on ${esc(p.terms)}${p.band ? ', band ' + esc(p.band) : ''}. ${chips(p.rules)}</p>
         ${rv.ask ? askCell(rv.ask) : ''}</div>
         <div class="twocol">${thenCard(rv.then)}${nowCard(rv.now, rv.changes)}</div></div>`;
@@ -334,6 +344,24 @@
 
     $('score-summary').textContent = sc ? sc.summary.replace(/^./, (c) => c.toUpperCase()) + '.' + (r.scripted ? ' A quick run acts out a few moments, not the whole case; a new run with Droid works all of it.' : '') + (sc.moment.length ? ` The moment: the simple rule approves ${sc.moment.map((m) => m.application_id + ' (' + m.simple_rule.replace('approve ', '') + ')').join(', ')}; the desk put it on fraud hold.` : '') : 'This case has no answer key, so the run is not scored.';
     $('errors').innerHTML = sc ? sc.errors.map((e) => `<tr><td class="mono">${esc(e.id)}</td><td>${esc(e.title)}</td><td>${e.caught ? '<span class="badge approved">Caught</span>' : '<span class="badge off">Not yet</span>'}</td><td class="small">${esc(e.by || '')}</td></tr>`).join('') : '';
+
+    const im = r.impact;
+    if (im) {
+      const mins = (m) => (m == null ? 'no estimate' : `${m} min`);
+      $('impact-cards').innerHTML = [
+        ['A person\'s time per application', mins(im.human_minutes_per_application), `${im.requests_on_applications} of ${im.requests_to_a_person} requests to a person were about applications`],
+        ['Bad credit stopped', money(im.bad_credit_stopped.total), im.bad_credit_stopped.items.map((x) => `${x.application_id}: ${x.desk}`).join(', ') || 'none in this run'],
+        ['Supplier payments stopped', money(im.payments_stopped.total), im.payments_stopped.items.map((x) => `${x.bill_id}: ${x.action}`).join(', ') || 'none in this run'],
+        ['Model cost per application', im.model_cost.per_application_cents == null ? '-' : `$${(im.model_cost.per_application_cents / 100).toFixed(2)}`, im.scripted ? 'Scripted seats, no model' : `$${(im.model_cost.total_cents / 100).toFixed(2)} for the whole run, every seat`],
+      ].map(([k, v, sub]) => `<div class="card"><div class="label">${esc(k)}</div><div class="big">${esc(v)}</div><div class="small">${esc(sub)}</div></div>`).join('');
+      const deskCredit = r.applications.reduce((n, a) => n + (a.decision && a.decision.outcome === 'approve' ? a.decision.limit : 0), 0);
+      $('impact-compare').innerHTML = [
+        ['By hand', im.estimates.manual_elapsed, 'a person decides', 'depends on the person', '$0'],
+        ['The simple rule', '0 min', money(im.simple_rule.approved), '$0: it approves the fake applicant', '$0'],
+        ['The credit desk', `${mins(im.human_minutes_per_application)} of a person's time${im.all_decided_within_minutes == null ? '' : `; all decided within ${im.all_decided_within_minutes} min of the start`}`, money(deskCredit), money(im.bad_credit_stopped.total), im.model_cost.per_application_cents == null ? '-' : `$${(im.model_cost.per_application_cents / 100).toFixed(2)}`],
+      ].map((row) => `<tr>${row.map((c, i) => i ? `<td>${esc(c)}</td>` : `<th>${esc(c)}</th>`).join('')}</tr>`).join('');
+      $('impact-notes').textContent = `Measured from this run's log. A person's time counts only the requests that reached one, at ${im.estimates.review_minutes_per_request} minutes each (${im.estimates.review_source}) By hand: ${im.estimates.manual_source}`;
+    }
 
     $('rules-head').innerHTML = `<span class="mono">${esc(s.rules.file)}</span>, version ${esc(s.rules.version || '?')}, ${esc(s.rules.count)} rules.` +
       (/^https:\/\//.test(s.rules.source || '') ? ` Worked out with Mana: <a href="${esc(s.rules.source)}" target="_blank" rel="noreferrer noopener">the public chat</a>.` : '');
@@ -380,7 +408,15 @@
       await api('POST', '/api/approvals/' + encodeURIComponent(id), { approved, by: 'credit desk window' });
       denying = null;
       await load();
-    } catch (e) { status('The answer did not go through: ' + e.message, true); }
+    } catch (e) {
+      // On a Business box only a signed-in person answers, never the bare screen, never the one who asked.
+      const why = /Only a person/i.test(e.message) ? 'On a Business box only a person can answer. Pick who you are from the top bar, then answer again.'
+        : /asked for this/i.test(e.message) ? 'You asked for this, so someone else has to answer it.'
+        : /limit|may not|not.*approve/i.test(e.message) ? `Not yours to answer: ${e.message}`
+        : 'The answer did not go through: ' + e.message;
+      denying = null;
+      status(why, true);
+    }
   }
 
   function checked(res) {

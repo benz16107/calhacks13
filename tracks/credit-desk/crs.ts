@@ -97,10 +97,12 @@ function publicRecords(r: Raw) {
   };
 }
 
-function phoneOwner(r: Raw) {
+function phoneOwner(r: Raw, app: any) {
   const recs = r.response?.data?.records;
   if (!Array.isArray(recs)) return { request_id: r.requestId, error: `unexpected answer (HTTP ${r.status})` };
-  return { request_id: r.requestId, owners: recs.map((x: any) => `${x.firstName ?? ''} ${x.lastName ?? ''}`.trim()) };
+  // Whether the owner on file is the guarantor, not who it is: the seats never see a person's name.
+  const want = `${app.guarantor.first_name} ${app.guarantor.last_name}`.toUpperCase();
+  return { request_id: r.requestId, owners_on_file: recs.length, owner_is_the_guarantor: recs.some((x: any) => `${x.firstName ?? ''} ${x.lastName ?? ''}`.trim().toUpperCase() === want) };
 }
 
 // An HTTP error is reported as an error, never read as an empty (clean-looking) answer.
@@ -124,13 +126,12 @@ export async function checkApplication(app: any, caseId: string, creds: () => [s
   }
   return {
     application_id: app.application_id,
-    guarantor: `${app.guarantor.first_name} ${app.guarantor.last_name}`,
     source: recorded ? 'recorded CRS sandbox answers from 2026-10-23 (CRS could not be reached)' : 'CRS sandbox, live',
     credit: { transunion: read(creditReport, raw.transunion), equifax: read(creditReport, raw.equifax), experian: read(creditReport, raw.experian) },
     identity: read(identity, raw.identity),
     fraud: read(fraud, raw.fraud),
     public_records: read(publicRecords, raw['public-records']),
-    phone_owner: read(phoneOwner, raw['phone-owner']),
+    phone_owner: read((x) => phoneOwner(x, app), raw['phone-owner']),
   };
 }
 
