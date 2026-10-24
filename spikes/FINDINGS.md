@@ -15,7 +15,7 @@ Run a script: `tar c spikes/NN-*.sh | ssh benmac 'limactl shell box -- bash -c "
 |---|---|---|
 | 1 | Per-task file copies (overlayfs) | Works, as root |
 | 2 | Tasks as separate users | Works |
-| 3 | Per-task network limits | pending |
+| 3 | Per-task network limits | Works, matched by uid. Cgroup matching fails open |
 | 4 | SpacetimeDB on ARM | pending |
 | 5 | Droid as its own user | pending |
 | 6 | Vision model for /find | pending |
@@ -100,6 +100,62 @@ as a plain user (`setpriv --reuid --regid --init-groups --no-new-privs`), then a
 **For the core thread:** run every task as a systemd unit with `User=task-<id>` plus the hardening line
 above, in its own overlay on an idmapped bind of `lower`. Never put secrets where any task user can read
 them.
+
+## 3. Per-task network limits
+
+**Ran:** `sudo bash 03-network.sh` (after `02-users.sh`). `03-proxy.mjs` is a 40-line Node HTTP proxy on
+`127.0.0.1:8888`, run as its own user `box-proxy`. It allows named hosts per task. It tells which task is
+calling from the uid that owns the client socket (a lookup in `/proc/net/tcp`), so tasks carry no token.
+Tasks ran as systemd units in `box.slice` with the spike 2 hardening. Three ways to limit them were tried.
+
+**Way A, nftables on the task's uid. Works, all 8 checks pass:**
+
+```
+table inet box {
+  chain out {
+    type filter hook output priority filter; policy accept;
+    meta skuid 30000-39999 ip daddr 127.0.0.1 tcp dport 8888 accept
+    meta skuid 30000-39999 counter log prefix "box-block " reject
+  }
+}
+```
+
+- Blocked: a direct `curl https://registry.npmjs.org` ("Could not resolve host"), a direct connection to
+  `1.1.1.1:443`, any DNS lookup, and another localhost service on `127.0.0.1:9999` (a stand-in for
+  SpacetimeDB or the vault).
+- Through the proxy: task-a reached its allowed `registry.npmjs.org` (HTTP 200). It was refused
+  `example.com` (`CONNECT tunnel failed, response 403`), which task-b, whose list has it, reached.
+- Root and the box service are unaffected.
+- The proxy logs one JSON line per request: `{"uid":30001,"verb":"CONNECT","host":"example.com","ok":false}`.
+  The kernel logs each blocked packet with the `box-block` prefix (`journalctl -k`).
+
+**Way B, nftables on the task's cgroup (`socket cgroupv2 level 1 "box.slice"`). Works until the slice is
+recreated, then fails open:**
+- nft refuses the rule if the cgroup does not exist yet: `Error: cgroupv2 path fails: No such file or
+  directory`. You must `systemctl start box.slice` first, and the slice then stays active.
+- nft stores the cgroup's inode number (`level 1 9099`), not its path. After `systemctl stop box.slice` and
+  a fresh start, the rule no longer matched, **and task-a reached the internet directly.** This happens on
+  every reboot and every slice restart, unless something reloads the rules each time.
+
+**Way C, systemd alone (`IPAddressDeny=any IPAddressAllow=127.0.0.1`).** It blocks the internet and lets the
+proxy work. It cannot limit ports, so the task still reached the other localhost service.
+
+**Gotchas:**
+- **Block DNS for tasks.** Otherwise a task can leak data through lookups to systemd-resolved
+  (`127.0.0.53:53`). Way A blocks it, since only the proxy port is allowed. The proxy resolves names itself.
+- **nftables does not see Unix sockets.** A task could still talk to the system D-Bus (`busctl --system
+  list` worked). `RestrictAddressFamilies=AF_INET AF_INET6` on the unit blocks that, and the proxy still
+  works (HTTP 200).
+- For HTTPS the proxy sees only the host name (CONNECT), not the path. Calls that need a secret should go
+  to the vault as plain HTTP on a local port, and the vault adds the key and makes the TLS call. That port
+  needs its own `accept` line, and the vault can check the caller's uid the same way.
+- Use an `inet` table so IPv6 is covered too. Leave Lima's own `ip nat` table alone.
+- `curl -f` hides who refused: a 403 from the proxy comes back as curl exit 56 (`CONNECT tunnel failed`),
+  while an upstream 403 is exit 22. GitHub's API returned 403 to this VM even without the proxy.
+
+**For the core thread:** load the way A rules at boot from `/etc/nftables.conf` with a fixed task uid range,
+add `RestrictAddressFamilies=AF_INET AF_INET6` to every task unit, and give each task a host allowlist in the
+proxy keyed by uid. Do not match on cgroups.
 
 ## Not tested yet
 
