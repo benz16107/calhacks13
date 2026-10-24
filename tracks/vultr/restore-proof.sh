@@ -3,7 +3,8 @@
 # checkout (never on a machine whose box matters: it starts two throwaway boxes and removes task users):
 #   VULTR_OBJ_ACCESS=… VULTR_OBJ_SECRET=… tracks/vultr/restore-proof.sh
 # Box A runs a finished task and one waiting for an OK, backs up to the real Object Storage, and is killed hard with
-# its task users deleted. Box B starts empty, restores, and must show the same tasks, give the same user the same id,
+# its task users deleted. With STOP_AFTER_BACKUP=<file> it stops there and leaves the owner's identity in <file>, so the
+# restore can be run on a different machine (tracks/vultr/restore.ts). Box B starts empty, restores, and must show the same tasks, give the same user the same id,
 # and finish the waiting task once it is approved.
 set -euo pipefail
 cd "$(dirname "$0")/../.."
@@ -30,6 +31,11 @@ for _ in $(seq 100); do api "$A" GET /api/tasks | js "d.filter(t=>t.id=='$t1'&&t
 uid_a=$(id -u "box-$t2"); say "A has task $t1 done and $t2 waiting for an OK; its user box-$t2 is uid $uid_a"
 api "$A" POST /t/vultr/backup | js "'backup: '+d.key+' '+d.bytes+' bytes in '+d.seconds+' s'" | while read -r l; do say "$l"; done
 
+if [ -n "${STOP_AFTER_BACKUP:-}" ]; then
+  cp "$W/owner.key" "$STOP_AFTER_BACKUP"; say "stopping after the backup; identity in $STOP_AFTER_BACKUP"
+  kill -9 -- "-$(cat "$A/pid")" 2>/dev/null || true; sleep 1
+  findmnt -rn -o TARGET | grep "^$A/" | sort -r | xargs -r -n1 umount -l; rm -rf "$W"; exit 0
+fi
 kill -9 -- "-$(cat "$A/pid")" 2>/dev/null || true; sleep 1
 findmnt -rn -o TARGET | grep "^$A/" | sort -r | xargs -r -n1 umount -l
 userdel "box-$t1" 2>/dev/null || true; userdel "box-$t2"; groupdel "box-$t2" 2>/dev/null || true

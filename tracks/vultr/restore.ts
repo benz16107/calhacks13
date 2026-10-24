@@ -45,9 +45,11 @@ try {
   if (hasUnit) sh('systemctl', 'stop', 'box.service');
   // Overlay mounts under the old folder would make the move fail or follow into live data.
   spawnSync('bash', ['-c', `findmnt -rn -o TARGET | grep '^${HOME}/' | sort -r | xargs -r -n1 umount -l`]);
-  const aside = `${HOME}.before-restore-${new Date().toISOString().replace(/[-:]|\.\d{3}/g, '')}`;
-  if (fs.existsSync(HOME)) fs.renameSync(HOME, aside);
-  fs.mkdirSync(HOME, { recursive: true, mode: 0o711 });
+  // The old state moves into a folder inside BOX_HOME, not beside it: on an installed box BOX_HOME is a mount point.
+  const aside = path.join(HOME, `.before-restore-${new Date().toISOString().replace(/[-:]|\.\d{3}/g, '')}`);
+  fs.mkdirSync(aside, { recursive: true, mode: 0o700 });
+  fs.chmodSync(HOME, 0o711);
+  for (const e of fs.readdirSync(HOME)) if (!e.startsWith('.before-restore-')) fs.renameSync(path.join(HOME, e), path.join(aside, e));
   sh('bash', '-c', `age -d -i '${a.identity}' '${file}' | tar --numeric-owner -xpf - -C '${HOME}'`);
 
   // Task users get their old ids back, so each task's files are still theirs.

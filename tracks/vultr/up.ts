@@ -3,15 +3,15 @@
 // it, wait until the installer has had time to finish, detach the disc, and print the console address where the
 // box's setup wizard is. Timings are printed so a README can quote them.
 //   VULTR_API_KEY=… vultr-up --iso-url https://sjc1.vultrobjects.com/gurtos/<version>/gurtos-server-x86_64.iso
-//   VULTR_API_KEY=… vultr-up --iso-id <id> [--plan vc2-2c-4gb] [--region sjc] [--firewall <group id>]
+//   VULTR_API_KEY=… vultr-up --iso-id <id> [--plan vc2-1c-1gb] [--region sjc] [--firewall <group id>]
 //   VULTR_API_KEY=… vultr-up --destroy <instance id> [--delete-iso <iso id>]
 // The disc has no sshd, and the box's API refuses the public internet, so setup happens on that console.
 import { parseArgs } from 'node:util';
 
 const { values: a } = parseArgs({
   options: {
-    'iso-url': { type: 'string' }, 'iso-id': { type: 'string' }, plan: { type: 'string', default: 'vc2-2c-4gb' }, region: { type: 'string', default: 'sjc' },
-    label: { type: 'string', default: 'gurtos-test' }, firewall: { type: 'string' }, 'install-seconds': { type: 'string', default: '240' }, destroy: { type: 'string' }, 'delete-iso': { type: 'string' },
+    'iso-url': { type: 'string' }, 'iso-id': { type: 'string' }, plan: { type: 'string', default: 'vc2-1c-1gb' }, region: { type: 'string', default: 'sjc' },
+    label: { type: 'string', default: 'gurtos-test' }, firewall: { type: 'string' }, 'install-seconds': { type: 'string', default: '480' }, destroy: { type: 'string' }, 'delete-iso': { type: 'string' },
   },
 });
 const token = process.env.VULTR_API_KEY;

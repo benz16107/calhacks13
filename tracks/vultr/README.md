@@ -14,14 +14,29 @@ the project. Each part below says why it is there.
 
 ```sh
 VULTR_API_KEY=… tracks/vultr/up.ts --iso-url https://sjc1.vultrobjects.com/gurtos/v0.1.0-preview/gurtos-server-x86_64.iso
-VULTR_API_KEY=… tracks/vultr/up.ts --iso-id <id> [--plan vc2-2c-4gb] [--region sjc] [--firewall <group id>]
+VULTR_API_KEY=… tracks/vultr/up.ts --iso-id <id> [--plan vc2-1c-1gb] [--install-seconds 480] [--region sjc] [--firewall <group id>]
 VULTR_API_KEY=… tracks/vultr/up.ts --destroy <instance id> [--delete-iso <iso id>]
 ```
 
 It adds the ISO from a URL (or reuses one), creates an instance that boots it, waits for the installer, detaches the
 disc, and prints the instance, its address and the console address. The disc has no sshd and the box's API refuses
 the public internet (`image/README.md`, "Start it"), so first-run setup happens on that console, which shows the
-box's screen. Vultr allows two custom ISOs per account, so a third `--iso-url` fails until one is deleted.
+box's screen. Vultr allows two custom ISOs per account, so a third `--iso-url` fails until one is deleted, and it
+only fetches an ISO from an `https` URL.
+
+**Measured on 2026-10-24** with the release ISO (`gurtos-server-x86_64-20261024-0644-881318a.iso`, 1.5 GB) on the
+cheapest plan with the 25 GB the installer needs, `vc2-1c-1gb` (1 vCPU, 1 GB RAM, about $0.007 an hour):
+
+| Step | Time from creating the instance |
+|---|---|
+| Instance running with an address | 12 s |
+| Installer copying the system (screenshot 1: 50%) | about 3 min |
+| Installer finished, restarted, GurtOS home screen up | about 5 min |
+| Disc detached, box back from its own disk, same name | about 1 min more |
+
+The first attempt detached the disc after 300 s and cut the installer off: the console then stayed on "Booting from
+Hard Disk..." for good. 1 vCPU unpacks the system slowly, so `--install-seconds` defaults to 480 here. Screenshots:
+`screenshots/1-installer-copying-50-percent.png`, `2-box-screen-after-disc-detached.png`.
 
 ## Backups
 
@@ -48,14 +63,22 @@ export VULTR_OBJ_ACCESS=… VULTR_OBJ_SECRET=…
 tracks/vultr/restore.ts --identity ~/gurtos-backup.key --box-id <old box id>
 ```
 
-It downloads the newest backup, stops the box, moves the old `BOX_HOME` aside (kept, named `.before-restore-<time>`),
-decrypts in a pipe into a new one, gives each task user its old id, and starts the box. The box then does what it
+It downloads the newest backup, stops the box, moves the old state into `BOX_HOME/.before-restore-<time>` (kept, and left out of
+backups), decrypts in a pipe into `BOX_HOME`, gives each task user its old id, and starts the box. The box then does what it
 does after a power cut: replays the log and resumes every task that was running or waiting.
 
 **Measured** on the linuxbox test VM against the real Object Storage (`restore-proof.sh`): a 379 KB backup uploaded in
 1.2 s; a fresh `BOX_HOME` restored and its box was up 3 s after the download started; the task that was waiting for an
 OK came back waiting, got its OK on the restored box and finished, and its user had its old id. Restore onto a fresh
 *Vultr* instance has not been run (see "Status").
+
+**On a Vultr instance** (2026-10-24, `vc2-1c-1gb` installed from the Server debug disc, because the release disc has no
+shell to run a restore from): `restore.ts` took 2.8 s to download, decrypt and start the box on the restored folder.
+It listed the finished task as done and the waiting one as waiting, and after an OK on that box the waiting task
+finished and wrote its file. The installed image has `/var/lib/box` as a mount point, so the old state is moved into
+`BOX_HOME/.before-restore-<time>` instead of renaming the folder (a rename failed with EBUSY on the first try). The image
+needs the `age` program: the disc does not ship it yet, and has no apt, so this test used the official static `age`
+1.2.1 binary.
 
 **Vault keys:** `VULTR_OBJ_ACCESS`, `VULTR_OBJ_SECRET`, `BACKUP_AGE_RECIPIENT`; optional `VULTR_OBJ_HOST` (default
 `sjc1.vultrobjects.com`) and `VULTR_OBJ_BUCKET` (default `gurtos-backups`, made private on the first backup).
@@ -75,19 +98,26 @@ address. Vultr groups are allow lists, so everything else inbound is dropped, as
 - It never opens 7700 (the box API) or 3000 (SpacetimeDB), to the whole internet or to anyone: the box's own rule
   lets 7700 in from private networks only, and a request to open it is refused before any call to Vultr.
 - It refuses a config with no ssh source, or one wider than a /8, so a typo cannot lock everyone out.
-- It adds new rules before deleting old ones, so a changed ssh address never leaves a moment with none.
+- It adds new rules before deleting old ones, so a changed ssh address never leaves a moment with none in the API.
+  Vultr applies a change on its own schedule: on 2026-10-24 a removed rule was enforced within 15 s, and an added one
+  took up to about 3 minutes to start letting traffic in. Change the ssh source only while you still have a session
+  open or the Vultr console available.
+- Tested on a live instance: with the group attached and ssh allowed only from a wrong address, ssh from outside
+  timed out although the box's own firewall accepts port 22; putting the right address back let it in again.
 - Tailscale and the relay tunnel are outbound connections, so their replies come back without an inbound rule.
 
 Vault key: `VULTR_API_KEY` (the broker keeps it; no task sees it).
 
 ## Status
 
-Proven: the S3 client against Vultr (upload, list, download, delete, private bucket), the encrypted round trip, restore
-with resumed tasks, and the firewall group calls (create, add, remove, repeat, delete) against the Vultr API.
+Proven on live Vultr (2026-10-24): booting and installing the release disc (above), the S3 client against Object
+Storage, encrypted backup and restore onto a fresh Vultr instance with a waiting task resuming, and a firewall group
+created, attached to an instance, changed and enforced. The test instances, ISO, group and objects were deleted
+afterwards; the three runs cost under $0.20.
 
-Not proven on a live Vultr instance, because on 2026-10-24 Vultr refused to create any ("Your account does not have any
-additional credit - please add funds"): `up.ts` after the create call (the installer wait, the detach, the console
-setup), the restore onto a fresh Vultr instance, and attaching the firewall group to an instance.
+Not proven: the first-boot wizard was shown (screenshot 3) but not clicked through; the box's own `PUT /t/vultr/firewall`
+route and the daily backup trigger ran only against local stand-ins and the real Object Storage from a test VM, not on
+a Vultr instance running this track.
 
 ## Not built
 

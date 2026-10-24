@@ -1,18 +1,4 @@
 {
-  "redirects": [
-    {
-      "source": "/p/:box([a-z0-9-]{3,30})",
-      "has": [{ "type": "host", "value": "gurtos.co" }],
-      "destination": "https://app.gurtos.com/pair?box=:box.box.gurtos.com",
-      "permanent": false
-    },
-    {
-      "source": "/:path*",
-      "has": [{ "type": "host", "value": "(www\\.)?gurtos\\.co" }],
-      "destination": "https://gurtos.com/:path*",
-      "permanent": false
-    }
-  ],
   "rewrites": [
     {
       "source": "/((?!api/|assets/|kit/|.*\\..*).*)",

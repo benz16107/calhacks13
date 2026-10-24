@@ -14,7 +14,7 @@ export const KEEP = 14;
 
 /** What stays out: the box's live socket and relay identity (a restored box makes its own), its CA key, and each
  * task's overlay mount points (their files are in `upper`). */
-export const EXCLUDES = ['./api.sock', './api.port', './remote', './remote.json', './ca', './empty', './tasks/*/root', './tasks/*/work'];
+export const EXCLUDES = ['./api.sock', './api.port', './remote', './remote.json', './ca', './empty', './tasks/*/root', './tasks/*/work', './.before-restore-*'];
 
 export const prefix = () => `backups/${process.env.BOX_ID ?? 'box'}/`;
 
