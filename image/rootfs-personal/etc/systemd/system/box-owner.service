@@ -10,6 +10,7 @@ After=box.service
 
 [Service]
 Type=oneshot
+ExecStartPre=-/usr/local/lib/box-os/box-hostname
 ExecStart=/opt/box/personal/install.sh
 
 [Install]

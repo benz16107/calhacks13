@@ -221,7 +221,8 @@ kiosk:
 - **The Box desktop layer** comes from `personal/install.sh`, with its GurtOS session and theme. See the hook
   below.
 - **The computer's name** is `gurt-<id>` until the person names it in Settings. First boot sets it as the
-  pretty hostname too, so GNOME's setup offers it instead of naming the machine after the account.
+  pretty hostname too. GNOME's setup still names the machine after the new account, so `box-hostname` (run by
+  `box-owner.service` right after) puts `gurt-<id>` back, unless the person typed a computer name of their own.
 
 The data partition also holds `/home`, saved Wi-Fi and network connections, AccountsService (account pictures
 and types) and Bluetooth pairings. These mounts are required on Personal: a desktop that started without `/home`

@@ -125,6 +125,8 @@ if [[ $edition == personal- ]]; then
   owner "after the first account" && echo "test: the box knows its owner: ana"
   check() { vm "$2" >/dev/null 2>&1 || { echo "test: FAILED, $1"; exit 1; }; }
   check "a Python error prints apport's second traceback" '! python3 -c "raise ValueError" 2>&1 | grep -q "package manager"'
+  check "a computer named after the account is not renamed back" 'hostnamectl --static set-hostname ana && /usr/local/lib/box-os/box-hostname && hostnamectl --static | grep -q "^gurt-"'
+  check "a name the person chose is not kept" 'hostnamectl --static set-hostname mycomputer && /usr/local/lib/box-os/box-hostname && [ "$(hostnamectl --static)" = mycomputer ]'
   check "no BOX_URL" 'grep -q "^BOX_URL=http" /run/box-os/box.env'
   check "no pretty hostname" 'grep -q "^PRETTY_HOSTNAME=gurt-" /etc/machine-info'
   check "Adwaita icons outside Ubuntu's session" '! sudo -u ana env -u XDG_CURRENT_DESKTOP gsettings get org.gnome.desktop.interface icon-theme | grep -q Adwaita'

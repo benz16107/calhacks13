@@ -1,0 +1,11 @@
+#!/bin/bash
+# GNOME's first-boot setup leaves its "Computer" field empty and names the machine after the new account (ben).
+# Put the box's own name back (gurt-<id>, from its identity key) unless the person chose a name themselves: the
+# only name we replace is one equal to an account name. Runs before the box learns its owner, so the box restarts
+# with the right name.
+set -euo pipefail
+cur=$(hostnamectl --static)
+id=$(openssl pkey -pubin -in /etc/box/identity.pub -outform DER | sha256sum | cut -c1-6)
+for u in $(awk -F: '$3 >= 1000 && $3 < 30000 { print $1 }' /etc/passwd); do
+  if [ "$cur" = "$u" ]; then hostnamectl --static set-hostname "gurt-$id"; exit 0; fi
+done
