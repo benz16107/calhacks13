@@ -284,6 +284,14 @@ made a task with `source: api`; the log and Jira would read better with the devi
 **P2-19. "Spent today" shows an old total for the first seconds after a page loads.** Owner: portal. A freshly loaded
 phone showed "$18.23 spent today" for about 4 s, then the right "$29.79". Minor.
 
+**P1-16. A guest lookup asks the owner twice (Mana guest requests, 03bade4).** Owner: mana. The agent's `apify.run`
+default cap ($0.50) is above the guest run's $0.25 budget, so after the owner approves the request, the phone gets a
+second "Spend $0.50 on apify.run? Budget $0.25" and the run waits. Mana's fix (`maxUsd` 0.2 in the guest prompt) is
+in test.
+
+**P2-20. Normal tasks log `net.blocked 127.0.0.53:53`.** Owner: core. Droid's own process tries the resolver stub,
+about eight times in one lookup, and the portal shows them as blocked attempts. Filed with core.
+
 ## Docs site (gurtos.com)
 
 **D-1 to D-4 and D-7 fixed in 199dce5 and live, spot-checked 00:00 PT:** real ISO names, `gurt-<id>`, the Personal ISO
