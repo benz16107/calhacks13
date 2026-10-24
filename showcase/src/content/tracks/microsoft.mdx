@@ -1,63 +1,47 @@
 ---
+design: kit
 order: 6
 sponsor: Microsoft
 prize: Built for the Real World, and the Customer Impact Award
 editions: 'GurtOS Business'
-pitch: 'Companies want agents on finance work, but an ordinary OS gives an agent its owner''s keys, no separation of duties, no record and no undo, so pilots stay pilots. GurtOS Business gives each seat its own user, routes approvals to the right person, keeps a full audit and a kill switch, on a box the company owns. A measured incident drill is done: 10 agents stopped within 271 ms, a bad batch undone in 48 ms. Built since: measured impact per run, a Responsible AI mapping and sourced customer facts.  GurtOS Business is on main: people and roles, approvals routed by rules written in plain words, refusals for answering your own request or above your limit, a Waiting for me inbox, an audit with CSV export and a kill switch. Sign-in with a work account (Microsoft Entra ID, roles from groups) is Entra-ready and tested with a standards test provider; shadow mode (a seat only suggests, and a person decides) is built. The scored credit desk runs were on GurtOS Server; the Business screens are from a box seeded as the made-up Fogline Supply.'
+pitch: 'Companies want agents on finance work, but an ordinary OS gives an agent its owner''s keys, no separation of duties, no record and no undo, so pilots stay pilots. GurtOS Business gives each seat its own user, routes approvals to the right person, runs a seat in shadow mode until it has earned trust, keeps an audit and a kill switch, on a computer the company owns. Measured incident drill: 10 agents frozen within 271 ms, a bad batch undone in 48 ms. Business is on main; the scored credit desk runs were on GurtOS Server, and the Business screens come from a box seeded as the made-up Fogline Supply. Sign-in with a work account (Microsoft Entra ID) is Entra-ready and tested with a standards test provider, not a real tenant.'
 title: A finance agent with a path to production
-summary: 'Companies want agents doing finance work, but an ordinary operating system gives an agent its owner''s keys, no separation of duties, no record and no undo, so pilots never reach production. The credit desk is a small wholesaler''s credit analyst agent and collections clerk agent with a human controller, and GurtOS is its path to production: each seat is its own Linux user without keys, every action lands in an append-only log, approvals reach a phone, and the box picks up where it was after a power cut. It runs on a computer the company owns.'
-proof: 'Scored from the action log against an answer key, the full live run with real Droid on all three seats caught <strong>16 of 17 planted errors with 1 false alarm</strong> and decided all 6 credit applications as the key does. A simple rule on the same CRS data approves all six for $153,000, including $20,000 to a fake applicant whose $18,500 rush order would have shipped to a freight forwarder.'
+summary: 'Companies want agents doing finance work, but an ordinary operating system gives an agent its owner''s keys, no separation of duties, no record and no undo, so pilots never reach production. The credit desk is a made-up wholesaler''s credit analyst, collections clerk and AP clerk with a human controller, and GurtOS Business is its path to production: each seat is its own Linux user without keys, a seat starts in shadow mode and goes live only when a rule in plain words says it has earned it, every action lands in an append-only log, approvals reach the right person''s phone, and one kill switch stops every agent. It runs on a computer the company owns.'
+proof: 'Measured on a live credit desk run with 10 agents working (3 Droid seats on Claude, 7 scripted): the kill switch froze every agent within <strong>271 ms</strong>, none took a step while paused, and a bad batch was undone in <strong>48 ms</strong> with every other task keeping its work. Scored against the answer key, the full live run caught 16 of 17 planted errors and held a $20,000 fake applicant a simple rule approves.'
 criteriaSource: "From Microsoft's track description and judging criteria, as copied into the project's track plan (docs/tracks.md)."
-video: hyphenate
 clip: credit-desk
+video: hyphenate
 criteria:
   - ask: 'A production-minded AI agent for finance, productivity, healthcare or similar.'
-    how: 'Finance: trade credit and collections at Fogline Supply Co., a made-up Oakland wholesaler with 26 employees, about $8.1M revenue and 38 accounts on trade credit. Two agent seats (Droid running Claude) and a human controller.'
+    how: 'Finance: trade credit, collections and supplier payments at Fogline Supply Co., a made-up Oakland wholesaler, with three agent seats and a human controller.'
   - ask: 'Customer understanding.'
-    how: 'A small wholesaler''s credit desk is one or two people doing credit checks and collections by hand, where one fake customer or one misapplied payment costs real money. The case is built from those everyday failures: a synthetic identity, a payment applied to the wrong customer, a post-dated check booked as cash, an invoice billed twice, a limit nobody reviewed in 29 months.'
+    how: 'The customer is the controller of a small business, where one fake customer or one misapplied payment costs real money. The case is built from those failures, and the page cites sourced facts about them.'
   - ask: 'Measurable usefulness.'
-    how: 'Every run is scored from its log: planted errors caught out of 14, false alarms, and decisions matched on 6 applications, 11 customers and 6 orders. The full live run on Oct 24 caught 16 of 17 planted errors with 1 false alarm (precision 97%), decided all 6 applications as the key does and took 12 minutes for about $5.24 of model use; a January review caught 2 of 2. The simple rule is the baseline on the same data.'
+    how: 'Every run is scored from its log against an answer key: 16 of 17 planted errors, 1 false alarm, 6 of 6 credit decisions in the full live run, beside the simple rule on the same data.'
   - ask: 'Path to production.'
-    how: 'It runs on GurtOS: each seat is its own Linux user with its own copy of the files, keys stay in a root-only vault, every action is in an append-only log, approvals reach a phone, the box resumes after a power cut, and the OS updates as a whole and rolls itself back. The rules are a file, so the controller changes policy without code.'
+    how: 'A one-week pilot in shadow mode, people and roles, routed approvals, an audit, a kill switch with a measured drill, and a way back to shadow in one setting.'
   - ask: 'Responsible design.'
-    how: 'The agent cannot approve its own large proposals, clear a fraud flag, or decide before the checks run. It never sees the answer key. Every decision names the rule and the data behind it. It pulls only what trade credit needs (no criminal or eviction searches) and never tells an applicant which check failed.'
+    how: 'Seats cannot approve their own work, never see protected attributes, and every decision names its rule and data. The six Responsible AI principles are mapped to code and tests, with what is not done.'
   - ask: 'End-to-end function.'
-    how: 'Application in, seven CRS checks, a decision by rule, the controller''s approval on a phone, the decision in the log, the run scored. The merge gate runs this path on every merge, live against CRS and Nessie.'
+    how: 'Application in, seven CRS checks, a decision by rule, the controller''s answer on a phone, the decision in the log, the run scored. The merge gate runs this on every merge.'
   - ask: 'Customer Impact Award.'
-    how: 'The customer is the controller at a small business: the desk does the checking and the paperwork, stops the one application that would have cost $20,000 of credit, and brings only the decisions that need a person to their phone, with the reason and the data attached.'
+    how: 'The desk does the checking and paperwork, stops the one application that would have cost $20,000 of credit, and brings only the decisions that need a person to their phone.'
 shots:
-  - src: ../../assets/track/hyphenate/window.png
-    alt: 'The Credit desk window: 2 of 14 planted errors caught in a quick scripted run, 1 needs you, the analyst and clerk seats, and the applications table with APP-1043 highlighted amber, where the simple rule approves $20,000 and the desk asks the controller to put it on fraud hold, with Deny and Approve.'
-    caption: 'The Credit desk window during a Quick run (scripted seats, live CRS and Nessie, about 10 seconds). APP-1043 waits for the controller; the simple rule beside it would approve $20,000. Approve here, on a paired phone or in Notification Center: the first answer wins, and the log names who gave it.'
-  - src: ../../assets/track/hyphenate/analyst-decision.png
-    alt: 'The recorded decision: fraud hold, decided by the controller on the phone, rules FRD-1 and FRD-2, seven CRS request ids.'
-    caption: 'The decision in the log: what, why (rule ids), who approved, and the data it rests on.'
-  - src: ../../assets/repo/business/3-waiting-rosa-desktop.png
-    alt: 'Waiting for me on the Business box for Rosa Delgado, Controller: three requests, a $40,000 credit line for Bright Harbor Catering open with the rule that sent it to her, the agent''s checks, and Deny and Approve.'
-    caption: 'GurtOS Business, Waiting for me. A rule sent the $40,000 request to Rosa; Sam asked for it, so he cannot approve it. The data is sandbox data for the made-up Fogline Supply.'
-  - src: ../../assets/repo/business/shadow-people.png
-    alt: 'Settings, People, Shadow mode: the Collections clerk is in shadow and shows 5 of 6 agreed (83%) against its go-live rule of 20 suggestions with 95% agreement, with its one disagreement listed under Disagreements.'
-    caption: 'Shadow mode on a seeded box: the Collections clerk only suggests, a person decides each suggestion, and the box counts agreement against a rule written in plain words. It has not met its bar yet. The disagreement is listed with who decided otherwise.'
-  - src: ../../assets/repo/business/2-rules.png
-    alt: 'The Rules page: a tester that says a $40,000 credit line asked for by Sam Chen goes to Rosa Delgado, the plain-words rules, and the always-on rules.'
-    caption: 'Rules in plain words, with a tester that shows who a request would go to. "Nobody approves their own request" and "an agent never approves an agent" cannot be turned off.'
-  - src: ../../assets/repo/business/1a-people.png
-    alt: 'Settings, People: Rosa Delgado the Controller, Sam Chen in Sales, Priya Nair the IT admin and Owen Clarke the auditor, plus two agent seats.'
-    caption: 'People and agent seats. Each person approves only from a phone paired as them; the auditor is read-only.'
-  - src: ../../assets/repo/business/4-audit.png
-    alt: 'The Audit window for Owen Clarke, read-only, filtered to Bright Harbor Catering, showing the request routed to Rosa, her approval from her phone and the task finishing.'
-    caption: 'Audit, read-only for the auditor, with filters and Export CSV. Every row names who asked, which seat, and who approved.'
-  - src: ../../assets/repo/business/two-phones-rosa-approves.png
-    alt: 'Rosa''s phone after approving the $40,000 request.'
-    caption: 'Two phones, one request: Rosa approves $40,000 on hers.'
-    tall: true
-  - src: ../../assets/repo/business/two-phones-sam-after.png
-    alt: 'Sam''s phone afterwards, showing who answered his request.'
-    caption: 'Sam''s phone shows who answered.'
-    tall: true
-  - src: ../../assets/repo/business/5c-control-center-paused.png
-    alt: 'The box''s screen after the kill switch: All agents are paused, pulled by Priya Nair from her phone, six tasks stopped where they were, requests waiting for an OK stay open.'
-    caption: 'The kill switch: one pull from IT''s phone pauses every agent. Nothing is lost, and requests waiting for an OK stay open.'
+  - src: ../../assets/track/microsoft/biz-waiting.png
+    alt: 'Waiting for me on GurtOS Business, signed in as the controller: four requests, and for the selected $40,000 credit line why it was sent to the controller, the agent''s checks, and Deny and Approve $40,000.'
+    caption: 'The controller''s inbox: each request carries why it reached this person and the evidence.'
+  - src: ../../assets/track/microsoft/biz-people.png
+    alt: 'Settings, People: four people with roles and limits, two agent seats with the Collections clerk in shadow at 5 of 6 agreed, and the shadow mode switches.'
+    caption: 'People, agent seats and shadow mode.'
+  - src: ../../assets/track/microsoft/biz-rules.png
+    alt: 'Settings, Rules: the rule tester sending a $40,000 credit line asked by Sam Chen to the Controller, and the approval rules in plain words.'
+    caption: 'Approval rules in plain words, with a tester.'
+  - src: ../../assets/track/microsoft/biz-audit.png
+    alt: 'The Audit view, read-only for the auditor, with filters and Export CSV.'
+    caption: 'Audit, read-only for the auditor, with CSV export.'
+  - src: ../../assets/track/microsoft/biz-kill.png
+    alt: 'Settings, Kill switch, with a Pause all agents button.'
+    caption: 'One switch pauses every agent.'
 links:
   - label: 'Final live run bd5c61 (October, 16 of 17)'
     href: https://github.com/benz16107/calhacks13/tree/main/tracks/credit-desk/runs/2026-10-24-live-bd5c61-rules-0.3
@@ -122,145 +106,189 @@ status:
     note: 'Fogline Supply Co. is fictional. No money moves: the desk decides credit and records collection steps.'
 ---
 
-## Why GurtOS, and what each part is for
+<Lead proof="Measured on a live credit desk run with 10 agents working: the kill switch froze every agent within <strong>271 ms</strong>, none took a step while paused, and a bad batch was undone in <strong>48 ms</strong> with every other task keeping its work.">
+The question here is whether a real company could switch this on. Our answer is a pilot a company can run in a week and reverse in one setting: GurtOS Business on a computer it owns, an AI collections clerk working in shadow mode (it suggests, a person decides), and a go-live bar written in plain words. The case is the credit desk of a made-up wholesaler. An ordinary operating system cannot give a company what it asks first: people with limits, no agent approving its own work, one switch that stops everything, and a record it can show an auditor.
+</Lead>
 
-**The problem.** A company will not let an agent near its books while the agent runs as its owner, with the owner's
-keys, no separation of duties, no record it can show an auditor and no way to undo one thing. That is why finance
-pilots stay pilots. This page is about whether a real company could switch the desk on. How well the desk decides is
-on the [Hyphenate page](/tracks/hyphenate/).
+<Numbers items={[
+  { value: "271 ms", label: "every agent frozen after the kill switch, 10 agents working", href: "https://github.com/benz16107/calhacks13/blob/main/docs/drill.md", source: "docs/drill.md" },
+  { value: "48 ms", label: "to undo a bad batch of three order releases, other tasks untouched", href: "https://github.com/benz16107/calhacks13/blob/main/docs/drill.md", source: "docs/drill.md" },
+  { value: "16 of 17", label: "planted errors found, full live run scored against the key", href: "https://github.com/benz16107/calhacks13/tree/main/tracks/credit-desk/runs/2026-10-24-live-bd5c61-rules-0.3", source: "run bd5c61" },
+  { value: "$20,000", label: "to a fake applicant a simple rule approves; the desk held it", href: "https://github.com/benz16107/calhacks13/tree/main/tracks/credit-desk/runs/2026-10-24-live-bd5c61-rules-0.3", source: "run bd5c61 log" }
+]} />
 
-**GurtOS Business is the answer for a company:** seats with their own users, approvals routed to the right person, a
-full audit and a kill switch, on a box the company owns. Business is on main. The screens below are from a box seeded as the made-up Fogline Supply; the scored credit desk runs were on GurtOS Server, where the controller seat approves from the portal or a phone. The OS
-is light (one Node service, 4 GB of memory) and open source under Apache-2.0, so a company can read what it runs.
+Best shown in **GurtOS Business**. The scored credit desk runs were on GurtOS Server. The Business screens on this page come from a box seeded as the made-up Fogline Supply, with scripted seats and test data.
 
-| Feature | Why it is there | Microsoft criterion | From | Today |
-|---|---|---|---|---|
-| Each seat is its own Linux user with its own copy of the files; keys stay in a root-only vault | A finance agent holds nothing it could leak or misuse | Path to production, Responsible design | GurtOS | Shipped. The merge gate checks no key appears in the log |
-| A seat cannot approve its own large proposal; fraud holds always go to a person, on the portal or a phone | Separation of duties for an agent | Responsible design | GurtOS (the approval pause) and the desk (where the line is) | Shipped. Above $10,000 the controller answers; the log names who |
-| One append-only record of every call, decision, rule id and approver | Something an auditor can read | Path to production | GurtOS (the log) and the desk (rule ids, CRS request ids) | Shipped |
-| Undo one seat's file changes; resume after a power cut with nothing paid twice; whole-system updates that roll back | A bad hour is recoverable | Path to production | GurtOS | Shipped |
-| People with roles (owner, admin, approver, requester, auditor) and agent seats, each phone paired as its person | A company has its own people, not one login | Path to production | GurtOS Business | Shipped. The merge gate's business step makes four people with paired phones and refuses a requester who tries to read the policy |
-| Rules in plain words route each approval to the right person, and answers are refused for your own request, above your limit, or by anything that is not a person | Separation of duties that a team can read and change | Responsible design | GurtOS Business | Shipped. The gate checks seven refused answers and that all five requests still wait afterwards |
-| Waiting for me and My requests on phone and desktop | Each person sees only what is theirs to answer | Path to production | GurtOS Business | Shipped. Rosa sees three requests, Sam none and his own four, Priya none |
-| An audit with filters by person, agent seat and date, and CSV export, read-only for an auditor | Something an auditor can read without asking IT | Path to production | GurtOS Business | Shipped. The gate checks the filters, the CSV header and that an auditor can change nothing |
-| One kill switch pauses every agent at once from any admin's phone or the box, on every edition (Server and Personal through the owner, Business through the owner or an IT admin); requests waiting for an OK stay open | The first thing a company asks about is how to stop it | Path to production | GurtOS Business (shared with Personal's pause) | Shipped. The gate checks six tasks stopped where they were, every screen says who pulled it, and both pulls are in the log |
-| Shadow mode and a one-week pilot plan: an admin puts an agent seat in shadow with one setting, each decision it would make becomes a suggestion that a person decides through the same rules as any request, the box counts how often the person agreed, and a rule in plain words says when the seat goes live ("The Collections clerk goes live after 20 suggestions with 95% agreement.") | A company starts with a pilot it can switch off, and widens what an agent does alone only when it has earned it | Path to production | GurtOS Business | Shipped (`docs/pilot.md` has the plan: install, roles, rules, a week in shadow, the go-live check and rollback). The screenshot is from a seeded box: the Collections clerk shows "Shadow, 5 of 6 agreed (83%)" with its one disagreement listed, so it has not yet met its bar. The box never takes a seat live by itself, a person turns shadow off and the log records who, and going back to shadow is the same one setting. Not run over a real week at a real company |
-| Sign-in with a work account (OpenID Connect, Microsoft Entra ID), with each person's role taken from their Entra groups | Joining, leaving and changing team happen in Entra, in one place, not by pairing each phone with a code | Path to production | GurtOS Business | Shipped. The merge gate runs the whole flow against a small provider of its own, with PKCE, signature, issuer, audience, expiry and nonce checks, and refuses someone in no mapped group. It is Entra-ready and tested with a standards test provider, not with a real Entra or Google tenant (a free Microsoft trial now asks for a card, and Google's sign-in blocked the automated browser); the README has the Entra setup step by step |
-| Measured impact per run: a person's minutes per application (only requests that reached a person count), credit stopped from going to applicants the desk refused, supplier payments stopped, model cost per application, and minutes until every application was decided, shown beside the simple rule and beside doing it by hand | A controller can say what the desk is worth | Measurable usefulness | The desk (`impact.ts`) on GurtOS's log | Shipped: the window's Impact view and `GET /t/credit-desk/impact`. On the final October run the simple rule approved the fake applicant for $20,000 and the desk held it. We state no minutes-by-hand figure, because no source times hands-on minutes; the 3 minutes a person needs to answer one request is our assumption, not a measurement |
-| Each control mapped to Microsoft's six Responsible AI principles (fairness, reliability and safety, privacy and security, inclusiveness, transparency, accountability), with the code or test that shows it; a test that the seats never see protected attributes or the guarantor's identity; a plain letter for every adverse decision | A judge can check each claim, and an applicant gets a reason in words they can act on | Responsible design | The desk (`RESPONSIBLE.md`, `fairness.test.ts`, `letters.ts`) and GurtOS (vault, log, approvals) | Shipped as a design mapping for a hackathon project with sandbox data, not an assessment against the Standard. It lists what is not done: no translations and no screen-reader test. The letters are model letters and no claim of legal compliance: a lawyer should check the fraud-hold wording, which gives a general reason where Regulation B asks for the factors considered |
-| Published, cited facts about the customer, each with its source and scope, and what we could not find | The case is built on real failures, not on our say-so | Customer understanding | The desk (`CUSTOMER.md`) | Shipped. Most figures are vendor or trade-association surveys of people who chose to answer, and the file says so for each |
-| A measured incident drill: during a live credit desk run with 10 agents working (3 Droid seats on Claude, 7 scripted, one a bad batch releasing three orders it should have held), pull the kill switch, undo the bad batch, resume, and time each | The answer to "what if it goes wrong" is a number | Path to production, Responsible design | GurtOS Business (kill switch, undo, resume) | Shipped, measured on a test box on Oct 24 (`docs/drill.md`): the pause call returned in 137 ms and every agent was frozen within 271 ms, no agent took a step, called a tool, asked or spent in the 10 s while paused, the bad batch was undone in 48 ms with every other task keeping its work, and all three live seats carried on after resume. Resume to the first agent step took 48.8 s, mostly a live seat finishing its model turn. A tool call already running finishes when the switch is pulled, and requests waiting for an OK stay open. The box's log holds the pause, the resume and these numbers |
+## What a company needs before it says yes
 
-## The Customer Impact Award
+<Compare labels={["An ordinary computer", "GurtOS Business"]}>
+<div slot="a">
 
-The customer is the controller at a small business, so here is what we can source about that customer. Each figure is from a page we opened, with its scope.
-
-| Fact | Source |
-|---|---|
-| US businesses conduct on average 45% of their business-to-business sales on credit, and US companies often report losing 1% to 2% of their B2B invoices as bad debt. A vendor survey of 240 US businesses, so a typical range and not a measured average. | [Atradius, Payment Practices Barometer, US 2026](https://group.atradius.com/dam/jcr:b4148500-b5c5-4f9c-bb8a-072a75afffad/payment-practices-barometer-us-2026-en.pdf) |
-| 46% of credit professionals who answered approve new credit applications in under three days, and more than a quarter say it takes a week or more. This is elapsed time, not hands-on minutes. | [Nuvo and NACM, 2025 B2B Credit Insights](https://nacm.org/pdfs/Nuvo-WhitePaper-Jul25.pdf) |
-| Business email compromise: 24,768 complaints and $3,046,598,558 in reported losses in 2025, up from 21,442 complaints in 2024. | [FBI IC3, 2025 Internet Crime Report](https://www.ic3.gov/AnnualReport/Reports/2025_IC3Report.pdf) |
-
-More sourced figures, including what we could not find, are in [`CUSTOMER.md`](https://github.com/benz16107/calhacks13/blob/main/tracks/credit-desk/CUSTOMER.md).
-
-What the desk does for that customer: on the final October run it caught 16 of 17 planted errors, held the one fake applicant a simple rule approves for $20,000, and brought only the decisions that need a person to a phone, with the reason and the data attached. The window's Impact view and `GET /t/credit-desk/impact` give the per-run numbers: a person's minutes per application, credit stopped, supplier payments stopped and model cost, beside the simple rule and beside doing it by hand. We do not state minutes by hand, because we found no source that times them; and the 3 minutes a person needs to answer one request is our assumption. Fogline Supply Co. is made up and no money moves.
-
-## Evidence
-
-### Measured: the full live run, three seats (Oct 24)
-
-From the full live ./demo on Oct 24 (real Droid on all three seats, the real CRS sandbox and the Nessie sandbox with test money, a script answering the controller's questions yes), the October case (Fogline, rules 0.3) caught 16 of 17 planted errors with 1 false alarm (precision 97%) and decided all 6 credit applications as the answer key does; the simple rule approves the fake applicant, APP-1043, for $20,000, and the desk held it. It missed one (E14, the credit report that disagrees with the application) and its one false alarm was the "Oakalnd" typo. The January review caught 2 of 2 with no false alarms and cut Bright Harbor's October $40,000 to $7,500 on Net 15 after the controller's yes, as the key does. It missed E14 and took about $5.24 and 12 minutes in October (8 of 11 collection steps, 5 of 6 order decisions and 7 of 8 supplier bills matching the key) and about $1.79 and 5 minutes in January.
-
-### Earlier runs: two seats, on the first and smaller key (14 planted errors)
-
-<div class="table-wrap">
-
-| Run | Rules | Planted errors caught | False alarms | Credit decisions | Collection steps | Orders | Time, model cost |
-|---|---|---|---|---|---|---|---|
-| `88d75b` | 0.1 draft | 13 of 14 | 1 | 6 of 6 | 9 of 11 | 6 of 6 | 9 min, about $1.50 |
-| `6f5c0b` | 0.2 (Mana) | 13 of 14 | 1 | 6 of 6 | 9 of 11 | 6 of 6 | 9 min, about $3.54 |
-| `73c47b` | 0.2, seats told to record follow-ups | 14 of 14 | 0 | 6 of 6 | 9 of 11 | 5 of 6 | 13 min, about $4.67 |
+- The agent runs as its owner, with the owner's keys in files any process can read.
+- Every agent shares one set of files, so a bad hour cannot be undone one task at a time.
+- Nothing says who may approve what, so an agent can approve its own work.
+- Stopping everything means finding and killing processes.
+- The record is whatever the agent chose to write down.
 
 </div>
+<div slot="b">
 
-The baseline: the simple rule in the rules file approves all six applications for $153,000. Following the rules,
-the desk approves $8,000 itself, sends $83,500 to the controller at reduced limits, and stops $20,000 as fraud.
+- Each seat is its own Linux user with its own copy of the files. Keys stay in a root-only vault.
+- Undo takes one task's layer out. Every other task keeps its own.
+- Rules in plain words send each request to the one person who may answer it. Nobody answers their own request, and no agent approves an agent.
+- One kill switch pauses every agent from an admin's phone or the computer's screen.
+- An append-only action log, and an Audit view that is read-only for an auditor, with CSV export.
 
-### What the controller saw
+</div>
+</Compare>
 
-In run `73c47b` the analyst asked the controller five times. Each question carries the decision, why, and the
-figures. The fraud referral, shortened:
+<Shot src="track/microsoft/biz-waiting.png" alt="Waiting for me on GurtOS Business, signed in as the controller: four requests, and for the selected $40,000 credit line why it was sent to the controller, the agent's checks, and Deny and Approve $40,000." caption="The controller's inbox. The $40,000 credit line reached the controller because requests over $10,000 go to the Controller, and not to Sam Chen, who asked for it. Sandbox data from CRS and Nessie." />
+
+It runs on a computer the company owns, so the company decides what leaves it: one Node service, 4 GB of memory and 17 GB of disk for GurtOS Server, no GPU, and Apache-2.0, so the company can read the code.
+
+<Steps title="A one-week pilot" time="Day 0 setup, then a week in shadow. The plan is in docs/pilot.md.">
+
+1. **Day 0, people and roles.** The admin adds each person with a role and a limit and pairs each phone, or signs people in with a work account (OpenID Connect, Microsoft Entra ID), taking each role from Entra groups.
+2. **Day 0, the policy.** One rule per line, for example "Requests over $10,000 go to the Controller for approval." and "The Collections clerk goes live after 20 suggestions with 95% agreement." The rule tester answers "Who would approve this?" before the week starts.
+3. **Days 1 to 5, shadow.** The seat works as usual, but each decision it would record becomes a suggestion that goes to a person through the same rules as any request. The box counts how often the person decides the same, and lists each disagreement.
+4. **Day 5, the go-live check.** When the bar is met, the seat's row says Ready to go live. The admin checks every disagreement has an answer, then turns shadow off for that seat. The box never does this by itself, and the log records who did.
+5. **Rollback.** One setting puts the seat back in shadow. The kill switch stops every agent at once. Both are in the log with the name of the person who used them.
+
+</Steps>
+
+<Shot src="track/microsoft/biz-people.png" alt="Settings, People: four people with roles and limits, two agent seats with the Collections clerk in shadow at 5 of 6 agreed, and the shadow mode switches." caption="The pilot as the admin sees it: the Collections clerk is in shadow, 5 of 6 agreed (83%), so it has not met its bar yet. A seeded box with scripted seats, not a real week at a real company." />
+
+<Shot src="track/microsoft/biz-rules.png" alt="Settings, Rules: the rule tester sending a $40,000 credit line asked by Sam Chen to the Controller, and the approval rules in plain words." caption="Approval rules in plain words. The tester shows where a request would go, and every change is in the audit log." />
+
+<Evidence title="The incident drill, measured" run="Sat Oct 24, test box (Ubuntu 24.04, x86, 6 vCPUs), GurtOS Business seeded as Fogline Supply. A live credit desk run with 3 Droid seats on Claude and 7 scripted tasks, one of them a bad batch releasing three orders it should have held." numbers={[
+  { value: "137 ms", label: "the pause call returned" },
+  { value: "271 ms", label: "every agent confirmed frozen" },
+  { value: "0", label: "agent events in the 10 s while paused" },
+  { value: "48 ms", label: "to undo the bad batch" }
+]} sources={[{ label: "docs/drill.md", href: "https://github.com/benz16107/calhacks13/blob/main/docs/drill.md" }]}>
+
+- Resume to the first agent step took 48.8 s, mostly a live seat finishing its model turn. After resuming, all three live seats carried on from where they were.
+- A tool call already running when the switch is pulled finishes, and requests waiting for an OK stay open and can still be answered.
+- The log holds the pause, the resume, who pulled them and from which screen, and these numbers.
+
+</Evidence>
+
+<Shot src="track/microsoft/biz-kill.png" alt="Settings, Kill switch: 3 tasks running, 4 requests that need you, 2 agent seats, and a Pause all agents button." caption="The kill switch on GurtOS Business. Every running task stops where it is and nothing new starts." />
+
+<Evidence title="The customer: a small business's controller" run="Each figure is from a page we opened, with its scope. More, and what we could not find, are in CUSTOMER.md." numbers={[
+  { value: "45%", label: "of B2B sales on credit on average, US (vendor survey of 240 businesses)" },
+  { value: "1% to 2%", label: "of B2B invoices often lost as bad debt, same survey" },
+  { value: "24,768", label: "business email compromise complaints in 2025, $3,046,598,558 reported losses" }
+]} sources={[
+  { label: "Atradius, Payment Practices Barometer, US 2026", href: "https://group.atradius.com/dam/jcr:b4148500-b5c5-4f9c-bb8a-072a75afffad/payment-practices-barometer-us-2026-en.pdf" },
+  { label: "FBI IC3, 2025 Internet Crime Report", href: "https://www.ic3.gov/AnnualReport/Reports/2025_IC3Report.pdf" },
+  { label: "CUSTOMER.md", href: "https://github.com/benz16107/calhacks13/blob/main/tracks/credit-desk/CUSTOMER.md" }
+]}>
+
+- The Atradius figures are a typical range from 240 US businesses, not a measured average.
+- Business email compromise is the attack the AP clerk is tested against: a supplier's bank details changed from a lookalike email.
+- What the desk does for this customer: on the final October run it caught 16 of 17 planted errors, held the one fake applicant a simple rule approves for $20,000, and brought only the decisions that need a person to a phone, with the reason and the data attached.
+
+</Evidence>
+
+<Sources title="Real attacks on financial companies" intro="A lender or a credit bureau holds what a finance agent is asked to handle. Each incident is stated as its source states it, with what GurtOS's controls do about that kind of attack and what they do not." items={[
+  { name: "Equifax", date: "2017 breach, settled July 2019", what: "About 147 million people affected, including 145.5 million Social Security numbers and 209,000 payment card numbers with expiration dates. The FTC alleges Equifax had no policy to ensure vulnerabilities were patched, left administrative credentials in a plain-text file and did not segment its database servers. It agreed to pay at least $575 million.", href: "https://www.ftc.gov/news-events/news/press-releases/2019/07/equifax-pay-575-million-part-settlement-ftc-cfpb-states-related-2017-data-breach", source: "FTC press release, July 22, 2019", gurtos: "Keys sit in a root-only vault, never in a task's files or environment, and each task has its own Linux user and copy of the files, so a compromised task has no credential to steal and cannot read another task's files. GurtOS does not patch a company's own servers or keep personal data out of a database you run." },
+  { name: "Prosper", date: "September 2025", what: "Names, dates of birth, addresses, Social Security numbers and credit, employment and income details, obtained, Prosper says, \"including through unauthorized queries made on company databases\". Have I Been Pwned counts 17.6 million unique email addresses; Prosper says it could not confirm that count. The sources do not say how the attacker got in.", href: "https://haveibeenpwned.com/Breach/Prosper", source: "Have I Been Pwned and BankInfoSecurity, Oct 2025", gurtos: "Because the way in is not public, we claim nothing about it. For the data an agent works with: a seat holds no database login, the core makes each call, and every pull is logged with its request id. It cannot protect a lender's own applicant database from a way in nobody has described." }
+]} />
+
+## Responsible design, checked against Microsoft's six principles
+
+Each control is mapped to Microsoft's Responsible AI Standard in `tracks/credit-desk/RESPONSIBLE.md`, with the code or test that shows it. This is a design mapping for a hackathon project with sandbox data, not an assessment against the Standard.
+
+- **Fairness.** The seats never see protected attributes or the guarantor's name, SSN, date of birth or address. A test shows two applicants who differ only in those are byte-identical to the seats.
+- **Reliability and safety.** Limits are enforced in code: no decision before the CRS checks, no payment to bank details changed by email without a confirming call, no duplicate payment. Runs are scored against a key, with precision beside recall.
+- **Privacy and security.** Keys in a vault, a Linux user per seat, no network except through the desk's tools, test identities only.
+- **Inclusiveness.** Plain letters, a neutral fraud-hold wording, anyone can bring their own case. Not done: translations and a screen-reader test.
+- **Transparency.** Every decision carries rule ids, figures, CRS request ids and who approved it, and Ask why answers from the log months later.
+- **Accountability.** A named person approves what the rules send them, the audit names who answered, and shadow mode needs a person to go live.
+
+## What Microsoft asked for, and where each answer is
+
+<CriteriaMap sponsor="Microsoft" source="Microsoft's track description and judging criteria, as copied into the project's track plan (docs/tracks.md)." items={[
+  { ask: "A production-minded AI agent for finance, productivity, healthcare or similar.", status: "met", how: "Finance: trade credit, collections and supplier payments at Fogline Supply Co., a made-up Oakland wholesaler, with three agent seats and a human controller.", evidence: [{ label: "Credit desk on the Hyphenate page", href: "/tracks/hyphenate/" }] },
+  { ask: "Customer understanding.", status: "met", how: "The customer is the controller of a small business. The case is built from everyday failures and the page cites sourced facts about them, each with its scope and what we could not find.", evidence: [{ label: "The customer", href: "#the-customer-a-small-business-s-controller" }, { label: "CUSTOMER.md", href: "https://github.com/benz16107/calhacks13/blob/main/tracks/credit-desk/CUSTOMER.md" }] },
+  { ask: "Measurable usefulness.", status: "met", how: "Scored from the log against the key: 16 of 17 planted errors, 1 false alarm, 6 of 6 credit decisions, beside the simple rule, which approves all six for $153,000. The Impact view also shows a person's minutes per application, credit stopped, supplier payments stopped and model cost per application. We state no minutes-by-hand figure, because no source we found times them, and the 3 minutes a person needs to answer one request is our assumption.", evidence: [{ label: "Run bd5c61", href: "https://github.com/benz16107/calhacks13/tree/main/tracks/credit-desk/runs/2026-10-24-live-bd5c61-rules-0.3" }] },
+  { ask: "Path to production.", status: "met", how: "People and roles, routed approvals, a read-only audit, one kill switch with a measured drill, shadow mode with a go-live bar and a one-setting way back, updates that roll back, and resume after a power cut. Sign-in with a work account is Entra-ready and tested with a standards test provider, not a real tenant.", evidence: [{ label: "The pilot plan", href: "https://github.com/benz16107/calhacks13/blob/main/docs/pilot.md" }, { label: "The drill", href: "https://github.com/benz16107/calhacks13/blob/main/docs/drill.md" }] },
+  { ask: "Responsible design.", status: "met", how: "Six principles mapped to code and tests, with what is not done. Seats cannot approve their own work or clear a fraud hold, and an applicant gets a plain letter. The letters are model letters, not a claim of legal compliance.", evidence: [{ label: "RESPONSIBLE.md", href: "https://github.com/benz16107/calhacks13/blob/main/tracks/credit-desk/RESPONSIBLE.md" }] },
+  { ask: "End-to-end function.", status: "met", how: "Application in, seven CRS checks, a decision by rule, the controller's answer on a phone, the decision in the log, the run scored. The merge gate runs this path on every merge, live against CRS and Nessie.", evidence: [{ label: "Hyphenate page", href: "/tracks/hyphenate/" }] },
+  { ask: "Customer Impact Award.", status: "met", how: "The desk does the checking and the paperwork, stops the one application that would have cost $20,000 of credit, and brings only the decisions that need a person to their phone with the reason attached.", evidence: [] }
+]} />
+
+## What comes from GurtOS, and what from the desk
+
+<OSvsTrack sponsor="Microsoft" rows={[
+  { what: "Each seat is its own Linux user with its own copy of the files, and keys stay in a root-only vault", why: "A finance agent holds nothing it could leak or misuse", os: "Separate users, a copy-on-write layer per task, the vault", track: "None", status: "Built" },
+  { what: "A seat cannot approve its own large proposal, and fraud holds always go to a person", why: "Separation of duties for an agent", os: "The approval pause and routing", track: "Where the line is: above $10,000 and every fraud hold", status: "Built" },
+  { what: "Undo one seat's work, resume after a power cut with nothing paid twice, and whole-system updates that roll back", why: "A bad hour is recoverable", os: "Per-task undo, the fsynced log, update slots", track: "pay_bill checks the bank first", status: "Built" },
+  { what: "People with roles and agent seats, each phone paired as its person", why: "A company has its own people, not one login", os: "GurtOS Business", track: "None", status: "Built" },
+  { what: "Rules in plain words route each approval, and answers are refused for your own request, above your limit, or by anything that is not a person", why: "Separation of duties a team can read and change", os: "GurtOS Business", track: "None", status: "Built" },
+  { what: "Waiting for me and My requests on phone and desktop", why: "Each person sees only what is theirs to answer", os: "GurtOS Business", track: "None", status: "Built" },
+  { what: "An audit with filters by person, seat and date, CSV export, read-only for an auditor", why: "Something an auditor can read without asking IT", os: "GurtOS Business", track: "None", status: "Built" },
+  { what: "One kill switch pauses every agent, on every edition", why: "The first thing a company asks is how to stop it", os: "GurtOS Business, shared with Personal's pause", track: "None", status: "Built" },
+  { what: "Shadow mode and a one-week pilot plan with a go-live bar", why: "A company starts with a pilot it can switch off", os: "GurtOS Business", track: "None", status: "Built" },
+  { what: "Sign-in with a work account (OpenID Connect, Microsoft Entra ID), roles from Entra groups", why: "Joining and leaving happen in one place", os: "GurtOS Business", track: "None", status: "Built" },
+  { what: "Measured impact per run beside the simple rule", why: "A controller can say what the desk is worth", os: "The action log", track: "impact.ts, the Impact view", status: "Built" },
+  { what: "Each control mapped to the six Responsible AI principles, a protected-attribute test and a plain letter for every adverse decision", why: "A judge can check each claim", os: "The vault, the log and the approvals", track: "RESPONSIBLE.md, fairness.test.ts, letters.ts", status: "Built" },
+  { what: "Published, cited facts about the customer, with their scope", why: "The case rests on real failures", os: "None", track: "CUSTOMER.md", status: "Built" },
+  { what: "A measured incident drill: kill switch, undo, resume, each timed", why: "The answer to what if it goes wrong is a number", os: "The kill switch, undo and resume", track: "None", status: "Built" }
+]} />
+
+<Details summary="Sign-in with a work account, and what was tested">
+
+Each person signs in with OpenID Connect (Microsoft Entra ID), and their role comes from their Entra groups. The merge gate runs the whole flow against a small provider of its own, with PKCE, signature, issuer, audience, expiry and nonce checks, and refuses someone in no mapped group. Forged tokens, a wrong audience and a replay are refused. It was not tested against a real Entra or Google tenant (a free Microsoft trial now asks for a card, and Google's sign-in blocked the automated browser). The README has the Entra setup step by step.
+
+</Details>
+
+<Details summary="Measured impact per run, and the merge gate">
+
+The credit desk window's Impact view and `GET /t/credit-desk/impact` give, per run, a person's minutes per application (only requests that reached a person count), credit stopped from going to applicants the desk refused, supplier payments stopped, model cost per application, and minutes until every application was decided, shown beside the simple rule. On the final October run the simple rule approved the fake applicant for $20,000 and the desk held it.
+
+The merge gate, `./demo`, runs the whole box on a fresh test VM before anything reaches main. The Oct 24 run passed 22 sections and 175 checks with 0 failures. Lines this page leans on:
 
 ```
-Credit desk [APP-1043 fraud hold 0]: fraud referral. Put Pacific Crest Provisions LLC (APP-1043) on fraud hold,
-no credit, cash in advance only? The analyst found: Four independent fraud stops: (1) FRD-1, TransUnion identity
-returned code 2201 (SSN not associated with name) and code 2202 (DOB mismatch). (2) FRD-2, Fraud Finder risk
-score 88. (3) FRD-3, business registered 2026-09-01 (52 days before the case date) but the application claims
-4 years in business. (4) FRD-4, six compound signals present (threshold is two) ...
-Rules: FRD-1, FRD-2, FRD-3, FRD-4, FRR-1, FRR-2, FRR-3, GEN-1, CHK-1, CHK-3.
-```
-
-### Production checks on every merge
-
-The merge gate, `./demo`, runs the whole box on a fresh test VM before anything reaches main. The Oct 24 run passed
-22 sections and 175 checks with 0 failures, in 102 seconds on the x86 test VM. The parts this agent leans on:
-
-```
-moment 2: the booby-trapped page
-  ok    it could not read the vault: root only
-  ok    no secret anywhere in its environment or files
 moment 3: a pause for your OK
   ok    another task kept running and finished while P waited
   ok    only one of the two parallel $0.60 payments went through: $0.60 spent, not $1.20 (atomic budget)
 moment 4: pull the plug
   ok    the long job carried on from where it was: no step done twice, none skipped
-  ok    the deploy is still waiting for its OK, live in SpacetimeDB
 track credit-desk
-  ok    the fraud referral paused the analyst until the controller answers
   ok    the analyst cannot approve $40,000 on its own: above its $10,000 authority, nothing is recorded until the controller answers
   ok    the clerk cannot release a credit hold; that needs the controller
   ok    no CRS or Nessie key is anywhere in the log
 ```
 
-## How it works
+</Details>
 
-<Flow steps={frontmatter.flow} />
+<Details summary="The audit, read-only for an auditor">
 
-**Why the box is the path to production.** A finance agent that runs as a script on someone's laptop has the
-laptop's keys, can write anywhere, and leaves no record a controller can audit. On GurtOS the same agent:
+<Shot src="track/microsoft/biz-audit.png" alt="The Audit view, read-only for the auditor: a table of entries with time, kind, who, seat and what, filters for dates, people, agents and kinds, and Export CSV." caption="Audit, with filters by person, agent seat and date, and CSV export. The merge gate checks that an auditor can change nothing." />
 
-| Production need | What GurtOS does |
-|---|---|
-| Least privilege | Each seat is its own Linux user with no sudo, its own copy of the files, and only its job's tools. Segregation of duties is tool access. |
-| Secrets | CRS and Nessie keys live in a root-only vault. Tools that need them run in the box's core; the seats get results. |
-| Human approval | The tool returns "needs controller"; the box pauses only that task and sends the question to the portal and phone. |
-| Audit | One append-only, fsynced action log: every call, result, approval and cost. Decisions carry rule ids and CRS request ids. |
-| Reliability | After a power cut the box rebuilds every task from the log and resumes it. Updates install to a second system slot and roll back if unhealthy. |
-| Change control | The rules are a YAML file. Swap it per run with `{"rules": "/path/to/rules.yaml"}`; the tools refuse rule ids it does not have. |
-| Regression testing | Every run is scored against an answer key from its log, so a prompt or rules change is measured, not guessed. |
+</Details>
 
-## Try it
+<Steps title="Try it" time="About 5 minutes on a box that has the credit desk's keys.">
 
-On a box with `CRS_USERNAME`, `CRS_PASSWORD` and `NESSIE_API_KEY` in its vault:
+1. Install GurtOS Server on a computer you own and turn on the Credit desk app with its keys (CRS and Nessie sandbox logins in the vault).
+2. Turn Business on from the computer's own screen as the owner, add people in Settings, People, and write the rules in Settings, Rules.
+3. Open **Credit desk** and press **Quick run**. A fraud referral waits for the controller. Answer it as that person, then try to answer it as the requester and see it refused.
+4. Open **Audit** as the auditor and export the CSV. Pull the kill switch in Settings and see every agent stop.
+5. The full pilot plan, with shadow mode, is in `docs/pilot.md`. At our table on Sunday we run it live.
 
-```sh
-curl -s -X POST localhost:7700/t/credit-desk/run -d '{"case": "fogline-2026-10"}'
-curl -s localhost:7700/approvals
-curl -s -X POST localhost:7700/approvals/<id> -d '{"approved": true, "by": "controller"}'
-curl -s -X POST localhost:7700/t/credit-desk/score -d '{"run": "<run>"}'
-```
+</Steps>
 
-Any case folder that passes `check-case.ts` runs the same way with `{"dir": "/path/to/case"}`. The Hyphenate page
-has the steps for writing your own.
+<Limits title="What this does not cover">
 
-<Status rows={frontmatter.status} />
+- The scored runs used one controller seat on GurtOS Server. Routing by amount to different people is GurtOS Business, shown on a seeded box with scripted seats and sandbox data, not in a scored run.
+- Shadow mode has not been run for a real week at a real company. The 83% on the screenshot is a seeded box.
+- Sign-in with a work account is Entra-ready and tested with a standards test provider, not with a real Entra or Google tenant. Signing out at the provider and sign-in from the hosted app at app.gurtos.com are not built.
+- The Responsible AI mapping is a design mapping, not an assessment against the Standard. No translations and no screen-reader test.
+- The letters are model letters, not a claim of legal compliance. A lawyer should check the fraud-hold wording, which gives a general reason where Regulation B asks for the factors considered.
+- The drill is one measurement on one test box. A tool call already running finishes when the switch is pulled, and requests waiting for an OK stay open.
+- Most customer figures are vendor or trade-association surveys of people who chose to answer. We state no minutes-by-hand figure.
+- The business credit file is simulated, the bank is read and not written, and Fogline Supply Co. is fictional.
 
-## Limits
-
-- The scorer checks decisions field by field, but a finding counts as caught by matching its rows, wording and rule
-  ids, not by checking that its conclusion is right.
-- Two collection steps differ from the key in every run: the clerk put two over-limit customers on credit hold
-  (rule COL-3) instead of the aging step the key lists.
-- The business credit file is simulated, and the bank is read, not written.
-- The scored runs used a single controller seat on GurtOS Server. Routing by amount to different people is in GurtOS Business, shown here on a seeded box with scripted seats and sandbox data, not in a scored run.
-- Sign-in with a work account is Entra-ready and tested with a standards test provider (forged tokens, a wrong audience and a replay are refused, and a user in no mapped group is refused), not with a real Entra or Google tenant. Signing out at the provider, and sign-in from the hosted app at app.gurtos.com, are not built either.
+</Limits>
