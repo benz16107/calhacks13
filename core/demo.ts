@@ -761,6 +761,11 @@ await moment('security: an outside caller gets nothing, and a folder cannot be t
   check((await out('GET', '/api/health')).status === 200 && (await out('POST', '/api/pair', { code: 'nope', name: 'x' })).status === 400, 'only the health check and redeeming a pairing code are open, and a wrong code is just refused');
   check((await api<{ state: string }[]>('GET', '/api/approvals')).find((a: any) => a.id === ask.id)?.state === 'pending' && (await task(mine.id)).state === 'waiting', 'none of that touched the real request: it is still waiting for the owner');
 
+  // A web page in a browser on the box itself also comes from loopback; another site's page gets nothing.
+  const fromSite = await viaTcp('POST', '/api/tasks', { title: 'x', prompt: 'x', worker: 'fake', workspace: 'guarded' }, { origin: 'https://evil.example' });
+  const fromBox = await viaTcp('GET', '/api/tasks', undefined, { origin: `http://127.0.0.1:${PORT}` });
+  check(fromSite.status === 401 && fromBox.status === 200, `a page from another site, sent from this machine, is refused (${fromSite.status}); the box's own page is not (${fromBox.status})`);
+
   // A paired phone, not the owner's: it can read and answer, and the log names the phone, never what it claims.
   const code = await api<{ code: string }>('POST', '/api/pair/start', {});
   const phone = await api<{ token: string; device: { id: string; name: string } }>('POST', '/api/pair', { code: code.code, name: 'Judge phone' });

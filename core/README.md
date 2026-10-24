@@ -201,8 +201,10 @@ it again with no reinstall. The choice is saved in `apps.json`, so it survives a
 
 ## Who may reach the API
 
-**From the box's own screen** (a request on this machine, over the socket or loopback, with no proxy header) the
-API is open, as it always was. **From anywhere else every request must carry a paired phone's token**, as
+**From the box's own screen** (a request on this machine, over the socket or loopback, with no proxy header, and
+no `Origin` other than the box's own address) the API is open, as it always was. A web page from another site in a
+browser on the box (GurtOS Personal) also arrives from loopback, but its `Origin` gives it away, so it is treated
+as remote and needs a paired token. **From anywhere else every request must carry a paired phone's token**, as
 `Authorization: Bearer <token>` or `?access_token=<token>` (an EventSource cannot set headers, so the SSE stream
 takes the query form). Without one the answer is `401` and nothing is read, started, approved or undone. The
 only open routes are `GET /api/health`, `POST /api/pair` (redeeming a pairing code) and the portal's own pages

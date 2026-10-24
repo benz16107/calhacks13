@@ -1002,7 +1002,11 @@ class Core {
     const loopback = addr === undefined || addr === '127.0.0.1' || addr === '::1' || addr === '::ffff:127.0.0.1';
     const h = req.headers;
     const relayed = !!(h['x-forwarded-for'] || h.forwarded || h['x-real-ip'] || h['tailscale-user-login'] || h['x-forwarded-host']);
-    return loopback && !relayed;
+    // A web page in a browser on this machine also arrives from loopback. Only the box's own pages count: a request
+    // a browser marks as coming from another site (Origin) is not the box's screen, whatever address it came from.
+    const origin = h.origin;
+    const foreign = !!origin && !/^https?:\/\/(127\.0\.0\.1|localhost|\[::1\])(:\d+)?$/.test(origin);
+    return loopback && !relayed && !foreign;
   }
 
   /** The box's own screen, or a device that was paired as the owner. */
