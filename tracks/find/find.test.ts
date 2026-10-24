@@ -147,7 +147,7 @@ test('the Claude describe task needs a Factory key and never repeats a photo it 
     }) as any;
   const photos = (...names: string[]) => names.map((path) => ({ workspace: 'photos', path }));
 
-  assert.throws(() => askClaude(box(false), photos('a.jpg', 'b.jpg')), /needs a Factory key/);
+  assert.throws(() => askClaude(box(false), photos('a.jpg', 'b.jpg')), /needs a model key/);
   assert.equal(started.length, 0, 'no Factory key in the vault: no task, so a fresh box shows no failed task');
   askClaude(box(true), photos('a.jpg', 'b.jpg'));
   assert.equal(started.length, 1);

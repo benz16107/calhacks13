@@ -106,7 +106,7 @@ function fromClaude(box: Box, ws: string, rel: string) {
 
 /** Start Claude describe tasks for these photos. Only when the person asks on the Find page: it spends model money. */
 export function askClaude(box: Box, failed: { workspace: string; path: string }[]) {
-  if (!maybe(box.secret, 'FACTORY_API_KEY')) throw new Error('Describing with Claude needs a Factory key. Add it in Settings.');
+  if (!maybe(box.secret, 'FACTORY_API_KEY')) throw new Error('Describing with Claude needs a model key. Add one in Settings.');
   const fresh = failed.filter((f) => !handed.has(`${f.workspace}/${f.path}`) && !covered(box, f.workspace, f.path));
   if (!fresh.length) return [];
   for (const workspace of new Set(fresh.map((f) => f.workspace))) {
@@ -125,7 +125,7 @@ export function askClaude(box: Box, failed: { workspace: string; path: string }[
 }
 
 const owner = (req: Request) => ['screen', 'owner'].includes(req.headers.get('x-box-caller') ?? '');
-const denied = () => Response.json({ error: "only the box's own screen or the owner's paired device can do this" }, { status: 403 });
+const denied = () => Response.json({ error: 'Only the owner can do this.' }, { status: 403 });
 
 /** Where a photo goes to be described, in words the Find page shows. It must match the code in find.ts. */
 function privacy(secret: Secret) {
@@ -133,9 +133,9 @@ function privacy(secret: Secret) {
   const host = url ? new URL(url).hostname : '';
   const here = ['127.0.0.1', 'localhost', '::1', 'host.lima.internal'].includes(host);
   const parts = [
-    url ? (here ? 'Photos are described by a model on this machine.' : `Photos are described by a model on ${host}.`) : 'No local photo model is set, so photos are found by file name until you set one.',
+    url ? (here ? 'Photos are described by a model on this computer.' : `Photos are described by a model on ${host}.`) : 'No local photo model is set, so photos are found by file name until you set one.',
     ...(maybe(secret, 'VULTR_INFERENCE_KEY') ? ["If that model does not answer, a photo is sent to Vultr's hosted model."] : []),
-    'Claude (through Factory) sees a photo only when you press Describe with Claude.',
+    'Claude sees a photo only when you press Describe with Claude.',
   ];
   return parts.join(' ');
 }
@@ -254,7 +254,7 @@ export default {
     {
       name: 'find.search',
       description:
-        'Search everything on this box by meaning: photos (by what is in them), text files, and past tasks. ' +
+        'Search everything on this computer by meaning: photos (by what is in them), text files, and past tasks. ' +
         'Returns the best matches with their workspace and path, best first.',
       input: {
         type: 'object',

@@ -31,7 +31,7 @@
     </div>
     <form role="search" id="form" class="g-search">
       <g-icon name="system-search"></g-icon>
-      <label class="g-sr" for="q">Search this box</label>
+      <label class="g-sr" for="q">Search this computer</label>
       <input id="q" class="g-field" type="search" placeholder="Find the whiteboard photo" autocomplete="off" autofocus>
     </form>
   </div>
@@ -46,7 +46,7 @@
     <p class="t-caption t-secondary">Preferences go to every agent in every app before its task starts. Notes from earlier tasks go only to tasks with the same permissions. A note from a task that could reach the web is not shared with agents until you trust it.</p>
     <div id="items"></div>
   </section>
-  <footer class="t-caption t-secondary"><div id="privacy"></div><div id="foot">Searches tasks, files, memories and photo descriptions on this box.</div></footer>
+  <footer class="t-caption t-secondary"><div id="privacy"></div><div id="foot">Searches tasks, files, memories and photo descriptions on this computer.</div></footer>
 </main>
 <script>
   // gurtos.js puts the pairing token on this page's fetches. An <img> cannot carry a header, so photos take it in the URL.
@@ -119,7 +119,7 @@
     img.src = withToken(`/t/find/file?workspace=${encodeURIComponent(r.workspace)}&path=${encodeURIComponent(r.path)}`);
     img.alt = body(r).split('. ')[0];
     img.loading = 'lazy';
-    card.append(img, el('p', 't-caption t-mono', `${r.workspace}/${r.path}`), el('p', 't-caption t-secondary', `Described by ${r.model || 'a model'}`), forgetButton(r.id, r.path, again));
+    card.append(img, el('p', 't-caption t-mono', `${r.workspace}/${r.path}`), el('p', 't-caption t-secondary', `Described by ${/^claude/i.test(r.model || '') ? 'Claude' : r.model || 'a model'}`), forgetButton(r.id, r.path, again));
     return card;
   }
 
@@ -139,10 +139,11 @@
   }
 
   function render(d, q) {
-    if (!d.results.length) status($('results'), 'Nothing found', `No photo, file, memory or task on this box matches "${q}".`);
+    if (!d.results.length) status($('results'), 'Nothing found', `No photo, file, memory or task on this computer matches "${q}".`);
     else groups($('results'), d.results, search);
-    const by = d.index === 'moss' ? `Moss, in ${d.ms < 1 ? 'under 1' : d.ms} ms (${Math.round(d.wallMs)} ms on the box)` : d.index;
-    $('foot').textContent = `Answered by ${by}. ${d.cloud}.`;
+    // The cloud copy is mentioned only when it is on (or paused): by default there is nothing to say.
+    const cloud = d.cloud.startsWith('cloud copy off') ? '' : d.cloud.includes('paused') ? " A text copy in Moss's cloud is paused: Moss's usage limit was reached. Search still works." : " A text-only copy is also kept in Moss's cloud.";
+    $('foot').textContent = `Search runs on this computer${d.index === 'moss' ? `, with Moss, in ${Math.round(d.wallMs)} ms` : ''}.${cloud}`;
   }
 
   let timer, seq = 0;
@@ -154,10 +155,10 @@
       const r = await fetch(`/t/find/search?q=${encodeURIComponent(q)}&k=12`);
       const d = await r.json();
       if (mine !== seq) return; // a newer search is on its way
-      if (!r.ok) throw new Error(r.status === 401 ? 'Pair this device with the box first.' : d.error || `HTTP ${r.status}`);
+      if (!r.ok) throw new Error(r.status === 401 ? 'Pair this device with this computer first.' : d.error || `HTTP ${r.status}`);
       render(d, q);
     } catch (e) {
-      status($('results'), 'The box did not answer', String(e.message), 'dialog-warning');
+      status($('results'), 'This computer did not answer', String(e.message), 'dialog-warning');
     }
   }
 
@@ -188,8 +189,8 @@
     if (r.ok) ($('pref').value = ''), gurtos.toast('Remembered. Every agent is told before its next task.'), memory();
     else gurtos.toast(d.error || `HTTP ${r.status}`);
   });
-  status($('results'), 'Search this box', 'Photos by what is in them, text files, memories and past tasks.');
-  // Photos no model on this box could describe. Claude describes them only when you ask: it uses your model key.
+  status($('results'), 'Search this computer', 'Photos by what is in them, text files, memories and past tasks.');
+  // Photos no model on this computer could describe. Claude describes them only when you ask: it uses your model key.
   fetch('/t/find/status').then((r) => r.json()).then((s) => {
     $('privacy').textContent = s.privacy;
     if (!s.undescribed) return;
