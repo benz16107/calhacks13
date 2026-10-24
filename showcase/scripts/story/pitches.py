@@ -22,7 +22,7 @@ E = {
  'solana': ('GurtOS Server, and GurtOS Business',
    "An always-on box you own holds the Solana wallet in its root-only vault, so agents can pay for APIs at any hour without ever seeing the key. Every payment is a devnet transaction anyone can check, recorded in the box's log with the task that made it. GurtOS is open source (Apache-2.0), so the same wallet works in anyone's agents."),
  'fetch': ("GurtOS Server (always reachable), and GurtOS Personal too",
-   "GurtOS gives ASI:One a safe body on a computer you own, even an old one: each request runs as its own sandboxed task with no keys, asks before it spends, and can be undone, and the portal and phone show it live. A Server box answers at 3 AM through its Agentverse mailbox with no open port."),
+   "GurtOS gives ASI:One a safe body on a computer you own, even an old one: each request runs as its own sandboxed task with no keys, asks before it spends, and can be undone, and the portal and phone show it live. A team of agents on Agentverse fronts the box, strangers' agents' replies are treated as data (a hidden instruction is blocked and logged), and payments run in test FET through the box's one budget path. A Server box answers at 3 AM through its Agentverse mailbox with no open port."),
  'vultr': ("GurtOS Server",
    "GurtOS Server runs wherever a VM does. On Vultr it is the public, always-on box: Jira and Mana reach it, and the rest of its API stays closed. The real release disc also installs and boots on a 1 vCPU, 1 GB Vultr instance, its state backs up encrypted to Vultr Object Storage, and Vultr's firewall is set from code."),
  'spacetime': ("All three editions, strongest in GurtOS Business",

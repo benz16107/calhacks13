@@ -145,6 +145,7 @@ Built solo by Ben Zhou. Open source under the Apache License 2.0. All payments a
 
 
 
+
 **The community:** solo developers who leave AI agents (Claude Code, OpenClaw) running at home.
 
 **The problem.** Those agents run as you, with every key and file. An ordinary OS can't separate them, record what they did or undo it, and the alternative is renting a cloud you can't see into.
@@ -192,6 +193,7 @@ GurtOS is open source (Apache-2.0): anyone can run it and customise it.
 
 
 
+
 Every task an agent runs on GurtOS becomes a Jira issue holding what it was asked, what it was allowed to use, its reasoning in its own words, its approvals, every blocked attempt, its diff and its action log. A Forge app adds a panel with Approve, Deny and **Roll back**, which removes only that task's file changes on the box, and indexes each task's state, cost and blocked attempts for JQL (`project = BOX AND boxBlocked > 0`).
 
 Agents now act for teams, and the systems they run on were built for one person at a keyboard, so the next morning there is no record you can trust and no way to undo only the bad actions. Also built, all shown on the live demo site against a GurtOS Server box: a Rovo agent that answers from the log and rolls back with a confirm, bulk roll back of many issues at once, agents started from a Jira label, assignment or Automation rule, Jira Service Management approvals for risky actions, a daily and an incident page in Confluence, and a dashboard gadget. A Jira user acting as their GurtOS Business person is built and checked in the merge gate against offline Jira stand-ins (an unlinked user, a requester and an over-limit approval are all refused), not on the live Jira site.
@@ -205,6 +207,7 @@ Forge app: `jira:issuePanel` (UI Kit), a resolver that reads the task as the sig
 ### Hyphenate: Autonomous Systems for Finance
 
 **Best shown in:** GurtOS Business. A finance team needs roles, segregation of duties and an audit trail on every agent decision, which is what Business adds: who may approve what, up to how much. GurtOS Business is on main: people and roles, approvals routed by rules written in plain words, refusals for answering your own request or above your limit, a Waiting for me inbox, an audit with CSV export and a kill switch. Sign-in with a work account (Microsoft Entra ID, roles from groups) is Entra-ready and tested with a standards test provider; shadow mode (a seat only suggests, and a person decides) is built. The scored credit desk runs were on GurtOS Server; the Business screens are from a box seeded as the made-up Fogline Supply.
+
 
 
 
@@ -286,6 +289,7 @@ GurtOS is open source (Apache-2.0): anyone can run it, customise it and reuse th
 
 
 
+
 Droid, through the TypeScript Droid SDK (`@factory/droid-sdk` 0.10.0) and running Claude, is the worker inside every GurtOS task. The box limits what each Droid can touch: its own user, an overlay copy of the files, only its task's hosts and tools. Every Droid tool call is a step in the action log, shown with the diff in the portal, Jira and ASI:One. After a power cut, the box resumes the same Droid session.
 
 **Proof:** 240 of 240 process samples of a live Droid task held only a placeholder Factory key; the box's proxy adds the real key on the way to Factory. The cost ($0.5378) was priced from Droid's token counts.
@@ -297,6 +301,7 @@ Where and how: `core/workers/droid.ts` (createSession or resumeSession, the box 
 ### Armadin: Best Security Hack
 
 **Best shown in:** All three editions. Agents get attacked through the pages they read and the packages they install, and on an ordinary OS a fooled agent can read every key and send it anywhere. GurtOS stops it at the OS, whatever the model does, in every edition, and publishes the score: of 16 OS-level attacks, 14 caught and 2 published as not covered, on two machines. A poisoned package imitating the 2025 npm worm and a hijacked payment both fail. Next (being built): tripwire keys and a deeper per-task sandbox.
+
 
 
 
@@ -372,6 +377,7 @@ Armadin published no criteria; the page lists every control, its test, and the l
 
 
 
+
 Companies want agents doing finance work, but an ordinary operating system gives an agent its owner's keys, no separation of duties, no record and no undo, so pilots never reach production. The credit desk is a small wholesaler's credit analyst agent and collections clerk agent with a human controller who approves anything large or suspicious from a phone. GurtOS is its path to production: each seat is its own Linux user without keys, a root-only vault, an append-only log, approvals, resume after a power cut, and updates that roll back, on a computer the company owns. Hyphenate covers how well the desk decides; this entry is about whether a company could switch it on.
 
 Shipped in GurtOS Business: people with roles, rules in plain words that route each approval to the right person, refusals for answering your own request or above your limit or by anything that is not a person, a Waiting for me inbox on the phone and desktop, a read-only audit with filters and CSV export, and a kill switch. The merge gate's business step checks each of them. These screens are from a box seeded as the made-up Fogline Supply, with scripted seats and sandbox data; the scored credit desk runs were on GurtOS Server.
@@ -387,6 +393,7 @@ Shipped since: a measured incident drill (`docs/drill.md`, a test box on Oct 24)
 ### Visa: Reimagining Shopping
 
 **Best shown in:** GurtOS Personal, plus GurtOS Server for routines that keep running when you close your laptop. GurtOS Personal runs your shopping agents on a computer you own, even an old one: the agent never sees your card, every purchase waits for your tap, every order is signed so the store can verify it, and undo refunds it. A Server box keeps a watch running while the laptop is closed.
+
 
 
 
@@ -464,6 +471,7 @@ GurtOS is open source (Apache-2.0): anyone can run it, customise it and reuse th
 
 
 
+
 **The problem.** Giving an agent money today means handing it your card or a private key, on a heavy system or a cloud with no layer built for this: no separation, no safe key handling, no record and no undo. **GurtOS is that layer:** the key never reaches the agent, budgets and the x402 client's policy limit every payment, you approve from your phone, every payment is on the record, and it all runs on top of the OS. GurtOS is open source (Apache-2.0), so anyone can run it and reuse the wallet in their own agents.
 
 Agents on a GurtOS box pay for 402-gated APIs with the x402 SDK. Payments settle through Coinbase's CDP facilitator, and the wallet key stays in the box's root-only vault. A payment over the task's budget waits for your OK on the portal or phone.
@@ -484,7 +492,8 @@ Also built: the box earns over x402 (it sells its audit proof, a metered file se
 
 ### Fetch.ai: ASI:One Agent Challenge
 
-**Best shown in:** GurtOS Server (always reachable), and GurtOS Personal too. GurtOS gives ASI:One a safe body on a computer you own, even an old one: each request runs as its own sandboxed task with no keys, asks before it spends, and can be undone, and the portal and phone show it live. A Server box answers at 3 AM through its Agentverse mailbox with no open port.
+**Best shown in:** GurtOS Server (always reachable), and GurtOS Personal too. GurtOS gives ASI:One a safe body on a computer you own, even an old one: each request runs as its own sandboxed task with no keys, asks before it spends, and can be undone, and the portal and phone show it live. A team of agents on Agentverse fronts the box, strangers' agents' replies are treated as data (a hidden instruction is blocked and logged), and payments run in test FET through the box's one budget path. A Server box answers at 3 AM through its Agentverse mailbox with no open port.
+
 
 
 
@@ -521,10 +530,15 @@ Also built: the box earns over x402 (it sells its audit proof, a metered file se
 
 **Proof:** In a live ASI:One run, a Droid task fixed the failing test for $0.05 and returned the diff with Undo. A stock check paused at a $0.50 Apify search over its $0.25 budget, sent an Approve/Deny card, and after Approve reported the filters in stock at $10.25.
 
-Agents:
+Agents (all mailbox agents on Agentverse; the three TEST agents are ours and stand in for strangers):
 
-- `box`: `agent1qvuk46tnt9lnscher0pawl7pr5y525mak66ptwsrvg4kff0pfy9m2sy0us6`
-- `box-test`: `agent1qdcex5gzkjnl08fc6wswejxv9h7swvfnewk35fyntrklthx57sv3jkzxz3u`
+- `GurtOS`: `agent1qvuk46tnt9lnscher0pawl7pr5y525mak66ptwsrvg4kff0pfy9m2sy0us6` (the one to chat with)
+- `GurtOS Shopper`: `agent1qdplwdgdc5ta893e22arqkc3hj00fuzh9d8k0nphlwsngxxc3kzesvrq0fj`
+- `GurtOS Find`: `agent1qd5fhsz5a6xaqenu7em9fqsz8ucfxk7e5zmsqxwz04ufgsmm3xjek6ewztq`
+- `GurtOS Credit Desk`: `agent1q05500vet9lygyes5c0syh44ug8gdw832uenczze75dmysag6d3qcjer4q0`
+- TEST: `GurtOS test weather (trap)` `agent1q07mpkw7lg7awsk6dscgv28gvdkaund3jmhh0acg3h740yawscx66gtufk3`, `GurtOS test oracle (paid)` `agent1qgtzsg7xfe8dyte2h4z879xnf9pej3ftkqkzm28ecf5zr2qqjgxng8qm9tl`, `GurtOS test buyer` `agent1qvvqqv5l8h53rljr7992uguqpwd5efsa89qyd3zmtapnfqz66dp5ctp0tmq`
+
+Also built and live-verified: a team of agents (GurtOS routes a request over the chat protocol to its Shopper, Find or Credit Desk agent); strangers' replies treated as data (the live run blocked our test trap's hidden instruction, described in plain words and logged, never quoted, and relayed Fetch.ai's real Weather Agent); the Payment Protocol in test FET on Fetch's Dorado testnet, both ways, through the `fetch.pay` tool and the box's one budget path (the box paid 0.5 test FET after the owner's OK, and a test stranger paid the Shopper 0.05; Dorado's explorer stopped indexing new blocks, so receipts link to the raw transaction); richer cards; a restart notice in the chat; machines linked with an HMAC proof and named by their GurtOS edition; guest requests through the Mana app's one guest path; and a team of box agents on a SpacetimeDB queue (3 Droid agents shared one queue, each job went to exactly one, and 3 of 3 finished with a price). The Agentverse agents are the front door and the box's agents are the team behind it.
 
 Badges: ![tag:innovationlab](https://img.shields.io/badge/innovationlab-3D8BD3) ![tag:hackathon](https://img.shields.io/badge/hackathon-5F43F1). Uses the Agent Chat Protocol (uAgents, Agentverse mailbox). The main flow runs inside the ASI:One chat. Real tool use: Droid edits and tests code; Apify `rag-web-browser` searches the web. Run steps are in `tracks/fetch/README.md`. Video: produced by the team after the build (screen recordings and animation). Also submitted through the ASI:One Submission Agent: **TODO**.
 
@@ -565,7 +579,8 @@ GurtOS is open source (Apache-2.0): anyone can run it, customise it and reuse th
 
 
 
-The usual stack for live agent state, a database, a websocket server, a cache and auth glue, is heavy and fragile, and an ordinary OS has nothing for it. GurtOS runs one self-hosted SpacetimeDB per box as its live nervous system, with the security enforced in the database. The box mirrors tasks and approvals into it, and the box's own screens subscribe to it and answer through the `answer` reducer; the first answer wins and a later one is refused with who answered first. Agents share a work queue in it: a `claimJob` procedure takes the oldest open job in one transaction, and four broker tools (`spacetime.claim`, `finish`, `post`, `team`) let an agent use it without ever connecting to the database. In the merge gate, 3 agents made 15 claims on 12 jobs at once and got 12 distinct jobs, none twice, and 30 simultaneous claims on 10 jobs gave 10 distinct jobs. In Business, each person is sent only their own requests (private tables and a per-connection view; Rosa's client is sent what is routed to her, Priya's and a stranger's get nothing), enforced by the database for any connection that reaches it. Today only the box's own screens and local helpers reach SpacetimeDB; phones use the token-checked API. A scheduled reducer can bring a second person into a pending request (the mechanism; the Business policy has no reminder rule yet), and live meters are kept by the reducers. It is one engine on the box, open source and part of the GurtOS suite. The credit desk's opt-in Coordinate option ran live with real Droid: two analysts claimed three applications each from one queue and decided all six, matching the answer key (analysts only, not the scored headline run, since the clerk and AP seats were not started). A request that lists items becomes jobs on the shared queue for Fetch's team of box agents, checked offline only. Not running yet: the Maincloud fleet view across machines (written, not published).
+
+The usual stack for live agent state, a database, a websocket server, a cache and auth glue, is heavy and fragile, and an ordinary OS has nothing for it. GurtOS runs one self-hosted SpacetimeDB per box as its live nervous system, with the security enforced in the database. The box mirrors tasks and approvals into it, and the box's own screens subscribe to it and answer through the `answer` reducer; the first answer wins and a later one is refused with who answered first. Agents share a work queue in it: a `claimJob` procedure takes the oldest open job in one transaction, and four broker tools (`spacetime.claim`, `finish`, `post`, `team`) let an agent use it without ever connecting to the database. In the merge gate, 3 agents made 15 claims on 12 jobs at once and got 12 distinct jobs, none twice, and 30 simultaneous claims on 10 jobs gave 10 distinct jobs. In Business, each person is sent only their own requests (private tables and a per-connection view; Rosa's client is sent what is routed to her, Priya's and a stranger's get nothing), enforced by the database for any connection that reaches it. Today only the box's own screens and local helpers reach SpacetimeDB; phones use the token-checked API. A scheduled reducer can bring a second person into a pending request (the mechanism; the Business policy has no reminder rule yet), and live meters are kept by the reducers. It is one engine on the box, open source and part of the GurtOS suite. The credit desk's opt-in Coordinate option ran live with real Droid: two analysts claimed three applications each from one queue and decided all six, matching the answer key (analysts only, not the scored headline run, since the clerk and AP seats were not started). Fetch's split requests are worked by a team of box agents that coordinate through SpacetimeDB, with the Agentverse agents as the front door; live with real Droid, 3 agents shared one queue, each job went to exactly one and 3 of 3 finished with a price. Not running yet: the Maincloud fleet view across machines (written, not published).
 
 **Proof:** in every merge run, a task stops over budget, SpacetimeDB shows the request live with its amount, payee and purpose, another task keeps running, the phone's OK comes back through the reducer into the log, and the task finishes. After a hard power cut, the waiting approval is still live in SpacetimeDB.
 
@@ -574,6 +589,7 @@ The usual stack for live agent state, a database, a websocket server, a cache an
 ### Elastic: Agent Builder on Serverless
 
 **Best shown in:** GurtOS Business and GurtOS Server. After a week of agents working, an ordinary OS cannot tell you what they did, and anyone with root can edit its logs. GurtOS keeps one action log of every action and chains each entry to the one before, and Elastic keeps a copy the box cannot rewrite, so a changed entry is caught. Elastic's agent answers and investigates, and its alert rules and the agent can only leave a request: the box turns it into one approval on your phone.
+
 
 
 
@@ -647,6 +663,7 @@ Agent: `gurtos-log`, 14 ES|QL tools, a workflow tool and an index search tool, c
 
 
 
+
 A personal agent is only useful if it remembers you, but today that means uploading your life to someone's cloud, and any web page an agent reads can plant false memories. On GurtOS the memory sits on a computer you own. /find: say "find the whiteboard photo" and the box answers `photos/IMG_2041.jpg`, from a vision model's description, not the file name. Moss indexes photos, text files and the history of every task inside the box's own memory, with a text-only copy in Moss's cloud (the text includes what the vision model wrote about your photos). Agents search it through a box tool, with no network or key of their own. Disclosure: a fresh box calls no model. A photo is described only by a model you point the box at (such as gemma4 in Ollama on your own machine) or, when the owner presses Describe with Claude, by Claude through Factory, which sends those photos off the computer; nothing runs Claude automatically.
 
 Built since: talk to your computer in GurtOS Personal (Super+Alt+Space, the answer as a notification and a local voice, a spoken yes approves only a request that spends nothing, audio deleted after reading; not yet tried through a real microphone, and the speech model downloads at first boot). Being built, not on main yet: agent memory that cannot be poisoned, one preference honoured across apps, and a forget button.
@@ -660,6 +677,7 @@ Fits Moss's second example: a personal agent that remembers you and works across
 ### Apify: Best Use of Apify, and Best Actor
 
 **Best shown in:** GurtOS Personal and GurtOS Server. GurtOS lets your agents use Apify's web robots from their own isolated space, with no keys: the broker holds the token, a scraped page is treated as untrusted data, and every run's cost is capped by the task budget and shown in the portal. On a Server box, schedules and webhooks start those tasks while you're away. It is light and open source.
+
 
 
 
@@ -735,6 +753,7 @@ GurtOS is open source (Apache-2.0): anyone can run it, customise it and reuse th
 
 
 
+
 The unexpected part is the operating system. We built a whole OS, an ecosystem, for agents to do credit and fraud checks safely, because on an ordinary one an agent doing this holds the keys, can approve its own work and can pull any report. On GurtOS the analyst agent runs seven CRS checks on every guarantor (three bureau reports, identity, Fraud Finder, public records and phone owner) without holding the CRS login, and the decision tool refuses to record anything until those checks run (rule CHK-1). Each decision carries their request ids, a fraud hold always goes to a person, and the box has an audit and a kill switch.
 
 Credit bureaus are the target in real attacks: the FTC says attackers took data on about 147 million people from Equifax in 2017 ([FTC](https://www.ftc.gov/news-events/news/press-releases/2019/07/equifax-pay-575-million-part-settlement-ftc-cfpb-states-related-2017-data-breach)), and TransUnion reported in August 2025 that more than 4.4 million people's names, birth dates and Social Security numbers were taken from an outside support application ([TechCrunch](https://techcrunch.com/2025/08/28/transunion-says-hackers-stole-4-4-million-customers-personal-information/)). GurtOS keeps keys in a root-only vault and each task in its own space; it does not patch a bureau's own servers.
@@ -748,6 +767,7 @@ Built, merged and run against the CRS sandbox with test personas: know-your-agen
 ### Solana: MLH Best use of Solana
 
 **Best shown in:** GurtOS Server, and GurtOS Business. An always-on box you own holds the Solana wallet in its root-only vault, so agents can pay for APIs at any hour without ever seeing the key. Every payment is a devnet transaction anyone can check, recorded in the box's log with the task that made it. GurtOS is open source (Apache-2.0), so the same wallet works in anyone's agents.
+
 
 
 
@@ -823,6 +843,7 @@ Devnet USDC only: test money with no value.
 
 
 
+
 A Vultr Cloud Compute VM in San Jose is the GurtOS box the internet can reach: Jira's Forge app approves and rolls back agent tasks on it, and a public Mana app reads its status live. Everything else on its API answers 404. The same VM builds the bootable GurtOS Server and Personal discs and runs the full merge gate. A second Vultr VM runs GurtOS Personal on GNOME for the desktop layer's tests.
 
 Also run live on Vultr on Oct 24, for under $0.20 in all, with the test resources destroyed: the real GurtOS Server release disc (1.5 GB) installed on a Vultr Cloud Compute instance with 1 vCPU, 1 GB of RAM and a 25 GB disk (about $0.007 an hour); the instance was running in 12 s, the box's screen was up about 5 minutes after creation, and after the disc was detached it came back from its own disk with the same name. Encrypted backups: the box tars its state, encrypts it with age to the owner's public key and uploads it to a private Vultr Object Storage bucket, so Vultr holds only ciphertext; a restore onto a fresh Vultr instance took 2.8 s, a task that was waiting for an OK came back waiting and finished after approval. The restore ran on the Server debug build of the same image, because the release disc has no shell and did not ship the age program (the image build on main now includes it). A Vultr cloud firewall is set from code and enforced by Vultr (ssh from a non-allowed address timed out within 15 s; a new rule can take about 3 minutes to start letting traffic in) and can never open ports 7700 or 3000. Not proven on a Vultr instance running the track: the box's own firewall route and daily backup trigger. The first-boot wizard was shown, not clicked through. Vultr Serverless Inference is not used: it is a paid subscription the account does not have.
@@ -834,6 +855,7 @@ Also run live on Vultr on Oct 24, for under $0.20 in all, with the test resource
 ### Figma: Best Workflow, Stage Log, Best Design, Most Creative
 
 **Best shown in:** All three editions. One design system for every edition: the box screen and phone for Server, the GNOME layer for Personal, and room in the same tokens for Business.
+
 
 
 
@@ -920,6 +942,7 @@ count. The output is `portal/`, the kit at `/kit/` for track apps, and `personal
 ### Mana: Building with Mana
 
 **Best shown in:** GurtOS Personal and GurtOS Business. AI workspaces are great for thinking, but there is no safe place for an AI to act on your real computer. Mana plans it, GurtOS does it safely in an isolated space, and you approve from your phone. Four public Mana chats shaped the credit desk rules, Business approval rules, Visa mandates and the Fetch agent team, each with what it changed in code.
+
 
 
 

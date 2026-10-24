@@ -354,7 +354,7 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 
 **Best shown in:** GurtOS Server (always reachable), and GurtOS Personal too
 
-**Pitch:** GurtOS gives ASI:One a safe body on a computer you own, even an old one: each request runs as its own sandboxed task with no keys, asks before it spends, and can be undone, and the portal and phone show it live. A Server box answers at 3 AM through its Agentverse mailbox with no open port.
+**Pitch:** GurtOS gives ASI:One a safe body on a computer you own, even an old one: each request runs as its own sandboxed task with no keys, asks before it spends, and can be undone, and the portal and phone show it live. A team of agents on Agentverse fronts the box, strangers' agents' replies are treated as data (a hidden instruction is blocked and logged), and payments run in test FET through the box's one budget path. A Server box answers at 3 AM through its Agentverse mailbox with no open port.
 
 **The problem:** A chat agent can only act if it runs somewhere: a cloud you can't see into, or your own computer with full access. Agents that talk to strangers' agents can be fed hidden instructions.
 
@@ -370,18 +370,21 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 | Only the paired owner gives work; strangers get the pairing step | Nobody else can start, approve or undo anything | Required: real multi-step action, safely | The Fetch.ai app | Shipped |
 | Replies wait in an outbox, the agent restarts within 5 seconds, and tasks resume after a power cut | A chat never loses its answer | Bonus: reliability | GurtOS (resume) and the app (outbox) | Shipped |
 | Live view and control on the portal and phone | You can watch and stop chat work from anywhere | Required: real action you can see | GurtOS | Shipped |
-| A team of agents on Agentverse, safe calls to strangers' agents with their replies treated as untrusted (a blocked hidden instruction), the Payment Protocol, richer cards, picking your machine from chat, guest requests the owner approves (the guest path is on main in the Mana app: a stranger's request waits for the owner's OK, with at most 3 requests per guest and 10 in all per hour and a 25 cent budget; the ASI:One chat's use of it is not confirmed yet) | Next steps for the bonus criteria; this page adds each one with its reason when it ships | Bonus: multi-agent, Payment Protocol, cards, reliability | The Fetch.ai app | Being built; not on main yet |
+| A team of agents: GurtOS routes a request over the chat protocol to its Shopper, Find or Credit Desk agent and relays the reply, naming who said it | An app on your box becomes something any agent can use, without one big agent holding everyone's powers | Bonus: multi-agent | The Fetch.ai app | Shipped. The Find and Credit Desk agents answer only their own box, and the controller's questions arrive as Approve and Deny cards |
+| Strangers' replies are data: a hidden instruction is blocked, described in plain words and logged, never quoted; cards from outside agents are not shown | The easiest way into an agent is another agent's reply | Required: real tool use, safely | GurtOS (a reply cannot start a task, approve, pay or pair, and no task holds a key) and the app (the screening) | Shipped. The live run blocked our test trap and relayed Fetch.ai's real Weather Agent. The rules catch common shapes, so a novel instruction might get through the screening, but it still cannot make GurtOS do anything |
+| The Payment Protocol in test FET on Fetch's testnet, both ways, through the `fetch.pay` tool and the box's one budget path | A chat agent can pay and get paid without holding a key | Bonus: Payment Protocol | GurtOS (the budget, the approval, the key in the core) and the app (the protocol) | Shipped as test money. Live: the box paid 0.5 test FET after the owner's OK, and a test stranger paid the Shopper 0.05 |
+| Richer cards: approve or deny, live progress with Stop and undo, the diff with Keep or Undo, a receipt and a blocked card | You see and control the work in the chat | Bonus: Interactive Cards | GurtOS (undo) and the app (the cards) | Shipped |
+| Reliability in the chat: after a power cut the chat says GurtOS restarted and is resuming the task where it stopped | A chat never loses its answer | Bonus: reliability | GurtOS (resume) and the app (the outbox) | Shipped |
+| Pick your machine from the chat: link another GurtOS box with a code and an HMAC proof, then run work there, with the machine named by its GurtOS edition | One chat for a server and a laptop | Bonus: multi-agent | The Fetch.ai app | Shipped. A linked machine can only answer, never give orders, and its replies are screened too |
+| Guest requests: a stranger's lookup or price check waits for the owner's OK, then runs with no network of its own and a 25 cent budget | Anyone can ask your box something, and nothing runs before you say yes | Required: real action, safely | GurtOS and the Mana app's one guest path | Shipped, with at most 3 requests per guest an hour and 10 from all guests |
+| A team of box agents on the SpacetimeDB queue: a request that lists items becomes jobs, and up to three agents each claim the next one, check its price and finish it | Several agents split one request without colliding | Bonus: multi-agent | GurtOS (the queue) | Shipped. Live with real Droid: 3 agents shared one queue, each job went to exactly one, and 3 of 3 finished with a price. The offline gate checks the posting, the board and the claiming only |
 
 **Demo moment and proof:** In a live run through ASI:One, the box's agent paired with the chat, a Droid task fixed the failing test in a sample repo for $0.05 and sent back the diff with Undo, and a stock check paused at a $0.50 web search over its $0.25 budget, sent an Interactive Card, and finished after Approve: "in stock on Hario's US store at $10.25".
 
 **Still to do:**
 
-- Public repo with run steps. (partly)
 - 3 to 5 minute video. (partly)
 - Also submit through the ASI:One Submission Agent. (open)
-- Bonus: ASI:One Interactive Cards, reliability, multi-agent. (partly)
-- Payment Protocol (not built)
-- A team of agents on Agentverse, safe calls to strangers' agents with their replies treated as untrusted (a blocked hidden instruction), the Payment Protocol, richer cards, picking your machine from chat, guest requests the owner approves (the guest path is on main in the Mana app: a stranger's request waits for the owner's OK, with at most 3 requests per guest and 10 in all per hour and a 25 cent budget; the ASI:One chat's use of it is not confirmed yet)
 
 ## SpacetimeDB: SpacetimeDB as the core real-time backend
 
