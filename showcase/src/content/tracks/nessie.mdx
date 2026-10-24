@@ -66,6 +66,15 @@ status:
     note: 'The clerk''s corrections are recorded in the box''s log, not pushed to Nessie, so undoing a task never leaves the bank out of step.'
 ---
 
+## Real attacks on financial companies
+
+A bank's own data is the target, and the attacks below came through a firewall and through database queries. On an ordinary operating system an agent doing this work holds the keys, can approve its own work and can pull any report. Real attacks on financial companies show why that matters. Each row names its source and what was taken as the source states it, then says what GurtOS's controls do about that kind of attack and what they do not.
+
+| Incident | What was taken, and how | Source | What GurtOS does about this kind of attack | What it does not do |
+|---|---|---|---|---|
+| Capital One, 2019 | The Justice Department says the break-in used a misconfigured web application firewall to reach data stored on Capital One servers. CNN reports Capital One's count as about 100 million people in the U.S. and 6 million in Canada. | [Justice Department case page](https://www.justice.gov/usao-wdwa/united-states-v-paige-thompson) and [CNN, July 2019](https://www.cnn.com/2019/07/29/business/capital-one-data-breach) | Each task has a network rule that allows only the hosts it needs, so a compromised task cannot reach anything else, and no seat holds a key. | GurtOS does not set up a company's own firewall or cloud, and a misconfigured one in front of it is outside what it controls. |
+| Prosper, September 2025 | Names, dates of birth, addresses, Social Security numbers, and credit status, employment and income details of customers and loan applicants, obtained "including through unauthorized queries made on Company databases". Have I Been Pwned counts 17.6 million unique email addresses; Prosper says it could not confirm that count. The sources do not say how the attacker got in. | [BankInfoSecurity, Oct 2025](https://www.bankinfosecurity.com/prosper-market-data-breach-affects-176m-individuals-a-29755) and [Have I Been Pwned](https://haveibeenpwned.com/Breach/Prosper) | Because the way in is not public, we claim nothing about it. For the data an agent works with: a seat holds no database login, the core makes each call, and every pull is logged with its request id. | It cannot protect a lender's own applicant database from a way in we do not know. |
+
 ## Evidence
 
 ### Every merge, live against Nessie

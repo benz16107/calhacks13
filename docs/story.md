@@ -35,6 +35,12 @@ has not been signed off yet.
     (app.gurtos.com), remote access (`<name>.box.gurtos.com` with push to the phone), the app platform that
     integrations plug into, the public docs (gurtos.com), and the open-source code.
 
+14. **Finance tracks (CRS, Hyphenate, Microsoft, Capital One, Visa, Coinbase): the unexpected part is the OS.** We built
+    an entire operating system, a whole ecosystem, for agents to do this work safely, where on an ordinary OS the agent
+    holds the keys, can approve its own work and can pull any report. Each of these pages cites real attacks on financial
+    companies, only with a source (name, date, link, what was taken, as the source states it), then says what GurtOS's
+    controls do about that kind of attack and what they do not. Never invent or round up an incident.
+
 Where they show up on the site: the overview opens with 12, 11, 10 and 13; principles 2 to 6 and 10 to 13 are the
 "Runs on top of GurtOS" box on every track page; 7 is the "Best shown in" band; 1, 8 and 9 are the page summary
 and its "Why" table.
@@ -62,7 +68,7 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 | Elastic | GurtOS Business and GurtOS Server | decided |
 | Moss | GurtOS Personal | to review with Ben |
 | Apify | GurtOS Personal and GurtOS Server | decided |
-| CRS | GurtOS Business | to review with Ben |
+| CRS | GurtOS Business | decided |
 | Capital One | GurtOS Business, then GurtOS Personal | to review with Ben |
 | Solana | GurtOS Server, and GurtOS Business | decided |
 | Vultr | GurtOS Server | to review with Ben |
@@ -472,30 +478,40 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 
 ## CRS: Overall, Best Financial AI Agent, Best Identity/Fraud, and Most Unexpected
 
-**Status:** to review with Ben. **Page:** https://calhacks.gurtos.com/tracks/crs/
+**Status:** decided. **Page:** https://calhacks.gurtos.com/tracks/crs/
 
 **Best shown in:** GurtOS Business
 
-**Pitch:** Agents today run as you, with your keys and no separation of duties, so no company lets one near the books. Identity and fraud checks are team work: an analyst agent runs them, a controller signs off, and every decision keeps its CRS request ids for the audit. GurtOS Business is on main: people and roles, approvals routed by rules written in plain words, refusals for answering your own request or above your limit, a Waiting for me inbox, an audit with CSV export and a kill switch. Sign-in with work accounts and shadow mode are not built. The scored credit desk runs were on GurtOS Server; the Business screens are from a box seeded as the made-up Fogline Supply.
+**Pitch:** The unexpected part is the OS: we built a whole operating system for agents to do credit and fraud checks safely, where on an ordinary one the agent holds the keys, approves its own work and can pull any report. Each seat is its own user without the CRS login, a person approves what the rules send them, and every pull keeps its request id. GurtOS Business is on main: people and roles, approvals routed by rules written in plain words, refusals for answering your own request or above your limit, a Waiting for me inbox, an audit with CSV export and a kill switch. Sign-in with work accounts and shadow mode are not built. The scored credit desk runs were on GurtOS Server; the Business screens are from a box seeded as the made-up Fogline Supply. Next (being built): know-your-agent, permissible purpose with a pull limit, CRS's MCP server behind the broker, nightly re-checks, a fraud case file on the phone and a fraudster who argues, measured.
 
-**The problem:** Draft: identity and fraud checks are exactly where a fooled or hijacked agent costs real money, and today the agent that runs them holds the keys and can approve its own work.
+**The problem:** Credit bureaus and lenders are what attackers go after, and on an ordinary OS an agent doing identity and fraud checks holds the keys, can approve its own work and can pull any report.
 
-**Features, by the sponsor's criteria** (no OS-vs-track table yet; to write when reviewed):
+**Features** (from the page's table):
 
-- *CRS central, not bolted on.* (met): CRS is the analyst's main source. Rule CHK-1 says no terms before the CRS checks, and the credit-desk.credit_decision tool enforces it: it refuses a decision on an application whose seven checks have not run in the same task. Bands come from the lowest bureau score, fraud stops from identity codes and the Fraud Finder score.
-- *Live against the sandbox.* (met): Every ./demo run calls the CRS sandbox live. On Oct 23 all six applicants were checked live (42 calls) and every answer matched its CRS persona. Recorded answers are used only if CRS cannot be reached, and the result says which source answered.
-- *Useful.* (met): Three of the case's 14 planted errors rest on CRS answers: the synthetic identity (APP-1043), a lien and a judgment the applicant denied (APP-1044), and three bureaus that disagree (APP-1045). The live Droid run 73c47b caught all three, and the bureau scores set the band and limit on every application.
-- *Creative.* (met): CRS runs as a tool inside an operating system for agents. The agent asks the box; the core logs in to CRS with keys from a root-only vault, makes the calls and returns a summary with each request id. A hijacked or confused agent cannot pull reports it was not asked to, or see the login.
-- *Test identities only.* (met): Every applicant's guarantor is copied from one of CRS's 20 sandbox personas (sandbox/crs-personas.json). The businesses around them are made up.
-- *Best Financial AI Agent.* (met): The analyst is an agent that does the work: runs the checks, compares them with the application, the business credit file and the bank, sets band, limit and terms by rule, and routes what it may not decide alone to the controller.
-- *Best Identity/Fraud.* (met): Fraud stops are rules the tools hold the agent to: identity codes 2201, 2202 and 2301 (FRD-1), Fraud Finder 70 or more (FRD-2), and compound signals (FRD-4). A fraud hold stops every shipment and always goes to a person.
-- *Most Unexpected.* (met): Credit data as a guard for agents: the same box that stops a booby-trapped web page from stealing keys uses CRS to stop a fake customer from talking an AI desk into $20,000 of credit.
+| Feature | Why it is there | CRS criterion | From | Today |
+|---|---|---|---|---|
+| The agent never holds the CRS login: the core logs in from a root-only vault and returns a summary with each request id | A hijacked agent has nothing to steal | Most Unexpected, Creative | GurtOS (vault, broker) and the track (the CRS client) | Shipped. The merge gate checks no key appears in the log |
+| The decision tool refuses to record anything until the seven checks have run in the same task | CRS is central, not bolted on | Overall, Best Financial AI Agent | The track, enforced in the core | Shipped |
+| A seat holds only the tools its task lists, so it cannot pull reports it was not asked to | An agent cannot widen its own access | Best Identity/Fraud | GurtOS (task tools) and the track | Shipped |
+| A fraud hold, or anything above the analyst's limit, waits for a person; nobody approves their own request and no agent approves an agent | Separation of duties for credit decisions | Best Identity/Fraud, Useful | GurtOS Business (routed approvals) and the track (where the line is) | Shipped. The merge gate checks seven refused answers |
+| An audit with CSV export and one kill switch | A lender can show what each pull was and stop it | Useful | GurtOS Business | Shipped |
+| Know-your-agent: CRS verifies the human behind a stranger's agent before credit or payment | An agent that applies on someone's behalf can be a fraudster's agent | Best Identity/Fraud, Most Unexpected | The track (CRS identity checks) and GurtOS (the stranger's request waits for a person) | Being built; not on main yet |
+| Permissible purpose and a pull limit recorded for every credit pull | A credit pull needs a stated reason and a cap on how many | Useful, Best Financial AI Agent | The track (purpose) and GurtOS (the limit, counted in the core) | Being built; not on main yet |
+| CRS's MCP server behind the broker, scoped per seat | The agent speaks CRS's own tools without holding its login | Overall, Creative | GurtOS (broker, per-seat scope) and CRS (the MCP server) | Being built; not on main yet |
+| Nightly re-checks of existing customers | Fraud shows up after the first approval | Useful, Overall | The track (the re-checks) and GurtOS (schedules) | Being built; not on main yet |
+| A fraud case file on the phone | The controller decides with the evidence in hand | Best Identity/Fraud, Useful | GurtOS (the phone app) and the track (the case file) | Being built; not on main yet |
+| A fraudster who argues, measured | We test the desk against someone who talks back, and publish the score | Best Identity/Fraud, Most Unexpected | The track | Being built; not on main yet |
 
 **Demo moment and proof:** APP-1043 has clean-looking numbers and a 640 score, and the simple rule approves it for $20,000. CRS, live: identity fails with codes 2201, 2202 and 2101, Fraud Finder scores it 88, nobody owns its phone, and 9 credit inquiries landed between Aug 19 and Sep 12. The analyst put it on fraud hold and the controller confirmed it. Every merge-gate run repeats this live.
 
 **Still to do:**
 
-- Review the story with Ben: problem, features with their why, OS vs track
+- Know-your-agent: CRS verifies the human behind a stranger's agent before credit or payment
+- Permissible purpose and a pull limit recorded for every credit pull
+- CRS's MCP server behind the broker, scoped per seat
+- Nightly re-checks of existing customers
+- A fraud case file on the phone
+- A fraudster who argues, measured
 
 ## Capital One: Best use of the Nessie banking API
 

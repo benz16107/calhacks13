@@ -4,7 +4,7 @@ root = sys.argv[1]
 import os
 HERE = os.path.dirname(os.path.abspath(__file__))
 exec(open(os.path.join(HERE, 'pitches.py')).read().split("if __name__")[0])
-DECIDED = {'hyphenate', 'visa', 'fetch', 'coinbase', 'solana', 'apify', 'anthropic', 'microsoft', 'elastic'}
+DECIDED = {'hyphenate', 'visa', 'fetch', 'coinbase', 'solana', 'apify', 'anthropic', 'microsoft', 'elastic', 'crs'}
 EXTRA_TODO = {'anthropic': ['How to enter: pending; Ben will ask a director (the prize is not on Devpost yet)']}
 PROBLEM = {
  'hyphenate': "Companies want AI employees, but today's computers and clouds weren't built for them. An agent runs as you, with your keys, on one shared filesystem, with no separation of duties, no record you can trust and no undo, so nobody lets one do real finance work.",
@@ -17,7 +17,7 @@ PROBLEM = {
  'armadin': "Draft: a web page can carry hidden instructions, and an agent that obeys them can read every key on the machine and send it anywhere, because nothing in a normal OS stands between the agent and your secrets.",
  'microsoft': "Companies want agents doing finance work, but an ordinary OS gives an agent its owner's keys, no separation of duties, no record and no undo, so pilots never reach production.",
  'atlassian': "Draft: when an agent acts for you overnight, nobody can see the next morning exactly what it did and why, or roll back only the wrong part.",
- 'crs': "Draft: identity and fraud checks are exactly where a fooled or hijacked agent costs real money, and today the agent that runs them holds the keys and can approve its own work.",
+ 'crs': "Credit bureaus and lenders are what attackers go after, and on an ordinary OS an agent doing identity and fraud checks holds the keys, can approve its own work and can pull any report.",
  'nessie': "Draft: an agent that reconciles a company's bank against its books needs bank access, and today that means handing it the key and trusting whatever it changes.",
  'spacetime': "Draft: when agents run unattended, the people responsible need to see every request live, on every screen at once, and answer from wherever they are.",
  'elastic': "After a week of agents working, an ordinary OS cannot tell you what they did: its logs are scattered and anyone with root can edit them.",
@@ -71,6 +71,11 @@ out = ["# The story bible", "",
  "13. **GurtOS is a suite, not one system:** the OS in three editions, the portal and phone companion app",
  "    (app.gurtos.com), remote access (`<name>.box.gurtos.com` with push to the phone), the app platform that",
  "    integrations plug into, the public docs (gurtos.com), and the open-source code.", "",
+ "14. **Finance tracks (CRS, Hyphenate, Microsoft, Capital One, Visa, Coinbase): the unexpected part is the OS.** We built",
+ "    an entire operating system, a whole ecosystem, for agents to do this work safely, where on an ordinary OS the agent",
+ "    holds the keys, can approve its own work and can pull any report. Each of these pages cites real attacks on financial",
+ "    companies, only with a source (name, date, link, what was taken, as the source states it), then says what GurtOS's",
+ "    controls do about that kind of attack and what they do not. Never invent or round up an incident.", "",
  "Where they show up on the site: the overview opens with 12, 11, 10 and 13; principles 2 to 6 and 10 to 13 are the",
  "\"Runs on top of GurtOS\" box on every track page; 7 is the \"Best shown in\" band; 1, 8 and 9 are the page summary",
  "and its \"Why\" table.", "",

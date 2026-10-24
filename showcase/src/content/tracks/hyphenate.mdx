@@ -128,6 +128,15 @@ the same for any agent on the box.
 | People, roles, policy-routed approvals, a "Waiting for me" inbox, an Audit view with CSV export | GurtOS Business | Shipped, shown on a Business box seeded as Fogline Supply with scripted seats and sandbox data. The scored runs below were on GurtOS Server |
 | Credit rules, the planted case, the scorer, the Credit desk window | The desk | Shipped |
 
+## Real attacks on financial companies
+
+A lender or a bureau holds exactly what a finance agent would be asked to handle. On an ordinary operating system an agent doing this work holds the keys, can approve its own work and can pull any report. Real attacks on financial companies show why that matters. Each row names its source and what was taken as the source states it, then says what GurtOS's controls do about that kind of attack and what they do not.
+
+| Incident | What was taken, and how | Source | What GurtOS does about this kind of attack | What it does not do |
+|---|---|---|---|---|
+| Prosper, September 2025 | Names, dates of birth, addresses, Social Security numbers, and credit status, employment and income details of customers and loan applicants, obtained "including through unauthorized queries made on Company databases". Have I Been Pwned counts 17.6 million unique email addresses; Prosper says it could not confirm that count. The sources do not say how the attacker got in. | [BankInfoSecurity, Oct 2025](https://www.bankinfosecurity.com/prosper-market-data-breach-affects-176m-individuals-a-29755) and [Have I Been Pwned](https://haveibeenpwned.com/Breach/Prosper) | Because the way in is not public, we claim nothing about it. For the data an agent works with: a seat holds no database login, the core makes each call, and every pull is logged with its request id. | It cannot protect a lender's own applicant database from a way in we do not know. |
+| Equifax, 2017 | About 147 million names and dates of birth, 145.5 million Social Security numbers and 209,000 payment card numbers with expiration dates. The FTC alleges Equifax did not fix a known flaw, kept administrator credentials in a plain-text file and did not segment its database servers. It agreed to pay at least $575 million. | [FTC, July 2019](https://www.ftc.gov/news-events/news/press-releases/2019/07/equifax-pay-575-million-part-settlement-ftc-cfpb-states-related-2017-data-breach) | Keys sit in a root-only vault and never in a task's files or environment, and each task has its own Linux user and its own copy of the files. A task that is compromised has no credential to steal and cannot read another task's files. | GurtOS does not patch a company's own servers or databases, and it does not keep personal data out of a database you run. |
+
 ## Evidence
 
 ### Three live runs with Droid, scored against the answer key

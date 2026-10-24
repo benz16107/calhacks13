@@ -3,9 +3,9 @@ order: 14
 sponsor: CRS
 prize: Overall, Best Financial AI Agent, Best Identity/Fraud, and Most Unexpected
 editions: 'GurtOS Business'
-pitch: 'Agents today run as you, with your keys and no separation of duties, so no company lets one near the books. Identity and fraud checks are team work: an analyst agent runs them, a controller signs off, and every decision keeps its CRS request ids for the audit. GurtOS Business is on main: people and roles, approvals routed by rules written in plain words, refusals for answering your own request or above your limit, a Waiting for me inbox, an audit with CSV export and a kill switch. Sign-in with work accounts and shadow mode are not built. The scored credit desk runs were on GurtOS Server; the Business screens are from a box seeded as the made-up Fogline Supply.'
+pitch: 'The unexpected part is the OS: we built a whole operating system for agents to do credit and fraud checks safely, where on an ordinary one the agent holds the keys, approves its own work and can pull any report. Each seat is its own user without the CRS login, a person approves what the rules send them, and every pull keeps its request id. GurtOS Business is on main: people and roles, approvals routed by rules written in plain words, refusals for answering your own request or above your limit, a Waiting for me inbox, an audit with CSV export and a kill switch. Sign-in with work accounts and shadow mode are not built. The scored credit desk runs were on GurtOS Server; the Business screens are from a box seeded as the made-up Fogline Supply. Next (being built): know-your-agent, permissible purpose with a pull limit, CRS''s MCP server behind the broker, nightly re-checks, a fraud case file on the phone and a fraudster who argues, measured.'
 title: CRS is how the credit analyst decides, and how it stops a synthetic identity
-summary: 'The credit desk''s analyst agent runs seven CRS checks on every applicant''s guarantor before it may set terms: TransUnion, Equifax and Experian reports, TransUnion identity verification, Fraud Finder, PitchPoint public records and a reverse phone lookup. The box enforces it: the decision tool refuses to record anything until those checks have run in the same task, and every decision carries their request ids. The agent never holds the CRS login.'
+summary: 'The unexpected part is the operating system. We built a whole OS, an ecosystem, for agents to do credit and fraud checks safely, because on an ordinary one an agent doing this holds the keys, can approve its own work and can pull any report. On GurtOS the credit desk''s analyst agent runs seven CRS checks on every applicant''s guarantor (TransUnion, Equifax and Experian reports, TransUnion identity verification, Fraud Finder, PitchPoint public records and a reverse phone lookup) without ever holding the CRS login. The box enforces it: the decision tool refuses to record anything until those checks have run in the same task, and every decision carries their request ids.'
 proof: 'APP-1043 has clean-looking numbers and a 640 score, and the simple rule approves it for $20,000. CRS, live: identity fails with codes <strong>2201, 2202 and 2101</strong>, Fraud Finder scores it <strong>88</strong>, nobody owns its phone, and 9 credit inquiries landed between Aug 19 and Sep 12. The analyst put it on fraud hold and the controller confirmed it. Every merge-gate run repeats this live.'
 criteriaSource: "From CRS's track description, as copied into the project's track plan (docs/tracks.md). CRS judges four prizes: Overall, Financial AI Agent, Identity/Fraud, and Unexpected."
 clip: credit-desk
@@ -16,9 +16,9 @@ criteria:
   - ask: 'Live against the sandbox.'
     how: 'Every <code>./demo</code> run calls the CRS sandbox live. On Oct 23 all six applicants were checked live (42 calls) and every answer matched its CRS persona. Recorded answers are used only if CRS cannot be reached, and the result says which source answered.'
   - ask: 'Useful.'
-    how: 'Three of the case''s 14 planted errors rest on CRS answers: the synthetic identity (APP-1043), a lien and a judgment the applicant denied (APP-1044), and three bureaus that disagree (APP-1045). The live Droid run <code>73c47b</code> caught all three, and the bureau scores set the band and limit on every application.'
+    how: 'A lender can let an agent run identity and fraud checks without the agent holding the CRS login or approving its own result, which is what an ordinary OS cannot give it. Three of the case''s 14 planted errors rest on CRS answers: the synthetic identity (APP-1043), a lien and a judgment the applicant denied (APP-1044), and three bureaus that disagree (APP-1045). The live Droid run <code>73c47b</code> caught all three, and the bureau scores set the band and limit on every application.'
   - ask: 'Creative.'
-    how: 'CRS runs as a tool inside an operating system for agents. The agent asks the box; the core logs in to CRS with keys from a root-only vault, makes the calls and returns a summary with each request id. A hijacked or confused agent cannot pull reports it was not asked to, or see the login.'
+    how: 'We built an entire operating system for agents to do credit and fraud checks safely. On an ordinary OS an agent doing this holds the keys, can approve its own work and can pull any report. On GurtOS CRS runs as a tool: the agent asks the box, the core logs in to CRS with keys from a root-only vault, makes the calls and returns a summary with each request id. A hijacked or confused agent cannot pull reports it was not asked to, or see the login.'
   - ask: 'Test identities only.'
     how: 'Every applicant''s guarantor is copied from one of CRS''s 20 sandbox personas (<code>sandbox/crs-personas.json</code>). The businesses around them are made up.'
   - ask: 'Best Financial AI Agent.'
@@ -26,7 +26,7 @@ criteria:
   - ask: 'Best Identity/Fraud.'
     how: 'Fraud stops are rules the tools hold the agent to: identity codes 2201, 2202 and 2301 (FRD-1), Fraud Finder 70 or more (FRD-2), and compound signals (FRD-4). A fraud hold stops every shipment and always goes to a person.'
   - ask: 'Most Unexpected.'
-    how: 'Credit data as a guard for agents: the same box that stops a booby-trapped web page from stealing keys uses CRS to stop a fake customer from talking an AI desk into $20,000 of credit.'
+    how: 'The unexpected part is the OS: a whole operating system, with its own users, vault, approvals and log, built so an agent can do credit and fraud checks safely. And the same box that stops a booby-trapped web page from stealing keys uses CRS to stop a fake customer from talking an AI desk into $20,000 of credit.'
 shots:
   - src: ../../assets/track/hyphenate/analyst-crs-live.png
     alt: 'The analyst task''s steps: CRS on APP-1043 from the live sandbox, scores 640 at TransUnion, Equifax and Experian, identity not verified, fraud score 88.'
@@ -87,6 +87,35 @@ status:
     state: simulated
     note: 'Saved live answers from Oct 23, used only when CRS cannot be reached. The summary then says so.'
 ---
+
+## Why GurtOS, and what each part is for
+
+**The problem.** A lender wants an agent to run identity and fraud checks, but on an ordinary operating system that agent holds the CRS login, can approve its own result and can pull any report it likes. Credit bureaus and lenders are what attackers go after (see the real attacks below), so no one lets an agent near that data.
+
+**GurtOS Business is the environment built for it:** each seat is its own user without keys, approvals are routed by rules in plain words to the right person, every pull is in an append-only log, and one switch stops every agent. It runs on a computer the company owns, is light (one Node service, 4 GB of memory) and is open source under Apache-2.0. Business is on main; the scored runs were on GurtOS Server, and the screens are from a box seeded as the made-up Fogline Supply.
+
+| Feature | Why it is there | CRS criterion | From | Today |
+|---|---|---|---|---|
+| The agent never holds the CRS login: the core logs in from a root-only vault and returns a summary with each request id | A hijacked agent has nothing to steal | Most Unexpected, Creative | GurtOS (vault, broker) and the track (the CRS client) | Shipped. The merge gate checks no key appears in the log |
+| The decision tool refuses to record anything until the seven checks have run in the same task | CRS is central, not bolted on | Overall, Best Financial AI Agent | The track, enforced in the core | Shipped |
+| A seat holds only the tools its task lists, so it cannot pull reports it was not asked to | An agent cannot widen its own access | Best Identity/Fraud | GurtOS (task tools) and the track | Shipped |
+| A fraud hold, or anything above the analyst's limit, waits for a person; nobody approves their own request and no agent approves an agent | Separation of duties for credit decisions | Best Identity/Fraud, Useful | GurtOS Business (routed approvals) and the track (where the line is) | Shipped. The merge gate checks seven refused answers |
+| An audit with CSV export and one kill switch | A lender can show what each pull was and stop it | Useful | GurtOS Business | Shipped |
+| Know-your-agent: CRS verifies the human behind a stranger's agent before credit or payment | An agent that applies on someone's behalf can be a fraudster's agent | Best Identity/Fraud, Most Unexpected | The track (CRS identity checks) and GurtOS (the stranger's request waits for a person) | Being built; not on main yet |
+| Permissible purpose and a pull limit recorded for every credit pull | A credit pull needs a stated reason and a cap on how many | Useful, Best Financial AI Agent | The track (purpose) and GurtOS (the limit, counted in the core) | Being built; not on main yet |
+| CRS's MCP server behind the broker, scoped per seat | The agent speaks CRS's own tools without holding its login | Overall, Creative | GurtOS (broker, per-seat scope) and CRS (the MCP server) | Being built; not on main yet |
+| Nightly re-checks of existing customers | Fraud shows up after the first approval | Useful, Overall | The track (the re-checks) and GurtOS (schedules) | Being built; not on main yet |
+| A fraud case file on the phone | The controller decides with the evidence in hand | Best Identity/Fraud, Useful | GurtOS (the phone app) and the track (the case file) | Being built; not on main yet |
+| A fraudster who argues, measured | We test the desk against someone who talks back, and publish the score | Best Identity/Fraud, Most Unexpected | The track | Being built; not on main yet |
+
+## Real attacks on financial companies
+
+Credit bureaus are the target. Both incidents below are bureaus, which is the data this track uses. On an ordinary operating system an agent doing this work holds the keys, can approve its own work and can pull any report. Real attacks on financial companies show why that matters. Each row names its source and what was taken as the source states it, then says what GurtOS's controls do about that kind of attack and what they do not.
+
+| Incident | What was taken, and how | Source | What GurtOS does about this kind of attack | What it does not do |
+|---|---|---|---|---|
+| Equifax, 2017 | About 147 million names and dates of birth, 145.5 million Social Security numbers and 209,000 payment card numbers with expiration dates. The FTC alleges Equifax did not fix a known flaw, kept administrator credentials in a plain-text file and did not segment its database servers. It agreed to pay at least $575 million. | [FTC, July 2019](https://www.ftc.gov/news-events/news/press-releases/2019/07/equifax-pay-575-million-part-settlement-ftc-cfpb-states-related-2017-data-breach) | Keys sit in a root-only vault and never in a task's files or environment, and each task has its own Linux user and its own copy of the files. A task that is compromised has no credential to steal and cannot read another task's files. | GurtOS does not patch a company's own servers or databases, and it does not keep personal data out of a database you run. |
+| TransUnion, July 2025 | Names, dates of birth and Social Security numbers of more than 4.4 million people, taken on July 28 from an outside application that held customer data for its U.S. consumer support. TransUnion says no credit information was accessed. The attacker is unknown and TransUnion declined to give more. | [TechCrunch, Aug 28, 2025](https://techcrunch.com/2025/08/28/transunion-says-hackers-stole-4-4-million-customers-personal-information/) | A tool that talks to an outside service runs in the core with the key held there, and its task reaches only the hosts it is allowed. Anything large or unusual waits for a person's OK. | It does not stop a person from being talked into giving an outside party access. |
 
 ## Evidence
 

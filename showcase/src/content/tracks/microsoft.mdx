@@ -147,6 +147,15 @@ The measured-impact feature (being built) will put human minutes, dollars stoppe
 same page, from the log, so the award case is a number the controller can check and not a claim. Fogline Supply Co. is
 made up and no money moves.
 
+## Real attacks on financial companies
+
+A company that switches an agent on has to ask what an insider or a third-party tool could reach. On an ordinary operating system an agent doing this work holds the keys, can approve its own work and can pull any report. Real attacks on financial companies show why that matters. Each row names its source and what was taken as the source states it, then says what GurtOS's controls do about that kind of attack and what they do not.
+
+| Incident | What was taken, and how | Source | What GurtOS does about this kind of attack | What it does not do |
+|---|---|---|---|---|
+| Coinbase, May 2025 | Coinbase's SEC filing says an attacker appears to have paid contractors or employees in support roles outside the United States to copy data from internal systems they could reach for their jobs. The data included names, addresses, phone numbers, emails, masked Social Security numbers and bank account numbers, government ID images, balance snapshots and transaction history. No passwords or private keys were taken and no one could reach customer funds. Coinbase estimated $180 million to $400 million to remediate and reimburse. | [Coinbase Form 8-K, May 2025](https://www.sec.gov/Archives/edgar/data/1679788/000167978825000094/coin-20250514.htm) | A seat holds only the tools its task lists, every call it makes goes in an append-only log with who asked and who approved, and an amount over a limit needs a second person. With Business, an auditor reads the whole record. | A person with root on the box can still edit the log, which the known limits list, and an insider with a legitimate right to customer data is a people problem the OS can only record. |
+| TransUnion, July 2025 | Names, dates of birth and Social Security numbers of more than 4.4 million people, taken on July 28 from an outside application that held customer data for its U.S. consumer support. TransUnion says no credit information was accessed. The attacker is unknown and TransUnion declined to give more. | [TechCrunch, Aug 28, 2025](https://techcrunch.com/2025/08/28/transunion-says-hackers-stole-4-4-million-customers-personal-information/) | A tool that talks to an outside service runs in the core with the key held there, and its task reaches only the hosts it is allowed. Anything large or unusual waits for a person's OK. | It does not stop a person from being talked into giving an outside party access. |
+
 ## Evidence
 
 ### Measured: three live runs
