@@ -345,12 +345,12 @@ message could name that call, or the credit desk could register its seats when B
 **P2-29. The open `/api/health` tells the public internet more than "ok".** Owner: core. On the new public names
 (`gurt-cloud.box.gurtos.com`, `gurt-laptop.box.gurtos.com`) anyone can read the task count, whether the box is paused,
 when it started, the ids of resumed tasks and all 37 tool names. It is open on purpose for the phone's outage check.
-Trim it to `{ok}` plus what the app needs, or give the full version only to a paired phone.
+Trim it to `{ok}` plus what the app needs, or give the full version only to a paired phone. Passed to core, keeping `ok` and
+`startedAt`.
 
-**P2-30. Opening a box's own HTTPS address in a browser shows raw JSON.** Owner: portal or remote access.
-`https://gurt-cloud.box.gurtos.com/` returns `{"error":"pair this phone with the box first"}` with a 401. A judge who
-types the address, rather than scanning the QR (which goes through app.gurtos.com), sees an error. Serve the portal's
-"Pair this phone first" page there.
+**P2-30 (withdrawn).** I thought `https://<box>.box.gurtos.com/` showed raw JSON. That was `curl` without a browser's
+`Accept: text/html`; with it, both boxes return the GurtOS page (200), checked at 06:55 PT. The JSON 401 is for clients
+that don't ask for HTML, by design.
 
 **Remote access checked from outside, main d7f9fc1, 06:25 PT:** both names answer (health 200); `/api/tasks`, `/api/system`,
 `/api/apps`, `/api/setup`, `/api/business` and `/t/credit-desk/` give 401 without a token; a foreign Origin gets 401;
