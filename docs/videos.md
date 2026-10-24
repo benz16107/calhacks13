@@ -138,21 +138,28 @@ publish the Make file so it can be embedded.
 
 ## 5. Hyphenate (opens with its moment; aim for 3 minutes)
 
-Hyphenate asks for a video that **opens with the moment**. No intro before it.
+Hyphenate asks for a video that **opens with the moment**. No intro before it. Then the problem, then why an OS.
+Say out loud, once each, which parts come from GurtOS and which from the desk (the "From" column of the table on
+the showcase's Hyphenate page).
 
 | Time | On screen | Say |
 |---|---|---|
-| 0:00 | APP-1043, Pacific Crest Provisions: clean numbers. The simple rule's answer: approve $20,000 | "A new customer applies for twenty thousand dollars of credit. A simple rule approves it." |
-| 0:12 | The CRS results in the log: identity fails (2201, 2202, 2101), Fraud Finder 88, nobody owns the phone | "The credit analyst agent runs seven CRS checks. The owner is a synthetic identity." |
-| 0:25 | The phone: "needs controller" approval for the fraud hold. Tap Approve | "It puts the account on fraud hold, and the box pauses for the human controller, on my phone." |
-| 0:35 | The open order: $18,500 rush order to a Florida freight forwarder, held | "And an eighteen-and-a-half-thousand-dollar rush order to a freight forwarder never ships." |
-| 0:45 | Title: "Credit desk for Fogline Supply Co. Seats: a credit analyst and a collections clerk, with a human controller above $10,000 and on every fraud referral." | Read the seats line. |
-| 1:00 | The case files: customers, invoices, payments, orders, six applications; the answer key's 14 planted errors | "The data is messy on purpose: fourteen planted errors and seven things that look wrong but aren't." |
-| 1:20 | Nessie deposits against the ledger: the misapplied payment, the post-dated check | "The clerk reconciles the ledger against the bank, Capital One's Nessie." |
-| 1:40 | A tool refusing: the clerk can't release a hold; the analyst can't approve $40,000 alone | "Segregation of duties is enforced by the tools, not the prompt." |
-| 2:00 | One decision in the log: outcome, rule ids, the 7 CRS request ids, who approved | "Every decision carries its rules, its figures, its CRS request ids and who approved it." |
-| 2:20 | The score: 14 of 14 caught, 0 false alarms, 6 of 6 decisions | "Scored against the answer key: fourteen of fourteen, no false alarms, every credit decision right." |
-| 2:40 | `check-case.ts` and `POST /t/credit-desk/run {"dir": ...}` | "Bring your own case: any folder that passes the checker runs on the box." |
+| 0:00 | The Credit desk window, Quick run. APP-1043, Pacific Crest Provisions: the simple rule column says approve $20,000 | "A new customer asks for twenty thousand dollars of credit. A simple rule says yes." |
+| 0:10 | The row turns amber: CRS identity fails (2201, 2202), Fraud Finder 88 | "The credit analyst, an AI agent, ran seven CRS checks. The owner is a synthetic identity." |
+| 0:20 | The phone: the fraud hold waiting. Tap Approve. The row records "controller (phone)" | "It can't decide this alone. It asks the controller, on my phone. An $18,500 rush order never ships." |
+| 0:35 | Title card: "Companies want AI employees. Today's computers weren't built for them." | "Companies want AI employees. But an agent today runs as you, with your keys, on one shared disk. No separation of duties, no record you can trust, no undo. So nobody lets it do real finance work." |
+| 0:55 | Tasks window: two seats running side by side, each "runs as box-..." | "GurtOS is an environment for AI employees. Each seat is its own Linux user with its own copy of the files. That's the OS, not the app." |
+| 1:10 | A seat's task window: "What it was allowed", tools only, no hosts; the log line showing CRS ran in the core | "No seat ever sees a password. The CRS and bank keys stay in the vault; the OS makes the call for it." |
+| 1:25 | A tool refusing: the clerk can't release a credit hold; the analyst can't approve $40,000 alone | "The desk decides who may do what. The OS makes them stop and ask." |
+| 1:40 | The case files and the answer key's 14 planted errors | "The data is messy on purpose: fourteen planted errors and seven traps that look wrong but aren't." |
+| 1:55 | Nessie deposits against the ledger: PMT-8812 applied to the wrong invoice | "The collections clerk reconciles the ledger against the bank, Capital One's Nessie." |
+| 2:10 | One decision in the log: rule ids, the 7 CRS request ids, who approved | "Every decision carries its rules, its data and who approved it, in an append-only log from the OS." |
+| 2:25 | Score: 14 of 14, 0 false alarms, 6 of 6 decisions (live Droid run 73c47b) | "A full live run with Claude: fourteen of fourteen, no false alarms." |
+| 2:40 | The case menu in the Credit desk window | "Bring your own case: drop a folder on the box and run it." |
+| 2:50 | If GurtOS Business has merged: Waiting for me, the routed approval, Audit and its CSV, the kill switch. If not, skip this shot | "In GurtOS Business, approvals route to the right person by role, and the whole company sees the audit trail." |
+
+Swap the opening for "a March decision reopened in June" only if the credit desk's reopening work has merged by
+the time you record.
 
 ## 6. Visa (aim for 2 to 3 minutes)
 

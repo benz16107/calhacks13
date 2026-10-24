@@ -5,7 +5,7 @@ prize: Autonomous Systems for Finance
 editions: 'GurtOS Business (preview)'
 pitch: 'A finance team needs roles, segregation of duties and an audit trail on every agent decision, which is what Business adds: who may approve what, up to how much. GurtOS Business is not built yet. Today''s demo runs on GurtOS Server, with the credit desk''s human controller seat approving from a phone.'
 title: A credit desk that catches the fake applicant a simple rule would approve
-summary: 'Two AI agents run the trade-credit corner of Fogline Supply Co., a made-up Oakland wholesaler of coffee and cafe supplies. A credit analyst checks new business customers through CRS and proposes terms. A collections clerk works the ledger against the bank, Capital One''s Nessie. A human controller signs off above $10,000 and on every fraud referral. Each seat runs as its own Linux user on a GurtOS box, holds no keys, and can only use the tools its job allows.'
+summary: 'Companies want AI employees, but today''s computers and clouds were not built for them. An agent runs as you, with your keys, on one shared filesystem, with no separation of duties, no record you can trust and no undo, so nobody lets one do real finance work. GurtOS is an environment for AI employees. Here, two of them run the trade-credit desk of Fogline Supply Co., a made-up Oakland wholesaler: a credit analyst checks new customers through CRS, and a collections clerk works the ledger against the bank, Capital One''s Nessie. Each has its own Linux user and its own copy of the files, never sees a password, and cannot approve its own work. A human controller signs off above $10,000 and on every fraud referral.'
 proof: 'Live Droid run <code>73c47b</code>, scored from the action log against the answer key: <strong>14 of 14 planted errors caught, 0 false alarms, 6 of 6 credit decisions right</strong> (outcome, band, limit and terms). It held APP-1043, a synthetic identity that a simple rule approves for $20,000.'
 criteriaSource: "From Hyphenate's brief, as copied into the project's track plan (docs/tracks.md)."
 criteria:
@@ -107,6 +107,26 @@ status:
     state: simulated
     note: 'Fogline Supply Co. and its customers are fictional. No money moves: the desk decides credit and records collection steps.'
 ---
+
+## Why an operating system
+
+Most of what makes this desk safe to run comes from GurtOS, not from the desk. The desk supplies the finance
+judgment; the OS supplies the separation, the keys, the approvals and the record. Every row marked "GurtOS" works
+the same for any agent on the box.
+
+| Capability | From | Today |
+|---|---|---|
+| Each seat works in its own space: its own Linux user and its own copy of the files, like a worktree per task | GurtOS | Shipped. The two seats run side by side without touching each other's files |
+| No seat ever sees a password: CRS and Nessie keys stay in the root-only vault, and tools that need them run in the core | GurtOS | Shipped. The merge gate checks no key appears anywhere in the log |
+| A seat cannot approve its own work: a decision above its authority waits for a person's OK on the portal or phone | GurtOS (the approval pause) and the desk (where the line is) | Shipped. The analyst's limit is $10,000; fraud holds always go to the controller |
+| Segregation of duties by tool access: only the analyst can record credit decisions, only the clerk collections actions | The desk, on GurtOS task specs | Shipped |
+| Everything is visible to the company, live, on the portal and the phone | GurtOS | Shipped |
+| One append-only record of every call, decision, rule id and approver | GurtOS (the action log) and the desk (rule ids, CRS request ids) | Shipped |
+| Undo one seat's file changes without touching the other's | GurtOS | Shipped. The log keeps the record either way |
+| A crash mid-run resumes where it was, with nothing paid or recorded twice | GurtOS | Shipped for tasks and approvals (moment 4) |
+| Pause every agent at once | GurtOS | Shipped as a setting (`paused`); the Business kill switch builds on it |
+| People, roles, policy-routed approvals, a "Waiting for me" inbox, an Audit view with CSV export | GurtOS Business | Being built; not on main yet |
+| Credit rules, the planted case, the scorer, the Credit desk window | The desk | Shipped |
 
 ## Evidence
 
