@@ -13,6 +13,7 @@ find_disc() {
 }
 
 mountroot() {
+	echo "Starting GurtOS from the disc. This takes a minute or two."
 	for m in isofs squashfs overlay loop sr_mod; do modprobe -q "$m" || true; done
 	wait_for_udev 10
 	mkdir -p /run/boxlive/iso /run/boxlive/ro /run/boxlive/rw

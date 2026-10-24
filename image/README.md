@@ -42,8 +42,9 @@ that key log in as root. Release builds have no sshd.
 
 ## Start it
 
-The disc's menu says GurtOS Server or GurtOS Personal and waits 5 seconds. On a machine without GurtOS, it
-installs. On a machine that already has it on its disk, it starts that. A blank disk is used straight away. A
+The disc's menu says GurtOS Server or GurtOS Personal. On a machine without GurtOS it waits 5 seconds, then
+installs. On a machine that already has GurtOS on its disk it waits 30 seconds, then starts that; pick Install to
+install again. A blank disk is used straight away. A
 disk with anything on it is erased only after someone types `erase` on the screen. The installer then restarts
 into GurtOS. Server shows the portal's box screen. Personal shows GNOME's welcome, which makes the first account.
 
@@ -58,8 +59,15 @@ and files survive the update.
 **Vultr** (Server): put the ISO at a URL (for example on the build VM:
 `cd /var/lib/box-image/out && python3 -m http.server 8080`, then `http://<build-vm-ip>:8080/gurtos-server-x86_64.iso`).
 In Vultr: Orchestration, ISOs, Add ISO, paste the URL. Deploy a Cloud Compute instance with that ISO as its
-image (at least 25 GB of disk). Open the instance's console: it installs, restarts, and shows the box. Detach
-the ISO afterwards or leave it; either way GurtOS starts from its disk.
+image (at least 25 GB of disk). Open the instance's console. A new instance first shows iPXE ("Custom OS
+selected. Please mount an ISO") for about a minute while Vultr attaches the ISO, then restarts into the disc by
+itself. The installer's screen stays dark for a minute or two, then copies the system with a progress bar; from
+the disc's menu to the box's screen takes about 3 minutes. Detach the ISO afterwards: GurtOS starts from its disk
+either way, but with the ISO attached every start waits 30 seconds at the disc's menu. To reinstall, restart with
+the ISO attached and pick Install within those 30 seconds (Vultr's reinstall refuses ISO instances).
+
+A box on Vultr has only a public address, so its firewall lets nothing reach the box's API: use it from Vultr's
+console, or put the box on a private network (Tailscale's addresses are allowed).
 
 **UTM on a Mac** (Apple silicon), the quickest way to try it:
 1. In UTM: Create a New Virtual Machine, then **Virtualize** (not Emulate: emulation is about 10 times slower).
@@ -127,6 +135,18 @@ after the rollback. An update also copies over `/etc/machine-id`, SSH host keys,
 - The two 6 GB slots cost 12 GB of disk (24 GB on Personal).
 - Updates are signed with one ed25519 key on one build VM. There is no key rotation and no rollback protection
   (an old signed image installs fine).
+
+## Network and firewall
+
+`/etc/nftables.conf` drops everything coming in except replies to the box's own connections, ping and DHCP. On
+GurtOS Server the box's API and portal (port 7700) are also open to private networks (10/8, 172.16/12,
+192.168/16, Tailscale's 100.64/10, link-local, IPv6 ULA), so a phone on the same network can pair; the box
+listens on every address and sets `BOX_URL` to its own address at each start (`box-env`), so the pairing QR code
+opens on the phone. Never from the public internet: most of the API takes no token, so anyone who could reach it
+could approve a spend or start a task. SpacetimeDB (port 3000) is never open to the network, because its
+`answer` reducer takes anonymous calls; the portal falls back to the API's log stream. GurtOS Personal keeps the
+API on `127.0.0.1`. Debug builds also open ssh (22). The time zone is Pacific (`BOX_TIMEZONE` at build time
+changes it; Personal's own setup asks).
 
 ## GurtOS Personal
 
@@ -197,7 +217,11 @@ With `image/test` in QEMU on linuxbox, Oct 24:
   an update to slot B that account, its sudo and its files are still there, and GDM asks for a login instead of
   running setup again. A broken update rolls back by itself.
 
-Not tested: Vultr itself, Parallels, a real PC, the kernel-panic path of a bad update, an update fetched by URL,
+On Vultr (by the QA thread, Oct 23, release ISO built 21:34 PT): the ISO installed on a blank 160 GB disk with
+BIOS in about 3 minutes from the disc booting to the box's screen, came back about 25 s after a hard power-off,
+and the disc started the box from disk when it was already installed.
+
+Not tested: Parallels, a real PC, the kernel-panic path of a bad update, an update fetched by URL,
 clicking through GNOME's setup by hand, the Box desktop layer running in a logged-in session, and Personal on
 arm64.
 
@@ -228,7 +252,8 @@ Stock Ubuntu Server 24.04 has a login prompt, a user with sudo, snapd, cloud-ini
 - **Has an A/B disk layout, a static GRUB menu and `box-update`** (above), instead of grub-mkconfig and apt.
 - **Boots its install disc live**, with a custom initramfs boot method (`boot=boxlive`): the disc's squashfs
   is a read-only root with a RAM layer on top.
-- **Networking** is systemd-networkd with DHCP on every wired card (no netplan).
+- **Networking** is systemd-networkd with DHCP on every wired card (no netplan), behind an inbound firewall
+  (above).
 
 Every file the image adds is in `rootfs/` (both editions; the kiosk and networking files are Server only) and
 `rootfs-personal/` (Personal only), at the path it gets on the machine. Internal names (the `box` service,

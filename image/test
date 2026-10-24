@@ -41,7 +41,8 @@ common=(-name box-test -m 4096 -smp 4 -display none
   -drive "if=none,id=cd,media=cdrom,readonly=on,file=$iso" -drive "if=none,id=hd,file=$run/disk.qcow2"
   -device virtio-blk-pci,drive=hd,bootindex=1
   -serial "file:$run/serial.log" -monitor "unix:$run/mon.sock,server,nowait"
-  -nic "user,model=virtio-net-pci,hostfwd=tcp:127.0.0.1:$port-:22" -daemonize -pidfile "$run/qemu.pid")
+  -nic "user,model=virtio-net-pci,hostfwd=tcp:127.0.0.1:$port-:22,hostfwd=tcp:127.0.0.1:$((port + 1000))-:3000,hostfwd=tcp:127.0.0.1:$((port + 2000))-:7700"
+  -daemonize -pidfile "$run/qemu.pid")
 if [[ $arch == arm64 ]]; then
   cp "$share/edk2-arm-vars.fd" "$run/vars.fd"
   qemu-system-aarch64 -machine virt -cpu max -accel tcg,thread=multi "${common[@]}" \
@@ -85,6 +86,16 @@ mon system_reset
 wait_for 'box: up and healthy' 2 600
 [[ $(box_id 1) == "$(box_id 2)" && -n $(box_id 1) ]] || { echo "test: FAILED, the box's identity changed"; exit 1; }
 echo "test: back up after the power cut, same box $(box_id 2)"
+
+# The firewall, from outside the VM. QEMU's network makes us a private address (10.0.2.2), like a home network.
+stdb=$(curl -s -o /dev/null -w '%{http_code}' --max-time 8 "http://127.0.0.1:$((port + 1000))/v1/ping" || true)
+[[ $stdb == 000 ]] || { echo "test: FAILED, SpacetimeDB on 3000 answered from outside ($stdb)"; exit 1; }
+echo "test: SpacetimeDB (3000) does not answer from outside"
+if [[ $edition == server- ]]; then
+  curl -sf --max-time 8 "http://127.0.0.1:$((port + 2000))/api/health" | grep -q '"ok":true' ||
+    { echo "test: FAILED, the box's API (7700) does not answer from a private network"; exit 1; }
+  echo "test: the box's API (7700) answers from a private network"
+fi
 
 if [[ $name != *-debug ]]; then
   echo "test: PASSED (a release build has no ssh, so the update steps need --debug)"

@@ -8,6 +8,7 @@
 #   image/build personal [arch]    the Personal edition: GNOME desktop, the person's own account, the Box layer
 #   image/build --here x86_64 [personal]   this machine. Only on a build VM: it needs root and loop devices.
 # Env: BOX_SSH_KEY     a public key file. Adds sshd with that key for root. Debug builds only.
+#      BOX_TIMEZONE    the time zone until someone changes it (default America/Los_Angeles)
 # Outputs on the build machine, in /var/lib/box-image/out: gurtos-<edition>-<arch>.iso, the install disc, and
 # gurtos-<edition>-<arch>.sqfs (+ .sha256, .sig), the update image. Edition is server or personal. Debug builds end
 # in -debug, so they cannot be mistaken for a release.
@@ -33,7 +34,7 @@ if [[ ${1:-} != --here ]]; then
     echo "echo '$(git rev-parse --short HEAD)$(git diff --quiet HEAD -- . || echo +dirty)' > $dest/image/.commit"
     [[ -n $key ]] && echo "echo $key | base64 -d > $dest/image/.ssh-key"
     for arch in $([[ ${1:-x86_64} == all ]] && echo x86_64 arm64 || echo "${1:-x86_64}"); do
-      echo "$dest/image/build --here $arch $edition"
+      echo "BOX_TIMEZONE='${BOX_TIMEZONE:-}' $dest/image/build --here $arch $edition"
     done
   } | $BUILD_SHELL sudo bash -s
   exit
@@ -169,7 +170,8 @@ if [[ $edition == server ]]; then
 else
   # The shared files, without the Server's screen and networking, then the Personal edition's own.
   rsync -a --exclude /etc/fstab --exclude /etc/systemd/network/ --exclude /etc/systemd/system/box-kiosk.service \
-    --exclude /usr/local/lib/box-os/kiosk.py "$src/image/rootfs/" "$root/"
+    --exclude /usr/local/lib/box-os/kiosk.py --exclude /etc/systemd/system/box.service.d/network.conf \
+    "$src/image/rootfs/" "$root/"
   rsync -a "$src/image/rootfs-personal/" "$root/"
 fi
 mkdir -p "$root/etc/box-os"
@@ -178,6 +180,10 @@ key=$top/update-signing.key # stays on the build machine
 openssl pkey -in "$key" -pubout -out "$root/etc/box-os/update.pub"
 build_id="$(date -u +%Y%m%d-%H%M)-$(cat "$src/image/.commit" 2>/dev/null || echo local)"
 printf 'BUILD=%s\nARCH=%s\n' "$build_id" "$arch" > "$root/etc/box-os/release"
+# Pacific time until someone changes it (BOX_TIMEZONE at build time): the screen shows the clock and greeting.
+ln -sf "/usr/share/zoneinfo/${BOX_TIMEZONE:-America/Los_Angeles}" "$root/etc/localtime"
+echo "${BOX_TIMEZONE:-America/Los_Angeles}" > "$root/etc/timezone"
+[[ -e $root/usr/share/zoneinfo/${BOX_TIMEZONE:-America/Los_Angeles} ]] || { say "unknown time zone $BOX_TIMEZONE"; exit 1; }
 # The product's name. Ubuntu's codename stays, so apt and its tools still know the base.
 version=$(date -u +%Y.%m.%d)
 cat > "$root/usr/lib/os-release" <<OSREL
@@ -204,7 +210,7 @@ printf 'GurtOS %s %s\n' "$Edition" "$version" > "$root/etc/issue.net"
   # State lives on the data partition. These are its mount points; what the image put there is hidden at boot.
   rm -rf /etc/box /var/lib/box /var/lib/spacetimedb /root/.config/spacetime
   mkdir -p /data /boot/efi /etc/box /var/lib/box /var/lib/spacetimedb /root/.config/spacetime /var/log/journal
-  systemctl enable systemd-networkd systemd-resolved seatd box-firstboot box-kiosk box-confirm box-install >/dev/null 2>&1
+  systemctl enable nftables systemd-networkd systemd-resolved seatd box-firstboot box-kiosk box-confirm box-install >/dev/null 2>&1
   # No login prompt anywhere: the screen is the box, and no human account exists.
   systemctl mask getty@.service serial-getty@.service autovt@.service console-getty.service >/dev/null 2>&1
   update-initramfs -u -k all >/dev/null
@@ -219,7 +225,7 @@ printf 'GurtOS %s %s\n' "$Edition" "$version" > "$root/etc/issue.net"
   mkdir -p /data /boot/efi /etc/box /var/lib/box /var/lib/spacetimedb /root/.config/spacetime /var/log/journal
   locale-gen en_US.UTF-8 >/dev/null
   update-locale LANG=en_US.UTF-8
-  systemctl enable box-firstboot box-confirm box-install box-owner.service box-owner.path >/dev/null 2>&1
+  systemctl enable nftables box-firstboot box-confirm box-install box-owner.service box-owner.path >/dev/null 2>&1
   systemctl set-default graphical.target >/dev/null 2>&1
   update-initramfs -u -k all >/dev/null
   cd /boot
@@ -231,6 +237,7 @@ if [[ -f $src/image/.ssh-key ]]; then
   install -d -m 700 "$root/root/.ssh"
   install -m 600 "$src/image/.ssh-key" "$root/root/.ssh/authorized_keys"
   echo 'DEBUG=sshd-with-a-root-key' >> "$root/etc/box-os/release"
+  sed -i 's/# debug builds: ssh/tcp dport 22 accept # debug build/' "$root/etc/nftables.conf"
 fi
 
 # Every machine makes its own identity on first boot.

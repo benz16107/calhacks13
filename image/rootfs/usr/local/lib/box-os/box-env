@@ -1,0 +1,6 @@
+#!/bin/bash
+# Works out the box's address at each start (DHCP can change it) for box.service: BOX_LISTEN and BOX_URL.
+set -euo pipefail
+ip=$(ip -4 route get 1.1.1.1 2>/dev/null | sed -n 's/.* src \([0-9.]*\).*/\1/p')
+mkdir -p /run/box-os
+{ echo BOX_LISTEN=0.0.0.0; [ -z "$ip" ] || echo "BOX_URL=http://$ip:7700"; } > /run/box-os/box.env

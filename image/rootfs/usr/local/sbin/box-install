@@ -65,7 +65,7 @@ for p in box-a box-b box-data; do mkfs.ext4 -q -F -L $p "$(part $p)"; done
 say "Copying the system to slot A"
 mkdir -p $mnt/a $mnt/data $mnt/esp
 mount "$(part box-a)" $mnt/a
-unsquashfs -f -q -no-progress -d $mnt/a "$src"
+unsquashfs -f -d $mnt/a "$src" # its progress bar shows on the screen
 mount "$(part box-data)" $mnt/data
 mkdir -p $mnt/data/update
 # Each /data/... bind mount in the system's fstab starts as a copy of what the image has at that path.
