@@ -19,7 +19,7 @@ release install that was deleted at 22:54 PT. Their IDs and addresses are kept o
 
 ## Summary
 
-Status at 00:35 PT Saturday. **8 P0 found: 7 fixed and verified, P0-8 open.** 20 P1 and 18 P2 found in the product, plus 7 in
+Status at 00:55 PT Saturday. **8 P0 found, all 8 fixed and verified.** 20 P1 and 18 P2 found in the product, plus 7 in
 the docs site and 9 in the showcase. The four moments, Shopper, the wallet, the credit desk and a phone paired over the
 network all work on main as of 717bc3f.
 
@@ -32,7 +32,7 @@ network all work on main as of 717bc3f.
 | P0-5 paired phone loses live updates and apps | Fixed, verified 23:42 | portal 3ae539b |
 | P0-6 Caddy-relayed track routes get 401 | Fixed, verified 23:47 | core 6879fb9 |
 | P0-7 one task reads another task's folder copy | Fixed, verified 00:12 (copy is 0600 and owned by its task) | core bb0ccde |
-| **P0-8 scanning the pairing QR doesn't pair** | **Open**, found 00:27: the QR address `/pair#<code>` opens "Pair this phone first" with the code field empty and Pair disabled; typing the code works (shot 75) | portal |
+| P0-8 scanning the pairing QR doesn't pair | Fixed, verified 00:53: `/pair#<code>` and `/#pair/<code>` fill the code on a fresh iPhone-UA phone, and one tap pairs (shot 78) | portal d64cb80 |
 | P1-1 undo leaves files on disk | Fixed, verified | core c6f747e |
 | P1-2 direct connections not logged | Fixed, verified 00:12 (1.1.1.1 and 169.254.169.254 logged) | core bb0ccde |
 | P1-4 stale release ISO, no firewall | Fixed, verified 00:02: GurtOS, Pacific time, 3000 and 7700 closed to the internet | image 881318a |
@@ -55,7 +55,8 @@ network all work on main as of 717bc3f.
 | P2-13 Elastic index mixes test boxes | Fixed, verified 00:48: 505 documents from installed boxes plus one demo run kept for screenshots (a18523); no dev boxes; the agent filters to installed boxes by default | elastic ca03219, portal 717bc3f |
 | Jira through Caddy after the token gate | Fixed. The Jira thread checked Approve and Roll back from the real panel on BOX-14 through Caddy. QA confirmed from outside at 00:45: /t/jira/task 401 without the secret, /t/mana/status 200, everything else 404 | core 6879fb9, jira c82fcdb |
 | D-1 to D-4, D-6, D-7 docs | Fixed, live. D-6 spot-checked 00:52: the Elastic, Jira and Shopper guides say GurtOS log (gurtos-log), GurtOS agent task and GurtOS Test Store, with no "Box" names left | docs 199dce5, 9cc7d92 |
-| P1-7 live banner names the wrong hosts | **Still open** at 00:21 on a phone: "tm2diipf4e2 tried to reach attacker.example. It may not reach any host." (id instead of title, and its host is shop.localhost:8123) | portal |
+| P1-7 live banner names the wrong hosts | Fixed, verified 00:54 on a phone off the box: the first banner text is "Find me a road bike (live banner 2) tried to reach attacker.example. It may only reach shop.localhost:8123." (shot 79) | portal d64cb80 |
+| P2-18 phone tasks logged as "api" | Fixed, verified: "Ask the box" on a phone logs the device name as source | portal d64cb80 |
 | Open P1s | P1-12 ASI:One not paired; P1-13 real agent probes the proxy in moment 2; D-5; showcase S-1 to S-6 | |
 
 **Not re-tested yet:** P2-6, P2-7, P2-8, P2-10 (portal says fixed), and the installed boxes. **At 00:40:** Vultr runs current main (the public Mana app answers 200; Jira's route
@@ -269,6 +270,9 @@ image/README.md still says "most of the API takes no token" (image).
 **P2-18. A task started from a phone is logged as source "api".** Owner: portal. "Ask the box" on a paired phone
 made a task with `source: api`; the log and Jira would read better with the device name or "phone".
 
+**P2-19. "Spent today" shows an old total for the first seconds after a page loads.** Owner: portal. A freshly loaded
+phone showed "$18.23 spent today" for about 4 s, then the right "$29.79". Minor.
+
 ## Docs site (gurtos.com)
 
 **D-1 to D-4 and D-7 fixed in 199dce5 and live, spot-checked 00:00 PT:** real ISO names, `gurt-<id>`, the Personal ISO
@@ -397,3 +401,4 @@ on the pages or in OCR of all 61 images; no em dashes; every page fits 390 x 844
 | 00:21 | P1-7 on a phone (still open) | 72 |
 | 00:27 | Pairing from the QR address on a fresh phone (P0-8); two phones racing (P2-1) | 73 to 76 |
 | 00:33 | Main a427291: validation, clean-stop marker, no /find boot task, /find on a phone | 77 |
+| 00:53 | Main d64cb80: QR pairing on fresh phones, the live moment 2 banner, task source | 78, 79 |
