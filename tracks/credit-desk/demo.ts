@@ -7,43 +7,13 @@ import fs from 'node:fs';
 import path from 'node:path';
 import type { Approval, DemoKit, LogEvent, Task } from '../../core/contract.ts';
 
-const call = (tool: string, input: object) => `call ${tool} ${JSON.stringify(input)}`;
-const fraudHold = { application_id: 'APP-1043', outcome: 'fraud hold', band: 'none', limit: 0, terms: 'cash in advance', rules: ['FRD-1', 'FRD-2'], data: { fraud_score: 88 }, why: 'Identity check fails and the fraud score is 88.' };
-
-const analyst = [
-  'missing case/answer_key.json',
-  call('credit-desk.crs', { application_id: 'APP-1043' }),
-  call('credit-desk.bank', { what: 'statements', application_id: 'APP-1043' }),
-  call('credit-desk.flag', {
-    ids: ['APP-1043', 'BC-1043'], problem: 'Fake applicant: synthetic identity', rules: ['FRD-1', 'FRD-2', 'FRD-3'],
-    detail: 'TransUnion identity fails (2201 SSN not associated with the name, 2202 date of birth does not match the file). Fraud Finder risk score 88: prepaid VoIP phone the applicant does not own, email first seen days ago. The LLC was filed 2026-09-01 but claims 4 years in business.',
-    conclusion: 'Fraud hold: no credit, cash in advance only, refer to the controller.',
-  }),
-  call('credit-desk.credit_decision', fraudHold),
-  'ask Credit desk [APP-1043 fraud hold 0]: confirm the fraud hold on Pacific Crest Provisions LLC?',
-  call('credit-desk.credit_decision', fraudHold),
-  call('credit-desk.crs', { application_id: 'APP-1042' }),
-  call('credit-desk.credit_decision', { application_id: 'APP-1042', outcome: 'approve', band: 'A', limit: 40000, terms: 'Net 30', rules: ['BND-A', 'LIM-1'], why: 'Clean 790 file.' }),
-].join('\n');
-
-const clerk = [
-  call('credit-desk.bank', { what: 'deposits' }),
-  call('credit-desk.flag', {
-    ids: ['PMT-8812', 'INV-24089', 'INV-24098'], problem: 'Payment applied to the wrong invoice', rules: ['COL-6'],
-    detail: "Golden Gate Bagel paid 1,940.00 with remittance INV-24098, and the bank deposit carries that memo, but the payment was applied to Greenleaf Juice's INV-24089.",
-    conclusion: 'Reapply PMT-8812 to INV-24098. INV-24089 is still open.',
-  }),
-  call('credit-desk.collections_action', { subject: 'SO-5528', action: 'release order', detail: 'Piedmont is current once INV-24111 carries its real 2026 date.', rules: ['ORD-1'] }),
-  call('credit-desk.collections_action', { subject: 'C-1005', action: 'release credit hold', detail: 'The customer asks to ship SO-5521.', rules: ['COL-3'] }),
-].join('\n');
-
 const results = (events: LogEvent[], tool: string) =>
   events.flatMap((e) => (e.type === 'tool.call' && e.tool === tool ? [e.key] : []))
     .map((k) => events.find((e) => e.type === 'tool.result' && e.key === k))
     .flatMap((e) => (e?.type === 'tool.result' && e.ok ? [e.output as any] : []));
 
 export default async function (d: DemoKit) {
-  const run = await d.api('POST', '/t/credit-desk/run', { case: 'fogline-2026-10', worker: 'fake', scripts: { analyst, clerk } });
+  const run = await d.api('POST', '/t/credit-desk/run', { case: 'fogline-2026-10', scripted: true });
   const ask = await d.waitFor('the fraud referral', async () =>
     (await d.api<Approval[]>('GET', '/approvals')).find((a) => a.task === run.tasks.analyst && a.state === 'pending'));
   const { task: waiting, events: early } = await d.api<{ task: Task; events: LogEvent[] }>('GET', `/tasks/${run.tasks.analyst}`);
@@ -51,6 +21,9 @@ export default async function (d: DemoKit) {
   const codes = crs.identity.problems.map((p: { code: string }) => p.code).join(', ');
   d.check(!crs.identity.verified && crs.fraud.risk_score >= 70, `CRS (${crs.source}): APP-1043's identity fails (${codes}) and its fraud score is ${crs.fraud.risk_score}`);
   d.check(waiting.state === 'waiting' && ask.question.includes('[APP-1043 fraud hold 0]'), 'the fraud referral paused the analyst until the controller answers');
+  const view = await d.api('GET', `/t/credit-desk/state?run=${run.run}`);
+  const row = view.run.applications.find((a: { id: string }) => a.id === 'APP-1043');
+  d.check(view.run.seats.length === 2 && row?.ask?.id === ask.id && row.checks?.fraud === 88, "the desk's window shows both seats, APP-1043's checks, and the fraud hold waiting for the controller");
 
   await d.settled([run.tasks.clerk]);
   const { events: clerkEvents } = await d.api<{ events: LogEvent[] }>('GET', `/tasks/${run.tasks.clerk}`);

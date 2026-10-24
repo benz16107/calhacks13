@@ -44,6 +44,21 @@ $18,500 rush order to a Florida freight forwarder never ships.
 
 ## Run it
 
+- **The Credit desk window.** Open Credit desk from the box's app grid or dock, on the box's screen or a paired
+  phone. It shows one run at a time: both seats' live status, every application with the desk's decision, the rule
+  ids it rests on and what the simple rule would have done, the problems and collections actions, the score against
+  the answer key, and the rules file.
+
+  ![The Credit desk window: APP-1043 waits for the controller](window.png)
+
+  - **Quick run** starts the scripted seats on the Fogline case: no model, live CRS and Nessie, about 10 seconds.
+    APP-1043's row turns amber with the fraud referral, and the simple rule beside it approves $20,000. Approve or
+    Deny it in the row, on the phone or in Notification Center; the first answer wins. A quick run acts out only the
+    fraud catch and one ledger error, so its score is 2 of 14.
+  - **New run** puts both seats on the whole case with Droid, about 10 to 15 minutes of model time. The controller's
+    questions arrive one by one as amber rows.
+  - **A judge's own case:** put the folder under `tracks/credit-desk/cases/` on the box and it appears in the case
+    menu next to the run buttons. Or start it through the API with `{"dir": "/path/to/case"}`.
 - **`./demo`**, the merge gate. The credit desk's step uses scripted seats (the box's fake worker) that call the real
   tools, live against CRS and Nessie, in about 8 seconds. It checks that CRS catches APP-1043, that the fraud referral
   pauses the analyst, that Nessie shows the payment the ledger misapplied, that neither seat can act above its
@@ -53,10 +68,10 @@ $18,500 rush order to a Florida freight forwarder never ships.
 - **The live run with Droid:** `DEMO_LIVE=credit-desk ./demo`. Both seats work the whole case with Droid, a script
   answers the controller's questions yes, and the run is scored. The evidence (score, log, both reports, worker logs)
   is saved in `/var/lib/box-demo/credit-desk-<run>/`.
-- **On a running box**, for a live demo or a judge's case:
+- **The API**, on the box itself. From anywhere else, add the paired phone's token: `-H "Authorization: Bearer <token>"`.
 
   ```sh
-  curl -s -X POST localhost:7700/t/credit-desk/run -d '{"case": "fogline-2026-10"}'   # or {"dir": "/path/to/case"}
+  curl -s -X POST localhost:7700/t/credit-desk/run -d '{"case": "fogline-2026-10"}'   # or {"dir": "/path/to/case"}, or {"scripted": true}
   curl -s localhost:7700/t/credit-desk/runs                                         # runs and their tasks
   curl -s localhost:7700/approvals                                                  # what waits for the controller
   curl -s -X POST localhost:7700/approvals/<id> -d '{"approved": true, "by": "controller"}'
@@ -108,7 +123,9 @@ $18,500 rush order to a Florida freight forwarder never ships.
 
 | Path | What it is |
 |---|---|
-| `track.ts` | The track: the five tools and the `/run`, `/score` and `/runs` routes |
+| `track.ts` | The track: the five tools, the window's routes, and `/run`, `/score` and `/runs` |
+| `app.html` | The Credit desk window |
+| `scripts.ts` | The scripted seats for a quick run and the demo |
 | `seats.ts` | What each seat is told, and which tools it gets |
 | `crs.ts`, `nessie.ts` | The CRS and Nessie clients. One CRS login per box process; a failed login is never retried |
 | `score.ts` | Scoring against the answer key, and the simple rule on the same CRS answers |
@@ -364,7 +381,7 @@ controller who signs off above $10,000 and on every fraud referral.
 | Approvals and segregation of duties | Tool access per seat, and the controller gate in `credit_decision` and `collections_action`, on the box's own approval pause |
 | Every call traceable | Every tool call and result is in the log; each decision carries its rule ids, the figures used, the CRS request ids and who approved it |
 | Proof | `POST /t/credit-desk/score` scores a run against the answer key. The latest live Droid run, under the Mana rules: caught 14 of 14, 0 false alarms, all 6 credit decisions right (`runs/2026-10-24-live-73c47b-rules-0.2/`) |
-| They may run their own case | Any folder that passes `check-case.ts`: `POST /t/credit-desk/run {"dir": ...}`. See "Add your own case" |
+| They may run their own case | Any folder that passes `check-case.ts`: put it under `cases/` on the box and pick it in the Credit desk window, or `POST /t/credit-desk/run {"dir": ...}`. See "Add your own case" |
 | A video that opens with the moment | APP-1043: the simple rule approves $20,000, CRS fails the identity, the analyst holds it, the controller confirms on the phone |
 
 ### CRS

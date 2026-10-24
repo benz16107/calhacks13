@@ -4,7 +4,7 @@
 import { randomBytes } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
-import type { Box, Ctx, Track } from '../../core/contract.ts';
+import type { Box, Ctx, LogEvent, Track } from '../../core/contract.ts';
 import { checkCase, parseCsv } from './check-case.ts';
 import { CRS_HOST, checkApplication } from './crs.ts';
 import {
@@ -12,6 +12,7 @@ import {
   safeId, stageWorkspace, toolUses, workspaceDir, type RunInfo,
 } from './desk.ts';
 import { NESSIE_HOST, readBank } from './nessie.ts';
+import * as scripted from './scripts.ts';
 import { scoreRun } from './score.ts';
 import { ACTIONS, ANALYST_TOOLS, CLERK_TOOLS, CONTROLLER_ACTIONS, OUTCOMES, analystPrompt, clerkPrompt } from './seats.ts';
 
@@ -197,10 +198,13 @@ export default {
   ],
 
   routes: {
-    // Start the seats on a case: {case: "fogline-2026-10"} or {dir: "/path/to/case"}, optional {rules: "/path/to/rules.yaml"},
-    // {seats: ["analyst", "clerk"]}, and for tests {worker: "fake", scripts: {analyst, clerk}}.
+    // Start the seats on a case: {case: "fogline-2026-10"} or {dir: "/path/to/case"}, optional {rules: "/path/to/rules.yaml"}
+    // and {seats: ["analyst", "clerk"]}. {scripted: true} runs the Fogline case's scripted seats: no model, about 10 seconds.
     'POST /run': async (req, box) => {
       const body = await req.json().catch(() => ({}));
+      if (body.scripted && (body.dir || (body.case ?? 'fogline-2026-10') !== 'fogline-2026-10')) {
+        return Response.json({ error: 'scripted seats exist only for the fogline-2026-10 case' }, { status: 400 });
+      }
       const caseDir = body.dir ? path.resolve(String(body.dir)) : path.join(CASES_DIR, safeId(body.case ?? 'fogline-2026-10'));
       const { problems } = checkCase(caseDir);
       if (problems.length) return Response.json({ error: 'the case does not follow the format in README.md', problems }, { status: 400 });
@@ -223,19 +227,19 @@ export default {
       const company = fs.existsSync(profile) ? fs.readFileSync(profile, 'utf8').match(/^#\s+(.+)$/m)?.[1] ?? 'the company' : 'the company';
       const brief = { company, asOf: meta.as_of, applications: apps, bank: info.nessie, hasProfile: fs.existsSync(profile) };
       const seats: string[] = body.seats ?? ['analyst', 'clerk'];
-      const worker = body.worker === 'fake' ? 'fake' : 'droid';
+      const worker = body.scripted ? 'fake' : 'droid';
       const tasks: Record<string, string> = {};
       const withBank = (tools: string[]) => tools.filter((t) => info.nessie || t !== 'credit-desk.bank');
       if (seats.includes('analyst') && apps.length) {
         tasks.analyst = (await box.createTask({
           title: `Credit analyst: ${meta.case_id}`, workspace: info.workspace, worker, source: `credit-desk:${run}`, tools: withBank(ANALYST_TOOLS),
-          prompt: worker === 'fake' ? String(body.scripts?.analyst ?? '') : analystPrompt(brief),
+          prompt: worker === 'fake' ? scripted.analyst : analystPrompt(brief),
         })).id;
       }
       if (seats.includes('clerk') && fs.existsSync(path.join(caseDir, 'customers.csv'))) {
         tasks.clerk = (await box.createTask({
           title: `Collections clerk: ${meta.case_id}`, workspace: info.workspace, worker, source: `credit-desk:${run}`, tools: withBank(CLERK_TOOLS),
-          prompt: worker === 'fake' ? String(body.scripts?.clerk ?? '') : clerkPrompt(brief),
+          prompt: worker === 'fake' ? scripted.clerk : clerkPrompt(brief),
         })).id;
       }
       return Response.json({ run, workspace: info.workspace, rules: rulesFile, tasks });
@@ -254,9 +258,80 @@ export default {
     },
 
     'GET /runs': (_req, box: Box) => {
-      const events = readLog();
-      const runs = events.flatMap((e) => (e.type === 'note' && e.track === 'credit-desk' && (e.data as any).kind === 'run.started' ? [(e.data as any).info as RunInfo] : []));
+      const runs = runsOf(readLog()).map((r) => r.info);
       return Response.json(runs.map((r) => ({ ...r, tasks: box.tasks().filter((t) => runOf(t.source) === r.run).map((t) => ({ id: t.id, title: t.title, state: t.state, costCents: t.costCents })) })));
     },
+
+    // The window: the cases, the runs, and for one run (?run=, default the latest) its seats, decisions, problems,
+    // actions, what waits for the controller, and the score against the answer key.
+    'GET /': () => new Response(PAGE, { headers: { 'content-type': 'text/html; charset=utf-8' } }),
+    // shortcut: re-reads the whole log on every refresh (the window asks every 2.5 s); keep a cursor if the log grows large.
+    'GET /state': (req, box) => Response.json(windowState(readLog(), box, new URL(req.url).searchParams.get('run'))),
+    'GET /rules': (req) => {
+      const r = runsOf(readLog()).find((x) => x.info.run === new URL(req.url).searchParams.get('run'));
+      return new Response(fs.readFileSync(r?.info.rulesFile ?? DEFAULT_RULES, 'utf8'), { headers: { 'content-type': 'text/plain; charset=utf-8' } });
+    },
   },
+
+  apps: [{ name: 'credit-desk', title: 'Credit desk', href: '/' }],
 } satisfies Track;
+
+const PAGE = fs.readFileSync(new URL('./app.html', import.meta.url), 'utf8');
+
+const runsOf = (events: LogEvent[]) =>
+  events.flatMap((e) => (e.type === 'note' && e.track === 'credit-desk' && (e.data as any)?.kind === 'run.started' ? [{ info: (e.data as any).info as RunInfo, at: e.at }] : []));
+
+function windowState(events: LogEvent[], box: Box, want: string | null) {
+  const cases = fs.readdirSync(CASES_DIR).filter((c) => fs.existsSync(path.join(CASES_DIR, c, 'case.json'))).map((c) => {
+    const meta = JSON.parse(fs.readFileSync(path.join(CASES_DIR, c, 'case.json'), 'utf8'));
+    return { id: c, title: meta.title ?? c, as_of: meta.as_of, scripted: c === 'fogline-2026-10' };
+  });
+  const runs = runsOf(events);
+  const r = runs.find((x) => x.info.run === want) ?? runs.at(-1);
+  const rulesFile = r?.info.rulesFile ?? DEFAULT_RULES;
+  const rulesText = fs.readFileSync(rulesFile, 'utf8');
+  const rules = { file: path.basename(rulesFile), count: loadRules(rulesFile).ids.size, version: rulesText.match(/^version:\s*(.+)$/m)?.[1] ?? null, source: rulesText.match(/^source:\s*"?([^"\n]+)"?$/m)?.[1] ?? null };
+  const base = { cases, rules, runs: runs.map((x) => ({ run: x.info.run, case: x.info.caseId, at: x.at })).reverse() };
+  if (!r) return { ...base, run: null };
+
+  const tasks = box.tasks().filter((t) => runOf(t.source) === r.info.run);
+  const ids = new Set(tasks.map((t) => t.id));
+  const uses = toolUses(events, ids);
+  const pending = box.approvals().filter((a) => ids.has(a.task) && a.state === 'pending');
+  const seat = (t: { title: string }) => (t.title.startsWith('Credit analyst') ? 'analyst' : 'clerk');
+  // The desk's own log lines are the readable story of a seat; Droid's raw tool calls are not.
+  const story = (id: string) => events.filter((e) => e.type === 'task.step' && e.task === id && /^(CRS on|Problem:|Decision on|Collections:)/.test(e.text)).slice(-5).map((e) => (e as { text: string }).text);
+  const score = fs.existsSync(path.join(r.info.caseDir, 'answer_key.json')) ? scoreRun(r.info, events, box.tasks()) : null;
+  const appDir = path.join(r.info.caseDir, 'applications');
+  const applications = (fs.existsSync(appDir) ? fs.readdirSync(appDir).filter((f) => f.endsWith('.json')).sort() : []).map((f) => {
+    const a = JSON.parse(fs.readFileSync(path.join(appDir, f), 'utf8'));
+    const decision = uses.findLast((u) => u.tool === 'credit-desk.credit_decision' && u.ok && u.output?.status === 'recorded' && u.input.application_id === a.application_id);
+    const last = uses.findLast((u) => u.tool === 'credit-desk.credit_decision' && u.ok && u.input.application_id === a.application_id);
+    const crs = uses.findLast((u) => u.tool === 'credit-desk.crs' && u.ok && u.input.application_id === a.application_id)?.output;
+    const ask = pending.find((p) => p.question.includes(`[${a.application_id} `));
+    return {
+      id: a.application_id, business: a.business?.legal_name, requested: a.request?.credit_limit, terms: a.request?.terms,
+      decision: decision?.output.decision ?? null, why: decision?.input.why ?? null,
+      // The analyst's latest proposal when it still waits for the controller (above authority, fraud hold).
+      proposed: last?.output?.status === 'needs controller' ? { outcome: last.input.outcome, limit: last.input.limit, terms: last.input.terms } : null,
+      checks: crs ? { transunion: crs.credit?.transunion?.score ?? null, identity: crs.identity?.verified ?? null, fraud: crs.fraud?.risk_score ?? null, source: crs.source } : null,
+      simple_rule: score?.simple_rule.find((x: { application_id: string }) => x.application_id === a.application_id) ?? null,
+      ask: ask ? { id: ask.id, question: ask.question } : null,
+    };
+  });
+  const started = Date.parse(r.at);
+  const last = Math.max(started, ...tasks.map((t) => Date.parse(t.updatedAt)));
+  return {
+    ...base,
+    run: {
+      run: r.info.run, case: r.info.caseId, at: r.at, minutes: Math.max(1, Math.round((last - started) / 60000)),
+      costCents: tasks.reduce((n, t) => n + t.costCents, 0), scripted: tasks.some((t) => t.worker === 'fake'),
+      seats: tasks.map((t) => ({ seat: seat(t), id: t.id, state: t.state, costCents: t.costCents, story: story(t.id) })),
+      approvals: pending.map((p) => ({ id: p.id, question: p.question, seat: seat(tasks.find((t) => t.id === p.task)!) })),
+      applications,
+      problems: uses.filter((u) => u.tool === 'credit-desk.flag' && u.ok).map((u) => ({ ids: u.input.ids, problem: u.input.problem, rules: u.input.rules, seat: seat(tasks.find((t) => t.id === u.task)!) })),
+      actions: uses.filter((u) => u.tool === 'credit-desk.collections_action' && u.ok && u.output?.status === 'recorded').map((u) => ({ ...u.output.action, detail: u.input.detail })),
+      score: score && { summary: score.summary, caught: score.caught, total: score.total, false_alarms: score.false_alarms.length, errors: score.errors, moment: score.moment },
+    },
+  };
+}
