@@ -7,7 +7,7 @@ core/setup.sh >/dev/null
 
 mkdir -p /opt/box /etc/box
 rsync -a --delete --exclude node_modules --exclude .git ./ /opt/box/
-(cd /opt/box && npm ci --omit=dev --no-audit --no-fund --loglevel=error)
+(cd /opt/box && npm ci --omit=dev --no-audit --no-fund --no-update-notifier --loglevel=error)
 [ -f /etc/box/vault.env ] || install -m 600 /dev/null /etc/box/vault.env
 
 cat > /etc/systemd/system/box.service <<'UNIT'

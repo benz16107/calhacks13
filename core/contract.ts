@@ -75,7 +75,8 @@ export type LogEvent =
   /** Progress the worker reports: plans, steps, diffs. `data` is what the worker needs to resume. */
   | Ev<'task.step', { task: string; text: string; data?: unknown }>
   | Ev<'tool.call', { task: string; key: string; tool: string; input: unknown }>
-  | Ev<'tool.result', { task: string; key: string; ok: boolean; output?: unknown; error?: string }>
+  /** `cents` is what the call spent; it counts toward the task's cost. */
+  | Ev<'tool.result', { task: string; key: string; ok: boolean; output?: unknown; error?: string; cents?: number }>
   | Ev<'approval.asked', { task: string; approval: Approval }>
   | Ev<'approval.answered', { task: string; id: string; approved: boolean; by: string }>
   | Ev<'cost', { cents: number; what: string }>
@@ -110,7 +111,10 @@ export interface Ctx {
   box: Box;
   /** The task that called, if any. */
   task?: Task;
-  /** Unique per call and stable across retries after a restart. Use it as an idempotency key. */
+  /**
+   * Unique per call and stable across a restart. A call cut off by a power cut runs again with the same key,
+   * so pass it to your API as an idempotency key (Stripe and most payment APIs take one).
+   */
   key: string;
   /** Read a vault secret. Only names listed in the tool's or job's `secrets`. Never return it. */
   secret(name: string): string;

@@ -108,8 +108,11 @@ export const kill = (task: Task) => tryRun('pkill', '-KILL', '-u', task.user);
 export function seal(task: Task) {
   kill(task);
   unmount(dirs.root(task.id));
-  // Later tasks run as other users. They must be able to change files this task made.
+  // Later tasks run as other users and must be able to change files this task made, through their own
+  // copies. The layer's own folder becomes root-only, so no task can reach the layer directly.
   tryRun('chmod', '-R', 'a+rwX', dirs.upper(task.id));
+  tryRun('chown', 'root:root', dirs.upper(task.id));
+  tryRun('chmod', '0700', dirs.upper(task.id));
   tryRun('userdel', task.user);
 }
 

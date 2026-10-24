@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # The merge gate: runs the four demo moments, with no screen, on a test VM. Exit 0 = pass.
 #   ./demo                         the linuxbox VM if it is running, else the laptop VM
+#   ./demo laptop|linuxbox|vultr   that test machine
 #   BOX_SHELL='ssh my-vm' ./demo   any test machine with passwordless sudo
 #   ./demo --here                  this machine. Only on a test VM: it needs root.
 set -euo pipefail
@@ -11,19 +12,27 @@ if [[ ${1:-} == --here ]]; then
   core/setup.sh >/dev/null
   lock=$(sha256sum package-lock.json | cut -c1-16)
   if [[ ! -f node_modules/.lock-$lock ]]; then
-    npm ci --omit=dev --no-audit --no-fund --loglevel=error && touch "node_modules/.lock-$lock"
+    npm ci --omit=dev --no-audit --no-fund --no-update-notifier --loglevel=error && touch "node_modules/.lock-$lock"
   fi
   exec node --experimental-strip-types --disable-warning=ExperimentalWarning core/demo.ts
 fi
 
-if [[ -z ${BOX_SHELL:-} ]]; then
-  lima=$(command -v limactl || echo /home/linuxbrew/.linuxbrew/bin/limactl)
-  if [[ -x $lima ]] && "$lima" list box 2>/dev/null | grep -q Running; then
-    BOX_SHELL="$lima shell --workdir / box --"
-  else
-    BOX_SHELL="ssh -o ConnectTimeout=10 benmac /opt/homebrew/bin/limactl shell --workdir / box --"
-  fi
-fi
+lima=$(command -v limactl || echo /home/linuxbrew/.linuxbrew/bin/limactl)
+on() { [[ $(hostname -s) == "$1"* ]]; }
+laptop="/opt/homebrew/bin/limactl shell --workdir / box --"
+on benmac || laptop="ssh -o ConnectTimeout=10 benmac $laptop"
+linuxbox="/home/linuxbrew/.linuxbrew/bin/limactl shell --workdir / box --"
+on linuxbox || linuxbox="ssh -o ConnectTimeout=10 linuxbox $linuxbox"
+case ${1:-} in
+  laptop) BOX_SHELL=$laptop ;;
+  linuxbox) BOX_SHELL=$linuxbox ;;
+  vultr) BOX_SHELL="ssh -o ConnectTimeout=10 vultrbox" ;;
+  '')
+    if [[ -z ${BOX_SHELL:-} ]]; then
+      if on linuxbox && "$lima" list box 2>/dev/null | grep -q Running; then BOX_SHELL=$linuxbox; else BOX_SHELL=$laptop; fi
+    fi ;;
+  *) echo "usage: ./demo [laptop|linuxbox|vultr|--here]" >&2; exit 2 ;;
+esac
 
 # Ship this checkout (tracked and new files, not ignored ones) and run it there. node_modules stays between runs.
 dest=/opt/box-dev/$(basename "$PWD")

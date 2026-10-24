@@ -9,7 +9,7 @@ import path from 'node:path';
 import type { App, Approval, Box, Ctx, LogEvent, LogReader, ModelJob, NewEvent, Route, Task, TaskSpec, TaskState, Tool, Track } from './contract.ts';
 import { Live } from './live.ts';
 import { Log, apply, canMove, doneLayers, fold, type State } from './log.ts';
-import { PROXY_PORT, firewall, startProxy } from './net.ts';
+import { PLACEHOLDER_KEY, PROXY_PORT, firewall, relayCert, startProxy } from './net.ts';
 import * as sandbox from './sandbox.ts';
 import { HOME, dirs } from './sandbox.ts';
 import { loadVault } from './vault.ts';
@@ -63,6 +63,7 @@ class Core {
   brokers = new Map<string, http.Server>();
   waiters = new Map<string, ((approved: boolean) => void)[]>();
   uidTask = new Map<number, string>();
+  relay = relayCert(HOME);
   live = new Live({
     tasks: () => [...this.state.tasks.values()],
     approvals: () => [...this.state.approvals.values()],
@@ -72,12 +73,16 @@ class Core {
   write(e: NewEvent): LogEvent {
     const full = this.log.append(e);
     apply(this.state, full);
-    if (full.type === 'task.created' || full.type === 'task.state' || full.type === 'cost') {
-      const t = full.task && this.state.tasks.get(full.task);
-      if (t) this.live.task(t);
-    }
-    if (full.type === 'approval.asked' || full.type === 'approval.answered') {
-      this.live.approval(this.state.approvals.get(full.type === 'approval.asked' ? full.approval.id : full.id)!);
+    try {
+      if (full.type === 'task.created' || full.type === 'task.state' || full.type === 'cost' || full.type === 'tool.result') {
+        const t = full.task && this.state.tasks.get(full.task);
+        if (t) this.live.task(t);
+      }
+      if (full.type === 'approval.asked' || full.type === 'approval.answered') {
+        this.live.approval(this.state.approvals.get(full.type === 'approval.asked' ? full.approval.id : full.id)!);
+      }
+    } catch (err) {
+      console.error('spacetime mirror failed:', err); // the log is written; the mirror catches up on reconnect
     }
     for (const l of this.listeners) {
       try {
@@ -134,7 +139,14 @@ class Core {
       if (t.worker === 'droid') {
         if (!this.vault.get('FACTORY_API_KEY')) throw new Error('the vault has no FACTORY_API_KEY, which Droid needs');
         // The task holds a placeholder. The proxy swaps in the real key on the way to Factory.
-        Object.assign(env, { FACTORY_API_KEY: 'fk-placeholder-the-box-adds-the-key', FACTORY_API_BASE_URL: proxy, FACTORY_RIPGREP_PATH: '/usr/bin/rg' });
+        Object.assign(env, {
+          FACTORY_API_KEY: PLACEHOLDER_KEY,
+          FACTORY_API_BASE_URL: proxy,
+          FACTORY_EXTRA_CA_CERTS: this.relay.caPem,
+          NODE_EXTRA_CA_CERTS: this.relay.caPem,
+          FACTORY_RIPGREP_PATH: '/usr/bin/rg',
+          ...(process.env.BOX_MODEL ? { BOX_MODEL: process.env.BOX_MODEL } : {}),
+        });
       }
       const ids = sandbox.prepare(t);
       this.uidTask.set(ids.uid, t.id);
@@ -184,11 +196,17 @@ class Core {
       this.write({ type: 'approval.asked', task: t.id, approval: { id, task: t.id, question, costCents, state: 'pending' } });
     }
     const a = this.state.approvals.get(id)!;
-    if (a.state !== 'pending') return a.state === 'approved';
+    const settle = () => {
+      const stillWaiting = [...this.state.approvals.values()].some((x) => x.task === t.id && x.state === 'pending');
+      if (t.state === 'waiting' && !stillWaiting) this.move(t, 'running');
+    };
+    if (a.state !== 'pending') {
+      settle(); // answered while the box was down
+      return a.state === 'approved';
+    }
     if (t.state === 'running') this.move(t, 'waiting');
     const approved = await new Promise<boolean>((resolve) => this.waiters.set(id, [...(this.waiters.get(id) ?? []), resolve]));
-    const stillWaiting = [...this.state.approvals.values()].some((x) => x.task === t.id && x.state === 'pending');
-    if (t.state === 'waiting' && !stillWaiting) this.move(t, 'running');
+    settle();
     return approved;
   }
 
@@ -227,7 +245,7 @@ class Core {
     if (!entry) throw new Error(`no tool ${name}`);
     const prev = this.log.events.findLast((e) => e.type === 'tool.result' && e.task === t.id && e.key === key);
     if (prev?.type === 'tool.result') return { ok: prev.ok, output: prev.output, error: prev.error };
-    const result = (r: { ok: boolean; output?: unknown; error?: string }) => {
+    const result = (r: { ok: boolean; output?: unknown; error?: string; cents?: number }) => {
       this.write({ type: 'tool.result', task: t.id, key, ...r });
       return r;
     };
@@ -239,8 +257,7 @@ class Core {
     this.write({ type: 'tool.call', task: t.id, key, tool: name, input });
     try {
       const output = await entry.tool.run(input, this.ctx(entry.track, key, entry.tool.secrets, t));
-      if (cost) this.write({ type: 'cost', task: t.id, cents: cost, what: name });
-      return result({ ok: true, output });
+      return result({ ok: true, output, ...(cost ? { cents: cost } : {}) }); // result and cost in one line: counted once
     } catch (e) {
       return result({ ok: false, error: (e as Error).message });
     }
@@ -415,7 +432,7 @@ class Core {
       },
       blocked: (t, host) => this.write({ type: 'net.blocked', task: t.id, host }),
       factoryKey: () => this.vault.get('FACTORY_API_KEY'),
-    });
+    }, this.relay);
     this.live.start();
     const tracks = await this.loadTracks();
     for (const ws of fs.readdirSync(path.join(HOME, 'workspaces'))) this.refreshView(ws);
@@ -441,5 +458,8 @@ class Core {
   }
 }
 
+// One bad connection or task must not take the box down. The log keeps the truth either way.
+process.on('uncaughtException', (e) => console.error('uncaught:', e));
+process.on('unhandledRejection', (e) => console.error('unhandled:', e));
 sandbox.init();
 await new Core().boot();

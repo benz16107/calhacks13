@@ -35,7 +35,7 @@ Worker side of the socket (`BOX_SOCKET` in the worker's environment), JSON over 
 |---|---|
 | `GET /task` | The task, plus the steps it already logged (to resume) |
 | `POST /step {text, data?}` | Log progress: a plan, a step, a diff |
-| `POST /call {tool, input, key}` | Run a tool. Above the remaining budget it asks for an OK first. A key already answered returns the logged result, so a resumed task never pays twice. |
+| `POST /call {tool, input, key}` | Run a tool. Above the remaining budget it asks for an OK first. A key already answered returns the logged result. A call cut off mid-way runs again with the same `ctx.key`, so tools pass it on as an idempotency key and a resumed task never pays twice. |
 | `POST /ask {question, key}` | Pause for an OK, returns `{approved}`. The same key returns the same approval. |
 | `POST /cost {cents, what}` | Count model spending |
 
@@ -47,7 +47,8 @@ portal and phone). The first answer wins. The task carries on, and other tasks n
 
 ## Cost
 
-Tools declare `cost(input)` in US cents. The broker counts it when the call succeeds. Workers report model
+Tools declare `cost(input)` in US cents. The broker counts it when the call succeeds, in the same log line as
+the result. Workers report model
 spending with `POST /cost`. `task.costCents` is the total.
 
 ## Writing a track

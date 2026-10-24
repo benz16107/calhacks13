@@ -67,11 +67,15 @@ is `/etc/box/vault.env` (root, 0600). The API is `127.0.0.1:7700`. Task users ar
 
 ## Test machines
 
-- **Laptop VM** (ARM64, Ubuntu 24.04, Lima on Ben's MacBook): `ssh benmac 'limactl shell box -- <command>'`.
-  The laptop sleeps when closed, so don't rely on it overnight. This is also the demo box on Sunday.
-- **linuxbox VM** (x86, always on): `limactl shell box -- <command>` on linuxbox (Homebrew's `limactl`).
-  `./demo` uses it when it is running, else the laptop VM. `BOX_SHELL='<command prefix>' ./demo` picks any other.
-- **Vultr VM** (x86): being set up; also the second box for the Vultr track.
+All three run Ubuntu 24.04 with passwordless root, and each has the sponsor keys in `/etc/box/vault.env`.
+`./demo <name>` runs the merge gate on one; plain `./demo` uses the linuxbox VM when it is up, else the laptop.
+
+- **laptop** (ARM64, Lima on Ben's MacBook): `ssh benmac 'limactl shell box -- <command>'`. It sleeps with the
+  laptop, so don't rely on it overnight. This is the demo box on Sunday.
+- **linuxbox** (x86, always on, Lima on linuxbox): `limactl shell box -- <command>` on linuxbox, with
+  `/home/linuxbrew/.linuxbrew/bin` on PATH. The installed box service runs here (`core/install.sh`).
+- **vultr** (x86, always on, public IP, San Jose): `ssh vultrbox` from linuxbox, as root. Also the Vultr track's
+  second box later.
 
 ## If time runs short, cut in this order
 

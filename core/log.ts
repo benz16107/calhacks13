@@ -70,6 +70,9 @@ export function apply(s: State, e: LogEvent): void {
     case 'cost':
       if (t) t.costCents += e.cents;
       break;
+    case 'tool.result':
+      if (t && e.cents) t.costCents += e.cents;
+      break;
     case 'approval.asked':
       s.approvals.set(e.approval.id, { ...e.approval });
       break;
