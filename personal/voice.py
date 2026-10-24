@@ -18,6 +18,7 @@ import signal
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 import urllib.parse
 from datetime import datetime, timezone
@@ -102,7 +103,7 @@ def find(query):
     if not words_:
         return 'What should I look for?'
     t = time.time()
-    out = api('GET', '/t/find/search?' + urllib.parse.urlencode({'q': ' '.join(words_), 'k': 4}), timeout=4)
+    out = api('GET', '/t/find/search?' + urllib.parse.urlencode({'q': ' '.join(words_), 'k': 4, 'mode': 'fast'}), timeout=4)  # fast: never waits for Moss to open
     hits = [r for r in out.get('results', []) if r.get('kind') != 'task'] or out.get('results', [])
     if not hits:
         return f"I found nothing for {' '.join(words_)}."
@@ -208,6 +209,14 @@ def record(path):
     return True
 
 
+def warm_search():
+    """Open Moss's session now, so it is ready (3 ms, not about 1 s) by the time the words are text. Older boxes have no such route."""
+    try:
+        api('POST', '/t/find/warm', timeout=2)
+    except Exception:  # noqa: BLE001
+        pass
+
+
 def start_model():
     if not os.path.exists(VENV_PYTHON):
         return None
@@ -250,6 +259,7 @@ def main(argv):
         path = wav or os.path.join(tmp, 'speech.wav')
         try:
             say_state('listening')
+            threading.Thread(target=warm_search, daemon=True).start()  # while the owner talks
             heard_audio = True if wav else record(path)
             if not heard_audio:
                 say_state(None)
