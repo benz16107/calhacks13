@@ -52,7 +52,7 @@ What you get for free on every track page, kit or legacy:
 | Component | Props (slot = the content between the tags) |
 |---|---|
 | `<Lead>` | slot: the 30-second version, 2 to 4 sentences. `proof` (HTML): one line of evidence. `kicker` (default "In 30 seconds") |
-| `<Shot>` | `src` = path under `src/assets/` (`"repo/portal/x.png"` or `"portal/x.png"`) or an imported image; `dark` = the same screen in dark; `alt`; `caption` (HTML); `size` = `wide` (default), `narrow`, `phone`. Click enlarges (the dark image when the page is dark) |
+| `<Shot>` | `src` = path under `src/assets/` (`"repo/portal/x.png"` or `"portal/x.png"`) or an imported image; `dark` = the same screen in dark; `alt`; `caption` (HTML); `size` = `wide` (default), `narrow`, `phone`; `frame` puts the shared iPhone frame round a phone screenshot (add `inset` and `edge`="#hex of the top row" for portal pages that have no status bar; never `inset` for native iPhone app screenshots). Click enlarges (the dark image when the page is dark) |
 | `<Clip>` | `name` = a clip from `src/data/clips.json`, or `src` (an mp4 under `public/` or a `.gif`) with `poster`, `alt`, `caption`. Muted, looping, pauses off screen, has a Pause button, and shows only the poster under reduced motion |
 | `<Compare>` | `labels={['Before', 'After']}`; put one `<div slot="a">` and one `<div slot="b">` inside, each with markdown or a `<Shot>` (leave blank lines around the markdown). Stacks on phones |
 | `<CriteriaMap>` | `sponsor`, `source` (where the criteria are quoted from, HTML), `items={[{ ask, status: 'met' \| 'partly' \| 'open', how, evidence: [{ label, href }] }]}`. Quote the sponsor's own words in `ask` |

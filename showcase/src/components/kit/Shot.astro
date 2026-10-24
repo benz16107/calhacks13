@@ -3,6 +3,7 @@
 // `src` is a path under src/assets/ ("repo/portal/live-agents.png" or just "portal/live-agents.png"), or an imported image.
 import { Image } from 'astro:assets';
 import type { ImageMetadata } from 'astro';
+import PhoneFrame from '../../../../site/src/theme/PhoneFrame.astro';
 
 interface Props {
   src: string | ImageMetadata;
@@ -11,6 +12,12 @@ interface Props {
   caption?: string;
   // 'wide' fills the column, 'narrow' is a reading width, 'phone' is a tall phone shot at phone size.
   size?: 'wide' | 'narrow' | 'phone';
+  // Put an iPhone frame (the shared GurtOS phone frame) round a phone screenshot. `inset` is for screens with no status bar
+  // of their own, such as portal pages (set `edge` to the colour at the top of the screenshot); native iPhone app
+  // screenshots already have a status bar and must not use it.
+  frame?: boolean;
+  inset?: boolean;
+  edge?: string;
 }
 const files = import.meta.glob<{ default: ImageMetadata }>('../../assets/**/*.{png,jpg,jpeg,webp,svg}', { eager: true });
 const find = (s: string | ImageMetadata | undefined): ImageMetadata | undefined => {
@@ -19,16 +26,25 @@ const find = (s: string | ImageMetadata | undefined): ImageMetadata | undefined 
   if (!hit) throw new Error(`Shot: no image at src/assets/${s}`);
   return hit.default;
 };
-const { alt, caption, size = 'wide' } = Astro.props;
+const { alt, caption, frame = false, inset = false, edge } = Astro.props;
+const size = frame ? 'phone' : (Astro.props.size ?? 'wide');
 const light = find(Astro.props.src)!;
 const dark = find(Astro.props.dark);
 const sizes = size === 'phone' ? '320px' : '(max-width: 900px) 100vw, 900px';
 ---
 
 <figure class={`k-shot ${size}`}>
-  <button type="button" class="k-zoom" data-zoom aria-label={`Enlarge: ${alt}`}>
-    <Image class="k-light" src={light} alt={alt} widths={[480, 960, 1600]} sizes={sizes} data-full={light.src} />
-    {dark && <Image class="k-dark" src={dark} alt="" aria-hidden="true" widths={[480, 960, 1600]} sizes={sizes} data-full={dark.src} />}
+  <button type="button" class:list={['k-zoom', { framed: frame }]} data-zoom aria-label={`Enlarge: ${alt}`}>
+    {
+      frame ? (
+        <PhoneFrame src={light} dark={dark} alt={alt} inset={inset} edge={edge} sizes="320px" />
+      ) : (
+        <>
+          <Image class="k-light" src={light} alt={alt} widths={[480, 960, 1600]} sizes={sizes} data-full={light.src} />
+          {dark && <Image class="k-dark" src={dark} alt="" aria-hidden="true" widths={[480, 960, 1600]} sizes={sizes} data-full={dark.src} />}
+        </>
+      )
+    }
   </button>
   {caption && <figcaption set:html={caption} />}
 </figure>
@@ -56,6 +72,12 @@ const sizes = size === 'phone' ? '320px' : '(max-width: 900px) 100vw, 900px';
   .k-zoom :global(img) {
     width: 100%;
     height: auto;
+  }
+  .k-zoom.framed {
+    border: 0;
+    background: transparent;
+    border-radius: 0;
+    overflow: visible;
   }
   .k-dark {
     display: none !important;
