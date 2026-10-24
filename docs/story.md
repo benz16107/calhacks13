@@ -217,7 +217,7 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 
 **Best shown in:** All three editions
 
-**Pitch:** Agents get attacked through the pages they read and the packages they install, and on an ordinary OS a fooled agent can read every key and send it anywhere. GurtOS stops it at the OS, whatever the model does, in every edition, and publishes the test for each control. Next (being built): a poisoned npm package, tripwire keys, a deeper per-task sandbox, a scoreboard of about 15 OS-level attacks with its misses, a hijacked payment and an OWASP mapping.
+**Pitch:** Agents get attacked through the pages they read and the packages they install, and on an ordinary OS a fooled agent can read every key and send it anywhere. GurtOS stops it at the OS, whatever the model does, in every edition, and publishes the score: 13 of 15 OS-level attacks caught and 2 published as not covered. A poisoned package imitating the 2025 npm worm and a hijacked payment both fail. Next (being built): tripwire keys and a deeper per-task sandbox.
 
 **The problem:** Agents get attacked through the pages they read and the packages they install, and on an ordinary OS a fooled agent can read every key and send it anywhere.
 
@@ -229,23 +229,19 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 | Each task is its own Linux user in its own copy of the files, seeing no process but its own | A task reads another task's files or the box's | GurtOS | Shipped |
 | A per-task network rule and a proxy allowlist | The stolen data has nowhere to go | GurtOS | Shipped. A send to attacker.example is refused and logged, and a raw connection to an IP is refused by the firewall |
 | Approvals and an append-only log, and undo of the task | A fooled agent cannot approve its own action, and the damage is removable | GurtOS | Shipped. The task cannot reach SpacetimeDB or the API to approve itself |
-| The poisoned npm package: a package whose install script hunts for keys and sends them out, run inside a task | The September 2025 npm worm, which stole tokens and cloud keys from developer machines | GurtOS (task user, vault, network rule) and the Armadin test | Being built; not on main yet |
+| The poisoned npm package: `gurt-chalk-utils`, a harmless imitation of the Shai-Hulud worm, installed with a real `npm install` inside a task: it reads environment variables and dotfiles, asks cloud metadata for credentials, tries to send them out, tries to publish to the registry, reads other tasks' files and tries to persist | The September 2025 npm worm, which stole tokens and cloud keys from developer machines | GurtOS (task user, vault, network rule, undo) and the Armadin test | Shipped. Every step is blocked or contained in a real run on a demo box: no real key is there to read, the vault read fails, the cloud-metadata, exfiltration, raw-IP and registry connections are refused and logged, and the persistence write into the system is refused. The one write that succeeds is into the task's own copy, and undo removes the package and everything it wrote. The planted canary token appears nowhere in the report or the log |
 | Tripwire keys: fake keys planted where an attacker looks, so a read is logged and alerts you | A hijacked agent that hunts for keys gives itself away | GurtOS (the vault and the log) | Being built; not on main yet |
 | A deeper per-task sandbox: seccomp filters, Landlock file rules and cgroup caps | A task that tries to widen its own reach inside the kernel | GurtOS (core) | Being built; not on main yet |
-| A scoreboard of about 15 OS-level attacks, with the ones it misses | A score you can check, not a claim | GurtOS and the Armadin tests | Being built; not on main yet |
-| The hijacked payment: a business email compromise that tries to change who gets paid | Fraud by fooling an agent or a person about where money goes | GurtOS (approvals) and the credit desk (its refusal of changed bank details) | Being built; not on main yet |
-| A mapping of the controls to the OWASP list for agents | A shared checklist a security reviewer already knows | The Armadin page | Being built; not on main yet |
+| A scoreboard of 15 OS-level attacks, with the ones it misses (`SCOREBOARD.md`) | A score you can check, not a claim | GurtOS and the Armadin tests | Shipped. 13 caught and 2 published as not covered, from a real run on Oct 24. Six of the 13 are proved by core's own merge gate and cited, not repeated. Not covered: a per-task disk quota (a 200 MB write was not refused), and a payload sent to a host the task is allowed to reach (a token in a query string arrived). Model-level attacks are not in this table |
+| The hijacked payment: a lookalike-sender email says "we changed banks, pay the new account", and a second honest bill is over the AP clerk's $5,000 limit | Fraud by fooling an agent or a person about where money goes | GurtOS (approvals) and the credit desk (AP-4 and AP-2) | Shipped. The bank change is refused in code before any person is asked, so it cannot wear a controller down. The over-limit bill pauses for the controller, who says no. Neither bill is paid, and no payment is sent in this case at all. Nessie is the credit desk's test bank |
+| A mapping of the controls to the OWASP Top 10 for LLM Applications (2025) and the OWASP Top 10 for Agentic Applications (2026), with a not-covered column (`OWASP.md`) | A shared checklist a security reviewer already knows | The Armadin track | Shipped. It says plainly that prompt injection itself is not prevented, only what it can do, and lists what is out of scope for an operating system and the two genuinely open items |
 
 **Demo moment and proof:** In every merge-gate run, a scripted agent obeys the hidden instructions step by step and is stopped at each one: the vault read fails (EACCES), the send to attacker.example is refused by the proxy, a raw connection to 1.1.1.1 is refused by the firewall, and reaching SpacetimeDB or the box's API to approve itself is refused. Then real Claude reads the same page: it refused, and no vault secret appeared in its files, environment or log.
 
 **Still to do:**
 
-- The poisoned npm package: a package whose install script hunts for keys and sends them out, run inside a task
 - Tripwire keys: fake keys planted where an attacker looks, so a read is logged and alerts you
 - A deeper per-task sandbox: seccomp filters, Landlock file rules and cgroup caps
-- A scoreboard of about 15 OS-level attacks, with the ones it misses
-- The hijacked payment: a business email compromise that tries to change who gets paid
-- A mapping of the controls to the OWASP list for agents
 
 ## Microsoft: Built for the Real World, and the Customer Impact Award
 
@@ -420,7 +416,7 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 
 **Best shown in:** GurtOS Business and GurtOS Server
 
-**Pitch:** After a week of agents working, an ordinary OS cannot tell you what they did, and anyone with root can edit its logs. GurtOS keeps one action log of every action and Elastic keeps a copy the box cannot rewrite; its agent answers and investigates, and acting still needs your OK. Business is on main, but the agent has only been run against GurtOS Server boxes and demo runs. Next (being built): a tamper-evident log with a verify tool, detection rules with phone alerts, pause, undo and stop through approvals, a fleet view, semantic search, and asking from the portal and phone.
+**Pitch:** After a week of agents working, an ordinary OS cannot tell you what they did, and anyone with root can edit its logs. GurtOS keeps one action log of every action and chains each entry to the one before, and Elastic keeps a copy the box cannot rewrite, so a changed entry is caught. Elastic's agent answers and investigates, and its alert rules and the agent can only leave a request: the box turns it into one approval on your phone.
 
 **The problem:** After a week of agents working, an ordinary OS cannot tell you what they did: its logs are scattered and anyone with root can edit them.
 
@@ -432,23 +428,18 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 | The log streams into a Serverless index, each event once, with the Elastic key held only by one core job | The record lives outside the box and no task can reach the key | On a Serverless instance | GurtOS (vault, core job) and Elastic (the index) | Shipped. A live run shipped all 156 events of a demo run, each exactly once |
 | An Agent Builder agent, GurtOS log, with six query tools and one index search tool, as code in the repo | Plain-words answers to what changed, what it cost, why it failed, what got blocked | An Agent Builder agent | Elastic (agent, tools) | Shipped |
 | Anything that acts waits for your OK on the portal or phone | An investigator that can also act would be a new thing to trust | Real data used for something that matters | GurtOS (the approval pause) | Shipped for tasks; the agent has no action tools yet |
-| A hash-chained log with an add-only copy in Elastic and a verify tool | Removes the limit that root can edit the log: a changed line breaks the chain and the copy shows it | Real data used for something that matters | GurtOS (the chain, the verify tool) and Elastic (the add-only copy) | Being built; not on main yet. The "root can edit the log" limit stays listed until it merges |
-| Detection rules with alerts to the phone | The morning after becomes the minute it happens | Real data used for something that matters | Elastic (rules) and GurtOS (the phone alert) | Being built; not on main yet |
-| Agent tools that request pause, undo or stop through GurtOS approvals | The investigator can act, but only with your yes | An Agent Builder agent | Elastic (tools) and GurtOS (approvals) | Being built; not on main yet |
-| A fleet view and a who-approved-what view, with role-scoped access | A team sees every box, and each person sees only what their role allows | Real data used for something that matters | Elastic (the views) and GurtOS Business (roles) | Being built; not on main yet |
-| Semantic search over what agents did | Find "the task that tried to send the repo out" without knowing its words | An Agent Builder agent | Elastic | Being built; not on main yet |
-| Ask from the portal and phone, plus a Kibana dashboard | The answer is where you already look | An Agent Builder agent | GurtOS (portal, phone) and Elastic (Kibana) | Being built; not on main yet |
+| A record root cannot rewrite without being caught: the core chains every log entry to the one before it, the box checks its log against Elastic's copy every ten minutes, and Elastic's copy is written with a key that can only create documents | A changed, removed or reordered entry breaks the chain after it, and a full rehash by someone with root is still caught by Elastic's copy | Real data used for something that matters | GurtOS (the chain in `core/log.ts`, the box's own check) and Elastic (the create-only key, the `box.verify_log` tool) | Shipped. The live demo plants an edit as root would and the agent names entries 466 to 474; a rewrite of every hash after it is still named; overwrite, update and delete on Elastic's copy return 403. Not covered: an entry can be changed in the seconds before Elastic has it, and a fully taken-over box can stop sending or lie about its own check (the agent flags a box that goes silent, and `agent.ts verify` checks a copy of a log without asking the box) |
+| Four alert rules on the log: a task that read a page then tried to reach somewhere else, a task that went for a secret, a task spending $5 or more in 15 minutes, and a blocked destination no agent has tried before | The morning after becomes the minute it happens | Real data used for something that matters | Elastic (Kibana alerting rules in ES-QL) and GurtOS (the approval and the phone push) | Shipped as Kibana alerting rules, not Security detection rules, because a Serverless Elasticsearch project does not include those. Each match leaves one request that the box turns into an approval on the owner's phone |
+| The agent can ask to undo a task, through a workflow tool that only leaves a request | Elastic never holds the power to act | An Agent Builder agent | Elastic (the tool) and GurtOS (policy routing, the phone, the undo) | Shipped for undo only: the box pulls the request, asks the owner and undoes the task only if they approve, and the demo shows a denied and an approved request. Pause and stop are not requestable, because undo is the one task control the box gives an app. The agent says "I asked", never "I undid" |
+| A fleet and who-approved-what view: every installed box ships to one index, each box has its own key, and each Business person has a key that copies their role | A team sees every box, and each person sees only what their role allows | Real data used for something that matters | Elastic (document-level security, the tools by person, seat and approver) and GurtOS Business (roles, `who` on every entry) | Shipped. The owner, an admin and an auditor see everything, an approver sees what was routed to them or answered by them, and a requester sees their own tasks. The person keys are made by hand today, so a role change in GurtOS needs a new key |
+| Search by meaning: every step, tool call, approval and block has a plain sentence in a `semantic_text` field, and `box.search_meaning` finds a step like "tried to read the vault" without its words | Find the step without knowing what it was called | An Agent Builder agent | Elastic (ELSER, ES-QL `MATCH`) and GurtOS (the sentences) | Shipped |
+| Ask GurtOS, an app in the portal and on the phone, and a Kibana dashboard of cost, blocks and approvals | A person asks in plain words, as themselves, and the key never sits in the page | An Agent Builder agent | GurtOS (the app, the vault) and Elastic (the converse API, the dashboard) | Shipped. The box adds the person's own Elastic key, so the answer cannot say more than their role may see |
 
 **Demo moment and proof:** Asked "Why did the job routine fail? Look at demo run a18523.", the agent found the failed task with box.failures, read its timeline and named the root cause itself: the routine was allowed to reach only boards.greenhouse.io, its plan needed www.linkedin.com, the box blocked it, and the task failed right after. A live run shipped all 156 events of a demo run to Serverless, each exactly once.
 
 **Still to do:**
 
-- A hash-chained log with an add-only copy in Elastic and a verify tool
-- Detection rules with alerts to the phone
-- Agent tools that request pause, undo or stop through GurtOS approvals
-- A fleet view and a who-approved-what view, with role-scoped access
-- Semantic search over what agents did
-- Ask from the portal and phone, plus a Kibana dashboard
+- Nothing open.
 
 ## Moss: A personal agent that remembers you
 
