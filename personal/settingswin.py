@@ -76,7 +76,7 @@ def update_words(u):
     if u.get('available'):
         a = u['available']
         return f"GurtOS {a.get('version') or a.get('build')} is available", 'GurtOS installs it as a whole and can go back if it does not start.'
-    return f'{name} is up to date', (when_saved(u['checkedAt']).replace('Saved', 'Checked') if u.get('checkedAt') else '')
+    return f'{name} is up to date', (when_saved(u['lastAt']).replace('Saved', 'Last updated') if u.get('lastAt') else '')
 
 
 def take(scroller, into):
@@ -186,8 +186,9 @@ class SettingsWindow(SetupWindow):
         if self.update:
             title, sub = update_words(self.update)
             r = Adw.ActionRow(title=GLib.markup_escape_text(title), subtitle=GLib.markup_escape_text(sub))
-            r.add_prefix(Gtk.Image(icon_name='software-update-available-symbolic' if self.update.get('state') == 'ready' or self.update.get('available')
-                                   else 'emblem-ok-symbolic', accessible_role=Gtk.AccessibleRole.PRESENTATION))
+            icon = {'ready': 'software-update-available-symbolic', 'trial': 'emblem-synchronizing-symbolic',
+                    'rolledBack': 'dialog-warning-symbolic'}.get(self.update.get('state'), 'emblem-ok-symbolic')
+            r.add_prefix(Gtk.Image(icon_name=icon, accessible_role=Gtk.AccessibleRole.PRESENTATION))
             if self.update.get('state') == 'ready':
                 r.add_suffix(button_for('Restart…', lambda: subprocess.Popen(['gnome-session-quit', '--reboot'], start_new_session=True)))
             elif 'checkedAt' in self.update:  # the box can look for updates

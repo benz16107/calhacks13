@@ -250,3 +250,8 @@ check(r['hosts'] == [] and r['user'].startswith('box-'), f"a task's page shows w
 plan = tl.go_back_plan(api('GET', '/api/tasks'), tl.since(tl.SPANS[0][1]))
 check(any(t['id'] == t_app['id'] for t in plan) and [t['updatedAt'] for t in plan] == sorted((t['updatedAt'] for t in plan), reverse=True),
       f"Time Machine's go back takes out what finished in the last 15 minutes, newest first ({len(plan)} tasks)")
+
+# GurtOS Settings' System update row reads GET /api/update; a demo box isn't installed from an image, so it hides.
+u = api('GET', '/api/update')
+check(u.get('state') in ('current', 'ready', 'trial', 'rolledBack', 'unknown') and 'version' in u,
+      f"Settings' System update row gets box-update's state from the box ({u.get('state')}: hidden unless installed from a GurtOS image)")
