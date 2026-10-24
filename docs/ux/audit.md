@@ -25,7 +25,7 @@ finding gets a **Fixed** line with the commit and an after-screenshot in `after/
 |---|---|
 | personal | P-29 waits for Ben |
 | image | S2, S15, S16, S24, P-4, P-17, P-28, E-1 to E-11, E-13 (About logo), E-15, then P-1 with release |
-| personal (parity) | E-14 (re-measuring) |
+| personal (parity) | E-14 (not reproduced by Personal; measured once on the rebuilt ISO) |
 
 Release (P-1): one rebuild of all four ISOs from one main commit, about 75 minutes to a verified release plus 20 for
 the download pages. The UX thread sends the commit once the Personal, image and core P0 and P1 fixes are in. Target
