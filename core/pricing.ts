@@ -15,16 +15,23 @@ interface Price {
   cacheRead: number;
 }
 
-// Anthropic list prices, Oct 2026. Thinking tokens are billed as output and already in `output`.
+// Anthropic list prices from platform.claude.com/docs/en/about-claude/pricing, read Oct 24 2026. Thinking tokens are
+// billed as output and already in `output`. Haiku 5.5 charges 5x for a prompt over 100,000 tokens; a Droid task
+// reports one total for all its turns, so that surcharge is not applied here (shortcut: Haiku tasks are short).
 const PRICES: Record<string, Price> = {
+  'claude-opus-5-5': { in: 4, out: 20, cacheWrite: 5, cacheRead: 0.2 },
+  'claude-sonnet-5-5': { in: 2, out: 10, cacheWrite: 2.5, cacheRead: 0.1 },
+  'claude-haiku-5-5': { in: 0.1, out: 0.5, cacheWrite: 0.125, cacheRead: 0.01 },
+  // Earlier models a box may still be set to.
   opus: { in: 15, out: 75, cacheWrite: 18.75, cacheRead: 1.5 },
   sonnet: { in: 3, out: 15, cacheWrite: 3.75, cacheRead: 0.3 },
   haiku: { in: 1, out: 5, cacheWrite: 1.25, cacheRead: 0.1 },
 };
 
 function priceFor(model: string): Price {
-  for (const name of Object.keys(PRICES)) if (model.includes(name)) return PRICES[name];
-  return PRICES.sonnet; // the box's default model
+  const exact = Object.keys(PRICES).find((name) => model.includes(name));
+  if (exact) return PRICES[exact];
+  return PRICES['claude-sonnet-5-5']; // the box's default model
 }
 
 /** US cents for this usage, not rounded, so sub-cent tasks still count. */
