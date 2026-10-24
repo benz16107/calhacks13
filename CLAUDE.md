@@ -74,7 +74,11 @@ The core thread owns this section. Don't add other top-level folders; ask the co
   `tracks/*/demo.ts`. Exit 0 means you may merge. **Runs from different checkouts are isolated and go side by
   side on one VM**: each has its own `BOX_HOME` (`/var/lib/box-demo/<run>`), task users, ports and SpacetimeDB
   database, and cleans up after itself. A second run from the same checkout (same folder name) waits for the
-  first. Machine setup and the SpacetimeDB CLI take a short lock. Don't touch `/var/lib/box` on a VM: that is
+  first. **Real Droid is off by default**: it spends Factory credit (there is a 5-hour limit shared by every
+  thread, and the live demo needs it). `./demo` uses the scripted worker, prints Factory's 5-hour and weekly
+  use first, and the box refuses a real-Droid task in a demo run. `./demo --live-droid` (or `DEMO_LIVE=droid`)
+  runs the real steps, and refuses to when the 5-hour use is 90% or more (`DEMO_LIVE_DROID_FORCE=1` overrides).
+  A track's own real-Droid step must be gated the same way. Machine setup and the SpacetimeDB CLI take a short lock. Don't touch `/var/lib/box` on a VM: that is
   the installed box.
 
 On the box: `BOX_HOME=/var/lib/box` holds `log.jsonl`, `workspaces/`, `views/` and `tasks/<id>/`. The vault

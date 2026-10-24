@@ -4,12 +4,19 @@
 #   ./demo laptop|linuxbox|vultr   that test machine
 #   BOX_SHELL='ssh my-vm' ./demo   any test machine with passwordless sudo
 #   ./demo --here                  this machine. Only on a test VM: it needs root.
-#   --skip-droid                   skip the real Droid step, only when Factory itself is down
+#   ./demo --live-droid            also run the real Droid steps. They spend Factory credit, so they are OFF by default
+#                                  (same as DEMO_LIVE=droid). The run prints Factory's 5-hour and weekly use first.
 #   DEMO_LIVE=apify,visa ./demo    also make these tracks' paid or slow live calls (off by default)
 set -euo pipefail
 cd "$(dirname "$0")"
 skip=; args=()
-for a in "$@"; do if [[ $a == --skip-droid ]]; then skip=1; else args+=("$a"); fi; done
+for a in "$@"; do
+  case $a in
+    --live-droid) export DEMO_LIVE="${DEMO_LIVE:+$DEMO_LIVE,}droid" ;;
+    --skip-droid) ;; # real Droid is off by default now; kept so old command lines still work
+    *) args+=("$a") ;;
+  esac
+done
 set -- "${args[@]+"${args[@]}"}"
 
 if [[ ${1:-} == --here ]]; then

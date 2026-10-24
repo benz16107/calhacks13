@@ -153,6 +153,8 @@ class Core {
     if (!s.title || !s.prompt) throw new Error('a task needs a title and a prompt');
     if (!/^[\w.-]+$/.test(s.workspace) || !fs.existsSync(dirs.workspace(s.workspace))) throw new Error(`no workspace ${s.workspace}`);
     if (!['droid', 'fake'].includes(s.worker)) throw new Error(`no worker ${s.worker}`);
+    // A demo run spends no Factory credit unless it was asked to: a track that wants a real agent must be gated behind DEMO_LIVE=droid.
+    if (s.worker === 'droid' && process.env.BOX_NO_DROID) throw new Error('real Droid is off in this demo run (it spends Factory credit); DEMO_LIVE=droid ./demo, or ./demo --live-droid, turns it on');
     for (const name of s.tools) if (!this.tools.has(name)) throw new Error(`no tool ${name}`);
     const id = 't' + Date.now().toString(36).slice(-6) + randomBytes(2).toString('hex');
     this.write({ type: 'task.created', task: id, spec: s, user: `box-${id}` });

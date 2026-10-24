@@ -125,8 +125,8 @@ export default async function (d: DemoKit) {
       seller.close();
     }
   } else console.log('  skip  x402 supplies: no wallet track or no WALLET_SOLANA_KEY');
-  const droid = vault.FACTORY_API_KEY && !process.env.DEMO_SKIP_DROID;
-  if (!droid) console.log('  skip  Droid reorder and watch: no FACTORY_API_KEY, or --skip-droid');
+  const droid = vault.FACTORY_API_KEY && /\bdroid\b/.test(process.env.DEMO_LIVE ?? ''); // real Droid spends Factory credit: DEMO_LIVE=droid
+  if (!droid) console.log('  skip  Droid reorder and watch: real Droid is off: DEMO_LIVE=droid ./demo runs it');
   else {
     const reorder = await d.api<Task>('POST', '/t/shopper/reorder');
     const prop = await d.waitFor('Droid to propose a reorder', async () => (await d.api<Task[]>('GET', '/tasks')).find((t) => t.source === `shopper:propose:${reorder.id}`), 240_000);
