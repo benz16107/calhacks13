@@ -31,6 +31,12 @@ if [[ ${1:-} == --here ]]; then
   else
     npm ci --no-audit --no-fund --no-update-notifier --loglevel=error && touch "node_modules/.lock-$lock"
   fi
+  # One gate run at a time per machine: runs side by side fail on timeouts, not on the code. A second run waits.
+  exec 7>/run/lock/box-demo-run.lock
+  if ! flock -n 7; then
+    echo "demo: another demo run is using this machine; waiting for it to finish"
+    flock 7
+  fi
   BOX_REVIEW="${BOX_REVIEW:-}" DEMO_ONLY="${DEMO_ONLY:-}" DEMO_SKIP_DROID="${DEMO_SKIP_DROID:-$skip}" exec node --experimental-strip-types --disable-warning=ExperimentalWarning core/demo.ts
 fi
 
