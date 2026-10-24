@@ -38,6 +38,7 @@ async function stdbRows(sql: string): Promise<Record<string, any>[]> {
 
 let box: ReturnType<typeof spawn> | undefined;
 let PORT = 0; // the box's API port, which the box picks and writes to BOX_HOME/api.port
+const WINDOW = 600; // the approval wait window; short here so a long wait is quick to act out (a fake clock)
 const mountsUnder = (dir: string) =>
   fs.readFileSync('/proc/self/mountinfo', 'utf8').split('\n').map((l) => l.split(' ')[4]).filter((m) => m?.startsWith(dir + '/'));
 
@@ -47,7 +48,7 @@ async function startBox() {
   box = spawn(process.execPath, [...process.execArgv, new URL('./box.ts', import.meta.url).pathname], {
     detached: true,
     stdio: ['ignore', out, out],
-    env: { ...process.env, BOX_HOME: HOME, BOX_PORT: 'auto', BOX_VAULT: path.join(HOME, 'vault.env'), BOX_STDB_DB: DB, BOX_PROXY_PORT: 'auto', BOX_ID: 'demo-box', BOX_NAME: 'Demo box', BOX_PEERS: JSON.stringify([{ id: 'vultr', name: 'Vultr box', stdb: 'box' }]) },
+    env: { ...process.env, BOX_HOME: HOME, BOX_PORT: 'auto', BOX_VAULT: path.join(HOME, 'vault.env'), BOX_STDB_DB: DB, BOX_PROXY_PORT: 'auto', BOX_APPROVAL_WAIT_MS: String(WINDOW), BOX_ID: 'demo-box', BOX_NAME: 'Demo box', BOX_PEERS: JSON.stringify([{ id: 'vultr', name: 'Vultr box', stdb: 'box' }]) },
   });
   for (let i = 0; i < 300; i++) {
     if (await api('GET', '/health').catch(() => undefined)) {
@@ -423,6 +424,36 @@ await moment('moment 4: pull the plug', async () => {
   await settled([W.id]);
   check(view('long', 'deployed.txt') === 'yes', 'approved after the restart, it finished');
   check(view('notes', 'b.txt') === 'made by B' && view('notes', 'a.txt') === 'original a', 'earlier work survived too: B kept, A still undone');
+});
+
+// ---------- approvals: idempotent, long waits, closed at the end ----------
+
+await moment('approvals survive a long wait, never duplicate, and close when the task ends', async () => {
+  workspace('wait', {});
+  // Waits far longer than one approval window (stands in for a wait past Droid's 3-minute tool-call limit).
+  const W = await api<Task>('POST', '/tasks', { workspace: 'wait', worker: 'fake', source: 'demo', title: 'Needs an OK', prompt: 'ask Proceed with the long job?\nwrite ok.txt yes' });
+  const ask = await waitFor('the request', async () => (await api<{ id: string; task: string }[]>('GET', '/api/approvals?state=pending')).find((a) => a.task === W.id));
+  await sleep(WINDOW * 4); // several windows go by with no answer
+  const forW = (await api<{ task: string }[]>('GET', '/api/approvals')).filter((a) => a.task === W.id);
+  check((await task(W.id)).state === 'waiting' && forW.length === 1, 'past several wait windows it is still waiting on exactly one approval, no duplicates');
+  await api('POST', `/api/approvals/${ask.id}`, { approved: true, by: 'demo' });
+  await settled([W.id]);
+  check(view('wait', 'ok.txt') === 'yes', 'the answer, given long after the request, let the task carry on');
+
+  // The same over-budget call fired twice at once asks once and is charged once (a retried call does not duplicate).
+  const S = await api<Task>('POST', '/tasks', { workspace: 'wait', worker: 'fake', source: 'demo', title: 'Same call twice at once', tools: ['example.spend'], budgetCents: 0, prompt: 'callsame example.spend {"cents":60,"on":"a GPU hour"}' });
+  const sAsk = await waitFor('its one request', async () => (await api<{ id: string; task: string }[]>('GET', '/api/approvals?state=pending')).find((a) => a.task === S.id));
+  await sleep(WINDOW); // give any duplicate a chance to appear
+  check((await api<{ task: string }[]>('GET', '/api/approvals')).filter((a) => a.task === S.id).length === 1, 'the same call retried while waiting made one approval, not two');
+  await api('POST', `/api/approvals/${sAsk.id}`, { approved: true, by: 'demo' });
+  await settled([S.id]);
+  check((await task(S.id)).costCents === 60, 'it ran and was charged once ($0.60), not twice');
+
+  // A task that ends with a request still open leaves nothing pending.
+  const C = await api<Task>('POST', '/tasks', { workspace: 'wait', worker: 'fake', source: 'demo', title: 'Ends while waiting', prompt: 'ask Never answered?\nwrite never.txt yes' });
+  await waitFor('its request', async () => (await api<{ task: string }[]>('GET', '/api/approvals?state=pending')).find((a) => a.task === C.id));
+  await api('POST', `/api/tasks/${C.id}/undo`);
+  check((await api<{ task: string; state: string }[]>('GET', '/api/approvals')).filter((a) => a.task === C.id && a.state === 'pending').length === 0, 'when the task ended, its pending approval was closed');
 });
 
 // ---------- pairing a phone, and more than one box ----------

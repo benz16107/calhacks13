@@ -57,8 +57,21 @@ Worker side of the socket (`BOX_SOCKET` in the worker's environment), JSON over 
 ## Approvals
 
 `POST /ask`, or a tool call over budget, writes `approval.asked` and sets the task to `waiting`. Anyone
-answers with `POST /approvals/<id> {approved, by}` on the box's API (and soon through SpacetimeDB from the
-portal and phone). The first answer wins. The task carries on, and other tasks never stop.
+answers with `POST /approvals/<id> {approved, by}` on the box's API or the SpacetimeDB `answer` reducer. The
+first answer wins. The task carries on, and other tasks never stop.
+
+**One approval per action.** The approval id is keyed by the task plus the tool and its arguments, so the
+same call retried (Droid gives up on a tool call after about 3 minutes and calls again) reuses one approval
+instead of making a second. An answer to any copy resolves the one request, and a retried call is run and
+charged once.
+
+**Waiting longer than the client's timeout.** `/ask` and an over-budget `/call` wait up to
+`BOX_APPROVAL_WAIT_MS` (default 150s, under Droid's limit). If no answer comes, they return `{pending:true}`
+with "call again to check"; the worker (and Droid, which calls the tool again) polls until the answer exists.
+So a task can wait hours for an OK.
+
+**Closed at the end.** When a task reaches done, failed or undone, any approval still pending for it is
+closed, so none lingers.
 
 ## Cost
 

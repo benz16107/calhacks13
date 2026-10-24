@@ -2,7 +2,8 @@
 //   write <file> <text>     append <file> <text>     rm <file>     sleep <seconds>
 //   expect <file> <text>    missing <file>           whoami <file>
 //   call <tool> <json>      ask <question>           fetch <url> <file>      fail <message>
-//   callpar <tool> <json>   (fires the tool twice at once, to test the budget under parallel calls)
+//   callpar <tool> <json>   (two different calls at once: tests the budget reservation)
+//   callsame <tool> <json>  (the same call twice at once: tests idempotent dedup)
 //   steal <file> <out>      env <out>                connect <host:port> <out>      procs <out>
 // The last four, and fetch, write what happened instead of failing: they act out a hijacked agent.
 // Each finished line is logged as a step, so after a hard kill it carries on from the next line.
@@ -47,23 +48,37 @@ for (let n = done + 1; n <= lines.length; n++) {
       fs.writeFileSync(arg, os.userInfo().username + '\n');
       break;
     case 'call': {
-      const r = await call(sock, 'POST', '/call', { key: `line${n}`, tool: arg, input: text ? JSON.parse(text) : {} });
+      let r;
+      do {
+        r = await call(sock, 'POST', '/call', { key: `line${n}`, tool: arg, input: text ? JSON.parse(text) : {} });
+      } while (r.pending); // keep checking past the approval wait window
       if (!r.ok) throw new Error(`${arg}: ${r.error}`);
       note = `${line} -> ${JSON.stringify(r.output)}`;
       break;
     }
-    case 'callpar': {
-      const input = text ? JSON.parse(text) : {};
-      const [ra, rb] = await Promise.all([
-        call(sock, 'POST', '/call', { key: `line${n}a`, tool: arg, input }),
-        call(sock, 'POST', '/call', { key: `line${n}b`, tool: arg, input }),
-      ]);
+    case 'callpar':
+    case 'callsame': {
+      // callpar: two different calls at once (different actions) to test the budget reservation.
+      // callsame: the same call twice at once (one action) to test idempotent dedup.
+      const base = text ? JSON.parse(text) : {};
+      const once = async (suffix: string) => {
+        const input = cmd === 'callpar' ? { ...base, _par: suffix } : base;
+        let r;
+        do {
+          r = await call(sock, 'POST', '/call', { key: `line${n}${suffix}`, tool: arg, input });
+        } while (r.pending);
+        return r;
+      };
+      const [ra, rb] = await Promise.all([once('a'), once('b')]);
       note = `${line} -> ${[ra, rb].map((r) => (r.ok ? 'ok' : r.error)).join(', ')}`;
       break;
     }
     case 'ask': {
       const question = [arg, text].join(' ');
-      const r = await call(sock, 'POST', '/ask', { key: `line${n}`, question });
+      let r;
+      do {
+        r = await call(sock, 'POST', '/ask', { key: `line${n}`, question });
+      } while (r.pending); // wait past the window, as long as it takes
       if (!r.approved) throw new Error(`not approved: ${question}`);
       break;
     }

@@ -32,12 +32,15 @@ async function handle(method: string, params: any) {
       const input = params.arguments ?? {};
       if (params.name === 'box_ask') {
         const r = await call(sock, 'POST', '/ask', { key: `mcp.ask.${hash(input.question)}`, question: String(input.question) });
+        if (r.pending) return { content: [{ type: 'text', text: 'Waiting for the box owner to answer. Call box_ask again with the same question to check.' }] };
         return { content: [{ type: 'text', text: r.approved ? 'approved' : 'not approved' }] };
       }
       const tool = boxName(params.name);
       const id = `${tool}.${hash(input)}`;
       seen.set(id, (seen.get(id) ?? 0) + 1);
       const r = await call(sock, 'POST', '/call', { key: `mcp.${id}.${seen.get(id)}`, tool, input });
+      // 'pending' means an approval is still open: let Droid keep working and call again, not treat it as a failure.
+      if (r.pending) return { content: [{ type: 'text', text: String(r.error) }] };
       return { content: [{ type: 'text', text: JSON.stringify(r.ok ? r.output : r.error) }], isError: !r.ok };
     }
   }

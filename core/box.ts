@@ -2,7 +2,7 @@
 //   node --experimental-strip-types core/box.ts
 // Env: BOX_HOME (default /var/lib/box), BOX_VAULT, BOX_PORT (default 7700, 0 = off), BOX_LISTEN (default 127.0.0.1).
 import type { ChildProcess } from 'node:child_process';
-import { randomBytes } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
 import fs from 'node:fs';
 import http from 'node:http';
 import os from 'node:os';
@@ -76,6 +76,7 @@ class Core {
   brokers = new Map<string, http.Server>();
   waiters = new Map<string, ((approved: boolean) => void)[]>();
   reserved = new Map<string, number>(); // cents a task has in-flight tool calls committed but not yet logged
+  inflight = new Map<string, Promise<{ ok: boolean; output?: unknown; error?: string; pending?: boolean }>>(); // one run per task+action
   webhooks = new Map<string, (payload: unknown, headers: Record<string, string>) => unknown>();
   trackSecrets = new Map<string, Set<string>>(); // vault keys each track's routes and triggers may read
   devicesPath = path.join(HOME, 'devices.json');
@@ -187,6 +188,7 @@ class Core {
   }
 
   finish(t: Task) {
+    this.closePending(t, 'task ended'); // nothing waits on a task that has stopped
     this.brokers.get(t.id)?.close();
     this.brokers.delete(t.id);
     sandbox.seal(t);
@@ -210,25 +212,47 @@ class Core {
   // ---------- approvals ----------
 
   /** Pause the task until someone answers. The same key returns the same approval, even after a restart. */
-  async ask(t: Task, key: string, opts: { question: string; costCents?: number; payee?: string; purpose?: string }): Promise<boolean> {
+  /** Back to running once nothing of this task's is still waiting. */
+  settleTask(t: Task) {
+    const stillWaiting = [...this.state.approvals.values()].some((x) => x.task === t.id && x.state === 'pending');
+    if (t.state === 'waiting' && !stillWaiting) this.move(t, 'running');
+  }
+
+  /**
+   * Ask for an OK and wait a bounded time. The approval id is the same for the same question (`key`), so a
+   * tool call retried after a timeout reuses one approval instead of making a new one. Returns 'pending' if
+   * no answer came within the window, so the worker can report "waiting, call again" and poll past a client
+   * tool-call timeout (Droid gives up after ~3 minutes). Any copy's answer resolves the one request.
+   */
+  async askFor(t: Task, key: string, opts: { question: string; costCents?: number; payee?: string; purpose?: string }): Promise<'approved' | 'denied' | 'pending'> {
     const id = `${t.id}.${key}`;
     if (!this.state.approvals.has(id)) {
       const approval: Approval = { id, task: t.id, question: opts.question, costCents: opts.costCents ?? 0, payee: opts.payee, purpose: opts.purpose, state: 'pending' };
       this.write({ type: 'approval.asked', task: t.id, approval });
     }
     const a = this.state.approvals.get(id)!;
-    const settle = () => {
-      const stillWaiting = [...this.state.approvals.values()].some((x) => x.task === t.id && x.state === 'pending');
-      if (t.state === 'waiting' && !stillWaiting) this.move(t, 'running');
-    };
     if (a.state !== 'pending') {
-      settle(); // answered while the box was down
-      return a.state === 'approved';
+      this.settleTask(t);
+      return a.state === 'approved' ? 'approved' : 'denied';
     }
     if (t.state === 'running') this.move(t, 'waiting');
-    const approved = await new Promise<boolean>((resolve) => this.waiters.set(id, [...(this.waiters.get(id) ?? []), resolve]));
-    settle();
-    return approved;
+    const wait = Number(process.env.BOX_APPROVAL_WAIT_MS ?? 150000); // under Droid's ~3 min tool-call limit
+    const answered = await new Promise<boolean | undefined>((resolve) => {
+      const w = (v: boolean) => resolve(v);
+      this.waiters.set(id, [...(this.waiters.get(id) ?? []), w]);
+      setTimeout(() => {
+        this.waiters.set(id, (this.waiters.get(id) ?? []).filter((x) => x !== w));
+        resolve(undefined); // still pending; the waiter is removed but the approval stays open
+      }, wait).unref();
+    });
+    if (answered === undefined) return 'pending';
+    this.settleTask(t);
+    return answered ? 'approved' : 'denied';
+  }
+
+  /** Close any approvals still pending for a task that has ended, so none lingers. */
+  closePending(t: Task, by: string) {
+    for (const a of this.state.approvals.values()) if (a.task === t.id && a.state === 'pending') this.answer(a.id, false, by);
   }
 
   answer(id: string, approved: boolean, by: string): Approval {
@@ -260,24 +284,40 @@ class Core {
   }
 
   /** Run a tool for a task. A key already answered in the log returns the logged result without running again. */
-  async callTool(t: Task, key: string, name: string, input: unknown) {
+  async callTool(t: Task, key: string, name: string, input: unknown): Promise<{ ok: boolean; output?: unknown; error?: string; pending?: boolean }> {
     if (!t.tools.includes(name)) throw new Error(`this task may not use ${name}`);
     const entry = this.tools.get(name);
     if (!entry) throw new Error(`no tool ${name}`);
+    // Resume dedup: a call already finished and logged under this exact key returns its result.
     const prev = this.log.events.findLast((e) => e.type === 'tool.result' && e.task === t.id && e.key === key);
     if (prev?.type === 'tool.result') return { ok: prev.ok, output: prev.output, error: prev.error };
+    // Collapse a call that is retried while the first is still waiting (Droid re-calls after its timeout):
+    // the same tool and arguments share one in-flight run, so it is approved and charged once.
+    const action = `${name}:${createHash('sha256').update(JSON.stringify(input ?? {})).digest('hex').slice(0, 16)}`;
+    const flight = `${t.id}|${action}`;
+    const existing = this.inflight.get(flight);
+    if (existing) return existing;
+    const run = this.runTool(t, key, name, input, action, entry);
+    this.inflight.set(flight, run);
+    void run.finally(() => this.inflight.delete(flight));
+    return run;
+  }
+
+  private async runTool(t: Task, key: string, name: string, input: unknown, action: string, entry: { tool: Tool; track: string }) {
     const result = (r: { ok: boolean; output?: unknown; error?: string; cents?: number }) => {
       this.write({ type: 'tool.result', task: t.id, key, ...r });
       return r;
     };
     const cost = entry.tool.cost?.(input) ?? 0;
-    // Count spending already committed by this task's other in-flight calls, so two parallel payments
-    // cannot both pass a budget check and together overspend.
+    // Count spending this task's other in-flight calls have committed, so two payments at once can't both pass.
     const committed = () => t.costCents + (this.reserved.get(t.id) ?? 0);
     if (cost > 0 && committed() + cost > t.budgetCents) {
       const meta = entry.tool.approval?.(input) ?? {};
       const q = `Spend ${dollars(cost)}${meta.payee ? ` to ${meta.payee}` : ''} on ${name}${meta.purpose ? ` (${meta.purpose})` : ''}? Budget ${dollars(t.budgetCents)}, spent ${dollars(t.costCents)}.`;
-      if (!(await this.ask(t, `budget.${key}`, { question: q, costCents: cost, payee: meta.payee, purpose: meta.purpose }))) return result({ ok: false, error: 'not approved' });
+      // Approval id keyed by the action, so a retry of the same call reuses it instead of asking again.
+      const outcome = await this.askFor(t, `budget.${action}`, { question: q, costCents: cost, payee: meta.payee, purpose: meta.purpose });
+      if (outcome === 'pending') return { ok: false, pending: true, error: 'Waiting for the box owner to approve this spend. Call this tool again to check.' };
+      if (outcome === 'denied') return result({ ok: false, error: 'not approved' });
     }
     this.reserved.set(t.id, (this.reserved.get(t.id) ?? 0) + cost); // reserve now, with no await before it, so a parallel call sees this spend
     this.write({ type: 'tool.call', task: t.id, key, tool: name, input });
@@ -324,7 +364,10 @@ class Core {
         return this.write({ type: 'cost', task: t.id, cents: usageCents(String(body.model), tokens), what: String(body.what ?? 'model'), model: String(body.model), tokens });
       }
       if (route === 'POST /call') return this.callTool(t, String(body.key), String(body.tool), body.input);
-      if (route === 'POST /ask') return { approved: await this.ask(t, String(body.key), { question: String(body.question), costCents: Number(body.costCents ?? 0), payee: body.payee, purpose: body.purpose }) };
+      if (route === 'POST /ask') {
+        const outcome = await this.askFor(t, String(body.key), { question: String(body.question), costCents: Number(body.costCents ?? 0), payee: body.payee, purpose: body.purpose });
+        return outcome === 'pending' ? { pending: true } : { approved: outcome === 'approved' };
+      }
     });
     this.brokers.set(t.id, server);
     await listenSocket(server, dirs.socket(t.id), owner);
