@@ -20,13 +20,15 @@ Made-up company for the credit desk demo. Every person, business and number here
 |---|---|---|
 | Credit analyst | agent | Checks new business customers, proposes risk band, terms and limit, approves limits up to $10,000, declines |
 | Collections clerk | agent | Issues and corrects invoices, applies payments, sends reminders, places holds, releases orders for current customers |
+| AP clerk | agent | Checks supplier bills, enters new ones, pays suppliers up to $5,000 a payment. Never pays a bill it entered itself |
 | Controller | Rosa Delgado (human) | Approves limits above $10,000, up to $50,000, and any terms with public records. The only one who clears a fraud referral. Releases credit holds, writes off |
-| Sales | Sam Ortiz, M. Chen, J. Park | Bring in customers and enter orders, and may ask for an exception. No credit decisions. |
-| IT admin | Dana Brooks | Runs the box: people, keys and apps. No credit decisions. |
-| Auditor | Lee Morgan | Reads the action log and every decision. Changes nothing. |
+| Sales | Sam Chen, Jae Park | Bring in customers and enter orders, and may ask for an exception. No credit decisions. |
+| Purchasing | Luis Romero, Mia Ito (temp) | Order from suppliers and enter their bills. Never pay them. |
+| IT admin | Priya Nair | Runs the box: people, keys, apps and the kill switch. No credit decisions. |
+| Auditor | Owen Clarke | Reads the action log, every decision and the audit. Changes nothing. |
 | Owner | Martin Hale | Not in the credit process |
 
-The two agent seats never approve their own proposals. Anything above the analyst's authority, and every fraud
+The agent seats never approve their own proposals or each other's. Anything above the analyst's authority, and every fraud
 referral, waits for the controller.
 
 ## Terms Fogline offers

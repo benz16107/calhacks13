@@ -36,6 +36,8 @@ const TABLES: Record<string, [string, string[], string[], string[]]> = {
   "invoice_lines.csv": ["", ["invoice_id", "qty", "unit_price", "line_total"], ["qty", "unit_price", "line_total"], []],
   "payments.csv": ["payment_id", ["received_date", "customer_id", "amount"], ["amount", "discount_taken"], ["received_date", "payment_date"]],
   "orders.csv": ["order_id", ["customer_id", "order_date", "amount"], ["amount"], ["order_date", "requested_ship_date"]],
+  "suppliers.csv": ["supplier_id", ["name"], [], ["bank_changed_on"]],
+  "bills.csv": ["bill_id", ["supplier_id", "bill_date", "due_date", "amount"], ["amount", "paid_amount"], ["bill_date", "due_date", "paid_on"]],
   "sources/bank_statements.csv": ["", ["application_id", "month", "deposits_total"], ["deposits_total"], []],
 };
 // [file, column, file it must point into]
@@ -45,6 +47,7 @@ const REFS: [string, string, string][] = [
   ["payments.csv", "customer_id", "customers.csv"],
   ["payments.csv", "applied_invoice_id", "invoices.csv"],
   ["orders.csv", "customer_id", "customers.csv"],
+  ["bills.csv", "supplier_id", "suppliers.csv"],
 ];
 
 const isDate = (s: string) => /^\d{4}-\d{2}-\d{2}$/.test(s) && !Number.isNaN(Date.parse(s));

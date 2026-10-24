@@ -1,0 +1,3 @@
+date,event,payment_id,amount,reason
+2026-12-18,returned,PMT-8933,7420.00,ACH return R01: insufficient funds
+2027-01-06,returned,PMT-8967,11250.00,Check 1188 returned unpaid: insufficient funds

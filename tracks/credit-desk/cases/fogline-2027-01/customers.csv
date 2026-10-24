@@ -1,0 +1,3 @@
+customer_id,legal_name,ein,phone,email,address_line1,address_line2,city,state,zip,terms,credit_limit,last_credit_review,on_credit_hold,created_on,sales_rep,notes
+C-1001,Golden Gate Bagel Co.,94-3307716,(415) 555-0121,ap@ggbagel.example,3150 Geary Blvd,,San Francisco,CA,94118,Net 30,20000,2026-02-11,no,2019-04-02,Sam Chen,Two shops: Geary Blvd (bill-to) and 780 Valencia St
+C-1013,Bright Harbor Catering Inc.,45-0918372,(408) 555-0144,billing@brightharborcatering.example,455 W Julian St,,San Jose,CA,95110,Net 30,40000,2026-10-26,no,2026-10-26,Sam Chen,Opened from credit application APP-1042 (October case)

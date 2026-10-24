@@ -1,0 +1,29 @@
+{
+  "runs": [
+    "20261024-0921",
+    "20261024-0922"
+  ],
+  "model": "claude-sonnet-4-6",
+  "questions": 10,
+  "correct": 7,
+  "noAnswer": 0,
+  "byLevel": {
+    "easy": {
+      "n": 3,
+      "correct": 2
+    },
+    "hard": {
+      "n": 7,
+      "correct": 5
+    }
+  },
+  "costUsd": 3.22,
+  "taskMinutes": 11.8,
+  "wallMinutes": 7.9,
+  "tokens": {
+    "input": 6158,
+    "output": 66834,
+    "cacheWrite": 322444,
+    "cacheRead": 3294402
+  }
+}

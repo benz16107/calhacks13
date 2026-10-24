@@ -1,7 +1,7 @@
 order_id,customer_id,order_date,requested_ship_date,amount,status,entered_by,notes
-SO-5519,C-1003,2026-10-21,2026-10-24,1420.00,awaiting credit release,J. Park,
-SO-5521,C-1005,2026-10-22,2026-10-24,2400.00,awaiting credit release,M. Chen,Customer asked for Friday delivery
-SO-5524,C-1011,2026-10-22,2026-10-26,1850.00,awaiting credit release,J. Park,
-SO-5527,C-1002,2026-10-21,2026-10-23,3100.00,awaiting credit release,M. Chen,Weekend brunch stock-up
-SO-5528,C-1012,2026-10-22,2026-10-27,2980.00,awaiting credit release,M. Chen,Holiday tasting event
-SO-5530,C-1001,2026-10-22,2026-10-24,1760.00,awaiting credit release,M. Chen,Valencia St shop
+SO-5519,C-1003,2026-10-21,2026-10-24,1420.00,awaiting credit release,Jae Park,
+SO-5521,C-1005,2026-10-22,2026-10-24,2400.00,awaiting credit release,Sam Chen,Customer asked for Friday delivery
+SO-5524,C-1011,2026-10-22,2026-10-26,1850.00,awaiting credit release,Jae Park,
+SO-5527,C-1002,2026-10-21,2026-10-23,3100.00,awaiting credit release,Sam Chen,Weekend brunch stock-up
+SO-5528,C-1012,2026-10-22,2026-10-27,2980.00,awaiting credit release,Sam Chen,Holiday tasting event
+SO-5530,C-1001,2026-10-22,2026-10-24,1760.00,awaiting credit release,Sam Chen,Valencia St shop

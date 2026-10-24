@@ -1,0 +1,10 @@
+{
+  "note": "The controller's answers in a scored run. Anything not listed is approved. Kept out of the seats' files.",
+  "answers": [
+    {
+      "match": "[B-3301 pay",
+      "approve": false,
+      "reason": "Not yet. Receiving hasn't confirmed PO-8841 arrived complete, and Altamira shorted us in September. Hold it until receiving signs off."
+    }
+  ]
+}

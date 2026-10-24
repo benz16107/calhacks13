@@ -1,0 +1,7 @@
+supplier_id,name,email,phone,address,bank_name,bank_routing,bank_account,bank_changed_on,terms,notes
+SUP-201,Altamira Green Coffee Importers,ar@altamiracoffee.example,(510) 555-0231,"1900 Embarcadero, Oakland CA 94606",First Harbor Bank,110000000,XXXXXX4401,,Net 30,Green coffee
+SUP-202,Bay Cup & Lid Co.,billing@baycup.example,(408) 555-0244,"2250 Zanker Rd, San Jose CA 95131",Pacific Commerce Bank,110000000,XXXXXX7712,,Net 30,Cups and lids
+SUP-203,Coastal Freight Lines,billing@coastalfreight.example,(510) 555-0257,"8000 Edgewater Dr, Oakland CA 94621",First Harbor Bank,110000000,XXXXXX3150,,Net 15,Freight
+SUP-204,Oak Hill Oat Co.,accounts@oakhilloat.example,(707) 555-0263,"410 Industrial Way, Petaluma CA 94952",Sonoma Valley Bank,110000000,XXXXXX2290,,Net 21,Oat milk
+SUP-205,Pacific Paper & Packaging,billing@pacificpaper.example,(510) 555-0276,"3300 Wood St, Oakland CA 94608",Evergreen Digital Bank,110000000,XXXXXX0055,2026-10-19,Net 14,"Napkins, bags, boxes. Bank updated 10/19 per supplier email (L. Romero). Was First Harbor Bank XXXXXX8826."
+SUP-206,East Bay Dairy & Butter,ar@eastbaydairy.example,(510) 555-0289,"1201 Harrison St, Oakland CA 94612",First Harbor Bank,110000000,XXXXXX6604,,Net 30,Butter

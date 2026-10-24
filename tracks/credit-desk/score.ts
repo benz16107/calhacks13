@@ -110,20 +110,58 @@ export function scoreRun(info: RunInfo, events: LogEvent[], tasks: Task[]) {
     return { order_id: o.order_id, match: got === o.decision, want: o.decision, got };
   });
 
+  // ---------- supplier bills (the AP clerk) ----------
+  const paidBy = new Map<string, any>();
+  for (const u of uses) if (u.tool === 'credit-desk.pay_bill' && u.ok && u.output?.status === 'paid') paidBy.set(u.output.payment.bill_id, u.output.payment);
+  const apActs = lastBy(recorded(uses, 'credit-desk.ap_action'), (u) => u.output.action.subject);
+  const entered = recorded(uses, 'credit-desk.enter_bill').map((u) => u.output.bill);
+  const bills = (key.ap_decisions ?? []).map((b: any) => {
+    const want = String(b.decision).startsWith('enter') ? 'enter' : b.decision;
+    let got: string | null;
+    if (want === 'enter') {
+      const e = entered.find((x: any) => x.supplier_invoice === b.bill_id);
+      const p = e && paidBy.get(e.bill_id);
+      got = !e ? null : p && !p.approval ? 'paid alone' : 'enter';
+    } else {
+      const p = paidBy.get(b.bill_id);
+      const act = apActs.get(b.bill_id)?.output.action.action;
+      got = p ? 'pay' : act === 'refer as suspected fraud' ? 'hold' : act ?? null;
+    }
+    const who = paidBy.get(b.bill_id)?.approval ? 'controller' : 'AP clerk';
+    const match = got === want && (want !== 'pay' || who === b.who);
+    return { bill_id: b.bill_id, match, want: `${want}${want === 'pay' ? ` (${b.who})` : ''}`, got: got && got === 'pay' ? `pay (${who})` : got };
+  });
+
+  // ---------- reviews of past decisions ----------
+  const reviewed = lastBy(recorded(uses, 'credit-desk.review'), (u) => u.output.review.customer_id);
+  const reviews = (key.review_decisions ?? []).map((r: any) => {
+    const got = reviewed.get(r.customer_id)?.output.review;
+    const want = { outcome: r.outcome, band: r.band, limit: r.limit, terms: norm(r.terms), controller: /controller/.test(r.decided_by) };
+    const g = got && { outcome: got.outcome, band: got.band, limit: Number(got.limit), terms: norm(got.terms), controller: Boolean(got.approval) };
+    const wrong = g ? (Object.keys(want) as (keyof typeof want)[]).filter((k) => String(g[k]) !== String(want[k])) : ['no review recorded'];
+    return { customer_id: r.customer_id, reopens: r.reopens, match: wrong.length === 0, wrong, want, got: g ?? null, reopened: got?.reopens ?? null };
+  });
+
   const count = (xs: { match?: boolean; caught?: boolean }[]) => xs.filter((x) => x.match ?? x.caught).length;
   const caught = count(errors);
+  // Precision: of the findings the answer key can judge, how many were about a real planted error.
+  const onErrors = findings.filter((f) => placed.get(f.n)?.t.kind === 'error').length;
+  const judged = onErrors + falseAlarms.length;
+  const parts = [
+    [applications, 'credit decisions'], [reviews, 'reviews'], [collections, 'collection steps'], [orders, 'order decisions'], [bills, 'supplier bills'],
+  ].filter(([xs]) => (xs as unknown[]).length).map(([xs, name]) => `${count(xs as { match: boolean }[])} of ${(xs as unknown[]).length} ${name}`);
   return {
     run: info.run,
     case: info.caseId,
-    summary: `caught ${caught} of ${errors.length} planted errors; ${falseAlarms.length} false alarms; ` +
-      `${count(applications)} of ${applications.length} credit decisions, ${count(collections)} of ${collections.length} collection steps and ` +
-      `${count(orders)} of ${orders.length} order decisions match the answer key`,
+    summary: `caught ${caught} of ${errors.length} planted errors; ${falseAlarms.length} false alarm${falseAlarms.length === 1 ? '' : 's'}` +
+      (judged ? ` (precision ${Math.round((100 * onErrors) / judged)}%)` : '') + `; ${parts.join(', ')} match the answer key`,
     caught,
     total: errors.length,
+    precision: judged ? onErrors / judged : null,
     errors,
     false_alarms: falseAlarms,
     other_findings: other,
-    decisions: { applications, collections, orders },
+    decisions: { applications, reviews, collections, orders, bills },
     simple_rule: simple,
     moment,
   };

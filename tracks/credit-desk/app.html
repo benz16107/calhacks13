@@ -53,31 +53,50 @@
   pre { margin: 0; padding: 16px; font: 13px/19px var(--mono); white-space: pre-wrap; max-height: 60vh; overflow: auto; }
   .err { color: var(--fail-fg); }
   .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .twocol { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+  .review { margin-bottom: 16px; }
+  .review h3, .card h3 { margin: 0 0 8px; font-size: 15px; }
+  dl.facts { display: grid; grid-template-columns: max-content 1fr; gap: 4px 12px; margin: 0; font-size: 13px; }
+  dl.facts dt { color: var(--text2); } dl.facts dd { margin: 0; }
+  ul.changes { margin: 8px 0 0; padding-left: 18px; } ul.changes li { margin-top: 4px; }
+  .story { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 10px 16px; margin-bottom: 16px; font-size: 13px; }
+  .story b { font-weight: 600; }
+  textarea, input[type=text], input[type=number] { font: inherit; padding: 6px 10px; border: 1px solid var(--strong); border-radius: 4px; background: var(--surface); color: var(--text); }
+  textarea { width: 100%; min-height: 56px; }
+  .form { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); align-items: end; }
+  .form label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--text2); }
+  .why p { margin: 0 0 8px; }
+  .ok { color: var(--done-fg); }
   [hidden] { display: none !important; }
 </style>
+
 <main>
   <div class="bar">
-    <div class="group">
-      <label class="sr-only" for="run">Run</label><select id="run" hidden></select>
-    </div>
+    <div class="group"><label class="sr-only" for="run">Run</label><select id="run" hidden></select></div>
     <div class="toggle" role="tablist" aria-label="Views">
       <button role="tab" data-view="decisions">Decisions<span class="count" id="n-decisions"></span></button>
+      <button role="tab" data-view="reviews">Reviews<span class="count" id="n-reviews"></span></button>
       <button role="tab" data-view="collections">Collections<span class="count" id="n-collections"></span></button>
+      <button role="tab" data-view="payables">Payables<span class="count" id="n-payables"></span></button>
+      <button role="tab" data-view="books">Books</button>
       <button role="tab" data-view="score">Score</button>
+      <button role="tab" data-view="why">Ask why</button>
+      <button role="tab" data-view="byo">Bring your own</button>
       <button role="tab" data-view="rules">Rules</button>
     </div>
     <div class="group">
-      <label class="sr-only" for="case">Case</label><select id="case" hidden></select>
+      <label class="sr-only" for="case">Case</label><select id="case"></select>
       <button id="quick" title="Scripted seats call the real tools, live against CRS and Nessie. No model. About 10 seconds.">Quick run</button>
-      <button id="full" class="primary" title="Both seats with Droid and Claude on the whole case. About 10 minutes of model time.">New run</button>
+      <button id="full" class="primary" title="Every seat with Droid and Claude on the whole case. About 10 to 15 minutes of model time.">New run</button>
     </div>
   </div>
   <p id="status" class="small" role="status" aria-live="polite"></p>
+  <div class="story" id="story" hidden></div>
 
   <section id="empty" class="card empty" hidden>
     <svg width="48" height="48" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M16 10H32C33.1 10 34 10.9 34 12V36C34 37.1 33.1 38 32 38H16C14.9 38 14 37.1 14 36V12C14 10.9 14.9 10 16 10Z"/><path d="M19 18H29M19 24H29M19 30H25"/></svg>
     <h2>No runs yet</h2>
-    <p class="small">A quick run shows the desk catch the fake applicant in about 10 seconds. A new run puts both seats on the whole case with Droid.</p>
+    <p class="small">A quick run shows the desk catch the fake applicant in about 10 seconds. A new run puts every seat on the whole case with Droid.</p>
   </section>
 
   <div id="body" hidden>
@@ -95,11 +114,21 @@
         <tbody id="apps"></tbody>
       </table></div>
     </section>
+    <section data-panel="reviews" hidden><div id="reviews"></div></section>
     <section data-panel="collections" hidden>
       <div class="wrap"><table><caption>Problems flagged</caption>
         <thead><tr><th>Rows</th><th>Problem</th><th>Rules</th><th>Seat</th></tr></thead><tbody id="problems"></tbody></table></div>
       <div class="wrap"><table><caption>Collections actions</caption>
         <thead><tr><th>Subject</th><th>Action</th><th>Rules</th><th>Decided by</th></tr></thead><tbody id="actions"></tbody></table></div>
+    </section>
+    <section data-panel="payables" hidden>
+      <div class="wrap"><table><caption>Supplier bills (payments are Capital One Nessie sandbox test money)</caption>
+        <thead><tr><th>Bill</th><th>Supplier</th><th>Invoice</th><th>Due</th><th>Amount</th><th>Entered by</th><th>Status</th><th></th></tr></thead><tbody id="bills"></tbody></table></div>
+    </section>
+    <section data-panel="books" hidden>
+      <div class="cards" id="books-cards"></div>
+      <p class="small">The real books are Fogline's Beancount ledger plus every entry posted through the desk, rebuilt from the box's log. A seat drafts in its own copy; nothing reaches the books except through the desk's books tool, and undoing a task takes its entries back out. <a id="books-link" href="#">Download the books</a> to open them in Fava or check them with bean-check.</p>
+      <div class="wrap"><table><caption>Posted through the desk</caption><thead><tr><th>Log entry</th><th>Seat</th><th>Entry</th></tr></thead><tbody id="posted"></tbody></table></div>
     </section>
     <section data-panel="score" hidden>
       <p class="small" id="score-summary"></p>
@@ -112,12 +141,48 @@
     </section>
   </div>
 
-  <p class="notice">Every decision names the rule ids it rests on, and the desk's tools refuse a rule the file does not have. CRS and Capital One Nessie are sandboxes with test identities: no real person's credit is checked, and no real money moves.</p>
+  <section data-panel="why" hidden>
+    <div class="card">
+      <h3>Why did we decide this, and does it still hold?</h3>
+      <p class="small">The desk answers from the box's log alone: what it knew at the moment it decided, the rules it cited, who approved it and when, and anything recorded since. Ask about an application (APP-1042), a customer (C-1013) or a business name.</p>
+      <form id="why-form" class="group"><label class="sr-only" for="why-q">Subject</label><input type="text" id="why-q" value="APP-1042" size="28"><button class="primary">Ask</button></form>
+    </div>
+    <div id="why-out" class="why"></div>
+  </section>
+
+  <section data-panel="byo" hidden>
+    <div class="card">
+      <h3>A credit application of your own</h3>
+      <p class="small">Type any business. The owner who signs the guarantee must be one of CRS's 20 test people: the sandbox knows only them, and no real person's credit is checked.</p>
+      <form id="app-form" class="form">
+        <label>Business name<input type="text" name="business" required placeholder="Sunrise Bakery LLC"></label>
+        <label>Industry<input type="text" name="industry" placeholder="Bakery"></label>
+        <label>Annual revenue, $<input type="number" name="annual_revenue" required min="0" value="900000"></label>
+        <label>Years in business<input type="number" name="years_in_business" required min="0" value="5"></label>
+        <label>Credit limit asked for, $<input type="number" name="credit_limit" required min="1" value="20000"></label>
+        <label>Terms asked for<select name="terms"><option>Net 30</option><option>Net 15</option></select></label>
+        <label>Owner (a CRS test person)<select name="persona" id="persona"></select></label>
+        <label>Why they want credit<input type="text" name="reason" placeholder="Opening a second shop"></label>
+        <div><button class="primary">Check it</button></div>
+      </form>
+    </div>
+    <div class="card" style="margin-top:16px">
+      <h3>Or upload case files</h3>
+      <p class="small">CSV files named as in the README (customers.csv, invoices.csv, payments.csv, orders.csv, suppliers.csv, bills.csv), applications named APP-something.json, and optionally an answer_key.json to score the run. <a href="#" id="templates">Download templates</a>.</p>
+      <form id="up-form" class="group"><input type="file" id="files" multiple accept=".csv,.json"><button class="primary">Check them</button></form>
+    </div>
+    <div id="byo-out"></div>
+  </section>
+
+  <p class="notice" id="notice">Every decision names the rule ids it rests on, and the desk's tools refuse a rule the file does not have. CRS and Capital One Nessie are sandboxes with test identities: no real person's credit is checked, and every payment is test money.</p>
 </main>
 <script>
-  // Off the box's own screen the core needs the paired token; the portal puts it in this window's URL.
-  const token = new URLSearchParams(location.search).get('access_token');
-  const auth = token ? { authorization: 'Bearer ' + token } : {};
+  // Off the box's own screen the core needs the paired token; the portal puts it in this window's URL. On a Business
+  // box, ?person= says who is signed in on the box's screen.
+  const params = new URLSearchParams(location.search);
+  const token = params.get('access_token');
+  const person = params.get('person');
+  const auth = { ...(token ? { authorization: 'Bearer ' + token } : {}), ...(person ? { 'x-box-person': person } : {}) };
   async function api(method, url, body) {
     const r = await fetch(url, { method, headers: { ...auth, ...(body ? { 'content-type': 'application/json' } : {}) }, body: body ? JSON.stringify(body) : undefined });
     const text = await r.text();
@@ -128,18 +193,26 @@
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
   const money = (n) => (n == null ? '' : '$' + Number(n).toLocaleString('en-US'));
+  const cents = (n) => (n == null ? '' : '$' + Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
   const plain = (q) => String(q || '').replace(/^Credit desk \[[^\]]*\]: (.)/, (_, c) => c.toUpperCase());
   const clip = (t, n) => (t.length <= n ? t : t.slice(0, t.lastIndexOf(' ', n)) + '...');
   const chips = (ids) => (ids || []).map((r) => `<span class="chip">${esc(r)}</span>`).join('');
-  const SEAT = { analyst: 'Credit analyst', clerk: 'Collections clerk' };
+  const SEAT = { analyst: 'Credit analyst', clerk: 'Collections clerk', ap: 'AP clerk' };
   const STATE = { running: ['running', 'Running'], queued: ['running', 'Queued'], waiting: ['needsyou', 'Needs you'], done: ['done', 'Done'], failed: ['failed', 'Failed'], undone: ['off', 'Undone'] };
-  let view = 'decisions', runId = null, state = null, rulesFor = null;
+  let view = 'decisions', runId = null, state = null, rulesFor = null, denying = null;
 
   function status(text, isError) { $('status').textContent = text || ''; $('status').className = isError ? 'small err' : 'small'; }
 
+  // Approve, or Deny with a reason the seat reads before it revises.
+  const answerButtons = (ask) => denying === ask.id
+    ? `<div class="actions" style="flex-direction:column;align-items:stretch"><label class="small" for="reason-${esc(ask.id)}">Why not? The seat reads this and revises.</label><textarea id="reason-${esc(ask.id)}" data-reason-for="${esc(ask.id)}"></textarea><div class="actions"><button data-cancel="1">Cancel</button><button class="primary" data-send-no="${esc(ask.id)}">Send the no</button></div></div>`
+    : `<div class="actions"><button data-deny="${esc(ask.id)}">Deny</button><button class="primary" data-approve="${esc(ask.id)}">Approve</button></div>`;
+  const askCell = (ask) => `<div class="small">${esc(plain(ask.question))}</div>${answerButtons(ask)}`;
+
   function decisionCell(a) {
-    if (a.ask) return [`<span class="badge needsyou">Needs you</span>`, `<div class="small">${esc(plain(a.ask.question))}</div><div class="actions"><button data-deny="${esc(a.ask.id)}">Deny</button><button class="primary" data-approve="${esc(a.ask.id)}">Approve</button></div>`];
+    if (a.ask) return [`<span class="badge needsyou">Needs you</span>`, askCell(a.ask)];
     const d = a.decision;
+    if (!d && a.proposed && a.proposed.status === 'denied') return [`<span class="badge failed">Controller said no</span>`, `<span class="small">${esc(a.proposed.reason ? '"' + a.proposed.reason + '". ' : '')}The analyst revises.</span>`];
     if (!d && a.proposed) return a.proposed.outcome === 'fraud hold'
       ? [`<span class="badge needsyou">Fraud referral</span>`, `<span class="small">The analyst proposes a fraud hold. Only the controller can decide it.</span>`]
       : [`<span class="badge needsyou">Above authority</span>`, `<span class="small">The analyst proposes to ${esc(a.proposed.outcome)}${a.proposed.limit ? ' ' + money(a.proposed.limit) : ''}. Only the controller can approve it.</span>`];
@@ -148,19 +221,57 @@
     return [`<span class="badge ${kind[0]}">${esc(kind[1])}</span>`, `<span class="small">${esc(d.decided_by === 'credit analyst' ? 'Within the analyst\'s authority' : 'By the ' + d.decided_by)}</span>`];
   }
 
+  const facts = (rows) => `<dl class="facts">${rows.filter(([, v]) => v !== null && v !== undefined && v !== '').map(([k, v]) => `<dt>${esc(k)}</dt><dd>${v}</dd>`).join('')}</dl>`;
+  function thenCard(t) {
+    if (!t) return `<div class="card"><h3>Then</h3><p class="small">The box's log has no earlier decision for this customer. Run the October case first: the desk's memory is the log.</p></div>`;
+    const c = t.checks || {};
+    return `<div class="card"><h3>Then: ${esc(t.case_date)}, from the log</h3>${facts([
+      ['Decision', `${esc(t.decision.outcome)} ${money(t.decision.limit)} on ${esc(t.decision.terms)}, band ${esc(t.decision.band)}`],
+      ['Approved by', t.approval ? `${esc(t.approval.by)}, ${esc(new Date(t.approval.at).toLocaleString())}` : 'the analyst, within its authority'],
+      ['Credit', `TransUnion ${esc(c.transunion)}, Equifax ${esc(c.equifax)}, Experian ${esc(c.experian)}`],
+      ['Identity, fraud', `${esc(c.identity)}, fraud score ${esc(c.fraud_score)}`],
+      ['Public records', esc(c.public_records)],
+      ['Bank', t.bank ? `${money(t.bank.average_monthly_deposits)} a month over ${esc(t.bank.months)} months` : ''],
+      ['Rules', chips((t.rules || []).map((r) => r.id || r))],
+      ['Log entry', `<span class="mono">${esc(t.seq)}</span>, run ${esc(t.run)}`],
+    ])}</div>`;
+  }
+  function nowCard(n, changes) {
+    if (!n) return `<div class="card"><h3>Now</h3><p class="small">Recorded once the controller answers.</p></div>`;
+    return `<div class="card"><h3>Now: ${esc(n.case_date)}</h3>${facts([
+      ['On the record', `${money(n.limit)} on ${esc(n.terms)}`],
+      ['Books say open', cents(n.system_open_balance)],
+      ['Really open', `<b>${cents(n.open_balance)}</b>`],
+      ['Oldest past due', `${esc(n.oldest_days_past_due)} days`],
+      ['Returned payments', (n.returned_payments || []).map((r) => `${esc(r.payment_id)} ${cents(r.amount)} on ${esc(r.date)}`).join('<br>') || 'none'],
+      ['Waiting to ship', (n.open_orders || []).map((o) => `${esc(o.order_id)} ${cents(o.amount)}`).join(', ') || 'nothing'],
+    ])}${changes && changes.length ? `<ul class="changes">${changes.map((c) => `<li>${esc(c)}</li>`).join('')}</ul>` : ''}</div>`;
+  }
+
+  function story(s) {
+    const c = s.run ? s.run.case : $('case').value;
+    const hasOct = s.runs.some((r) => r.case === 'fogline-2026-10');
+    if (c !== 'fogline-2026-10' && c !== 'fogline-2027-01') return '';
+    return `<b>A year at Fogline.</b> <span>October: six new applicants, one of them fake, and a ledger full of mistakes.</span> <span>&rarr;</span> <span>January: two of Bright Harbor's payments bounce, and the desk reopens October's $40,000 decision from its own log.</span>` +
+      (c === 'fogline-2027-01' && !hasOct ? ' <span class="err">Run October first: January needs its decision in the log.</span>' : '');
+  }
+
   function render() {
     const s = state;
-    const cases = s.cases || [];
-    $('case').hidden = cases.length < 2;
-    $('case').innerHTML = cases.map((c) => `<option value="${esc(c.id)}">${esc(c.title)}</option>`).join('');
-    if (s.run && cases.some((c) => c.id === s.run.case) && !$('case').dataset.touched) $('case').value = s.run.case;
-    const chosen = cases.find((c) => c.id === $('case').value);
+    const sel = $('case').value;
+    $('case').innerHTML = s.cases.map((c) => `<option value="${esc(c.id)}">${esc(c.uploaded ? 'Yours: ' : '')}${esc(c.title)}</option>`).join('');
+    if (sel && s.cases.some((c) => c.id === sel)) $('case').value = sel;
+    else if (s.run && s.cases.some((c) => c.id === s.run.case)) $('case').value = s.run.case;
+    const chosen = s.cases.find((c) => c.id === $('case').value);
     $('quick').disabled = !chosen || !chosen.scripted;
     $('run').hidden = !s.runs.length;
     $('run').innerHTML = s.runs.map((r) => `<option value="${esc(r.run)}">Run ${esc(r.run)}, ${esc(r.case)}, ${esc(new Date(r.at).toLocaleString())}</option>`).join('');
     if (s.run) $('run').value = s.run.run;
-    $('empty').hidden = !!s.run;
-    $('body').hidden = !s.run;
+    const st = story(s);
+    $('story').hidden = !st; $('story').innerHTML = st;
+    const inRun = !['why', 'byo'].includes(view);
+    $('empty').hidden = !!s.run || !inRun;
+    $('body').hidden = !s.run || !inRun;
     if (!s.run) return;
     const r = s.run;
 
@@ -169,41 +280,64 @@
     $('c-caught-sub').textContent = `Run ${r.run}, rules ${s.rules.version || s.rules.file}${r.scripted ? ', scripted seats' : ''}`;
     $('c-false').textContent = sc ? sc.false_alarms : '-';
     const simple = r.applications.filter((a) => a.simple_rule && a.simple_rule.outcome === 'approve');
-    $('c-false-sub').textContent = simple.length ? `The simple rule approves ${simple.length} of ${r.applications.length}, ${money(simple.reduce((n, a) => n + a.simple_rule.limit, 0))}` : 'The simple rule runs on the CRS answers';
+    $('c-false-sub').textContent = sc && sc.precision != null ? `Precision ${Math.round(100 * sc.precision)}% of the findings the key can judge` : simple.length ? `The simple rule approves ${simple.length} of ${r.applications.length}` : '';
     $('c-needs').textContent = r.approvals.length;
     $('c-needs').className = 'big' + (r.approvals.length ? ' warn' : '');
     $('c-needs-sub').textContent = r.approvals.length ? clip(plain(r.approvals[0].question), 90) : 'Nothing waiting for the controller';
     $('c-time').textContent = `${r.minutes} min, $${(r.costCents / 100).toFixed(2)}`;
-    $('c-time-sub').textContent = r.scripted ? 'Scripted seats, no model' : 'Two Droid seats with Claude, model cost estimated';
+    $('c-time-sub').textContent = r.scripted ? 'Scripted seats, no model' : `${r.seats.length} Droid seats with Claude, model cost estimated`;
 
     $('seats').innerHTML = r.seats.map((t) => {
       const [cls, label] = STATE[t.state] || ['off', t.state];
-      return `<div class="card seat"><h2>${esc(SEAT[t.seat])} <span class="badge ${cls}">${esc(label)}</span></h2>
+      return `<div class="card seat"><h2>${esc(SEAT[t.seat] || t.seat)} <span class="badge ${cls}">${esc(label)}</span></h2>
         ${t.story.length ? `<ol>${t.story.map((l) => `<li>${esc(l)}</li>`).join('')}</ol>` : `<p class="small">Reading the case.</p>`}</div>`;
     }).join('');
 
     $('n-decisions').textContent = r.applications.filter((a) => a.decision).length || '';
+    $('n-reviews').textContent = r.reviews.length || '';
     $('n-collections').textContent = r.problems.length || '';
+    $('n-payables').textContent = r.bills.length || '';
     $('apps').innerHTML = r.applications.map((a) => {
       const [badge, detail] = decisionCell(a);
-      const d = a.decision;
-      const sr = a.simple_rule;
+      const d = a.decision, sr = a.simple_rule;
       return `<tr class="${a.ask ? 'needs' : ''}">
         <td class="mono">${esc(a.id)}</td><td>${esc(a.business)}</td><td>${money(a.requested)} <span class="small">${esc(a.terms)}</span></td>
         <td>${!d ? '' : d.outcome === 'fraud hold' || !d.limit ? `No credit <span class="small">${esc(d.terms)}</span>` : `${money(d.limit)} <span class="small">${esc(d.terms)}${d.band && d.band !== 'none' ? ', band ' + esc(d.band) : ''}</span>`}</td>
         <td>${d ? chips(d.rules) : ''}</td>
         <td>${sr && sr.outcome === 'approve' ? `Approves ${money(sr.limit)}` : sr && sr.outcome === 'decline' ? 'Declines' : ''}</td>
         <td>${badge}</td><td>${detail}</td></tr>`;
-    }).join('');
+    }).join('') || `<tr><td colspan="8" class="small">No applications in this case.</td></tr>`;
 
-    $('problems').innerHTML = r.problems.map((p) => `<tr><td class="mono">${esc((p.ids || []).join(', '))}</td><td>${esc(p.problem)}</td><td>${chips(p.rules)}</td><td>${esc(SEAT[p.seat])}</td></tr>`).join('') || `<tr><td colspan="4" class="small">No problems flagged yet.</td></tr>`;
+    $('reviews').innerHTML = r.reviews.map((rv) => {
+      const p = rv.proposal, rec = rv.review;
+      const head = rec ? `<span class="badge approved">${esc(rec.outcome)}: ${money(rec.limit)} on ${esc(rec.terms)}</span> <span class="small">by the ${esc(rec.decided_by)}</span>`
+        : rv.ask ? `<span class="badge needsyou">Needs you</span>` : rv.status === 'denied' ? `<span class="badge failed">Controller said no</span> <span class="small">${esc(rv.reason || '')}</span>` : `<span class="badge running">${esc(rv.status)}</span>`;
+      return `<div class="review"><div class="card" style="margin-bottom:12px"><h3>Review of <span class="mono">${esc(rv.customer_id)}</span> ${head}</h3>
+        <p class="small">The analyst proposes to ${esc(p.outcome)} the limit to ${money(p.limit)} on ${esc(p.terms)}${p.band ? ', band ' + esc(p.band) : ''}. ${chips(p.rules)}</p>
+        ${rv.ask ? askCell(rv.ask) : ''}</div>
+        <div class="twocol">${thenCard(rv.then)}${nowCard(rv.now, rv.changes)}</div></div>`;
+    }).join('') || `<p class="small">No reviews in this run. The January case shows one: run October, then January.</p>`;
+
+    $('problems').innerHTML = r.problems.map((p) => `<tr><td class="mono">${esc((p.ids || []).join(', '))}</td><td>${esc(p.problem)}</td><td>${chips(p.rules)}</td><td>${esc(SEAT[p.seat] || p.seat)}</td></tr>`).join('') || `<tr><td colspan="4" class="small">No problems flagged yet.</td></tr>`;
     $('actions').innerHTML = r.actions.map((a) => `<tr><td class="mono">${esc(a.subject)}</td><td>${esc(a.action)}<div class="small">${esc(a.detail)}</div></td><td>${chips(a.rules)}</td><td>${esc(a.decided_by)}</td></tr>`).join('') || `<tr><td colspan="4" class="small">No actions recorded yet.</td></tr>`;
 
-    $('score-summary').textContent = sc ? sc.summary.replace(/^./, (c) => c.toUpperCase()) + '.' + (r.scripted ? ' A quick run acts out only the fraud catch and one ledger error; a new run with Droid works the whole case.' : '') + (sc.moment.length ? ` The moment: the simple rule approves ${sc.moment.map((m) => m.application_id + ' (' + m.simple_rule.replace('approve ', '') + ')').join(', ')}; the desk put it on fraud hold.` : '') : 'This case has no answer key, so the run is not scored.';
+    const BILL = { paid: 'approved', 'paid before': 'off', void: 'off', hold: 'held', 'refer as suspected fraud': 'held', wait: 'off', refused: 'failed', denied: 'failed', open: 'off', 'needs controller': 'needsyou' };
+    $('bills').innerHTML = r.bills.map((b) => `<tr class="${b.ask ? 'needs' : ''}"><td class="mono">${esc(b.bill_id)}</td><td>${esc(b.supplier)}${b.bank_changed ? `<div class="small err">Bank details changed ${esc(b.bank_changed)}</div>` : ''}</td>
+      <td class="mono">${esc(b.supplier_invoice)}</td><td>${esc(b.due)}</td><td>${cents(b.amount)}</td><td>${esc(b.entered_by)}${b.entered_here ? ' <span class="small">(this run)</span>' : ''}</td>
+      <td><span class="badge ${BILL[b.status] || 'off'}">${esc(b.ask ? 'Needs you' : b.status)}</span>${b.by ? `<div class="small">${esc(b.by)}</div>` : ''}</td>
+      <td>${b.ask ? askCell(b.ask) : `<span class="small">${esc(b.why || '')}</span>`}</td></tr>`).join('') || `<tr><td colspan="8" class="small">No supplier bills in this case.</td></tr>`;
+
+    const bk = r.books;
+    $('books-cards').innerHTML = [['Bank, per the books', cents(bk.bank)], ['Customers owe', cents(bk.receivable)], ['Owed to suppliers', cents(bk.payable)], ['Entries', `${bk.transactions}${bk.errors ? `, <span class="err">${bk.errors} errors</span>` : ', all balanced'}`]]
+      .map(([k, v]) => `<div class="card"><div class="label">${esc(k)}</div><div class="big">${v}</div></div>`).join('');
+    $('posted').innerHTML = bk.posted.map((p) => `<tr><td class="mono">${esc(p.seq)}</td><td>${esc(SEAT[p.seat] || p.seat)}<div class="small">${esc(p.kind)}</div></td><td><pre style="padding:0;max-height:none">${esc(p.text)}</pre></td></tr>`).join('') || `<tr><td colspan="3" class="small">Nothing posted yet.</td></tr>`;
+
+    $('score-summary').textContent = sc ? sc.summary.replace(/^./, (c) => c.toUpperCase()) + '.' + (r.scripted ? ' A quick run acts out a few moments, not the whole case; a new run with Droid works all of it.' : '') + (sc.moment.length ? ` The moment: the simple rule approves ${sc.moment.map((m) => m.application_id + ' (' + m.simple_rule.replace('approve ', '') + ')').join(', ')}; the desk put it on fraud hold.` : '') : 'This case has no answer key, so the run is not scored.';
     $('errors').innerHTML = sc ? sc.errors.map((e) => `<tr><td class="mono">${esc(e.id)}</td><td>${esc(e.title)}</td><td>${e.caught ? '<span class="badge approved">Caught</span>' : '<span class="badge off">Not yet</span>'}</td><td class="small">${esc(e.by || '')}</td></tr>`).join('') : '';
 
     $('rules-head').innerHTML = `<span class="mono">${esc(s.rules.file)}</span>, version ${esc(s.rules.version || '?')}, ${esc(s.rules.count)} rules.` +
       (/^https:\/\//.test(s.rules.source || '') ? ` Worked out with Mana: <a href="${esc(s.rules.source)}" target="_blank" rel="noreferrer noopener">the public chat</a>.` : '');
+    $('books-link').href = '/t/credit-desk/books?run=' + encodeURIComponent(r.run) + (token ? '&access_token=' + encodeURIComponent(token) : '');
     if (view === 'rules' && rulesFor !== r.run) {
       rulesFor = r.run;
       api('GET', '/t/credit-desk/rules?run=' + encodeURIComponent(r.run)).then((t) => ($('rules-text').textContent = t), (e) => ($('rules-text').textContent = e.message));
@@ -218,6 +352,7 @@
   }
 
   async function load() {
+    if (denying) return; // don't redraw while someone types a reason
     try {
       state = await api('GET', '/t/credit-desk/state' + (runId ? '?run=' + encodeURIComponent(runId) : ''));
       render();
@@ -225,36 +360,90 @@
     } catch (e) { status('The box did not answer: ' + e.message, true); }
   }
 
-  async function start(scripted) {
-    const c = $('case').value || 'fogline-2026-10';
-    if (!scripted && !confirm(`Start both seats with Droid on ${c}? It takes about 10 minutes of model time.`)) return;
+  async function start(caseId, scripted) {
+    if (!scripted && !confirm(`Start every seat with Droid on ${caseId}? It takes about 10 to 15 minutes of model time.`)) return;
     $('quick').disabled = $('full').disabled = true;
-    status(scripted ? 'Starting the scripted seats...' : 'Starting both seats with Droid...');
+    status(scripted ? 'Starting the scripted seats...' : 'Starting the seats with Droid...');
     try {
-      const r = await api('POST', '/t/credit-desk/run', { case: c, scripted });
+      const r = await api('POST', '/t/credit-desk/run', { case: caseId, scripted });
       runId = r.run;
       status(`Run ${r.run} started.`);
+      show('decisions');
       await load();
     } catch (e) { status('Could not start the run: ' + e.message, true); }
     $('full').disabled = false;
   }
 
+  async function answer(id, approved, reason) {
+    try {
+      if (!approved && reason) await api('POST', '/t/credit-desk/reason', { approval: id, reason });
+      await api('POST', '/api/approvals/' + encodeURIComponent(id), { approved, by: 'credit desk window' });
+      denying = null;
+      await load();
+    } catch (e) { status('The answer did not go through: ' + e.message, true); }
+  }
+
+  function checked(res) {
+    const ok = !res.problems.length;
+    return `<div class="card" style="margin-top:16px"><h3>${ok ? '<span class="ok">The case is valid.</span>' : 'The case has problems'}</h3>
+      ${ok ? `<p class="small">${esc(res.summary.join(', '))}</p><div class="actions"><button class="primary" data-run-case="${esc(res.case)}">Run it with Droid</button></div>` : `<ul>${res.problems.map((p) => `<li class="small">${esc(p)}</li>`).join('')}</ul>`}</div>`;
+  }
+
   document.addEventListener('click', async (ev) => {
-    const b = ev.target.closest('button');
+    const b = ev.target.closest('button, a#templates');
     if (!b) return;
     if (b.dataset.view) return show(b.dataset.view);
-    if (b.id === 'quick') return start(true);
-    if (b.id === 'full') return start(false);
-    const id = b.dataset.approve || b.dataset.deny;
-    if (!id) return;
-    b.disabled = true;
+    if (b.id === 'quick') return start($('case').value, true);
+    if (b.id === 'full') return start($('case').value, false);
+    if (b.dataset.runCase) return start(b.dataset.runCase, false);
+    if (b.dataset.approve) { b.disabled = true; return answer(b.dataset.approve, true); }
+    if (b.dataset.deny) { denying = b.dataset.deny; render(); document.querySelector(`[data-reason-for="${CSS.escape(denying)}"]`)?.focus(); return; }
+    if (b.dataset.cancel) { denying = null; return load(); }
+    if (b.dataset.sendNo) { const t = document.querySelector(`[data-reason-for="${CSS.escape(b.dataset.sendNo)}"]`); return answer(b.dataset.sendNo, false, t ? t.value : ''); }
+    if (b.id === 'templates') {
+      ev.preventDefault();
+      const t = await api('GET', '/t/credit-desk/templates');
+      for (const [name, text] of Object.entries(t.files)) {
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(new Blob([text], { type: 'text/plain' }));
+        a.download = name.replace('/', '_');
+        a.click();
+      }
+    }
+  });
+  $('why-form').addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const q = $('why-q').value.trim();
+    $('why-out').innerHTML = '<p class="small">Reading the log...</p>';
     try {
-      await api('POST', '/api/approvals/' + encodeURIComponent(id), { approved: !!b.dataset.approve, by: 'credit desk window' });
-      await load();
-    } catch (e) { status('The answer did not go through: ' + e.message, true); b.disabled = false; }
+      const r = await api('GET', '/t/credit-desk/why?subject=' + encodeURIComponent(q));
+      $('why-out').innerHTML = r.decisions.length ? r.decisions.map((d) => `<div class="card" style="margin-top:16px"><h3>${esc(d.business)} (${esc(d.application_id)}), decided ${esc(d.case_date)}</h3>
+        ${d.answer.map((p) => `<p>${esc(p)}</p>`).join('')}
+        <p class="small">From log entry <span class="mono">${esc(d.seq)}</span> of run ${esc(d.run)}. CRS request ids: <span class="mono">${esc(d.crs_request_ids.join(', '))}</span></p></div>`).join('')
+        : `<div class="card" style="margin-top:16px"><p>The log has no credit decision about "${esc(q)}".</p></div>`;
+    } catch (e) { $('why-out').innerHTML = `<p class="err">${esc(e.message)}</p>`; }
+  });
+  $('app-form').addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const f = Object.fromEntries(new FormData(ev.target));
+    try { $('byo-out').innerHTML = checked(await api('POST', '/t/credit-desk/application', f)); await load(); }
+    catch (e) { $('byo-out').innerHTML = `<p class="err">${esc(e.message)}</p>`; }
+  });
+  $('up-form').addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const files = {};
+    for (const file of $('files').files) {
+      const name = /^APP-.*\.json$/i.test(file.name) ? 'applications/' + file.name : /^(case|answer_key)\.json$/.test(file.name) || /\.csv$/.test(file.name) && ['customers.csv', 'invoices.csv', 'invoice_lines.csv', 'payments.csv', 'orders.csv', 'suppliers.csv', 'bills.csv'].includes(file.name) ? file.name : 'sources/' + file.name;
+      files[name] = await file.text();
+    }
+    try { $('byo-out').innerHTML = checked(await api('POST', '/t/credit-desk/upload', { files })); await load(); }
+    catch (e) { $('byo-out').innerHTML = `<p class="err">${esc(e.message)}</p>`; }
   });
   $('run').addEventListener('change', () => { runId = $('run').value; rulesFor = null; load(); });
-  $('case').addEventListener('change', () => { $('case').dataset.touched = '1'; if (state) render(); });
+  $('case').addEventListener('change', () => { if (state) render(); });
+  api('GET', '/t/credit-desk/templates').then((t) => {
+    $('persona').innerHTML = t.personas.map((p) => `<option value="${esc(p.id)}">${esc(p.id)} ${esc(p.name)}: ${esc(p.profile)}</option>`).join('');
+  }, () => {});
   show('decisions');
   load();
   setInterval(load, 2500);

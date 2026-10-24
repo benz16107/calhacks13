@@ -1,0 +1,11 @@
+{
+  "case_id": "fogline-2027-01",
+  "title": "Fogline Supply Co., three months later: Bright Harbor's payments bounce",
+  "as_of": "2027-01-22",
+  "currency": "USD",
+  "company_profile": "../../company/profile.md",
+  "rules": "../../rules/credit-rules.yaml",
+  "nessie": true,
+  "follows": "fogline-2026-10",
+  "description": "Bright Harbor Catering, approved for 40,000 in the October case, has had two payments returned by the bank. Run fogline-2026-10 first: the desk finds the October decision in the box's log."
+}

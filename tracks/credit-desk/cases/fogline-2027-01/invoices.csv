@@ -1,0 +1,8 @@
+invoice_id,customer_id,bill_to_name,invoice_date,terms,due_date,po_number,ship_to,total,amount_paid,discount_allowed,balance,status
+INV-24160,C-1013,Bright Harbor Catering Inc.,2026-11-02,Net 30,2026-12-02,,,9800.00,9800.00,0.00,0.00,paid
+INV-24188,C-1013,Bright Harbor Catering Inc.,2026-11-16,Net 30,2026-12-16,,,7420.00,7420.00,0.00,0.00,paid
+INV-24215,C-1013,Bright Harbor Catering Inc.,2026-12-01,Net 30,2026-12-31,,,11250.00,11250.00,0.00,0.00,paid
+INV-24246,C-1013,Bright Harbor Catering Inc.,2026-12-15,Net 30,2027-01-14,,,8960.00,0.00,0.00,8960.00,open
+INV-24262,C-1001,Golden Gate Bagel Co.,2026-12-20,Net 30,2027-01-19,,,2410.00,2410.00,0.00,0.00,paid
+INV-24281,C-1013,Bright Harbor Catering Inc.,2027-01-05,Net 30,2027-02-04,,,10140.00,0.00,0.00,10140.00,open
+INV-24301,C-1001,Golden Gate Bagel Co.,2027-01-12,Net 30,2027-02-11,,,2180.00,0.00,0.00,2180.00,open

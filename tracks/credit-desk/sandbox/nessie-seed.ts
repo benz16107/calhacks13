@@ -37,7 +37,7 @@ if (import.meta.main) {
     if (!res.ok) throw new Error(`${method} ${p}: HTTP ${res.status} ${text.replaceAll(key, '<key>').slice(0, 300)}`);
     return text ? JSON.parse(text) : null;
   };
-  const created = { customers: 0, accounts: 0, bills: 0, deposits: 0 };
+  const created = { customers: 0, accounts: 0, bills: 0, deposits: 0, withdrawals: 0 };
   let customers: any[] = await call('GET', '/customers');
   async function customer(first_name: string, last_name: string, address: object) {
     const found = customers.find((c) => c.first_name === first_name && c.last_name === last_name);
@@ -114,6 +114,23 @@ if (import.meta.main) {
       id: s.month, transaction_date: `${s.month}-28`, amount: s.deposits_total,
       description: `deposits for the month, ${s.deposit_count} items | exact ${s.deposits_total}`,
     }))) };
+  }
+
+  // Money out: the bank's own record of returned payments (sources/bank_events.csv) and supplier bills paid before the case date.
+  const outflows = [
+    ...read('sources/bank_events.csv').filter((e) => e.event === 'returned').map((e) => ({ date: e.date, amount: e.amount, description: `RETURNED ITEM ${e.payment_id} | ${e.reason}` })),
+    ...read('bills.csv').filter((b) => b.status === 'paid' && b.paid_on && b.paid_on <= asOf).map((b) => ({ date: b.paid_on, amount: b.paid_amount || b.amount, description: `PAID ${b.bill_id} to ${b.supplier_id}` })),
+  ];
+  if (outflows.length) {
+    const have: any[] = await call('GET', `/accounts/${ids.fogline.account}/withdrawals`);
+    ids.withdrawals = {};
+    for (const w of outflows) {
+      const found = have.find((h) => h.description.startsWith(`${w.description} |`));
+      ids.withdrawals[w.description] = found?._id ?? (await call('POST', `/accounts/${ids.fogline.account}/withdrawals`, {
+        medium: 'balance', transaction_date: w.date, status: 'completed', amount: dollars(w.amount), description: `${w.description} | exact ${Number(w.amount).toFixed(2)}`,
+      })).objectCreated._id;
+      if (!found) created.withdrawals++;
+    }
   }
 
   if (idsOut) fs.writeFileSync(idsOut, JSON.stringify(ids, null, 2));

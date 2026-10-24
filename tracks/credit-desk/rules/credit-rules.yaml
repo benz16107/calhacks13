@@ -17,8 +17,12 @@
 # Mana's proposal, so some numbers are skipped (no FRR-4, FRR-6, DSP-3, REV-4).
 # Amounts are USD. "Days past due" counts from the due date. All dates are as of the case's as_of date.
 
+# 0.3 (the credit desk thread, not Mana): AP-1 to AP-5 for the AP clerk seat, REV-6 for returned payments, and
+#   BK-1 for the books.
+#   Every 0.2 rule is unchanged.
+
 status: adopted
-version: 0.2
+version: 0.3
 source: "https://www.mana.space/shared-chats/x5CqxyjcOgVCAyrvUBqK2LNRcMJ2/001792810018092cc50381027f1410c8fcb"
 replaces: credit-rules.draft.yaml
 
@@ -333,6 +337,39 @@ rules:
       limit or terms; a cut applies to new orders, and open invoices keep their terms. The analyst may lower any limit to
       10,000 or less. A cut that stays above 10,000, or any increase above 10,000, is a proposal (SOD-2), and an
       increase at most doubles the limit.
+
+  - id: REV-6
+    text: >-
+      Two or more returned payments (COL-8) within 90 days put the account in band C at best: Net 15 and a limit of at
+      most 7,500, until 6 months pass with no returned payment. Open orders wait (ORD-3). A limit the controller
+      approved is changed only by the controller, so the analyst proposes the cut and the controller decides it.
+
+  # The books
+  - id: BK-1
+    text: >-
+      Entries reach the books only through the desk's books tool, each with the rule it rests on and the record it
+      fixes. A fix is a new entry that reverses or adjusts the wrong one; nobody edits a past entry. A write-off needs
+      the controller (SOD-3).
+
+  # Accounts payable (the AP clerk seat)
+  - id: AP-1
+    text: >-
+      Whoever enters a bill, or changes a supplier's record, does not release its payment. A bill the AP clerk entered
+      is paid only with a second person's OK.
+  - id: AP-2
+    text: A supplier payment over 5,000 needs the controller.
+  - id: AP-3
+    text: >-
+      Before paying, check for a duplicate: the same supplier and the same invoice number ignoring spaces and
+      punctuation, or the same supplier and amount within 30 days. A duplicate is voided, not paid.
+  - id: AP-4
+    text: >-
+      A change to a supplier's bank account is confirmed by calling the phone number already on the supplier's record,
+      never a number or address from the request. Until it is confirmed, no payment goes to the new account, and the
+      change is referred to the controller as suspected fraud when the request came from an address the record does
+      not have.
+  - id: AP-5
+    text: Pay bills that fall due within the next 7 days of the payment run, not earlier, unless the supplier offers an early-payment discount.
 
 # The baseline the desk has to beat. A naive desk approves when all four hold.
 simple_rule:

@@ -1,0 +1,2 @@
+order_id,customer_id,order_date,requested_ship_date,amount,status,entered_by,notes
+SO-6014,C-1013,2027-01-20,2027-01-23,6800.00,awaiting credit release,Sam Chen,"Corporate event, rush"

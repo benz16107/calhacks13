@@ -2,7 +2,8 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import type { LogEvent } from '../../core/contract.ts';
+import type { Ctx, LogEvent } from '../../core/contract.ts';
+import { booksFromCase } from './books.ts';
 
 export const HOME = process.env.BOX_HOME ?? '/var/lib/box';
 export const TRACK_DIR = new URL('.', import.meta.url).pathname;
@@ -72,8 +73,11 @@ export interface RunInfo { run: string; caseId: string; caseDir: string; rulesFi
 /** The run's starting files, staged in a root-only folder for box.workspace: the case without its answer key. */
 export function stageWorkspace(info: RunInfo): string {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'credit-desk-'));
-  // The agent must never see the answers.
-  fs.cpSync(info.caseDir, path.join(dir, 'case'), { recursive: true, filter: (src) => path.basename(src) !== 'answer_key.json' });
+  // The agent must never see the answers, nor the bank's own records when the bank (Nessie) holds them.
+  const hidden = new Set(['answer_key.json', 'controller.json', ...(info.nessie ? ['bank_events.csv'] : [])]);
+  fs.cpSync(info.caseDir, path.join(dir, 'case'), { recursive: true, filter: (src) => !hidden.has(path.basename(src)) });
+  fs.mkdirSync(path.join(dir, 'books'));
+  fs.writeFileSync(path.join(dir, 'books', 'ledger.beancount'), booksFromCase(info.caseDir));
   fs.copyFileSync(info.rulesFile, path.join(dir, 'rules.yaml'));
   const meta = JSON.parse(fs.readFileSync(path.join(info.caseDir, 'case.json'), 'utf8'));
   const profile = meta.company_profile && path.resolve(info.caseDir, meta.company_profile);
@@ -102,3 +106,62 @@ export function controllerAnswer(approvals: { task: string; question: string; st
 }
 
 export const money = (n: number) => `$${Math.round(n).toLocaleString('en-US')}`;
+
+// ---------- what tools share ----------
+// Tools read the case from the run's base workspace, which no task can write: a task changes only its own copy.
+
+export const caseFile = (ctx: Ctx, ...p: string[]) => {
+  if (!ctx.task) throw new Error('only a task can use this tool');
+  return path.join(workspaceDir(ctx.task.workspace), ...p);
+};
+export const application = (ctx: Ctx, id: unknown) => {
+  const file = caseFile(ctx, 'case', 'applications', `${safeId(id)}.json`);
+  if (!fs.existsSync(file)) throw new Error(`there is no application ${id} in this case`);
+  return JSON.parse(fs.readFileSync(file, 'utf8'));
+};
+export const rulesOf = (ctx: Ctx) => loadRules(caseFile(ctx, 'rules.yaml'));
+
+/** What a decision needing the controller returns until the controller has answered. */
+export function controllerGate(ctx: Ctx, mark: string, question: string): { pending?: { status: string; ask: string; then: string }; approval?: { id: string; approved: boolean; by: string; reason?: string } } {
+  const a = controllerAnswer(ctx.box.approvals(), ctx.task!.id, mark);
+  if (a && a.state !== 'pending') {
+    return { approval: { id: a.id, approved: a.state === 'approved', by: a.by ?? 'unknown', ...(a.state === 'denied' ? { reason: denyReason(a.id) } : {}) } };
+  }
+  return {
+    pending: {
+      status: 'needs controller',
+      ask: question,
+      then: 'Call box_ask with exactly this question. When it is answered, call this tool again with the same input to record the outcome.',
+    },
+  };
+}
+
+/** The reason the controller gave with a no (the window asks for one), from the log. */
+export function denyReason(approval: string): string | undefined {
+  for (const e of readLog().reverse()) {
+    const d = e.type === 'note' && e.track === 'credit-desk' ? (e.data as { kind?: string; approval?: string; reason?: string }) : undefined;
+    if (d?.kind === 'answer.reason' && d.approval === approval) return d.reason;
+  }
+}
+
+/** A task's seat: 'Credit analyst', 'Collections clerk' or 'AP clerk', from its title. */
+export const seatOf = (t: { title: string }) => t.title.split(':')[0];
+
+export const strings = { type: 'array', items: { type: 'string' } };
+export const rulesField = { ...strings, description: 'Rule ids from rules.yaml that this rests on, e.g. ["FRD-1", "LIM-1"].' };
+
+/** Rule id to its text, from a rules file (folded `>-` texts joined into one line). */
+export function ruleTexts(file: string): Map<string, string> {
+  const out = new Map<string, string>();
+  const lines = fs.readFileSync(file, 'utf8').split('\n');
+  for (let i = 0; i < lines.length; i++) {
+    const id = lines[i].match(/^\s*-\s*id:\s*([A-Za-z]+-[A-Za-z0-9]+)\s*$/)?.[1];
+    if (!id) continue;
+    const t = lines[i + 1]?.match(/^\s*text:\s*(.*)$/)?.[1] ?? '';
+    if (t && t !== '>-' && t !== '>') { out.set(id, t); continue; }
+    const body: string[] = [];
+    for (let j = i + 2; j < lines.length && /^\s{6,}\S/.test(lines[j]); j++) body.push(lines[j].trim());
+    out.set(id, body.join(' '));
+  }
+  return out;
+}

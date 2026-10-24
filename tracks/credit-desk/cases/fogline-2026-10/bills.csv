@@ -1,0 +1,9 @@
+bill_id,supplier_id,supplier_invoice,bill_date,due_date,amount,description,po_number,entered_by,status,paid_on,paid_amount
+B-3301,SUP-201,AGC-5512,2026-09-25,2026-10-25,12480.00,"Green coffee, 60 bags, Colombia Huila",PO-8841,Luis Romero,open,,
+B-3302,SUP-203,CFL-20931,2026-09-30,2026-10-15,1260.00,"Freight, September deliveries",PO-8850,Luis Romero,paid,2026-10-14,1260.00
+B-3304,SUP-203,CFL-21177,2026-10-08,2026-10-23,1385.00,"Freight, early October deliveries",PO-8873,Luis Romero,open,,
+B-3307,SUP-202,BCL-77120,2026-10-01,2026-10-29,6845.00,"12 oz hot cups and sip lids, 85 cases",PO-8859,Luis Romero,open,,
+B-3309,SUP-204,OHO-4410,2026-10-06,2026-10-27,3960.00,"Barista oat milk, 100 cases",PO-8866,Luis Romero,open,,
+B-3311,SUP-202,BCL77120,2026-10-03,2026-10-31,6845.00,Cups and lids (resent invoice),PO-8859,Mia Ito (temp),open,,
+B-3313,SUP-206,EBD-90812,2026-10-09,2026-11-08,2275.00,"Unsalted butter, 16 cases",PO-8877,Luis Romero,open,,
+B-3315,SUP-205,PPP-11873,2026-10-10,2026-10-24,18940.00,"Napkins, kraft bags and pastry boxes, Q4 stock",PO-8880,Luis Romero,open,,

@@ -8,40 +8,18 @@ import type { Box, Ctx, LogEvent, Track } from '../../core/contract.ts';
 import { checkCase, parseCsv } from './check-case.ts';
 import { CRS_HOST, checkApplication } from './crs.ts';
 import {
-  CASES_DIR, DEFAULT_RULES, checkRules, controllerAnswer, loadRules, marker, money, readLog, runInfo, runOf,
-  safeId, stageWorkspace, toolUses, workspaceDir, type RunInfo,
+  DEFAULT_RULES, application, caseFile, checkRules, controllerGate, loadRules, marker, money, readLog, rulesField, rulesOf,
+  runInfo, runOf, safeId, seatOf, stageWorkspace, strings, toolUses, type RunInfo,
 } from './desk.ts';
 import { NESSIE_HOST, readBank } from './nessie.ts';
 import * as scripted from './scripts.ts';
+import { apTools } from './ap.ts';
+import { balances } from './books.ts';
+import { bookTools, realBooks } from './bookkeeping.ts';
+import { reviewTools, why } from './review.ts';
+import { applicationCase, caseDirOf, listCases, personaList, saveUpload, templates } from './uploads.ts';
 import { scoreRun } from './score.ts';
-import { ACTIONS, ANALYST_TOOLS, CLERK_TOOLS, CONTROLLER_ACTIONS, OUTCOMES, analystPrompt, clerkPrompt } from './seats.ts';
-
-const caseFile = (ctx: Ctx, ...p: string[]) => {
-  if (!ctx.task) throw new Error('only a task can use this tool');
-  return path.join(workspaceDir(ctx.task.workspace), ...p);
-};
-const application = (ctx: Ctx, id: unknown) => {
-  const file = caseFile(ctx, 'case', 'applications', `${safeId(id)}.json`);
-  if (!fs.existsSync(file)) throw new Error(`there is no application ${id} in this case`);
-  return JSON.parse(fs.readFileSync(file, 'utf8'));
-};
-const rulesOf = (ctx: Ctx) => loadRules(caseFile(ctx, 'rules.yaml'));
-
-/** What a decision needing the controller returns until the controller has answered. */
-function controllerGate(ctx: Ctx, mark: string, question: string) {
-  const a = controllerAnswer(ctx.box.approvals(), ctx.task!.id, mark);
-  if (a && a.state !== 'pending') return { approval: { id: a.id, approved: a.state === 'approved', by: a.by ?? 'unknown' } };
-  return {
-    pending: {
-      status: 'needs controller',
-      ask: question,
-      then: 'Call box_ask with exactly this question. When it is answered, call this tool again with the same input to record the outcome.',
-    },
-  };
-}
-
-const strings = { type: 'array', items: { type: 'string' } };
-const rulesField = { ...strings, description: 'Rule ids from rules.yaml that this rests on, e.g. ["FRD-1", "LIM-1"].' };
+import { ACTIONS, ANALYST_TOOLS, AP_TOOLS, CLERK_TOOLS, CONTROLLER_ACTIONS, OUTCOMES, analystPrompt, apPrompt, clerkPrompt } from './seats.ts';
 
 export default {
   name: 'credit-desk',
@@ -83,7 +61,9 @@ export default {
           const a = JSON.parse(fs.readFileSync(path.join(apps, f), 'utf8'));
           names.set(a.application_id, a.business?.legal_name);
         }
-        return readBank(input, ctx.secret('NESSIE_API_KEY'), names);
+        const info = runInfo(readLog(), runOf(ctx.task!.source)!)!;
+        const asOf = JSON.parse(fs.readFileSync(caseFile(ctx, 'case', 'case.json'), 'utf8')).as_of;
+        return readBank(input, ctx.secret('NESSIE_API_KEY'), names, asOf, info.run);
       },
     },
     {
@@ -139,7 +119,7 @@ export default {
         const name = app.business?.legal_name ?? app.application_id;
         const aboveAuthority = input.outcome === 'approve' && limit > rulesFile.authority;
         const needs = input.outcome === 'fraud hold' || aboveAuthority || input.needs_controller === true;
-        let approval: { id: string; approved: boolean; by: string } | undefined;
+        let approval: { id: string; approved: boolean; by: string; reason?: string } | undefined;
         if (needs) {
           const mark = marker(app.application_id, input.outcome, limit);
           const why = String(input.why ?? '').slice(0, 400);
@@ -148,17 +128,22 @@ export default {
             : `Credit desk ${mark}: ${input.outcome} ${name} (${app.application_id})${input.outcome === 'approve' ? ` for ${money(limit)}, ${input.terms}, band ${input.band ?? '?'}` : ''}? Proposed by the credit analyst; ${aboveAuthority ? `above the analyst's ${money(rulesFile.authority)} authority` : 'a rule needs your sign-off'}. Why: ${why} Rules: ${rules.join(', ')}.`;
           const gate = controllerGate(ctx, mark, question);
           if (gate.pending) return gate.pending;
-          approval = gate.approval;
+          approval = gate.approval!;
+          // A no is not the end: the seat gets the reason and revises, and the same proposal is never asked twice.
+          if (!approval.approved) {
+            return { status: 'denied', reason: approval.reason ?? null, then: `The controller said no${approval.reason ? `: "${approval.reason}"` : ''}. Do not ask the same question again. Revise the proposal to answer the reason (new terms or limit, or decline), cite the rules, and call this tool again; or record what you will do instead.` };
+          }
         }
         const decision = {
           application_id: app.application_id,
-          outcome: approval && !approval.approved ? 'sent back by the controller' : input.outcome,
+          outcome: input.outcome,
           band: input.band ?? null,
-          limit: approval && !approval.approved ? 0 : limit,
+          limit,
           terms: input.terms,
           decided_by: approval ? `controller (${approval.by})` : 'credit analyst',
           approval: approval ?? null,
           rules,
+          data: input.data ?? null,
         };
         ctx.log(`Decision on ${app.application_id}: ${decision.outcome}, ${money(decision.limit)} ${decision.terms}, band ${decision.band}; ${decision.decided_by}; ${rules.join(', ')}`);
         return { status: 'recorded', decision, crs_request_ids: requestIds, crs_source: crs.output.source };
@@ -183,18 +168,22 @@ export default {
         const subject = safeId(input.subject);
         if (!ACTIONS.includes(input.action)) throw new Error(`action must be one of: ${ACTIONS.join(', ')}`);
         const rules = checkRules(rulesOf(ctx), input.rules);
-        let approval: { id: string; approved: boolean; by: string } | undefined;
+        let approval: { id: string; approved: boolean; by: string; reason?: string } | undefined;
         if (CONTROLLER_ACTIONS.includes(input.action) || input.needs_controller === true) {
           const mark = marker(subject, input.action);
           const gate = controllerGate(ctx, mark, `Credit desk ${mark}: ${input.action} for ${subject}? The collections clerk asks: ${String(input.detail).slice(0, 400)} Rules: ${rules.join(', ')}.`);
           if (gate.pending) return gate.pending;
-          approval = gate.approval;
+          approval = gate.approval!;
+          if (!approval.approved) return { status: 'denied', reason: approval.reason ?? null, then: 'The controller said no. Do not ask again; record what you will do instead, citing the reason.' };
         }
-        const done = approval && !approval.approved ? 'refused by the controller' : input.action;
+        const done = input.action;
         ctx.log(`Collections: ${done} on ${subject} (${rules.join(', ')})`);
         return { status: 'recorded', action: { subject, action: done, decided_by: approval ? `controller (${approval.by})` : 'collections clerk', approval: approval ?? null, rules } };
       },
     },
+    ...apTools,
+    ...bookTools,
+    ...reviewTools,
   ],
 
   routes: {
@@ -202,10 +191,11 @@ export default {
     // and {seats: ["analyst", "clerk"]}. {scripted: true} runs the Fogline case's scripted seats: no model, about 10 seconds.
     'POST /run': async (req, box) => {
       const body = await req.json().catch(() => ({}));
-      if (body.scripted && (body.dir || (body.case ?? 'fogline-2026-10') !== 'fogline-2026-10')) {
-        return Response.json({ error: 'scripted seats exist only for the fogline-2026-10 case' }, { status: 400 });
+      if (body.scripted && (body.dir || !scripted.SCRIPTS[body.case ?? 'fogline-2026-10'])) {
+        return Response.json({ error: `scripted seats exist only for ${Object.keys(scripted.SCRIPTS).join(' and ')}` }, { status: 400 });
       }
-      const caseDir = body.dir ? path.resolve(String(body.dir)) : path.join(CASES_DIR, safeId(body.case ?? 'fogline-2026-10'));
+      const caseDir = body.dir ? path.resolve(String(body.dir)) : caseDirOf(String(body.case ?? 'fogline-2026-10'));
+      if (!caseDir) return Response.json({ error: `no case ${body.case}` }, { status: 404 });
       const { problems } = checkCase(caseDir);
       if (problems.length) return Response.json({ error: 'the case does not follow the format in README.md', problems }, { status: 400 });
       const meta = JSON.parse(fs.readFileSync(path.join(caseDir, 'case.json'), 'utf8'));
@@ -225,21 +215,25 @@ export default {
       const apps = fs.existsSync(path.join(caseDir, 'applications')) ? fs.readdirSync(path.join(caseDir, 'applications')).filter((f) => f.endsWith('.json')).map((f) => f.slice(0, -5)).sort() : [];
       const profile = path.join(caseDir, meta.company_profile ?? '-');
       const company = fs.existsSync(profile) ? fs.readFileSync(profile, 'utf8').match(/^#\s+(.+)$/m)?.[1] ?? 'the company' : 'the company';
-      const brief = { company, asOf: meta.as_of, applications: apps, bank: info.nessie, hasProfile: fs.existsSync(profile) };
-      const seats: string[] = body.seats ?? ['analyst', 'clerk'];
+      const brief = { company, asOf: meta.as_of, applications: apps, bank: info.nessie, hasProfile: fs.existsSync(profile), follows: meta.follows as string | undefined };
+      const seats: string[] = body.seats ?? ['analyst', 'clerk', 'ap'];
       const worker = body.scripted ? 'fake' : 'droid';
+      const script = scripted.SCRIPTS[meta.case_id] ?? {};
       const tasks: Record<string, string> = {};
       const withBank = (tools: string[]) => tools.filter((t) => info.nessie || t !== 'credit-desk.bank');
-      if (seats.includes('analyst') && apps.length) {
-        tasks.analyst = (await box.createTask({
-          title: `Credit analyst: ${meta.case_id}`, workspace: info.workspace, worker, source: `credit-desk:${run}`, tools: withBank(ANALYST_TOOLS),
-          prompt: worker === 'fake' ? scripted.analyst : analystPrompt(brief),
-        })).id;
-      }
-      if (seats.includes('clerk') && fs.existsSync(path.join(caseDir, 'customers.csv'))) {
-        tasks.clerk = (await box.createTask({
-          title: `Collections clerk: ${meta.case_id}`, workspace: info.workspace, worker, source: `credit-desk:${run}`, tools: withBank(CLERK_TOOLS),
-          prompt: worker === 'fake' ? scripted.clerk : clerkPrompt(brief),
+      const has = (f: string) => fs.existsSync(path.join(caseDir, f));
+      // Each seat is its own task: its own Linux user, its own copy of the files, and only its own tools.
+      const SEATS = [
+        { key: 'analyst', title: 'Credit analyst', tools: ANALYST_TOOLS, prompt: analystPrompt, when: apps.length > 0 || has('customers.csv') },
+        { key: 'clerk', title: 'Collections clerk', tools: CLERK_TOOLS, prompt: clerkPrompt, when: has('customers.csv') },
+        { key: 'ap', title: 'AP clerk', tools: AP_TOOLS, prompt: apPrompt, when: has('bills.csv') },
+      ] as const;
+      for (const seat of SEATS) {
+        if (!seats.includes(seat.key) || !seat.when) continue;
+        const prompt = worker === 'fake' ? (script as Record<string, string>)[seat.key] : seat.prompt(brief);
+        if (!prompt) continue;
+        tasks[seat.key] = (await box.createTask({
+          title: `${seat.title}: ${meta.case_id}`, workspace: info.workspace, worker, source: `credit-desk:${run}`, tools: withBank([...seat.tools]), prompt,
         })).id;
       }
       return Response.json({ run, workspace: info.workspace, rules: rulesFile, tasks });
@@ -271,6 +265,48 @@ export default {
       const r = runsOf(readLog()).find((x) => x.info.run === new URL(req.url).searchParams.get('run'));
       return new Response(fs.readFileSync(r?.info.rulesFile ?? DEFAULT_RULES, 'utf8'), { headers: { 'content-type': 'text/plain; charset=utf-8' } });
     },
+
+    // The auditor's question: why did the desk decide this, and does it still hold? Answered from the log alone.
+    'GET /why': (req) => {
+      const subject = String(new URL(req.url).searchParams.get('subject') ?? '').trim();
+      if (!subject) return Response.json({ error: 'give a subject: an application id, a customer id or a name' }, { status: 400 });
+      return Response.json({ subject, decisions: why(readLog(), subject) });
+    },
+
+    // A run's real books as a Beancount file (open it with Fava or bean-check).
+    'GET /books': (req, box) => {
+      const r = runsOf(readLog()).find((x) => x.info.run === new URL(req.url).searchParams.get('run')) ?? runsOf(readLog()).at(-1);
+      if (!r) return new Response('no run yet\n', { status: 404 });
+      return new Response(realBooks(r.info, box.tasks()).text, { headers: { 'content-type': 'text/plain; charset=utf-8', 'content-disposition': `inline; filename="${r.info.caseId}-${r.info.run}.beancount"` } });
+    },
+
+    // The reason a controller gives with a no. The seat reads it from the log and revises; core approvals carry no text.
+    'POST /reason': async (req, box) => {
+      const { approval, reason } = await req.json().catch(() => ({}));
+      const a = box.approvals().find((x) => x.id === approval);
+      if (!a || a.state !== 'pending') return Response.json({ error: 'no pending request with that id' }, { status: 400 });
+      const text = String(reason ?? '').trim().slice(0, 500);
+      if (text) box.note({ kind: 'answer.reason', approval: a.id, reason: text }, a.task);
+      return Response.json({ ok: true });
+    },
+
+    // Bring your own scenario: case files, or one application on a CRS test person. Checked before anything runs.
+    'POST /upload': async (req) => {
+      const body = await req.json().catch(() => ({}));
+      try {
+        return Response.json(saveUpload(body.files, { title: body.title, as_of: body.as_of }));
+      } catch (e) {
+        return Response.json({ error: (e as Error).message }, { status: 400 });
+      }
+    },
+    'POST /application': async (req) => {
+      try {
+        return Response.json(applicationCase(await req.json()));
+      } catch (e) {
+        return Response.json({ error: (e as Error).message }, { status: 400 });
+      }
+    },
+    'GET /templates': () => Response.json({ files: templates(), personas: personaList() }),
   },
 
   apps: [{ name: 'credit-desk', title: 'Credit desk', href: '/' }],
@@ -281,11 +317,10 @@ const PAGE = fs.readFileSync(new URL('./app.html', import.meta.url), 'utf8');
 const runsOf = (events: LogEvent[]) =>
   events.flatMap((e) => (e.type === 'note' && e.track === 'credit-desk' && (e.data as any)?.kind === 'run.started' ? [{ info: (e.data as any).info as RunInfo, at: e.at }] : []));
 
+const SEAT_KEY: Record<string, string> = { 'Credit analyst': 'analyst', 'Collections clerk': 'clerk', 'AP clerk': 'ap' };
+
 function windowState(events: LogEvent[], box: Box, want: string | null) {
-  const cases = fs.readdirSync(CASES_DIR).filter((c) => fs.existsSync(path.join(CASES_DIR, c, 'case.json'))).map((c) => {
-    const meta = JSON.parse(fs.readFileSync(path.join(CASES_DIR, c, 'case.json'), 'utf8'));
-    return { id: c, title: meta.title ?? c, as_of: meta.as_of, scripted: c === 'fogline-2026-10' };
-  });
+  const cases = listCases().map((c) => ({ ...c, scripted: Boolean(scripted.SCRIPTS[c.id]) }));
   const runs = runsOf(events);
   const r = runs.find((x) => x.info.run === want) ?? runs.at(-1);
   const rulesFile = r?.info.rulesFile ?? DEFAULT_RULES;
@@ -298,9 +333,10 @@ function windowState(events: LogEvent[], box: Box, want: string | null) {
   const ids = new Set(tasks.map((t) => t.id));
   const uses = toolUses(events, ids);
   const pending = box.approvals().filter((a) => ids.has(a.task) && a.state === 'pending');
-  const seat = (t: { title: string }) => (t.title.startsWith('Credit analyst') ? 'analyst' : 'clerk');
+  const seat = (id: string) => SEAT_KEY[seatOf(tasks.find((t) => t.id === id) ?? { title: '' })] ?? 'clerk';
+  const askFor = (subject: string) => pending.find((p) => p.question.includes(`[${subject} `));
   // The desk's own log lines are the readable story of a seat; Droid's raw tool calls are not.
-  const story = (id: string) => events.filter((e) => e.type === 'task.step' && e.task === id && /^(CRS on|Problem:|Decision on|Collections:)/.test(e.text)).slice(-5).map((e) => (e as { text: string }).text);
+  const story = (id: string) => events.filter((e) => e.type === 'task.step' && e.task === id && /^(CRS on|Problem:|Decision on|Collections:|Review of|Books:|AP:)/.test(e.text)).slice(-6).map((e) => (e as { text: string }).text);
   const score = fs.existsSync(path.join(r.info.caseDir, 'answer_key.json')) ? scoreRun(r.info, events, box.tasks()) : null;
   const appDir = path.join(r.info.caseDir, 'applications');
   const applications = (fs.existsSync(appDir) ? fs.readdirSync(appDir).filter((f) => f.endsWith('.json')).sort() : []).map((f) => {
@@ -308,17 +344,61 @@ function windowState(events: LogEvent[], box: Box, want: string | null) {
     const decision = uses.findLast((u) => u.tool === 'credit-desk.credit_decision' && u.ok && u.output?.status === 'recorded' && u.input.application_id === a.application_id);
     const last = uses.findLast((u) => u.tool === 'credit-desk.credit_decision' && u.ok && u.input.application_id === a.application_id);
     const crs = uses.findLast((u) => u.tool === 'credit-desk.crs' && u.ok && u.input.application_id === a.application_id)?.output;
-    const ask = pending.find((p) => p.question.includes(`[${a.application_id} `));
+    const ask = askFor(a.application_id);
     return {
       id: a.application_id, business: a.business?.legal_name, requested: a.request?.credit_limit, terms: a.request?.terms,
       decision: decision?.output.decision ?? null, why: decision?.input.why ?? null,
-      // The analyst's latest proposal when it still waits for the controller (above authority, fraud hold).
-      proposed: last?.output?.status === 'needs controller' ? { outcome: last.input.outcome, limit: last.input.limit, terms: last.input.terms } : null,
+      // The analyst's latest proposal while it waits for the controller, or after a no.
+      proposed: last && last.output?.status !== 'recorded' ? { outcome: last.input.outcome, limit: last.input.limit, terms: last.input.terms, status: last.output.status, reason: last.output.reason ?? null } : null,
       checks: crs ? { transunion: crs.credit?.transunion?.score ?? null, identity: crs.identity?.verified ?? null, fraud: crs.fraud?.risk_score ?? null, source: crs.source } : null,
       simple_rule: score?.simple_rule.find((x: { application_id: string }) => x.application_id === a.application_id) ?? null,
       ask: ask ? { id: ask.id, question: ask.question } : null,
     };
   });
+
+  // Reviews: the latest per customer, recorded or waiting, with then next to now.
+  const reviewUses = uses.filter((u) => u.tool === 'credit-desk.review' && u.ok);
+  const reviews = [...new Set(reviewUses.map((u) => u.input.customer_id))].map((cid) => {
+    const done = reviewUses.findLast((u) => u.input.customer_id === cid && u.output?.status === 'recorded');
+    const last = reviewUses.findLast((u) => u.input.customer_id === cid)!;
+    const ask = askFor(cid);
+    return {
+      customer_id: cid, proposal: { outcome: last.input.outcome, band: last.input.band, limit: last.input.limit, terms: last.input.terms, rules: last.input.rules, why: last.input.why },
+      status: done ? 'recorded' : last.output.status, review: done?.output.review ?? null, reason: last.output.reason ?? null,
+      then: done?.output.then ?? last.output.before ?? null, now: done?.output.now ?? last.output.now ?? null, changes: done?.output.changes ?? last.output.changes ?? null,
+      ask: ask ? { id: ask.id, question: ask.question } : null,
+    };
+  });
+  // When a review still waits, show then and now from the history the analyst read.
+  for (const rv of reviews) {
+    if (rv.then) continue;
+    const h = uses.findLast((u) => u.tool === 'credit-desk.history' && u.ok && u.input.customer_id === rv.customer_id)?.output;
+    rv.then = h?.decisions?.at(-1) ?? null;
+  }
+
+  // Supplier bills: the case's and those entered in this run, with what the AP clerk did.
+  const read = (f: string) => (fs.existsSync(path.join(r.info.caseDir, f)) ? parseCsv(fs.readFileSync(path.join(r.info.caseDir, f), 'utf8')) : []);
+  const suppliers = new Map(read('suppliers.csv').map((x) => [x.supplier_id, x]));
+  const entered = uses.filter((u) => u.tool === 'credit-desk.enter_bill' && u.ok && u.output?.status === 'recorded').map((u) => ({ ...u.output.bill, entered_here: true }));
+  const bills = [...read('bills.csv').map((b) => ({ ...b, amount: Number(b.amount) })), ...entered].map((b: any) => {
+    const mine = uses.filter((u) => ['credit-desk.pay_bill', 'credit-desk.ap_action'].includes(u.tool) && u.ok && (u.input.bill_id === b.bill_id || u.input.subject === b.bill_id));
+    const last = mine.at(-1);
+    const paid = mine.find((u) => u.output?.status === 'paid')?.output.payment;
+    const act = mine.findLast((u) => u.output?.status === 'recorded')?.output.action;
+    const ask = askFor(b.bill_id);
+    const s = suppliers.get(b.supplier_id);
+    return {
+      bill_id: b.bill_id, supplier: s?.name ?? b.supplier_id, supplier_invoice: b.supplier_invoice, due: b.due_date, amount: b.amount, entered_by: b.entered_by, entered_here: Boolean(b.entered_here),
+      bank_changed: s?.bank_changed_on || null, was_paid: b.status === 'paid',
+      status: b.status === 'paid' ? 'paid before' : paid ? 'paid' : act ? act.action : last?.output?.status ?? 'open',
+      by: paid?.decided_by ?? act?.decided_by ?? null, why: last?.output?.why ?? last?.output?.reason ?? null,
+      ask: ask ? { id: ask.id, question: ask.question } : null,
+    };
+  });
+
+  const books = realBooks(r.info, box.tasks());
+  const bal = balances(books.ledger);
+  const sum = (prefix: string) => [...bal].filter(([k]) => k.startsWith(prefix)).reduce((n, [, v]) => n + v, 0) / 100;
   const started = Date.parse(r.at);
   const last = Math.max(started, ...tasks.map((t) => Date.parse(t.updatedAt)));
   return {
@@ -326,12 +406,17 @@ function windowState(events: LogEvent[], box: Box, want: string | null) {
     run: {
       run: r.info.run, case: r.info.caseId, at: r.at, minutes: Math.max(1, Math.round((last - started) / 60000)),
       costCents: tasks.reduce((n, t) => n + t.costCents, 0), scripted: tasks.some((t) => t.worker === 'fake'),
-      seats: tasks.map((t) => ({ seat: seat(t), id: t.id, state: t.state, costCents: t.costCents, story: story(t.id) })),
-      approvals: pending.map((p) => ({ id: p.id, question: p.question, seat: seat(tasks.find((t) => t.id === p.task)!) })),
-      applications,
-      problems: uses.filter((u) => u.tool === 'credit-desk.flag' && u.ok).map((u) => ({ ids: u.input.ids, problem: u.input.problem, rules: u.input.rules, seat: seat(tasks.find((t) => t.id === u.task)!) })),
+      seats: tasks.map((t) => ({ seat: seat(t.id), id: t.id, state: t.state, costCents: t.costCents, story: story(t.id) })),
+      approvals: pending.map((p) => ({ id: p.id, question: p.question, seat: seat(p.task) })),
+      applications, reviews, bills,
+      problems: uses.filter((u) => u.tool === 'credit-desk.flag' && u.ok).map((u) => ({ ids: u.input.ids, problem: u.input.problem, rules: u.input.rules, seat: seat(u.task) })),
       actions: uses.filter((u) => u.tool === 'credit-desk.collections_action' && u.ok && u.output?.status === 'recorded').map((u) => ({ ...u.output.action, detail: u.input.detail })),
-      score: score && { summary: score.summary, caught: score.caught, total: score.total, false_alarms: score.false_alarms.length, errors: score.errors, moment: score.moment },
+      books: {
+        errors: books.ledger.errors.length, transactions: books.ledger.transactions.length,
+        bank: sum('Assets:Bank'), receivable: sum('Assets:Receivable'), payable: -sum('Liabilities:Payable'),
+        posted: books.posted.map((p) => ({ seq: p.seq, seat: SEAT_KEY[p.seat] ?? p.seat, kind: p.kind, text: p.text })),
+      },
+      score: score && { summary: score.summary, caught: score.caught, total: score.total, false_alarms: score.false_alarms.length, precision: score.precision, errors: score.errors, moment: score.moment },
     },
   };
 }

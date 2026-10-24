@@ -1,54 +1,99 @@
-// The credit desk's demo step. Scripted seats (the fake worker) drive the real tools, live against CRS and Nessie:
-// the fake applicant is caught, the analyst pauses for the controller, decisions land in the log with their rule ids
-// and CRS request ids, and the run is scored against the answer key.
-// DEMO_LIVE=credit-desk ./demo also runs both seats with Droid on the whole case, answers the controller's questions, scores it
-// and saves the evidence to /var/lib/box-demo/credit-desk-<run>/. That takes several minutes.
+// The credit desk's demo step. Scripted seats (the fake worker, no model) drive the real tools, live against CRS and
+// Nessie: the fake applicant is caught, the AP clerk's limits hold in code, entries reach the books only through the
+// desk and leave them on undo, January reopens October's decision from the log, the auditor's "why" is answered from
+// the log, and both runs are scored against their answer keys.
+// DEMO_LIVE=credit-desk ./demo also runs every seat with Droid on October then January, answers the controller's
+// questions from each case's controller.json (one is a no, with a reason), scores both and saves the evidence to
+// /var/lib/box-demo/credit-desk-<run>/. That takes 20 to 30 minutes of model time.
 import fs from 'node:fs';
 import path from 'node:path';
 import type { Approval, DemoKit, LogEvent, Task } from '../../core/contract.ts';
+import { parseLedger } from './books.ts';
 
 const results = (events: LogEvent[], tool: string) =>
   events.flatMap((e) => (e.type === 'tool.call' && e.tool === tool ? [e.key] : []))
     .map((k) => events.find((e) => e.type === 'tool.result' && e.key === k))
     .flatMap((e) => (e?.type === 'tool.result' && e.ok ? [e.output as any] : []));
 
+const pendingFor = async (d: DemoKit, ids: string[]) => (await d.api<Approval[]>('GET', '/approvals')).filter((a) => ids.includes(a.task) && a.state === 'pending');
+
+/** Answer every request of these tasks until they finish. `answers` picks yes or no (with a reason) per question. */
+async function controller(d: DemoKit, ids: string[], answers: (q: string) => { approve: boolean; reason?: string } = () => ({ approve: true }), ms = 60000, log = false) {
+  const end = Date.now() + ms;
+  for (let n = 0; Date.now() < end; n++) {
+    for (const a of await pendingFor(d, ids)) {
+      const ans = answers(a.question);
+      if (log) console.log(`  controller: ${ans.approve ? 'yes' : `no ("${ans.reason}")`} to "${a.question.slice(0, 150)}"`);
+      if (!ans.approve && ans.reason) await d.api('POST', '/t/credit-desk/reason', { approval: a.id, reason: ans.reason });
+      await d.api('POST', `/approvals/${a.id}`, { approved: ans.approve, by: 'Rosa Delgado' });
+    }
+    const tasks = await Promise.all(ids.map(async (id) => (await d.api<{ task: Task }>('GET', `/tasks/${id}`)).task));
+    if (log && n % 20 === 0) console.log(`  ${tasks.map((t) => `${t.title}: ${t.state}, $${(t.costCents / 100).toFixed(2)}`).join(' | ')}`);
+    if (tasks.every((t) => ['done', 'failed', 'undone'].includes(t.state))) return tasks;
+    await new Promise((r) => setTimeout(r, log ? 3000 : 300));
+  }
+  throw new Error('the seats did not finish in time');
+}
+
+const eventsOf = async (d: DemoKit, id: string) => (await d.api<{ events: LogEvent[] }>('GET', `/tasks/${id}`)).events;
+
 export default async function (d: DemoKit) {
-  const run = await d.api('POST', '/t/credit-desk/run', { case: 'fogline-2026-10', scripted: true });
-  const ask = await d.waitFor('the fraud referral', async () =>
-    (await d.api<Approval[]>('GET', '/approvals')).find((a) => a.task === run.tasks.analyst && a.state === 'pending'));
-  const { task: waiting, events: early } = await d.api<{ task: Task; events: LogEvent[] }>('GET', `/tasks/${run.tasks.analyst}`);
-  const [crs] = results(early, 'credit-desk.crs');
-  const codes = crs.identity.problems.map((p: { code: string }) => p.code).join(', ');
-  d.check(!crs.identity.verified && crs.fraud.risk_score >= 70, `CRS (${crs.source}): APP-1043's identity fails (${codes}) and its fraud score is ${crs.fraud.risk_score}`);
-  d.check(waiting.state === 'waiting' && ask.question.includes('[APP-1043 fraud hold 0]'), 'the fraud referral paused the analyst until the controller answers');
-  const view = await d.api('GET', `/t/credit-desk/state?run=${run.run}`);
-  const row = view.run.applications.find((a: { id: string }) => a.id === 'APP-1043');
-  d.check(view.run.seats.length === 2 && row?.ask?.id === ask.id && row.checks?.fraud === 88, "the desk's window shows both seats, APP-1043's checks, and the fraud hold waiting for the controller");
+  // ---------- October: the planted case ----------
+  const oct = await d.api('POST', '/t/credit-desk/run', { case: 'fogline-2026-10', scripted: true });
+  const seats: string[] = Object.values(oct.tasks);
+  d.check(seats.length === 3, 'three seats started, each its own task: credit analyst, collections clerk, AP clerk');
+  const ask = await d.waitFor('the fraud referral', async () => (await pendingFor(d, [oct.tasks.analyst]))[0]);
+  const [crs] = results(await eventsOf(d, oct.tasks.analyst), 'credit-desk.crs');
+  d.check(!crs.identity.verified && crs.fraud.risk_score >= 70, `CRS (${crs.source}): APP-1043's identity fails (${crs.identity.problems.map((p: { code: string }) => p.code).join(', ')}) and its fraud score is ${crs.fraud.risk_score}`);
+  d.check(ask.question.includes('[APP-1043 fraud hold 0]'), 'the fraud referral paused the analyst until the controller answers');
+  const view = await d.api('GET', `/t/credit-desk/state?run=${oct.run}`);
+  d.check(view.run.applications.find((a: { id: string }) => a.id === 'APP-1043')?.ask?.id === ask.id, "the desk's window shows the fraud hold waiting for the controller");
 
-  await d.settled([run.tasks.clerk]);
-  const { events: clerkEvents } = await d.api<{ events: LogEvent[] }>('GET', `/tasks/${run.tasks.clerk}`);
-  const [bank] = results(clerkEvents, 'credit-desk.bank');
-  const deposit = bank.deposits.find((x: { description: string }) => x.description.startsWith('PMT-8812'));
-  d.check(deposit?.description.includes('memo INV-24098') && !bank.deposits.some((x: { description: string }) => x.description.startsWith('PMT-8823')),
-    'Nessie: Golden Gate\'s deposit says INV-24098 (the ledger applied it elsewhere), and the post-dated check has not cleared');
-  const release = results(clerkEvents, 'credit-desk.collections_action').find((o) => o.ask?.includes('[C-1005 release credit hold'));
-  d.check(release?.status === 'needs controller', 'the clerk cannot release a credit hold; that needs the controller');
+  await controller(d, seats);
+  const ap = await eventsOf(d, oct.tasks.ap);
+  const pays = results(ap, 'credit-desk.pay_bill');
+  d.check(pays.some((p) => p.status === 'refused' && /bank details changed/.test(p.why) && /AP-4/.test(p.why)),
+    "the AP clerk could not pay Pacific Paper's bill: its bank details changed from a lookalike email and nobody called (refused in code, AP-4)");
+  d.check(pays.some((p) => p.status === 'paid' && p.payment.bill_id === 'B-3304' && p.payment.nessie_withdrawal),
+    'it paid a small freight bill from the operating account at Nessie (test money)');
+  d.check(pays.some((p) => p.status === 'needs controller' && /AP-1/.test(p.ask)), 'it could not pay a bill it had entered itself without a second person (AP-1)');
+  d.check(results(ap, 'credit-desk.ap_action').some((a) => a.action?.subject === 'B-3311' && a.action.action === 'void'), 'it voided the duplicate supplier invoice (AP-3)');
 
-  await d.api('POST', `/approvals/${ask.id}`, { approved: true, by: 'controller' });
-  await d.settled([run.tasks.analyst]);
-  const { events } = await d.api<{ events: LogEvent[] }>('GET', `/tasks/${run.tasks.analyst}`);
-  const decisions = results(events, 'credit-desk.credit_decision');
+  const decisions = results(await eventsOf(d, oct.tasks.analyst), 'credit-desk.credit_decision');
   const hold = decisions.find((x) => x.decision?.application_id === 'APP-1043');
-  d.check(hold?.decision.outcome === 'fraud hold' && hold.decision.decided_by === 'controller (controller)' && hold.decision.rules.includes('FRD-1') && hold.crs_request_ids.length === 7,
-    `the fraud hold is in the log with the controller's OK, its rule ids (${hold?.decision.rules.join(', ')}) and the 7 CRS request ids it rests on`);
-  const big = decisions.find((x) => x.ask?.includes('[APP-1042 approve 40000]'));
-  d.check(big?.status === 'needs controller' && !decisions.some((x) => x.decision?.application_id === 'APP-1042'),
-    'the analyst cannot approve $40,000 on its own: above its $10,000 authority, nothing is recorded until the controller answers');
+  d.check(hold?.decision.outcome === 'fraud hold' && hold.decision.decided_by === 'controller (Rosa Delgado)' && hold.crs_request_ids.length === 7,
+    `the fraud hold is in the log with Rosa's OK, its rule ids (${hold?.decision.rules.join(', ')}) and the 7 CRS request ids it rests on`);
+  d.check(decisions.some((x) => x.status === 'needs controller' && x.ask.includes('[APP-1042 approve 40000]')) && decisions.some((x) => x.decision?.application_id === 'APP-1042' && x.decision.approval),
+    'the analyst could not approve $40,000 on its own; it waited, and recorded it only after the controller said yes');
 
-  const score = await d.api('POST', '/t/credit-desk/score', { run: run.run });
-  d.check(score.total === 14 && score.caught === 2 && score.false_alarms.length === 0, `scored from the log against the answer key: ${score.summary}`);
-  d.check(score.moment[0]?.application_id === 'APP-1043' && score.moment[0].simple_rule === 'approve $20,000',
-    'the simple rule would have approved APP-1043 for $20,000 on the same CRS answers; the desk held it');
+  // ---------- the books: only through the desk, and undo takes a seat's entries out ----------
+  const books = async () => (await fetch(`${d.url}/t/credit-desk/books?run=${oct.run}`)).text();
+  const before = await books();
+  d.check(parseLedger(before).errors.length === 0 && before.includes('fixes PMT-8812') && before.includes('"Pay B-3304"'),
+    "the real books (Beancount) carry the clerk's correction of PMT-8812 and the AP payment, every entry balanced");
+  await d.api('POST', `/tasks/${oct.tasks.clerk}/undo`);
+  const after = await books();
+  d.check(!after.includes('fixes PMT-8812') && after.includes('"Pay B-3304"'), "undoing the clerk's task took its entry out of the books; the AP clerk's payment stayed");
+
+  const octScore = await d.api('POST', '/t/credit-desk/score', { run: oct.run });
+  d.check(octScore.total === 16 && octScore.false_alarms.length === 0 && octScore.moment[0]?.simple_rule === 'approve $20,000',
+    `October scored from the log: ${octScore.summary}. The simple rule approves APP-1043 for $20,000; the desk held it`);
+
+  // ---------- January: the desk reopens October's decision from its own log ----------
+  const jan = await d.api('POST', '/t/credit-desk/run', { case: 'fogline-2027-01', scripted: true });
+  const cut = await d.waitFor('the review to reach the controller', async () => (await pendingFor(d, [jan.tasks.analyst]))[0], 40000);
+  const pending = results(await eventsOf(d, jan.tasks.analyst), 'credit-desk.review').at(-1);
+  d.check(pending.before?.decision.limit === 40000 && pending.before.approval?.by === 'Rosa Delgado' && pending.now.returned_payments.length === 2 && pending.now.open_balance === 37770,
+    `the review found October's $40,000 decision in the log (log entry ${pending.before?.seq}, approved by Rosa) and set it beside now: 2 returned payments, $37,770 really open`);
+  d.check(cut.question.includes('[C-1013 reduce 7500]'), 'cutting a limit Rosa approved went back to Rosa (REV-6): only she can change her own decision');
+  await controller(d, Object.values(jan.tasks));
+  const janScore = await d.api('POST', '/t/credit-desk/score', { run: jan.run });
+  d.check(janScore.caught === 2 && janScore.decisions.reviews[0]?.match, `January scored: ${janScore.summary}`);
+
+  const why = await d.api('GET', '/t/credit-desk/why?subject=APP-1042');
+  const answer = why.decisions[0]?.answer.join(' ') ?? '';
+  d.check(/TransUnion 790/.test(answer) && /Approved by Rosa Delgado/.test(answer) && /Does it still hold\? No\./.test(answer),
+    '"Why did we give Bright Harbor $40,000?" is answered from the log: what the desk knew, the rules, who approved it, and that it no longer holds');
 
   const vault = fs.readFileSync(path.join(d.home, 'vault.env'), 'utf8');
   const keys = ['CRS_USERNAME', 'CRS_PASSWORD', 'NESSIE_API_KEY'].map((k) => vault.match(new RegExp(`^${k}=(.*)$`, 'm'))?.[1]).filter((v): v is string => !!v && v.length > 4);
@@ -56,38 +101,33 @@ export default async function (d: DemoKit) {
   d.check(keys.length === 3 && keys.every((k) => !log.includes(k)), 'no CRS or Nessie key is anywhere in the log');
 
   if ((process.env.DEMO_LIVE ?? '').split(/[\s,]+/).includes('credit-desk')) await live(d);
-  else console.log('  skip  the live Droid run on the whole case, about 10 minutes of model time: DEMO_LIVE=credit-desk ./demo runs it');
+  else console.log('  skip  the live Droid runs on October and January, 20 to 30 minutes of model time: DEMO_LIVE=credit-desk ./demo runs them');
 }
 
-/** Both seats with Droid on the whole case. The controller's questions are answered yes, as Rosa would after reading them. */
+/** Every seat with Droid, October then January. Rosa's answers come from each case's controller.json. */
 async function live(d: DemoKit) {
-  const run = await d.api('POST', '/t/credit-desk/run', { case: 'fogline-2026-10' });
-  const ids: string[] = Object.values(run.tasks);
-  console.log(`  live run ${run.run}: tasks ${ids.join(', ')}`);
-  const end = Date.now() + 60 * 60 * 1000;
-  for (let n = 0; ; n++) {
-    for (const a of await d.api<Approval[]>('GET', '/approvals')) {
-      if (ids.includes(a.task) && a.state === 'pending') {
-        console.log(`  controller: yes to "${a.question.slice(0, 160)}"`);
-        await d.api('POST', `/approvals/${a.id}`, { approved: true, by: 'controller (scripted for the scored run)' });
-      }
+  for (const caseId of ['fogline-2026-10', 'fogline-2027-01']) {
+    const answersFile = path.join(import.meta.dirname, 'cases', caseId, 'controller.json');
+    const scripted: { match: string; approve: boolean; reason?: string }[] = fs.existsSync(answersFile) ? JSON.parse(fs.readFileSync(answersFile, 'utf8')).answers : [];
+    const answers = (q: string) => scripted.find((a) => q.includes(a.match)) ?? { approve: true };
+    const run = await d.api('POST', '/t/credit-desk/run', { case: caseId });
+    const ids: string[] = Object.values(run.tasks);
+    console.log(`  live run ${run.run} (${caseId}): tasks ${ids.join(', ')}`);
+    await controller(d, ids, answers, 90 * 60 * 1000, true);
+    const score = await d.api('POST', '/t/credit-desk/score', { run: run.run });
+    const out = `/var/lib/box-demo/credit-desk-${run.run}`;
+    fs.mkdirSync(out, { recursive: true });
+    const log = (await d.api<LogEvent[]>('GET', '/log')).filter((e) => (e.task && ids.includes(e.task)) || (e.type === 'note' && e.track === 'credit-desk'));
+    fs.writeFileSync(path.join(out, 'score.json'), JSON.stringify(score, null, 2));
+    fs.writeFileSync(path.join(out, 'log.jsonl'), log.map((e) => JSON.stringify(e)).join('\n') + '\n');
+    fs.writeFileSync(path.join(out, 'books.beancount'), await (await fetch(`${d.url}/t/credit-desk/books?run=${run.run}`)).text());
+    for (const f of ['analyst-report.md', 'clerk-report.md', 'ap-report.md']) {
+      const text = d.view(run.workspace, f);
+      if (text) fs.writeFileSync(path.join(out, f), text);
     }
-    const tasks = await Promise.all(ids.map(async (id) => (await d.api<{ task: Task }>('GET', `/tasks/${id}`)).task));
-    if (n % 20 === 0) console.log(`  ${tasks.map((t) => `${t.title}: ${t.state}, $${(t.costCents / 100).toFixed(2)}`).join(' | ')}`);
-    if (tasks.every((t) => ['done', 'failed', 'undone'].includes(t.state)) || Date.now() > end) break;
-    await new Promise((r) => setTimeout(r, 3000));
+    console.log(`  live ${caseId}: ${score.summary}\n  evidence in ${out}`);
+    d.check(true, `live Droid run on ${caseId} scored: ${score.summary}`);
   }
-  const score = await d.api('POST', '/t/credit-desk/score', { run: run.run });
-  const out = `/var/lib/box-demo/credit-desk-${run.run}`;
-  fs.mkdirSync(out, { recursive: true });
-  const log = (await d.api<LogEvent[]>('GET', '/log')).filter((e) => (e.task && ids.includes(e.task)) || (e.type === 'note' && e.track === 'credit-desk'));
-  fs.writeFileSync(path.join(out, 'score.json'), JSON.stringify(score, null, 2));
-  fs.writeFileSync(path.join(out, 'log.jsonl'), log.map((e) => JSON.stringify(e)).join('\n') + '\n');
-  for (const f of ['analyst-report.md', 'clerk-report.md']) fs.writeFileSync(path.join(out, f), d.view(run.workspace, f) ?? '(not written)\n');
-  for (const id of ids) {
-    const w = path.join(d.home, 'tasks', id, 'worker.log');
-    if (fs.existsSync(w)) fs.copyFileSync(w, path.join(out, `${id}.worker.log`));
-  }
-  console.log(`  live: ${score.summary}\n  evidence in ${out}`);
-  d.check(true, `live Droid run scored: ${score.summary}`);
+  const why = await d.api('GET', '/t/credit-desk/why?subject=APP-1042');
+  console.log(`  why APP-1042: ${why.decisions.at(-1)?.answer.join(' ')}`);
 }

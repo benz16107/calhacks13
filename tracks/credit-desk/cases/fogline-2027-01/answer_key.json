@@ -1,0 +1,130 @@
+{
+  "case_id": "fogline-2027-01",
+  "as_of": "2027-01-22",
+  "rules": "rules/credit-rules.yaml (0.3)",
+  "follows": "fogline-2026-10",
+  "scoring": "As for fogline-2026-10. The review decision is scored against review_decisions. The October decision it reopens must already be in the box's log (run fogline-2026-10 first).",
+  "planted_errors": [
+    {
+      "id": "J1",
+      "seat": "collections clerk",
+      "category": "returned payments still shown as paid",
+      "title": "Two of Bright Harbor's payments bounced, but the books show them paid",
+      "where": [
+        {
+          "file": "payments.csv",
+          "id": "PMT-8933"
+        },
+        {
+          "file": "payments.csv",
+          "id": "PMT-8967"
+        },
+        {
+          "file": "invoices.csv",
+          "id": "INV-24188"
+        },
+        {
+          "file": "invoices.csv",
+          "id": "INV-24215"
+        }
+      ],
+      "what_is_wrong": "The bank returned PMT-8933 (7,420.00, ACH, 2026-12-18) and PMT-8967 (11,250.00, check 1188, 2027-01-06) for insufficient funds. The accounting system still shows INV-24188 and INV-24215 as paid.",
+      "correct_conclusion": "A returned payment was never received (COL-8). Reopen INV-24188 and INV-24215 at their original due dates. Bright Harbor really owes 37,770.00, not 19,100.00, and its j_oldest invoice is 37 days past due: phone call, and new orders wait for the controller.",
+      "if_missed": "The desk keeps shipping on credit to a customer whose payments are bouncing.",
+      "rules": [
+        "COL-8",
+        "COL-1",
+        "ORD-3"
+      ]
+    },
+    {
+      "id": "J2",
+      "seat": "credit analyst",
+      "category": "a past decision no longer holds",
+      "title": "The October decision to give Bright Harbor 40,000 has to be reopened",
+      "where": [
+        {
+          "file": "customers.csv",
+          "id": "C-1013"
+        }
+      ],
+      "what_is_wrong": "In October the desk gave Bright Harbor 40,000 on Net 30 (band A, approved by the controller) on a clean 790 file and steady deposits. Since then two payments came back unpaid within 90 days.",
+      "correct_conclusion": "Start an early review (REV-3). Two returned payments within 90 days put it in band C at best: Net 15, at most 7,500 (REV-6). Show what the desk knew in October next to what it knows now, and send the cut to the controller, who approved the 40,000 (REV-6, SOD-2). Hold SO-6014 until she decides.",
+      "if_missed": "A 40,000 limit set on October's facts keeps running on January's.",
+      "rules": [
+        "REV-3",
+        "REV-6",
+        "SOD-2"
+      ]
+    }
+  ],
+  "review_decisions": [
+    {
+      "customer_id": "C-1013",
+      "reopens": "APP-1042",
+      "outcome": "reduce",
+      "band": "C",
+      "limit": 7500,
+      "terms": "Net 15",
+      "decided_by": "controller",
+      "why": "Two returned payments within 90 days (REV-6). The controller approved the 40,000, so only she can cut it."
+    }
+  ],
+  "collections": [
+    {
+      "customer_id": "C-1013",
+      "name": "Bright Harbor Catering Inc.",
+      "corrected_open_balance": 37770.0,
+      "credit_limit": 40000,
+      "oldest_days_past_due": 37,
+      "past_due_invoices": [
+        {
+          "invoice_id": "INV-24188",
+          "balance": 7420.0,
+          "days_past_due": 37
+        },
+        {
+          "invoice_id": "INV-24215",
+          "balance": 11250.0,
+          "days_past_due": 22
+        },
+        {
+          "invoice_id": "INV-24246",
+          "balance": 8960.0,
+          "days_past_due": 8
+        }
+      ],
+      "dunning_step": "phone call; hold new orders",
+      "note": "Reopened INV-24188 and INV-24215 after the returns (J1)."
+    },
+    {
+      "customer_id": "C-1001",
+      "name": "Golden Gate Bagel Co.",
+      "corrected_open_balance": 2180.0,
+      "credit_limit": 20000,
+      "oldest_days_past_due": 0,
+      "past_due_invoices": [],
+      "dunning_step": "none"
+    }
+  ],
+  "order_decisions": [
+    {
+      "order_id": "SO-6014",
+      "customer_id": "C-1013",
+      "decision": "hold",
+      "who_can_release": "controller",
+      "why": "Two returned payments; the account is under review (REV-6, ORD-3)."
+    }
+  ],
+  "not_errors": [
+    {
+      "where": [
+        {
+          "file": "payments.csv",
+          "id": "PMT-9010"
+        }
+      ],
+      "why_fine": "Golden Gate paid INV-24262 on time, and the payment cleared."
+    }
+  ]
+}
