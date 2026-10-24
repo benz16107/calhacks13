@@ -1,6 +1,6 @@
 {
   "source": "CRS CalHacks MCP server 1.1.2 (@crscreditapi/crs-calhacks-mcp-server, MIT), test-data/personas.json, CalHacks13(20261022)-CRS-Sandbox",
-  "note": "Every persona is fake. Copy a guarantor block into an application exactly as written (upper case, same address) or the sandbox returns no canned result.",
+  "note": "Every persona is fake. Copy a guarantor block into an application with the same name, SSN, date of birth, address, phone and email, or the sandbox returns no canned result. Letter case does not matter (tested 2026-10-23).",
   "personas": [
     {
       "id": "P01",

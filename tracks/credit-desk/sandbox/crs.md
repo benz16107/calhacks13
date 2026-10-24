@@ -1,22 +1,16 @@
 # CRS Credit API: what the credit desk uses
 
-Read on 2026-10-23 from https://calhacks.crscreditapi.com and the CRS MCP server package
+Checked live against the CRS sandbox on 2026-10-23: six applicants, seven checks each, 42 calls. Every result
+matched the CRS persona the applicant uses. The raw answers, with each call's `RequestID`, are in `crs-responses/`.
+`crs-check.ts` runs the same calls again.
+
+Sources: https://calhacks.crscreditapi.com and the CRS MCP server package
 (`@crscreditapi/crs-calhacks-mcp-server` 1.1.2: its README, product guides, OpenAPI spec and `personas.json`).
-**Nothing was called.** No sandbox credentials exist yet.
 
-## Keys Ben needs
+## Keys
 
-| What | Where to get it | Store as |
-|---|---|---|
-| CRS sandbox username and password | https://calhacks.crscreditapi.com, "Get started": enter your email, follow the invite email to the CRS portal. A second email links the Postman collection. | `CRS_USERNAME`, `CRS_PASSWORD` in the box vault, `/etc/box/vault.env` on the test VM |
-
-When the account arrives, ask the CRS booth to confirm these products are on it (a `401` from one means it is off):
-
-- `credit_report` with configs `tu-prequal-fico9`, `efx-prequal-vantage4`, `exp-prequal-vantage4`
-- `tu_identity_verification` (role `ROLE_TU_TV`)
-- `fraud_finder` (role `ROLE_ATDATA`, config `fraud-finder`)
-- `pitchpoint_blj`
-- `accurate_append` (optional, for the reverse phone check)
+`CRS_USERNAME` and `CRS_PASSWORD` are in the box vault, `/etc/box/vault.env`, on both test VMs. All five products
+the desk uses are turned on for the account: every call above returned data.
 
 The MCP server for Claude Code (docs tools work without credentials; only `debug_request` needs them):
 
@@ -24,14 +18,22 @@ The MCP server for Claude Code (docs tools work without credentials; only `debug
 claude mcp add crs-calhacks -e CRS_USERNAME=... -e CRS_PASSWORD=... -- npx -y @crscreditapi/crs-calhacks-mcp-server@latest
 ```
 
+## Run the checks
+
+On a test VM, as root so the script can read the vault, from a copy of `tracks/credit-desk`:
+
+```sh
+sudo node sandbox/crs-check.ts /tmp/crs-out cases/fogline-2026-10
+```
+
+It logs in once and stops on a failed login. Repeated failed logins disable the account with no warning, so never
+retry a failed login in a loop. It writes one file per check: the route, the body sent, the HTTP status, the
+`RequestID` and the response.
+
 ## Calls
 
-Base URL `https://api-sandbox.stitchcredit.com/api`. Log in once with `POST /users/login`
-(`{"username","password"}`), keep the `token`, send `Authorization: Bearer <token>`. Repeated failed logins disable the
-account with no warning, so never retry a failed login in a loop.
-
-The desk runs these on the owner who signs the personal guarantee (`guarantor` in the application). `g` is the
-guarantor, `a` the application.
+Base URL `https://api-sandbox.stitchcredit.com/api`. `POST /users/login` with `{"username","password"}` returns a
+`token`; send `Authorization: Bearer <token>`. `g` is the guarantor, `a` the application.
 
 | Check | Request | Body built from the application |
 |---|---|---|
@@ -39,52 +41,66 @@ guarantor, `a` the application.
 | Identity | `POST /transunion/identity-manager-verification/basic` | `firstName, lastName, ssn, dob: g.dob, street1: g.home_address.line1, city, state, zip` |
 | Fraud | `POST /fraud-finder/fraud-finder` | `firstName, lastName, phoneNumber: g.phone, email: g.email, ipAddress: a.submitted_from_ip, address: {addressLine1, city, state, postalCode}` |
 | Public records | `POST /pp/fcrablj/data` | `terms: {term: [{person: {firstName, lastName, ssn}}]}` |
-| Phone owner (optional) | `POST /accurate-append/reverse` | `phoneNumber: g.phone` |
+| Phone owner | `POST /accurate-append/reverse` | `phoneNumber: g.phone` |
 
-Not used, on purpose (rule CHK-2): criminal and eviction searches. They are not relevant to trade credit, and pulling
-data the decision does not need is a bad look for the "responsible" judging criterion.
+Not used, on purpose (rule CHK-2): criminal and eviction searches. They are not relevant to trade credit.
 
-How to read the answers:
+## How to read the answers
 
-- **Credit reports return errors as HTTP 200.** Check `errorMessages` in the body first. A bureau with no file comes
-  back as `NoFileReturnedNoHit`; a frozen file as `NoFileReturnedCreditFreeze`.
-- **Identity:** `addOnProducts[0].idManagerVerification.messages[]`. Empty means verified. Codes 2201, 2202, 2301 and
-  2401 mean SSN issued to another name, SSN issued before the date of birth, deceased, fraud alert. KBA is not mocked.
-- **Fraud Finder:** `risk.score` 0 to 100, higher is riskier (rule FRD-2 stops at 70). Also `risk.phone.owner`,
-  `eam.date_first_seen`, `risk.postal.ip_postal_distance`. The field is `ipAddress`; a field named `ip` is ignored.
+- **Credit reports return errors as HTTP 200.** `errorMessages` is null on success. File status is
+  `creditFiles[].creditFileDetail.creditFileResultStatusType`: `FileReturned`, `NoFileReturnedNoHit`,
+  `NoFileReturnedCreditFreeze`.
+- **Score** is `scores[].scoreValue`, a string. Model names differ by bureau: TransUnion `TransUnionVantageScore4.0`,
+  Experian `VantageScore 4.0`, and Equifax returns two entries (`Vantage 4.0` and `02958`) with the same value.
+- **Bad marks:** read `summaries.derogatorySummary` (`collectionsCount`, `chargeOffsCount`, `_90DayLates`) or a
+  tradeline's `derogatoryDataIndicator` and `currentRatingType`. **Do not use `chargeOffAmount`**: in the sandbox's
+  Experian files every tradeline carries 931, clean ones too.
+- **Inquiries:** `inquiries[]`, each with an `inquiryDate`.
+- **Identity:** `addOnProducts[0].idManagerVerification.messages[]`, each `{code, text, source}`. Empty means
+  verified. Seen live: 2201 "INPUT SSN NOT ASSOCIATED WITH INPUT NAME", 2202 "INPUT DATE OF BIRTH DOES NOT MATCH FILE",
+  2101 "INPUT CURRENT ADDRESS DOES NOT MATCH FILE CURRENT ADDRESS". CRS's notes add 2301 (deceased) and 2401 (fraud
+  alert). KBA is not mocked.
+- **Fraud Finder:** `risk.score` (0 to 100; rule FRD-2 stops at 70), `risk.phone` (`line_type`, `prepaid`,
+  `owner.*_match`), `eam.date_first_seen` for the email, `risk.postal.ip_postal_distance` as text ("5 miles",
+  "> 1000 miles"), `email_validation.status`. The field you send is `ipAddress`; one named `ip` is ignored.
+- **PitchPoint:** `DetailedBLJReport.BankruptciesFound`, `JudgmentsFound`, `LiensFound`. Details are under
+  `Results.Judgments.JudgmentRecord` (`TotalJudgmentAmount`, `Status`, `Plaintiff`, `FilingDate`) and
+  `Results.Liens.LienRecord` (`TotalLienAmount`, `Status`). A single record comes back as an object, not a list.
+- **Phone owner:** `data.records[]`. Empty means no one is on file for that number.
 - **Every response has a `RequestID` header.** Log it with the decision (rule CHK-3). `GET /users/retention/{id}`
-  shows what was sent and returned; retry 5xx there with backoff.
+  shows what was sent and returned.
 - Identical requests return cached results.
 
 ## The sandbox only knows 20 fake people
 
-It returns canned results only when the body contains every field of one of its personas, exactly as CRS wrote them
-(upper case names and addresses). Anything else goes to the real vendor and comes back empty. So every applicant's
-guarantor block is copied from a persona; all 20 are in `crs-personas.json` next to this file.
+It returns canned results only for its personas; anything else goes to the real vendor and comes back empty. So every
+applicant's guarantor is copied from a persona; all 20 are in `crs-personas.json`. Copy the name, SSN, date of birth,
+address, phone and email as written. **Letter case does not matter:** "Grace Nakamura, 1850 Solano Ave, Berkeley"
+returned the same report as the upper-case version (tested 2026-10-23).
 
-| Application | Business | Guarantor (persona) | What CRS should return | Desk conclusion |
-|---|---|---|---|---|
-| APP-1041 | Kettle & Crumb Cafe, Berkeley | P19 Grace Nakamura, small-business owner | 770 at all three, identity PASS, Fraud Finder 9, no records | Approve 8,000 Net 30 (analyst) |
-| APP-1042 | Bright Harbor Catering, San Jose | P01 Margaret Okafor, prime | 790 at all three, PASS, 11, no records | Propose 40,000; controller approves |
-| APP-1043 | Pacific Crest Provisions LLC | **P13 Kayla Brennan, synthetic identity** | 640 thin file, **identity FAIL**, **Fraud Finder 88** (email 3 days old, phone not hers, prepaid VoIP), no records, reverse phone no match | **Fraud hold**, though a simple rule approves 20,000 |
-| APP-1044 | Saffron Table Catering, Chicago | P08 Priya Venkatesan | 690, PASS, 10, **12,300 judgment and 7,450 state tax lien** | Band C, 7,500 Net 15; controller |
-| APP-1045 | Castellanos Panaderia, Dallas | P17 Elena Castellanos, bureau divergence | **TU 760, Equifax no file, Experian 700 with a charge-off**, PASS, 11 | Band B, 15,000; controller |
-| APP-1046 | Lakeshore Diner, Austin | P02 Daniel Whitfield, super-prime | 815 at all three, PASS, 9, no records | 21,000 on verified revenue; controller |
+## Live results, 2026-10-23
+
+| Application | Guarantor | TU / EFX / EXP | Inquiries | Identity | Fraud Finder | Public records | Phone owner | Desk conclusion |
+|---|---|---|---|---|---|---|---|---|
+| APP-1041 Kettle & Crumb Cafe | P19 Grace Nakamura | 770 / 770 / 770 | 2 | verified | 9 | none | her | Approve 8,000 Net 30 (analyst) |
+| APP-1042 Bright Harbor Catering | P01 Margaret Okafor | 790 / 790 / 790 | 1 | verified | 11 | none | her | Propose 40,000; controller approves |
+| APP-1043 Pacific Crest Provisions | **P13 Kayla Brennan** | 640 / 640 / 640, 3 accounts | **9, Aug 19 to Sep 12** | **fails: 2201, 2202, 2101** | **88**: prepaid VoIP, owner does not match, email first seen Oct 15, IP over 1,000 miles away | none | **no one** | **Fraud hold**, though a simple rule approves 20,000 |
+| APP-1044 Saffron Table Catering | P08 Priya Venkatesan | 690 / 690 / 690 | 2 | verified | 10 | **12,300 judgment, unsatisfied; 7,450 Illinois tax lien, unreleased** | her | Band C, 7,500 Net 15; controller |
+| APP-1045 Castellanos Panaderia | P17 Elena Castellanos | **760 / no file / 700 with one collection** | 1 | verified | 11 | none | her | Band B, 15,000; controller |
+| APP-1046 Lakeshore Diner | P02 Daniel Whitfield | 815 / 815 / 815 | 1 | verified | 9 | none | him | 21,000 on verified revenue; controller |
 
 Spare personas for a judge's own case: P05 subprime (decline), P06 Chapter 7 discharged, P07 Chapter 13 open,
 P12 identity mismatch (a second fraud case), P14 deceased SSN, P15 frozen TransUnion file, P16 fraud alert (KBA step-up),
-P20 file with no score. Expected results for each are in `crs-personas.json`.
+P20 file with no score. Their expected results are in `crs-personas.json`; these eight were not called.
 
 ## Business credit
 
-The CRS page lists "business credit: a company's debt picture and its state filings", but none of the sandbox routes in
-the MCP server or its OpenAPI spec cover it. Until CRS says otherwise, `sources/business_credit.json` in the case is
-simulated and labeled so. Ask at the booth (question below).
+The CRS page lists "business credit: a company's debt picture and its state filings", but no sandbox route in the MCP
+server or its OpenAPI spec covers it. Until CRS says otherwise, `sources/business_credit.json` in the case is simulated
+and labeled so.
 
 ## Questions for the CRS booth
 
 1. Is business credit (company debt and state filings) available in the CalHacks sandbox? Which route and which test companies?
-2. Do the personas' bodies have to match in upper case, or is matching case-insensitive?
-3. Can a sandbox account have all of credit report, TruValidate, Fraud Finder, PitchPoint and AccurateAppend turned on?
-4. Do the credit reports for P13 really carry the 9 inquiries in 60 days that the persona summary describes?
-5. For the Identity/Fraud prize, do you want to see the fraud stop rules themselves, or only the catch?
+2. Every tradeline in the sandbox's Experian files has `chargeOffAmount` 931. Is that intended?
+3. For the Identity/Fraud prize, do you want to see the fraud stop rules themselves, or only the catch?

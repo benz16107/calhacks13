@@ -1,0 +1,37 @@
+{
+  "route": "/pp/fcrablj/data",
+  "body": {
+    "terms": {
+      "term": [
+        {
+          "person": {
+            "firstName": "MARGARET",
+            "lastName": "OKAFOR",
+            "ssn": "666701001"
+          }
+        }
+      ]
+    }
+  },
+  "status": 200,
+  "requestId": "814e0d88-8f63-4ec6-b6da-598800a3d2a3",
+  "response": {
+    "DetailedBLJReport": {
+      "JudgmentsFound": 0,
+      "Filters": {
+        "ExcludeBankruptcies": false,
+        "FilterVerbiage": "Judgment satisfied = 7 years; Judgment unsatisfied = 7 years; Lien released = 7 years; Lien unreleased = 10 years; Bankruptcy chapter 7 or 11 dismissed or discharged = 10 years; Bankruptcy chapter 7 or 11 not dismissed or discharged = 10 years; Bankruptcy chapter 13 dismissed or discharged = 7 years; Bankruptcy chapter 13 not dismissed or discharged = 10 years",
+        "SkipNameValidation": false
+      },
+      "Messages": {
+        "Message": {
+          "Text": "No Errors",
+          "Code": 0
+        }
+      },
+      "Results": "",
+      "BankruptciesFound": 0,
+      "LiensFound": 0
+    }
+  }
+}

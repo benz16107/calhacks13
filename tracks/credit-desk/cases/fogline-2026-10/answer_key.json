@@ -223,7 +223,7 @@
           "id": "APP-1043"
         }
       ],
-      "what_is_wrong": "The numbers look clean and a simple rule approves 20,000. The identity checks fail. CRS: TransUnion identity FAIL (SSN issued before the date of birth, several names on one SSN); Fraud Finder risk score 88 (email 3 days old, phone not the applicant's, prepaid VoIP); 9 credit inquiries in 60 days. Case files: LLC filed 2026-09-01 but claims 4 years in business; bank account opened 2026-08-28; billing address is a private mailbox; ship-to is a freight forwarder in Florida; both trade references share one phone number; rush first order of 18,500 to ship tomorrow.",
+      "what_is_wrong": "The numbers look clean and a simple rule approves 20,000. The identity checks fail. CRS: TransUnion identity FAIL (codes 2201 SSN not associated with the name, 2202 date of birth does not match the file, 2101 address does not match); Fraud Finder risk score 88 (email first seen 2026-10-15, six days before the application; phone is a prepaid VoIP line whose owner does not match; IP more than 1,000 miles from the address); the phone number has no owner on file (AccurateAppend); 9 credit inquiries between 2026-08-19 and 2026-09-12. Case files: LLC filed 2026-09-01 but claims 4 years in business; bank account opened 2026-08-28; billing address is a private mailbox; ship-to is a freight forwarder in Florida; both trade references share one phone number; rush first order of 18,500 to ship tomorrow.",
       "correct_conclusion": "Fraud hold. No credit, no shipment on terms. Refer to the controller. Do not contact the applicant through the phone or email supplied. Cash in advance is the only offer.",
       "if_missed": "18,500 of product ships to a forwarder and is never paid for.",
       "rules": [
@@ -271,7 +271,7 @@
           "file": "applications/APP-1044.json"
         }
       ],
-      "what_is_wrong": "The owner answered 'no' to open liens or judgments. CRS PitchPoint shows a 12,300 civil judgment and a 7,450 state tax lien against her.",
+      "what_is_wrong": "The owner answered 'no' to open liens or judgments. CRS PitchPoint shows an unsatisfied 12,300 civil judgment (Lakeview Contractors, Cook County, filed 2023-03-15) and an unreleased 7,450 Illinois Department of Revenue tax lien (filed 2024-08-21) against her.",
       "correct_conclusion": "Treat as band C at best (Net 15, 7,500), note the false declaration, and send to the controller. Open terms with public records need controller approval.",
       "if_missed": "Credit is extended on a false declaration, and the tax lien may take priority over Fogline's claim.",
       "rules": [
@@ -307,8 +307,8 @@
           "file": "applications/APP-1045.json"
         }
       ],
-      "what_is_wrong": "Fresh CRS pulls: TransUnion 760, Equifax no file, Experian 700 with one charge-off.",
-      "correct_conclusion": "Use the lowest score (700) and count the charge-off: band B (Net 30, at most 15,000). Requested 25,000 becomes 15,000, which is above the analyst's authority, so it goes to the controller.",
+      "what_is_wrong": "Fresh CRS pulls: TransUnion 760, Equifax no file, Experian 700 with one collection account (National Recovery, 640 past due).",
+      "correct_conclusion": "Use the lowest score (700) and count the collection: band B (Net 30, at most 15,000). Requested 25,000 becomes 15,000, which is above the analyst's authority, so it goes to the controller.",
       "if_missed": "Banded A on the best bureau alone; 25,000 approved instead of 15,000.",
       "rules": [
         "BND-1",
@@ -438,7 +438,7 @@
         "limit": 15000,
         "terms": "Net 30",
         "decided_by": "controller",
-        "why": "Ignore the applicant's 2025 report. Fresh pulls disagree; the lowest score (700) and the Experian charge-off put it in band B, capped at 15,000, which is above the analyst's authority.",
+        "why": "Ignore the applicant's 2025 report. Fresh pulls disagree; the lowest score (700) and the Experian collection put it in band B, capped at 15,000, which is above the analyst's authority.",
         "rules": [
           "DOC-1",
           "BND-1",

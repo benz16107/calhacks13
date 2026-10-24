@@ -1,74 +1,69 @@
 # Capital One Nessie: the credit desk's bank
 
-Read on 2026-10-23 from https://nessieisreal.com (Getting Started and Documentation pages) and its OpenAPI 3.0.3 spec
-at https://nessieisreal.com/nessie-openapi-spec.yaml. **Nothing was called with a key.** No key exists yet.
+Loaded on 2026-10-23 from `cases/fogline-2026-10` with `nessie-seed.ts`, and read back. Sources: https://nessieisreal.com
+(Getting Started and Documentation) and its OpenAPI 3.0.3 spec at https://nessieisreal.com/nessie-openapi-spec.yaml.
+Where the live API and the spec disagree, this file says what the live API did.
 
-## Key Ben needs
+## Key
 
-| What | Where to get it | Store as |
-|---|---|---|
-| One Nessie API key | Log in with GitHub at https://nessieisreal.com, then open Profile | `NESSIE_API_KEY` in the box vault, `/etc/box/vault.env` on the test VM |
+`NESSIE_API_KEY` is in the box vault, `/etc/box/vault.env`, on both test VMs. It goes on every request as a query
+parameter, `?key=...`. Both test VMs share the key, so they see the same Nessie data. Use HTTPS:
+`https://api.nessieisreal.com` and `https://prod-api.nessieisreal.com` both answer; plain HTTP does not connect.
 
-The key goes on every request as a query parameter: `?key=...`. One key is enough. It owns its own customers.
-
-## Base URL: check on the first call
-
-- Getting Started says `api.nessieisreal.com` (for example `api.nessieisreal.com/customers?key=...`).
-- The spec's production server is `https://prod-api.nessieisreal.com`.
-- Without a key, `https://api.nessieisreal.com` answers with AWS API Gateway errors, so it is live. Plain HTTP does
-  not connect. Use HTTPS, and try `prod-api` if `api` fails.
-
-## Two kinds of endpoint
-
-- **Customer endpoints** (no `/enterprise`): you act as a bank customer and can create, change and delete data you own.
-- **Enterprise endpoints** (`/enterprise/...`): read-only, everything in the system, as a Capital One analyst.
-
+Customer endpoints (no `/enterprise`) create, change and delete data the key owns. Enterprise endpoints are read-only.
 The desk only needs customer endpoints.
 
-## How the case maps onto Nessie
+## What is loaded
 
-The ledger CSVs are Fogline's accounting system. Nessie is the bank: it shows what money really arrived. Seeding both
-from the case gives the desk two sources that disagree in the planted places, which is what Hyphenate asks for.
-
-| Credit desk | Nessie | Notes |
+| Credit desk | Nessie | Count |
 |---|---|---|
-| Fogline Supply Co. | Customer `Fogline` / `Supply Co.`, one Checking account nicknamed `Fogline Operating` | Receives every customer payment |
-| Each row of `customers.csv` | Customer with `first_name` = legal name, `last_name` = customer id (`C-1001`), one Checking account | The id in `last_name` makes the join easy |
-| Each row of `invoices.csv` | Bill on that customer's account: `payee` "Fogline Supply Co.", `nickname` = invoice id, `payment_amount` = total, `payment_date` = due date, `status` `pending` (open) or `completed` (paid) | Mirrors the ledger as recorded, errors included |
-| Each row of `payments.csv` | Deposit into `Fogline Operating`: `medium` "balance", `transaction_date` = received date, `amount`, `status` "completed", `description` = payment id, payer and remittance memo | Mirrors the money. **Skip PMT-8823**: the post-dated check cannot be deposited before 2026-11-06 |
-| Each applicant in `sources/bank_statements.csv` | Customer and Checking account per applicant, one deposit per month | The applicant shares this account so the desk can check stated revenue |
+| Fogline Supply Co. | Customer `Fogline` / `Supply Co.`, Checking account `Fogline Operating` | 1 |
+| Each row of `customers.csv` | Customer with `first_name` = legal name and `last_name` = customer id (`C-1001`), Checking account `<legal name> checking` | 12 |
+| Each row of `invoices.csv` | Bill on that customer's account: `payee` "Fogline Supply Co.", `nickname` = invoice id, `payment_amount` = total, `payment_date` = due date, `status` `completed` if the ledger says paid, else `pending` | 38 |
+| Each payment the bank could have cleared | Deposit into `Fogline Operating` on the received date. The description holds the payment id, payer, reference, remittance memo and exact amount, e.g. `PMT-8812 from Golden Gate Bagel Co \| ACH 1009 GGB \| memo INV-24098 \| exact 1940.00` | 14 |
+| Each applicant in `sources/bank_statements.csv` | Customer (`last_name` = application id) and Checking account, one deposit per month dated the 28th | 6 applicants, 31 deposits |
 
-What the bank then shows against the ledger:
+The ledger CSVs are Fogline's accounting system. Nessie is the bank: it shows what money arrived, and from whom. So it
+disagrees with the ledger in the planted places:
 
-- PMT-8812's deposit says "Golden Gate Bagel Co, INV-24098" while the ledger applied it to Greenleaf's INV-24089 (E03).
-- No deposit exists for Dogpatch Deli's check, yet the ledger marks INV-24091 paid (E05).
-- Lakeshore Diner's deposits average 17,600 a month against a claimed 1.85M a year (E11).
+- PMT-8812's deposit says it came from Golden Gate Bagel with memo INV-24098, while the ledger applied it to
+  Greenleaf's INV-24089 (E03).
+- There is no deposit for Dogpatch Deli's check: it is dated 2026-11-06, after the case date, so the seed skips any
+  payment whose `payment_date` is later than `as_of`. The ledger still marks INV-24091 paid (E05).
+- Lakeshore Diner's deposits average 17,600 a month against a claimed 1.85M a year (E11). Pacific Crest has one month
+  of deposits in an account opened in August (E10).
 
-## Limits in the spec
+## Load it again
 
-- **Deposit `amount` is an integer**, and so is account `balance`. Payments have cents (2,169.72). Until a keyed call
-  shows decimals are accepted, round to whole dollars in Nessie and keep the exact amount in the deposit
-  `description`. The ledger CSVs stay the record of exact amounts.
-- Bill `payment_amount` is a number, so cents are fine there.
-- **Create calls return a string** ("Customer created", "Bill created"), not the new object. To get the new `_id`, list
-  afterwards (`GET /customers`, `GET /customers/{id}/accounts`, `GET /accounts/{id}/bills`) and match on name or nickname.
-- Addresses need `street_number` and `street_name` as separate fields, plus `city`, `state`, `zip`.
-- Account `type` is one of `Credit Card`, `Savings`, `Checking`. Bill `status` is one of `pending`, `cancelled`,
-  `completed`, `recurring`.
-- Transfers have no create endpoint in this spec (only get, update and delete by id), so payments are deposits.
+On a test VM, as root so the script can read the vault, from a copy of `tracks/credit-desk`:
 
-## Seed order (for the thread that wires this in)
+```sh
+sudo node sandbox/nessie-seed.ts cases/fogline-2026-10 /tmp/nessie-ids.json
+```
 
-1. `POST /customers` for Fogline, then `POST /customers/{id}/accounts` for `Fogline Operating`.
-2. For each customer row: `POST /customers`, then a Checking account.
-3. For each invoice: `POST /accounts/{customer account}/bills`.
-4. For each payment except PMT-8823: `POST /accounts/{Fogline Operating}/deposits`.
-5. For each applicant: customer, Checking account, then one deposit per month from `bank_statements.csv`.
-6. Write the Nessie ids next to the case ids in a file on the VM, outside the repo, so a reseed is not needed after a restart.
+It looks up every customer, account, bill and deposit before creating it, so running it again creates nothing. Every
+run rewrites the id map (case id to Nessie id), which is how to get the ids back after a restart.
 
-## Questions worth asking Capital One
+## How the live API behaves
 
-1. Does a deposit accept a decimal `amount`, or only whole dollars?
-2. Is there a way to get the new object's id from a create call, or is listing the only way?
-3. Is `api.nessieisreal.com` or `prod-api.nessieisreal.com` the right base for the hackathon?
-4. Does deleting a customer remove its accounts, bills and deposits, so a reseed starts clean?
+- **Create calls return the new object**: `{"code": 201, "message": "...", "objectCreated": {..., "_id": "..."}}`.
+  The spec says they return only a string.
+- **Deposits drop cents silently.** A deposit of 2169.72 is stored as 2169. The seed rounds to whole dollars itself and
+  keeps the exact amount in the description. Bills keep cents.
+- **A bill created without `recurring_date` breaks every bill list on its account.** It is stored, but
+  `GET /accounts/{id}/bills`, `GET /customers/{id}/bills` and `GET /bills/{id}` then fail with HTTP 400 ("field
+  required: recurring_date, upcoming_payment_date"). Updating the bill afterwards does not fix it; only deleting it
+  does. Creating it with `recurring_date` (the seed uses the day of the due date) makes Nessie fill in
+  `upcoming_payment_date`, and the bill reads fine. `upcoming_payment_date` cannot be sent.
+- **Account balances do not move** when a completed deposit is added. Use the deposits, not `balance`.
+- Customers cannot be deleted (no route). Accounts, bills and deposits can.
+- Addresses need `street_number` and `street_name` as separate fields, plus `city`, `state` and a 5-digit `zip`.
+- Account `type` is `Credit Card`, `Savings` or `Checking`. Bill `status` is `pending`, `cancelled`, `completed` or
+  `recurring`.
+- Transfers have no create route, so payments are deposits.
+
+## Questions for Capital One
+
+1. Bills without `recurring_date` make the bill lists fail with HTTP 400. Known bug? Is `recurring_date` meant to be required?
+2. Can a customer be deleted, so a reseed can start clean?
+3. Should account `balance` change when a deposit completes?

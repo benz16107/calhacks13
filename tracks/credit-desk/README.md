@@ -21,8 +21,9 @@ identity. CRS's identity and fraud checks catch it before an $18,500 rush order 
 | `rules/credit-rules.draft.yaml` | Credit rules, **first draft**. Ben's Mana chats will replace it. Every rule has an id that decisions cite |
 | `cases/fogline-2026-10/` | The planted case: 12 trade customers, 38 invoices, 15 payments, 6 open orders, 6 credit applications |
 | `cases/fogline-2026-10/answer_key.json` | Every planted error, where it is, and what a correct desk concludes |
-| `sandbox/crs.md`, `sandbox/crs-personas.json` | CRS: calls, request bodies, the 20 test people, the persona each applicant uses, keys |
-| `sandbox/nessie.md` | Capital One Nessie: how the ledger maps onto the bank, limits in the API, keys |
+| `sandbox/crs.md`, `sandbox/crs-personas.json` | CRS: calls, request bodies, how to read the answers, the 20 test people, live results for each applicant |
+| `sandbox/crs-check.ts`, `sandbox/crs-responses/` | Runs the desk's seven CRS checks on every application; the raw answers recorded on 2026-10-23, an offline fallback |
+| `sandbox/nessie.md`, `sandbox/nessie-seed.ts` | Capital One Nessie: how the ledger maps onto the bank, how the live API behaves, and the script that loads a case |
 | `check-case.ts` | Checks that a case folder follows the format below |
 
 ## The planted case
@@ -187,8 +188,9 @@ The file name must be the `application_id`. Required fields are marked; everythi
 }
 ```
 
-**The guarantor block must be one of CRS's 20 test people, copied exactly** from `sandbox/crs-personas.json`
-(upper case, same address). The CRS sandbox only returns results for those people. Everything else in the application
+**The guarantor block must be one of CRS's 20 test people**, copied from `sandbox/crs-personas.json`: the same name,
+SSN, date of birth, address, phone and email. Letter case does not matter. The CRS sandbox only returns results for
+those people. Everything else in the application
 (the business, the request, the references) can be anything.
 
 ### sources/: other data the desk can check against
@@ -233,12 +235,14 @@ No code changes are needed: the desk reads whatever case folder it is pointed at
 
 ## Keys
 
-None are in the repo, and nothing here has called a sponsor API yet.
+None are in the repo. They are in the box vault, `/etc/box/vault.env`, on both test VMs.
 
-| Service | Key | How to get it |
+| Service | Key | State on 2026-10-23 |
 |---|---|---|
-| CRS Credit API sandbox | `CRS_USERNAME`, `CRS_PASSWORD` | Invite form at https://calhacks.crscreditapi.com; details in `sandbox/crs.md` |
-| Capital One Nessie | `NESSIE_API_KEY` | GitHub login at https://nessieisreal.com, then Profile; details in `sandbox/nessie.md` |
+| CRS Credit API sandbox | `CRS_USERNAME`, `CRS_PASSWORD` | All six applicants checked live; results match the answer key (`sandbox/crs.md`) |
+| Capital One Nessie | `NESSIE_API_KEY` | The case is loaded: 12 trade customers, 38 bills, 14 payment deposits, 6 applicants (`sandbox/nessie.md`) |
+
+Both scripts run on a test VM as root so they can read the vault, and neither prints a key.
 
 ## For the sponsor tracks
 

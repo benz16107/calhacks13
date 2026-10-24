@@ -1,0 +1,78 @@
+{
+  "route": "/fraud-finder/fraud-finder",
+  "body": {
+    "firstName": "ELENA",
+    "lastName": "CASTELLANOS",
+    "phoneNumber": "5550101017",
+    "email": "elena.castellanos@example.com",
+    "ipAddress": "203.0.113.27",
+    "address": {
+      "addressLine1": "4400 N CENTRAL EXPY STE 100",
+      "city": "DALLAS",
+      "state": "TX",
+      "postalCode": "75206"
+    }
+  },
+  "status": 200,
+  "requestId": "95688168-4fdd-4854-b52e-e8dcae57520f",
+  "response": {
+    "eam": {
+      "date_first_seen": "2014-11-20",
+      "longevity": 9,
+      "velocity": 1,
+      "popularity": 6
+    },
+    "dam": {
+      "date_first_seen": "1995-08-13",
+      "longevity": 10,
+      "velocity": 1,
+      "popularity": 10
+    },
+    "risk": {
+      "score": 11,
+      "tumbling_risk": 0,
+      "query_id": "calhacks-P17-0001",
+      "domain": {
+        "domain_risk_score": 0
+      },
+      "ip": {
+        "routing_type": "fixed",
+        "organization": "comcast cable communications llc",
+        "proxy_type": "",
+        "hosting_facility": false,
+        "latitude": "32.78",
+        "longitude": "-96.80"
+      },
+      "postal": {
+        "first_name_match": "match",
+        "last_name_match": "match",
+        "street_match": "match",
+        "city_match": "match",
+        "zip_match": "match",
+        "address_type": "Street",
+        "deliverability": "deliverable",
+        "ip_postal_distance": "5 miles"
+      },
+      "phone": {
+        "line_type": "mobile",
+        "carrier": "VERIZON WIRELESS",
+        "status": "valid",
+        "prepaid": false,
+        "owner": {
+          "first_name_match": "match",
+          "last_name_match": "match",
+          "street_match": "match",
+          "city_match": "match",
+          "zip_match": "match",
+          "type": "person"
+        }
+      }
+    },
+    "email_validation": {
+      "address": "elena.castellanos@example.com",
+      "status": "valid",
+      "status_code": 50,
+      "domain_type": "freeisp"
+    }
+  }
+}

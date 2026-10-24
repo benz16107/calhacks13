@@ -1,0 +1,27 @@
+{
+  "route": "/accurate-append/reverse",
+  "body": {
+    "phoneNumber": "5550101008"
+  },
+  "status": 200,
+  "requestId": "2319ee48-55b2-4c85-8706-af1cca3a9ba9",
+  "response": {
+    "success": true,
+    "message": "Unified reverse completed successfully",
+    "data": {
+      "transactionId": "TC-REVERSE-0001",
+      "records": [
+        {
+          "firstName": "PRIYA",
+          "lastName": "VENKATESAN",
+          "houseNo": "3300",
+          "streetName": "N LAKE SHORE DR APT 15C",
+          "address": "3300 N LAKE SHORE DR APT 15C",
+          "city": "CHICAGO",
+          "state": "IL",
+          "postalCode": "60657"
+        }
+      ]
+    }
+  }
+}

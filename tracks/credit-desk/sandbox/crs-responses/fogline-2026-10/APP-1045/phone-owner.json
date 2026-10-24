@@ -1,0 +1,27 @@
+{
+  "route": "/accurate-append/reverse",
+  "body": {
+    "phoneNumber": "5550101017"
+  },
+  "status": 200,
+  "requestId": "8a112c22-6429-4645-82d6-c2d023770be1",
+  "response": {
+    "success": true,
+    "message": "Unified reverse completed successfully",
+    "data": {
+      "transactionId": "TC-REVERSE-0001",
+      "records": [
+        {
+          "firstName": "ELENA",
+          "lastName": "CASTELLANOS",
+          "houseNo": "4400",
+          "streetName": "N CENTRAL EXPY STE 100",
+          "address": "4400 N CENTRAL EXPY STE 100",
+          "city": "DALLAS",
+          "state": "TX",
+          "postalCode": "75206"
+        }
+      ]
+    }
+  }
+}

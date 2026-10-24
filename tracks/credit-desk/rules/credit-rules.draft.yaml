@@ -46,7 +46,10 @@ rules:
 
   # Fraud stops: any one means fraud hold, no credit, refer to the controller
   - id: FRD-1
-    text: TransUnion identity verification fails (deceased SSN, SSN issued to another name, SSN issued before the date of birth, several names on one SSN).
+    text: >-
+      TransUnion identity verification says the SSN is not associated with the name (code 2201), the date of birth does
+      not match the file (2202), or the SSN belongs to a deceased person (2301). An address mismatch alone (2101) means
+      ask for proof of address, not a stop.
   - id: FRD-2
     text: Fraud Finder risk.score is 70 or higher.
   - id: FRD-3

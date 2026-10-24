@@ -1,0 +1,16 @@
+{
+  "route": "/accurate-append/reverse",
+  "body": {
+    "phoneNumber": "5550101013"
+  },
+  "status": 200,
+  "requestId": "8641b0cc-6e6b-4775-9f23-1ad24d6ddf7f",
+  "response": {
+    "success": true,
+    "message": "Unified reverse completed successfully",
+    "data": {
+      "transactionId": "TC-REVERSE-0001",
+      "records": []
+    }
+  }
+}

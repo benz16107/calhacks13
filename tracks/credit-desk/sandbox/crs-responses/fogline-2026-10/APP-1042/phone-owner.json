@@ -1,0 +1,27 @@
+{
+  "route": "/accurate-append/reverse",
+  "body": {
+    "phoneNumber": "5550101001"
+  },
+  "status": 200,
+  "requestId": "66677a26-a208-4a2f-996a-e868a7c5e7a2",
+  "response": {
+    "success": true,
+    "message": "Unified reverse completed successfully",
+    "data": {
+      "transactionId": "TC-REVERSE-0001",
+      "records": [
+        {
+          "firstName": "MARGARET",
+          "lastName": "OKAFOR",
+          "houseNo": "1420",
+          "streetName": "WILLOW CREEK DR",
+          "address": "1420 WILLOW CREEK DR",
+          "city": "SAN JOSE",
+          "state": "CA",
+          "postalCode": "95125"
+        }
+      ]
+    }
+  }
+}
