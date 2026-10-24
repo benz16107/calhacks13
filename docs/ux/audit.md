@@ -642,8 +642,9 @@ choice before install, so say "erases the disk" on the download page.
 **P2:** E-13 About shows the Ubuntu logo and "Ubuntu Desktop" (image, open); search lists both Terminal and Console
 (**fixed in 7f8e452**, ![](after/personal-search-term.png)).
 
-E-3's GurtOS side is in 7f8e452 (Settings, Agents, Updates: "System update"), reading core's `GET /api/update`
-(d66bf5f); it shows once both are on the image. E-14 is being re-measured on one image with only the session mode
+E-3's GurtOS side is live in 1a0f7f2 (Settings, Agents, Updates), reading core's `GET /api/update` (d66bf5f): up to
+date, ready with Restart, first start, rolled back. ![](after/personal-update-ready.png)
+![](after/personal-update-rolledBack.png) E-3 stays open until image removes Ubuntu's Software Updater. E-14 is being re-measured on one image with only the session mode
 switched: the Personal thread measured 10 to 40 ms to the window mapping, not 0.2 s.
 
 **Release risk:** E-1, E-4, E-5 and E-7 to E-11 add about 540 MB of packages. The Personal ISOs are 1.78 GB against
