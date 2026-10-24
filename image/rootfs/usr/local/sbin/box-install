@@ -1,0 +1,86 @@
+#!/bin/bash
+# Install the box on this machine's disk. The install disc runs this when started with the kernel option box.install.
+#   box.install           use the first disk that is not the install disc and is big enough
+#   box.install=/dev/sdb  use that disk
+# An empty disk is used straight away. A disk with anything on it is erased only after you type "erase".
+# Layout (GPT): BIOS boot (x86 only), ESP, system slot A, system slot B, data. Slot B stays empty until the
+# first system update.
+set -euo pipefail
+SLOT_MB=6144 ESP_MB=512 MIN_DATA_MB=4096
+src=/run/boxlive/iso/box/root.sqfs
+mnt=/run/box-install
+
+say() {
+  echo "$*"
+  for t in /dev/ttyS0 /dev/ttyAMA0; do { echo "box-install: $*" > $t; } 2>/dev/null || true; done
+}
+fail() {
+  say "FAILED: $*"
+  say "The box is not installed. Power off, then start from the disc again."
+  sleep infinity
+}
+trap 'fail "line $LINENO: $BASH_COMMAND"' ERR
+[ -f "$src" ] || fail "no system image at $src"
+
+udevadm settle
+disc=$(findmnt -no SOURCE /run/boxlive/iso)
+disc=$(lsblk -dno PKNAME "$disc" 2>/dev/null | grep . || basename "$disc")
+need=$((1 + ESP_MB + 2 * SLOT_MB + MIN_DATA_MB))
+disk=$(sed -n 's/.*box\.install=\([^ ]*\).*/\1/p' /proc/cmdline)
+for _ in $(seq 30); do
+  [ -n "$disk" ] && break
+  disk=$(lsblk -dnpbo NAME,TYPE,RO,SIZE | awk -v disc="/dev/$disc" -v need=$((need * 1048576)) \
+    '$2 == "disk" && $3 == 0 && $1 != disc && $4 >= need { print $1; exit }')
+  sleep 1
+done
+[ -b "$disk" ] || fail "no disk of at least $((need / 1024 + 1)) GB to install on"
+about="$disk ($(lsblk -dno SIZE,MODEL "$disk" | xargs))"
+
+if [ -n "$(wipefs -n "$disk"; lsblk -nro NAME "$disk" | tail -n +2)" ]; then
+  say "$about has data on it. Installing the box erases all of it."
+  read -r -p 'Type erase and press Enter to go on: ' answer
+  [ "$answer" = erase ] || fail "you did not type erase, so nothing changed"
+fi
+
+say "Installing the box on $about"
+wipefs -qa "$disk"
+sgdisk -Z "$disk" >/dev/null
+bios=()
+[ "$(uname -m)" = x86_64 ] && bios=(-n 0:0:+1M -t 0:ef02 -c 0:box-bios)
+sgdisk "${bios[@]}" \
+  -n 0:0:+${ESP_MB}M -t 0:ef00 -c 0:box-esp \
+  -n 0:0:+${SLOT_MB}M -t 0:8300 -c 0:box-a \
+  -n 0:0:+${SLOT_MB}M -t 0:8300 -c 0:box-b \
+  -n 0:0:0 -t 0:8300 -c 0:box-data "$disk" >/dev/null
+partx -u "$disk" 2>/dev/null || true
+udevadm settle
+part() { lsblk -nrpo NAME,PARTLABEL "$disk" | awk -v l="$1" '$2 == l { print $1 }'; }
+for _ in $(seq 10); do [ -b "$(part box-data)" ] && break; sleep 1; udevadm settle; done
+
+mkfs.vfat -F 32 -n BOX-ESP "$(part box-esp)" >/dev/null
+for p in box-a box-b box-data; do mkfs.ext4 -q -F -L $p "$(part $p)"; done
+
+say "Copying the system to slot A"
+mkdir -p $mnt/a $mnt/data $mnt/esp
+mount "$(part box-a)" $mnt/a
+unsquashfs -f -q -no-progress -d $mnt/a "$src"
+mount "$(part box-data)" $mnt/data
+mkdir -p $mnt/data/{box,etc-box,spacetimedb,spacetime-cli,journal,update}
+
+say "Installing the boot loader"
+mount "$(part box-esp)" $mnt/esp
+if [ "$(uname -m)" = x86_64 ]; then
+  grub-install --target=i386-pc --boot-directory=$mnt/esp/boot "$disk" 2>/dev/null
+  grub-install --target=x86_64-efi --efi-directory=$mnt/esp --boot-directory=$mnt/esp/boot --removable --no-nvram 2>/dev/null
+else
+  grub-install --target=arm64-efi --efi-directory=$mnt/esp --boot-directory=$mnt/esp/boot --removable --no-nvram 2>/dev/null
+fi
+cp /usr/local/lib/box-os/grub.cfg $mnt/esp/boot/grub/grub.cfg
+grub-editenv $mnt/esp/boot/grub/grubenv create
+grub-editenv $mnt/esp/boot/grub/grubenv set saved_entry=a
+
+sync
+umount $mnt/a $mnt/data $mnt/esp
+say "Installed. Restarting into the box. You can remove the install disc."
+sleep 3
+systemctl reboot

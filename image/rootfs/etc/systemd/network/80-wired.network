@@ -1,0 +1,6 @@
+# Every wired network card gets an address by DHCP. That covers Vultr, QEMU, UTM and Parallels.
+[Match]
+Name=en* eth*
+
+[Network]
+DHCP=yes

@@ -1,0 +1,108 @@
+#!/usr/bin/env bash
+# Boot-test the install disc in a fresh QEMU VM on this machine (no root needed):
+#   1. it installs on an empty disk and restarts into the box, which must report healthy on the serial console
+#   2. the disc is removed and the plug pulled: the box must start from its own disk, healthy, same identity
+#   3. with --debug (a debug build: sshd with your key): a system update to slot B, then a broken update that
+#      must roll back by itself
+#   image/test [--debug] [--uefi]   x86_64 with KVM. BIOS by default, like Vultr.
+#   image/test --arm64               arm64 with UEFI, emulated (no KVM), so about 5 times slower
+# It fetches the build from the build VM.
+# Env: ISO (a local ISO instead), BUILD_HOST (default vultrbox), TEST_DIR (default ~/.cache/box-image-test)
+set -Eeuo pipefail
+trap 'echo "test: FAILED at line $LINENO: $BASH_COMMAND"' ERR
+uefi= arch=x86_64 debug=
+for a in "$@"; do
+  case $a in
+    --uefi) uefi=1 ;; --debug) debug=-debug ;; --arm64) arch=arm64 ;;
+    *) echo "usage: image/test [--debug] [--uefi] [--arm64]" >&2; exit 2 ;;
+  esac
+done
+name=$arch$debug
+slow=1
+[[ $arch == arm64 ]] && slow=5
+dir=${TEST_DIR:-$HOME/.cache/box-image-test}
+out=/var/lib/box-image/out
+mkdir -p "$dir"
+iso=${ISO:-$dir/box-$name.iso}
+if [[ -z ${ISO:-} ]]; then
+  files=("${BUILD_HOST:-vultrbox}:$out/box-$name.iso")
+  [[ -n $debug ]] && files+=("${BUILD_HOST:-vultrbox}:$out/root-$name.sqfs*")
+  rsync -t --info=progress2 "${files[@]}" "$dir/"
+fi
+run=$dir/run-$(date +%m%d-%H%M%S)
+mkdir -p "$run"
+echo "test: $run"
+qemu-img create -q -f qcow2 "$run/disk.qcow2" 24G
+share=$(dirname "$(readlink -f "$(command -v qemu-system-x86_64)")")/../share/qemu
+port=${SSH_PORT:-2299}
+common=(-name box-test -m 4096 -smp 4 -display none
+  -drive "if=none,id=cd,media=cdrom,readonly=on,file=$iso" -drive "if=none,id=hd,file=$run/disk.qcow2"
+  -device virtio-blk-pci,drive=hd,bootindex=1
+  -serial "file:$run/serial.log" -monitor "unix:$run/mon.sock,server,nowait"
+  -nic "user,model=virtio-net-pci,hostfwd=tcp:127.0.0.1:$port-:22" -daemonize -pidfile "$run/qemu.pid")
+if [[ $arch == arm64 ]]; then
+  cp "$share/edk2-arm-vars.fd" "$run/vars.fd"
+  qemu-system-aarch64 -machine virt -cpu max -accel tcg,thread=multi "${common[@]}" \
+    -drive "if=pflash,format=raw,readonly=on,file=$share/edk2-aarch64-code.fd" -drive "if=pflash,format=raw,file=$run/vars.fd" \
+    -device virtio-scsi-pci -device scsi-cd,drive=cd,bootindex=0 \
+    -device virtio-gpu-pci -device qemu-xhci -device usb-kbd
+else
+  fw=()
+  if [[ -n $uefi ]]; then
+    cp "$share/edk2-i386-vars.fd" "$run/vars.fd"
+    fw=(-drive "if=pflash,format=raw,readonly=on,file=$share/edk2-x86_64-code.fd" -drive "if=pflash,format=raw,file=$run/vars.fd")
+  fi
+  qemu-system-x86_64 -machine q35 -enable-kvm -cpu host "${common[@]}" "${fw[@]}" -device ide-cd,drive=cd,bootindex=0 \
+    -device virtio-vga
+fi
+trap 'kill $(cat "$run/qemu.pid") 2>/dev/null || true' EXIT
+
+mon() { echo "$*" | nc -NU "$run/mon.sock" >/dev/null; }
+shot() { mon "screendump $run/$1.ppm" && sleep 1 && convert "$run/$1.ppm" "$run/$1.png" && rm "$run/$1.ppm" && echo "test: screenshot $run/$1.png"; }
+count() { grep -c "$1" "$run/serial.log" 2>/dev/null || true; }
+wait_for() { # <pattern> <how many times in the log> <seconds>
+  for _ in $(seq $(($3 * slow))); do [[ $(count "$1") -ge $2 ]] && return 0; sleep 1; done
+  echo "test: FAILED, timed out waiting for: $1"
+  tail -40 "$run/serial.log"
+  exit 1
+}
+box_id() { grep 'box: up and healthy' "$run/serial.log" | sed -n "${1}p" | sed -n 's/.* box \([0-9a-f]*\):.*/\1/p'; }
+vm() { ssh -q -p "$port" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5 root@127.0.0.1 "$@"; }
+
+wait_for 'box-install: Installing the box on' 1 300
+echo "test: $(grep -o 'Installing the box on.*' "$run/serial.log")"
+wait_for 'box-install: Installed' 1 600
+echo "test: installed, restarting into the box"
+wait_for 'box: up and healthy' 1 600
+grep 'box: up and healthy' "$run/serial.log" | tail -1
+sleep $((15 * slow)) && shot screen-1
+
+echo "test: removing the disc and pulling the plug"
+mon "eject -f cd"
+mon system_reset
+wait_for 'box: up and healthy' 2 600
+[[ $(box_id 1) == "$(box_id 2)" && -n $(box_id 1) ]] || { echo "test: FAILED, the box's identity changed"; exit 1; }
+echo "test: back up after the power cut, same box $(box_id 2)"
+
+if [[ $name != *-debug ]]; then
+  echo "test: PASSED (a release build has no ssh, so the update steps need --debug)"
+  exit 0
+fi
+vm 'systemctl is-active box spacetimedb box-screen box-kiosk; box-update status'
+
+echo "test: system update to slot B"
+vm 'cat > /data/update/root.sqfs' < "$dir/root-$name.sqfs"
+vm 'cat > /data/update/root.sqfs.sha256' < "$dir/root-$name.sqfs.sha256"
+vm 'cat > /data/update/root.sqfs.sig' < "$dir/root-$name.sqfs.sig"
+vm 'box-update apply /data/update/root.sqfs' || true
+wait_for 'box: update confirmed: slot b' 1 600
+vm 'box-update status'
+shot screen-2
+
+echo "test: a broken update (its box service never starts) must roll back to slot B by itself"
+vm 'box-update apply /data/update/root.sqfs --no-reboot && mount LABEL=box-a /mnt &&
+  ln -sf /dev/null /mnt/etc/systemd/system/box.service && umount /mnt && systemctl reboot' || true
+wait_for 'box: the update in slot a is not healthy' 1 900
+wait_for 'box: up and healthy on slot b' 2 600
+vm 'box-update status'
+echo "test: PASSED"

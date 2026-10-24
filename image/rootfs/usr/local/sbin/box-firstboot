@@ -1,0 +1,21 @@
+#!/bin/bash
+# First-boot setup. Runs at every start and makes only what is missing, so a system update keeps it all.
+#   identity.key   the box's own ed25519 key. The box id is the first 10 hex digits of its public key's hash.
+#   pairing.json   a one-time pairing token and the portal URL the screen shows as a QR code
+#   vault.env      the vault, empty until the portal fills it. Root only.
+# Everything here is on the data partition, in /etc/box. SSH host keys too, on debug builds.
+set -euo pipefail
+umask 077
+cd /etc/box
+[ -s identity.key ] || openssl genpkey -algorithm ed25519 -out identity.key
+openssl pkey -in identity.key -pubout -out identity.pub && chmod 644 identity.pub
+id=$(openssl pkey -pubin -in identity.pub -outform DER | sha256sum | cut -c1-10)
+[ -f vault.env ] || install -m 600 /dev/null vault.env
+if [ ! -s pairing.json ]; then
+  portal=$(sed -n 's/^PORTAL_URL=//p' /etc/box-os/release)
+  token=$(openssl rand -hex 16)
+  printf '{"box":"%s","token":"%s","url":"%s?box=%s&token=%s","created":"%s"}\n' \
+    "$id" "$token" "$portal" "$id" "$token" "$(date -u +%FT%TZ)" > pairing.json
+fi
+if command -v sshd >/dev/null; then ssh-keygen -A >/dev/null; fi
+echo "box $id is set up"

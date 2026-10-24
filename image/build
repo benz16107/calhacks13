@@ -1,0 +1,173 @@
+#!/usr/bin/env bash
+# Build the box OS: an installer ISO and a signed update image, for x86_64 or arm64.
+#   image/build                    x86_64, on the Vultr build VM (ssh vultrbox)
+#   image/build arm64              arm64, cross-built there with qemu-user
+#   image/build all                both
+#   BUILD_SHELL='ssh other-vm' image/build      any Ubuntu 24.04 VM with root. An arm64 VM builds arm64 natively:
+#   BUILD_SHELL='ssh benmac /opt/homebrew/bin/limactl shell box --' image/build arm64
+#   image/build --here x86_64      this machine. Only on a build VM: it needs root and loop devices.
+# Env: BOX_PORTAL_URL  where the pairing QR code points (default: a placeholder)
+#      BOX_SSH_KEY     a public key file. Adds sshd with that key for root. Debug builds only.
+# Outputs on the build machine, in /var/lib/box-image/out: box-<arch>.iso, root-<arch>.sqfs (+ .sha256, .sig).
+# Debug builds are named <arch>-debug, so they cannot be mistaken for a release.
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+if [[ ${1:-} != --here ]]; then
+  BUILD_SHELL=${BUILD_SHELL:-ssh -o ConnectTimeout=10 vultrbox}
+  key=$([[ -n ${BOX_SSH_KEY:-} ]] && base64 -w0 "$BOX_SSH_KEY" || true)
+  dest=/opt/box-image-src/${1:-x86_64}${key:+-debug}
+  echo "build: $BUILD_SHELL, in $dest"
+  {
+    echo "set -e; rm -rf $dest; mkdir -p $dest"
+    echo "base64 -d <<'EOF' | tar -xzf - -C $dest"
+    git ls-files -co --exclude-standard | while IFS= read -r f; do [[ -e $f ]] && printf '%s\n' "$f"; done |
+      tar -czf - -T - | base64
+    echo EOF
+    echo "echo '$(git rev-parse --short HEAD)$(git diff --quiet HEAD -- . || echo +dirty)' > $dest/image/.commit"
+    [[ -n $key ]] && echo "echo $key | base64 -d > $dest/image/.ssh-key"
+    for arch in $([[ ${1:-x86_64} == all ]] && echo x86_64 arm64 || echo "${1:-x86_64}"); do
+      echo "BOX_PORTAL_URL='${BOX_PORTAL_URL:-}' $dest/image/build --here $arch"
+    done
+  } | $BUILD_SHELL sudo bash -s
+  exit
+fi
+
+[[ $(id -u) == 0 ]] || exec sudo "$0" "$@"
+arch=${2:-x86_64}
+case $arch in
+  x86_64) deb=amd64 mirror=http://archive.ubuntu.com/ubuntu grub="grub-pc-bin grub-efi-amd64-bin" ;;
+  arm64) deb=arm64 mirror=http://ports.ubuntu.com/ubuntu-ports grub=grub-efi-arm64-bin ;;
+  *) echo "unknown arch $arch (x86_64 or arm64)" >&2; exit 2 ;;
+esac
+src=$PWD
+name=$arch
+[[ -f $src/image/.ssh-key ]] && name+=-debug
+top=/var/lib/box-image
+work=$top/$name
+out=$top/out
+root=$work/root
+mkdir -p "$work" "$out"
+say() { echo "build $name: $*"; }
+
+# The whole OS. Everything else on the image comes from core/setup.sh, core/install.sh and image/rootfs/.
+packages="systemd systemd-sysv systemd-resolved systemd-timesyncd libpam-systemd dbus udev kmod passwd
+  linux-image-generic initramfs-tools zstd $grub grub2-common
+  e2fsprogs dosfstools gdisk squashfs-tools util-linux procps iproute2
+  nftables ripgrep rsync curl ca-certificates xz-utils openssl qrencode
+  cage seatd python3-gi gir1.2-webkit2-4.1 libegl-mesa0 libgl1-mesa-dri fonts-dejavu-core"
+[[ -f $src/image/.ssh-key ]] && packages+=" openssh-server" # debug builds only
+
+host_tools="mmdebstrap squashfs-tools xorriso mtools grub-common"
+[[ $arch == x86_64 ]] && host_tools+=" grub-pc-bin grub-efi-amd64-bin" # so x86 builds need an x86 build VM
+[[ $arch == arm64 && $(uname -m) != aarch64 ]] && host_tools+=" qemu-user-static"
+missing=$(for p in $host_tools; do dpkg -s "$p" >/dev/null 2>&1 || echo "$p"; done)
+[[ -z $missing ]] || { apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq $missing >/dev/null; }
+
+mounted=()
+mount_root() {
+  mount -t proc proc "$1/proc"; mount -t sysfs sys "$1/sys"; mount -t tmpfs tmpfs "$1/run"
+  mount --rbind /dev "$1/dev"; mount --make-rslave "$1/dev"
+  mounted+=("$1")
+  rm -f "$1/etc/resolv.conf"; cp -L /etc/resolv.conf "$1/etc/resolv.conf"
+}
+umount_all() { for r in "${mounted[@]}"; do umount -R "$r/dev" "$r/run" "$r/sys" "$r/proc" 2>/dev/null || true; done; mounted=(); }
+trap umount_all EXIT
+in_root() {
+  chroot "$root" /usr/bin/env -i PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
+    HOME=/root LANG=C.UTF-8 DEBIAN_FRONTEND=noninteractive "$@"
+}
+
+# 1. The base: Ubuntu 24.04 plus the box's own dependencies. Cached until the package list or core/setup.sh changes.
+stamp=$(printf '%s\n' "$packages" | cat - core/setup.sh | sha256sum | cut -c1-12)
+base=$work/base-$stamp
+if [[ ! -d $base ]]; then
+  say "base $stamp: Ubuntu 24.04 from $mirror"
+  rm -rf "$work/base.tmp"
+  mmdebstrap --arch=$deb --variant=minbase --include="$(echo $packages | tr ' ' ,)" \
+    --dpkgopt='path-exclude=/usr/share/doc/*' --dpkgopt='path-include=/usr/share/doc/*/copyright' \
+    --dpkgopt='path-exclude=/usr/share/man/*' \
+    noble "$work/base.tmp" \
+    "deb $mirror noble main universe" "deb $mirror noble-updates main universe" "deb $mirror noble-security main universe"
+  root=$work/base.tmp
+  mount_root "$root"
+  mkdir -p "$root/tmp/core" && cp core/setup.sh "$root/tmp/core/"
+  in_root bash /tmp/core/setup.sh
+  umount_all
+  rm -rf "$root/tmp/core"
+  mv "$work/base.tmp" "$base"
+fi
+
+# 2. The root: the base, the box service installed by core/install.sh, and image/rootfs on top.
+say "root"
+root=$work/root
+mkdir -p "$root"
+rsync -aHAX --delete "$base/" "$root/"
+mount_root "$root"
+rsync -a --exclude node_modules --exclude .git "$src/" "$root/tmp/src/"
+# core/install.sh ends by asking systemd if the box is running. In an image build nothing runs yet.
+printf '#!/bin/sh\n[ "$1" = is-active ] && { echo "active at boot"; exit 0; }\nexec /usr/bin/systemctl "$@"\n' \
+  > "$root/usr/local/sbin/systemctl"
+chmod +x "$root/usr/local/sbin/systemctl"
+in_root /tmp/src/core/install.sh
+rm "$root/usr/local/sbin/systemctl"
+
+rsync -a "$src/image/rootfs/" "$root/"
+mkdir -p "$root/etc/box-os"
+key=$top/update-signing.key # stays on the build machine
+[[ -f $key ]] || (umask 077; openssl genpkey -algorithm ed25519 -out "$key")
+openssl pkey -in "$key" -pubout -out "$root/etc/box-os/update.pub"
+build_id="$(date -u +%Y%m%d-%H%M)-$(cat "$src/image/.commit" 2>/dev/null || echo local)"
+printf 'BUILD=%s\nARCH=%s\nPORTAL_URL=%s\n' "$build_id" "$arch" "${BOX_PORTAL_URL:-https://portal.example/pair}" \
+  > "$root/etc/box-os/release"
+
+in_root bash -euo pipefail -c '
+  useradd --system --home-dir /var/lib/kiosk --create-home --shell /usr/sbin/nologin kiosk
+  usermod -p "!" root
+  # State lives on the data partition. These are its mount points; what the image put there is hidden at boot.
+  rm -rf /etc/box /var/lib/box /var/lib/spacetimedb /root/.config/spacetime
+  mkdir -p /data /boot/efi /etc/box /var/lib/box /var/lib/spacetimedb /root/.config/spacetime /var/log/journal
+  systemctl enable systemd-networkd systemd-resolved seatd box-firstboot box-screen box-kiosk box-confirm box-install >/dev/null 2>&1
+  # No login prompt anywhere: the screen is the box, and no human account exists.
+  systemctl mask getty@.service serial-getty@.service autovt@.service console-getty.service >/dev/null 2>&1
+  update-initramfs -u -k all >/dev/null
+  cd /boot
+  ln -sf "$(ls vmlinuz-* | sort -V | tail -1)" vmlinuz
+  ln -sf "$(ls initrd.img-* | sort -V | tail -1)" initrd.img
+'
+if [[ -f $src/image/.ssh-key ]]; then
+  say "debug build: sshd with a root key"
+  install -d -m 700 "$root/root/.ssh"
+  install -m 600 "$src/image/.ssh-key" "$root/root/.ssh/authorized_keys"
+  echo 'DEBUG=sshd-with-a-root-key' >> "$root/etc/box-os/release"
+fi
+
+# Every machine makes its own identity on first boot.
+: > "$root/etc/machine-id"
+rm -f "$root/var/lib/dbus/machine-id" "$root"/etc/ssh/ssh_host_*
+umount_all
+rm -rf "$root/tmp/"* "$root/var/lib/apt/lists/"* "$root/var/cache/"*/* "$root/root/.npm" "$root/root/.cache"
+ln -sf ../run/systemd/resolve/stub-resolv.conf "$root/etc/resolv.conf"
+
+# 3. The update image: the whole root as one squashfs, hashed and signed.
+say "root-$name.sqfs"
+sq=$out/root-$name.sqfs
+mksquashfs "$root" "$sq" -noappend -comp zstd -quiet
+(cd "$out" && sha256sum "root-$name.sqfs" > "root-$name.sqfs.sha256")
+openssl pkeyutl -sign -inkey "$key" -rawin -in "$sq.sha256" -out "$sq.sig"
+
+# 4. The installer ISO: GRUB for BIOS and UEFI, the kernel, and the same squashfs as a live root.
+say "box-$name.iso"
+iso=$work/iso
+rm -rf "$iso"; mkdir -p "$iso/boot/grub" "$iso/box"
+cp -L "$root/boot/vmlinuz" "$root/boot/initrd.img" "$iso/boot/"
+ln "$sq" "$iso/box/root.sqfs"
+cp "$sq.sha256" "$sq.sig" "$iso/box/"
+cp "$src/image/iso-grub.cfg" "$iso/boot/grub/grub.cfg"
+dirs=()
+[[ $arch == arm64 ]] && dirs=(-d "$root/usr/lib/grub/arm64-efi")
+grub-mkrescue "${dirs[@]}" -o "$out/box-$name.iso" "$iso" -volid BOXINSTALL -iso-level 3 2>&1 | grep -v '^xorriso : UPDATE' || true
+[[ -s $out/box-$name.iso ]]
+rm -rf "$iso"
+say "done, build $build_id"
+ls -lh "$out/box-$name.iso" "$sq"

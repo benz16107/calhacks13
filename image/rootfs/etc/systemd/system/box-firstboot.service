@@ -1,0 +1,13 @@
+[Unit]
+Description=First-boot setup: the box's own identity, pairing code and vault
+ConditionKernelCommandLine=!box.install
+RequiresMountsFor=/etc/box
+Before=box.service box-screen.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/sbin/box-firstboot
+
+[Install]
+WantedBy=multi-user.target

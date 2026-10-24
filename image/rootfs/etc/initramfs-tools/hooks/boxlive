@@ -1,0 +1,5 @@
+#!/bin/sh
+# Kernel modules the install disc needs to start (see ../scripts/boxlive).
+case $1 in prereqs) exit 0 ;; esac
+. /usr/share/initramfs-tools/hook-functions
+manual_add_modules isofs squashfs overlay sr_mod cdrom

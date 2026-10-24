@@ -1,0 +1,14 @@
+[Unit]
+Description=Check the box is healthy, then keep or roll back a system update
+ConditionKernelCommandLine=!box.install
+After=box.service spacetimedb.service box-screen.service
+RequiresMountsFor=/data /boot/efi
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/sbin/box-update confirm
+TimeoutStartSec=infinity
+
+[Install]
+WantedBy=multi-user.target

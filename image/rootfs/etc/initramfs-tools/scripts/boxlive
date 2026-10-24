@@ -1,0 +1,32 @@
+# boot=boxlive: start the box from its install disc. The disc's squashfs is a read-only root with a RAM layer
+# on top. The initramfs init sources this file and calls mountroot.
+# The initramfs has no CD-ROM udev rules, so there is no /dev/disk/by-label for a disc. Try each drive instead:
+# the disc is the one with box/root.sqfs on it (a CD drive, or the USB stick the ISO was written to).
+find_disc() {
+	for dev in /dev/sr* /dev/sd? /dev/vd? /dev/nvme?n? /dev/mmcblk?; do
+		[ -b "$dev" ] || continue
+		mount -t iso9660 -o ro "$dev" /run/boxlive/iso 2>/dev/null || continue
+		[ -f /run/boxlive/iso/box/root.sqfs ] && return 0
+		umount /run/boxlive/iso
+	done
+	return 1
+}
+
+mountroot() {
+	for m in isofs squashfs overlay loop sr_mod; do modprobe -q "$m" || true; done
+	wait_for_udev 10
+	mkdir -p /run/boxlive/iso /run/boxlive/ro /run/boxlive/rw
+	i=0
+	until find_disc; do
+		[ $i -lt 60 ] || panic "boxlive: no drive holds the install disc (box/root.sqfs)"
+		sleep 1
+		i=$((i + 1))
+	done
+	mount -t squashfs -o ro,loop /run/boxlive/iso/box/root.sqfs /run/boxlive/ro || panic "boxlive: cannot mount root.sqfs"
+	mount -t tmpfs -o mode=0755 tmpfs /run/boxlive/rw
+	mkdir -p /run/boxlive/rw/upper /run/boxlive/rw/work
+	mount -t overlay -o lowerdir=/run/boxlive/ro,upperdir=/run/boxlive/rw/upper,workdir=/run/boxlive/rw/work \
+		boxlive "${rootmnt}" || panic "boxlive: cannot mount the root overlay"
+	# Running from the disc there is no data partition: everything stays in RAM.
+	sed -i -e '/^LABEL=BOX-ESP/d' -e '/^LABEL=box-data/d' -e '/^\/data\//d' "${rootmnt}/etc/fstab"
+}

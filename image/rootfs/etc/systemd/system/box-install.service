@@ -1,0 +1,16 @@
+[Unit]
+Description=Install the box on this machine's disk
+ConditionKernelCommandLine=box.install
+After=local-fs.target systemd-udevd.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/box-install
+StandardInput=tty
+StandardOutput=tty
+StandardError=tty
+TTYPath=/dev/tty1
+TTYReset=yes
+
+[Install]
+WantedBy=multi-user.target
