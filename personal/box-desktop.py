@@ -20,7 +20,7 @@ gi.require_version('AyatanaAppIndicator3', '0.1')
 from gi.repository import AyatanaAppIndicator3 as AppIndicator, Gio, GLib, Gtk  # noqa: E402
 
 sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
-from boxapi import BOX, api, dollars, header_caps, plan, quiet_now, quote, reviews, running, top_bar, ui, where  # noqa: E402
+from boxapi import BOX, api, dollars, header_caps, no_model_key, plan, quiet_now, quote, reviews, running, top_bar, ui, where  # noqa: E402
 
 APP = 'dev.box.Box'
 USER = getpass.getuser()
@@ -119,8 +119,12 @@ class Desktop:
         for t in self.tasks:  # a task that failed since this login, once
             if t['state'] == 'failed' and t['updatedAt'] >= self.started and t['id'] not in self.told_failed:
                 self.told_failed.add(t['id'])
-                self.notify(f"failed:{t['id']}", header_caps(f"{t['title'].rstrip('.')} could not finish"), t.get('error') or 'It stopped with an error.',
-                            ['default', 'Open in GurtOS'], 1, track=False)
+                if no_model_key(t.get('error')):
+                    self.notify(f"setup:{t['id']}", header_caps(f"{t['title'].rstrip('.')} could not start"),
+                                'Add a model key (Anthropic or Factory) in GurtOS Setup.', ['default', 'Open GurtOS Setup'], 1, track=False)
+                else:
+                    self.notify(f"failed:{t['id']}", header_caps(f"{t['title'].rstrip('.')} could not finish"), t.get('error') or 'It stopped with an error.',
+                                ['default', 'Open in GurtOS'], 1, track=False)
         self.approvals = pending
         self.render()
         return False
@@ -169,6 +173,8 @@ class Desktop:
             ui('review', ident)
         elif kind == 'failed':
             ui('app', f'task/{ident}')
+        elif kind == 'setup':
+            ui('setup')
 
     def on_closed(self, _bus, _sender, _path, _iface, _signal, params):
         self.shown.pop(params.unpack()[0], None)

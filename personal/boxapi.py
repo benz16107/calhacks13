@@ -139,3 +139,9 @@ def header_caps(text):
         literal = any(c in w for c in './_@:0123456789')  # file names, hosts, amounts stay as they are
         out.append(w if small or literal or not w[:1].islower() else w[:1].upper() + w[1:])
     return ' '.join(out)
+
+
+def no_model_key(error):
+    """Whether a task failed because the vault has no model key yet (a fresh install), so the fix is GurtOS Setup."""
+    e = (error or '').lower()
+    return 'vault has no' in e and any(k in e for k in ('factory_api_key', 'anthropic_api_key', 'model key'))

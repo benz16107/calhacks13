@@ -18,6 +18,10 @@ STEPS = [  # (id for /api/setup/step, label in the step list and the header)
 SKIPPABLE = {'apps', 'phone'}
 THRESHOLDS = [100, 500, 2000, 10000]  # cents: always ask before a single spend over this
 BUDGETS = [0, 50, 100, 500, 2000]  # cents: the budget of a task that names none
+MODEL_KEYS = [  # vault name, label, where to get it. One is enough.
+    ('ANTHROPIC_API_KEY', 'Anthropic API key', 'From console.anthropic.com, API keys'),
+    ('FACTORY_API_KEY', 'Or a Factory API key', 'From app.factory.ai, Settings, API keys'),
+]
 FOLDER_CHOICES = ['May change', 'Not allowed']  # "May read" waits for the core to tell reading from changing
 
 
@@ -66,7 +70,7 @@ class SetupWindow(Adw.ApplicationWindow):
     def __init__(self, app):
         super().__init__(application=app, title='GurtOS Setup', default_width=1100, default_height=760)
         self.at = 0
-        self.settings, self.vault, self.apps, self.boxes, self.taken = {}, [], [], [], {}
+        self.settings, self.vault, self.apps, self.boxes, self.taken, self.model = {}, [], [], [], {}, None
         self.folder_draft = None  # {path: 'May change' | 'Not allowed'} until Next saves it
 
         # The step list.
@@ -133,6 +137,7 @@ class SetupWindow(Adw.ApplicationWindow):
             self.next.set_sensitive(False)
             return
         setup, self.settings, self.vault, self.apps, self.boxes = state
+        self.model = setup.get('model')
         self.taken = setup.get('steps', {})
         first_open = next((i for i, (sid, _l) in enumerate(STEPS) if sid not in self.taken and sid != 'done'), len(STEPS) - 1)
         self.go(0 if setup.get('done') else first_open)
@@ -227,31 +232,39 @@ class SetupWindow(Adw.ApplicationWindow):
         self.summary.set_label('About 5 minutes.')
         return scroller
 
+    def model_ready(self):
+        # The box says once it knows (GET /api/setup -> model.ready); until then, either key in the vault counts.
+        if isinstance(self.model, dict) and 'ready' in self.model:
+            return bool(self.model['ready'])
+        return any(self.has_key(k) for k, _l, _h in MODEL_KEYS)
+
     def models(self):
-        scroller, box = page('Connect AI models', "Agents run on Factory's Droid with Claude. The key goes into the vault, which only root can read.")
+        scroller, box = page('Connect AI models', 'Agents run on Droid with Claude. Add one key: Anthropic or Factory. '
+                                                  'It goes into the vault, which only root can read.')
         lst = boxed()
-        worker = row('Droid with Claude', 'Factory Droid SDK', 'applications-science-symbolic')
+        worker = row('Droid with Claude', 'Your own model key, nothing else to sign up for', 'applications-science-symbolic')
         worker.add_suffix(Gtk.Label(label='Recommended', css_classes=['gurt-secondary']))
         lst.append(worker)
         box.append(lst)
-        saved = self.has_key('FACTORY_API_KEY')
-        box.append(Gtk.Label(label='FACTORY_API_KEY', xalign=0, css_classes=['gurt-mono'], margin_top=12))
-        entry = Gtk.PasswordEntry(show_peek_icon=False, placeholder_text='Saved. Type a new key to replace it.' if saved else 'Paste the key from app.factory.ai')
-        entry.update_property([Gtk.AccessibleProperty.LABEL], ['Factory API key'])
-        box.append(entry)
-        box.append(Gtk.Label(label='Write-only: you can replace it, never read it. Agents never see it.', xalign=0, css_classes=['gurt-caption', 'gurt-secondary']))
+        for name, label, hint in MODEL_KEYS:
+            saved = self.has_key(name)
+            box.append(Gtk.Label(label=f'{label} · {name}', xalign=0, css_classes=['gurt-mono'], margin_top=12))
+            entry = Gtk.PasswordEntry(show_peek_icon=False, placeholder_text='Saved. Type a new key to replace it.' if saved else hint)
+            entry.update_property([Gtk.AccessibleProperty.LABEL], [label])
+            box.append(entry)
 
-        def save(*_):
-            value = entry.get_text().strip()
-            if value:
-                entry.set_text('')  # write-only: the value leaves the screen as it goes to the vault
-                self.save_key('FACTORY_API_KEY', value, lambda: (entry.set_property('placeholder-text', 'Saved. Type a new key to replace it.'),
-                                                                  self.summary.set_label('The key is saved. Agents can start.')))
-        entry.connect('activate', save)
-        focus = Gtk.EventControllerFocus()
-        focus.connect('leave', save)  # Next or a click elsewhere saves it too
-        entry.add_controller(focus)
-        self.summary.set_label('The key is saved. Agents can start.' if saved else 'Agents can start once the key is saved.')
+            def save(*_, entry=entry, name=name):
+                value = entry.get_text().strip()
+                if value:
+                    entry.set_text('')  # write-only: the value leaves the screen as it goes to the vault
+                    self.save_key(name, value, lambda: (entry.set_property('placeholder-text', 'Saved. Type a new key to replace it.'),
+                                                        self.summary.set_label('The key is saved. Agents can start.')))
+            entry.connect('activate', save)
+            focus = Gtk.EventControllerFocus()
+            focus.connect('leave', save)  # Next or a click elsewhere saves it too
+            entry.add_controller(focus)
+        box.append(Gtk.Label(label='Write-only: you can replace a key, never read it. Agents never see it.', xalign=0, css_classes=['gurt-caption', 'gurt-secondary']))
+        self.summary.set_label('A model key is saved. Agents can start.' if self.model_ready() else 'Agents can start once one key is saved.')
         return scroller
 
     def chosen_folders(self):
@@ -356,7 +369,7 @@ class SetupWindow(Adw.ApplicationWindow):
         hosts = access.get('hosts') or []
         keys = access.get('secrets', [])
         shown = [chip(h, 'web-browser-symbolic') for h in hosts[:2]] or [chip('No internet', 'window-close-symbolic')]
-        shown += [chip(k['name'] if k.get('set') else f"Add {k['name']}", 'dialog-password-symbolic', attention=not k.get('set')) for k in keys[:2]]
+        shown += [chip(k['name'] if k.get('set') or not a.get('enabled') else f"Add {k['name']}", 'dialog-password-symbolic', attention=a.get('enabled') and not k.get('set')) for k in keys[:2]]
         rest = max(0, len(hosts) - 2) + max(0, len(keys) - 2)
         if rest:
             shown.append(chip(f'{rest} more'))
@@ -459,7 +472,7 @@ class SetupWindow(Adw.ApplicationWindow):
             card.append(inner)
             cards.append(card)
         box.append(cards)
-        self.summary.set_label('' if self.has_key('FACTORY_API_KEY') else 'Add the Factory key in GurtOS settings before your first task.')
+        self.summary.set_label('' if self.model_ready() else 'Add a model key (Anthropic or Factory) before your first task.')
         return scroller
 
 

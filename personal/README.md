@@ -18,7 +18,7 @@ GurtOS Personal ISO walked as a new person on Wayland, Ubuntu's default (below).
 | The GurtOS app | The portal in its own window (WebKitGTK), first in the dock | `box-ui.py app` |
 | Ask an Agent in Files | Right-click one folder or up to ten. One dialog: the task, the folders it may change, its internet, budget and worker. One Droid task on copies of them | `files/box-nautilus.py`, `box-ui.py ask` |
 | Keep or Undo | When the task is done, a notification opens the review: what changed, the diff, and a card that asks Keep these changes? Put files back undoes a Keep | `box-ui.py review` |
-| Failures | A task that cannot finish says why in a notification (for example, a fresh install's vault has no model key yet) | `box-desktop.py` |
+| Failures | A task that cannot finish says why in a notification (a missing model key instead offers to open GurtOS Setup) | `box-desktop.py` |
 
 **The design.** These windows follow the GurtOS system (`docs/figma/system.md`) and the Personal frames in
 `docs/figma/os-v2/personal/`, built from libadwaita's own widgets so they sit among GNOME apps. The system's colour
@@ -37,10 +37,10 @@ after GNOME's own setup, until the box says setup is done, and resumes at the fi
 | Step | What it does | Checked |
 |---|---|---|
 | Welcome | What keeps agents safe on this computer | Opened by itself at login |
-| AI models | The worker and the write-only `FACTORY_API_KEY`. A saved key shows as saved, never its value | The VM's key was detected without being shown |
+| AI models | One model key, write-only: `ANTHROPIC_API_KEY` (your own Anthropic key is enough) or `FACTORY_API_KEY`. A saved key shows as saved, never its value | The VM's key was detected without being shown |
 | Folders | The owner's usual folders, each May change or Not allowed (`agentFolders`), plus Add a folder | Documents and Projects saved; a folder outside is refused (self-test) |
 | Permissions | Internet for new tasks, the spend that always asks, the default budget, quiet hours | $5.00 saved; quiet hours mute approval banners (self-test) |
-| Apps | Every app with its icon, the sites it reaches and its keys (amber when missing); a switch turns it on or off; clicking an app with a missing key opens a sheet to add it | `APIFY_TOKEN` saved: listed by name and time, the chip turned grey; ASI:One turned off and on again in the box |
+| Apps | Optional. Every app with its icon, the sites it reaches and its keys (amber only when an app that is on misses one); a switch turns it on or off; clicking an app with a missing key opens a sheet to add it | `APIFY_TOKEN` saved: listed by name and time, the chip turned grey; ASI:One turned off and on again in the box |
 | Pair a phone | QR and code when the box has an address a phone can reach; otherwise it says so and offers Skip | No address on Personal yet, so Skip |
 | Done | Four cards: Ask an Agent, the top bar, Keep or Undo, Time Machine. Start using GurtOS finishes and opens the app | `done: true`, six steps recorded |
 
