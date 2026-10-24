@@ -273,6 +273,10 @@ export function caddyConfig(s: Saved, apiPort: number) {
 {
 	admin off
 	persist_config off
+	# These two loggers write the request URI, and a phone's ?access_token= with it. Keep certificate logs only.
+	log default {
+		exclude http.log.error http.handlers.reverse_proxy
+	}
 	http_port ${s.ports.http}
 	https_port ${s.ports.https}
 	default_bind 127.0.0.1
