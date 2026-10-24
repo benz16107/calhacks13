@@ -192,7 +192,7 @@ const registry = (box: Box) => async (keyId: string) => {
 };
 const charge = (box: Box) => (p: PayInput) => box.job('shopper.pay', p) as Promise<Payment>;
 
-let inbox: { port: number } | undefined;
+let inbox: { port: number; close: () => void } | undefined;
 
 /** The box's own API, where the store's checkout is. */
 function apiBase() {
@@ -361,8 +361,15 @@ export default {
       name: 'schedule',
       async start(box) {
         inbox = await startInbox(sampleMail(), (user, pass) => box.job('shopper.mailLogin', { user, pass }) as Promise<boolean>);
-        setInterval(() => void tick(box).catch((e) => console.error('shopper: schedule failed:', e)), 20_000).unref();
+        const timer = setInterval(() => void tick(box).catch((e) => console.error('shopper: schedule failed:', e)), 20_000);
+        timer.unref();
         await tick(box);
+        // Turning the app off stops the schedule and the demo inbox, with no restart.
+        return () => {
+          clearInterval(timer);
+          inbox?.close();
+          inbox = undefined;
+        };
       },
     },
   ],

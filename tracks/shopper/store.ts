@@ -63,7 +63,7 @@ async function stripe(key: string, route: string, form: Record<string, string>, 
   return body;
 }
 
-/** Charge or refund. `stripeKey` is undefined until Ben puts STRIPE_SECRET_KEY in the vault. */
+/** Charge or refund. `stripeKey` is undefined until the box's owner puts STRIPE_SECRET_KEY in the vault. */
 export async function pay(input: PayInput, stripeKey: string | undefined): Promise<Payment> {
   const live = stripeKey && !OFFLINE;
   if (live && !/^(sk|rk)_test_/.test(stripeKey)) throw new Error('this store runs in Stripe test mode only, and the vault holds a live key, so it refuses to charge');
