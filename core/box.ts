@@ -219,7 +219,8 @@ class Core {
         NODE_USE_ENV_PROXY: '1',
       };
       if (t.worker === 'droid') {
-        if (!this.vault.get('FACTORY_API_KEY')) throw new Error('the vault has no FACTORY_API_KEY, which Droid needs');
+        if (!this.vault.get('FACTORY_API_KEY')) this.vault = loadVault(); // a key added to the file by hand since boot
+        if (!this.vault.get('FACTORY_API_KEY')) throw new Error('no model key yet: add one in Settings > Model key (FACTORY_API_KEY in the vault)');
         // The task holds a placeholder. The proxy swaps in the real key on the way to Factory.
         Object.assign(env, {
           FACTORY_API_KEY: PLACEHOLDER_KEY,
@@ -892,7 +893,7 @@ class Core {
 
   /** The setup state with the suggested step order. Until `done`, the box's screen shows the wizard. */
   setupView() {
-    return { done: this.setup.done, finishedAt: this.setup.finishedAt ?? null, migrated: this.setup.migrated ?? false, steps: this.setup.steps, suggested: SETUP_STEPS };
+    return { modelKey: this.vault.has('FACTORY_API_KEY'), done: this.setup.done, finishedAt: this.setup.finishedAt ?? null, migrated: this.setup.migrated ?? false, steps: this.setup.steps, suggested: SETUP_STEPS };
   }
 
   // ---------- pairing a phone, and listing every box ----------

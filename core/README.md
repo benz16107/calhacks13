@@ -159,7 +159,7 @@ The `owner` flag is ignored from anyone who is not already the owner.
 | Request | Does |
 |---|---|
 | `GET /api/system` | `{product, edition, editionName, version, build, hostname, timezone, network: {online, interfaces}, boxId, boxName, owner, startedAt, uptimeSec}`. `build` is the commit `./deploy` installed. |
-| `GET /api/setup` | `{done, finishedAt, migrated, steps: {id: {at, data?}}, suggested: [...]}`. **Until `done`, the box's screen shows the wizard.** A box that already ran tasks when this arrived is `migrated` and counts as done. |
+| `GET /api/setup` | `{modelKey, done, finishedAt, migrated, steps: {id: {at, data?}}, suggested: [...]}`. **Until `done`, the box's screen shows the wizard.** `modelKey` is false until the vault holds `FACTORY_API_KEY`; without it no Droid task can start, so the wizard should ask for it (`PUT /api/vault/FACTORY_API_KEY`, which takes effect at once). A box that already ran tasks when this arrived is `migrated` and counts as done. |
 | `POST /api/setup/step {id, data?}` | Records a step as taken (any id like `network`; `suggested` lists the usual ones). `data` is at most 4 KB and is for answers, not keys: keys go to the vault. |
 | `POST /api/setup/finish`, `POST /api/setup/reopen` | Mark setup done, or show the wizard again. |
 | `GET /api/settings`, `PATCH /api/settings {...}` | The settings below. A patch changes only the keys it names (`quietHours` and `appearance` merge one level). Unknown keys and bad values are a `400` that names the field. Each change is a `note` in the action log with the old and new value. |

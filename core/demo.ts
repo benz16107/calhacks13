@@ -873,6 +873,7 @@ await moment('setup: the wizard, settings, the vault and apps', async () => {
 
   // Setup state. Only the box's own screen or the owner's paired device may change it.
   const s0 = await api<any>('GET', '/api/setup');
+  check(typeof s0.modelKey === 'boolean', `setup says whether a model key is set (${s0.modelKey})`);
   check(s0.done === false && s0.suggested.includes('network'), 'a new box has not finished setup, so its screen shows the wizard');
   const remote = await viaTcp('POST', '/api/setup/step', { id: 'network' }, RELAYED);
   check(denied(remote), 'a request relayed from elsewhere, with no token, cannot change setup');
