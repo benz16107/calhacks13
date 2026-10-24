@@ -3,7 +3,7 @@
 // Env: BOX_HOME (default /var/lib/box), BOX_VAULT, BOX_PORT (default 7700, 0 = off), BOX_LISTEN (default 127.0.0.1).
 import { spawn, type ChildProcess } from 'node:child_process';
 import { execFileSync } from 'node:child_process';
-import { createHash, randomBytes } from 'node:crypto';
+import { createHash, createHmac, randomBytes } from 'node:crypto';
 import fs from 'node:fs';
 import http from 'node:http';
 import os from 'node:os';
@@ -148,6 +148,33 @@ class Core {
   resumed: string[] = []; // tasks boot() restarted after a power cut, for the screen's banner
   // GurtOS Business: people, their roles and the policy. Off unless turned on, so Server and Personal are unchanged.
   businessPath = path.join(HOME, 'business.json');
+  tripped = new Set<string>(); // tasks whose decoy key has already been caught
+
+  /**
+   * Tripwire: every task holds a decoy cloud key in its environment, the same each time it starts. It is never real,
+   * so it only ever leaves a task if an agent tries to move secrets. Derived from a box-only key, so it is not in the log.
+   */
+  decoy(id: string) {
+    const f = path.join(HOME, 'tripwire.key');
+    if (!fs.existsSync(f)) fs.writeFileSync(f, randomBytes(32).toString('hex'), { mode: 0o600 });
+    const h = createHmac('sha256', fs.readFileSync(f, 'utf8')).update(id).digest();
+    return { id: 'AKIA' + h.subarray(0, 10).toString('hex').toUpperCase().slice(0, 16), secret: h.subarray(10).toString('base64').replace(/[^A-Za-z0-9]/g, '').slice(0, 40) };
+  }
+
+  leaks(t: Task, text: string) {
+    const d = this.decoy(t.id);
+    return text.includes(d.secret) || text.includes(d.id);
+  }
+
+  /** The decoy left the task: stop and undo it, log where it was caught (never the key), and tell the owner's phones. */
+  tripwire(t: Task, where: string) {
+    if (this.tripped.has(t.id)) return;
+    this.tripped.add(t.id);
+    this.write({ type: 'note', track: 'security', task: t.id, data: { tripwire: true, where } });
+    void this.undo(t.id).catch((e) => console.error(`tripwire: could not undo ${t.id}: ${(e as Error).message}`));
+    const fields = { type: 'tripwire', id: `tripwire.${t.id}`, task: t.id, source: t.source, costCents: 0, title: 'An agent tried to leak a key', body: `"${t.title}" tried to send its decoy key out (${where}). The box stopped it and undid its changes.`.slice(0, 200) };
+    if (this.remote.saved) for (const d of this.devices.filter((x) => x.owner && x.push && !x.revoked)) void this.pushTo(d, fields, fields.id).catch(() => {});
+  }
   business: Business = { on: process.env.BOX_EDITION === 'business', company: '', policy: DEFAULT_POLICY, people: [], seats: [], shadow: [], policyMeta: {}, ...readJson<Partial<Business>>(this.businessPath, {}) };
   // The kill switch is Settings' `paused`: every agent stops until someone resumes them. Who pulled it is kept beside it.
   pausedPath = path.join(HOME, 'paused.json');
@@ -184,6 +211,11 @@ class Core {
     }
     const full = this.log.append(e);
     apply(this.state, full);
+    // Tripwire: the task's decoy key in anything it wrote (a step, a tool's input or output, a note).
+    if (full.task && ['task.step', 'tool.call', 'tool.result', 'note'].includes(full.type) && (full as { track?: string }).track !== 'security') {
+      const t = this.state.tasks.get(full.task);
+      if (t && !this.tripped.has(t.id) && this.leaks(t, JSON.stringify(full))) queueMicrotask(() => this.tripwire(t, full.type));
+    }
     if (full.type === 'approval.answered' && full.approved && full.person) this.lastApprover.set(full.task, full.person);
     try {
       if (['task.created', 'task.state', 'task.step', 'cost', 'tool.result'].includes(full.type)) {
@@ -309,6 +341,8 @@ class Core {
         https_proxy: proxy,
         NO_PROXY: '127.0.0.1',
         NODE_USE_ENV_PROXY: '1',
+        AWS_ACCESS_KEY_ID: this.decoy(t.id).id, // the tripwire: a decoy, never a real key
+        AWS_SECRET_ACCESS_KEY: this.decoy(t.id).secret,
       };
       let byok: string | undefined; // the model id, when the task runs on the owner's own Anthropic key
       if (t.worker === 'droid') {
@@ -867,6 +901,10 @@ class Core {
   /** Run a tool for a task. A key already answered in the log returns the logged result without running again. */
   async callTool(t: Task, key: string, name: string, input: unknown): Promise<{ ok: boolean; output?: unknown; error?: string; pending?: boolean }> {
     if (!t.tools.includes(name)) throw new Error(`this task may not use ${name}`);
+    if (this.leaks(t, JSON.stringify(input ?? null))) {
+      this.tripwire(t, `a call to ${name}`);
+      return { ok: false, error: 'refused by the box' };
+    }
     const entry = this.tools.get(name);
     if (!entry) throw new Error(`no tool ${name}`);
     // Resume dedup: a call already finished and logged under this exact key returns its result.
@@ -2117,6 +2155,11 @@ data: ${JSON.stringify(e)}
         return t?.state === 'running' || t?.state === 'waiting' ? t : undefined;
       },
       blocked: (t, host) => this.write({ type: 'net.blocked', task: t.id, host }),
+      leaked: (t, text) => {
+        if (!this.leaks(t, text)) return false;
+        this.tripwire(t, 'a web request');
+        return true;
+      },
       factoryKey: () => this.vault.get('FACTORY_API_KEY'),
       anthropicKey: () => this.vault.get('ANTHROPIC_API_KEY'),
     }, this.relay);
