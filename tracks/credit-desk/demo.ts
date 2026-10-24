@@ -10,6 +10,7 @@ import path from 'node:path';
 import type { Approval, DemoKit, LogEvent, Task } from '../../core/contract.ts';
 import { parseLedger } from './books.ts';
 import crsPush from './demo-crs.ts';
+import { toolUses } from './desk.ts';
 
 const results = (events: LogEvent[], tool: string) =>
   events.flatMap((e) => (e.type === 'tool.call' && e.tool === tool ? [e.key] : []))
@@ -108,6 +109,8 @@ export default async function (d: DemoKit) {
   // Real Droid only when the gate allows it too (droid in DEMO_LIVE, and Factory's 5-hour use under the core's limit).
   const live = (process.env.DEMO_LIVE ?? '').split(/[\s,]+/);
   if (live.includes('credit-desk') && live.includes('droid')) await liveRuns(d);
+  // DEMO_LIVE=droid,coordinate ./demo: two real analysts share the October applications through SpacetimeDB.
+  else if (live.includes('coordinate') && live.includes('droid')) await coordinatedRun(d);
   else console.log('  skip  the live Droid runs on October and January, 20 to 30 minutes of model time: DEMO_LIVE=droid,credit-desk ./demo runs them');
 }
 
@@ -137,4 +140,28 @@ async function liveRuns(d: DemoKit) {
   }
   const why = await d.api('GET', '/t/credit-desk/why?subject=APP-1042');
   console.log(`  why APP-1042: ${why.decisions.at(-1)?.answer.join(' ')}`);
+}
+
+/** Opt-in live step: {coordinate: true} on October, analysts only. Each application is claimed from the queue exactly once. */
+async function coordinatedRun(d: DemoKit) {
+  const file = path.join(import.meta.dirname, 'cases', 'fogline-2026-10', 'controller.json');
+  const scripted: { match: string; approve: boolean; reason?: string }[] = JSON.parse(fs.readFileSync(file, 'utf8')).answers;
+  const run = await d.api('POST', '/t/credit-desk/run', { case: 'fogline-2026-10', coordinate: true, seats: ['analyst'] });
+  const ids: string[] = Object.values(run.tasks);
+  console.log(`  coordinated run ${run.run}: analysts ${ids.join(', ')}`);
+  await controller(d, ids, (q) => scripted.find((a) => q.includes(a.match)) ?? { approve: true }, 60 * 60 * 1000, true);
+  const log = (await d.api<LogEvent[]>('GET', '/log')).filter((e) => e.task && ids.includes(e.task));
+  const uses = toolUses(log, new Set(ids));
+  const claimed = uses.filter((u) => u.tool === 'spacetime.claim' && u.ok && u.output?.job).map((u) => ({ task: u.task, app: u.output.job.payload?.id ?? JSON.stringify(u.output.job.payload) }));
+  const decided = uses.filter((u) => u.tool === 'credit-desk.credit_decision' && u.ok && u.output?.status === 'recorded').map((u) => ({ task: u.task, app: u.input.application_id }));
+  const by = (xs: { task: string }[]) => ids.map((t) => xs.filter((x) => x.task === t).length).join(' and ');
+  console.log(`  claimed ${by(claimed)} applications, decided ${by(decided)}: ${claimed.map((c) => c.app).join(', ')}`);
+  d.check(new Set(claimed.map((c) => c.app)).size === 6 && new Set(decided.map((c) => c.app)).size === 6,
+    `two analysts claimed the six applications from the SpacetimeDB queue (${by(claimed)}) and decided all six (${by(decided)})`);
+  const out = `/var/lib/box-demo/credit-desk-${run.run}`;
+  fs.mkdirSync(out, { recursive: true });
+  const score = await d.api('POST', '/t/credit-desk/score', { run: run.run });
+  fs.writeFileSync(path.join(out, 'score.json'), JSON.stringify(score, null, 2));
+  fs.writeFileSync(path.join(out, 'log.jsonl'), log.map((e) => JSON.stringify(e)).join('\n') + '\n');
+  console.log(`  coordinated run: ${score.summary}\n  evidence in ${out}`);
 }
