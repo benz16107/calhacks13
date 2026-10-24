@@ -85,7 +85,7 @@ export default async function (d: DemoKit) {
   d.check(c.task.state === 'done' && idx?.indexed?.length === 1, `the Website Content Crawler wrote a page into the box's search folder: ${idx?.indexed?.[0]}${why(c)}`);
   // A finished task makes /find index again; then the page can be found by what it says.
   await d.settled([(await d.api<Task>('POST', '/tasks', { title: 'Touch web', workspace: 'web', worker: 'fake', source: 'demo', prompt: 'write touched.txt 1' })).id]);
-  const hit = await d.waitFor('/find to know the crawled page', async () => (await d.api<{ hits?: { metadata?: { path?: string } }[] }>('GET', '/t/find/search?query=illustrative%20examples%20in%20documents')).hits?.find((h) => h.metadata?.path?.includes('example.com')), 90_000);
+  const hit = await d.waitFor('/find to know the crawled page', async () => (await d.api<{ results?: { path?: string }[] }>('GET', '/t/find/search?q=domain%20for%20use%20in%20documentation%20examples')).results?.find((h) => h.path?.includes('example.com')), 90_000);
   d.check(hit, '/find answers a question from the crawled page');
 
   d.check([p, m, r, x, c].every((t) => t.task.hosts.length === 0), 'every task had no network of their own; the Actors did the web work');

@@ -45,7 +45,8 @@ Apify CLI and SDK).
 5. **A web source for the credit desk** (`apify.webSource`). An applicant's website and Google Maps listing
    (with reviews) set against what they claimed, returning every place the web contradicts the application.
    *Why:* the web is evidence that does not depend on what the applicant typed. *Criterion:* Apify used for a
-   decision, with untrusted text (reviews, sites) screened before the credit agent sees it.
+   decision, with untrusted text (reviews, sites) screened before the credit agent sees it. Available as a tool;
+   not used in the credit desk's scored run (see below).
 6. **Apify spending in GurtOS budgets.** Every tool declares its cost, so a call above the task's budget pauses
    for your OK on the phone and portal, naming Apify as the payee and the purpose. Each call also logs the
    usage Apify reports, and the Apify spend app lists both per task. *Why:* the third thing wrong with web agents
@@ -108,7 +109,9 @@ which one is missing.
 website excerpt, the Google Maps place, recent reviews, and `disagreements`: a phone or address that does not
 match, a start year that differs from the website's "since", a business Google marks closed, or no web presence
 at all. Reviews and site text are untrusted: an instruction inside a review is cut out before the credit agent
-sees it. The credit desk adds the tool to its analyst's tool list to use it. `apify.indexSite` writes pages to
+sees it. The tool is available to the credit desk but is not in its analyst's tool list, so it was not used in
+the scored run: the desk's applicants are made-up businesses, and a web check on them would only report "no web
+presence". It is meant for a case with real-looking businesses. `apify.indexSite` writes pages to
 `workspaces/web/web/<site>/` as Markdown, mode 644. /find already rescans every minute and after every finished
 task, so find needed no change.
 
