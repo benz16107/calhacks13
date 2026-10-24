@@ -21,9 +21,9 @@ quota was used up; /find searched locally and the find thread is fixing the sync
 
 ## Summary
 
-Status at 23:50 PT Friday. **6 P0, 20 P1 (14 product, 6 docs), 16 P2.** Fixed and verified: P0-1 (API), P0-3,
-P1-1 (core, c6f747e), P0-5 (portal, 3ae539b). Open P0s: P0-2 (reducer; the image's firewall is on main in 881318a,
-ISO rebuild pending), P0-4 (portal rebuild pending), P0-6 (core). Portal batch 1 is fixed in a rebuild not yet on
+Status at 23:55 PT Friday. **6 P0, 20 P1 (14 product, 6 docs), 17 P2.** Fixed and verified: P0-1, P0-3, P1-1 (core
+c6f747e), P0-5 (portal 3ae539b), P0-2 and P0-6 (core 6879fb9). Open P0: P0-4 (portal rebuild pending). The image's
+firewall is on main (881318a); the rebuilt ISO is still to be installed on Vultr. Portal batch 1 is fixed in a rebuild not yet on
 main.
 
 All four moments work by hand on a GurtOS Server install on Vultr running main, and so does Shopper end to end. The
@@ -59,7 +59,10 @@ to the internet.** Owners: core (reducer), image (firewall).
 - Steps: from outside, `POST http://<box>:3000/v1/database/box/call/answer {"id":"<approval>","approved":true,"by":"Ben's iPhone"}`.
 - Actual: 200. The task carried on and the log names "Ben's iPhone". The image has no inbound firewall, so this
   works from anywhere on a fresh ISO install.
-- **Still open at 23:33 PT on an image install:** core's fix moves SpacetimeDB to 127.0.0.1 through setup.sh, but the
+- **Fixed in core 6879fb9, verified 23:48 PT:** the reducer answers only from connections the box vouched for. From
+  outside, the same call got 530 and the task kept waiting; the box screen's Deny still worked and logged "box
+  screen". The image's firewall (881318a) also closes port 3000 on new installs; to be re-checked on the rebuilt ISO.
+- **Earlier, at 23:33 PT on an image install:** core's fix moves SpacetimeDB to 127.0.0.1 through setup.sh, but the
   image's spacetimedb.service has `--listen-addr 0.0.0.0:3000`, and a "$900 to attacker" request was still approved
   from outside. The image thread's firewall (rebuild in progress) closes the port; core was asked to also check the
   caller's identity in the reducer.
@@ -90,7 +93,9 @@ in 20 s, so moment 3 on a phone is broken (shots 50, 51). The box screen and a l
 **P0-6. After the token fix, Caddy-relayed track routes get 401.** Owner: core. With Caddy's headers,
 `/t/mana/status`, `/t/jira/issues` and `/t/jira/` return 401, so deploying main to the Vultr box breaks the public
 Mana app and the Jira Forge panel. The Vultr box still ran an older main at 23:33 PT (Mana answered 200). **Don't
-`./deploy vultr` until this is fixed.**
+`./deploy vultr` until this is fixed.** **Fixed in 6879fb9, verified 23:47 PT:** through a proxy, `/t/mana/status`
+answers 200 and Jira's three routes reach the track's own secret check; other track routes and the API still need a
+phone's token. Vultr can be deployed once a build with 6879fb9 passes the gate.
 
 ### P1
 
@@ -212,6 +217,10 @@ the store is "Box Test Store"; the Jira panel is "Box agent task"; the Elastic a
 **P2-15. No size limits on task text, and raw parser errors.** Owner: core. A 100,000-character title and a 5 MB
 prompt are accepted and pushed to every screen. Invalid JSON returns the parser's own message.
 
+**P2-16. A normal restart is announced as a power cut.** Owners: core, portal. After `systemctl restart box.service`
+(a deploy), the box screen said "Welcome back. The box went down after 06:44 and booted at 06:46" with "restored
+after a power cut" (shot 57). A clean stop could leave a marker so only a real outage gets the banner.
+
 ## Docs site (gurtos.com)
 
 Checked 22:40 to 22:46 PT by a helper agent. Nothing private leaked: no keys, tokens, tailnet names, home paths or
@@ -308,3 +317,4 @@ dashes. Search works. Nothing scrolls sideways at 390 x 844. No form collects da
 | 23:40 | Apify through a Best Buy watch | 55 |
 | 23:42 | Portal's 3ae539b installed; P0-5 re-tested on the paired phone | 56 |
 | 23:50 | HTML in task text on every screen; bad input to the task API | |
+| 23:46 | core's 6879fb9 installed: proxied track routes, the vouched reducer, box screen Deny | 57, 58 |
