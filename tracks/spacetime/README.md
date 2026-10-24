@@ -46,11 +46,11 @@ Another app posts jobs without any code of ours: it writes a note to the action 
 `box.note({ jobs: { queue: 'credit-desk:apps', items: [{ title, payload }] } })`, and this app turns it into live jobs.
 The box's screen can also post with `POST /t/spacetime/jobs {queue, jobs}` (each job a title string or `{title, payload?}`).
 
-## The Live window
+## The Live board
 
 `/t/spacetime/` on the box. Meters across the top (running, waiting, done, spent, activity for the last 30
 minutes), then three views: **Agents** (each queue as Open, In hand and Done, with every agent's status), **Requests**
-(every waiting request, who is viewing it, Approve and Deny), and **Machines** (the Maincloud switch and every
+(every waiting request, who is viewing it, Approve and Deny), and **Computers** (the Maincloud switch and every
 machine that granted this screen a view). Every number on it arrives over SpacetimeDB subscriptions.
 
 ## The fleet view on Maincloud
@@ -96,7 +96,7 @@ waiting request, a stranger sees nothing, and opting out removes it.
 
 ## Limits
 
-- SpacetimeDB listens on the box only, so only the box's own screen subscribes to it. The Live window on any other
+- SpacetimeDB listens on the box only, so only the box's own screen subscribes to it. The Live board on any other
   screen (a paired phone or laptop) is shown the same data from `GET /t/spacetime/snapshot`, every 2 seconds, and answers
   through the box's API. Phones do not connect to SpacetimeDB; that is deliberate.
 - Per-person visibility is enforced by the database for any connection that reaches it. Today those are the box's own

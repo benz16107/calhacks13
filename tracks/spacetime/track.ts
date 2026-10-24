@@ -46,7 +46,7 @@ const forbid = () => Response.json({ error: "only the box's owner can change thi
 
 export default {
   name: 'spacetime',
-  title: 'Live status',
+  title: 'Live board',
   description: 'Shows tasks, requests and spending on every screen the moment they change, and lets agents share one work queue.',
 
   tools: [
@@ -181,5 +181,5 @@ export default {
     },
   },
 
-  apps: [{ name: 'live', title: 'Live', href: '/' }],
+  apps: [{ name: 'live', title: 'Live board', href: '/' }],
 } satisfies Track;
