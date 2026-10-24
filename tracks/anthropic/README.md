@@ -48,6 +48,8 @@ turns, so the box cannot apply that; it matters only for a long Haiku task.
 | Sonnet 5.5 | 1.31 cents | 8 s |
 | Opus 5.5 | 3.25 cents | 70 s |
 
+The cost is a display, not a control: the worker reports its own token counts to the box (`POST /usage`), so a hijacked task could under-report it. The budget on tool spending is enforced in the core; the model-cost count is not tamper-proof.
+
 One run each, so the times are noisy. Opus took 70 s here and 71 s in the earlier run, so that gap is probably real.
 
 ## 2. Claude as the second pair of eyes
