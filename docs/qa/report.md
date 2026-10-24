@@ -21,7 +21,7 @@ quota was used up; /find searched locally and the find thread is fixing the sync
 
 ## Summary
 
-Status at 23:50 PT Friday. **6 P0, 19 P1 (13 product, 6 docs), 15 P2.** Fixed and verified: P0-1 (API), P0-3,
+Status at 23:50 PT Friday. **6 P0, 20 P1 (14 product, 6 docs), 16 P2.** Fixed and verified: P0-1 (API), P0-3,
 P1-1 (core, c6f747e), P0-5 (portal, 3ae539b). Open P0s: P0-2 (reducer; the image's firewall is on main in 881318a,
 ISO rebuild pending), P0-4 (portal rebuild pending), P0-6 (core). Portal batch 1 is fixed in a rebuild not yet on
 main.
@@ -155,6 +155,11 @@ curl proxies (not `.localhost`), or tell the agent the proxy in its prompt.
 but its page says "Owners paired: 0", so the chat flow needs `pair <code>` from Ben's ASI:One account before judging.
 The Vultr box's agent is off (no Agentverse key in its vault), which is fine if it's documented.
 
+**P1-14. The task API takes any budget and any hosts value.** Owner: core. `budgetCents` accepts -5, "abc", 0.5 and
+1e15; `hosts` accepts "*", "*.*", "0.0.0.0/0", "127.0.0.1:7700" and a bare string. Missing title or prompt, unknown
+tools and workers, and workspaces like `../../etc` are refused correctly. Core was asked to validate both fields
+and check what each accepted value lets a task reach.
+
 ### P2
 
 **P2-1. The losing phone gets no word.** Owner: portal. Two phones answered one request (Approve and Deny at the
@@ -203,6 +208,9 @@ them. Filter the agent's tools to `box.run: installed`, or keep dev boxes out of
 
 **P2-14. "Box" as a product name in more places.** Owners: mana, Visa, jira, elastic. The Mana app is "Box status";
 the store is "Box Test Store"; the Jira panel is "Box agent task"; the Elastic agent is "Box log".
+
+**P2-15. No size limits on task text, and raw parser errors.** Owner: core. A 100,000-character title and a 5 MB
+prompt are accepted and pushed to every screen. Invalid JSON returns the parser's own message.
 
 ## Docs site (gurtos.com)
 
@@ -257,6 +265,8 @@ dashes. Search works. Nothing scrolls sideways at 390 x 844. No form collects da
   14 s after power-on with all three resumed. Laptop, phone and box screen showed "Restored after a power cut. 3 tasks
   picked up where they stopped... Nothing was paid twice." Both jobs carried on from step 4, not from the start
   (shot 39).
+- **No HTML runs from task text.** Titles, approval questions and file contents carrying HTML showed as plain text on
+  the portal (home, Tasks, the task window, Activity, notifications, Time Machine), the track pages and a phone.
 - **Shopper (Visa).** A watch on the Box Test Store fired in 6 s with "Buy 2 x Hario V60 02 paper filters for $17.98?
   TEST PAYMENT". Approved on the phone: a Stripe test-mode order signed with Visa TAP and verified by the store. No
   repeat purchase on the next check. Undo refunded it in Stripe test mode (shots 40 to 46).
@@ -297,3 +307,4 @@ dashes. Search works. Nothing scrolls sideways at 390 x 844. No form collects da
 | 23:37 | Moment 2 with a real Droid task | |
 | 23:40 | Apify through a Best Buy watch | 55 |
 | 23:42 | Portal's 3ae539b installed; P0-5 re-tested on the paired phone | 56 |
+| 23:50 | HTML in task text on every screen; bad input to the task API | |
