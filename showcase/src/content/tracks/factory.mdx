@@ -1,9 +1,10 @@
 ---
+design: kit
 order: 4
 sponsor: Factory
 prize: Droid SDK track
 editions: 'GurtOS Server and GurtOS Personal'
-pitch: 'Droid does the work and GurtOS makes it safe. Droid never holds a key: the vault keeps it and the box''s proxy swaps it in outside the task. Each task is its own Linux user with its own firewall rule and its own copy of the files, on a locked-down Linux base where task users have no sudo, and every change is reviewable in the log and undoable. Keys kept where agents can reach them keep leaking: <a href="https://www.bleepingcomputer.com/news/security/opencode-hack-exposes-api-keys-amid-ai-distillation-attacks/">OpenCode Console exposed users'' provider API keys</a> on Oct 17, 2026, <a href="https://github.com/openclaw/openclaw/issues/43794">OpenClaw stores tokens and API keys in plaintext</a> in <code>~/.openclaw/openclaw.json</code>, and <a href="https://nvd.nist.gov/vuln/detail/CVE-2026-25253">CVE-2026-25253</a> let one crafted link make OpenClaw send its token to an attacker.'
+pitch: 'Droid does the work and GurtOS makes it safe. Each Droid task is its own Linux user with its own firewall rule and its own copy of the files, and Droid never holds a key: the vault keeps it and the box''s proxy swaps it in outside the task. Droid plans first and starts only after you approve the plan on your phone, a read-only reviewer droid checks the coder''s diff, and every change is reviewable in the log and undoable. In August 2025 malicious Nx packages used AI CLIs already on developers'' machines, started with permission-skipping flags, to hunt for tokens and keys. A Droid on GurtOS has none to find.'
 title: Droid is the worker inside every task
 summary: Every agent task on a GurtOS box is a Droid session, started through the TypeScript Droid SDK and running Claude. The box decides what each Droid may touch (its own Linux user, its own copy of the files, only the hosts and tools its task lists), turns each Droid tool call into a step in the action log, and resumes the same Droid session after a power cut.
 proof: 'In every merge-gate run, a Droid task (Claude) edits a file as its own Linux user while the box samples its processes: all 240 samples held only a placeholder Factory key, because the box''s proxy adds the real key on the way to Factory. Its cost, $0.5378 in the Oct 24 run, is priced from the token counts Droid reports.'
@@ -23,18 +24,6 @@ criteria:
     how: 'There is no chat box around Droid. Droid works on files and tools with nobody watching, and every action it takes is a log line a person can read, search in Elastic, or undo.'
 video: main
 clip: moment-1-undo
-shots:
-  - src: ../../assets/repo/portal/task.png
-    alt: 'A task window: a red notice that the task tried to reach attacker.example and may only reach example.com, its steps from the action log with the blocked step in red, the files it changed, and what it was allowed.'
-    caption: 'The task that read a booby-trapped page. The box refused its connection to attacker.example and wrote it in the log; Undo task removes its files.'
-  - src: ../../assets/repo/jira/panel-approved.png
-    alt: 'The Box agent task panel in Jira for a Droid task, with its reasoning, an audit trail and the diff of the receipt it wrote.'
-    caption: 'A Droid task (Claude Sonnet 4.6) in Jira: it asked to spend $3.00 of test money on a $1.00 budget, was approved, paid, wrote the receipt and finished. Every Droid tool call is a row in the audit trail.'
-    tall: true
-  - src: ../../assets/repo/personal/14-review.png
-    alt: 'The GurtOS Personal review window: a Droid task changed one file and added one across two folders, the diff, and Keep changes or Undo.'
-    caption: 'GurtOS Personal: a Droid task (Claude) worked on copies of two folders. Nothing in the real folders changed until the owner presses Keep.'
-    tall: true
 links:
   - label: The Droid worker, core/workers/droid.ts
     href: https://github.com/benz16107/calhacks13/blob/main/core/workers/droid.ts
@@ -48,28 +37,6 @@ links:
     href: https://gurtos.com/docs/concepts/triggers/
   - label: 'Docs: agent users'
     href: https://gurtos.com/docs/concepts/agent-users/
-flow:
-  - zone: you
-    label: A trigger starts a task
-    detail: A chat, a route, a folder in Files, a schedule, a webhook, or another task's tool call.
-  - zone: core
-    label: The box prepares the task
-    detail: A new user, an overlay copy, a hardened unit, the task's hosts, tools and budget.
-  - zone: task
-    label: droid.ts starts a Droid session
-    detail: <code>createSession</code> with Claude, high autonomy, and the box MCP server.
-  - zone: core
-    label: The proxy adds the Factory key
-    detail: The task holds a placeholder. The real key is added on the way out, and only there.
-  - zone: task
-    label: Each tool call is logged
-    detail: A <code>task.step</code> per call. Box tools go through the broker socket.
-  - zone: you
-    label: Questions become approvals
-    detail: Droid's own questions and over-budget calls wait for a yes on any screen.
-  - zone: core
-    label: Usage becomes cost
-    detail: Token counts priced at the model's list rates, in the same log.
 status:
   - part: Droid with Claude
     state: live
@@ -82,84 +49,141 @@ status:
     note: 'Tool spending is test money. Model cost is real.'
 ---
 
-## Evidence
+<Lead proof="A live run on Oct 24: Droid planned, the plan was approved from a phone, a coder droid fixed the bug and a reviewer droid said <code>VERDICT: APPROVE</code>, for <code>$0.12</code> (47,742 Factory credits). In every merge-gate run, <code>240 of 240</code> process samples of a Droid task held only a placeholder key.">
+Coding agents usually run as you, so they can read every file and key you can. On GurtOS, Droid does the work through the Droid SDK as its own Linux user, in its own copy of the files, with no key. It plans first, and the plan is an approval on your phone. Best shown in Server (an issue in, a pull request out, while you are away) and Personal (Droid works on a copy of your folder until you press Keep).
+</Lead>
 
-From the Oct 24 merge-gate run on the x86 test VM (22 sections, 175 checks, 0 failed):
+<Numbers items={[
+  { value: "240/240", label: "process samples of a Droid task held only a placeholder Factory key", href: "/evidence/", source: "merge gate" },
+  { value: "4", label: "custom droids: coder, reviewer (read-only), credit analyst, shopper", href: "https://github.com/benz16107/calhacks13/tree/main/tracks/factory/droids", source: "tracks/factory/droids" },
+  { value: "3", label: "autonomy levels, enforced by the OS as well as by Droid", href: "https://github.com/benz16107/calhacks13/blob/main/tracks/factory/README.md", source: "README" },
+  { value: "$0.12", label: "for the live run below, plan, coder and reviewer", href: "#the-live-path-start-to-diff", source: "below" }
+]} />
+
+## Why this needs an operating system
+
+<Compare labels={["Droid on your own computer", "Droid on GurtOS"]}>
+<div slot="a">
+
+- It runs as you and can read every `.env` and token on disk.
+- It can reach any host.
+- It writes straight into your files.
+- Its steps live in a terminal that scrolls away.
+- Approvals are a prompt in a terminal, with no record you can search.
+
+</div>
+<div slot="b">
+
+- Its own Linux user, with no sudo, in an overlay copy of the workspace.
+- A firewall rule per task: only the hosts the task names.
+- Undo removes one task's layer. Keep applies it.
+- One append-only action log of every tool call, its result and its cost.
+- The plan is an approval on your phone, and the box starts nothing until you approve.
+
+</div>
+</Compare>
+
+The incident: in August 2025, malicious Nx packages started the AI CLIs already installed on developers' machines with permission-skipping flags and told them to search the disk for wallets, SSH keys, `.env` files and tokens. Sources: [Wiz, Aug 27, 2025](https://www.wiz.io/blog/s1ngularity-supply-chain-attack) (the AI CLI abuse and the flags) and the [Nx advisory](https://github.com/nrwl/nx/security/advisories/GHSA-cxm3-wv7p-598c) (the credentials posted to GitHub repositories). Wiz says the AI-driven activity succeeded in hundreds of cases, though the AI providers' guardrails sometimes blocked it.
+
+## The live path, start to diff
+
+This run was real Droid with Claude Sonnet 5.5, started on Oct 24 from the Factory app on a demo box. The fake bug is `add(a, b) = a - b` and the test wants 5 from `add(2, 3)`.
+
+**1. Start.** The Factory app takes a job and a repository, shows your Factory plan's 5-hour and weekly use (read through the vault's key, which never leaves the core), and has two switches on: *Plan first* and *Coder and reviewer*. The same job can come from a GitHub issue labelled `droid`, a schedule, a webhook, a new file, an ASI:One chat, or `gurtos-exec`, a safe runner for `droid exec`.
+
+<Shot src="track/factory/app-top.png" alt="The Factory app window in GurtOS: the Factory plan usage (1 percent of the 5-hour limit, 55 percent of the week), a New task form with what should it do, a Git repository, Limits set to Ask before anything over $1, and switches for Plan first and Coder and reviewer, with a Start button." caption="The Factory app. The plan-usage bars are real, read from Factory's billing endpoint through the vault key. The repository field is optional." />
+
+**2. Plan, then approve.** Droid starts in Factory's spec mode, which can read but not change anything. Its plan becomes an approval on every screen. Nothing runs until Approve.
+
+<Shot src="track/factory/plan-phone.png" size="phone" alt="A phone approval: Droid's plan for Fix add() so its test passes. It names the cause, a one-operator fix, and a process of a coder droid then a reviewer droid, with Deny and Approve buttons." caption="Droid's plan on a phone. It names the cause (<code>a - b</code>), the fix, and the order: coder, then reviewer. Its text shows the plan's markdown unrendered, which is a known rough edge." />
+
+**3. Work, review, diff.** After Approve, a coder droid with edit tools made the change and ran the test. A reviewer droid with read-only tools checked it and answered `VERDICT: APPROVE`. Every tool call is a step in the log.
+
+<Shot src="track/factory/task-done.png" alt="A GurtOS task window: Fix add() so its test passes, done in 1 minute, $0.12 of a $1.00 budget, claude-sonnet-5-5. One file changed, add.js. The summary says the reviewer's verdict was APPROVE and the coder ran the test. The steps below are Droid's tool calls from the action log." caption="The finished task. One file changed, <strong>Undo task</strong> available, <strong>$0.12</strong>, every Droid tool call in the steps. It was allowed no site and ran as its own user. Test data only." />
+
+**4. Review in one place.** The Factory app shows each task's plan, the reviewer's verdict and its Factory credits. The second card below is the same job with the plan denied: the task failed with "the owner turned down the plan, so nothing was changed", and its diff is empty.
+
+<Shot src="track/factory/app-tasks.png" alt="The Factory app's task list: the approved task is Done with the reviewer approved, 47,742 Factory credits and $0.12; the denied task is Failed with 8,654 Factory credits and $0.02." caption="Two runs of the same job. Approved: done, reviewer approved. Denied: failed, nothing changed. The second card is labelled <em>The plan you approved</em> by mistake; the plan was denied." />
+
+<OSvsTrack sponsor="Factory" rows={[
+  { what: "Droid is the worker in every task, started through the Droid SDK with Claude", why: "Droid SDK does real work", os: "Creates the task user, copy and unit, resumes the session after a power cut, prices the usage", track: "Droid, spec mode, custom droids, Factory's SDK and billing endpoint", status: "Shipped" },
+  { what: "Plan first, then approve", why: "Visible plans", os: "The approval on the portal and phone, kept in the log", track: "Spec mode writes the plan, ExitSpecMode asks", status: "Shipped" },
+  { what: "A team of custom droids: coder, reviewer (read-only), credit analyst, shopper", why: "Careful limits on what each droid touches", os: "The task's tools and hosts bound every droid", track: "The droid definitions and the Task tool", status: "Shipped" },
+  { what: "Autonomy levels the OS enforces: low takes away the network and makes every spend ask, medium caps the budget at $1", why: "Careful limits", os: "createTask sets hosts and budget, so the firewall and budget hold even if Droid ignores its level", track: "Factory's autonomy levels", status: "Shipped" },
+  { what: "Droid hooks report to GurtOS: each tool result is logged, and risky commands (rm -rf, git push, sudo, npm publish, curl to sh) pause for an OK", why: "Visible steps", os: "The log and the approval", track: "Factory's PreToolUse and PostToolUse hooks", status: "Shipped, as a convenience (see limits)" },
+  { what: "Droid on GitHub: an issue labelled droid becomes a plan-first task on its own clone, and a pull request opens through the vault's token", why: "Triggers you designed", os: "The vault holds the token and the core pushes, so the task never has it", track: "The issue watcher and the pull-request tool", status: "Shipped" },
+  { what: "gurtos-exec, a safe runner for droid exec", why: "Triggers you designed", os: "Runs the job as its own user, keyless, and returns steps, diff, cost", track: "droid exec's flags and output", status: "Shipped" },
+  { what: "Factory usage in the portal: credits per task and the plan's 5-hour and weekly use", why: "Visible results", os: "The key stays in the core", track: "Factory's billing endpoint", status: "Shipped" }
+]} />
+
+## Droid's own pull request
+
+<Details summary="Droid on a real GitHub repository">
+
+Put `FACTORY_GITHUB_REPO` and `GITHUB_TOKEN` in the vault. Every 2 minutes the box checks the repo for open issues labelled `droid`. For each new one the core clones the repo into a workspace and starts a Droid task: plan first, medium autonomy, no network, and one tool, `factory.openPullRequest`. You approve the plan from the phone, the coder fixes the issue and the reviewer checks it. Droid then calls the tool, and the core copies the task's files, commits them to `droid/issue-<n>-<task>` and pushes with the token in a one-time header. Droid has no token and no route to GitHub. The test repository is [benz16107/gurtos-droid-demo](https://github.com/benz16107/calhacks13), kept for this track; the pull request was opened by a live `DEMO_LIVE=droid,github` run on the Vultr test box. It is not set up on every box.
+
+</Details>
+
+<Details summary="How the worker, the key swap and the hooks work">
+
+`core/workers/droid.ts` is the worker inside every task: `createSession` (or `resumeSession` after a power cut), a box MCP server for tools and approvals, the permission and AskUser handlers, hooks and droids. Droid's calls to Factory go through the box's proxy, which swaps the placeholder key for the real one, so the real key never enters the task. A tool that needs a key runs in the box service through the task's broker socket and returns only a result.
+
+Autonomy: `low` asks before anything but file edits and read-only commands, and the box takes away the network and makes every spend ask. `medium` also allows reversible commands, and caps the budget at $1. `high` runs without asking, on the task's own hosts and budget.
+
+The hooks file sits in the task user's home, so a hijacked Droid could edit or delete it. The pause is a convenience for an honest agent. The security boundary is the OS: the task's own user, its copy of the files, its firewall rule, its budget and the vault.
+
+</Details>
+
+<CriteriaMap
+  sponsor="Factory"
+  source="From Factory's track description and its Friday workshop notes, as copied into the project's track plan."
+  items={[
+    { ask: "Droid SDK (TypeScript or Python) does real work", status: "met", how: "Droid, through <code>@factory/droid-sdk</code> 0.10.0, is the default worker for every task: it fixes code and runs tests, works a credit desk with live CRS and bank data, reads receipts and proposes a reorder, describes photos, and edits a folder on GurtOS Personal.", evidence: [{ label: "The live path", href: "#the-live-path-start-to-diff" }, { label: "core/workers/droid.ts", href: "https://github.com/benz16107/calhacks13/blob/main/core/workers/droid.ts" }] },
+    { ask: "The README says where and how", status: "met", how: "The worker is about 70 lines in <code>core/workers/droid.ts</code>. The track README names each part, the criterion it serves and what comes from Factory.", evidence: [{ label: "tracks/factory/README.md", href: "https://github.com/benz16107/calhacks13/blob/main/tracks/factory/README.md" }] },
+    { ask: "Triggers you designed", status: "met", how: "A GitHub issue labelled droid, the portal and Personal desktop, a schedule, a webhook, a new file, an ASI:One chat, <code>gurtos-exec</code>, and a Droid tool call that starts another task.", evidence: [{ label: "Docs: triggers", href: "https://gurtos.com/docs/concepts/triggers/" }] },
+    { ask: "Careful limits on what Droid can touch", status: "met", how: "Its own Linux user, an overlay copy, a firewall rule that reaches only the box's proxy, only the tools its task lists, a budget, and autonomy levels the OS enforces.", evidence: [{ label: "Docs: agent users", href: "https://gurtos.com/docs/concepts/agent-users/" }] },
+    { ask: "Visible plans, steps and diffs", status: "met", how: "The plan is an approval, every tool call is a log step, and the task window shows the steps and the diff. The same appear in Jira and the ASI:One chat.", evidence: [{ label: "The live path", href: "#the-live-path-start-to-diff" }] },
+    { ask: "Scores badly: chatbot wrappers, actions you can't see", status: "met", how: "There is no chat box around Droid. Droid works on files and tools with nobody watching, and every action is a log line a person can read, search in Elastic, or undo." }
+  ]}
+/>
+
+<Steps title="Try it" time="About 10 minutes on a test machine with the box installed and a Factory API key in the vault.">
+
+1. Open the Factory app in the portal (`http://<box>:7700/`, then Factory under Apps), or run a job from a shell with a paired device's token:
+
+   ```sh
+   export GURTOS_BOX=http://<box>:7700 GURTOS_TOKEN=<a paired device's token>
+   tracks/factory/gurtos-exec.ts --repo https://github.com/you/project.git --auto medium --plan --team \
+     "Add a --json flag to the CLI and a test for it"
+   ```
+
+2. Approve the plan on the portal or your phone. Droid starts only after that.
+3. Read the steps, the reviewer's verdict and the diff, then press Keep or Undo. Droid has no key and no route to GitHub; a pull request opens through the vault's token only if you set a repo.
+4. Or run the merge gate with a real Droid: `./demo --live-droid` (about $0.50 of Factory credit).
+
+</Steps>
+
+<Evidence run="Merge gate, Oct 24, and a live run on a demo box" numbers={[{ value: "175", label: "merge-gate checks, 0 failed" }, { value: "47,742", label: "Factory credits for the live run, $0.12 at list price" }]} sources={[{ label: "Full demo output", href: "/evidence/" }]}>
 
 ```
 moment 1 with Droid: a real agent (Claude) in its own copy
   ok    Droid, running Claude as its own Linux user, edited the file in its own copy
-  ok    its steps are in the action log (6 steps)
   ok    it used a box tool through the broker; the tool ran in the core with the vault, not in the task
   ok    all 240 process samples held only a placeholder key; no real key ever entered the task
   ok    its model cost is priced from real token counts, logged with the model and a token breakdown
-  ok    its cost is real: $0.5378, the $0.50 test spend plus the model
-  ok    undo removed its changes
-moment 2: the booby-trapped page
-  ...
-  ok    the agent refused the hidden instructions; nothing left the box
 ```
 
-The sampler reads `/proc/<pid>/environ` of every process the task's user runs, ten times a second. The second run in
-moment 2 reads Droid a web page with hidden instructions to steal keys, with that page as its only allowed host.
+</Evidence>
 
-Live Droid runs from the tracks, each with its log saved:
+<Limits title="What is not covered">
 
-| Where | What Droid did | Result |
-|---|---|---|
-| Credit desk, two seats | Worked a planted case against live CRS and Nessie data | Full live run, three seats: 16 of 17 planted errors, 1 false alarm, 6 of 6 credit decisions, 12 minutes, about $5.24 of model use |
-| ASI:One chat | "Fix the failing test in my project" | Ran `node --test`, fixed the bug, sent the diff back to the chat; $0.05 |
-| Agent wallet | "Buy one joke and one report, then write both into answers.md" | Paid $0.01, waited for the OK on the $0.03 report, paid, wrote the file; 6 cents in all (devnet test money plus 2 cents of model) |
-| Jira | Asked to spend $3.00 on a $1.00 budget | Paused, approved from Jira, paid (test money), wrote the receipt |
-| GurtOS Personal | Fix the spelling in a thesis folder | 3 cents; the folder changed only after Keep |
+- **The hooks are a convenience.** The hooks file is in the task user's home, so a hijacked Droid could edit or delete it. The OS limits are the boundary.
+- **The plan's wording is Claude's.** The portal shows it as plain text, with markdown marks visible.
+- **The Factory app mislabels a denied plan** as "The plan you approved".
+- **The model provider sees what Droid sees.** Prompts, files and tool results go to Claude through Factory.
+- **Droid's cost is a display.** The worker reports its own token counts, so a hijacked task could under-report them.
+- **A shared kernel.** Tasks are Linux users, systemd units and overlay layers, not virtual machines.
+- **The pull-request path** needs a GitHub token and repo in the vault. It ran live on one test box and is not set up on every box.
+- **The plan's usage bars** read Factory's billing endpoint with the vault key, so they show nothing on a box with no Factory key.
 
-## How it works
-
-<Flow steps={frontmatter.flow} />
-
-**The session.** `droid.ts` runs inside the task as the task's user. It calls `createSession` with the task's copy as
-its working folder, `claude-sonnet-4-6`, `AutonomyLevel.High` and one MCP server, the box relay. High autonomy is
-safe here because the box, not Droid, sets the limits: the permission handler proceeds, and the OS refuses what the
-task may not do.
-
-**Tools without keys.** `mcp.ts` is a stdio MCP server that Droid starts inside the task. It lists the box tools the
-task may use (for example `apify__run` for `apify.run`) plus `box_ask`, and passes every call to the task's broker
-socket. The tool runs in the box service with the vault, and only its result comes back. A call above the budget
-returns "pending" until a person answers, so Droid keeps working and calls again.
-
-**Questions.** Droid's `askUserHandler` turns each question into a box approval, keyed by a hash of the question, so
-a retry reuses the same approval.
-
-**Power cuts.** The Droid session id is saved in the log as the first step. After a restart, `droid.ts` calls
-`resumeSession` with it and tells Droid: "The box restarted while you were working on this. Check what is already done
-in the files, then finish." Tool calls already answered return their logged result, so nothing is paid twice.
-
-**Cost.** Droid's result message carries token usage. The worker posts it to the broker, and the core prices it at
-the model's list rates (`core/pricing.ts`), writing a `cost` event with the model and a token breakdown.
-
-## Try it
-
-1. Install the box on Ubuntu 24.04 (`sudo core/install.sh`) and put `FACTORY_API_KEY` in `/etc/box/vault.env`.
-2. Start a Droid task. Droid is the default worker. The `project` workspace is a small repo with one failing test,
-   made by the Fetch.ai track at boot:
-
-   ```sh
-   curl -s 127.0.0.1:7700/api/tasks -H 'content-type: application/json' -d '{
-     "title": "Fix the failing test", "workspace": "project", "budgetCents": 25,
-     "prompt": "Run the tests with node --test, find why one fails, and fix the code."}'
-   ```
-
-3. Watch its steps: `curl -s 127.0.0.1:7700/api/tasks/<id>`, or open the task in the portal.
-4. Cut the power mid-task (on a test VM, `sudo reboot -f`). When the box is back, it resumes the task, and
-   `droid.ts` picks up the same Droid session from the id it logged.
-
-<Status rows={frontmatter.status} />
-
-## Limits
-
-- **Model spending does not pause a task.** It counts toward the budget for the next paid tool call, but Droid's own
-  model use never stops it for an OK.
-- **Droid gives up on a tool call after about 3 minutes.** The broker waits up to 150 seconds, then answers "pending"
-  so Droid calls again. A task can wait hours for an OK this way, at the cost of repeated calls.
-- **One worker model per box.** `BOX_MODEL` sets it for all tasks; a task cannot pick its own yet.
-- **Droid's tool steps are cut to 200 characters** of input in the log. The diff and the worker log have the rest.
+</Limits>
