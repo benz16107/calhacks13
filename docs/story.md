@@ -119,7 +119,7 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 
 **Best shown in:** GurtOS Business
 
-**Pitch:** Teams already work in Jira and Confluence. GurtOS makes every agent task an issue a teammate can approve or roll back, answers from the log through a Rovo agent, starts agents from an issue, sends risky actions to Jira Service Management approvers and writes the record to Confluence. Business is on main, but the Jira app has not been tried against a Business box: everything here ran against a GurtOS Server box.
+**Pitch:** Teams already work in Jira and Confluence. GurtOS makes every agent task an issue a teammate can approve or roll back, answers from the log through a Rovo agent, starts agents from an issue, sends risky actions to Jira Service Management approvers and writes the record to Confluence. Business is on main; everything here ran against a GurtOS Server box, except the Jira-user-to-Business-person mapping, which the merge gate checks against offline Jira stand-ins.
 
 **The problem:** Draft: when an agent acts for you overnight, nobody can see the next morning exactly what it did and why, or roll back only the wrong part.
 
@@ -135,7 +135,7 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 | Jira Service Management approvals for risky actions | A production push waits for the people who already approve changes in IT | Usefulness | GurtOS (the approval pause) and the Forge app | Shipped. A production request opened a JSM request with its approvers and, once approved there, the task carried on. The log names who approved |
 | Confluence reports: a daily page of what the agents did and an incident page whenever something is blocked | The record outlives the box | Usefulness, idea | GurtOS (the log) and the Forge app | Shipped. The daily page is rewritten every 15 minutes |
 | A dashboard gadget with tasks, blocked attempts and cost per project | The team sees its agents on the dashboard it already uses | Usefulness, technical use of Forge | The Forge app | Shipped |
-| A Jira user acts as their GurtOS Business person: only someone with both the Jira permission and the GurtOS role, within their limit, can approve | Jira's permissions and the company's roles together decide who may | Track 2: who may act for whom | GurtOS Business and the Forge app | Being built; not shown working yet. Its gate step was skipped until Business was on main |
+| A Jira user acts as their GurtOS Business person: only someone with both the Jira permission and the GurtOS role, within their limit, can approve | Jira's permissions and the company's roles together decide who may | Track 2: who may act for whom | GurtOS Business and the Forge app | Shipped, checked in the merge gate against offline Jira stand-ins: an unlinked Jira user is refused, a requester is refused, $60,000 over a $50,000 limit is refused, an approver counts as herself, and whoever started a task cannot approve it. There was no live run: the real demo Jira site has no accounts for these people |
 
 **Demo moment and proof:** BOX-2, a scripted agent that misread a rule, changed three configs instead of one and tried to send the repo to a paste site. It was blocked, approved from Jira, then rolled back from Jira: its configs came back and the README fix another task made a minute earlier stayed.
 
@@ -143,7 +143,6 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 
 - Review the story with Ben: problem, features with their why, OS vs track
 - Demo video, 3 minutes at most. (partly)
-- A Jira user acts as their GurtOS Business person: only someone with both the Jira permission and the GurtOS role, within their limit, can approve
 
 ## Hyphenate: Autonomous Systems for Finance
 
