@@ -91,6 +91,10 @@ SECOPS-168" and the task carried on.
 
 ![The Confluence incident page](screenshots/confluence-incident.png)
 
+And the day's "What our agents did" page, rewritten every 15 minutes from the box's log:
+
+![The Confluence daily page](screenshots/confluence-daily.png)
+
 **6. The dashboard gadget**, agent activity per project:
 
 ![The GurtOS agent activity gadget](screenshots/gadget.png)
