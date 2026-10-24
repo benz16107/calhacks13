@@ -25,7 +25,7 @@ popover, a toast or a notification. The research is in `figma/refs/os-system/` a
 
 **Build the portal from these.** The full list of v2 screens, with node IDs, PNGs and the API each one reads, is in
 [`figma/os-v2/README.md`](figma/os-v2/README.md). It grows in batches; each batch is merged as soon as it is done.
-Done so far: the whole Server setup wizard, all ten Settings pages, App Center with an app detail, and Tasks. The
+Done so far: the whole Server setup wizard, all ten Settings pages, App Center, the desktop (home, Notification Center, Control Center, lock screen, boot and session restore), Tasks, the task detail with Undo, Activity and Time Machine. The
 direction A screens further down stay as the reference for anything v2 has not reached yet.
 
 ## Files

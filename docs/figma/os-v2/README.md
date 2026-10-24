@@ -53,6 +53,17 @@ screen or the owner's phone.
 | `settings/09-appearance.png` | `77:3809` | `appearance.theme`, `appearance.accent`, wallpaper, and the accessibility switches |
 | `settings/10-about.png` | `77:4131` | The wordmark, `editionName`, `version`, `build`, `boxId`, uptime, and credits for the icons and the typeface |
 
+## Desktop (`desktop/`)
+
+| PNG | Node | What it shows, and its data |
+|---|---|---|
+| `desktop/home-approval-banner.png` | `83:4401` | The desktop: greeting, three glass widgets on the wallpaper (needs you, running, spent today), and an approval arriving as a banner with Deny and Approve. Banners come from the SpacetimeDB `approval` table; answering calls the `answer` reducer |
+| `desktop/notification-center.png` | `83:4554` | Opens from the clock: the approvals that wait (each with its actions), earlier notices (blocked attempts, finished tasks), and Quiet hours |
+| `desktop/control-center.png` | `83:4779` | Opens from the system menu: the box and its uptime, Settings, Lock and Power, quick toggles (network, quiet hours, dark style, pause agents), and what is running now with progress |
+| `desktop/lock-screen.png` | `83:4965` | The clock, the box's name, the waiting approvals without their actions (unlock or use the phone), and the passcode field |
+| `desktop/boot-after-power-cut.png` | `85:5480` | Moment 4 while the box starts: the wordmark, progress, and the log being read |
+| `desktop/restored-after-power-cut.png` | `85:5495` | Moment 4 after: "Welcome back", widgets for resumed tasks and "paid twice: 0", and an info notification. Data: the `task.state` events after boot |
+
 ## Windows (`windows/`)
 
 | PNG | Node | What it shows, and its data |
@@ -60,6 +71,10 @@ screen or the owner's phone.
 | `windows/tasks.png` | `57:722` | Tasks, like Activity Monitor: views in the header bar (All, Running, Waiting, Done with counts), one row per task with the user it runs as, its state badge, its `step` and progress, its cost of its budget, and a summary strip (running, waiting, spent today, blocked today) |
 | `windows/app-center.png` | `79:4011` | App Center: a sidebar of filters (all, on, off, needs a key) and a grid of app cards with status, hosts and keys, and one action each. `GET /api/apps?all=1` |
 | `windows/app-center-shopper-detail.png` | `79:4398` | One app: what it does, Turn off, every host it reaches (`access.hosts`), every key it needs (`access.secrets`), and the tools, windows and triggers it adds |
+| `windows/task-detail.png` | `84:4845` | One task: state, time, cost of budget, the blocked-attempts alert, its steps from the log (blocked ones red), the files it changed, and what it was allowed. `GET /api/tasks/<id>` (`task`, `events`), `GET /api/tasks/<id>/diff`. Undo task is the header bar's main action |
+| `windows/task-detail-undo-confirm.png` | `84:5090` | The alert dialog before `POST /api/tasks/<id>/undo`: Cancel first, "Undo task" in red |
+| `windows/activity.png` | `84:5312` | The action log as an event viewer: filters in the sidebar, one row per event (`seq`, time, task, `type` as a chip, text), blocked events red, approvals amber, and the selected event's fields below. `GET /api/log?after=<seq>` over SSE |
+| `windows/time-machine.png` | `85:5256` | One workspace's layers as a stack, newest on top, the base files at the bottom; for the selected layer, what comes out and what stays, and Undo this task |
 
 ## System sheets
 
