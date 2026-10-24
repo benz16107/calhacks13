@@ -18,12 +18,11 @@ How it was walked:
 
 ## Status
 
-**Fixed 67, closed 1, open 24** (92 findings: 19 web, 22 Server, 36 Personal, 15 parity). Each fixed
+**Fixed 68, closed 1, open 23** (92 findings: 19 web, 22 Server, 36 Personal, 15 parity). Each fixed
 finding gets a **Fixed** line with the commit and an after-screenshot in `after/`.
 
 | Owner | Open |
 |---|---|
-| apify track | A-1 |
 | personal | P-29 waits for Ben |
 | image | S2, S15, S16, S24, P-4, P-17, P-28, E-1 to E-11, E-15, then P-1 with release |
 | personal (parity) | E-14 (re-measuring) |
@@ -351,6 +350,9 @@ Its own H1, browser-default table, and "what the box counted" (`after/srv-app-ap
 Factory and the Live board (9c6a719, bd87b04), "No Apify calls yet. When an agent reads a page or checks a price,
 its cost shows here.", and "this computer". Owner: apify track.
 
+
+**Fixed in 8ae9448** (apify): the kit, task titles, the plain intro and empty state, light and dark.
+![](after/srv-app-apify.png) ![](after/srv-app-apify-dark.png) Reaches the installed computers with the final deploy.
 ### S27. P2. App windows show their URL path as a subtitle
 "/t/spacetime/", "/t/factory/" under the window title (`after/srv-app-live.png`). Fix: no subtitle, or the app's
 one-line description. Owner: portal.
