@@ -33,8 +33,9 @@ the download pages. The UX thread sends the commit once the Personal, image and 
 before midnight PT, hard cutoff 6:30 AM PT Sunday (at 5:30 AM the best demo-ready commit goes regardless).
 
 Deployed: the three installed computers run e5d7246 (core, after the UX batches). The live remote addresses serve the
-new build (`after/live-remote-address.png`, `after/live-remote-laptop.png`). app.gurtos.com is still the old build
-until the remote access thread redeploys it.
+new build (`after/live-remote-address.png`, `after/live-remote-laptop.png`). app.gurtos.com was redeployed from 4e563a7
+(portal 0c254e5): "Computer's address", 44 px targets (`after/live-app-gurtos.png`). Roll back with
+`vercel promote gurtos-jp6up1pve-benz16107-1762s-projects.vercel.app` from the laptop's Vercel login.
 
 ## Top 10
 
