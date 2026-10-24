@@ -7,7 +7,7 @@ at https://nessieisreal.com/nessie-openapi-spec.yaml. **Nothing was called with 
 
 | What | Where to get it | Store as |
 |---|---|---|
-| One Nessie API key | Log in with GitHub at https://nessieisreal.com, then open Profile | `NESSIE_API_KEY` in a git-ignored `.env` on the test VM |
+| One Nessie API key | Log in with GitHub at https://nessieisreal.com, then open Profile | `NESSIE_API_KEY` in the box vault, `/etc/box/vault.env` on the test VM |
 
 The key goes on every request as a query parameter: `?key=...`. One key is enough. It owns its own customers.
 
@@ -64,7 +64,7 @@ What the bank then shows against the ledger:
 3. For each invoice: `POST /accounts/{customer account}/bills`.
 4. For each payment except PMT-8823: `POST /accounts/{Fogline Operating}/deposits`.
 5. For each applicant: customer, Checking account, then one deposit per month from `bank_statements.csv`.
-6. Write the Nessie ids next to the case ids in a git-ignored file on the VM, so a reseed is not needed after a restart.
+6. Write the Nessie ids next to the case ids in a file on the VM, outside the repo, so a reseed is not needed after a restart.
 
 ## Questions worth asking Capital One
 

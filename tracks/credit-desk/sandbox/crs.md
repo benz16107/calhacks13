@@ -8,7 +8,7 @@ Read on 2026-10-23 from https://calhacks.crscreditapi.com and the CRS MCP server
 
 | What | Where to get it | Store as |
 |---|---|---|
-| CRS sandbox username and password | https://calhacks.crscreditapi.com, "Get started": enter your email, follow the invite email to the CRS portal. A second email links the Postman collection. | `CRS_USERNAME`, `CRS_PASSWORD` in a git-ignored `.env` on the test VM |
+| CRS sandbox username and password | https://calhacks.crscreditapi.com, "Get started": enter your email, follow the invite email to the CRS portal. A second email links the Postman collection. | `CRS_USERNAME`, `CRS_PASSWORD` in the box vault, `/etc/box/vault.env` on the test VM |
 
 When the account arrives, ask the CRS booth to confirm these products are on it (a `401` from one means it is off):
 
