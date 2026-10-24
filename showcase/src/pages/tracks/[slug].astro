@@ -35,7 +35,7 @@ const jumps = [
 
 <Base title={`${d.sponsor}: ${d.title} | GurtOS at Cal Hacks 13.0`} description={d.summary}>
   <article class="wrap track">
-    <nav class="crumbs" aria-label="Breadcrumb"><a href="/#tracks">Tracks</a> / {number} / {d.sponsor}</nav>
+    <nav class="crumbs" aria-label="Breadcrumb"><a href="/">All tracks</a> / {number} / {d.sponsor} <span class="to-product">· The product: <a href={LINKS.docs}>gurtos.com</a></span></nav>
     <header class="head">
       <div class="head-main">
         <p class="kicker">Track {number} · Sponsor track</p>
@@ -83,8 +83,8 @@ const jumps = [
     </div>
 
     <nav class="pager" aria-label="More tracks">
-      {prev ? <a href={`/tracks/${prev.id}/`} rel="prev">Previous: {prev.data.sponsor}</a> : <a href="/">Back to the overview</a>}
-      {next ? <a href={`/tracks/${next.id}/`} rel="next">Next: {next.data.sponsor}</a> : <a href="/#tracks">All tracks</a>}
+      {prev ? <a href={`/tracks/${prev.id}/`} rel="prev">Previous: {prev.data.sponsor}</a> : <a href="/">Back to the tracks list</a>}
+      {next ? <a href={`/tracks/${next.id}/`} rel="next">Next: {next.data.sponsor}</a> : <a href="/">All tracks</a>}
     </nav>
     <details class="others">
       <summary>Every track</summary>
@@ -103,6 +103,10 @@ const jumps = [
   .track {
     padding-top: var(--space-5);
     max-width: 64rem;
+  }
+  .to-product {
+    margin-left: var(--space-3);
+    color: var(--color-text-secondary);
   }
   .crumbs {
     font-size: 0.88rem;

@@ -33,10 +33,10 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
     <header class="site">
       <div class="wrap bar">
         <nav class="primary" aria-label="Site">
-          <a class="brand" href="/" aria-label="GurtOS at Cal Hacks 13.0, overview"><span class="g">Gurt</span><span class="o">OS</span></a>
-          <a href="/#editions">The ecosystem</a>
-          <a href="/#tracks">Tracks</a>
-          <a href="/#download">Download</a>
+          <a class="brand" href="/" aria-label="GurtOS at Cal Hacks 13.0, the tracks"><span class="g">Gurt</span><span class="o">OS</span></a>
+          <a href="/">Tracks</a>
+          <a href="/evidence/">Evidence</a>
+          <a href={LINKS.docs}>gurtos.com</a>
         </nav>
         <p class="where">Cal Hacks 13.0 <span aria-hidden="true">·</span> calhacks.gurtos.com</p>
       </div>
@@ -56,7 +56,7 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
         <div class="wrap bar">
           <p>GurtOS v0.1.0-preview <span aria-hidden="true">·</span> Apache-2.0 <span aria-hidden="true">·</span> Built at Cal Hacks 13.0</p>
           <nav aria-label="Footer">
-            <a href="/#download">Download</a>
+            <a href={`${LINKS.docs}/download/`}>Download</a>
             <a href={LINKS.repo}>GitHub</a>
             <a href={LINKS.docs}>Docs</a>
             <a href="/terms/">Terms</a>
