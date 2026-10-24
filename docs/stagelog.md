@@ -43,10 +43,22 @@ One line per Figma step: stage, Figma tool, minutes, rating 1 to 5, how the outp
 | Sat Oct 24, 1:20 to 2:00 AM | Code generation: GurtOS Personal OS on GNOME 46 | The PNGs, the table of how each part ships and the assets in `docs/figma/personal-os/`, read by Claude Code; built as a GNOME Shell extension, Shell stylesheet, libadwaita app, search providers and a Files extension, then checked against each frame on a test VM | 40 | 4 | `personal/`: the top bar's amber "needs you" pill and running count, the popover's approval card, the Agents tile and its menu, lock-screen cards where Deny works and Unlock to approve asks for the password, search in two sections, per-file emblems after Keep, and Settings with a view switcher. The wallpapers, Papirus with slate folders, Bibata, the wordmark, GDM logo and Plymouth theme are installed by `personal/theme/install.sh`. Not built: the Files bar (no nautilus-python API for it), a full Shell gresource, and the Pause and May read controls, which need core APIs. Screenshots in `personal/README.md`. |
 | Sat Oct 24, 1:50 to 2:02 AM | Design: the GurtOS phone app, one app for every machine | Figma Design via Claude Code and Figma's MCP server (`use_figma`, `get_screenshot`); Apple's HIG pages for sheets and notifications; a QR code made with segno | 12 | 4 | Page "GurtOS phone app", built from the approved system's phone frames and components: the Machines sheet (switch like accounts, each machine with its edition, online state and what waits), Add a machine, a home for Server, Personal (Keep and Undo) and Business (Rosa's Waiting for me), the lock-screen notification named by its machine and the approval it opens, and the install flow from the QR code to pairing inside the Home Screen app. Thirteen PNGs in `docs/figma/phone-app/`. |
 | Sat Oct 24, 2:05 to 2:06 AM | Design: GurtOS Business and the phone app, back to the approved people | Figma Design via Claude Code and Figma's MCP server (`use_figma`, `get_screenshot`) | 1 | 4 | Ben approved the checkpoint and the Business thread moved its core to it, so the frames went back to Sam Chen, Priya Nair and Owen Clarke, took the five-line policy (fraud reviewer, the $50,000 ceiling), the new route sentences, the audit search and the QR code after Add a person. Nine Business PNGs and four phone app PNGs replaced. |
+| Sat Oct 24, about 1:15 to 3:15 AM (Business thread) | Code generation: GurtOS Business from the approved frames | The approved frames in `docs/figma/business/` as exported PNGs, read by Claude Code | 120 | 4 | The Business screens in `portal/`: People and Add a person, Rules with its tester, Waiting for me on the phone and the desktop, My requests, Audit, the kill switch and the paused desktop, each reading the box's own values. Added here so the table matches the paragraph below. |
+| Sat Oct 24, 2:32 to 2:40 AM | Ideation: research for the Figma push, every Figma product | The web (Figma's product pages, help center, developer docs, the Config 2026 recap) and the Figma MCP's own tool list and answers | 8 | 4 | `docs/figma-products.md`: each Figma product, how GurtOS uses it, why it helps, and its status, including what the student plan blocks (publishing Code Connect, the variables REST API) and the clicks only Ben can make. |
+| Sat Oct 24, 2:35 to 2:58 AM (helper agent, in parallel) | Handoff: Figma variables to kit tokens, with a drift check | Figma's MCP server: `use_figma` exports every variable in every mode, because the variables REST API is Enterprise-only | 23 | 4 | `docs/figma/tokens/`: the export, `sync.ts --check` (18 drifts across 82 tokens on its first run, handed to the portal thread), `--css` and a self-test. |
+| Sat Oct 24, 2:35 to 3:02 AM (helper agent, in parallel) | Code generation: the real app beside each Figma frame | The exported frames and the portal's screenshots, compared in headless Chrome with no new dependencies | 27 | 4 | `docs/figma/compare/`: 77 pairs, 62 with a score for how much differs and 15 waiting for real Business and phone-app screenshots. `node docs/figma/compare/compare.ts` regenerates them. |
+| Sat Oct 24, 2:35 to 3:07 AM (helper agent, in parallel) | Prototyping: the GurtOS phone app in Figma Make | Figma Make (`create_new_file`, `send_code_to_figma`) | 32 | 4 | A Vite and React prototype in the system's tokens: switch machines, approve from the lock-screen notification, Keep and Undo, Pause all agents, the install walkthrough. Checked in a local browser; Make's own preview and publishing wait for Ben. Source in `docs/figma/make-phone-app/`. |
+| Sat Oct 24, 2:40 to 3:05 AM | Handoff: Code Connect templates and Dev Mode code for every component | Figma's MCP server (`get_code_connect_suggestions`, which refused: Code Connect needs an Organization or Enterprise plan; then `use_figma`) and Figma's Code Connect skill for the template format | 25 | 3 | `docs/figma/code-connect/`: 23 parserless templates and 72 generated for icons and app icons, ready to publish on an eligible plan. On our plan, all 95 components' Dev Mode descriptions now show the kit code and link to its source line. Rated 3 because Code Connect itself can't be published on a student plan. |
+| Sat Oct 24, 3:08 to 3:11 AM | Prototyping: the editions as variable modes, and the wired phone prototype | Figma Design via `use_figma`: a variable collection with modes, and prototype actions that set a variable, set a variable mode and run a conditional | 3 | 4 | The GurtOS Edition collection (Server, Personal, Business), an EditionCard bound to it, and three flows on the phone app page: switch machines, notification to approval (a conditional on the machine variable), and install. |
+| Sat Oct 24, 3:11 to 3:13 AM | Ideation: one FigJam map of the whole ecosystem | FigJam via `generate_diagram` (drawn twice: the first copy broke when moved) | 2 | 4 | The map on the board: the Figma files, the agent, the repo's checks and every surface people use. `docs/figma/ecosystem-map.png`. |
+| Sat Oct 24, 3:13 to 3:18 AM | Design: the GurtOS landing page for Figma Sites | Figma Design via `use_figma`; the MCP can't make a Sites file | 5 | 4 | Desktop and mobile frames built from the real GurtOS screens and the EditionCard in its three modes, with Ben's steps to paste them into Sites and publish. `docs/figma/landing/`. |
+| Sat Oct 24, 3:18 to 3:21 AM | Design: the Community cover and the playbook | Figma Design via `use_figma` | 3 | 4 | Cover and Playbook pages first in the design file, and `docs/figma/playbook.md`: the agent-driven workflow, the prompts used and how to adopt it. Publishing to Community is Ben's click. |
+| Sat Oct 24, 3:21 to 3:22 AM | Design: the motion spec | Figma Design via `use_figma` | 1 | 4 | A Motion sheet on the system page: the three curves and each animation's duration, curve, kit class and what Reduce motion does. `docs/figma/motion/motion.png`. |
+| Sat Oct 24, 3:22 to 3:25 AM | Pitch deck: the Figma push, with the stage log's numbers | Figma Slides via `use_figma` | 3 | 4 | Slide 6 shows GurtOS Business in development; slide 14 counts 82 tokens, the Edition modes and the components linked to code; slide 15 shows each stage's minutes from this log and the honest ratings. The stage log gained the Business thread's missing row and this push's rows, and the Devpost paragraphs now match the table. |
 
 ## For Devpost (up to 200 words per stage)
 
-**Ideation (FigJam and Figma Design, 32 minutes, 4 of 5).** Claude Code built the FigJam board through Figma's MCP
+**Ideation (FigJam and Figma Design, 42 minutes, 4 of 5).** Claude Code built the FigJam board through Figma's MCP
 server: the architecture and the four demo moments with `generate_diagram`, and the 25 sponsor tracks grouped by the
 slot each plugs into. When the first screens looked like a B2B dashboard, it collected 15 OS references from
 official pages into a moodboard on the same board, then drew three OS directions (home-server OS, across-the-room
@@ -54,17 +66,17 @@ console, hardware OS) on the box screen and the phone. Ben picked the home-serve
 `docs/figma/refs/` and `docs/figma/directions/`. When the built screens still read as a SaaS product, a second round
 collected 15 references from GNOME, elementary OS, macOS, Windows 11, Ubuntu, Synology DSM, umbrelOS and iOS, each
 with one rule to take from it, into `docs/figma/refs/os-system/` and a new section of the board. Those rules became
-the GurtOS design system in `docs/figma/system.md`.
+the GurtOS design system in `docs/figma/system.md`. For the last push it researched every Figma product into `docs/figma-products.md` and drew one FigJam map of the whole ecosystem.
 
-**Prototyping (Figma Design and Figma Make, 26 minutes, 4 of 5).** The first round wired two flows between the
+**Prototyping (Figma Design and Figma Make, 61 minutes, 4 of 5).** The first round wired two flows between the
 real screens: an approval arriving on the phone, and undoing one task on the box with a confirm step. After the
 redesign, Claude Code wired four flows across the 64 v2 screens with 136 prototype links: all 12 setup steps, approving
 a spend on the phone (the approval arrives on the lock screen after 1.2 s), undoing one task on the box through to an
 undone state with a toast, and the desktop with Notification Center, Control Center and every Settings page. Both
 rounds also went into Figma Make as a small working web page in the design's tokens, tested in a browser before each
-import. Links are in `docs/figma.md`.
+import. Links are in `docs/figma.md`. The phone app then went into Make as a clickable prototype, and the three editions became one variable collection with a mode each, which the phone flows switch with set-variable-mode and a conditional.
 
-**Handoff (Figma Design and Figma's MCP server, 19 minutes, 4 of 5).** Two handoffs. The first (4 minutes) made the design file ready
+**Handoff (Figma Design and Figma's MCP server, 67 minutes, 4 of 5).** Two handoffs. The first (4 minutes) made the design file ready
 for code: every frame named, auto layout throughout, and every color, size and motion value a variable with its CSS
 name as code syntax, so `get_design_context` emits the names the portal uses. `docs/figma.md` lists each screen's node
 ID and the API data behind it. After the redesign, `docs/figma/os-v2/README.md` does the same for every v2 screen,
@@ -72,18 +84,16 @@ matched to the core's setup, settings, apps and vault routes, and the screens re
 portal thread could build each one while the next was drawn. The second (15 minutes) took the Personal (GNOME) frames
 to the Personal thread as exported PNGs with notes, not as web code, because Personal is native GTK and libadwaita.
 Each frame's sections became a widget: the indicator menu's "Needs you" and "Running", the notification's actions,
-the Ask an Agent dialog's access group. `docs/figma/system.md` holds the rules, including guidelines for app makers.
+the Ask an Agent dialog's access group. `docs/figma/system.md` holds the rules, including guidelines for app makers. The last push tied design to code: every component's Dev Mode description now holds its kit code and source link (publishing Code Connect needs an Organization plan), and a script exports the variables and fails when the kit's tokens drift.
 
-**Code generation (Figma's MCP server, 202 minutes, 4 of 5).** Claude Code read the screens with `get_design_context`
+**Code generation (Figma's MCP server, 229 minutes, 4 of 5).** Claude Code read the screens with `get_design_context`
 and adapted Figma's React and Tailwind reference into the portal's own Preact components and CSS. The first rounds
 built Shopper's approval page and the direction A screens. When Ben approved the GurtOS design system, the next round
 turned its variables into a kit: each Figma variable is a CSS custom property with the same name in Light and Dark. On that kit it built a desktop with movable windows,
 the 12-step setup, ten Settings pages, App Center and the phone. Another round built GurtOS Personal's GNOME layer from the same frames and tokens as
 libadwaita widgets: the seven-step setup, Ask an Agent, Keep or Undo, the top-bar menu and the notification. A later
-round (40 minutes) turned the Personal OS frames into a Shell extension and installed the exported theme. Anything
-the box can't back up was cut: no made-up greeting, no Power button without an API, no progress bar without a step
-count. The output is `portal/`, the kit at `/kit/` for track apps, and `personal/`.
-`portal/README.md` puts every Figma frame beside a screenshot of the running app.
+round (40 minutes) turned the Personal OS frames into a Shell extension and installed the exported theme. The output is `portal/`, the kit at `/kit/` for track apps, and `personal/`.
+`portal/README.md` puts every Figma frame beside a screenshot of the running app. A script now regenerates that comparison for 77 frames with a difference score.
 
 **Code generation, GurtOS Business (the approved frames as exported PNGs, about 120 minutes, 4 of 5).** Claude Code
 built the Business screens from the frames in `docs/figma/business/` once Ben approved them: People and Add a person,

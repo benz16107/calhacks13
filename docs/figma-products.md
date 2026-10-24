@@ -14,21 +14,21 @@ Figma MCP connector exposes. The team is on Figma's student (Education) plan, wh
 | Product or feature | How GurtOS uses it | Why it helps the ecosystem | Status |
 |---|---|---|---|
 | **Figma Design** | The design system (tokens, type, 60 icons, 14 app icons, 30 components) and every screen: setup, desktop, eight apps, Settings, Personal on GNOME 46, Business, the phone app | One source for every surface | Done, about 200 frames |
-| **Variables and modes** | Colour tokens in Light and Dark modes, sizes, easing. An "Edition" collection with Server, Personal and Business modes drives the edition prototype | The same frame renders each edition and each theme, so they can't drift apart | Colours and sizes done; Edition modes in this push |
-| **Advanced prototyping** (variables, conditionals) | The edition prototype: one Machines switcher sets the Edition variable, and conditionals pick what each home shows | Shows the three editions as one product | This push |
+| **Variables and modes** | Colour tokens in Light and Dark modes, sizes, easing. An "Edition" collection with Server, Personal and Business modes drives the edition prototype | The same frame renders each edition and each theme, so they can't drift apart | Done: colours and sizes, and the Edition collection with three modes |
+| **Advanced prototyping** (variables, conditionals) | The edition prototype: one Machines switcher sets the Edition variable, and conditionals pick what each home shows | Shows the three editions as one product | Done: three flows on the phone app page |
 | **Dev Mode** | Each component's description holds its kit code and links to the source line | Developers see the real code next to the design | Done for 95 components |
 | **Code Connect** | 95 parserless templates map every Figma component to the Preact kit (`docs/figma/code-connect/`) | Dev Mode would show code filled in from the selected instance | Templates done. Publishing needs an Organization or Enterprise plan; the MCP refuses on our plan |
 | **Figma MCP server** | How the agent works: `use_figma` to build, `get_screenshot` to check, `get_design_context` and `get_variable_defs` to build code, `send_code_to_figma` for Make | The whole workflow is repeatable by any team with an agent | Used for every step |
 | **REST API** | Not for variables: Figma's variables endpoints are Enterprise-only, so the token export runs through the MCP (`docs/figma/tokens/`) | | Considered, not usable on our plan |
 | **Webhooks** | A `FILE_UPDATE` webhook on the design file would tell the build the design changed, so an agent re-exports tokens, runs the drift check and regenerates the comparisons | Design changes reach code without anyone remembering | Steps below; needs Ben's token |
 | **Figma Make** | The GurtOS phone app as a clickable prototype ([Make file](https://www.figma.com/make/gSXGjlKZRZbtMSKjxTvjgK)), and the earlier v2 portal prototype | People can try the phone app before it exists | Done; publishing is Ben's click |
-| **FigJam** | The ideation board, and a map of the whole ecosystem: editions, surfaces, the design system, the code and the checks between them | One picture of how everything fits | Board done; ecosystem map in this push |
-| **Figma Slides** | The 16-slide pitch deck | The pitch uses the same frames and tokens | Done; polish in this push |
-| **Figma Sites** | A GurtOS landing page | The public face uses the same system | This push. Education plans can publish one site, without a custom domain |
-| **Figma Community** | Publish the GurtOS design system with a playbook page: the agent-driven workflow and the prompts | Others can adopt the system and the workflow | Playbook in this push; publishing is Ben's click |
+| **FigJam** | The ideation board, and a map of the whole ecosystem: editions, surfaces, the design system, the code and the checks between them | One picture of how everything fits | Done: the board and the ecosystem map |
+| **Figma Slides** | The 16-slide pitch deck | The pitch uses the same frames and tokens | Done: slides 6, 14 and 15 updated to the stage log |
+| **Figma Sites** | A GurtOS landing page | The public face uses the same system | Designed (desktop and mobile); publishing is Ben's click. Education plans can publish one site, without a custom domain |
+| **Figma Community** | Publish the GurtOS design system with a playbook page: the agent-driven workflow and the prompts | Others can adopt the system and the workflow | Done: Cover and Playbook pages; publishing is Ben's click |
 | **Shaders** | Considered for an animated night-hills fill on the landing page | | Only if time allows |
 | **Generative plugins** | Considered: a checker that finds colours not bound to a GurtOS variable | Keeps new frames on the system | Only if time allows |
-| **Figma Motion** | The OS's motion values (100, 200, 300 ms; enter, exit and standard easing) as a spec page; the token check already flags that the kit's curves differ | Motion stays consistent across surfaces | Spec in this push |
+| **Figma Motion** | The OS's motion values (100, 200, 300 ms; enter, exit and standard easing) as a spec page; the token check already flags that the kit's curves differ | Motion stays consistent across surfaces | Done: a Motion sheet on the system page |
 | **Weave** | Wallpapers and imagery | | Not used: every Weave run needs Ben's OK on its cost first |
 | **Figma Buzz** | Launch and social assets from the same templates | Consistent assets | Not possible from the MCP (it can't make Buzz files); steps below if Ben wants it |
 | **Figma Draw** | The wallpapers and icons are vector work in Design | | Not needed separately |

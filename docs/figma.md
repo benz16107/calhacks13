@@ -50,6 +50,23 @@ Add a machine, a home for each edition, the lock-screen notification and the app
 (scan, Safari, Add to Home Screen, allow notifications, pair) are in [`figma/phone-app/README.md`](figma/phone-app/README.md)
 (page "GurtOS phone app").
 
+## The Figma push: one ecosystem, design kept tied to code (Sat Oct 24)
+
+The plan for every Figma product, what it does for GurtOS and what only Ben can click is
+[`figma-products.md`](figma-products.md). What it produced:
+
+| Piece | Where | What it does |
+|---|---|---|
+| Code in Dev Mode | [`figma/code-connect/`](figma/code-connect/README.md) | All 95 components (23 UI, 58 icons, 14 app icons) show their kit code and link to the source line. Code Connect templates are ready; publishing them needs an Organization plan |
+| Token sync | [`figma/tokens/`](figma/tokens/README.md) | Exports every Figma variable and fails when the kit's CSS tokens drift. First run: 18 drifts, handed to the portal thread |
+| App vs Figma | [`figma/compare/`](figma/compare/README.md) | 77 frames beside the running app with a difference score, regenerated on demand |
+| Editions as variable modes | [`figma/editions/`](figma/editions/editions-one-component-three-modes.png) | The "GurtOS Edition" collection (Server, Personal, Business) and the EditionCard bound to it; the phone prototype switches modes and runs a conditional |
+| Phone app prototype (Make) | [`figma/make-phone-app/`](figma/make-phone-app/README.md) | The phone app as a clickable prototype |
+| Ecosystem map (FigJam) | [`figma/ecosystem-map.png`](figma/ecosystem-map.png) | The Figma files, the agent, the repo's checks and every surface |
+| Landing page (Sites) | [`figma/landing/`](figma/landing/README.md) | Desktop and mobile, from the real screens; Ben pastes it into Sites and publishes |
+| Community file | [`figma/playbook.md`](figma/playbook.md), [`figma/community/`](figma/community/cover.png) | Cover and Playbook pages first in the design file; publishing is Ben's click |
+| Motion | [`figma/motion/motion.png`](figma/motion/motion.png) | Each animation's duration, curve, kit class and Reduce motion behaviour |
+
 ## Files
 
 | File | Link | What is in it |
@@ -58,7 +75,10 @@ Add a machine, a home for each edition, the lock-screen notification and the app
 | Ideation board (FigJam) | https://www.figma.com/board/KvHiDv5HIJuGYOZDDkp8VG | Architecture, the four demo moments, the 25 tracks by slot, the moodboard |
 | Prototype (Figma Design) | Setup: https://www.figma.com/proto/oppzH621OOOMA31rgLbxbM/?node-id=54-86&starting-point-node-id=54%3A86 · Phone: https://www.figma.com/proto/oppzH621OOOMA31rgLbxbM/?node-id=90-6534&starting-point-node-id=90%3A6534 · Box, undo: https://www.figma.com/proto/oppzH621OOOMA31rgLbxbM/?node-id=57-722&starting-point-node-id=57%3A722 · Desktop and Settings: https://www.figma.com/proto/oppzH621OOOMA31rgLbxbM/?node-id=83-4401&starting-point-node-id=83%3A4401 | Four flows wired between the v2 screens on "GurtOS screens v2" (136 links). The direction A prototype is still on "OS screens" |
 | Prototype (Figma Make) | https://www.figma.com/make/udWOO0nK4qggSCOIMqKjCZ | v2: the two flows (approve from the phone, undo one task on the box) as a small working web page in the GurtOS system: Atkinson Hyperlegible, the v2 tokens and Adwaita icons. Tested in a browser before the import. It replaces `PuKKW48akjbEKogpI59pdL` (direction A, GurtOS name) and `19hhCgh3CFsgfi1eBienAS` (direction A, Box name) |
-| Pitch deck (Figma Slides) | https://www.figma.com/slides/SBrJtJiY20k88X3IGzKwZW | 16 slides in Atkinson Hyperlegible with the v2 screens: the GurtOS wordmark, OpenClaw's demand and security record (sourced), doing it by hand, the box, the three editions, the setup wizard, the four moments, architecture, tracks, the design system, the Figma workflow |
+| Pitch deck (Figma Slides) | https://www.figma.com/slides/SBrJtJiY20k88X3IGzKwZW | 16 slides in Atkinson Hyperlegible with the v2 screens: the GurtOS wordmark, OpenClaw's demand and security record (sourced), doing it by hand, the box, the three editions, the setup wizard, the four moments, architecture, tracks, the design system, and the Figma workflow with each stage's minutes from `stagelog.md` |
+| Phone app prototype (Figma Make) | https://www.figma.com/make/gSXGjlKZRZbtMSKjxTvjgK | The GurtOS phone app: switch machines, approve from the notification, Keep and Undo, the install walkthrough. Publishing and "Anyone with the link" are Ben's clicks |
+| Phone app prototype (Figma Design) | Switch machines: https://www.figma.com/proto/oppzH621OOOMA31rgLbxbM/?node-id=130-87&starting-point-node-id=130%3A87 · Notification: https://www.figma.com/proto/oppzH621OOOMA31rgLbxbM/?node-id=133-324&starting-point-node-id=133%3A324 · Install: https://www.figma.com/proto/oppzH621OOOMA31rgLbxbM/?node-id=133-445&starting-point-node-id=133%3A445 | Three flows on "GurtOS phone app", using the Edition variable modes and a conditional |
+| Landing page (for Figma Sites) | Page "GurtOS landing (Sites)" in the design file | Desktop `142:87` and mobile `144:864`; steps to publish in `figma/landing/README.md` |
 
 File key for MCP calls: `oppzH621OOOMA31rgLbxbM`. Open a node with
 `https://www.figma.com/design/oppzH621OOOMA31rgLbxbM/?node-id=<id with a dash>`.
