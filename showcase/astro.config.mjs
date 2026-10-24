@@ -12,5 +12,5 @@ export default defineConfig({
     shikiConfig: { theme: 'github-light' },
   },
   integrations: [mdx()],
-  redirects: { '/tracks/nessie': '/tracks/hyphenate/' },
+  redirects: { '/tracks/nessie': '/tracks/hyphenate/', '/tracks/godaddy': '/' },
 });

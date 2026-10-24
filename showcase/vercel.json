@@ -30,6 +30,16 @@
       "source": "/tracks/nessie",
       "destination": "/tracks/hyphenate/",
       "permanent": true
+    },
+    {
+      "source": "/tracks/godaddy/",
+      "destination": "/",
+      "permanent": true
+    },
+    {
+      "source": "/tracks/godaddy",
+      "destination": "/",
+      "permanent": true
     }
   ]
 }

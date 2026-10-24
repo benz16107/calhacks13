@@ -37,8 +37,6 @@ E = {
    "AI workspaces are great for thinking, but there is no safe place for an AI to act on your real computer. Mana plans it, GurtOS does it safely in an isolated space, and you approve from your phone. Four public Mana chats shaped the credit desk rules, Business approval rules, Visa mandates and the Fetch agent team, each with what it changed in code."),
  'armadin': ("All three editions",
    "Agents get attacked through the pages they read and the packages they install, and on an ordinary OS a fooled agent can read every key and send it anywhere. GurtOS stops it at the OS, whatever the model does, in every edition, and publishes the test for each control. Next (being built): a poisoned npm package, tripwire keys, a deeper per-task sandbox, a scoreboard of about 15 OS-level attacks with its misses, a hijacked payment and an OWASP mapping."),
- 'godaddy': ("All three editions",
-   "One name for every edition, GurtOS Server, GurtOS Personal and GurtOS Business, all at gurtos.com."),
  'figma': ("All three editions",
    "One design system for every edition: the box screen and phone for Server, the GNOME layer for Personal, and room in the same tokens for Business."),
 }

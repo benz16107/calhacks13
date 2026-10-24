@@ -23,7 +23,6 @@ PROBLEM = {
  'moss': "A personal agent is only useful if it remembers you, and today that means uploading your life to someone's cloud, and any web page an agent reads can plant false memories.",
  'apify': "Web agents today drive your logged-in browser with your accounts, read booby-trapped pages, and you can't see what they spend.",
  'vultr': "Draft: an agent box should be reachable around the clock without exposing everything on it to the internet.",
- 'godaddy': "Draft: the product needs one name a person can remember for every edition, the domain and the OS itself.",
  'figma': "Draft: an OS for agents has to feel like an OS people trust, not another dashboard, and the design has to reach the code without drift.",
  'mana': "AI workspaces are great for thinking, but there is no safe place for an AI to act on your real computer.",
 }
@@ -112,6 +111,8 @@ for k in tracks:
     if k not in DECIDED: todo.insert(0, "Review the story with Ben: problem, features with their why, OS vs track")
     out += ["**Still to do:**", ""] + [f"- {x}" for x in todo or ["Nothing open."]] + [""]
 out += ["## Not entered", "",
+ "**MLH GoDaddy Registry domain.** Ben decided on Oct 24 not to enter it. Its showcase page and Devpost section are removed and",
+ "`/tracks/godaddy/` redirects to the overview. gurtos.com and the per-box `<name>.box.gurtos.com` addresses stay as they are; there is no gurtos.co.", "",
  "**Capital One (Nessie).** Ben decided on Oct 24 not to enter it. Its showcase page and Devpost section are removed and",
  "`/tracks/nessie/` redirects to the Hyphenate page. Nessie stays in the product as the credit desk's test bank, so the",
  "credit desk, Hyphenate and Microsoft pages still name it. No new Nessie features.", "",

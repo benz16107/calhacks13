@@ -71,7 +71,6 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 | CRS | GurtOS Business | decided |
 | Solana | GurtOS Server, and GurtOS Business | decided |
 | Vultr | GurtOS Server | to review with Ben |
-| GoDaddy Registry | All three editions | to review with Ben |
 | Figma | All three editions | to review with Ben |
 | Mana | GurtOS Personal and GurtOS Business | to review with Ben |
 
@@ -608,29 +607,6 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 - Booting a GurtOS disc on a Vultr instance (not built)
 - Switching to the Vultr box from another box's portal (not built)
 
-## GoDaddy Registry: MLH: Best domain name from GoDaddy Registry
-
-**Status:** to review with Ben. **Page:** https://calhacks.gurtos.com/tracks/godaddy/
-
-**Best shown in:** All three editions
-
-**Pitch:** One name for every edition, GurtOS Server, GurtOS Personal and GurtOS Business, all at gurtos.com.
-
-**The problem:** Draft: the product needs one name a person can remember for every edition, the domain and the OS itself.
-
-**Features, by the sponsor's criteria** (no OS-vs-track table yet; to write when reviewed):
-
-- *Best domain name.* (met): One word that says what the product does. A Gurt is a seatbelt: you still drive anywhere, and a crash does not throw you out. GurtOS gives agents real access (files, the web, money) and keeps each one strapped in: its own Linux user, its own copy of the files, no keys, and an undo. Short, spellable after hearing it once, and the same string in every place the product shows its name.
-- *Register a domain through GoDaddy Registry (MLH code).* (partly): gurtos.com is registered at GoDaddy (registrar GoDaddy.com, LLC, IANA id 146) and uses GoDaddy's DNS (ns69 and ns70.domaincontrol.com). Its records are added through GoDaddy's API.
-
-**Demo moment and proof:** Registered at GoDaddy.com, LLC on Fri Oct 23 at 9:29 PM PT, minutes after the rename, and live the same night: gurtos.com serves the product docs and calhacks.gurtos.com serves this site, both answered by GoDaddy's nameservers.
-
-**Still to do:**
-
-- Review the story with Ben: problem, features with their why, OS vs track
-- Register a domain through GoDaddy Registry (MLH code). (partly)
-- gurtos.co and short pairing links (not built)
-
 ## Figma: Best Workflow, Stage Log, Best Design and Most Creative
 
 **Status:** to review with Ben. **Page:** https://calhacks.gurtos.com/tracks/figma/
@@ -684,6 +660,9 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 - Review the story with Ben: problem, features with their why, OS vs track
 
 ## Not entered
+
+**MLH GoDaddy Registry domain.** Ben decided on Oct 24 not to enter it. Its showcase page and Devpost section are removed and
+`/tracks/godaddy/` redirects to the overview. gurtos.com and the per-box `<name>.box.gurtos.com` addresses stay as they are; there is no gurtos.co.
 
 **Capital One (Nessie).** Ben decided on Oct 24 not to enter it. Its showcase page and Devpost section are removed and
 `/tracks/nessie/` redirects to the Hyphenate page. Nessie stays in the product as the credit desk's test bank, so the
