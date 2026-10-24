@@ -32,8 +32,8 @@ Checked against main `7fe6651`, Sat Oct 24 08:09 PT. `./demo` from a clean workt
 |---|---|
 | verified (ISO) | 3 |
 | verified | 56 |
-| merged | 152 |
-| building | 6 |
+| merged | 151 |
+| building | 7 |
 | planned | 1 |
 | not pursued | 6 |
 | **Total** | **224** |
