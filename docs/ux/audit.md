@@ -18,12 +18,13 @@ How it was walked:
 
 ## Status
 
-**Fixed 29, open 42** (71 findings: 15 web, 21 Server, 35 Personal; parity findings join when measured). Each fixed
+**Fixed 29, open 43** (72 findings: 15 web, 22 Server, 35 Personal; parity findings join when measured). Each fixed
 finding gets a **Fixed** line with the commit and an after-screenshot in `after/`.
 
 | Owner | Open |
 |---|---|
-| portal | W4 to W12, W14, W15, S1, S5 to S7, S11, S14, S17 to S23, S25, S26 |
+| portal | W4 to W12, W14, W15, S1, S5 to S7, S11, S14, S17 to S23, S25, S26, S27 |
+| factory track | S11 (Factory half) |
 | personal | P-33, P-34; P-29 waits for Ben |
 | find track | P-35 |
 | image | S2, S15, S16, S24, P-4, P-17, P-28, then P-1 with release |
@@ -275,6 +276,15 @@ Fix: fill the name from the box name (W9), show the real address as you type, dr
 Native checkboxes and selects, another heading style, and text like "Droid works here as a team of custom droids",
 "no FACTORY_API_KEY in the vault", "the spacetime.claim tool" (36, 37). Fix: the kit's controls, and plain copy
 ("No tasks shared between agents yet."). Owners: portal with the factory and spacetime threads.
+
+**Live: fixed in bd87b04** (spacetime): "Live board", kit styling, "Needs you", "this computer", empty tabs that say
+what would appear, one line when it can't be reached. ![](after/srv-app-live.png)
+Factory still open (factory thread): native controls, "Droid works here as a team of custom droids... The box
+enforces...", "no FACTORY_GITHUB_REPO in the vault", "resets in 9008 min". ![](after/srv-app-factory.png)
+
+### S27. P2. App windows show their URL path as a subtitle
+"/t/spacetime/", "/t/factory/" under the window title (`after/srv-app-live.png`). Fix: no subtitle, or the app's
+one-line description. Owner: portal.
 
 ### S1. P1. A restart with no tasks says nothing
 ![](shots/server/50-plugpull-restored-desktop.png)

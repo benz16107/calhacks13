@@ -45,6 +45,8 @@ S('srv-show-apps', { act: click('[aria-label="Show apps"]') });
 S('srv-lock', { act: async (pg) => { await click('[aria-label="System menu"]')(pg); await click('[aria-label="Lock screen"]')(pg); } });
 for (const r of ['tasks', 'tasks/running', 'tasks/waiting', 'activity', 'time-machine', 'app-center'])
   S(`srv-${r.replace('/', '-')}`, { hash: r });
+S('srv-app-live', { hash: 'app/spacetime/live' });
+S('srv-app-factory', { hash: 'app/factory/factory' });
 S('srv-tasks-dark', { hash: 'tasks', dark: true });
 for (const st of ['running', 'waiting', 'done', 'failed', 'undone']) S(`srv-task-${st}`, { hash: async () => `task/${await firstTask(SRV, st)}` });
 for (const p of ['general', 'agents', 'permissions', 'keys', 'apps', 'devices', 'remote', 'updates', 'privacy', 'appearance', 'about'])
