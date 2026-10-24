@@ -31,10 +31,10 @@ Checked against main `8a4cbf4`, Sat Oct 24 05:30 PT. `./demo` from a clean workt
 | Status | Count |
 |---|---|
 | verified (ISO) | 3 |
-| verified | 53 |
+| verified | 54 |
 | merged | 60 |
 | building | 41 |
-| planned | 21 |
+| planned | 20 |
 | not pursued | 3 |
 | **Total** | **181** |
 
@@ -190,7 +190,7 @@ controller's clear-the-flag path (FRR-5), an ASI:One chat intent for credit.
 | Rich cards | fetch | merged (Interactive Cards for approve and undo; richer cards in d7f9fc1) | 2b013a3, d7f9fc1 | fetch demo | Fetch.ai |
 | Reliability shown in chat | fetch | planned | | | Fetch.ai |
 | Picking a machine from chat | fetch | planned | | | Fetch.ai |
-| Guest requests (one guest path shared with Mana) | fetch, mana | planned (showcase says "not built") | | | Fetch.ai, Mana |
+| Guest requests (one guest path shared with Mana: a gate task for the owner's OK, then a run in the empty guest workspace) | fetch, mana | verified Oct 24 04:25 on the Mana route (Fetch calls the same route; QA has not tried it from ASI:One) | 03bade4, 804e8d0 | tracks/mana/demo.ts | Fetch.ai, Mana |
 
 ## Coinbase and Solana (wallet)
 
