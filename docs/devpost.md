@@ -101,8 +101,8 @@ spends nothing can be approved from the notification; anything that spends money
 app, and the box's log records that the answer came from the paired phone with Face ID. The iPhone app makes its own push
 keys and the box encrypts each notification for them (RFC 8291), so the relay forwards only ciphertext; native delivery
 waits on the relay getting an Apple push key. On the Watch, built and demoed on a dev box (not on main yet), the box
-approves only up to $25, only on the wrist and unlocked, and never a Business request, a fraud referral or a purchase: $8
-is approved and $40 is refused. Limits: tested in Apple's simulators and on a Mac against real GurtOS computers, not yet on
+lets it approve any request up to $25 that is not a Business request and not a Shopper purchase (the wrist check is what the
+Watch reports, not proof): $8 is approved and $40 is refused. Limits: tested in Apple's simulators and on a Mac against real GurtOS computers, not yet on
 a physical iPhone or Watch; TestFlight internal testing only, no App Store submission; Android is the web app in a Trusted
 Web Activity. Screenshots and all limits: https://calhacks.gurtos.com/evidence/#devices
 
