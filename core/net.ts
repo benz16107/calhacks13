@@ -268,7 +268,13 @@ export async function startProxy(hooks: ProxyHooks, cert: { key: Buffer; cert: B
         client.write('HTTP/1.1 200 Connection Established\r\n\r\n');
         up!.write(head);
         up!.pipe(client);
-        client.pipe(up!);
+        // Plain HTTP can arrive in a tunnel too (Node's fetch sends CONNECT host:80): read it for the decoy key.
+        // shortcut: no backpressure and a key split across two chunks is missed; fine for requests, revisit for uploads.
+        if (port === '443') client.pipe(up!);
+        else {
+          client.on('data', (c: Buffer) => (hooks.leaked(t, c.toString('latin1')) ? (client.destroy(), up!.destroy()) : up!.write(c)));
+          client.on('end', () => up!.end());
+        }
       });
       up.on('error', () => client.destroy());
     });
