@@ -5,6 +5,8 @@
 import os
 import shutil
 import subprocess
+import urllib.error
+import urllib.request
 
 from gi.repository import Adw, Gdk, Gio, GLib, Gtk
 
@@ -18,10 +20,40 @@ STEPS = [  # (id for /api/setup/step, label in the step list and the header)
 SKIPPABLE = {'apps', 'phone'}
 THRESHOLDS = [100, 500, 2000, 10000]  # cents: always ask before a single spend over this
 BUDGETS = [0, 50, 100, 500, 2000]  # cents: the budget of a task that names none
-MODEL_KEYS = [  # vault name, label, where to get it. One is enough.
+SAFE = {'approvalThresholdCents': 500, 'defaultBudgetCents': 100}  # Personal's defaults: ask over $5, budget $1
+MODEL_KEYS = [  # key name, label, where to get it. One is enough.
     ('ANTHROPIC_API_KEY', 'Anthropic API key', 'From console.anthropic.com, API keys'),
-    ('FACTORY_API_KEY', 'Or a Factory API key', 'From app.factory.ai, Settings, API keys'),
+    ('FACTORY_API_KEY', 'Factory API key, instead', 'From app.factory.ai, Settings, API keys'),
 ]
+KEYS_LINE = "GurtOS keeps keys where agents can't read them. You can replace a key but never see it."
+# Apps that suit one person on their own computer. The rest (a company's finance desk, team tools, the box's own
+# plumbing, developer samples) stay out of Personal's lists.
+PERSONAL_APPS = ('find', 'shopper', 'wallet', 'factory', 'fetch', 'mana', 'apify')
+
+
+def check_key(name, value):
+    """One cheap call before a key is saved: 'ok', 'rejected' (the provider said no) or 'unchecked' (no network)."""
+    if name != 'ANTHROPIC_API_KEY':
+        return 'unchecked'  # shortcut: only Anthropic's key is checked; Factory has no free check call to make
+    req = urllib.request.Request('https://api.anthropic.com/v1/models?limit=1', headers={'x-api-key': value, 'anthropic-version': '2023-06-01'})
+    try:
+        with urllib.request.urlopen(req, timeout=8):
+            return 'ok'
+    except urllib.error.HTTPError as e:
+        return 'rejected' if e.code in (401, 403) else 'unchecked'
+    except Exception:  # noqa: BLE001 (offline, DNS, a proxy: the key is saved and the first task tells)
+        return 'unchecked'
+
+
+def key_title(name):
+    """A key's human name: ANTHROPIC_API_KEY is "Anthropic API key", CRS_PASSWORD is "CRS password"."""
+    named = {'WALLET_SOLANA_KEY': 'Solana wallet key', 'ASI_ONE_API_KEY': 'ASI:One API key', 'AGENTVERSE_API_KEY': 'Agentverse API key',
+             'STRIPE_SECRET_KEY': 'Stripe test key', 'SHOPPER_CARD': 'Test card', 'MOSS_PROJECT_ID': 'Moss project', 'MOSS_PROJECT_KEY': 'Moss key'}
+    if name in named:
+        return named[name]
+    keep = {'API', 'CRS', 'URL', 'ID', 'ASI', 'USDC', 'IMAP', 'POP3', 'SMTP'}
+    words = [w if w in keep else w.lower() for w in name.split('_')]
+    return ' '.join(words)[:1].upper() + ' '.join(words)[1:] if words else name
 FOLDER_CHOICES = ['May change', 'Not allowed']  # "May read" waits for the core to tell reading from changing
 
 
@@ -107,9 +139,6 @@ class SetupWindow(Adw.ApplicationWindow):
         header.pack_start(self.counter)
         self.title = Adw.WindowTitle()
         header.set_title_widget(self.title)
-        access = Gtk.Button(icon_name='preferences-desktop-accessibility-symbolic', tooltip_text='Accessibility', css_classes=['flat'])
-        access.connect('clicked', lambda _b: subprocess.Popen(['gnome-control-center', 'universal-access'], start_new_session=True))
-        header.pack_end(access)
         self.stack = Gtk.Stack(transition_type=Gtk.StackTransitionType.CROSSFADE, transition_duration=300, vexpand=True)
         footer = Gtk.Box(spacing=12, css_classes=['gurt-footer'])
         self.back = Gtk.Button(label='Back')
@@ -121,11 +150,11 @@ class SetupWindow(Adw.ApplicationWindow):
         self.next.connect('clicked', self.on_next)
         for w in (self.back, self.summary, self.skip, self.next):
             footer.append(w)
-        view = Adw.ToolbarView(content=self.stack)
+        self.toasts = Adw.ToastOverlay(child=self.stack)  # over the page, never over the footer's words
+        view = Adw.ToolbarView(content=self.toasts)
         view.add_top_bar(header)
         view.add_bottom_bar(footer)
-        self.toasts = Adw.ToastOverlay(child=view)
-        self.set_content(Adw.NavigationSplitView(sidebar=sidebar, content=Adw.NavigationPage(title='Setup', child=self.toasts),
+        self.set_content(Adw.NavigationSplitView(sidebar=sidebar, content=Adw.NavigationPage(title='Setup', child=view),
                                                  min_sidebar_width=260, max_sidebar_width=300))
         self.set_default_widget(self.next)
         self.builders = [self.welcome, self.models, self.folders, self.safety, self.app_list, self.phone, self.done]
@@ -164,16 +193,21 @@ class SetupWindow(Adw.ApplicationWindow):
         for n, (r, num) in enumerate(self.rows):
             for c in ('gurt-step-done', 'gurt-step-current', 'gurt-step-upcoming'):
                 r.remove_css_class(c)
-            state = 'done' if n < i else 'current' if n == i else 'upcoming'
+            state = 'current' if n == i else 'done' if n < i or STEPS[n][0] in self.taken else 'upcoming'
             r.add_css_class(f'gurt-step-{state}')
             num.set_label('✓' if state == 'done' else str(n + 1))
         self.back.set_sensitive(i > 0)
         self.skip.set_visible(sid in SKIPPABLE)
         self.next.set_label('Start using GurtOS' if sid == 'done' else 'Next')
         self.next.set_sensitive(True)
+        if sid == 'models':
+            self.models_footer()
 
     def on_next(self, _button):
         sid = STEPS[self.at][0]
+        if sid == 'models' and self.typed_key():
+            name, entry = self.typed_key()
+            return self.check_and_save(name, entry, then=lambda: self.on_next(None))
         self.next.set_sensitive(False)
         folders = self.chosen_folders() if sid == 'folders' else None
 
@@ -208,16 +242,16 @@ class SetupWindow(Adw.ApplicationWindow):
                 self.summary.set_label(said)
         background(lambda: api('PATCH', '/api/settings', change), done)
 
-    def save_key(self, name, value, done_cb=None):
+    def save_key(self, name, value, done_cb=None, said=None):
         def done(_out, err):
             if err:
-                return self.toast(f'{name} not saved: {err}')
+                return self.toast(f'{key_title(name)} not saved: {err}')
             self.vault = [v for v in self.vault if v['name'] != name] + [{'name': name}]
             for app in self.apps:  # the apps that needed it now have it
                 for k in (app.get('access') or {}).get('secrets', []):
                     if k['name'] == name:
                         k['set'] = True
-            self.toast(f'{name} saved to the vault')
+            self.toast(said or f'{key_title(name)} saved.')
             if done_cb:
                 done_cb()
         background(lambda: api('PUT', f'/api/vault/{name}', {'value': value}), done)
@@ -230,7 +264,7 @@ class SetupWindow(Adw.ApplicationWindow):
         for icon, title, sub in (
             ('avatar-default-symbolic', 'Each agent is its own user', 'With no sudo and none of your passwords'),
             ('folder-symbolic', 'They work on copies of folders you pick', 'Nothing reaches your real folder until you keep it'),
-            ('document-open-recent-symbolic', 'You can undo any of it', "Time Machine keeps each agent's changes apart from yours"),
+            ('document-open-recent-symbolic', 'You can undo any of it', "Each task's changes stay apart from yours, even after you keep them"),
         ):
             lst.append(row(title, sub, icon))
         box.append(lst)
@@ -238,38 +272,61 @@ class SetupWindow(Adw.ApplicationWindow):
         return scroller
 
     def model_ready(self):
-        # The box says once it knows (GET /api/setup -> model.ready); until then, either key in the vault counts.
-        if isinstance(self.model, dict) and 'ready' in self.model:
-            return bool(self.model['ready'])
-        return any(self.has_key(k) for k, _l, _h in MODEL_KEYS)
+        # A key saved here counts at once; otherwise the box says (GET /api/setup -> model.ready).
+        if any(self.has_key(k) for k, _l, _h in MODEL_KEYS):
+            return True
+        return bool(isinstance(self.model, dict) and self.model.get('ready'))
+
+    def typed_key(self):
+        """The model key typed but not saved yet, as (name, entry row)."""
+        return next(((n, e) for n, e in getattr(self, 'key_entries', {}).items() if e.get_text().strip()), None)
+
+    def models_footer(self):
+        if SHOW_TITLES and STEPS[self.at][0] == 'models':  # Setup only: Settings has no Next
+            empty = not self.typed_key() and not self.model_ready()
+            self.next.set_label('Skip for now' if empty else 'Next')
+        self.summary.set_label('Key saved. Agents can start.' if self.model_ready() else 'You need a key before an agent can start.')
+
+    def check_and_save(self, name, entry, then=None):
+        """Check the key with one cheap call, then save it, or say the provider refused it and keep it out."""
+        value = entry.get_text().strip()
+        nxt = getattr(self, 'next', None) or Gtk.Button()  # Settings has no Next button
+        nxt.set_sensitive(False)
+        entry.set_sensitive(False)
+        label = 'Anthropic' if name == 'ANTHROPIC_API_KEY' else 'Factory'
+
+        def checked(result, _err):
+            nxt.set_sensitive(True)
+            entry.set_sensitive(True)
+            if result == 'rejected':
+                entry.add_css_class('error')
+                self.summary.set_label(f"{label} didn't accept this key. Check it and try again.")
+                return self.toast(f"{label} didn't accept this key. Check it and try again.")
+            entry.remove_css_class('error')
+            entry.set_text('')  # write-only: the value leaves the screen as GurtOS stores it
+
+            def saved():
+                entry.set_title(f'{dict((k, l) for k, l, _h in MODEL_KEYS)[name]} · saved')
+                self.models_footer()
+                if then:
+                    then()
+            self.save_key(name, value, saved, said=f'{label} key saved.' if result == 'ok' else
+                          f"{label} key saved. GurtOS couldn't reach {label} to check it, so the first task will.")
+        background(lambda: check_key(name, value), checked)
 
     def models(self):
-        scroller, box = page('Connect AI models', 'Agents run on Droid with Claude. Add one key: Anthropic or Factory. '
-                                                  'It goes into the vault, which only root can read.')
+        scroller, box = page('Connect Claude', "Agents use Claude. Paste an Anthropic API key from console.anthropic.com. " + KEYS_LINE)
         lst = boxed()
-        worker = row('Droid with Claude', 'Your own model key, nothing else to sign up for', 'applications-science-symbolic')
-        worker.add_suffix(Gtk.Label(label='Recommended', css_classes=['gurt-secondary']))
-        lst.append(worker)
+        self.key_entries = {}
+        for name, label, _hint in MODEL_KEYS:
+            entry = Adw.PasswordEntryRow(title=f'{label} · saved' if self.has_key(name) else label, show_apply_button=True)
+            entry.connect('apply', lambda e, name=name: self.check_and_save(name, e))
+            entry.connect('changed', lambda _e: self.models_footer())
+            self.key_entries[name] = entry
+            lst.append(entry)
         box.append(lst)
-        for name, label, hint in MODEL_KEYS:
-            saved = self.has_key(name)
-            box.append(Gtk.Label(label=f'{label} · {name}', xalign=0, css_classes=['gurt-mono'], margin_top=12))
-            entry = Gtk.PasswordEntry(show_peek_icon=False, placeholder_text='Saved. Type a new key to replace it.' if saved else hint)
-            entry.update_property([Gtk.AccessibleProperty.LABEL], [label])
-            box.append(entry)
-
-            def save(*_, entry=entry, name=name):
-                value = entry.get_text().strip()
-                if value:
-                    entry.set_text('')  # write-only: the value leaves the screen as it goes to the vault
-                    self.save_key(name, value, lambda: (entry.set_property('placeholder-text', 'Saved. Type a new key to replace it.'),
-                                                        self.summary.set_label('The key is saved. Agents can start.')))
-            entry.connect('activate', save)
-            focus = Gtk.EventControllerFocus()
-            focus.connect('leave', save)  # Next or a click elsewhere saves it too
-            entry.add_controller(focus)
-        box.append(Gtk.Label(label='Write-only: you can replace a key, never read it. Agents never see it.', xalign=0, css_classes=['gurt-caption', 'gurt-secondary']))
-        self.summary.set_label('A model key is saved. Agents can start.' if self.model_ready() else 'Agents can start once one key is saved.')
+        box.append(Gtk.Label(label='One key is enough. Press Enter or the tick to save it.', xalign=0, wrap=True, css_classes=['gurt-caption', 'gurt-secondary']))
+        self.models_footer()
         return scroller
 
     def chosen_folders(self):
@@ -277,7 +334,7 @@ class SetupWindow(Adw.ApplicationWindow):
 
     def folders(self):
         scroller, box = page('Which folders may agents use?',
-                             'Agents can only work in these, and always on a copy. Add more later from any folder in Files, with Ask an Agent.')
+                             'Agents can only work in these, and always on a copy. Add more later from any folder in Files: right-click it, then New Agent Task.')
         if self.folder_draft is None:
             allowed = list(self.settings.get('agentFolders') or [])
             first_time = 'folders' not in self.taken and not allowed
@@ -314,10 +371,13 @@ class SetupWindow(Adw.ApplicationWindow):
     def folder_summary(self):
         n = len(self.chosen_folders())
         self.summary.set_label('Folders not listed here stay out of reach.' if n else
-                               'None chosen: Ask an Agent may use any folder in your home that you pick.')
+                               'None chosen: a new task may use any folder in your home that you pick.')
 
     def safety(self):
-        scroller, box = page('Safety defaults', 'What an agent may do before it has to ask you.')
+        scroller, box = page('What agents may spend', 'And which websites they reach. An agent asks you before it goes past these.')
+        if SHOW_TITLES and 'safety' not in self.taken and self.settings.get('approvalThresholdCents', 10000) == 10000 and not self.settings.get('defaultBudgetCents'):
+            self.settings.update(SAFE)  # Personal starts careful: ask over $5, budget $1
+            self.patch(dict(SAFE))
         s = self.settings
         lst = boxed()
         internet = Adw.ComboRow(title='Internet for new tasks', subtitle='Other sites are blocked and the attempt is logged',
@@ -351,10 +411,18 @@ class SetupWindow(Adw.ApplicationWindow):
         return scroller
 
     def app_list(self):
-        scroller, box = page('Choose apps', 'Each app shows what it can reach before you turn it on.')
+        scroller, box = page('Choose apps', 'Find is on. Turn on others when you want them; each says what it needs first.')
+        if SHOW_TITLES and 'apps' not in self.taken and not getattr(self, 'apps_reset', False):  # Setup only, never Settings
+            self.apps_reset = True  # first time here: everything off but Find, so nothing runs that the owner didn't pick
+            for a in self.apps:
+                want = a['id'] == 'find'
+                if a.get('enabled') != want and a['id'] not in ('spacetime', 'anthropic'):
+                    a['enabled'] = want
+                    background(lambda a=a, want=want: api('POST', f"/api/apps/{a['id']}/{'enable' if want else 'disable'}", {}), lambda _o, _e: None)
         lst = boxed()
         lst.connect('row-activated', lambda _l, r: getattr(r, 'on_activate', lambda: None)())
-        for a in sorted(self.apps, key=lambda a: (not a.get('enabled'), app_title(a))):
+        mine = [a for a in self.apps if a['id'] in PERSONAL_APPS]
+        for a in sorted(mine, key=lambda a: (a['id'] != 'find', app_title(a))):
             lst.append(self.app_row(a))
         box.append(lst)
         self.count_apps()
@@ -362,7 +430,7 @@ class SetupWindow(Adw.ApplicationWindow):
 
     def app_row(self, a):
         access = a.get('access') or {}
-        missing = [k['name'] for k in access.get('secrets', []) if not k.get('set')]
+        missing = [k['name'] for k in access.get('secrets', []) if not k.get('set') and not k.get('optional')]
         line = Gtk.Box(spacing=16, margin_top=14, margin_bottom=14, margin_start=16, margin_end=16)
         line.append(tile(a['id'], app_title(a), 40))
         text = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=3, hexpand=True)
@@ -371,13 +439,11 @@ class SetupWindow(Adw.ApplicationWindow):
         if blurb:
             text.append(Gtk.Label(label=blurb, xalign=0, wrap=True, css_classes=['gurt-caption', 'gurt-secondary']))
         chips = Gtk.Box(spacing=6, margin_top=6, halign=Gtk.Align.START)
-        hosts = access.get('hosts') or []
-        keys = access.get('secrets', [])
-        shown = [chip(h, 'web-browser-symbolic') for h in hosts[:2]] or [chip('No internet', 'window-close-symbolic')]
-        shown += [chip(k['name'] if k.get('set') or not a.get('enabled') else f"Add {k['name']}", 'dialog-password-symbolic', attention=a.get('enabled') and not k.get('set')) for k in keys[:2]]
-        rest = max(0, len(hosts) - 2) + max(0, len(keys) - 2)
-        if rest:
-            shown.append(chip(f'{rest} more'))
+        shown = []
+        if missing:
+            shown.append(chip('Needs a key', 'dialog-password-symbolic', attention=bool(a.get('enabled'))))
+        if access.get('hosts'):
+            shown.append(chip('Uses the internet', 'web-browser-symbolic'))
         for c in shown:
             chips.append(c)
         text.append(chips)
@@ -393,12 +459,11 @@ class SetupWindow(Adw.ApplicationWindow):
         return r
 
     def add_keys(self, app, names):
-        d = Adw.MessageDialog(transient_for=self, heading=f'Keys for {app_title(app)}',
-                              body='Write-only: you can replace a key, never read it. Agents never see it.')
+        d = Adw.MessageDialog(transient_for=self, heading=f'Keys for {app_title(app)}', body=KEYS_LINE)
         fields = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         entries = {}
         for n in names:
-            fields.append(Gtk.Label(label=n, xalign=0, css_classes=['gurt-mono']))
+            fields.append(Gtk.Label(label=key_title(n), xalign=0, css_classes=['heading']))
             entries[n] = Gtk.PasswordEntry(show_peek_icon=False)
             fields.append(entries[n])
         d.set_extra_child(fields)
@@ -428,9 +493,9 @@ class SetupWindow(Adw.ApplicationWindow):
         background(lambda: api('POST', f"/api/apps/{app['id']}/{'enable' if on else 'disable'}", {}), done)
 
     def count_apps(self):
-        on = [a for a in self.apps if a.get('enabled')]
-        needs = any(not k.get('set') for a in on for k in (a.get('access') or {}).get('secrets', []))
-        self.summary.set_label(f"{len(on)} app{'s' if len(on) != 1 else ''} on." + (' Click an app with an amber key to add it.' if needs else ''))
+        on = [a for a in self.apps if a.get('enabled') and a['id'] in PERSONAL_APPS]
+        needs = any(not k.get('set') and not k.get('optional') for a in on for k in (a.get('access') or {}).get('secrets', []))
+        self.summary.set_label(f"{len(on)} app{'s' if len(on) != 1 else ''} on." + (' Click an app that needs a key to add it.' if needs else ''))
 
     def phone(self):
         scroller, box = page('Pair a phone (optional)', 'Approvals and running agents can come to your phone when you are away from this computer.')
@@ -466,10 +531,10 @@ class SetupWindow(Adw.ApplicationWindow):
         scroller, box = page('You are set', 'Here is where GurtOS lives on this computer.')
         cards = Gtk.Box(spacing=12, homogeneous=True)
         for app, title, sub in (
-            ('folder', 'Ask an Agent', 'Right-click a folder in Files and say what to do.'),
-            ('tasks', 'The top bar', 'The GurtOS indicator shows what waits for you and what runs.'),
+            ('folder', 'New task', 'Open GurtOS, or right-click a folder in Files, and say what to do.'),
+            ('tasks', 'The top bar', 'It shows what needs you and what runs.'),
             ('credit-desk', 'Keep or Undo', 'Every finished task waits for your review.'),
-            ('time-machine', 'Time Machine', "Undo one agent's changes; yours stay."),
+            ('time-machine', 'Time Machine', "Undo any task, even after Keep. Your own changes stay."),
         ):
             inner = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6, margin_top=16, margin_bottom=16, margin_start=16, margin_end=16)
             inner.append(tile(app, title, 36))
@@ -479,7 +544,7 @@ class SetupWindow(Adw.ApplicationWindow):
             card.append(inner)
             cards.append(card)
         box.append(cards)
-        self.summary.set_label('' if self.model_ready() else 'Add a model key (Anthropic or Factory) before your first task.')
+        self.summary.set_label('' if self.model_ready() else 'Add an Anthropic API key in GurtOS Settings before your first task.')
         return scroller
 
 
@@ -495,8 +560,7 @@ def app_blurb(a):
     d = (a.get('description') or '').strip()
     if not d or d.startswith(('!', 'Track:', '[')):
         return ''
-    first = d.split('. ')[0].rstrip('.')
-    return (first if len(first) <= 120 else first[:119].rstrip() + '…') + '.'
+    return d if len(d) <= 180 else d[:179].rsplit(' ', 1)[0] + '…'
 
 
 def qr_image(text):

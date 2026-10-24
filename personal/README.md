@@ -4,7 +4,7 @@ GurtOS Personal is the OS on your own laptop, the way elementary OS and Pop!_OS 
 drivers, packages, updates), and GurtOS on top as part of the desktop, not an app beside it. You use it as a normal
 computer, with your own account and sudo. Agents work beside you as their own users without sudo, on copies of your
 folders, and nothing in your folders changes until you choose Keep. This folder is that desktop side. It talks to the
-box's API on `127.0.0.1:7700`; the box itself (tasks, the vault, the action log, Keep and Undo) is `core/`.
+box's API on `127.0.0.1:7700`; the box itself (tasks, the keys agents can't read, the action log, Keep and Undo) is `core/`.
 
 Tested on a cloud VM: installed onto plain Ubuntu 24.04 with GNOME 46, and as a fresh install of the GurtOS Personal
 ISO walked as a new person, on Wayland (Ubuntu's default) and Xorg.
@@ -14,12 +14,12 @@ ISO walked as a new person, on Wayland (Ubuntu's default) and Xorg.
 | Piece | What it does | Where |
 |---|---|---|
 | The GurtOS session | Its own GNOME session and Shell mode, like Ubuntu's own: it loads the GurtOS Shell extension, Ubuntu's dock, AppIndicator support and tiling. GDM starts it by default, on Wayland or Xorg. An extension a session mode loads cannot be switched off by accident | `theme/session/`, `theme/install.sh` |
-| The top bar | An amber "1 needs you" pill and "▶ 2 running". Its popover: Agents with the counts, Needs your OK as an amber card with Deny and Approve, Ready to review, Running with a working bar, then Ask an Agent…, Open GurtOS, GurtOS Settings | `shell/gurtos@gurtos.dev/` |
-| Quick Settings | An Agents tile with the flask icon, on while agents run, subtitle "1 needs you". Its menu: Pause all agents (the core's `paused` setting, the same one Business's kill switch uses; the top bar then says Paused), Quiet hours ("Until 07:00. Requests wait without a sound"), Needs your OK and Running with counts, GurtOS Settings | `shell/gurtos@gurtos.dev/` |
+| The top bar | An amber "1 needs you" pill (requests only) and "▶ 2 running". Its popover is 420 px wide: Agents with the counts, Needs you as amber cards with Deny and Approve, Ready to review, Running, at most 3 rows each with "Show all N in GurtOS", the lists scrolling inside 80% of the screen, then Pause all agents, Talk to your computer, New task…, Open GurtOS, GurtOS Settings. Offline it says so in one row and turns Pause and New task off | `shell/gurtos@gurtos.dev/` |
+| Quick Settings | An Agents tile with the GurtOS tasks icon, on while agents run, subtitle "1 needs you". Its menu: Pause all agents (the core's `paused` setting, the same one Business's kill switch uses; the top bar then says Paused), Quiet hours ("Until 07:00. Requests wait without a sound"), Needs you and Running with counts, GurtOS Settings | `shell/gurtos@gurtos.dev/` |
 | Approvals as Shell notifications | Deny and Approve (Approve names the amount); clicking the body opens the task; answered anywhere else, it goes away; in quiet hours it waits in the list without a banner | `shell/gurtos@gurtos.dev/` |
 | The lock screen | Each approval as a card in the lock screen's notification list. Deny works while locked. Unlock to approve asks for the password, then approves, because approving can spend money | `shell/gurtos@gurtos.dev/` |
 | Activities search | Two sections in the overview: GurtOS (agent tasks by title) and Find (files and photos /find knows, by what is in them). A result opens in the GurtOS app | `search-provider.py` |
-| Files | Ask an Agent… on one folder or up to ten. While changes wait, the folder's menu has Keep Agent Changes and Undo Agent Changes… (the review asks first), and nothing is marked. After Keep, the "changed by an agent" emblem on each file an agent added or changed, and Put Files Back… on the folder and on those files | `files/box-nautilus.py` |
+| Files | New Agent Task… on one folder or up to ten. While changes wait, the folder's menu has Keep Changes and Undo Task… (the task page asks first), and nothing is marked. After Keep, a notification says how many changes were kept, the "changed by an agent" emblem marks each file an agent added or changed, and Undo Task… on the folder and on those files puts them back | `files/box-nautilus.py` |
 | GurtOS Settings | A native libadwaita app with a view switcher: Agents (model key, updates, the action log), Permissions (folders, internet, spending, quiet hours and their hours), Apps, Keys, Phone. Phone has Reach this computer from anywhere: a name under box.gurtos.com, checked as you type, then Turn on and Turn off (`/api/remote`). It shows only when the box has that API. About is in the window menu, with the credits | `settingswin.py` |
 | Talk to your computer | Press Super+Alt+Space or choose it in the top-bar menu or the Agents tile, then say "what did my agents do today?", "find the whiteboard photo" or "approve the grocery order". Speech becomes text on this machine (faster-whisper `base.en`, CPU, `stt.py`), the answer comes from the box and its /find (Moss) search, and it appears as a notification and is spoken by espeak-ng. The top bar shows a red mic and "Listening…" while the microphone is open, and the same shortcut ends the sentence early. It never listens in the background, and the recording is deleted once it is read. Voice can approve or deny a request that spends nothing, signed `voice:<user>`, and refuses to approve anything that moves money: that needs the passkey or the popover | `voice.py`, `stt.py`, `voice-setup.sh` |
 | GurtOS Setup | At the owner's first login, after GNOME's own setup: Welcome, AI models, Folders, Permissions, Apps, Pair a phone, Done | `setupwin.py` |
@@ -33,7 +33,7 @@ ISO walked as a new person, on Wayland (Ubuntu's default) and Xorg.
 
 ![A finished task: its changes, Keep or Undo, and the diff](screenshots/app/3-task-review.png)
 
-![After Keep: Put files back](screenshots/app/3c-task-kept.png)
+![After Keep: Undo task puts the files back](screenshots/app/3c-task-kept.png)
 
 ![New task](screenshots/app/4-new-task.png)
 
@@ -75,7 +75,7 @@ ISO walked as a new person, on Wayland (Ubuntu's default) and Xorg.
 
 ![Files after Keep: the emblem on each file an agent changed](screenshots/os/13-files-emblem.png)
 
-![Files: Put Files Back on a changed file](screenshots/os/14-files-putback.png)
+![Files: Undo Task on a changed file (shot before the rename from Put Files Back)](screenshots/os/14-files-putback.png)
 
 ![The same session on Xorg](screenshots/os/16-xorg.png)
 
@@ -300,7 +300,6 @@ delete it afterwards.
 
 ## Not built yet
 
-- **One folder per task.** The core takes one `folder`, so Files offers Ask an Agent for one folder at a time.
 - **Pairing a phone** on Personal: the box has no address a phone can reach yet, so Setup's phone step says so and
   offers Skip until `GET /api/boxes` reports one. The QR path (with `qrencode`) is written but not walked.
 - **From the Personal frames, waiting on the core:** "May read" for a folder (the core has one kind of grant, may
@@ -311,3 +310,18 @@ delete it afterwards.
 
 The native app covers one person's agents. With Business on, its sidebar adds Company, which opens the Business
 screens (people, rules, routed approvals, the audit trail) in the browser for now, from the same box.
+
+## UX pass (Oct 24, from docs/ux/audit.md)
+
+- Words follow `docs/ux/words.md`: Undo before and after Keep (no "Put back", "Take out" or "Go back"), New task,
+  Needs you, Claude, and one sentence about keys: "GurtOS keeps keys where agents can't read them."
+- The model key is checked with one call to Anthropic (`GET /v1/models`) before it is saved; a refused key is never
+  stored. With no key, Setup's Next reads "Skip for now". A failed task's banner is a sentence, with Open Settings
+  when the key is the problem.
+- "Needs you" counts requests only, the same in the pill, the popover, Quick Settings and the app's badge.
+- Banners: none replayed at login, and tasks that finish within 3 seconds of each other share one.
+- Personal's spending defaults: ask over $5.00, budget $1.00, set by Setup the first time and used by New task.
+- Setup's Apps step lists apps for one person (Find, Shopper, Wallet, Factory, ASI:One, Mana, Apify), turns all but
+  Find off the first time, with "Needs a key" and "Uses the internet" chips. Settings' Keys page groups keys by app.
+- Not changed: Atkinson Hyperlegible draws its zero with a slash on purpose and has no plain-zero alternate, so
+  money and clocks keep it (P-29) until a second typeface for numbers is chosen.

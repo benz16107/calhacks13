@@ -36,6 +36,18 @@ def remote_state():
         return None
 
 
+def when_saved(iso):
+    """'Saved today at 1:44 PM', in this computer's time zone."""
+    from datetime import datetime
+    try:
+        t = datetime.fromisoformat(iso.replace('Z', '+00:00')).astimezone()
+    except (ValueError, AttributeError):
+        return 'Saved'
+    now = datetime.now().astimezone()
+    day = 'today' if t.date() == now.date() else 'yesterday' if (now.date() - t.date()).days == 1 else t.strftime('%b %-d')
+    return f"Saved {day} at {t.strftime('%-I:%M %p')}"
+
+
 def take(scroller, into):
     """Move a Setup page's content (under its title) into another page's box."""
     inner = scroller.get_child().get_child().get_child()
@@ -202,34 +214,35 @@ class SettingsWindow(SetupWindow):
             dst.append(r)
 
     def keys(self):
-        scroller, box = page('Keys', 'Keys are write-only. You can set or replace a key. No screen, phone or log ever shows one, '
-                                                'and agents never see them.')
-        needed = {}
-        for a in self.apps:
-            for k in (a.get('access') or {}).get('secrets', []):
-                needed.setdefault(k['name'], setupwin.app_title(a))
-        names = sorted({v['name'] for v in self.vault} | set(needed) | {'ANTHROPIC_API_KEY', 'FACTORY_API_KEY'})
-        lst = boxed()
-        for name in names:
-            meta = next((v for v in self.vault if v['name'] == name), None)
-            who = 'Droid with Claude' if name in ('ANTHROPIC_API_KEY', 'FACTORY_API_KEY') else needed.get(name, 'Added by hand')
-            state = ('set ' + meta['setAt'][:16].replace('T', ' ')) if meta and meta.get('setAt') else ('put there by hand' if meta else 'not set')
-            r = Adw.ActionRow(title=name, subtitle=f'{who} · {state}', title_lines=1, css_classes=['gurt-mono-title'])
-            b = Gtk.Button(label='Replace' if meta else 'Set key', valign=Gtk.Align.CENTER)
-            b.connect('clicked', lambda _b, n=name: self.key_sheet(n))
-            r.add_suffix(b)
-            lst.append(r)
+        scroller, box = page('Keys', setupwin.KEYS_LINE)
+        saved = {v['name']: v for v in self.vault}
+        groups = [('Claude', [k for k, _l, _h in setupwin.MODEL_KEYS])]
+        for a in sorted((a for a in self.apps if a.get('enabled') and a['id'] in setupwin.PERSONAL_APPS), key=setupwin.app_title):
+            names = [k['name'] for k in (a.get('access') or {}).get('secrets', []) if k['name'] not in groups[0][1]]
+            if names:
+                groups.append((setupwin.app_title(a), names))
+        for title, names in groups:
+            lst = section(box, title)
+            for name in names:
+                meta = saved.get(name)
+                state = when_saved(meta.get('setAt')) if meta and meta.get('setAt') else ('Saved' if meta else 'Not set')
+                r = Adw.ActionRow(title=setupwin.key_title(name), subtitle=GLib.markup_escape_text(f'{state} · {name}'))
+                b = Gtk.Button(label='Replace' if meta else 'Add', valign=Gtk.Align.CENTER)
+                b.update_property([Gtk.AccessibleProperty.LABEL], [f"{'Replace' if meta else 'Add'} {setupwin.key_title(name)}"])
+                b.connect('clicked', lambda _b, n=name: self.key_sheet(n))
+                r.add_suffix(b)
+                lst.append(r)
+        lst = section(box, 'Other')
         add = Adw.ActionRow(title='Add a key…', activatable=True, css_classes=['gurt-add-row'])
         add.add_prefix(Gtk.Image(icon_name='list-add-symbolic'))
         add.connect('activated', lambda _r: self.key_sheet(None))
         lst.append(add)
-        box.append(Gtk.Label(label='Keys in the vault', xalign=0, css_classes=['heading']))
-        box.append(lst)
         return scroller
 
     def key_sheet(self, name):
-        d = Adw.MessageDialog(transient_for=self, heading=f'Replace {name}' if name and self.has_key(name) else (f'Set {name}' if name else 'Add a key'),
-                              body='Write-only: you can replace a key, never read it. Agents never see it.')
+        human = setupwin.key_title(name) if name else None
+        d = Adw.MessageDialog(transient_for=self, heading=f'Replace {human}' if name and self.has_key(name) else (f'Add {human}' if name else 'Add a key'),
+                              body=setupwin.KEYS_LINE)
         fields = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         name_entry = Gtk.Entry(placeholder_text='NAME_LIKE_THIS', css_classes=['gurt-mono'])
         if not name:

@@ -35,8 +35,10 @@ install -Dm644 "$here/files/dev.box.Box.desktop" /usr/share/applications/dev.box
 install -Dm644 "$here/icons/dev.box.Box.svg" /usr/share/icons/hicolor/scalable/apps/dev.box.Box.svg
 install -Dm644 "$here/files/dev.box.Settings.desktop" /usr/share/applications/dev.box.Settings.desktop
 install -Dm644 "$here/icons/dev.box.Settings.svg" /usr/share/icons/hicolor/scalable/apps/dev.box.Settings.svg
+install -Dm644 "$here/icons/dev.box.Find.svg" /usr/share/icons/hicolor/scalable/apps/dev.box.Find.svg
 install -Dm644 "$here/icons/dev.box.Box-symbolic.svg" /usr/share/icons/hicolor/symbolic/apps/dev.box.Box-symbolic.svg
 install -Dm644 "$here/icons/gurtos-money-symbolic.svg" /usr/share/icons/hicolor/symbolic/apps/gurtos-money-symbolic.svg
+install -Dm644 "$here/icons/gurtos-tasks-symbolic.svg" /usr/share/icons/hicolor/symbolic/apps/gurtos-tasks-symbolic.svg
 install -Dm644 "$here/icons/emblem-gurtos-agent.svg" /usr/share/icons/hicolor/scalable/emblems/emblem-gurtos-agent.svg
 gtk-update-icon-cache -q -t -f /usr/share/icons/hicolor 2>/dev/null || true
 install -Dm644 "$here/files/apparmor-box-ui" /etc/apparmor.d/box-ui

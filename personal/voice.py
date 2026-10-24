@@ -264,7 +264,7 @@ def main(argv):
             if not heard_audio:
                 say_state(None)
                 model.kill()
-                notify('', "I didn't hear anything.")
+                notify('', "I didn't hear anything. Press Super+Alt+Space and try again.")
                 return 0
             say_state('thinking')
             t0 = time.time()

@@ -1,4 +1,4 @@
-# New task (Ask an Agent): the owner's words, the folders it may change (GNOME's folder chooser, through the portal),
+# New task: the owner's words, the folders it may change (GNOME's folder chooser, through the portal),
 # its internet and its budget. Opened from the GurtOS app, the dock, the top bar and Files.
 import os
 
@@ -19,13 +19,13 @@ def headed(window, title, content, subtitle=None):
     return header, view, toasts
 
 
-# ---------- Ask an Agent ----------
+# ---------- New task ----------
 
 ASK_BUDGETS = [50, 100, 500, 2000]  # cents
 
 
 class AskWindow(Adw.ApplicationWindow):
-    """Ask an Agent from Files (frame docs/figma/os-v2/personal/ask-an-agent-dialog.png): the task, then one boxed list of
+    """New task, also opened from Files (frame docs/figma/os-v2/personal/ask-an-agent-dialog.png): the task, then one boxed list of
     what it may change, its internet, its budget and its worker. Start stays off until the task is written."""
     MAX_FOLDERS = 10  # the box takes at most 10 folders in one task
 
@@ -53,13 +53,16 @@ class AskWindow(Adw.ApplicationWindow):
         self.sites = Adw.EntryRow(title='Sites it may reach, separated by commas', visible=False)
         self.list.append(self.sites)
         self.budget = Adw.ComboRow(title='Budget', subtitle='It asks before spending more. Model use counts.',
-                                   model=Gtk.StringList.new([dollars(c) for c in ASK_BUDGETS]))
+                                   model=Gtk.StringList.new([dollars(c) for c in ASK_BUDGETS]), selected=1)
         self.list.append(self.budget)
-        worker = Adw.ActionRow(title='Worker')
+        worker = Adw.ActionRow(title='Model')
         worker.add_prefix(Gtk.Image(icon_name='applications-science-symbolic'))
-        worker.add_suffix(Gtk.Label(label='Droid with Claude', css_classes=['gurt-secondary']))
+        worker.add_suffix(Gtk.Label(label='Claude', css_classes=['gurt-secondary']))
         self.list.append(worker)
         body.append(self.list)
+        self.no_folder = Gtk.Label(label='No folder: the agent works in a space of its own and changes none of your files.',
+                                   xalign=0, wrap=True, css_classes=['gurt-caption', 'gurt-secondary'])
+        body.append(self.no_folder)
         body.append(Gtk.Label(label='The agent works on a copy, as its own user with no sudo. You see the changes and choose Keep or Undo '
                                     'before anything reaches your folder.', xalign=0, wrap=True, css_classes=['gurt-caption', 'gurt-secondary']))
 
@@ -87,7 +90,7 @@ class AskWindow(Adw.ApplicationWindow):
         hosts = s.get('defaultHosts') or []
         self.sites.set_text(', '.join(hosts))
         self.internet.set_active(bool(s.get('networkDefault') == 'allowlist' and hosts))
-        want = s.get('defaultBudgetCents') or ASK_BUDGETS[0]
+        want = s.get('defaultBudgetCents') or 100  # $1.00, the same as Setup's default
         self.budget.set_selected(min(range(len(ASK_BUDGETS)), key=lambda k: abs(ASK_BUDGETS[k] - want)))
 
     def internet_changed(self):
@@ -103,9 +106,9 @@ class AskWindow(Adw.ApplicationWindow):
         if not os.path.isdir(path) or path in self.folders or len(self.folders) >= self.MAX_FOLDERS:
             return
         self.folders.append(path)
-        row = Adw.ActionRow(title='May change', subtitle=GLib.markup_escape_text(os.path.basename(path)))
+        row = Adw.ActionRow(title=GLib.markup_escape_text(os.path.basename(path) or path),
+                            subtitle=GLib.markup_escape_text(f'May change, on a copy · in {tilde(os.path.dirname(path))}'))
         row.add_prefix(Gtk.Image(icon_name='folder-symbolic'))
-        row.add_suffix(Gtk.Label(label=tilde(path), css_classes=['gurt-secondary'], ellipsize=1, max_width_chars=30))
         remove = Gtk.Button(icon_name='list-remove-symbolic', tooltip_text=f'Remove {os.path.basename(path)}', valign=Gtk.Align.CENTER, css_classes=['flat'])
 
         def drop(_b):
@@ -132,7 +135,8 @@ class AskWindow(Adw.ApplicationWindow):
         return b.get_text(b.get_start_iter(), b.get_end_iter(), False).strip()
 
     def validate(self):
-        self.start.set_sensitive(bool(self.text()))  # no folder: the agent works in a workspace of its own
+        self.start.set_sensitive(bool(self.text()))  # no folder: the agent works in a space of its own
+        self.no_folder.set_visible(not self.folders)
         self.add_row.set_visible(len(self.folders) < self.MAX_FOLDERS)
 
     def submit(self, _button):

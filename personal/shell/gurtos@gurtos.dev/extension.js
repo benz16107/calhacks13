@@ -17,7 +17,7 @@ import * as MessageTray from 'resource:///org/gnome/shell/ui/messageTray.js';
 import * as Util from 'resource:///org/gnome/shell/misc/util.js';
 import {QuickMenuToggle, SystemIndicator} from 'resource:///org/gnome/shell/ui/quickSettings.js';
 
-import {counts, dollars, isRunning, needsReview, noModelKey, plan, quietAt} from './logic.js';
+import {counts, dollars, failure, isRunning, needsReview, plan, quietAt} from './logic.js';
 
 Gio._promisify(Soup.Session.prototype, 'send_and_read_async');
 Gio._promisify(Soup.Session.prototype, 'send_async');
@@ -26,6 +26,7 @@ Gio._promisify(Gio.DataInputStream.prototype, 'read_line_async');
 const BOX = 'http://127.0.0.1:7700';
 const UI = '/opt/box/personal/box-ui.py';
 const ui = (...args) => Util.spawn([UI, ...args]);
+const SHOWN = 3; // rows per popover section; the rest are one click away in the GurtOS app
 const VOICE = '/opt/box/personal/voice.py'; // "Talk to your computer": press once to listen, press again to stop
 const VOICE_STATE = `${GLib.get_user_runtime_dir()}/gurtos-voice`; // voice.py writes "listening <pid>" here while it hears you
 const encoder = new TextEncoder();
@@ -140,56 +141,86 @@ class Indicator extends PanelMenu.Button {
     update() {
         const {tasks, pending, online} = this.ext;
         const c = counts(tasks, pending);
+        const off = online === false;
         this.needs.text = String(c.needsYou);
-        this.needsBox.visible = c.needsYou > 0;
+        this.needsBox.visible = !off && c.needsYou > 0;
         const paused = !!this.ext.settings?.paused;
-        this.runningLabel.text = online === false ? 'offline' : paused ? 'Paused' : c.running ? `${c.running} running` : 'Agents';
-        this.runIcon.icon_name = online === false ? 'network-offline-symbolic' : paused ? 'media-playback-pause-symbolic'
-            : c.running ? 'media-playback-start-symbolic' : 'applications-science-symbolic';
-        this.runBox.visible = !c.needsYou || c.running > 0 || paused || online === false;
+        this.runningLabel.text = off ? 'Offline' : paused ? 'Paused' : c.running ? `${c.running} running` : 'Agents';
+        this.runIcon.icon_name = off ? 'network-offline-symbolic' : paused ? 'media-playback-pause-symbolic'
+            : c.running ? 'media-playback-start-symbolic' : 'gurtos-tasks-symbolic';
+        this.runBox.visible = off || !c.needsYou || c.running > 0 || paused;
         this.rebuild(); // kept current, so the menu opens on what is true now
     }
 
-    heading(text) {
-        this.menu.addMenuItem(new PopupMenu.PopupMenuItem(text.toUpperCase(), {reactive: false, style_class: 'gurtos-heading'}));
+    heading(section, text) {
+        section.addMenuItem(new PopupMenu.PopupMenuItem(text.toUpperCase(), {reactive: false, style_class: 'gurtos-heading'}));
+    }
+
+    /** One section of the popover: at most 3 rows, then "Show all N in GurtOS". */
+    list(section, title, items, row) {
+        if (!items.length)
+            return;
+        this.heading(section, items.length > SHOWN ? `${title} · ${items.length}` : title);
+        for (const x of items.slice(0, SHOWN))
+            section.addMenuItem(row(x));
+        if (items.length > SHOWN) {
+            const more = new PopupMenu.PopupMenuItem(`Show all ${items.length} in GurtOS`, {style_class: 'gurtos-more'});
+            more.connect('activate', () => ui('app'));
+            section.addMenuItem(more);
+        }
     }
 
     rebuild() {
         const {tasks, pending, online, settings} = this.ext;
+        const off = online === false;
         this.menu.removeAll();
         const c = counts(tasks, pending);
         const titles = Object.fromEntries(tasks.map(t => [t.id, t]));
         // Header: Agents, and what needs you and what runs.
         const head = new PopupMenu.PopupBaseMenuItem({activate: false, hover: false, can_focus: false, style_class: 'gurtos-head'});
-        head.add_child(new St.Icon({icon_name: 'applications-science-symbolic', style_class: 'gurtos-head-icon'}));
+        const badge = new St.Bin({style_class: 'gurtos-head-badge', child: new St.Icon({icon_name: 'gurtos-tasks-symbolic', icon_size: 16})});
+        head.add_child(badge);
         const hcol = new St.BoxLayout({vertical: true});
         hcol.add_child(new St.Label({text: 'Agents', style_class: 'gurtos-head-title'}));
-        const parts = [c.needsYou ? `${c.needsYou} need${c.needsYou === 1 ? 's' : ''} your OK` : null, `${c.running} running`].filter(Boolean);
-        hcol.add_child(new St.Label({text: online === false ? "GurtOS isn't answering. Retrying…" : parts.join(' · '), style_class: 'gurtos-subtitle'}));
+        const reviews = tasks.filter(needsReview);
+        const parts = [c.needsYou ? `${c.needsYou} need${c.needsYou === 1 ? 's' : ''} you` : null, `${c.running} running`,
+            reviews.length ? `${reviews.length} to review` : null].filter(Boolean);
+        hcol.add_child(new St.Label({text: off ? 'Offline' : parts.join(' · '), style_class: 'gurtos-subtitle'}));
         head.add_child(hcol);
         this.menu.addMenuItem(head);
-        if (pending.length) {
-            this.heading('Needs your OK');
-            for (const a of pending)
-                this.menu.addMenuItem(this.approvalCard(a, titles[a.task]));
-        }
-        const reviews = tasks.filter(needsReview);
-        if (reviews.length) {
-            this.heading('Ready to review');
-            for (const t of reviews)
-                this.menu.addMenuItem(this.taskRow(t, (t.folders ?? [t.folder]).filter(Boolean).map(f => GLib.path_get_basename(f)).join(', '), () => ui('review', t.id)));
-        }
-        const running = tasks.filter(isRunning);
-        if (running.length) {
-            this.heading('Running');
-            for (const t of running)
-                this.menu.addMenuItem(this.taskRow(t, t.step ?? '', () => ui('app', `task/${t.id}`), true));
+
+        // The lists scroll inside a capped height, so the actions below never leave the screen.
+        const holder = new PopupMenu.PopupMenuSection();
+        const section = new PopupMenu.PopupMenuSection();
+        this.menu.addMenuItem(holder);
+        holder.addMenuItem(section);
+        holder.box.remove_child(section.actor);
+        const scroll = new St.ScrollView({hscrollbar_policy: St.PolicyType.NEVER, vscrollbar_policy: St.PolicyType.AUTOMATIC, overlay_scrollbars: true});
+        const mon = Main.layoutManager.primaryMonitor;
+        const scale = St.ThemeContext.get_for_stage(global.stage).scale_factor;
+        if (mon)
+            scroll.style = `max-height: ${Math.max(200, Math.floor((mon.height / scale) * 0.8) - 330)}px;`;
+        scroll.set_child(section.actor);
+        holder.box.add_child(scroll);
+        if (off) {
+            const row = new PopupMenu.PopupBaseMenuItem({activate: false, hover: false, can_focus: false, style_class: 'gurtos-offline'});
+            const l = new St.Label({text: "GurtOS isn't answering. Your files are unchanged. Retrying…", style_class: 'gurtos-subtitle', x_expand: true});
+            l.clutter_text.set({line_wrap: true, ellipsize: 0});
+            row.add_child(l);
+            section.addMenuItem(row);
+        } else {
+            this.list(section, 'Needs you', pending, a => this.approvalCard(a, titles[a.task]));
+            this.list(section, 'Ready to review', reviews, t => this.taskRow(t, (t.folders ?? [t.folder]).filter(Boolean).map(f => GLib.path_get_basename(f)).join(', '), () => ui('app', `task/${t.id}`)));
+            this.list(section, 'Running', tasks.filter(isRunning), t => this.taskRow(t, t.step ?? '', () => ui('app', `task/${t.id}`), true));
         }
         this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
-        if (settings && 'paused' in settings) // the box's pause switch, once the core has one
-            this.menu.addMenuItem(switchRow('Pause all agents', 'Running tasks stop where they are', !!settings.paused, v => this.ext.patch({paused: v})));
+        if (settings && 'paused' in settings) {
+            const pause = switchRow('Pause all agents', 'Running tasks stop where they are', !!settings.paused, v => this.ext.patch({paused: v}));
+            pause.setSensitive(!off);
+            this.menu.addMenuItem(pause);
+        }
         this.menu.addAction('Talk to your computer', () => Util.spawn([VOICE]));
-        this.menu.addAction('Ask an Agent…', () => ui('ask'));
+        this.menu.addAction('New task…', () => ui('ask')).setSensitive(!off);
         this.menu.addAction('Open GurtOS', () => ui('app'));
         this.menu.addAction('GurtOS Settings', () => ui('settings'));
     }
@@ -199,10 +230,14 @@ class Indicator extends PanelMenu.Button {
         item.add_child(new St.Icon({icon_name: working ? 'view-list-bullet-symbolic' : 'folder-symbolic', style_class: 'gurtos-task-icon'}));
         const col = new St.BoxLayout({vertical: true, x_expand: true});
         const line = new St.BoxLayout();
-        line.add_child(new St.Label({text: t.title, style_class: 'gurtos-task-title', x_expand: true}));
-        const d = new St.Label({text: detail, style_class: 'gurtos-subtitle'});
-        d.clutter_text.ellipsize = 3;
-        line.add_child(d);
+        const title = new St.Label({text: t.title, style_class: 'gurtos-task-title', x_expand: true});
+        title.clutter_text.ellipsize = 3; // one line; the GurtOS app has the whole name
+        line.add_child(title);
+        if (detail) {
+            const d = new St.Label({text: detail, style_class: 'gurtos-subtitle gurtos-detail'});
+            d.clutter_text.ellipsize = 3;
+            line.add_child(d);
+        }
         col.add_child(line);
         if (working) // the box has no step count, so a working bar rather than a percentage
             col.add_child(new St.Widget({style_class: 'gurtos-working'}));
@@ -216,8 +251,10 @@ class Indicator extends PanelMenu.Button {
         const card = new St.BoxLayout({vertical: true, x_expand: true, style_class: 'gurtos-approval-card'});
         const top = new St.BoxLayout({style_class: 'gurtos-approval-top'});
         top.add_child(new St.Icon({icon_name: a.costCents ? 'gurtos-money-symbolic' : 'dialog-question-symbolic', fallback_icon_name: 'dialog-question-symbolic', style_class: 'gurtos-approval-icon'}));
-        const tcol = new St.BoxLayout({vertical: true});
-        tcol.add_child(new St.Label({text: task?.title ?? 'A task', style_class: 'gurtos-approval-title'}));
+        const tcol = new St.BoxLayout({vertical: true, x_expand: true});
+        const tcol2 = new St.Label({text: task?.title ?? 'A task', style_class: 'gurtos-approval-title'});
+        tcol2.clutter_text.ellipsize = 3;
+        tcol.add_child(tcol2);
         tcol.add_child(new St.Label({text: [a.payee, task ? `asked ${ago(task.updatedAt)}` : null].filter(Boolean).join(' · '), style_class: 'gurtos-subtitle'}));
         top.add_child(tcol);
         card.add_child(top);
@@ -242,9 +279,9 @@ class Indicator extends PanelMenu.Button {
 const AgentsToggle = GObject.registerClass(
 class AgentsToggle extends QuickMenuToggle {
     _init(ext) {
-        super._init({title: 'Agents', iconName: 'applications-science-symbolic', toggleMode: false});
+        super._init({title: 'Agents', iconName: 'gurtos-tasks-symbolic', toggleMode: false});
         this.ext = ext;
-        this.menu.setHeader('applications-science-symbolic', 'Agents', 'GurtOS');
+        this.menu.setHeader('gurtos-tasks-symbolic', 'Agents', 'GurtOS');
         this.connect('clicked', () => ui('app', 'tasks'));
     }
 
@@ -253,7 +290,7 @@ class AgentsToggle extends QuickMenuToggle {
         const c = counts(tasks, pending);
         const quiet = !!settings?.quietHours?.enabled;
         this.checked = c.running > 0 || c.needsYou > 0; // on while agents run
-        this.subtitle = c.needsYou ? `${c.needsYou} need${c.needsYou === 1 ? 's' : ''} you` : settings?.paused ? 'Paused'
+        this.subtitle = this.ext.online === false ? 'Offline' : c.needsYou ? `${c.needsYou} need${c.needsYou === 1 ? 's' : ''} you` : settings?.paused ? 'Paused'
             : c.running ? `${c.running} running` : quiet ? 'Quiet hours' : 'Nothing running';
         this.menu.removeAll();
         if (settings && 'paused' in settings)
@@ -262,7 +299,7 @@ class AgentsToggle extends QuickMenuToggle {
         this.menu.addMenuItem(switchRow('Quiet hours', quiet ? `Until ${q.to ?? '07:00'}. Requests wait without a sound` : `${q.from ?? '22:00'} to ${q.to ?? '07:00'}. Requests wait without a sound`,
             quiet, v => this.ext.patch({quietHours: {enabled: v}})));
         this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
-        for (const [label, n, amber, open] of [['Needs your OK', c.needsYou, true, () => ui('app', 'tasks')], ['Running', c.running, false, () => ui('app', 'tasks')]]) {
+        for (const [label, n, amber, open] of [['Needs you', c.needsYou, true, () => ui('app', 'tasks')], ['Running', c.running, false, () => ui('app', 'tasks')]]) {
             const item = new PopupMenu.PopupMenuItem(label);
             const count = new St.Label({text: String(n), style_class: amber && n ? 'gurtos-badge' : 'gurtos-subtitle', y_align: Clutter.ActorAlign.CENTER});
             item.add_child(new St.Widget({x_expand: true}));
@@ -295,6 +332,8 @@ export default class GurtOS extends Extension {
         this.online = null;
         this.shown = new Map(); // notification key -> Notification
         this.toldFailed = new Set();
+        this.quiet = new Set(); // notification keys seen without a banner (at login, or inside a grouped one)
+        this.primed = false;
         this.started = new Date().toISOString().slice(0, 19);
         this.box = new Box();
         this.indicator = new Indicator(this);
@@ -342,7 +381,9 @@ export default class GurtOS extends Extension {
             if (this.approveAfterUnlock && !Main.sessionMode.isLocked) {
                 const id = this.approveAfterUnlock;
                 this.approveAfterUnlock = null;
-                this.answer(id, true);
+                const a = this.pending.find(x => x.id === id);
+                const title = (this.tasks.find(t => t.id === a?.task)?.title ?? 'The task').replace(/\.$/, '');
+                this.answer(id, true).then(ok => ok && this.notice(`Approved: ${title}`, 'It carries on now.'));
             }
             return;
         }
@@ -358,7 +399,9 @@ export default class GurtOS extends Extension {
             src.add_child(new St.Icon({gicon: this.icon, icon_size: 16}));
             src.add_child(new St.Label({text: 'GurtOS', style_class: 'gurtos-subtitle'}));
             card.add_child(src);
-            card.add_child(new St.Label({text: `${(titles[a.task] ?? 'A task').replace(/\.$/, '')} needs your OK`, style_class: 'gurtos-approval-title'}));
+            const lt = new St.Label({text: `${(titles[a.task] ?? 'A task').replace(/\.$/, '')} needs you`, style_class: 'gurtos-approval-title'});
+            lt.clutter_text.ellipsize = 3;
+            card.add_child(lt);
             const q = new St.Label({text: a.question, style_class: 'gurtos-approval-question'});
             q.clutter_text.set({line_wrap: true, ellipsize: 0});
             card.add_child(q);
@@ -392,6 +435,8 @@ export default class GurtOS extends Extension {
         this.box.destroy();
         if (this.timer)
             GLib.source_remove(this.timer);
+        if (this.reviewTimer)
+            GLib.source_remove(this.reviewTimer);
         for (const n of this.shown.values())
             n.destroy();
         this.source?.destroy();
@@ -427,6 +472,7 @@ export default class GurtOS extends Extension {
     offline() {
         this.online = false;
         this.indicator?.update();
+        this.agents?.toggle.update();
     }
 
     async refresh() {
@@ -446,12 +492,15 @@ export default class GurtOS extends Extension {
     }
 
     async answer(id, approved) {
+        let ok = true;
         try {
             await this.box.api('POST', `/api/approvals/${encodeURIComponent(id)}`, {approved, by: `desktop:${GLib.get_user_name()}`});
         } catch (e) {
+            ok = false;
             this.notice('GurtOS did not take your answer', e.message);
         }
         this.changed();
+        return ok;
     }
 
     async patch(change) {
@@ -486,54 +535,89 @@ export default class GurtOS extends Extension {
             this.shown.set(key, n);
         }
         this.getSource().addNotification(n);
+        return n;
     }
 
     notice(title, body) {
         this.post(null, {title, body, urgency: MessageTray.Urgency.NORMAL});
     }
 
+    postReviews() {
+        const keys = (this.reviewQueue ?? []).filter(k => this.quiet.has(k)); // still waiting for review
+        this.reviewQueue = [];
+        const tasks = Object.fromEntries(this.tasks.map(t => [t.id, t]));
+        if (keys.length > 1) {
+            this.groupNote?.destroy();
+            this.groupNote = this.post(null, {
+                title: `${keys.length} tasks finished`,
+                body: 'Review them in GurtOS. Nothing in your folders has changed yet.',
+                urgency: MessageTray.Urgency.NORMAL,
+                actions: [['Open GurtOS', () => ui('app')]],
+                open: () => ui('app'),
+            });
+        } else if (keys.length === 1 && tasks[keys[0].slice(7)]) {
+            const t = tasks[keys[0].slice(7)];
+            this.quiet.delete(keys[0]);
+            this.post(keys[0], {
+                title: `${t.title.replace(/\.$/, '')} is done`,
+                body: 'Nothing in your folders has changed yet. Review its changes, then keep or undo them.',
+                urgency: MessageTray.Urgency.NORMAL,
+                actions: [['Review changes', () => ui('app', `task/${t.id}`)]],
+                open: () => ui('app', `task/${t.id}`),
+            });
+        }
+    }
+
     notifyChanges() {
-        const {close, post} = plan(new Set(this.shown.keys()), this.tasks, this.pending);
-        for (const key of close)
+        // What is already there at login was seen before: it shows in the top bar and the popover, not as banners again.
+        const first = !this.primed;
+        this.primed = true;
+        const {close, post} = plan(new Set([...this.shown.keys(), ...this.quiet]), this.tasks, this.pending);
+        for (const key of close) {
             this.shown.get(key)?.destroy();
+            this.quiet.delete(key);
+        }
         const tasks = Object.fromEntries(this.tasks.map(t => [t.id, t]));
         const approvals = Object.fromEntries(this.pending.map(a => [a.id, a]));
         const quiet = quietAt(this.settings, GLib.DateTime.new_now_local().format('%H:%M'));
-        for (const key of post) {
-            const [kind, id] = [key.slice(0, key.indexOf(':')), key.slice(key.indexOf(':') + 1)];
-            if (kind === 'approval') {
-                const a = approvals[id];
-                const title = (tasks[a.task]?.title ?? 'A task').replace(/\.$/, '');
-                const q = a.question.trim();
-                // Critical: the task waits for you, so the banner stays. Quiet hours: it waits in the list, no banner.
-                this.post(key, {
-                    title: `${title} needs your OK`,
-                    body: `${q}${/[.?!]$/.test(q) ? '' : '.'} Your other agents keep working.`,
-                    urgency: quiet ? MessageTray.Urgency.LOW : MessageTray.Urgency.CRITICAL,
-                    actions: [['Deny', () => this.answer(a.id, false)], [a.costCents ? `Approve ${dollars(a.costCents)}` : 'Approve', () => this.answer(a.id, true)]],
-                    open: () => ui('app', `task/${a.task}`),
-                });
-            } else {
-                const t = tasks[id];
-                this.post(key, {
-                    title: `${t.title.replace(/\.$/, '')} is done`,
-                    body: 'Nothing in your folders has changed yet. Review its changes, then keep or undo them.',
-                    urgency: MessageTray.Urgency.NORMAL,
-                    actions: [['Review changes', () => ui('review', t.id)]],
-                    open: () => ui('review', t.id),
-                });
-            }
+        const reviews = post.filter(k => k.startsWith('review:'));
+        for (const key of post.filter(k => k.startsWith('approval:'))) {
+            const a = approvals[key.slice(9)];
+            const title = (tasks[a.task]?.title ?? 'A task').replace(/\.$/, '');
+            const q = a.question.trim();
+            // Critical: the task waits for you, so the banner stays. Quiet hours or login: it waits in the list, no banner.
+            this.post(key, {
+                title: `${title} needs you`,
+                body: `${q}${/[.?!]$/.test(q) ? '' : '.'} Your other agents keep working.`,
+                urgency: quiet || first ? MessageTray.Urgency.LOW : MessageTray.Urgency.CRITICAL,
+                actions: [['Deny', () => this.answer(a.id, false)], [a.costCents ? `Approve ${dollars(a.costCents)}` : 'Approve', () => this.answer(a.id, true)]],
+                open: () => ui('app', `task/${a.task}`),
+            });
+        }
+        if (first) {
+            for (const key of reviews)
+                this.quiet.add(key);
+        } else if (reviews.length) {
+            // Tasks often finish a moment apart: wait 3 s, then one banner for the lot, or the task's own for one.
+            for (const key of reviews)
+                this.quiet.add(key);
+            this.reviewQueue = [...(this.reviewQueue ?? []), ...reviews];
+            this.reviewTimer ??= GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, 3, () => {
+                this.reviewTimer = null;
+                this.postReviews();
+                return GLib.SOURCE_REMOVE;
+            });
         }
         for (const t of this.tasks) { // a task that failed since this login, once
             if (t.state !== 'failed' || t.updatedAt < this.started || this.toldFailed.has(t.id))
                 continue;
             this.toldFailed.add(t.id);
-            const setup = noModelKey(t.error);
+            const why = failure(t.error);
             this.post(null, {
-                title: `${t.title.replace(/\.$/, '')} ${setup ? 'could not start' : 'could not finish'}`,
-                body: setup ? 'Add a model key (Anthropic or Factory) in GurtOS Setup.' : (t.error || 'It stopped with an error.'),
+                title: `${t.title.replace(/\.$/, '')} ${why.key ? 'could not start' : 'could not finish'}`,
+                body: why.text,
                 urgency: MessageTray.Urgency.NORMAL,
-                actions: [[setup ? 'Open GurtOS Setup' : 'Open in GurtOS', () => (setup ? ui('setup') : ui('app', `task/${t.id}`))]],
+                actions: [[why.key ? 'Open Settings' : 'Open in GurtOS', () => (why.key ? ui('settings', 'agents') : ui('app', `task/${t.id}`))]],
             });
         }
     }

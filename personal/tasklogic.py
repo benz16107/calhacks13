@@ -66,7 +66,24 @@ STATE_WORDS = {'queued': 'Queued', 'running': 'Started', 'waiting': 'Waiting for
                'undone': 'Undone'}
 
 
-def event_text(e):
+def who(by, me=None):
+    """Who answered a request, in plain words: `desktop:<user>` is you on this computer."""
+    by = by or ''
+    kind, _, name = by.partition(':')
+    if kind == 'desktop':
+        return 'you' if name in (me, '') or me is None else name
+    if kind == 'voice':
+        return 'you, by voice'
+    if kind == 'passkey':
+        return 'you, with your passkey'
+    if kind in ('phone', 'device') or by == 'phone':
+        return 'your phone'
+    if kind in ('portal', 'screen'):
+        return 'the GurtOS screen'
+    return name or kind or 'someone'
+
+
+def event_text(e, me=None):
     """(icon, line) for one action log event, in plain words."""
     t = e.get('type', '')
     if t == 'task.created':
@@ -74,29 +91,66 @@ def event_text(e):
     if t == 'task.state':
         line = STATE_WORDS.get(e.get('state'), e.get('state', ''))
         if e.get('state') == 'failed' and e.get('error'):
-            line += f": {e['error']}"
+            line = f"Could not finish. {failure_text(e['error'])}"
         return {'done': 'object-select-symbolic', 'failed': 'dialog-error-symbolic', 'undone': 'edit-undo-symbolic'}.get(e.get('state'), 'media-playback-start-symbolic'), line
     if t == 'task.step':
         return 'go-next-symbolic', e.get('text', '')
     if t == 'tool.call':
-        return 'applications-system-symbolic', f"Used {e.get('tool', 'a tool')}"
+        app, _, action = (e.get('tool') or 'a tool').partition('.')
+        return 'applications-system-symbolic', f"Used {app.capitalize()}" + (f" ({action.replace('_', ' ')})" if action else '')
     if t == 'tool.result':
-        return ('object-select-symbolic', 'The tool answered') if e.get('ok') else ('dialog-warning-symbolic', f"The tool failed: {e.get('error', '')}")
+        return ('object-select-symbolic', 'It worked') if e.get('ok') else ('dialog-warning-symbolic', f"That did not work. {failure_text(e.get('error'))}")
     if t == 'approval.asked':
         return 'dialog-question-symbolic', 'Asked: ' + (e.get('approval') or {}).get('question', '')
     if t == 'approval.answered':
-        return ('object-select-symbolic' if e.get('approved') else 'process-stop-symbolic'), f"{'Approved' if e.get('approved') else 'Denied'} by {e.get('by', 'someone')}"
+        return ('object-select-symbolic' if e.get('approved') else 'process-stop-symbolic'), f"{'Approved' if e.get('approved') else 'Denied'} by {who(e.get('by'), me)}"
     if t == 'cost':
         return 'gurtos-money-symbolic', f"Spent {dollars(e.get('cents'))} on {e.get('what', 'the model')}"
     if t == 'net.blocked':
         return 'security-high-symbolic', f"Blocked a connection to {e.get('host', 'a site')}"
     if t == 'keep':
         return 'document-save-symbolic', {'pending': 'Changes ready for review', 'kept': 'You kept its changes', 'conflict': 'Keep stopped: you edited the same files',
-                                          'unkept': 'You put the files back', 'undone': 'Its changes were thrown away'}.get(e.get('result'), f"Keep: {e.get('result', '')}")
+                                          'unkept': 'Undone after Keep: the files are back', 'undone': 'Undone'}.get(e.get('result'), 'Changes updated')
     if t == 'note':
-        d = e.get('data') or {}
-        return 'document-edit-symbolic', ', '.join(f'{k} {v}' for k, v in list(d.items())[:2]) if isinstance(d, dict) else str(d)
-    return 'emblem-documents-symbolic', t.replace('.', ' ')
+        return 'document-edit-symbolic', f"{(e.get('track') or 'An app').capitalize()} made a note"
+    return 'emblem-documents-symbolic', 'Something happened'
+
+
+def failure_text(error):
+    """A failure as a sentence: no `worker exited with 1: Error:`, no JSON."""
+    import re
+    e = re.sub(r'^worker exited with \d+:\s*', '', error or '', flags=re.I)
+    e = re.sub(r'^Error:\s*', '', e)
+    if re.search(r'\b401\b|authentication_error|invalid x-api-key|invalid api key', e, re.I):
+        return 'Your Anthropic key was not accepted. Check it in GurtOS Settings.'
+    if re.search(r'vault has no', e, re.I):
+        return 'Add an Anthropic API key in GurtOS Settings first.'
+    first = e.strip().splitlines()[0] if e.strip() else ''
+    if first.startswith('{') or first.startswith('['):
+        return 'It stopped with an error. Technical details has the rest.'
+    return (first if first[-1:] in '.?!' else first + '.') if first else 'It stopped with an error.'
+
+
+def added_text(diff, path):
+    """The text of a file a task added, from its unified diff."""
+    out, inside = [], False
+    for line in diff.splitlines():
+        if line.startswith('+++ '):
+            inside = line[4:].strip() in (f'b/{path}', path)
+            continue
+        if line.startswith('--- ') or line.startswith('diff '):
+            inside = False if line.startswith('diff ') else inside
+            continue
+        if inside and line.startswith('+'):
+            out.append(line[1:])
+        elif inside and line.startswith('@@'):
+            continue
+    return out
+
+
+def app_title(e, apps):
+    a = app_of(e)
+    return next((x['title'] for x in apps if x.get('track') == a), a.capitalize() if a else None)
 
 
 def matches(e, titles, query='', task=None, app=None):
@@ -112,7 +166,7 @@ def matches(e, titles, query='', task=None, app=None):
 
 
 def can_take_out(t):
-    """How Time Machine takes a finished task out: Undo throws its copy away, Put back reverses a Keep."""
+    """How Time Machine undoes a finished task: `undo` throws its copy away, `unkeep` reverses a Keep."""
     if t.get('review') == 'kept':
         return 'unkeep'
     if t['state'] == 'done':
@@ -129,7 +183,7 @@ def since(span, now=None):
 
 
 def go_back_plan(tasks, start):
-    """Every task that finished after `start` and still has changes to take out, newest first, so later changes go
+    """Every task that finished after `start` and can still be undone, newest first, so later changes go
     before the earlier ones they may sit on."""
     out = [t for t in tasks if can_take_out(t) and (when(t.get('updatedAt')) or start) >= start]
     return sorted(out, key=lambda t: t.get('updatedAt', ''), reverse=True)

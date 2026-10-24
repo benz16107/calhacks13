@@ -1,10 +1,10 @@
 # GurtOS in Files (Nautilus 46, nautilus-python):
-#  - "Ask an Agent…" on folders: GurtOS's dialog with the folders you right-clicked (up to 10, all in one task), or the
+#  - "New Agent Task…" on folders: GurtOS's dialog with the folders you right-clicked (up to 10, all in one task), or the
 #    folder you are in when you right-click its background.
 #  - Before Keep, nothing in the folder is marked: the changes live in the task's copy until you keep them.
-#  - On a folder with changes waiting: Keep agent changes, and Undo agent changes… (the task page in the GurtOS app asks first).
-#  - After Keep, the "changed by an agent" emblem on each file an agent added or changed, and Put files back… on the
-#    folder and on those files (Figma "GurtOS Personal OS", screens 8a and 8b).
+#  - On a folder with changes waiting: Keep Changes, and Undo Task… (the task page in the GurtOS app asks first).
+#  - After Keep, the "changed by an agent" emblem on each file an agent added or changed, and Undo Task… on the
+#    folder and on those files, which puts the files back (Figma "GurtOS Personal OS", screens 8a and 8b).
 import json
 import os
 import subprocess
@@ -79,8 +79,14 @@ def keep(task, file):
                                  headers={'content-type': 'application/json'})
     try:
         with urllib.request.urlopen(req, timeout=10) as r:
-            if json.loads(r.read() or b'{}').get('conflicts'):
-                ui('review', task['id'])  # you edited the same files: the task page explains
+            out = json.loads(r.read() or b'{}')
+        if out.get('conflicts'):
+            ui('review', task['id'])  # you edited the same files: the task page explains
+        else:
+            n = len(out.get('kept', []))
+            where = ', '.join(os.path.basename(f) for f in (task.get('folders') or [task.get('folder')]) if f) or 'your folder'
+            subprocess.Popen(['notify-send', '-a', 'GurtOS', '-i', 'dev.box.Box', f"Kept {n} change{'s' if n != 1 else ''} in {where}",
+                              'Undo Task in Files or in GurtOS puts the files back.'])
     except Exception:  # noqa: BLE001
         ui('review', task['id'])
     _cache[0] = 0
@@ -98,13 +104,13 @@ class GurtOSFiles(GObject.GObject, Nautilus.MenuProvider, Nautilus.InfoProvider)
             t = kept_by(files[0].get_location().get_path())
             if not t:
                 return []
-            back = Nautilus.MenuItem(name='Box::PutBackFile', label='Put Files Back…', tip=f"Undo what \"{t['title']}\" changed")
+            back = Nautilus.MenuItem(name='Box::PutBackFile', label='Undo Task…', tip=f"Put back what \"{t['title']}\" changed")
             back.connect('activate', lambda _i: ui('review', t['id']))
             return [back]
         paths = [f.get_location().get_path() for f in files if f.is_directory() and f.get_uri_scheme() == 'file']
         if not paths or len(paths) != len(files) or len(paths) > 10:  # folders only; the box takes up to 10 in one task
             return []
-        item = Nautilus.MenuItem(name='Box::AskAnAgent', label='Ask an Agent…', tip='Let an agent work on a copy of this folder')
+        item = Nautilus.MenuItem(name='Box::AskAnAgent', label='New Agent Task…', tip='Let an agent work on a copy of this folder')
         item.connect('activate', lambda _i: ui('ask', *paths))
         items = [item]
         if len(files) == 1:
@@ -116,13 +122,13 @@ class GurtOSFiles(GObject.GObject, Nautilus.MenuProvider, Nautilus.InfoProvider)
         for n, t in enumerate(agent_tasks(file.get_location().get_path())[:3]):
             title = t['title'] if len(t['title']) <= 40 else t['title'][:39] + '…'
             if t.get('review') == 'kept':
-                back = Nautilus.MenuItem(name=f'Box::PutBack{n}', label=f'Put Files Back: {title}…', tip='Undo the agent changes you kept')
+                back = Nautilus.MenuItem(name=f'Box::PutBack{n}', label=f'Undo Task: {title}…', tip='Put back the files this task changed')
                 back.connect('activate', lambda _i, t=t: ui('review', t['id']))
                 items.append(back)
                 continue
-            keep_item = Nautilus.MenuItem(name=f'Box::Keep{n}', label=f'Keep Agent Changes: {title}', tip='Write the agent changes into this folder')
+            keep_item = Nautilus.MenuItem(name=f'Box::Keep{n}', label=f'Keep Changes: {title}', tip='Write the agent changes into this folder')
             keep_item.connect('activate', lambda _i, t=t: keep(t, file))
-            undo = Nautilus.MenuItem(name=f'Box::Undo{n}', label=f'Undo Agent Changes: {title}…', tip='Review them first, then throw them away')
+            undo = Nautilus.MenuItem(name=f'Box::Undo{n}', label=f'Undo Task: {title}…', tip='Review them first, then throw them away')
             undo.connect('activate', lambda _i, t=t: ui('review', t['id']))
             items += [keep_item, undo]
         return items
@@ -130,6 +136,6 @@ class GurtOSFiles(GObject.GObject, Nautilus.MenuProvider, Nautilus.InfoProvider)
     def get_background_items(self, folder):
         if folder.get_uri_scheme() != 'file':
             return []
-        item = Nautilus.MenuItem(name='Box::AskAnAgentHere', label='Ask an Agent…', tip='Let an agent work on a copy of this folder')
+        item = Nautilus.MenuItem(name='Box::AskAnAgentHere', label='New Agent Task…', tip='Let an agent work on a copy of this folder')
         item.connect('activate', lambda _i: ui('ask', folder.get_location().get_path()))
         return [item, *self.review_items(folder)]

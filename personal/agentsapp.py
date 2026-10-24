@@ -14,6 +14,7 @@ import tasklogic as tl
 from boxapi import BOX, api, background, quote, tilde
 
 ME = GLib.get_user_name()
+HIDDEN_PANELS = ('spacetime', 'anthropic')  # the box's own plumbing, not apps a person opens
 
 
 # ---------- small builders ----------
@@ -95,14 +96,25 @@ class AgentsWindow(Adw.ApplicationWindow):
         self.nav_list.connect('row-activated', lambda _l, r: self.show_root(r.pid))
         self.nav_list.set_header_func(lambda r, _b: r.set_header(label('Apps', 'heading', 'dim-label', margin_start=12, margin_top=12, margin_bottom=6)) if getattr(r, 'first_app', False) else r.set_header(None))
         side_header = Adw.HeaderBar(title_widget=Adw.WindowTitle(title='GurtOS'))
-        side_header.pack_start(icon_button('list-add-symbolic', 'New task', self.new_task))
+        plus = icon_button('list-add-symbolic', 'New task', self.new_task)
+        self.new_buttons = [plus]
+        side_header.pack_start(plus)
         side = Adw.ToolbarView(content=Gtk.ScrolledWindow(child=self.nav_list, hscrollbar_policy=Gtk.PolicyType.NEVER))
         side.add_top_bar(side_header)
         self.nav = Adw.NavigationView()
         self.split = Adw.NavigationSplitView(sidebar=Adw.NavigationPage(title='GurtOS', child=side),
                                              content=Adw.NavigationPage(title='Agents', child=self.nav), min_sidebar_width=220, max_sidebar_width=260)
-        self.toasts = Adw.ToastOverlay(child=self.split)
+        bar = Gtk.Box(spacing=8, css_classes=['gurt-offline-bar'])
+        bar.append(Gtk.Image(icon_name='network-offline-symbolic', accessible_role=Gtk.AccessibleRole.PRESENTATION))
+        bar.append(label("GurtOS isn't answering. Your files are unchanged. Retrying…", wrap=False))
+        self.banner = Gtk.Revealer(child=bar, reveal_child=False)
+        outer = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        outer.append(self.banner)
+        self.split.set_vexpand(True)
+        outer.append(self.split)
+        self.toasts = Adw.ToastOverlay(child=outer)
         self.set_content(self.toasts)
+        self.offline = False
         bp = Adw.Breakpoint.new(Adw.BreakpointCondition.parse('max-width: 640sp'))
         bp.add_setter(self.split, 'collapsed', True)
         self.add_breakpoint(bp)
@@ -120,16 +132,20 @@ class AgentsWindow(Adw.ApplicationWindow):
     def refresh(self, first=False):
         def done(state, err):
             if err:
+                self.set_offline(True)
                 if first:
-                    self.nav.replace([page('Agents', '', Adw.StatusPage(icon_name='dialog-error-symbolic', title="GurtOS isn't answering",
-                                                                       description=GLib.markup_escape_text(f'Its agent service runs on {BOX}. It may still be starting.')))])
+                    self.nav.replace([page('Agents', '', Adw.StatusPage(icon_name='network-offline-symbolic', title="GurtOS isn't answering",
+                                                                       description='Your files are unchanged. GurtOS keeps trying.'))])
                     GLib.timeout_add_seconds(3, lambda: self.refresh(first=True) and False)
                 return
+            self.set_offline(False)
             self.tasks, self.pending, self.settings, self.apps, self.system = state[:5]
+            self.apps = [a for a in self.apps if a.get('track') not in HIDDEN_PANELS]
             if first:
                 self.events = state[5]
                 self.fill_sidebar()
                 threading.Thread(target=self.follow, daemon=True).start()
+                GLib.timeout_add_seconds(5, self.heartbeat)
                 if self.current is None:
                     self.show_root('agents')
             self.update_badges()
@@ -137,6 +153,26 @@ class AgentsWindow(Adw.ApplicationWindow):
                 fn()
         background(lambda: (api('GET', '/api/tasks'), api('GET', '/api/approvals?state=pending'), api('GET', '/api/settings'),
                             api('GET', '/api/apps'), api('GET', '/api/system')) + ((api('GET', '/api/log?after=0'),) if first else ()), done)
+
+    def heartbeat(self):
+        """The live log goes quiet when GurtOS stops, so look every few seconds to notice, and to notice it is back."""
+        if self.stop.is_set():
+            return False
+        self.refresh()
+        return True
+
+    def set_offline(self, off):
+        if off == self.offline:
+            return
+        self.offline = off
+        self.banner.set_reveal_child(off)
+        self.new_button_sensitive(not off)
+        for fn in list(self.refreshers.values()):
+            fn()
+
+    def new_button_sensitive(self, on):
+        for b in getattr(self, 'new_buttons', []):
+            b.set_sensitive(on)
 
     def follow(self):
         """The live action log. Each event only means "something changed": one refresh per burst."""
@@ -198,7 +234,7 @@ class AgentsWindow(Adw.ApplicationWindow):
         self.update_badges()
 
     def update_badges(self):
-        n = len(self.pending) + sum(1 for t in self.tasks if t['state'] == 'done' and tl.needs_review(t))
+        n = len(self.pending)  # requests only, the same count as the top bar
         self.badge.set_label(str(n))
         self.badge.set_visible(n > 0)
 
@@ -278,13 +314,21 @@ class AgentsWindow(Adw.ApplicationWindow):
         pause.connect('toggled', paused)
         new = Gtk.Button(label='New task', css_classes=['suggested-action'], valign=Gtk.Align.CENTER, tooltip_text='New task (Ctrl+N)')
         new.connect('clicked', lambda _b: self.new_task())
+        self.new_buttons.append(new)
         p = page('Agents', '', body, new, pause)
 
         def build():
             guard[0] = True
             pause.set_active(bool(self.settings.get('paused')))
             pause.set_visible('paused' in self.settings)
+            pause.set_sensitive(not self.offline)
+            new.set_sensitive(not self.offline)
+            pause.set_tooltip_text('Resume all agents' if self.settings.get('paused') else 'Pause all agents')
             guard[0] = False
+            if self.offline:  # never a stale list, and never "No agents yet", while GurtOS is down
+                p.title_widget.set_subtitle('Offline')
+                return body.fill(Adw.StatusPage(icon_name='network-offline-symbolic', title="GurtOS isn't answering",
+                                                description='Your files are unchanged. GurtOS keeps trying and this page fills in by itself.'))
             s = tl.sections(self.tasks, self.pending)
             p.title_widget.set_subtitle(('Paused · ' if self.settings.get('paused') else '') + tl.headline(s))
             if not self.tasks:
@@ -308,7 +352,7 @@ class AgentsWindow(Adw.ApplicationWindow):
                 r.add_prefix(sp)
                 g.add(r)
             if not s['running']:
-                g.add(row('Nothing running', 'Start one with New task, or from a folder in Files with Ask an Agent.', 'media-playback-pause-symbolic'))
+                g.add(row('Nothing running', 'Start one with New task, or right-click a folder in Files.', 'media-playback-pause-symbolic'))
             out.append(g)
             if s['review']:
                 g = group('Ready to review', 'Finished. Nothing reaches your folder until you keep it.')
@@ -320,7 +364,7 @@ class AgentsWindow(Adw.ApplicationWindow):
             if s['done']:
                 g = group('Done')
                 for t in s['done']:
-                    words = {'done': 'Kept' if t.get('review') == 'kept' else 'Finished', 'failed': 'Failed', 'undone': 'Undone'}[t['state']]
+                    words = {'done': 'Kept' if t.get('review') == 'kept' else 'Finished', 'failed': 'Could not finish', 'undone': 'Undone'}[t['state']]
                     icon = {'done': 'object-select-symbolic', 'failed': 'dialog-error-symbolic', 'undone': 'edit-undo-symbolic'}[t['state']]
                     g.add(row(t['title'], f"{words} {tl.clock(t.get('updatedAt'))} · {tl.dollars(t.get('costCents'))}", icon, activate=lambda t=t: self.open_task(t['id'])))
                 out.append(g)
@@ -333,10 +377,9 @@ class AgentsWindow(Adw.ApplicationWindow):
 
     def open_task(self, task_id):
         body = Scroller()
-        undo = icon_button('edit-undo-symbolic', 'Undo this task', lambda: self.confirm(
-            'Undo this task?', 'Every change this task made goes away. Your folders stay as they are, and other tasks keep theirs.', 'Undo task', task_id, 'undo'))
-        p = page('Task', '', body, undo)
         state = {}
+        undo = icon_button('edit-undo-symbolic', 'Undo task', lambda: self.confirm_undo(state['detail']['task']))
+        p = page('Task', '', body, undo)
 
         def build():
             def done(result, err):
@@ -344,7 +387,7 @@ class AgentsWindow(Adw.ApplicationWindow):
                     return body.fill(Adw.StatusPage(icon_name='dialog-error-symbolic', title='Could not load this task', description=GLib.markup_escape_text(str(err))))
                 detail, diff = result
                 state['detail'] = detail
-                undo.set_visible(detail['task']['state'] != 'undone' and detail['task'].get('review') != 'kept')
+                undo.set_visible(detail['task']['state'] != 'undone' and detail['task'].get('review') != 'undone')
                 body.fill(*self.task_widgets(detail, diff, p))
             background(lambda: (api('GET', f'/api/tasks/{quote(task_id)}'), api('GET', f'/api/tasks/{quote(task_id)}/diff')), done)
         self.refreshers[f'task:{task_id}'] = build
@@ -370,7 +413,7 @@ class AgentsWindow(Adw.ApplicationWindow):
         r.add_suffix(bar)
         g.add(r)
         if t['state'] == 'failed':
-            g.add(row('It failed', t.get('error') or '', 'dialog-error-symbolic'))
+            g.add(row('It could not finish', tl.failure_text(t.get('error')), 'dialog-error-symbolic'))
         out.append(g)
 
         # Waiting for an OK
@@ -391,19 +434,18 @@ class AgentsWindow(Adw.ApplicationWindow):
             for f in reach['folders']:
                 g.add(row(os.path.basename(f) or f, f'May change, on a copy · {tilde(f)}', 'folder-symbolic'))
         else:
-            g.add(row('Its own workspace', reach['workspace'] or '', 'folder-symbolic'))
+            g.add(row('A space of its own', 'None of your folders', 'folder-symbolic'))
         g.add(row('Internet', ', '.join(reach['hosts']) if reach['hosts'] else 'Off', 'network-wireless-symbolic'))
         if reach['tools']:
             g.add(row('Apps', ', '.join(reach['tools']), 'application-x-addon-symbolic'))
-        if reach['user']:
-            g.add(row('Runs as', f"{reach['user']}, its own user, with no sudo and none of your passwords", 'system-users-symbolic'))
+        g.add(row('Runs as its own user, with no sudo', 'It never sees your passwords or the keys GurtOS keeps.', 'system-users-symbolic'))
         out.append(g)
 
         # Plan and steps, live
         g = group('Steps', 'The plan and every step, as the agent took them.')
         steps = [e for e in detail.get('events', []) if e.get('type') not in ('task.created',)]
         for e in steps[-60:]:
-            icon, line = tl.event_text(e)
+            icon, line = tl.event_text(e, ME)
             r = Adw.ActionRow(title=GLib.markup_escape_text(line or ' '), title_lines=3)
             r.add_prefix(Gtk.Image(icon_name=icon, accessible_role=Gtk.AccessibleRole.PRESENTATION))
             r.add_suffix(label(tl.clock(e.get('at')), 'dim-label', 'numeric', wrap=False, valign=Gtk.Align.CENTER))
@@ -415,6 +457,15 @@ class AgentsWindow(Adw.ApplicationWindow):
             sp.update_property([Gtk.AccessibleProperty.LABEL], ['Working'])
             g.set_header_suffix(sp)
         out.append(g)
+        tech = group()
+        ex = Adw.ExpanderRow(title='Technical details', subtitle='For troubleshooting')
+        for k, v in (('Task id', t['id']), ('Linux user', reach['user']), ('Workspace', reach['workspace']), ('Started from', t.get('source')),
+                     ('Error', t.get('error'))):
+            if v:
+                r = Adw.ActionRow(title=k, subtitle=GLib.markup_escape_text(str(v)), subtitle_selectable=True, css_classes=['property'])
+                ex.add_row(r)
+        tech.add(ex)
+        out.append(tech)
         return out
 
     def changes_widgets(self, t, diff):
@@ -435,11 +486,10 @@ class AgentsWindow(Adw.ApplicationWindow):
             desc = f'In a copy until you keep them. Nothing outside {where} changed.'
         g = group('Changes', desc)
         if review == 'kept':
-            g.set_header_suffix(button('Put files back…', lambda: self.confirm('Put your files back?', 'The files this task changed go back to how they were before Keep, and files it added are removed.',
-                                                                               'Put files back', t['id'], 'unkeep'), 'destructive-action'))
+            g.set_header_suffix(button('Undo task…', lambda: self.confirm_undo(t)))
         elif t['state'] == 'done' and tl.needs_review(t):
             box = Gtk.Box(spacing=6)
-            box.append(button('Undo…', lambda: self.confirm('Undo this task?', 'Its changes are thrown away. Your folder stays as it is.', 'Undo', t['id'], 'undo'), 'destructive-action'))
+            box.append(button('Undo task…', lambda: self.confirm_undo(t)))  # quieter than Keep: Keep is the usual answer
             box.append(button('Keep changes', lambda: self.keep(t['id']), 'suggested-action'))
             g.set_header_suffix(box)
         for kind, verb, icon in (('modified', 'Changed', 'document-edit-symbolic'), ('added', 'Added', 'list-add-symbolic'), ('deleted', 'Deleted', 'user-trash-symbolic')):
@@ -453,6 +503,14 @@ class AgentsWindow(Adw.ApplicationWindow):
             g.add(r)
         if not changes:
             g.add(row('No files changed' if t['state'] == 'done' else 'No changes yet', '', 'document-edit-symbolic'))
+        added = [c['path'] for c in changes if c['change'] == 'added']
+        if len(added) == 1 and diff.get('diff'):  # one new file: show what it says, not a diff
+            lines = tl.added_text(diff['diff'], added[0])
+            if lines:
+                prev = label('\n'.join(lines[:12]) + ('\n…' if len(lines) > 12 else ''), 'monospace', margin_top=8, margin_bottom=8, margin_start=12, margin_end=12, selectable=True)
+                r = Adw.ExpanderRow(title=f'What {os.path.basename(added[0])} says', expanded=True)
+                r.add_row(prev)
+                g.add(r)
         out = [g]
         if diff.get('diff'):
             text = Gtk.TextView(editable=False, cursor_visible=False, monospace=True, wrap_mode=Gtk.WrapMode.WORD_CHAR, top_margin=10, bottom_margin=10, left_margin=12, right_margin=12)
@@ -464,10 +522,20 @@ class AgentsWindow(Adw.ApplicationWindow):
             for line in diff['diff'].splitlines()[:2000]:
                 tag = 'hunk' if line.startswith('@@') else 'add' if line[:1] == '+' and not line.startswith('+++') else 'del' if line[:1] == '-' and not line.startswith('---') else None
                 (buf.insert_with_tags_by_name(buf.get_end_iter(), line + '\n', tag) if tag else buf.insert(buf.get_end_iter(), line + '\n'))
-            d = group('Line by line')
-            d.add(Gtk.Frame(child=Gtk.ScrolledWindow(child=text, min_content_height=200, max_content_height=480, propagate_natural_height=True), css_classes=['view']))
-            out.append(d)
+            d = Adw.ExpanderRow(title='Show changes line by line')
+            d.add_prefix(Gtk.Image(icon_name='view-list-symbolic', accessible_role=Gtk.AccessibleRole.PRESENTATION))
+            frame = Gtk.ScrolledWindow(child=text, min_content_height=200, max_content_height=480, propagate_natural_height=True)
+            d.add_row(frame)
+            g.add(d)
         return out
+
+    def confirm_undo(self, t):
+        if t.get('review') == 'kept':
+            self.confirm('Undo this task?', 'Its changes come out of your folder: files it changed go back to how they were, and files it added '
+                         'are removed. Every other task keeps its changes.', 'Undo task', t['id'], 'unkeep')
+        else:
+            self.confirm('Undo this task?', 'Every change this task made goes away. Your folders stay as they are, and other tasks keep theirs.',
+                         'Undo task', t['id'], 'undo')
 
     def keep(self, task_id):
         def done(out, err):
@@ -516,12 +584,12 @@ class AgentsWindow(Adw.ApplicationWindow):
                 done, stuck = result
                 if stuck:
                     d = Adw.MessageDialog(transient_for=self, heading='You edited these files since',
-                                          body=f"GurtOS took out {len(done)} task{'s' if len(done) != 1 else ''} and stopped at {self.titles().get(stuck[0], 'one')}, "
+                                          body=f"GurtOS undid {len(done)} task{'s' if len(done) != 1 else ''} and stopped at {self.titles().get(stuck[0], 'one')}, "
                                                'so your edits are safe:\n\n' + '\n'.join(stuck[1][:8]))
                     d.add_response('close', 'Close')
                     d.present()
                 else:
-                    self.toast(f"Took out {len(done)} task{'s' if len(done) != 1 else ''}. Every other task kept its changes." if len(done) != 1 else 'Done. Every other task kept its changes.')
+                    self.toast(f"Undid {len(done)} tasks. Every other task kept its changes." if len(done) != 1 else 'Undone. Every other task kept its changes.')
             self.refresh()
             if then:
                 then()
@@ -561,6 +629,8 @@ class AgentsWindow(Adw.ApplicationWindow):
                 apps_dd.set_selected(choices['apps'].index(keep) if keep in choices['apps'] else 0)
 
         def build(*_):
+            if self.offline:
+                return body.fill(Adw.StatusPage(icon_name='network-offline-symbolic', title="GurtOS isn't answering", description='The action log comes back when GurtOS does.'))
             fill_filters()
             titles = self.titles()
             task = choices['tasks'][tasks_dd.get_selected()] if tasks_dd.get_selected() < len(choices['tasks']) else None
@@ -570,8 +640,8 @@ class AgentsWindow(Adw.ApplicationWindow):
                 return body.fill(Adw.StatusPage(icon_name='edit-find-symbolic', title='Nothing matches', description='Try other words, or show all tasks and apps.'))
             g = group(f"{len(shown)} latest" if len(shown) == 200 else f"{len(shown)} event{'s' if len(shown) != 1 else ''}")
             for e in shown:
-                icon, line = tl.event_text(e)
-                who = titles.get(e.get('task')) or tl.app_of(e) or 'GurtOS'
+                icon, line = tl.event_text(e, ME)
+                who = titles.get(e.get('task')) or tl.app_title(e, self.apps) or 'GurtOS'
                 r = row(line, f"{who} · {tl.clock(e.get('at'))}", icon, activate=(lambda e=e: self.open_task(e['task'])) if e.get('task') in titles else None)
                 g.add(r)
             body.fill(g)
@@ -587,45 +657,45 @@ class AgentsWindow(Adw.ApplicationWindow):
 
     def timemachine_page(self):
         body = Scroller()
-        p = page('Time Machine', 'Take out one task, or go back in time', body)
-        span = Adw.ComboRow(title='Take out everything since', model=Gtk.StringList.new([s for s, _d in tl.SPANS]), selected=1)
-        go = button('Go back…', lambda: go_back(), 'destructive-action')
+        p = page('Time Machine', 'Undo one task, or every task since a time', body)
+        span = Adw.ComboRow(title='Undo every task since', model=Gtk.StringList.new([s for s, _d in tl.SPANS]), selected=1)
+        go = button('Undo…', lambda: go_back(), 'destructive-action')
         span.add_suffix(go)
 
         def go_back():
             plan = tl.go_back_plan(self.tasks, tl.since(tl.SPANS[span.get_selected()][1]))
             if not plan:
-                return self.toast('Nothing to take out in that time.')
-            d = Adw.MessageDialog(transient_for=self, heading=f"Go back to before {tl.SPANS[span.get_selected()][0]}?",
-                                  body='These tasks come out, newest first. Everything before stays.\n\n' + '\n'.join(f"• {t['title']}" for t in plan[:12]))
+                return self.toast('No task finished in that time.')
+            d = Adw.MessageDialog(transient_for=self, heading=f"Undo every task since {tl.SPANS[span.get_selected()][0]}?",
+                                  body='These tasks are undone, newest first. Everything before stays.\n\n' + '\n'.join(f"• {t['title']}" for t in plan[:12]))
             d.add_response('cancel', 'Cancel')
-            d.add_response('go', f"Take out {len(plan)}")
+            d.add_response('go', f"Undo {len(plan)} task{'s' if len(plan) != 1 else ''}")
             d.set_response_appearance('go', Adw.ResponseAppearance.DESTRUCTIVE)
             d.connect('response', lambda _d, r: r == 'go' and self.take_out([(t['id'], tl.can_take_out(t)) for t in plan]))
             d.present()
 
         def build(*_):
+            if self.offline:
+                return body.fill(Adw.StatusPage(icon_name='network-offline-symbolic', title="GurtOS isn't answering", description='Your files are unchanged.'))
             plan = tl.go_back_plan(self.tasks, tl.since(tl.SPANS[span.get_selected()][1]))
-            span.set_subtitle(f"{len(plan)} task{'s' if len(plan) != 1 else ''} would come out" if plan else 'Nothing finished in that time')
+            span.set_subtitle(f"{len(plan)} task{'s' if len(plan) != 1 else ''} would be undone" if plan else 'No task finished in that time')
             go.set_sensitive(bool(plan))
-            g1 = group('Go back in time', 'Undo every task that finished in that time, as if they never ran.')
+            g1 = group('Undo by time', 'Every task that finished in that time is undone, newest first. Everything before stays.')
             if span.get_parent():
                 span.get_parent().remove(span)
             g1.add(span)
-            g2 = group('Take out one task', 'Each finished task is a layer over your files. Taking one out leaves every other task as it is.')
-            layers = sorted((t for t in self.tasks if tl.can_take_out(t)), key=lambda t: t.get('updatedAt', ''), reverse=True)
-            for t in layers[:60]:
+            g2 = group('Undo one task', "Each task's changes are kept apart. Undoing one leaves every other task as it is.")
+            done = sorted((t for t in self.tasks if tl.can_take_out(t)), key=lambda t: t.get('updatedAt', ''), reverse=True)
+            for t in done[:60]:
                 how = tl.can_take_out(t)
-                where = ', '.join(tilde(f) for f in (t.get('folders') or [t.get('folder')]) if f) or t.get('workspace', '')
-                r = row(t['title'], f"{'Kept in' if how == 'unkeep' else 'In a copy of'} {where} · {tl.clock(t.get('updatedAt'))}",
+                where = ', '.join(tilde(f) for f in (t.get('folders') or [t.get('folder')]) if f) or 'a space of its own'
+                r = row(t['title'], f"{'Kept in' if how == 'unkeep' else 'Waiting in a copy of' if t.get('folder') or t.get('folders') else 'In'} {where} · {tl.clock(t.get('updatedAt'))}",
                         'document-save-symbolic' if how == 'unkeep' else 'document-open-recent-symbolic')
-                r.add_suffix(button('Put back…' if how == 'unkeep' else 'Undo…',
-                                    lambda t=t, how=how: self.confirm(f"Take out {t['title']}?", 'Only this task comes out. Every other task keeps its changes.',
-                                                                      'Take out', t['id'], how)))
+                r.add_suffix(button('Undo…', lambda t=t: self.confirm_undo(t)))
                 r.set_activatable(False)
                 g2.add(r)
-            if not layers:
-                g2.add(row('Nothing to take out', 'Finished tasks appear here.', 'document-open-recent-symbolic'))
+            if not done:
+                g2.add(row('Nothing to undo', 'Finished tasks appear here.', 'document-open-recent-symbolic'))
             body.fill(g1, g2)
         span.connect('notify::selected', build)
         self.refreshers['timemachine'] = build

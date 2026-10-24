@@ -53,3 +53,10 @@ stage { font-family: "Atkinson Hyperlegible", "Ubuntu", sans-serif; }
 .gurtos-lock-card { background-color: rgba(44, 49, 57, 0.92); }
 .gurtos-lock-source { spacing: 6px; }
 .gurtos-lock-hint { color: #AEB4BC; font-size: 0.85em; text-align: center; }
+
+/* The popover keeps one width, whatever the task names (P-7). */
+.gurtos-menu { width: 420px; min-width: 420px; max-width: 420px; }
+.gurtos-head-badge { background-color: #2F64A6; color: #F4F2EE; border-radius: 999px; width: 30px; height: 30px; }
+.gurtos-detail { max-width: 150px; margin-left: 8px; }
+.gurtos-more { color: #8DB8EE; font-weight: bold; }
+.gurtos-offline { padding: 10px 14px; }

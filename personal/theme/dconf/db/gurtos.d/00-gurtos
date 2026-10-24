@@ -53,3 +53,7 @@ custom-keybindings=['/org/gnome/settings-daemon/plugins/media-keys/custom-keybin
 name='Talk to your computer'
 command='/opt/box/personal/voice.py'
 binding='<Super><Alt>space'
+
+# Activities search: GurtOS's tasks and Find first, then Files and the rest.
+[org/gnome/desktop/search-providers]
+sort-order=['dev.box.Box.desktop', 'dev.box.Find.desktop', 'org.gnome.Nautilus.desktop', 'org.gnome.Settings.desktop', 'org.gnome.Calculator.desktop']
