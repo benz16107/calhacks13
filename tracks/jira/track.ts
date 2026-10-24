@@ -341,11 +341,26 @@ type Actor = { by: string; person?: string };
  * On a Business box that account must be linked to a person, and Business then decides by role, limit and who
  * asked. On a Server box, the Jira permission is the whole check.
  */
-async function actor(body: { by?: unknown; account?: unknown }): Promise<Actor> {
-  if (!(await isBusiness())) return { by: who(body.by) };
-  const person = linkedPerson(body.account);
+async function actor(box: Box, account: unknown, via?: string): Promise<Actor> {
+  const by = who(`${await nameOf(box, account)}${via ? ` via ${via}` : ''}`);
+  if (!(await isBusiness())) return { by };
+  const person = linkedPerson(account);
   if (!person) throw refuse(403, 'Your Jira account is not linked to a GurtOS person, so GurtOS Business cannot let you act. Ask an admin to link it.');
-  return { by: who(body.by), person };
+  return { by, person };
+}
+
+/** Who the log names, from Atlassian itself: the account's display name, never a name a caller sends. */
+const names = new Map<string, string>();
+async function nameOf(box: Box, account: unknown): Promise<string> {
+  const c = config();
+  if (typeof account !== 'string' || !/^[\w:-]{1,128}$/.test(account)) throw refuse(400, 'account: the Atlassian account id of the person acting');
+  if (!c) throw refuse(409, 'Jira is not connected on this box (no jira/config.json).');
+  if (!names.has(account)) {
+    const u = await jiraClient(box, c)('GET', `/rest/api/3/user?accountId=${encodeURIComponent(account)}`).catch(() => undefined);
+    if (!u?.displayName) throw refuse(403, 'Atlassian does not know that account.');
+    names.set(account, u.displayName);
+  }
+  return names.get(account)!;
 }
 const asPerson = (a: Actor) => ({ 'x-box-person': a.person! });
 
@@ -482,7 +497,8 @@ async function jsmTick(box: Box) {
     if (d.state === 'pending') continue;
     try {
       // The JSM approver acts as themselves: on Business, the GurtOS person their Jira account is linked to.
-      const a = await actor({ by: d.by ? `${d.by.name} via JSM ${o.key}` : `JSM ${o.key}`, account: d.by?.accountId });
+      if (!d.by) throw refuse(409, `JSM ${o.key} was decided, but it does not say by whom`);
+      const a = await actor(box, d.by.accountId, `JSM ${o.key}`);
       await answerAs(box, a, id, d.state === 'approved');
       o.done = true;
     } catch (e) {
@@ -644,18 +660,18 @@ export default {
       const body = await req.json();
       const a = box.approvals().find((x) => x.id === body.approval);
       if (!a || a.task !== body.task) throw refuse(404, `no approval ${body.approval} on task ${body.task}`);
-      return answerAs(box, await actor(body), a.id, body.approved === true);
+      return answerAs(box, await actor(box, body.account), a.id, body.approved === true);
     }),
     'POST /undo': guarded(async (req, box) => {
       const body = await req.json();
       if (!box.task(body.task)) throw refuse(404, `no task ${body.task}`);
-      await undoAs(box, await actor(body), body.task);
+      await undoAs(box, await actor(box, body.account), body.task);
       return box.task(body.task);
     }),
     // Several at once: picked in a JQL list or by the Rovo agent. Each is reported on its own; one failure stops none.
     'POST /undo-many': guarded(async (req, box) => {
       const body = await req.json();
-      const a = await actor(body);
+      const a = await actor(box, body.account);
       const byIssue = taskOfIssue();
       const ids: { task?: string; issue?: string }[] = [
         ...(Array.isArray(body.tasks) ? body.tasks : []).map((t: unknown) => ({ task: String(t) })),
@@ -676,7 +692,7 @@ export default {
     // Every agent on the box stops starting new work; running tasks hold where they are. Logged with who did it.
     'POST /pause': guarded(async (req, box) => {
       const body = await req.json();
-      const a = await actor(body);
+      const a = await actor(box, body.account);
       const paused = body.paused === true;
       box.note({ action: paused ? 'pause' : 'resume', by: a.by });
       const out = await boxCall<{ paused?: boolean }>('PATCH', '/api/settings', { paused }, a.person ? asPerson(a) : {});
@@ -690,7 +706,7 @@ export default {
     }),
     'POST /start': guarded(async (req, box) => {
       const body = await req.json();
-      return start(box, await actor(body), body.issue ?? {});
+      return start(box, await actor(box, body.account), body.issue ?? {});
     }),
   },
 } satisfies Track;

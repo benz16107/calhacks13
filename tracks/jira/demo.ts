@@ -76,6 +76,9 @@ export default async function (d: DemoKit) {
         body: body === undefined ? undefined : JSON.stringify(body),
       });
     const approval = `${B.id}.line3`;
+    // The Forge app sends the Atlassian account id; the box asks Atlassian for the name. A name in the body is ignored.
+    const me = stub ? { accountId: 'acct-user', displayName: 'Jira user' } : await jira('GET', '/rest/api/3/myself');
+    const acting = { account: me.accountId, by: 'Someone else entirely' };
     const refused = await Promise.all([panel('POST', '/undo', '', { task: B.id }), panel('POST', '/answer', 'guess'.repeat(10), { task: B.id, approval, approved: true })]);
     d.check(refused.every((r) => r.status === 401), 'without the shared secret the panel routes refuse to approve or roll back (401)');
     const secret = key('JIRA_BOX_SECRET');
@@ -84,18 +87,20 @@ export default async function (d: DemoKit) {
       return;
     }
     d.check((await panel('POST', '/answer', secret, { task: A.id, approval, approved: true })).status === 404, "an approval can't be answered through another task's issue");
-    await panel('POST', '/answer', secret, { task: B.id, approval, approved: true, by: 'Jira user' });
+    const nameOnly = await panel('POST', '/answer', secret, { task: B.id, approval, approved: true, by: 'Mallory' });
+    d.check(nameOnly.status === 400, 'an answer that names someone but carries no Atlassian account is refused (400)');
+    await panel('POST', '/answer', secret, { task: B.id, approval, approved: true, ...acting });
     await d.settled([B.id]);
     d.check(d.view('jira', 'settings.txt') === 'retries=0', 'approved from Jira, task B finished');
-    await panel('POST', '/undo', secret, { task: B.id, by: 'Jira user' });
+    await panel('POST', '/undo', secret, { task: B.id, ...acting });
     d.check(d.view('jira', 'settings.txt') === undefined && d.view('jira', 'README.md') === 'the box', 'rolled back from Jira: B\'s settings change is gone, A\'s fix stays');
     const audit = await (await panel('GET', `/task?id=${B.id}`, secret)).json();
     d.check(
-      audit.task.state === 'undone' && audit.audit.some((l: { text: string }) => l.text === 'Approved by jira:Jira user') && audit.blocked[0]?.host.startsWith('attacker.example') && audit.diff.includes('+retries=0'),
+      audit.task.state === 'undone' && audit.audit.some((l: { text: string }) => l.text === `Approved by jira:${me.displayName}`) && audit.blocked[0]?.host.startsWith('attacker.example') && audit.diff.includes('+retries=0'),
       'the panel\'s audit view shows the block, who approved, the roll back and the diff it undid',
     );
-    const b2 = await issue(B.id, (i) => i.fields.labels.includes('box-undone') && i.comments.some((c: string) => c.includes('Rolled back by jira:Jira user')));
-    d.check(b2.fields.status.name === 'Done' && b2.text.includes('Rolled back by jira:Jira user'), `${b2.key} says who rolled it back, in a comment and the description`);
+    const b2 = await issue(B.id, (i) => i.fields.labels.includes('box-undone') && i.comments.some((c: string) => c.includes(`Rolled back by jira:${me.displayName}`)));
+    d.check(b2.fields.status.name === 'Done' && b2.text.includes(`Rolled back by jira:${me.displayName}`), `${b2.key} says who rolled it back, in a comment and the description`);
     d.check(b2.text.includes('+retries=0'), `${b2.key} still shows the diff it undid, though the box deleted those files`);
     const secrets = vault.split('\n').map((l) => l.split('=').slice(1).join('=').trim()).filter((v) => v.length > 8);
     // Live, check the text the box wrote; Jira's own JSON carries the site and email, which are not secrets.
@@ -154,8 +159,8 @@ export default async function (d: DemoKit) {
     // A teammate's issue, assigned to the GurtOS agent: the task works in its own space and reports back there.
     const teammate = (await jira('POST', '/rest/api/3/issue', { fields: { project: { key: stub ? 'OPS' : 'BOX' }, issuetype: { name: 'Task' }, summary: 'Write the on-call notes', labels: [] } })).key;
     made.push(teammate);
-    const started = await call('POST', '/start', { issue: { key: teammate, summary: 'Write the on-call notes', description: 'write oncall.md Page Sam first, then Priya.' }, by: 'Jira user' });
-    const again = await call('POST', '/start', { issue: { key: teammate, summary: 'x', description: 'write x.md x' }, by: 'Jira user' });
+    const started = await call('POST', '/start', { issue: { key: teammate, summary: 'Write the on-call notes', description: 'write oncall.md Page Sam first, then Priya.' }, ...acting });
+    const again = await call('POST', '/start', { issue: { key: teammate, summary: 'x', description: 'write x.md x' }, ...acting });
     await d.settled([started.task.id]);
     const report = await d.waitFor(`the report on ${teammate}`, async () => {
       const cs = (await jira('GET', `/rest/api/3/issue/${teammate}/comment`)).comments.map((c: { body: unknown }) => JSON.stringify(c.body));
@@ -165,17 +170,17 @@ export default async function (d: DemoKit) {
       `assigned ${teammate} to the GurtOS agent: the task ran, the diff came back as a comment, a second start did not run it twice`);
 
     // Pause all: a new task waits; resume, and it runs.
-    await call('POST', '/pause', { paused: true, by: 'Jira user' });
+    await call('POST', '/pause', { paused: true, ...acting });
     const D = await start('Paused job', 'write paused.txt later');
     await new Promise((r) => setTimeout(r, 1500));
     const waited = (await d.api('GET', `/tasks/${D.id}`)).task.state === 'queued' && (await call('GET', '/activity')).paused;
-    await call('POST', '/pause', { paused: false, by: 'Jira user' });
+    await call('POST', '/pause', { paused: false, ...acting });
     await d.settled([D.id]);
     d.check(waited && d.view('jira', 'paused.txt') === 'later', 'pause all from Jira held a new task in the queue; resume ran it');
 
     // Bulk roll back from a JQL list: A's fix and the hotfix, picked by issue key. Each says what came back.
     const cIssue = (await issue(C.id, () => true)).key;
-    const bulk = await call('POST', '/undo-many', { issues: [a.key, cIssue, 'NOPE-1'], by: 'Jira user' });
+    const bulk = await call('POST', '/undo-many', { issues: [a.key, cIssue, 'NOPE-1'], ...acting });
     const [ra, rc, rx] = bulk.results;
     d.check(ra.ok && rc.ok && !rx.ok && ra.changes.some((x: { path: string }) => x.path === 'README.md') && d.view('jira', 'README.md') === 'teh box' && d.view('jira', 'hotfix.txt') === undefined && d.view('jira', 'oncall.md') !== undefined,
       `bulk roll back of ${a.key} and ${cIssue}: both came back (${[...ra.changes, ...rc.changes].map((x: { path: string }) => x.path).join(', ')}), NOPE-1 was refused, the on-call notes stayed`);
@@ -225,6 +230,11 @@ async function stubJira() {
       return send(201, { issueKey: key });
     }
     if (req.method === 'GET' && p === '/rest/api/3/myself') return send(200, { accountId: 'acct-approver' });
+    if (req.method === 'GET' && p === '/rest/api/3/user') {
+      const id = new URL(req.url!, 'http://x').searchParams.get('accountId');
+      const known: Record<string, string> = { 'acct-user': 'Jira user', 'acct-approver': 'Approver' };
+      return id && known[id] ? send(200, { accountId: id, displayName: known[id] }) : send(404, {});
+    }
     const sd = p.match(/^\/rest\/servicedeskapi\/request\/([\w-]+)\/(approval|comment)$/);
     if (sd) {
       const i = issues.get(sd[1]);

@@ -144,7 +144,9 @@ shared secret. It never trusts the browser or the model for who is acting or whi
 3. May they: Jira's `mypermissions` (edit the issue for approve and roll back, Jira admin for pause). In bulk,
    issues the user can't edit are skipped and reported.
 4. Then it calls the box with the secret. The box checks it in constant time, checks the approval belongs to
-   the task, and runs the same answer, undo and pause the portal and phone use. Its log records `jira:<name>`.
+   the task, and runs the same answer, undo and pause the portal and phone use (`box.answer`, `box.undo`,
+   `box.createTask`; one path each). Its log records `jira:<name>`, where the box asked Atlassian for the name
+   from the account id itself. A name in the request is ignored, and a request with no account is refused.
 
 **On GurtOS Business** (part 7), the box adds a step: the Jira account must be linked to a GurtOS person in
 `BOX_HOME/jira/people.json` (`{"<accountId>": "<person id>"}`), and the box acts as that person. Business then
