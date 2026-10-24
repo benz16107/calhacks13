@@ -6,8 +6,8 @@ found in. Exit 1 on any match.
 
     python3 -I release/scan-history.py <repo> <secret file>...
 
-Release use: run it on linuxbox with ~/.config/calhacks13/env, every test VM's /etc/box/vault.env, the track
-seeds and keys, right before the repository's visibility changes. See release/audit.md.
+Release use: run it on the machine that holds the keys, with the key file, every test VM's /etc/box/vault.env,
+the apps' seeds and keys, right before a repository's visibility changes. See release/audit.md.
 """
 import re
 import subprocess
