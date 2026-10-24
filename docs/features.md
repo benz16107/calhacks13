@@ -31,8 +31,8 @@ Checked against main `8a4cbf4`, Sat Oct 24 05:30 PT. `./demo` from a clean workt
 | Status | Count |
 |---|---|
 | verified (ISO) | 3 |
-| verified | 54 |
-| merged | 97 |
+| verified | 55 |
+| merged | 96 |
 | building | 14 |
 | planned | 20 |
 | not pursued | 5 |
@@ -153,7 +153,7 @@ controller's clear-the-flag path (FRR-5), an ASI:One chat intent for credit.
 
 | Feature | Owner | Status | Commit | Demo step | Tracks |
 |---|---|---|---|---|---|
-| Know your agent: a stranger's agent asks for credit through the guest path (`POST /t/mana/guest {kind:'credit'}`); CRS identity, Fraud Finder and phone owner run before the owner is asked; fraud persona P13 gets a plain-words 403 with no task and no approval; an honest persona reaches the owner with no SSN in the question or the log | credit desk, mana | merged (b17dedb; shares Mana's guest path) | b17dedb | track credit-desk (demo-crs.ts) | CRS, Hyphenate, Fetch.ai |
+| Know your agent: a stranger's agent asks for credit through the guest path (`POST /t/mana/guest {kind:'credit'}`); CRS identity, Fraud Finder and phone owner run before the owner is asked; fraud persona P13 gets a plain-words 403 with no task and no approval; an honest persona reaches the owner with no SSN in the question or the log | credit desk, mana | verified Oct 24 08:10 on the QA box (P13 through a proxy: 403 in plain words, no task made; a malformed SSN 400 and a well-formed number that is not one of CRS's test people 400, both before any CRS call; P19 reached the owner on a Business box routed to Rosa; the question has no SSN or last name; after Rosa's OK the credit desk took it and the guest saw only "Your application reached the credit desk") | b17dedb | track credit-desk (demo-crs.ts) | CRS, Hyphenate, Fetch.ai |
 | A stated reason for every CRS pull (credit application or account review), with the application or customer; a pull for a decided or stale application asks the controller first; a per-task pull limit | credit desk | merged (b17dedb) | b17dedb | track credit-desk (demo-crs.ts) | CRS, Microsoft |
 | CRS MCP behind the broker (`credit-desk.crs_docs`, `credit-desk.crs_lookup`); login stays in the vault; the clerk can read docs only; SSN and date of birth redacted | credit desk | merged (b17dedb) | b17dedb | track credit-desk (demo-crs.ts) | CRS |
 | Nightly re-check routine at 02:00 (off by default; `/t/credit-desk/recheck`); a score drop sends the limit change to the controller | credit desk | merged (b17dedb) | b17dedb | track credit-desk (demo-crs.ts) | CRS, Hyphenate |
