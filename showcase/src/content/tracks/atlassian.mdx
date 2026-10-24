@@ -1,16 +1,18 @@
 ---
 order: 2
 sponsor: Atlassian
-prize: Agentic Workforce Challenge, Track 2 (security for agents acting for a user)
+prize: Agentic Workforce Challenge, Track 2 (security for agents acting for a user) and Track 1 (agents that do the work)
 editions: 'GurtOS Business'
-pitch: 'Teams already review work in Jira. With Business, every agent task is an issue a teammate can approve or roll back, and Jira''s own permissions decide who may. Business is on main, but the Jira panel has not been tried against a Business box: today the Forge app drives a GurtOS Server box, and it already checks that the Jira user may edit the issue.'
+pitch: 'Teams already work in Jira and Confluence. GurtOS makes every agent task an issue a teammate can approve or roll back, answers from the log through a Rovo agent, starts agents from an issue, sends risky actions to Jira Service Management approvers and writes the record to Confluence. Business is on main, but the Jira app has not been tried against a Business box: everything here ran against a GurtOS Server box.'
 title: See what an agent did in Jira, then roll back only that
-summary: Every task an agent runs on a GurtOS box becomes a Jira issue with what it was asked, what it was allowed, its reasoning, every blocked attempt, its diff and its full action log. A Forge app adds a panel to the issue with Approve, Deny and Roll back, and Roll back removes only that task's changes on the box.
+summary: 'Agents now act for teams, and the systems they run on were built for one person at a keyboard: the agent runs as that person, with their keys, so the next morning there is no record you can trust and no way to undo only the bad actions. On GurtOS every task an agent runs becomes a Jira issue with what it was asked, what it was allowed, its reasoning, every blocked attempt, its diff and its full action log. A Forge app adds a panel with Approve, Deny and Roll back, and Roll back removes only that task''s changes on the box. A Rovo agent answers from the log, a bulk action rolls back many issues at once, an issue can start an agent, risky actions become Jira Service Management approvals, and Confluence gets a daily page and an incident page.'
 proof: 'BOX-2, a scripted agent that misread a rule, changed three configs instead of one and tried to send the repo to a paste site. It was blocked, approved from Jira, then rolled back from Jira: its configs came back and the README fix another task made a minute earlier stayed.'
 criteriaSource: "From Atlassian's Track 2 brief and the challenge rules, as copied into the project's track plan."
 criteria:
   - ask: 'Audit and reversion: record every action with the inputs and reasoning behind it, so an admin can see exactly what happened the next morning and roll back only the changes that were wrong.'
     how: 'Each issue holds the prompt, the tools and hosts the task was allowed, the agent''s reasoning in its own words, approvals and who gave them, blocked attempts, the diff and the last 40 log entries. <strong>Roll back this task</strong> takes out that task''s layer of file changes on the box. Every other task keeps its own.'
+  - ask: 'Track 1: agents that do the work.'
+    how: 'Hand a Jira issue to the GurtOS agent, by a label, by assigning it, or from an Automation rule. The issue''s text becomes a task in its own safe space, and the result, the diff and any request for an OK come back on the issue. A Rovo agent and bulk actions let a team run its agents from Jira.'
   - ask: 'A Forge app for Jira or Confluence.'
     how: 'A Jira issue panel (UI Kit, native render) with a resolver in Atlassian''s cloud, plus a <code>jira:entityProperty</code> index so state, cost, blocked attempts and pending approvals are searchable in JQL. Installed on the demo site in production.'
   - ask: 'Technical use of Forge.'
@@ -24,6 +26,36 @@ criteria:
     how: 'The track lives in <code>tracks/jira/</code> (box side) and <code>tracks/jira/forge/</code> (the Forge app).'
 clip: moment-1-undo
 shots:
+  - src: ../../assets/repo/jira/rovo-activity.png
+    alt: 'The GurtOS Rovo agent answering "What got blocked this week, and what did agents change?": 8 tasks in the BOX project costing $3.32, paste.example.net blocked during two tasks, and the files each task changed.'
+    caption: 'The Rovo agent answers from the box''s log.'
+    tall: true
+  - src: ../../assets/repo/jira/rovo-confirm.png
+    alt: 'Rovo asked to roll back everything the shopper did today: it found BOX-17 and BOX-18 and shows a Please review box with Confirm selected and Cancel.'
+    caption: '"Roll back everything the shopper did today": Rovo finds the tasks and asks before it acts. It says a roll back removes file changes and cannot recall money or messages already sent.'
+    tall: true
+  - src: ../../assets/repo/jira/rovo-rolled-back.png
+    alt: 'Rovo reporting BOX-18 and BOX-17 rolled back, with the files restored.'
+    caption: 'After the confirm, the report of what came back for each task.'
+    tall: true
+  - src: ../../assets/repo/jira/bulk-report.png
+    alt: 'A dialog titled Roll back with GurtOS: 2 of 2 rolled back, listing BOX-22 and BOX-21 and the files restored.'
+    caption: 'Rolling back several issues at once from an issue search, with a report for each.'
+  - src: ../../assets/repo/jira/started-from-issue.png
+    alt: 'A Jira issue after the GurtOS agent worked on it: "Done. Spent $0.03 of a $0.25 budget", what the agent says it did, the files changed and the diff.'
+    caption: 'An agent started from a teammate''s issue reported back on it, with the diff and what it spent.'
+    tall: true
+  - src: ../../assets/repo/jira/jsm-approval.png
+    alt: 'A Jira Service Management request, Approval needed: Push the new deploy settings to production, with Approve and Decline.'
+    caption: 'A production change waits in Jira Service Management. The agent waits, and the box logs who approved.'
+  - src: ../../assets/repo/jira/confluence-incident.png
+    alt: 'A Confluence incident page: a task tried to reach paste.example.net:443, which is not on its allowed list, so GurtOS refused the connection, with what was tried, what it was allowed and what to do.'
+    caption: 'The incident page for a blocked attempt.'
+    tall: true
+  - src: ../../assets/repo/jira/gadget.png
+    alt: 'The GurtOS agent activity dashboard gadget: 19 agent tasks in 7 days, 5 blocked attempts, 11 rolled back, $3.90 spent, tasks per project and the latest blocked attempts.'
+    caption: 'The dashboard gadget: agent activity per project.'
+    tall: true
   - src: ../../assets/repo/jira/panel-waiting.png
     alt: 'The Box agent task panel in Jira, waiting for an OK, with a blocked attempt to reach paste.example.net and a diff that changed three service configs.'
     caption: 'BOX-2 waits for an OK. The agent misread a rule, changed three configs instead of one, and tried to reach a paste site, which the box refused.'
@@ -88,6 +120,24 @@ status:
     state: simulated
     note: '<code>./demo</code> points the track at a stand-in for Jira Cloud on the test machine, so every merge runs it without touching the real site.'
 ---
+
+## Why GurtOS, and what each part is for
+
+**The problem.** Agents now act for teams: Rovo, coding agents, scripts with a model inside. They can be tricked by a planted instruction in an issue or a web page, or just be wrong. On an ordinary OS the agent runs as a person with their keys on one shared set of files, so there is no record you can trust of what it did and why, nothing stopped it reaching what it should not, and no way to undo only the bad actions without undoing everyone's work.
+
+**GurtOS gives every agent task its own space, and the Forge app turns Jira and Confluence into the control room for it.** Each task is its own Linux user in its own copy-on-write copy of the files, keys stay in a root-only vault, each task reaches only its allowed hosts, and the append-only action log is the audit. It is light (one Node service, 4 GB of memory) and open source under Apache-2.0, and the Forge app is reusable: point `BOX_URL` at any GurtOS box. Everything below ran on a GurtOS Server box; Business is on main but the Jira app has not been tried against a Business box.
+
+| Feature | Why it is there | Atlassian criterion | From | Today |
+|---|---|---|---|---|
+| Every task is a Jira issue with its prompt, permissions, reasoning, approvals, blocked attempts, diff and log, and JQL fields for state, cost and blocked attempts | The morning-after question is one search | Track 2: audit and reversion | GurtOS (the log, the diff) and the Forge app | Shipped |
+| The task panel: Approve, Deny and Roll back, checked as the signed-in Jira user | Roll back takes out one task's layer and every other task keeps its own | Track 2, technical use of Forge | GurtOS (undo of one task) and the Forge app | Shipped |
+| A Rovo agent, GurtOS, with three actions: ask what got blocked or changed, roll back the shopper's tasks, pause all agents | Ask in plain words, with no new screen to learn; Rovo asks before it rolls back or pauses | Usefulness, technical use of Forge | The Forge app and GurtOS (the log) | Shipped, shown live on the demo site |
+| Roll back several issues at once from an issue search | Atlassian's "roll back only the changes that were wrong", for 200 issues as easily as for one | Track 2, usefulness | GurtOS (undo) and the Forge app | Shipped. The gate rolled back BOX-1 and BOX-3, refused an issue that was not a task, and left the on-call notes alone |
+| Start an agent from Jira: label an issue `gurtos-agent`, assign it to the agent, or add Run in GurtOS to an Automation rule | The issue's text becomes a task in its own safe space with no network, no keys and a small budget; the result and diff come back on the issue | Track 1: agents that do the work | GurtOS (the task space) and the Forge app | Shipped. A task started from PLAT-33510 changed one file and reported back; a second start did not run it twice |
+| Jira Service Management approvals for risky actions | A production push waits for the people who already approve changes in IT | Usefulness | GurtOS (the approval pause) and the Forge app | Shipped. A production request opened a JSM request with its approvers and, once approved there, the task carried on. The log names who approved |
+| Confluence reports: a daily page of what the agents did and an incident page whenever something is blocked | The record outlives the box | Usefulness, idea | GurtOS (the log) and the Forge app | Shipped. The daily page is rewritten every 15 minutes |
+| A dashboard gadget with tasks, blocked attempts and cost per project | The team sees its agents on the dashboard it already uses | Usefulness, technical use of Forge | The Forge app | Shipped |
+| A Jira user acts as their GurtOS Business person: only someone with both the Jira permission and the GurtOS role, within their limit, can approve | Jira's permissions and the company's roles together decide who may | Track 2: who may act for whom | GurtOS Business and the Forge app | Being built; not shown working yet. Its gate step was skipped until Business was on main |
 
 ## Evidence
 
@@ -163,5 +213,6 @@ docs guide [Connect Jira](https://gurtos.com/guides/connect-jira/).
   check each call came from this app and this user; that is the next step.
 - The box writes to Jira with one person's API token, so its comments show that person as the author.
 - The panel polls the box every 4 seconds while it is open.
+- The Jira Service Management part relies on a request type with an approval step and sets approvers through the site's Approvers field. The project page and the Rovo agent list only tasks whose issue the user can see, and the gadget's totals count all tasks on the box. Name lookups to an outside resolver are refused like any connection and counted apart from real attempts.
 - Issue descriptions keep the last 40 log entries and the first 8,000 characters of the diff. The panel and the
   box's log have the rest.

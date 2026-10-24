@@ -114,24 +114,29 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 - Measured minimum hardware and a one-line install
 - How to enter: pending; Ben will ask a director (the prize is not on Devpost yet)
 
-## Atlassian: Agentic Workforce Challenge, Track 2 (security for agents acting for a user)
+## Atlassian: Agentic Workforce Challenge, Track 2 (security for agents acting for a user) and Track 1 (agents that do the work)
 
 **Status:** to review with Ben. **Page:** https://calhacks.gurtos.com/tracks/atlassian/
 
 **Best shown in:** GurtOS Business
 
-**Pitch:** Teams already review work in Jira. With Business, every agent task is an issue a teammate can approve or roll back, and Jira's own permissions decide who may. Business is on main, but the Jira panel has not been tried against a Business box: today the Forge app drives a GurtOS Server box, and it already checks that the Jira user may edit the issue.
+**Pitch:** Teams already work in Jira and Confluence. GurtOS makes every agent task an issue a teammate can approve or roll back, answers from the log through a Rovo agent, starts agents from an issue, sends risky actions to Jira Service Management approvers and writes the record to Confluence. Business is on main, but the Jira app has not been tried against a Business box: everything here ran against a GurtOS Server box.
 
 **The problem:** Draft: when an agent acts for you overnight, nobody can see the next morning exactly what it did and why, or roll back only the wrong part.
 
-**Features, by the sponsor's criteria** (no OS-vs-track table yet; to write when reviewed):
+**Features** (from the page's table):
 
-- *Audit and reversion: record every action with the inputs and reasoning behind it, so an admin can see exactly what happened the next morning and roll back only the changes that were wrong.* (met): Each issue holds the prompt, the tools and hosts the task was allowed, the agent's reasoning in its own words, approvals and who gave them, blocked attempts, the diff and the last 40 log entries. Roll back this task takes out that task's layer of file changes on the box. Every other task keeps its own.
-- *A Forge app for Jira or Confluence.* (met): A Jira issue panel (UI Kit, native render) with a resolver in Atlassian's cloud, plus a jira:entityProperty index so state, cost, blocked attempts and pending approvals are searchable in JQL. Installed on the demo site in production.
-- *Technical use of Forge.* (met): The resolver reads the issue property as the signed-in user, checks EDIT_ISSUES before any action, and is the only place that holds the box's shared secret (a Forge encrypted variable). It calls one declared external host. Scopes are read-only: the app never writes to Jira; the box does.
-- *Usefulness to Atlassian users.* (met): The morning-after question is one JQL search: project = BOX AND boxBlocked > 0. Agent work moves across a normal board (To Do, In Progress, In Review, Done), so a team reviews agents the way it reviews people.
-- *Demo video, 3 minutes at most.* (partly): The narrated video is produced after the build and will be embedded above; until then the clip above shows the real app.
-- *Repo link.* (met): The track lives in tracks/jira/ (box side) and tracks/jira/forge/ (the Forge app).
+| Feature | Why it is there | Atlassian criterion | From | Today |
+|---|---|---|---|---|
+| Every task is a Jira issue with its prompt, permissions, reasoning, approvals, blocked attempts, diff and log, and JQL fields for state, cost and blocked attempts | The morning-after question is one search | Track 2: audit and reversion | GurtOS (the log, the diff) and the Forge app | Shipped |
+| The task panel: Approve, Deny and Roll back, checked as the signed-in Jira user | Roll back takes out one task's layer and every other task keeps its own | Track 2, technical use of Forge | GurtOS (undo of one task) and the Forge app | Shipped |
+| A Rovo agent, GurtOS, with three actions: ask what got blocked or changed, roll back the shopper's tasks, pause all agents | Ask in plain words, with no new screen to learn; Rovo asks before it rolls back or pauses | Usefulness, technical use of Forge | The Forge app and GurtOS (the log) | Shipped, shown live on the demo site |
+| Roll back several issues at once from an issue search | Atlassian's "roll back only the changes that were wrong", for 200 issues as easily as for one | Track 2, usefulness | GurtOS (undo) and the Forge app | Shipped. The gate rolled back BOX-1 and BOX-3, refused an issue that was not a task, and left the on-call notes alone |
+| Start an agent from Jira: label an issue `gurtos-agent`, assign it to the agent, or add Run in GurtOS to an Automation rule | The issue's text becomes a task in its own safe space with no network, no keys and a small budget; the result and diff come back on the issue | Track 1: agents that do the work | GurtOS (the task space) and the Forge app | Shipped. A task started from PLAT-33510 changed one file and reported back; a second start did not run it twice |
+| Jira Service Management approvals for risky actions | A production push waits for the people who already approve changes in IT | Usefulness | GurtOS (the approval pause) and the Forge app | Shipped. A production request opened a JSM request with its approvers and, once approved there, the task carried on. The log names who approved |
+| Confluence reports: a daily page of what the agents did and an incident page whenever something is blocked | The record outlives the box | Usefulness, idea | GurtOS (the log) and the Forge app | Shipped. The daily page is rewritten every 15 minutes |
+| A dashboard gadget with tasks, blocked attempts and cost per project | The team sees its agents on the dashboard it already uses | Usefulness, technical use of Forge | The Forge app | Shipped |
+| A Jira user acts as their GurtOS Business person: only someone with both the Jira permission and the GurtOS role, within their limit, can approve | Jira's permissions and the company's roles together decide who may | Track 2: who may act for whom | GurtOS Business and the Forge app | Being built; not shown working yet. Its gate step was skipped until Business was on main |
 
 **Demo moment and proof:** BOX-2, a scripted agent that misread a rule, changed three configs instead of one and tried to send the repo to a paste site. It was blocked, approved from Jira, then rolled back from Jira: its configs came back and the README fix another task made a minute earlier stayed.
 
@@ -139,6 +144,7 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 
 - Review the story with Ben: problem, features with their why, OS vs track
 - Demo video, 3 minutes at most. (partly)
+- A Jira user acts as their GurtOS Business person: only someone with both the Jira permission and the GurtOS role, within their limit, can approve
 
 ## Hyphenate: Autonomous Systems for Finance
 
@@ -374,7 +380,7 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 | Only the paired owner gives work; strangers get the pairing step | Nobody else can start, approve or undo anything | Required: real multi-step action, safely | The Fetch.ai app | Shipped |
 | Replies wait in an outbox, the agent restarts within 5 seconds, and tasks resume after a power cut | A chat never loses its answer | Bonus: reliability | GurtOS (resume) and the app (outbox) | Shipped |
 | Live view and control on the portal and phone | You can watch and stop chat work from anywhere | Required: real action you can see | GurtOS | Shipped |
-| A team of agents on Agentverse, safe calls to strangers' agents with their replies treated as untrusted (a blocked hidden instruction), the Payment Protocol, richer cards, picking your machine from chat, guest requests the owner approves | Next steps for the bonus criteria; this page adds each one with its reason when it ships | Bonus: multi-agent, Payment Protocol, cards, reliability | The Fetch.ai app | Being built; not on main yet |
+| A team of agents on Agentverse, safe calls to strangers' agents with their replies treated as untrusted (a blocked hidden instruction), the Payment Protocol, richer cards, picking your machine from chat, guest requests the owner approves (the guest path is on main in the Mana app: a stranger's request waits for the owner's OK, with at most 3 requests per guest and 10 in all per hour and a 25 cent budget; the ASI:One chat's use of it is not confirmed yet) | Next steps for the bonus criteria; this page adds each one with its reason when it ships | Bonus: multi-agent, Payment Protocol, cards, reliability | The Fetch.ai app | Being built; not on main yet |
 
 **Demo moment and proof:** In a live run through ASI:One, the box's agent paired with the chat, a Droid task fixed the failing test in a sample repo for $0.05 and sent back the diff with Undo, and a stock check paused at a $0.50 web search over its $0.25 budget, sent an Interactive Card, and finished after Approve: "in stock on Hario's US store at $10.25".
 
@@ -385,7 +391,7 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 - Also submit through the ASI:One Submission Agent. (open)
 - Bonus: ASI:One Interactive Cards, reliability, multi-agent. (partly)
 - Payment Protocol (not built)
-- A team of agents on Agentverse, safe calls to strangers' agents with their replies treated as untrusted (a blocked hidden instruction), the Payment Protocol, richer cards, picking your machine from chat, guest requests the owner approves
+- A team of agents on Agentverse, safe calls to strangers' agents with their replies treated as untrusted (a blocked hidden instruction), the Payment Protocol, richer cards, picking your machine from chat, guest requests the owner approves (the guest path is on main in the Mana app: a stranger's request waits for the owner's OK, with at most 3 requests per guest and 10 in all per hour and a 25 cent budget; the ASI:One chat's use of it is not confirmed yet)
 
 ## SpacetimeDB: SpacetimeDB as the core real-time backend
 
@@ -453,7 +459,7 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 
 **Best shown in:** GurtOS Personal
 
-**Pitch:** A personal agent is only useful if it remembers you, and today that means uploading your life to someone's cloud. On GurtOS the index lives in your own computer's memory, agents search it with no network and no keys, and undoing a task takes its files out. Only text goes to Moss's cloud copy, including what a vision model wrote about your photos. Next (being built): talking to your computer, memory that cannot be poisoned, one preference honoured across apps, photos described by a local model only, and a forget button.
+**Pitch:** A personal agent is only useful if it remembers you, and today that means uploading your life to someone's cloud. On GurtOS the index lives in your own computer's memory, agents search it with no network and no keys, and undoing a task takes its files out. Only text goes to Moss's cloud copy, including what a vision model wrote about your photos. Talking to your computer is built in GurtOS Personal. Next (being built): memory that cannot be poisoned, one preference honoured across apps, photos described by a local model only, and a forget button.
 
 **The problem:** A personal agent is only useful if it remembers you, and today that means uploading your life to someone's cloud, and any web page an agent reads can plant false memories.
 
@@ -466,7 +472,7 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 | Undo a task and its files leave the index while the photos stay | Remembering must not be permanent against your wishes | A personal agent that remembers you | GurtOS (undo of one task) | Shipped |
 | A symlink to the vault is neither indexed nor served, and no path leaves the workspaces | The index cannot become a way to read your secrets | A personal agent that remembers you | GurtOS (the vault) and the Find app | Shipped |
 | Photos described by a vision model when they arrive: gemma4 in Ollama on the laptop, or Claude in a Droid task as the backup | A photo's name says nothing, its description does | A personal agent that remembers you | The Find app | Shipped. The Claude backup sends the photo to Anthropic |
-| Talk to your computer: Moss's voice-agent example | Asking out loud is how people expect to use memory | A voice agent | The Find app and Moss | Being built; not on main yet |
+| Talk to your computer: press Super+Alt+Space, ask out loud, and hear the answer as a notification and a local voice; a spoken yes approves only a request that spends nothing, signed as the voice of the owner, and the audio is deleted after it is read | Asking out loud is how people expect to use memory, and a voice must not be able to spend money | A voice agent | GurtOS Personal and the Find app | Shipped in GurtOS Personal. The self-test checks the safety rule, and speech to text took 1.1 s on a CPU. Nobody has tried it through a real microphone yet, and the speech model (about 600 MB) is downloaded at first boot, so with no network the feature stays off |
 | Agent memory that cannot be poisoned: what an agent reads from a web page or photo is labelled untrusted and cannot overwrite what you told it | A planted false memory would steer every later task | A personal agent that remembers you | GurtOS (per-task scope, untrusted data) and the Find app | Being built; not on main yet |
 | One preference honoured across apps: say it once and every app's agent follows it | Works across your apps | Works across your apps | The Find app and GurtOS (the shared index) | Being built; not on main yet |
 | Photos described by a local model only, with Claude used only if the owner opts in | Your photos stay on your computer unless you decide otherwise | A personal agent that remembers you | The Find app and GurtOS (the network rule) | Being built; not on main yet |
@@ -477,7 +483,6 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 **Still to do:**
 
 - Vultr's hosted vision model (not built)
-- Talk to your computer: Moss's voice-agent example
 - Agent memory that cannot be poisoned: what an agent reads from a web page or photo is labelled untrusted and cannot overwrite what you told it
 - One preference honoured across apps: say it once and every app's agent follows it
 - Photos described by a local model only, with Claude used only if the owner opts in
