@@ -3,185 +3,378 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Shopper</title>
+<link rel="stylesheet" href="/kit/gurtos.css">
+<script type="module" src="/kit/gurtos.js"></script>
 <style>
-  :root {
-    --bg: #F3F1EA; --surface: #FBFAF6; --sunken: #E6E7E1; --border: #D3D6CF; --strong: #6B726C;
-    --text: #1C201D; --text2: #535A54; --action: #1C201D; --on-action: #FBFAF6; --focus: #2D5784;
-    --run-fg: #2D5784; --run-bg: #DDE8F2; --wait-fg: #7F4C00; --wait-bg: #F8EBD0;
-    --done-fg: #2E6338; --done-bg: #DFEDDC; --fail-fg: #9C3326; --fail-bg: #F6E0DA; --neutral-fg: #535A54; --neutral-bg: #E6E7E1;
-  }
-  * { box-sizing: border-box; }
-  body { margin: 0; background: var(--bg); color: var(--text); font: 16px/24px "IBM Plex Sans", system-ui, sans-serif; }
-  main { max-width: 1040px; margin: 0 auto; padding: 24px 16px 64px; }
-  h1 { font-size: 40px; line-height: 48px; font-weight: 600; letter-spacing: -0.5px; margin: 0 0 8px; }
-  h2 { font-size: 17px; line-height: 24px; font-weight: 600; margin: 32px 0 12px; }
-  .mono { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 14px; line-height: 20px; }
-  .small { font-size: 13px; line-height: 18px; color: var(--text2); }
-  .label { font-size: 12px; line-height: 16px; font-weight: 500; letter-spacing: 0.4px; text-transform: uppercase; color: var(--text2); }
-  .test { background: var(--sunken); border: 1px solid var(--strong); border-radius: 4px; padding: 8px 12px; }
-  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 16px; }
-  .stack > * + * { margin-top: 12px; }
-  .grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); }
-  section { overflow-x: auto; }
-  table { width: 100%; border-collapse: collapse; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; }
-  th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-top: 1px solid var(--border); }
-  th { border-top: 0; }
-  button { font: inherit; font-weight: 500; min-height: 44px; padding: 6px 16px; border-radius: 4px; cursor: pointer;
-    border: 1px solid var(--strong); background: var(--surface); color: var(--text); }
-  button.primary { background: var(--action); color: var(--on-action); border-color: var(--action); }
-  button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
-  input, select { font: inherit; min-height: 44px; padding: 6px 10px; border: 1px solid var(--strong); border-radius: 4px; background: var(--surface); color: var(--text); }
-  form.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; }
-  form.row label { display: flex; flex-direction: column; gap: 4px; }
-  .pill { display: inline-block; font-size: 12px; line-height: 16px; font-weight: 500; letter-spacing: 0.4px; padding: 2px 8px; border-radius: 4px; white-space: nowrap; }
-  .watching, .buying, .running, .queued { color: var(--run-fg); background: var(--run-bg); }
-  .needs, .waiting { color: var(--wait-fg); background: var(--wait-bg); }
-  .bought, .done { color: var(--done-fg); background: var(--done-bg); }
-  .not, .failed { color: var(--fail-fg); background: var(--fail-bg); }
-  .refunded, .cancelled, .undone { color: var(--neutral-fg); background: var(--neutral-bg); }
-  .amount { font-size: 40px; line-height: 48px; font-weight: 600; letter-spacing: -0.5px; }
-  .actions { display: flex; gap: 8px; flex-wrap: wrap; }
-  .err { color: var(--fail-fg); }
+  main { max-width: 880px; margin: 0 auto; padding: var(--space-lg) var(--space-md) var(--space-xxl); display: flex; flex-direction: column; gap: var(--space-xl); }
+  .why { margin: 2px 0 0; }
+  .stack { display: flex; flex-direction: column; gap: var(--space-sm); }
+  .row { display: flex; flex-wrap: wrap; gap: var(--space-sm); align-items: center; }
+  .form { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: var(--space-sm); align-items: end; }
+  .form label { display: flex; flex-direction: column; gap: 4px; }
+  .form .wide { grid-column: 1 / -1; }
+  .cards { display: grid; gap: var(--space-sm); grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); }
+  table.cmp { width: 100%; border-collapse: collapse; margin-top: var(--space-xs); }
+  table.cmp th, table.cmp td { text-align: left; vertical-align: top; padding: 6px 8px; border-top: 1px solid var(--color-border-default); }
+  table.cmp th { font-weight: 500; color: var(--color-text-secondary); }
+  .best { background: var(--color-success-subtle); }
+  .money { font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .scroll { overflow-x: auto; }
+  .kicker { text-transform: uppercase; letter-spacing: .04em; }
+  .store-pick { display: flex; flex-direction: column; gap: 6px; }
+  .store-pick label { flex-direction: row; align-items: center; gap: 8px; }
+  @media (max-width: 520px) { main { padding: var(--space-md) var(--space-sm) var(--space-xl); } .cards { grid-template-columns: 1fr; } .g-btn { min-height: 44px; } }
 </style>
+<body class="g-page">
 <main>
-  <h1>Shopper</h1>
-  <p class="test"><b>TEST PAYMENTS ONLY.</b> Purchases are Stripe test-mode payments with a Visa test card held in the box's vault. No real money moves, and no real store accepts this card, so checkout happens at the <a href="/t/shopper/store">GurtOS Test Store</a>.</p>
-  <p class="small" id="setup" role="status">Loading…</p>
+  <div class="g-banner" role="note"><g-icon name="dialog-warning"></g-icon><div>
+    <p class="t-body-strong">TEST PAYMENTS ONLY.</p>
+    <p class="t-caption">Purchases use a Visa test card held in the box's vault. No real money moves, and no real store accepts this card, so checkout happens at the <a href="/t/shopper/store">GurtOS Test Store</a>.</p>
+  </div></div>
 
-  <section aria-labelledby="ok-h">
-    <h2 id="ok-h">Needs your OK</h2>
-    <div id="approvals" class="grid"></div>
+  <section class="g-group" aria-labelledby="ok-h">
+    <div class="g-group-head"><div>
+      <h2 class="g-group-title" id="ok-h">Needs you</h2>
+      <p class="g-group-caption why">Why it's here: a stolen session can't buy anything, because the box checks your Face ID signature before it pays. Trust and user experience.</p>
+    </div></div>
+    <div id="approvals" class="cards" aria-live="polite"></div>
   </section>
 
-  <section aria-labelledby="watch-h">
-    <h2 id="watch-h">Watch a product</h2>
-    <div class="card stack">
-      <form class="row" id="ask">
-        <label style="flex:1 1 360px">Say it in words (Claude finds the product and sets the watch; it cannot buy)
-          <input name="text" required placeholder="Get me the Chemex filters when they're under $16"></label>
-        <button class="primary">Set up watch</button>
+  <div class="stack">
+    <p class="t-body">Shopper runs on GurtOS, on a computer you own. The agent never sees your card, every purchase needs your OK, stores can verify the agent, and every purchase can be undone.</p>
+    <p class="t-caption t-secondary" id="setup" role="status" aria-live="polite">Loading…</p>
+  </div>
+
+  <section class="g-group" aria-labelledby="face-h">
+    <div class="g-group-head"><div>
+      <h2 class="g-group-title" id="face-h">Face ID</h2>
+      <p class="g-group-caption why">Why it's here: Approve with Face ID signs each approval with a passkey on your device. The box checks the signature before it pays, so a stolen pairing token can't buy anything. This follows Visa's payment passkey direction. Trust and user experience.</p>
+    </div></div>
+    <div class="g-card stack" id="face"></div>
+  </section>
+
+  <section class="g-group" aria-labelledby="mandates-h">
+    <div class="g-group-head"><div>
+      <h2 class="g-group-title" id="mandates-h">Shopping mandates</h2>
+      <p class="g-group-caption why">Why it's here: the store checks this signed instruction and refuses anything outside it: another item, a higher price, another store, more items, or after it expires. It mirrors the payment instruction in Visa Intelligent Commerce, built here with open tools. Innovation and trust.</p>
+    </div></div>
+    <div class="g-card stack">
+      <form class="form" id="ask">
+        <label class="wide"><span class="t-caption-strong">Say it in words</span>
+          <input class="g-field" name="text" required placeholder="Chemex filters under $16, from Best Buy or Gold Roast, by Friday"></label>
+        <p class="t-caption t-secondary wide">Claude finds the product at each store and proposes the mandate. It cannot buy anything.</p>
+        <button class="g-btn">Propose with Claude</button>
       </form>
-      <form class="row" id="watch">
-        <label>Store <select name="store"><option value="test">GurtOS Test Store (USD)</option><option value="bestbuy.ca">Best Buy Canada, live (CAD)</option></select></label>
-        <label>Product (SKU or words) <input name="product" required value="HV60-100" size="14"></label>
-        <label>Buy when <select name="when"><option value="price">it drops under</option><option value="restock">it's back in stock, up to</option></select></label>
-        <label>Price per item <input name="max" required inputmode="decimal" value="7.00" size="6"></label>
-        <label>Quantity <input name="qty" type="number" min="1" max="10" value="2" style="width:5em"></label>
-        <label>Check every <select name="every"><option value="1">minute</option><option value="15">15 minutes</option><option value="60" selected>hour</option></select></label>
-        <button>Watch</button>
+      <hr style="border:0;border-top:1px solid var(--color-border-default);width:100%">
+      <form class="form" id="watch">
+        <label class="wide"><span class="t-caption-strong">What</span><input class="g-field" name="text" required value="Chemex filters"></label>
+        <fieldset class="wide store-pick" style="border:0;padding:0;margin:0"><legend class="t-caption-strong">Stores, and the product at each (a SKU, a link handle or search words)</legend><div id="storepick"></div>
+          <p class="t-caption t-secondary">One mandate covers stores with one currency: the Canadian stores are in CAD, the GurtOS Test Store in USD.</p></fieldset>
+        <label><span class="t-caption-strong">Most per item, in dollars</span><input class="g-field" name="max" required inputmode="decimal" value="16.00"></label>
+        <label><span class="t-caption-strong">How many</span><input class="g-field" name="qty" type="number" min="1" max="10" value="1"></label>
+        <label><span class="t-caption-strong">Category</span><span class="g-combo-wrap"><select class="g-combo" name="category"><option>coffee</option><option>household</option><option>electronics</option><option>other</option></select><g-icon name="pan-down"></g-icon></span></label>
+        <label><span class="t-caption-strong">Until</span><input class="g-field" name="until" type="date"></label>
+        <label><span class="t-caption-strong">Buy when</span><span class="g-combo-wrap"><select class="g-combo" name="when"><option value="price">the price is at or under it</option><option value="restock">it's back in stock</option></select><g-icon name="pan-down"></g-icon></span></label>
+        <label><span class="t-caption-strong">Check every</span><span class="g-combo-wrap"><select class="g-combo" name="every"><option value="1">minute</option><option value="15">15 minutes</option><option value="60" selected>hour</option></select><g-icon name="pan-down"></g-icon></span></label>
+        <button class="g-btn g-btn-suggested">Propose the mandate</button>
       </form>
-      <p class="small err" id="formerr" role="alert"></p>
+      <p class="t-caption t-destructive" id="formerr" role="alert"></p>
     </div>
+    <p class="t-caption t-secondary why">Comparison: the box checks real stores through Apify and buys the best total, with the reason in plain words. Technical execution and user experience.</p>
+    <div id="watches" class="stack" aria-live="polite"></div>
   </section>
 
-  <section aria-labelledby="watches-h">
-    <h2 id="watches-h">Watches</h2>
-    <table><thead><tr><th>Product</th><th>Rule</th><th>Last check</th><th>Status</th><th></th></tr></thead><tbody id="watches"></tbody></table>
-  </section>
-
-  <section aria-labelledby="home-h">
-    <h2 id="home-h">Household reorder</h2>
-    <div class="card row actions">
-      <p style="margin:0;flex:1 1 360px">Claude reads the receipts in the household's mailbox, works out what runs out this week, and proposes a reorder. It sees the receipts, never the mailbox login or any other email. This is a demo inbox of sample receipts.</p>
-      <button id="reorder">Check the receipts</button>
-    </div>
-  </section>
-
-  <section aria-labelledby="supplies-h">
-    <h2 id="supplies-h">Agents buying their own supplies</h2>
-    <form class="card row" id="supplies">
-      <p style="margin:0;flex:1 1 100%">An agent pays for an API it needs with x402, from the box's wallet, in USDC on Solana devnet (test money). It asks the price first and pays exactly that. Above your budget it waits for your OK. The task reaches only that API.</p>
-      <label style="flex:1 1 320px">Paid API <input name="url" required value="http://api.localhost:4021/report"></label>
-      <label>Budget, cents <input name="cents" type="number" min="1" max="500" value="3" style="width:6em"></label>
-      <button>Buy it</button>
+  <section class="g-group" aria-labelledby="rules-h">
+    <div class="g-group-head"><div>
+      <h2 class="g-group-title" id="rules-h">Spending rules</h2>
+      <p class="g-group-caption why">Why it's here: like the controls in a card app, but enforced by the box before any payment, so no agent and no approval can go past them. Trust and user experience.</p>
+    </div></div>
+    <form class="g-card stack" id="rules">
+      <div class="form" id="rulefields"></div>
+      <p class="t-caption t-secondary">In US dollars. CAD prices count at the box's fixed rate of 0.73. Leave a cap empty for no cap; 0 blocks it.</p>
+      <div class="row"><button class="g-btn g-btn-suggested" id="saverules">Save rules</button><span class="t-caption t-secondary" id="rulesby"></span></div>
     </form>
   </section>
 
-  <section aria-labelledby="orders-h">
-    <h2 id="orders-h">Orders (test payments)</h2>
-    <table><thead><tr><th>Order</th><th>Items</th><th>Total</th><th>Payment</th><th>Visa TAP</th></tr></thead><tbody id="orders"></tbody></table>
+  <section class="g-group" aria-labelledby="save-h">
+    <div class="g-group-head"><div>
+      <h2 class="g-group-title" id="save-h">Saving after you buy</h2>
+      <p class="g-group-caption why">Why it's here: the box keeps working for you after the purchase. Innovation and loyalty.</p>
+    </div></div>
+    <div class="cards">
+      <div class="g-card stack">
+        <h3 class="t-heading">Price protection</h3>
+        <p class="t-caption t-secondary">Within 30 days of a purchase at the GurtOS Test Store, the box watches the price and asks for the difference if it drops (a test refund).</p>
+        <div id="saved" class="stack"></div>
+        <div class="row"><button class="g-btn" id="checkprices">Check prices now</button></div>
+      </div>
+      <div class="g-card stack">
+        <h3 class="t-heading">Subscriptions</h3>
+        <p class="t-caption t-secondary">Claude reads your receipts, finds what you pay for and don't use, and offers to cancel it. Each cancel asks you first.</p>
+        <div id="subs" class="stack"></div>
+        <div class="row"><button class="g-btn" id="findsubs">Find unused subscriptions</button></div>
+      </div>
+    </div>
   </section>
 
-  <section aria-labelledby="tasks-h">
-    <h2 id="tasks-h">What the agents did</h2>
-    <table><thead><tr><th>Task</th><th>State</th><th>Cost</th></tr></thead><tbody id="tasks"></tbody></table>
+  <section class="g-group" aria-labelledby="orders-h">
+    <div class="g-group-head"><div>
+      <h2 class="g-group-title" id="orders-h">Orders (test payments)</h2>
+      <p class="g-group-caption why">Why it's here: every order carries its evidence: who approved it, the mandate, and the signature the store checked. Undo refunds it. Trust and commerce impact.</p>
+    </div></div>
+    <div id="orders" class="stack"></div>
+  </section>
+
+  <section class="g-group" aria-labelledby="sup-h">
+    <div class="g-group-head"><div>
+      <h2 class="g-group-title" id="sup-h">Agents buying their own supplies</h2>
+      <p class="g-group-caption why">Why it's here: an agent pays for an API it needs with x402 (Coinbase), from the box's wallet, in devnet USDC test money. It asks the price first and pays exactly that; above your budget it waits for your OK.</p>
+    </div></div>
+    <form class="g-card form" id="supplies">
+      <label class="wide"><span class="t-caption-strong">Paid API</span><input class="g-field" name="url" required value="http://api.localhost:4021/report"></label>
+      <label><span class="t-caption-strong">Budget, in cents</span><input class="g-field" name="cents" type="number" min="1" max="500" value="3"></label>
+      <button class="g-btn">Buy it</button>
+    </form>
+  </section>
+
+  <section class="g-group" aria-labelledby="tasks-h">
+    <div class="g-group-head"><div><h2 class="g-group-title" id="tasks-h">What the agents did</h2>
+      <p class="g-group-caption">Every check, approval and payment is a line in the box's action log.</p></div></div>
+    <div class="g-list" id="tasks"></div>
+  </section>
+
+  <section class="g-group" aria-labelledby="about-h">
+    <div class="g-group-head"><div><h2 class="g-group-title" id="about-h">Why GurtOS</h2></div></div>
+    <div class="g-card stack t-body">
+      <p>Today's shopping agents need your card number or your store password. Stores can't tell a good agent from a bot. You can't see or stop what they buy. Cloud agents run on someone else's computer, where you don't know what happens.</p>
+      <p>GurtOS is a safe place for agents on a computer you own, even an old laptop: it is a light OS that needs 4 GB of memory. The agent never sees your card, every purchase needs your tap, the store can verify the agent, and every purchase can be undone.</p>
+      <p>Shopper is best in GurtOS Personal, on your own computer, and in GurtOS Server for routines that keep running after you close your laptop: price watching, reorders and subscription checks.</p>
+      <p>The GurtOS portal and phone app show live what every agent is doing, on your laptop or your server, and let you approve, deny, pause or undo.</p>
+    </div>
   </section>
 </main>
-<script>
-  // Off the box (a paired phone or laptop), every call needs the pairing token the portal put in this page's URL.
-  const token = new URLSearchParams(location.search).get('access_token');
-  const auth = token ? { authorization: `Bearer ${token}` } : {};
-  const withToken = (url) => (token ? `${url}${url.includes('?') ? '&' : '?'}access_token=${encodeURIComponent(token)}` : url);
-  document.querySelectorAll('a[href^="/t/"]').forEach((a) => (a.href = withToken(a.getAttribute('href'))));
+<script type="module">
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
-  const money = (c, cur = 'USD') => `$${(c / 100).toFixed(2)}${cur === 'USD' ? '' : ' ' + cur}`;
-  const cur = (w) => (w.store === 'bestbuy.ca' ? 'CAD' : 'USD');
-  const pill = (s) => `<span class="pill ${esc(s.split(' ')[0])}">${esc({ waiting: 'Waiting for OK', running: 'Running', queued: 'Queued', done: 'Done', failed: 'Failed', undone: 'Undone' }[s] ?? s[0].toUpperCase() + s.slice(1))}</span>`;
-  const ago = (t) => { const s = Math.round((Date.now() - Date.parse(t)) / 1000); return s < 60 ? `${s}s ago` : s < 3600 ? `${Math.round(s / 60)} min ago` : new Date(t).toLocaleString(); };
+  const money = (c, cur = 'USD') => `$${(Number(c) / 100).toFixed(2)}${cur === 'USD' ? '' : ' ' + cur}`;
+  const ago = (t) => { const s = Math.round((Date.now() - Date.parse(t)) / 1000); return s < 60 ? `${s} s ago` : s < 3600 ? `${Math.round(s / 60)} min ago` : new Date(t).toLocaleString(); };
+  const BADGE = { waiting: ['', 'Needs you'], running: ['g-badge-accent', 'Running'], queued: ['g-badge-accent', 'Queued'], done: ['g-badge-success', 'Done'], failed: ['g-badge-destructive', 'Failed'], undone: ['g-badge-neutral', 'Undone'],
+    'needs your OK': ['', 'Needs you'], watching: ['g-badge-accent', 'Watching'], buying: ['g-badge-accent', 'Buying'], bought: ['g-badge-success', 'Bought'], 'not bought': ['g-badge-destructive', 'Not bought'],
+    'not approved': ['g-badge-neutral', 'Not approved'], refunded: ['g-badge-neutral', 'Refunded'], cancelled: ['g-badge-neutral', 'Cancelled'], expired: ['g-badge-neutral', 'Expired'], active: ['g-badge-accent', 'Active'] };
+  const badge = (s) => { const [c, t] = BADGE[s] ?? ['g-badge-neutral', s]; return `<span class="g-badge ${c}">${esc(t)}</span>`; };
   const post = async (url, body) => {
-    const r = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json', ...auth }, body: JSON.stringify(body ?? {}) });
-    const out = await r.json().catch(() => ({}));
-    if (!r.ok) throw new Error(out.error ?? `HTTP ${r.status}`);
-    return out;
+    const r = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body ?? {}) });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.error ?? `The box answered ${r.status}.`);
+    return j;
   };
-  const act = (fn) => async (e) => { e.preventDefault(); $('formerr').textContent = ''; try { await fn(e); await load(); } catch (err) { $('formerr').textContent = err.message; } };
+  const passkey = () => import('/t/shopper/passkey.js');
+  let S;          // the last /state
+  let face = {};  // /passkey/status for this address
+  let ruleDraft;  // the rules form keeps what you typed between refreshes
+
+  function setup(s) {
+    const p = s.setup.payments;
+    const f = !face.enrolled ? 'Face ID: not set up' : face.here ? 'Face ID: on for this address' : 'Face ID: set up on another address';
+    $('setup').textContent = `Payments: ${p.why}. ${f}. Test card in the vault: ${s.setup.card ? 'yes' : 'no'}. Agent signing key (Visa TAP): ${s.setup.agentKey ? 'yes' : 'no'}.`;
+  }
+
+  function approvalCard(a) {
+    const t = S.tasks.find((x) => x.id === a.task);
+    const src = t?.source ?? '';
+    const kind = src.startsWith('shopper:mandate:') ? 'Shopping mandate' : src.startsWith('shopper:cancel:') ? 'Cancel this?' : 'Buy this?';
+    const [head, ...rest] = a.question.split('? ');
+    const amount = (a.question.match(/ for (\$[\d.]+(?: CAD)?)\?/) ?? [])[1];
+    const faceOk = face.enrolled && face.usable && face.here;
+    const ok = faceOk
+      ? `<button class="g-btn g-btn-suggested g-btn-large" data-face="${esc(a.id)}"><g-icon name="security-high"></g-icon>Approve${amount ? ' ' + esc(amount) : ''} with Face ID</button>`
+      : `<button class="g-btn g-btn-suggested g-btn-large" data-ok="${esc(a.id)}">Approve${amount ? ' ' + esc(amount) : ''}</button>`;
+    const note = faceOk ? 'The box checks your Face ID signature before it pays. The card stays in the vault; the agent never sees it.'
+      : face.enrolled ? `Face ID is set up on ${esc(S.passkeys.map((p) => p.rpId).join(', '))}. Approve there, or on your phone: a tap here is refused at payment.`
+      : 'Face ID is off on this box, so approvals are a tap. Set it up below.';
+    return `<article class="g-notification">
+      <div class="g-notification-head">
+        <div class="g-notification-meta"><span class="g-notification-app kicker">${esc(kind)} · TEST PAYMENT</span><span class="g-notification-title">${esc(head)}?</span></div></div>
+      <p class="g-notification-body">${esc(rest.join('? '))}</p>
+      <p class="t-caption t-secondary">${note}</p>
+      <div class="g-notification-actions"><button class="g-btn g-btn-large" data-no="${esc(a.id)}">Deny</button>${ok}</div>
+    </article>`;
+  }
+
+  function faceCard(s) {
+    const list = s.passkeys.map((p) => `<li>${esc(p.device)} on <span class="t-mono">${esc(p.rpId)}</span>, set up ${esc(ago(p.createdAt))}</li>`).join('');
+    let action;
+    if (!window.isSecureContext || /^\d+\.\d+\.\d+\.\d+$/.test(location.hostname)) {
+      action = `<p class="t-caption">Face ID needs a secure address: this box's https address, or <span class="t-mono">localhost</span> on the box itself. On this address approvals fall back to a tap.</p>`;
+    } else if (face.enrolled && !face.here) {
+      action = `<p class="t-caption">Face ID is set up on another address. Passkeys belong to the address they were made on, so approve there.</p>`;
+    } else {
+      action = `<div class="row"><button class="g-btn ${face.enrolled ? '' : 'g-btn-suggested'}" id="enroll">${face.enrolled ? 'Add Face ID on another device' : 'Set up Face ID on this device'}</button></div>`;
+    }
+    $('face').innerHTML = `${list ? `<ul class="t-body" style="margin:0;padding-left:20px">${list}</ul>` : '<p class="t-body">No passkey yet. Until you set one up, approvals are a tap.</p>'}${action}`;
+  }
+
+  function cmpTable(w) {
+    const c = w.compared;
+    if (!c) return '<p class="t-caption t-secondary">Waiting for the first check.</p>';
+    const rows = c.rows.map((r) => {
+      const best = c.best && r.offer.store === c.best.store && r.offer.sku === c.best.sku;
+      const label = S.stores[r.offer.store]?.label ?? r.offer.store;
+      return `<tr class="${best ? 'best' : ''}"><td>${esc(label)}<div class="t-caption t-secondary">${esc(r.offer.name)}</div></td>
+        <td class="money">${money(r.offer.priceCents, r.offer.currency)}${r.offer.regularCents > r.offer.priceCents ? ` <s class="t-secondary">${money(r.offer.regularCents, r.offer.currency)}</s>` : ''}</td>
+        <td class="money">${r.totalCents != null ? money(r.totalCents, r.offer.currency) : ''}</td>
+        <td>${best ? '<span class="g-badge g-badge-success">Best</span> ' : ''}${esc(r.why)}</td></tr>`;
+    }).join('');
+    return `<div class="scroll"><table class="cmp"><thead><tr><th>Store</th><th>Price</th><th>Total for ${w.qty}</th><th>Why</th></tr></thead><tbody>${rows}</tbody></table></div>
+      <p class="t-caption">${esc(c.explanation)} <span class="t-secondary">Checked ${esc(ago(c.at))}, ${w.checks} ${w.checks === 1 ? 'check' : 'checks'}.</span></p>`;
+  }
+
+  function watchCard(w) {
+    const stores = w.offers.map((o) => S.stores[o.store]?.label ?? o.store).join(' or ');
+    const m = w.mandate?.mandate;
+    const how = m ? (m.approvedBy.method === 'passkey' ? `approved with Face ID on ${esc(m.approvedBy.by)}` : `approved with a tap by ${esc(m.approvedBy.by)}`) : '';
+    return `<div class="g-card stack">
+      <div class="row" style="justify-content:space-between"><h3 class="t-heading">${esc(w.text)}</h3>${badge(w.status)}</div>
+      <p class="t-body">${w.qty} × up to <span class="money">${money(w.maxCents, w.currency)}</span> each, from ${esc(stores)}, until ${esc(new Date(w.expires).toLocaleDateString(undefined, { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' }))}. ${w.when === 'restock' ? 'Buys when it is back in stock.' : ''}</p>
+      <p class="t-caption t-secondary">${m ? `Mandate <span class="t-mono">${esc(m.id)}</span> signed by the box, ${how}. The store checks it on every order.` : 'Waiting for your OK on the mandate above.'}</p>
+      ${w.blocked ? `<div class="g-banner g-banner-destructive"><g-icon name="security-high"></g-icon><div><p class="t-body-strong">${esc(w.blocked)}</p></div></div>` : ''}
+      ${w.note && w.status === 'not bought' ? `<p class="t-caption t-destructive">${esc(w.note)}</p>` : ''}
+      ${m ? cmpTable(w) : ''}
+      ${w.status === 'watching' ? `<div class="row"><button class="g-btn" data-check="${esc(w.id)}">Check now</button><button class="g-btn g-btn-destructive" data-stop="${esc(w.id)}">Stop</button></div>` : ''}
+    </div>`;
+  }
+
+  function storePicker(s) {
+    if ($('storepick').dataset.done) return;
+    const defaults = { 'bestbuy.ca': '20220310', 'goldroast.ca': 'chemex filter', test: 'HV60-100' };
+    $('storepick').innerHTML = Object.entries(s.stores).map(([id, st]) => `<div class="stack" style="gap:4px">
+      <label style="display:flex;flex-direction:row;gap:8px;align-items:center"><input type="checkbox" name="store" value="${esc(id)}" data-cur="${esc(st.currency)}" ${id !== 'test' ? 'checked' : ''}> <span>${esc(st.label)} <span class="t-caption t-secondary">${esc(st.currency)}</span></span></label>
+      <input class="g-field" name="p-${esc(id)}" aria-label="Product at ${esc(st.label)}" value="${esc(defaults[id] ?? '')}">
+      <span class="t-caption t-secondary">${esc(st.agents)}</span></div>`).join('');
+    $('storepick').dataset.done = '1';
+    const sync = () => {
+      const picked = [...document.querySelectorAll('input[name=store]:checked')];
+      const cur = picked[0]?.dataset.cur;
+      for (const b of document.querySelectorAll('input[name=store]')) b.disabled = !!cur && b.dataset.cur !== cur;
+    };
+    $('storepick').addEventListener('change', sync);
+    sync();
+  }
+
+  function ruleForm(s) {
+    const r = ruleDraft ?? s.rules;
+    const month = new Date();
+    const spent = s.spent.filter((x) => { const d = new Date(x.at); return d.getFullYear() === month.getFullYear() && d.getMonth() === month.getMonth(); });
+    const sum = (f) => spent.filter(f).reduce((t, x) => t + x.usdCents, 0);
+    const field = (name, label, cents, used) => `<label><span class="t-caption-strong">${esc(label)}</span>
+      <input class="g-field" name="${esc(name)}" inputmode="decimal" placeholder="No cap" value="${cents == null ? '' : (cents / 100).toFixed(2)}">
+      <span class="t-caption t-secondary">Spent ${money(used)} this month</span>
+      ${cents ? `<span class="g-progress" role="progressbar" aria-label="${esc(label)} used" style="--value:${Math.min(100, Math.round((used / cents) * 100))}%"><span></span></span>` : ''}</label>`;
+    $('rulefields').innerHTML = [
+      field('monthly', 'Monthly cap', r.monthlyCents, sum(() => true)),
+      ...Object.entries(s.stores).map(([id, st]) => field(`store-${id}`, `At ${st.label}`, r.perStore?.[id], sum((x) => x.store === id))),
+      ...['coffee', 'household', 'electronics', 'other'].map((c) => field(`cat-${c}`, `On ${c}`, r.perCategory?.[c], sum((x) => x.category === c))),
+      `<label class="wide"><span class="t-caption-strong">Never buy (words, comma separated)</span><input class="g-field" name="never" value="${esc((r.never ?? []).join(', '))}" placeholder="gift card, alcohol"></label>`,
+    ].join('');
+    $('rulesby').textContent = s.rules.at ? `Last changed ${ago(s.rules.at)} by ${s.rules.by}${s.rules.method === 'passkey' ? ' with Face ID' : ''}.` : 'No rules yet.';
+    $('saverules').textContent = face.enrolled && face.here ? 'Save rules with Face ID' : 'Save rules';
+  }
+
+  function readRules() {
+    const f = $('rules');
+    const cents = (v) => { const t = String(v ?? '').trim().replace(/^\$/, ''); if (!t) return undefined; const n = Math.round(Number(t) * 100); if (!Number.isFinite(n) || n < 0) throw new Error('Caps must be dollar amounts like 25.00.'); return n; };
+    const r = { perStore: {}, perCategory: {}, never: f.never.value.split(',').map((w) => w.trim()).filter(Boolean) };
+    const m = cents(f.monthly.value);
+    if (m !== undefined) r.monthlyCents = m;
+    for (const id of Object.keys(S.stores)) { const v = cents(f[`store-${id}`].value); if (v !== undefined) r.perStore[id] = v; }
+    for (const c of ['coffee', 'household', 'electronics', 'other']) { const v = cents(f[`cat-${c}`].value); if (v !== undefined) r.perCategory[c] = v; }
+    return r;
+  }
 
   function render(s) {
-    const st = s.setup;
-    $('setup').textContent = `Payments: ${st.payments}. Visa test card in the vault: ${st.card ? 'yes' : 'no'}. Agent signing key (Visa TAP): ${st.agentKey ? 'yes' : 'no'}. Demo inbox login in the vault: ${st.inbox ? 'yes' : 'no'}.`;
-    $('approvals').innerHTML = s.approvals.map((a) => `<div class="card stack">
-        <p class="test small" style="margin:0">TEST PAYMENT. No real money moves.</p>
-        <div class="label">Buy this?</div>
-        <div style="font-size:17px;font-weight:600">${esc(a.question.split('? ')[0])}?</div>
-        <p style="margin:0">${esc(a.question.split('? ').slice(1).join('? '))}</p>
-        <p class="small" style="margin:0">The card stays in the vault; the agent never sees it. The checkout request is signed with Visa Trusted Agent Protocol.</p>
-        <div class="actions"><button class="primary" data-ok="${esc(a.id)}">Approve</button><button data-no="${esc(a.id)}">Deny</button></div>
-      </div>`).join('') || '<p class="small">Nothing is waiting for you.</p>';
-    $('watches').innerHTML = s.watches.map((w) => `<tr>
-        <td>${esc(w.name || w.product)}<div class="small mono">${esc(w.store)} ${esc(w.product)}</div></td>
-        <td>${w.qty} × ${w.when === 'restock' ? 'when back in stock, up to' : 'under'} <span class="mono">${money(w.maxCents, cur(w))}</span><div class="small">checks every ${w.everyMinutes === 1 ? 'minute' : w.everyMinutes + ' min'}</div></td>
-        <td>${w.last ? `<span class="mono">${money(w.last.priceCents, cur(w))}</span>${w.last.regularCents > w.last.priceCents ? ` <s class="small">${money(w.last.regularCents, cur(w))}</s>` : ''}, ${w.last.inStock ? 'in stock' : 'sold out'}<div class="small">${ago(w.last.checkedAt)}, ${w.checks} checks</div>` : w.lastError ? `<span class="err">${esc(w.lastError)}</span>` : '<span class="small">checking…</span>'}</td>
-        <td>${pill(w.status)}${w.note ? `<div class="small">${esc(w.note)}</div>` : ''}</td>
-        <td>${w.status === 'watching' ? `<div class="actions"><button data-check="${esc(w.id)}">Check now</button><button data-cancel="${esc(w.id)}">Stop</button></div>` : ''}</td>
-      </tr>`).join('') || '<tr><td colspan="5" class="small">No watches yet.</td></tr>';
-    $('orders').innerHTML = s.orders.map((o) => `<tr>
-        <td class="mono">${esc(o.id)}<div class="small">${ago(o.at)}</div></td>
-        <td>${o.items.map((l) => `${l.qty} × ${esc(l.name)}${l.from ? ` <span class="small">(${esc(l.from)} price)</span>` : ''}`).join('<br>')}</td>
-        <td class="mono">${money(o.totalCents, o.currency)}</td>
-        <td>TEST: ${esc(o.payment.card)}<div class="small">${esc(o.payment.provider)} <span class="mono">${esc(o.payment.id)}</span>${o.refund ? '<br><b>Refunded</b> (the purchase task was undone)' : ''}</div></td>
-        <td>Signed by <span class="mono">${esc(o.agent.keyId)}</span>, verified by the store</td>
-      </tr>`).join('') || '<tr><td colspan="5" class="small">No orders yet.</td></tr>';
-    $('tasks').innerHTML = s.tasks.map((t) => `<tr><td>${esc(t.title)}<div class="small">${esc(t.error || t.step || '')}</div></td><td>${pill(t.state)}</td><td class="mono">${money(t.costCents)} of ${money(t.budgetCents)}</td></tr>`).join('') || '<tr><td colspan="3" class="small">Nothing yet.</td></tr>';
+    S = s;
+    setup(s);
+    $('approvals').innerHTML = s.approvals.map(approvalCard).join('') || '<div class="g-card"><p class="t-body t-secondary">Nothing is waiting for you.</p></div>';
+    faceCard(s);
+    storePicker(s);
+    $('watches').innerHTML = s.watches.map(watchCard).join('') || '<div class="g-card"><p class="t-body t-secondary">No mandates yet.</p></div>';
+    if (!$('rules').contains(document.activeElement)) ruleForm(s);
+    $('saved').innerHTML = s.saved.map((x) => `<p class="t-body"><span class="money t-body-strong">${money(x.cents)}</span> ${esc(x.text)} <span class="t-caption t-secondary">${esc(ago(x.at))}</span></p>`).join('') || '<p class="t-caption t-secondary">Nothing saved yet.</p>';
+    $('subs').innerHTML = s.subscriptions.map((x) => `<div class="row" style="justify-content:space-between"><span>${esc(x.name)} <span class="money t-secondary">${money(x.monthlyCents)} a month</span></span>${badge(x.status)}</div>${x.status === 'cancelled' ? `<p class="t-caption t-secondary">Saves ${money(x.monthlyCents * 12)} a year (test subscription).</p>` : ''}`).join('');
+    $('orders').innerHTML = s.orders.map((o) => {
+      const a = o.mandate?.approvedBy;
+      const adj = (o.adjustments ?? []).map((x) => `<p class="t-caption">Price protection: ${money(x.refundCents, o.currency)} back when it fell to ${money(x.nowCents, o.currency)} (TEST refund).</p>`).join('');
+      return `<div class="g-card stack">
+        <div class="row" style="justify-content:space-between"><span class="t-body-strong">${o.items.map((l) => `${l.qty} × ${esc(l.name)}${l.from ? ` <span class="t-caption t-secondary">(${esc(S.stores[l.from]?.label ?? l.from)} price)</span>` : ''}`).join('<br>')}</span>
+          <span class="money t-heading">${money(o.totalCents, o.currency)}</span></div>
+        <p class="t-caption">TEST payment: ${esc(o.payment.card)}, ${esc(o.payment.provider)} <span class="t-mono">${esc(o.payment.id)}</span>. ${o.refund ? '<b>Refunded</b> (the purchase was undone).' : ''}</p>
+        <p class="t-caption t-secondary">Mandate <span class="t-mono">${esc(o.mandate?.id)}</span>, ${a?.method === 'passkey' ? `approved with Face ID on ${esc(a.by)}` : `approved with a tap by ${esc(a?.by)}`}. Signed with Visa Trusted Agent Protocol and verified by the store. Order <span class="t-mono">${esc(o.id)}</span>, ${esc(ago(o.at))}.</p>${adj}
+      </div>`;
+    }).join('') || '<div class="g-card"><p class="t-body t-secondary">No orders yet.</p></div>';
+    $('tasks').innerHTML = s.tasks.map((t) => `<div class="g-row" style="cursor:default"><span class="g-row-text"><span class="g-row-title">${esc(t.title)}</span><span class="g-row-sub">${esc(t.error || t.step || '')}</span></span><span class="g-row-trail">${badge(t.state)}<span class="money t-caption">${money(t.costCents)} of ${money(t.budgetCents)}</span></span></div>`).join('') || '<div class="g-row"><span class="g-row-text t-secondary">Nothing yet.</span></div>';
   }
 
   async function load() {
     try {
-      const r = await fetch('/t/shopper/state', { headers: auth });
-      const s = await r.json();
-      if (!r.ok) throw new Error(s.error ?? `HTTP ${r.status}`);
+      const [s, f] = await Promise.all([
+        fetch('/t/shopper/state').then(async (r) => { const j = await r.json(); if (!r.ok) throw new Error(j.error ?? `HTTP ${r.status}`); return j; }),
+        fetch(`/t/shopper/passkey/status?origin=${encodeURIComponent(location.origin)}`).then((r) => r.json()).catch(() => ({})),
+      ]);
+      face = f;
       render(s);
-    } catch (e) { $('setup').textContent = `The box did not answer: ${e.message}`; }
+    } catch (e) {
+      $('setup').textContent = `The box did not answer: ${e.message}`;
+    }
   }
+
+  const err = (m) => { $('formerr').textContent = m; if (m) window.gurtos?.toast?.(m); };
+  const act = (fn) => async (e) => { e.preventDefault?.(); err(''); try { await fn(e); await load(); } catch (x) { err(x.message); } };
+
   document.addEventListener('click', (e) => {
-    if (e.target.closest('[data-ok],[data-no],[data-check],[data-cancel],#reorder')) onButton(e);
-  });
-  const onButton = act(async (e) => {
     const b = e.target.closest('button');
-    if (b.dataset.ok) await post(`/api/approvals/${encodeURIComponent(b.dataset.ok)}`, { approved: true, by: 'portal' });
-    if (b.dataset.no) await post(`/api/approvals/${encodeURIComponent(b.dataset.no)}`, { approved: false, by: 'portal' });
-    if (b.dataset.check) await post('/t/shopper/watches/check', { id: b.dataset.check });
-    if (b.dataset.cancel) await post('/t/shopper/watches/cancel', { id: b.dataset.cancel });
-    if (b.id === 'reorder') await post('/t/shopper/reorder');
+    if (!b) return;
+    const d = b.dataset;
+    const run = act(async () => {
+      if (d.face) { b.disabled = true; await (await passkey()).approve(d.face); window.gurtos?.toast?.('Approved with Face ID'); }
+      else if (d.ok) await post(`/api/approvals/${encodeURIComponent(d.ok)}`, { approved: true, by: 'portal' });
+      else if (d.no) await post(`/api/approvals/${encodeURIComponent(d.no)}`, { approved: false, by: 'portal' });
+      else if (d.check) await post('/t/shopper/watches/check', { id: d.check });
+      else if (d.stop) await post('/t/shopper/watches/cancel', { id: d.stop });
+      else if (b.id === 'enroll') {
+        const guess = /iPhone/.test(navigator.userAgent) ? 'iPhone' : /Android/.test(navigator.userAgent) ? 'Android phone' : /Mac/.test(navigator.userAgent) ? 'Mac' : 'This computer';
+        const name = prompt('Name this device', guess);
+        if (!name) return;
+        await (await passkey()).enroll(name, { existing: face.enrolled });
+        window.gurtos?.toast?.('Face ID is set up on this device');
+      }
+      else if (b.id === 'checkprices') await post('/t/shopper/savings/check');
+      else if (b.id === 'findsubs') await post('/t/shopper/savings/subscriptions');
+      else return;
+    });
+    if (d.face || d.ok || d.no || d.check || d.stop || ['enroll', 'checkprices', 'findsubs'].includes(b.id)) run(e);
   });
-  $('ask').addEventListener('submit', act(async (e) => { await post('/t/shopper/ask', { text: e.target.text.value }); e.target.reset(); }));
-  $('supplies').addEventListener('submit', act(async (e) => { await post('/t/shopper/supplies', { url: e.target.url.value, cents: Number(e.target.cents.value) }); }));
+
+  $('rules').addEventListener('input', () => { try { ruleDraft = readRules(); } catch {} });
+  $('rules').addEventListener('submit', act(async () => {
+    const r = readRules();
+    if (face.enrolled && face.here) await (await passkey()).saveRules(r);
+    else await post('/t/shopper/rules', { rules: r });
+    ruleDraft = undefined;
+    window.gurtos?.toast?.('Rules saved');
+  }));
+  $('ask').addEventListener('submit', act(async (e) => { await post('/t/shopper/ask', { text: e.target.text.value }); e.target.reset(); window.gurtos?.toast?.('Claude is looking'); }));
   $('watch').addEventListener('submit', act(async (e) => {
     const f = e.target;
     const maxCents = Math.round(Number(f.max.value.trim().replace(/^\$/, '')) * 100);
     if (!(maxCents >= 1 && maxCents <= 50000)) throw new Error('Price per item must be a dollar amount from $0.01 to $500.');
-    await post('/t/shopper/watches', { store: f.store.value, product: f.product.value, when: f.when.value, maxCents, qty: Number(f.qty.value), everyMinutes: Number(f.every.value) });
+    const offers = [...f.querySelectorAll('input[name=store]:checked')].map((b) => ({ store: b.value, product: f[`p-${b.value}`].value.trim() }));
+    if (!offers.length) throw new Error('Pick at least one store.');
+    const until = f.until.value ? new Date(`${f.until.value}T23:59:00`).toISOString() : undefined;
+    await post('/t/shopper/watches', { text: f.text.value, offers, maxCents, qty: Number(f.qty.value), category: f.category.value, when: f.when.value, everyMinutes: Number(f.every.value), ...(until && { expires: until }) });
+    window.gurtos?.toast?.('Proposed. Approve the mandate above.');
   }));
+  $('supplies').addEventListener('submit', act(async (e) => { await post('/t/shopper/supplies', { url: e.target.url.value, cents: Number(e.target.cents.value) }); }));
+  { const d = new Date(Date.now() + 6 * 86400000); $('watch').until.value = d.toISOString().slice(0, 10); }
   load();
   setInterval(load, 3000);
 </script>

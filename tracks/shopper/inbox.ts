@@ -15,6 +15,15 @@ const BOUGHT: Record<string, { name: string; priceCents: number; days: number[] 
   'USBC-1M': { name: 'USB-C cable, 1 m', priceCents: 999, days: [45] },
 };
 
+// The household's subscriptions at the GurtOS Test Store (same ids as store.ts), and when each was last used.
+// Nobody has watched Streaming Plus for 74 days; the other two are in use.
+const SUBS = [
+  { id: 'SUB-STREAM', name: 'Streaming Plus', cents: 1599, usedDaysAgo: 74, activity: 'We miss you. You have not watched anything in a while.' },
+  { id: 'SUB-COFFEE', name: 'Coffee of the month', cents: 1800, usedDaysAgo: 6, activity: 'Your October coffee was delivered.' },
+  { id: 'SUB-PHOTOS', name: 'Cloud photos, 200 GB', cents: 399, usedDaysAgo: 1, activity: 'Your photo backup finished: 2,341 photos.' },
+];
+const ymd = (t: number) => new Date(t).toISOString().slice(0, 10);
+
 const header = (from: string, subject: string, date: Date, id: string) =>
   `From: ${from}\r\nTo: ${MAILBOX}\r\nSubject: ${subject}\r\nDate: ${date.toUTCString()}\r\nMessage-ID: <${id}@box.test>\r\nContent-Type: text/plain; charset=utf-8\r\n\r\n`;
 
@@ -29,8 +38,15 @@ export function sampleMail(now = Date.now()): string[] {
     return header('GurtOS Test Store <receipts@store.box.test>', `Your GurtOS Test Store receipt, order ${++order}`, new Date(now - d * DAY), `r${order}`) +
       `Thanks for your order.\r\n\r\n${lines.join('\r\n')}\r\n\r\nTotal: $${(total / 100).toFixed(2)}\r\nSample receipt in the demo inbox.\r\n`;
   });
+  const subs = SUBS.flatMap((x, i) => [
+    ...[62, 32, 2].map((d) => header('GurtOS Test Store <receipts@store.box.test>', `Your ${x.name} receipt`, new Date(now - (d + i) * DAY), `s${x.id}${d}`) +
+      `Subscription: ${x.name} (${x.id}), $${(x.cents / 100).toFixed(2)} a month. Charged ${ymd(now - (d + i) * DAY)}.\r\nSample receipt in the demo inbox.\r\n`),
+    header(`${x.name} <hello@store.box.test>`, `Your ${x.name} activity`, new Date(now - Math.min(x.usedDaysAgo, 20) * DAY), `a${x.id}`) +
+      `${x.activity}\r\nActivity for ${x.id}: last used ${ymd(now - x.usedDaysAgo * DAY)}.\r\n`,
+  ]);
   return [
     ...receipts,
+    ...subs,
     header('Credit Union <alerts@bank.box.test>', 'Your October statement is ready', new Date(now - 3 * DAY), 'bank') + 'Your statement is ready to view. Balance: $2,481.07.\r\n',
     header('Mail <no-reply@mail.box.test>', 'Your sign-in code', new Date(now - 2 * DAY), 'code') + 'Your sign-in code is 482913. It expires in 10 minutes.\r\n',
   ];
@@ -142,6 +158,7 @@ export function fetchMail(port: number, user: string, pass: string, host = '127.
 
 export type Item = { sku: string; name: string; qty: number; priceCents: number };
 export type Receipt = { date: string; from: string; subject: string; items: Item[] };
+export type Subscription = { id: string; name: string; monthlyCents: number; charges: number; lastCharged: string; lastUsed?: string; unusedDays?: number; unused: boolean };
 export type Estimate = { sku: string; name: string; boughtTimes: number; lastBought: string; everyDays: number; daysLeft: number; runningLow: boolean; lastQty: number };
 
 export function parseMessage(raw: string) {
@@ -151,13 +168,33 @@ export function parseMessage(raw: string) {
 }
 
 const LINE = /^(\d+) x (.+) \(([\w-]+)\) @ \$(\d+\.\d\d)$/gm;
+const SUB_LINE = /^Subscription: (.+) \(([\w-]+)\), \$(\d+\.\d\d) a month\. Charged (\d{4}-\d\d-\d\d)\./m;
+const USED_LINE = /^Activity for ([\w-]+): last used (\d{4}-\d\d-\d\d)\./m;
+/** A subscription nobody used for this long is worth asking about. */
+export const UNUSED_DAYS = 45;
 
-/** Keep the receipts, count the rest, and work out when each regular item runs out. */
+/** Keep the receipts and subscription notices, count the rest, and work out what runs low and what goes unused. */
 export function readReceipts(raws: string[], now = Date.now()) {
   const receipts: Receipt[] = [];
+  const subs = new Map<string, Subscription>();
+  const used = new Map<string, string>();
   let withheld = 0;
   for (const raw of raws) {
     const { headers, body } = parseMessage(raw);
+    const sub = body.match(SUB_LINE);
+    if (sub) {
+      const [, name, id, price, date] = sub;
+      const s = subs.get(id) ?? { id, name, monthlyCents: Math.round(Number(price) * 100), charges: 0, lastCharged: date, unused: false };
+      s.charges++;
+      if (date > s.lastCharged) s.lastCharged = date;
+      subs.set(id, s);
+      continue;
+    }
+    const u = body.match(USED_LINE);
+    if (u) {
+      if (!used.has(u[1]) || u[2] > used.get(u[1])!) used.set(u[1], u[2]);
+      continue;
+    }
     const items = [...body.matchAll(LINE)].map(([, qty, name, sku, price]) => ({ sku, name, qty: Number(qty), priceCents: Math.round(Number(price) * 100) }));
     if (!/receipt|order/i.test(headers.subject ?? '') || !items.length) {
       withheld++;
@@ -165,7 +202,12 @@ export function readReceipts(raws: string[], now = Date.now()) {
     }
     receipts.push({ date: new Date(headers.date).toISOString(), from: headers.from, subject: headers.subject, items });
   }
-  return { receipts, withheld, estimates: estimate(receipts, now) };
+  const subscriptions = [...subs.values()].map((s) => {
+    const lastUsed = used.get(s.id);
+    const unusedDays = lastUsed ? Math.floor((now - Date.parse(lastUsed)) / DAY) : undefined;
+    return { ...s, lastUsed, unusedDays, unused: unusedDays === undefined || unusedDays >= UNUSED_DAYS };
+  });
+  return { receipts, withheld, estimates: estimate(receipts, now), subscriptions };
 }
 
 // shortcut: assumes each purchase lasts until the next one, whatever the quantity; enough for a household's regulars.

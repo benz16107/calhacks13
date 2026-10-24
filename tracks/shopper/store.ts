@@ -1,26 +1,31 @@
 // The GurtOS Test Store: a small merchant the shopper agent buys from, because no real store accepts a test card.
-// It takes an order only when the request is signed with Visa Trusted Agent Protocol by a key in the agent
-// registry, charges it in Stripe test mode (or simulates the charge until the Stripe keys are in the vault),
-// and keeps its own order book. Every payment here is a TEST payment: no real money moves.
+// It is also the merchant's side of the story: it takes an order only when the request is signed with Visa
+// Trusted Agent Protocol by a key in the agent registry AND carries a signed shopping mandate the order fits.
+// It counts every request, so its dashboard shows verified agent orders next to the unknown bots it refused.
+// Every payment here is a TEST payment: no real money moves, and nothing ships.
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
-import type { Box } from '../../core/contract.ts';
-import { KEY_ID, PAYER, type Verified, verifyRequest } from './tap.ts';
+import { type Line, type Signed, outside } from './mandate.ts';
+import type { PayInput, Payment } from './payments.ts';
+import { BROWSE, KEY_ID, PAYER, type Verified, verifyRequest } from './tap.ts';
 
+export type { Line };
 export const HOME = process.env.BOX_HOME ?? '/var/lib/box';
-// A ./demo run makes no live Stripe call unless DEMO_LIVE names this track (shopper or visa). The installed box always may.
+// A ./demo run makes no live payment call unless DEMO_LIVE names this track (shopper or visa). The installed box always may.
 export const OFFLINE = HOME.startsWith('/var/lib/box-demo/') && !/\b(shopper|visa)\b/.test(process.env.DEMO_LIVE ?? '');
 const MAX_ORDER_CENTS = 50_000;
+/** Price protection: a drop within this many days of the order gets the difference back. */
+export const PROTECT_DAYS = 30;
 
-export type Product = { sku: string; name: string; priceCents: number; regularCents: number; inStock: boolean };
+export type Product = { sku: string; name: string; category: string; priceCents: number; regularCents: number; inStock: boolean };
 export const CATALOG: Product[] = [
-  { sku: 'HV60-100', name: 'Hario V60 02 paper filters, 100 count', priceCents: 899, regularCents: 899, inStock: true },
-  { sku: 'HV60-DRIP', name: 'Hario V60 02 ceramic dripper, white', priceCents: 2700, regularCents: 2700, inStock: false },
-  { sku: 'PT-6', name: 'Paper towels, 6 rolls', priceCents: 1149, regularCents: 1149, inStock: true },
-  { sku: 'DS-750', name: 'Dish soap, 750 ml', priceCents: 399, regularCents: 399, inStock: true },
-  { sku: 'CB-340', name: 'Whole bean coffee, 340 g', priceCents: 1600, regularCents: 1600, inStock: true },
-  { sku: 'USBC-1M', name: 'USB-C cable, 1 m', priceCents: 999, regularCents: 999, inStock: true },
+  { sku: 'HV60-100', name: 'Hario V60 02 paper filters, 100 count', category: 'coffee', priceCents: 899, regularCents: 899, inStock: true },
+  { sku: 'HV60-DRIP', name: 'Hario V60 02 ceramic dripper, white', category: 'coffee', priceCents: 2700, regularCents: 2700, inStock: false },
+  { sku: 'PT-6', name: 'Paper towels, 6 rolls', category: 'household', priceCents: 1149, regularCents: 1149, inStock: true },
+  { sku: 'DS-750', name: 'Dish soap, 750 ml', category: 'household', priceCents: 399, regularCents: 399, inStock: true },
+  { sku: 'CB-340', name: 'Whole bean coffee, 340 g', category: 'coffee', priceCents: 1600, regularCents: 1600, inStock: true },
+  { sku: 'USBC-1M', name: 'USB-C cable, 1 m', category: 'electronics', priceCents: 999, regularCents: 999, inStock: true },
 ];
 // shortcut: price and stock changes live in memory and reset when the box restarts; fine for a test store.
 const catalog = new Map(CATALOG.map((p) => [p.sku, { ...p }]));
@@ -37,108 +42,76 @@ export function setProduct(sku: string, change: { priceCents?: number; inStock?:
   return p;
 }
 
-// ---------- payments: the one place that talks to Stripe ----------
+/** The household's subscriptions at this store (sample account). Cancelling one is a signed agent request. */
+export const SUBSCRIPTIONS = [
+  { id: 'SUB-STREAM', name: 'Streaming Plus', monthlyCents: 1599, since: '2025-11-02' },
+  { id: 'SUB-COFFEE', name: 'Coffee of the month', monthlyCents: 1800, since: '2026-03-15' },
+  { id: 'SUB-PHOTOS', name: 'Cloud photos, 200 GB', monthlyCents: 399, since: '2024-06-20' },
+];
 
-export type Payment = { test: true; provider: 'stripe test mode' | 'simulated'; id: string; status: string; card: string; note?: string };
-export type PayInput =
-  | { action: 'charge'; cents: number; currency: string; card: string; key: string; description: string }
-  | { action: 'refund'; payment: Payment; key: string };
+// ---------- what the store keeps: orders, and every request it saw (for the dashboard) ----------
 
-// Stripe's test PaymentMethods. A simulated charge accepts only these, so no real card is ever "charged" here.
-const TEST_CARDS: Record<string, string> = {
-  pm_card_visa: 'Visa test card ending 4242',
-  pm_card_visa_debit: 'Visa debit test card ending 5556',
-  pm_card_chargeDeclined: 'Visa test card ending 0002 (always declined)',
-};
-
-async function stripe(key: string, route: string, form: Record<string, string>, idempotencyKey: string) {
-  const r = await fetch(`https://api.stripe.com/v1/${route}`, {
-    method: 'POST',
-    headers: { authorization: `Bearer ${key}`, 'content-type': 'application/x-www-form-urlencoded', 'idempotency-key': idempotencyKey },
-    body: new URLSearchParams(form),
-    signal: AbortSignal.timeout(30_000),
-  });
-  const body = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(`Stripe ${r.status}: ${body?.error?.message ?? r.statusText}`);
-  return body;
-}
-
-/** Charge or refund. `stripeKey` is undefined until the box's owner puts STRIPE_SECRET_KEY in the vault. */
-export async function pay(input: PayInput, stripeKey: string | undefined): Promise<Payment> {
-  const live = stripeKey && !OFFLINE;
-  if (live && !/^(sk|rk)_test_/.test(stripeKey)) throw new Error('this store runs in Stripe test mode only, and the vault holds a live key, so it refuses to charge');
-  const sim = (prefix: string) => `${prefix}_sim_${createHash('sha256').update(input.key).digest('hex').slice(0, 16)}`;
-  const why = OFFLINE ? 'offline demo run: no Stripe call' : 'simulated: no STRIPE_SECRET_KEY in the vault yet';
-  if (input.action === 'refund') {
-    const p = input.payment;
-    if (p.provider === 'simulated' || !live) return { ...p, id: sim('re'), status: 'refunded', note: why };
-    const r = await stripe(stripeKey, 'refunds', { payment_intent: p.id }, input.key);
-    return { ...p, id: r.id, status: r.status === 'succeeded' ? 'refunded' : r.status };
-  }
-  if (!TEST_CARDS[input.card]) throw new Error('the vault card is not a Stripe test card; this store takes test cards only');
-  if (!live) {
-    if (input.card === 'pm_card_chargeDeclined') throw new Error('card declined (simulated)');
-    return { test: true, provider: 'simulated', id: sim('pi'), status: 'succeeded', card: TEST_CARDS[input.card], note: why };
-  }
-  const pi = await stripe(
-    stripeKey,
-    'payment_intents',
-    {
-      amount: String(input.cents),
-      currency: input.currency.toLowerCase(),
-      payment_method: input.card,
-      'payment_method_types[]': 'card',
-      confirm: 'true',
-      description: `TEST: ${input.description}`.slice(0, 300),
-      'metadata[box_order]': input.key,
-      'expand[]': 'latest_charge',
-    },
-    input.key,
-  );
-  if (pi.status !== 'succeeded') throw new Error(`payment ${pi.status}`);
-  const c = pi.latest_charge?.payment_method_details?.card;
-  return { test: true, provider: 'stripe test mode', id: pi.id, status: pi.status, card: c ? `${c.brand === 'visa' ? 'Visa' : c.brand} test card ending ${c.last4}` : TEST_CARDS[input.card] };
-}
-
-// ---------- the order book ----------
-
-export type Line = { sku: string; name: string; priceCents: number; qty: number; from?: string };
+export type Adjustment = { at: string; sku: string; paidCents: number; nowCents: number; refundCents: number; payment: Payment };
 export type Order = {
   id: string; key: string; task?: string; items: Line[]; currency: string; totalCents: number; at: string;
-  agent: Verified; payment: Payment; refund?: Payment;
+  agent: Verified; mandate: { id: string; text: string; approvedBy: Signed['mandate']['approvedBy'] }; payment: Payment;
+  refund?: Payment; adjustments?: Adjustment[];
 };
-export type Refusal = { at: string; reason: string };
+/** One request the store saw. `verified` is whether it carried a valid TAP signature. */
+export type StoreEvent = {
+  at: string; kind: 'visit' | 'order' | 'refused' | 'refund' | 'adjust' | 'cancel'; verified: boolean;
+  code?: string; reason?: string; mandate?: string; order?: string; cents?: number; currency?: string; sub?: string; passkey?: boolean;
+};
 
 const orders = new Map<string, Order>();
-export const refusals: Refusal[] = [];
+const events: StoreEvent[] = [];
+const cancelled = new Map<string, string>(); // subscription id -> when
 let loaded = false;
-const ordersFile = () => path.join(HOME, 'shopper', 'orders.jsonl');
+const file = (name: string) => path.join(HOME, 'shopper', name);
+function readJsonl<T>(name: string): T[] {
+  if (!fs.existsSync(file(name))) return [];
+  return fs.readFileSync(file(name), 'utf8').split('\n').flatMap((l) => {
+    try {
+      return l ? [JSON.parse(l) as T] : [];
+    } catch {
+      return []; // a torn last line after a power cut
+    }
+  });
+}
+function append(name: string, v: unknown) {
+  fs.mkdirSync(path.dirname(file(name)), { recursive: true, mode: 0o700 });
+  const fd = fs.openSync(file(name), 'a', 0o600);
+  fs.writeSync(fd, JSON.stringify(v) + '\n');
+  fs.fsyncSync(fd);
+  fs.closeSync(fd);
+}
 function load() {
   if (loaded) return;
   loaded = true;
-  if (!fs.existsSync(ordersFile())) return;
-  for (const line of fs.readFileSync(ordersFile(), 'utf8').split('\n')) {
-    try {
-      const o: Order = JSON.parse(line);
-      orders.set(o.key, o); // a later line for the same order (a refund) replaces the earlier one
-    } catch {} // a torn last line after a power cut
+  for (const o of readJsonl<Order>('orders.jsonl')) orders.set(o.key, o); // a later line for the same order replaces it
+  for (const e of readJsonl<StoreEvent>('store-events.jsonl')) {
+    events.push(e);
+    if (e.kind === 'cancel' && e.sub) cancelled.set(e.sub, e.at);
   }
 }
 function save(o: Order) {
-  fs.mkdirSync(path.dirname(ordersFile()), { recursive: true, mode: 0o700 });
-  const fd = fs.openSync(ordersFile(), 'a', 0o600);
-  fs.writeSync(fd, JSON.stringify(o) + '\n');
-  fs.fsyncSync(fd);
-  fs.closeSync(fd);
+  append('orders.jsonl', o);
   orders.set(o.key, o);
+}
+function record(e: Omit<StoreEvent, 'at'>) {
+  const full = { at: new Date().toISOString(), ...e };
+  append('store-events.jsonl', full);
+  events.push(full);
+  if (full.kind === 'cancel' && full.sub) cancelled.set(full.sub, full.at);
 }
 export const allOrders = () => (load(), [...orders.values()].reverse());
 export const orderForTask = (task: string) => allOrders().find((o) => o.task === task);
+export const subscriptions = () => (load(), SUBSCRIPTIONS.map((s) => ({ ...s, status: cancelled.has(s.id) ? 'cancelled' : 'active', cancelledAt: cancelled.get(s.id) })));
 
 // Nonces seen, until their signature expires. shortcut: in memory, so a restart forgets them; the Idempotency-Key
 // still stops a replayed order from being charged twice.
 const nonces = new Map<string, number>();
-function seen(nonce: string, expires: number) {
+function fresh(nonce: string, expires: number) {
   const now = Date.now() / 1000;
   for (const [n, e] of nonces) if (e < now) nonces.delete(n);
   if (nonces.has(nonce)) return false;
@@ -146,30 +119,57 @@ function seen(nonce: string, expires: number) {
   return true;
 }
 
-const fail = (status: number, error: string) => Response.json({ error }, { status });
+/** Sort a TAP refusal into a dashboard bucket. */
+const tapCode = (reason: string) =>
+  /unsigned/.test(reason) ? 'unsigned (unknown bot)'
+  : /replay/.test(reason) ? 'replayed signature'
+  : /changed/.test(reason) ? 'changed in transit'
+  : /expired|not yet valid/.test(reason) ? 'expired signature'
+  : /unknown agent key/.test(reason) ? 'unknown agent'
+  : 'bad signature';
 
-/** POST /store/checkout. The agent registry is `registry(keyId)`; charging goes through `charge`. */
-export async function checkout(req: Request, registry: (keyId: string) => Promise<string | undefined>, charge: (p: PayInput) => Promise<Payment>) {
-  load();
-  const body = await req.text();
+const fail = (status: number, error: string) => Response.json({ error }, { status });
+type Registry = (keyId: string) => Promise<string | undefined>;
+type Charge = (p: PayInput) => Promise<Payment>;
+
+/** Check the request's TAP signature. Records and returns a 401 when it fails. */
+async function agentOf(req: Request, body: string, registry: Registry, tag: string, kind: StoreEvent['kind']): Promise<Verified | Response> {
   const url = new URL(req.url);
-  let agent: Verified;
   try {
     const pub = await registry(KEY_ID);
-    agent = verifyRequest({ authority: req.headers.get('host') ?? url.host, path: url.pathname, headers: req.headers, body }, (id) => (id === KEY_ID ? pub : undefined), seen);
-    if (agent.tag !== PAYER) throw new Error(`a checkout needs the ${PAYER} tag, not ${agent.tag}`);
+    const agent = verifyRequest({ authority: req.headers.get('host') ?? url.host, path: url.pathname, headers: req.headers, body }, (id) => (id === KEY_ID ? pub : undefined), fresh);
+    if (agent.tag !== tag) throw new Error(`this needs the ${tag} tag, not ${agent.tag}`);
+    return agent;
   } catch (e) {
     const reason = (e as Error).message;
-    refusals.unshift({ at: new Date().toISOString(), reason });
-    refusals.length = Math.min(refusals.length, 20);
+    record({ kind: kind === 'visit' ? 'visit' : 'refused', verified: false, code: tapCode(reason), reason });
     return fail(401, `refused: ${reason}`);
   }
+}
+
+/** GET /store/products. Anyone may browse; the store counts verified agents apart from unknown bots. */
+export async function browse(req: Request, registry: Registry) {
+  load();
+  const signed = req.headers.has('signature-input');
+  const agent = signed ? await agentOf(req, '', registry, BROWSE, 'visit') : undefined;
+  if (agent instanceof Response) return agent;
+  const mandate = new URL(req.url).searchParams.get('mandate') ?? undefined;
+  record({ kind: 'visit', verified: !!agent, ...(agent ? { mandate } : { code: 'unsigned (unknown bot)' }) });
+  return Response.json(products());
+}
+
+/** POST /store/checkout. TAP signature, a signed mandate the order fits, an Idempotency-Key; then a test charge. */
+export async function checkout(req: Request, registry: Registry, charge: Charge) {
+  load();
+  const body = await req.text();
+  const agent = await agentOf(req, body, registry, PAYER, 'order');
+  if (agent instanceof Response) return agent;
   const key = req.headers.get('idempotency-key') ?? '';
   if (!key) return fail(400, 'an Idempotency-Key header is required');
   const done = orders.get(key);
   if (done) return Response.json({ ...done, repeat: true }); // the same order again after a restart: no second charge
 
-  let o: { items?: Line[]; currency?: string; card?: string; task?: string };
+  let o: { items?: Line[]; currency?: string; task?: string; mandate?: Signed };
   try {
     o = JSON.parse(body);
   } catch {
@@ -181,11 +181,11 @@ export async function checkout(req: Request, registry: (keyId: string) => Promis
   for (const l of items) {
     if (!Number.isInteger(l.qty) || l.qty < 1 || l.qty > 10) return fail(400, `${l.sku}: quantity must be 1 to 10`);
     const p = catalog.get(l.sku);
-    if (p) {
+    if (p && !l.from) {
       if (currency !== 'USD') return fail(400, `${l.sku} is sold in USD here`);
       if (!p.inStock) return fail(409, `${p.name} is out of stock`);
       if (l.priceCents !== p.priceCents) return fail(409, `${p.name} is now $${(p.priceCents / 100).toFixed(2)}, not $${(l.priceCents / 100).toFixed(2)}`);
-      l.name = p.name;
+      [l.name, l.category] = [p.name, p.category];
     } else if (!l.from || !Number.isInteger(l.priceCents) || l.priceCents <= 0) {
       return fail(400, `no product ${l.sku}`);
     } else {
@@ -196,45 +196,117 @@ export async function checkout(req: Request, registry: (keyId: string) => Promis
   const totalCents = items.reduce((s, l) => s + l.priceCents * l.qty, 0);
   if (totalCents > MAX_ORDER_CENTS) return fail(400, 'orders above $500 are refused');
 
+  // The mandate's limits cover every order under it, so count what earlier orders already took.
+  const mid = o.mandate?.mandate?.id;
+  const before = allOrders().filter((x) => x.mandate.id === mid && !x.refund);
+  const used = { qty: before.reduce((n, x) => n + x.items.reduce((q, l) => q + l.qty, 0), 0), cents: before.reduce((n, x) => n + x.totalCents, 0) };
+  const refusal = outside(o.mandate, o.mandate && (await registry(o.mandate.mandate.issuer)), items, currency, { agentKeyId: agent.keyId, used });
+  if (refusal) {
+    record({ kind: 'refused', verified: true, code: refusal.code, reason: refusal.reason, mandate: o.mandate?.mandate?.id });
+    return fail(403, `refused: ${refusal.reason}`);
+  }
+  const m = o.mandate!.mandate;
   const id = `ord_${createHash('sha256').update(key).digest('hex').slice(0, 10)}`;
   let payment: Payment;
   try {
-    payment = await charge({ action: 'charge', cents: totalCents, currency, card: String(o.card ?? ''), key, description: `${id} ${items.map((l) => `${l.qty} x ${l.name}`).join(', ')}` });
+    payment = await charge({ action: 'charge', cents: totalCents, currency, key, description: `${id} ${items.map((l) => `${l.qty} x ${l.name}`).join(', ')}` });
   } catch (e) {
     return fail(402, `payment failed: ${(e as Error).message}`);
   }
-  const order: Order = { id, key, task: o.task, items, currency, totalCents, at: new Date().toISOString(), agent, payment };
+  const order: Order = {
+    id, key, task: o.task, items, currency, totalCents, at: new Date().toISOString(), agent, payment,
+    mandate: { id: m.id, text: m.text, approvedBy: m.approvedBy },
+  };
   save(order);
+  record({ kind: 'order', verified: true, mandate: m.id, order: id, cents: totalCents, currency, passkey: m.approvedBy.method === 'passkey' });
   return Response.json(order);
 }
 
 /** Refund the order a task placed (the task was undone). Safe to call twice. */
-export async function refundTask(task: string, charge: (p: PayInput) => Promise<Payment>) {
+export async function refundTask(task: string, charge: Charge) {
   const o = orderForTask(task);
   if (!o || o.refund) return o;
-  const refund = await charge({ action: 'refund', payment: o.payment, key: `refund-${o.id}` });
+  const back = o.totalCents - (o.adjustments ?? []).reduce((s, a) => s + a.refundCents, 0);
+  const refund = await charge({ action: 'refund', payment: o.payment, key: `refund-${o.id}`, cents: back });
   save({ ...o, refund });
+  record({ kind: 'refund', verified: true, order: o.id, cents: back, currency: o.currency });
   return orders.get(o.key);
 }
 
-// ---------- the store's own page ----------
-
-const esc = (s: unknown) => String(s).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
-const money = (cents: number, cur = 'USD') => `$${(cents / 100).toFixed(2)}${cur === 'USD' ? '' : ' ' + cur}`;
-
-export function storePage() {
+/**
+ * POST /store/price-adjust {order, sku}: price protection. Within PROTECT_DAYS of the order, if this store's price
+ * for the item dropped, it refunds the difference (a TEST refund). The store checks its own price, not the agent's.
+ */
+export async function priceAdjust(req: Request, registry: Registry, charge: Charge) {
   load();
-  const rows = products().map((p) => `<tr><td class="mono">${esc(p.sku)}</td><td>${esc(p.name)}</td><td class="mono">${money(p.priceCents)}${p.priceCents < p.regularCents ? ` <s>${money(p.regularCents)}</s>` : ''}</td><td>${p.inStock ? 'In stock' : 'Sold out'}</td></tr>`).join('');
-  const book = allOrders().slice(0, 20).map((o) => `<tr><td class="mono">${esc(o.id)}</td><td>${o.items.map((l) => `${l.qty} × ${esc(l.name)}${l.from ? ` <small>(${esc(l.from)} price)</small>` : ''}`).join('<br>')}</td><td class="mono">${money(o.totalCents, o.currency)}</td><td>TEST: ${esc(o.payment.card)}, ${esc(o.payment.provider)}<br><small class="mono">${esc(o.payment.id)}</small>${o.refund ? '<br><b>Refunded</b>' : ''}</td><td>Signed by <span class="mono">${esc(o.agent.keyId)}</span>, verified</td></tr>`).join('') || '<tr><td colspan="5">No orders yet.</td></tr>';
-  const refused = refusals.map((r) => `<li><span class="mono">${esc(r.at.slice(11, 19))}</span> ${esc(r.reason)}</li>`).join('') || '<li>None yet.</li>';
-  return `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>GurtOS Test Store</title>
-<style>body{font:16px/24px "IBM Plex Sans",system-ui,sans-serif;background:#F3F1EA;color:#1C201D;margin:0;padding:24px;max-width:1000px}h1{font-size:24px;line-height:32px}h2{font-size:17px;margin-top:32px}
-table{border-collapse:collapse;width:100%;background:#FBFAF6;border:1px solid #D3D6CF;border-radius:6px}td,th{padding:8px 12px;border-top:1px solid #D3D6CF;text-align:left;vertical-align:top}th{font:500 12px/16px "IBM Plex Sans",system-ui;letter-spacing:.4px;text-transform:uppercase;color:#535A54}
-.mono,small.mono{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:14px}.test{background:#E6E7E1;border:1px solid #6B726C;border-radius:4px;padding:8px 12px}s{color:#535A54}</style>
-<h1>GurtOS Test Store</h1>
-<p class="test">TEST STORE. Every payment is a Stripe test-mode payment with a Visa test card. No real money moves, and nothing ships. It exists because no real store accepts a test card.</p>
-<p>Checkout takes orders only from agents that sign the request with <a href="https://github.com/visa/trusted-agent-protocol">Visa Trusted Agent Protocol</a>, checked against the agent registry key <span class="mono">${KEY_ID}</span>.</p>
-<h2>Products</h2><table><tr><th>SKU</th><th>Product</th><th>Price</th><th>Stock</th></tr>${rows}</table>
-<h2>Orders</h2><table><tr><th>Order</th><th>Items</th><th>Total</th><th>Payment</th><th>Agent</th></tr>${book}</table>
-<h2>Refused at checkout</h2><ul>${refused}</ul></html>`;
+  const body = await req.text();
+  const agent = await agentOf(req, body, registry, PAYER, 'adjust');
+  if (agent instanceof Response) return agent;
+  let i: { order?: string; sku?: string };
+  try {
+    i = JSON.parse(body);
+  } catch {
+    return fail(400, 'the body is not JSON');
+  }
+  const o = allOrders().find((x) => x.id === i.order);
+  const line = o?.items.find((l) => l.sku === i.sku && !l.from);
+  const p = line && product(line.sku);
+  if (!o || !line || !p) return fail(404, `no item ${i.sku} from this store in order ${i.order}`);
+  if (o.refund) return fail(409, 'that order was refunded');
+  if (Date.now() - Date.parse(o.at) > PROTECT_DAYS * 86_400_000) return fail(409, `price protection lasts ${PROTECT_DAYS} days`);
+  const lowest = Math.min(line.priceCents, ...(o.adjustments ?? []).filter((a) => a.sku === line.sku).map((a) => a.nowCents));
+  if (!(p.priceCents < lowest)) return fail(409, `the price is $${(p.priceCents / 100).toFixed(2)}, not below the $${(lowest / 100).toFixed(2)} already paid`);
+  const refundCents = (lowest - p.priceCents) * line.qty;
+  const payment = await charge({ action: 'refund', payment: o.payment, key: `adjust-${o.id}-${line.sku}-${p.priceCents}`, cents: refundCents });
+  const adj: Adjustment = { at: new Date().toISOString(), sku: line.sku, paidCents: lowest, nowCents: p.priceCents, refundCents, payment };
+  save({ ...o, adjustments: [...(o.adjustments ?? []), adj] });
+  record({ kind: 'adjust', verified: true, order: o.id, cents: refundCents, currency: o.currency });
+  return Response.json({ order: o.id, ...adj, test: true });
+}
+
+/** POST /store/subscriptions/cancel {id}: a signed agent request, made only after the owner's OK. */
+export async function cancelSubscription(req: Request, registry: Registry) {
+  load();
+  const body = await req.text();
+  const agent = await agentOf(req, body, registry, PAYER, 'cancel');
+  if (agent instanceof Response) return agent;
+  const { id } = JSON.parse(body || '{}');
+  const s = subscriptions().find((x) => x.id === id);
+  if (!s) return fail(404, `no subscription ${id}`);
+  if (s.status !== 'cancelled') record({ kind: 'cancel', verified: true, sub: s.id, cents: s.monthlyCents });
+  return Response.json({ ...subscriptions().find((x) => x.id === id), test: true });
+}
+
+// ---------- the merchant's dashboard ----------
+
+/** What the store's owner sees: verified agent orders vs unknown bots, conversion, and why chargebacks are zero. */
+export function stats() {
+  load();
+  const orderEvents = events.filter((e) => e.kind === 'order');
+  const refused = events.filter((e) => e.kind === 'refused' || (e.kind === 'visit' && !e.verified && e.code !== 'unsigned (unknown bot)'));
+  const byCode: Record<string, number> = {};
+  for (const e of refused) byCode[e.code ?? 'other'] = (byCode[e.code ?? 'other'] ?? 0) + 1;
+  const sum = (xs: StoreEvent[], cur: string) => xs.filter((e) => e.currency === cur).reduce((s, e) => s + (e.cents ?? 0), 0);
+  const visits = events.filter((e) => e.kind === 'visit');
+  // A shopping session is one mandate's visits; it converted when that mandate placed an order.
+  const sessions = new Set([...visits.filter((e) => e.verified && e.mandate).map((e) => e.mandate!), ...orderEvents.map((e) => e.mandate!)]);
+  const converted = new Set(orderEvents.map((e) => e.mandate!));
+  const book = allOrders();
+  return {
+    test: true,
+    orders: { count: orderEvents.length, usdCents: sum(orderEvents, 'USD'), cadCents: sum(orderEvents, 'CAD'), withPasskey: orderEvents.filter((e) => e.passkey).length },
+    visits: { verified: visits.filter((e) => e.verified).length, bots: visits.filter((e) => !e.verified).length },
+    refused: { count: refused.length, unsignedAtCheckout: refused.filter((e) => e.code === 'unsigned (unknown bot)').length, byCode },
+    conversion: { sessions: sessions.size, ordered: converted.size },
+    refunds: { count: events.filter((e) => e.kind === 'refund').length, adjustedCount: events.filter((e) => e.kind === 'adjust').length, adjustedUsdCents: sum(events.filter((e) => e.kind === 'adjust'), 'USD') },
+    cancellations: events.filter((e) => e.kind === 'cancel').length,
+    // Every order needed a valid TAP signature, a signed mandate it fits, and a person's approval, so there is
+    // nothing for a cardholder to dispute as "I didn't authorize this". The store keeps that evidence per order.
+    chargebacks: 0,
+    evidence: book.slice(0, 20).map((o) => ({ order: o.id, at: o.at, totalCents: o.totalCents, currency: o.currency, agent: o.agent.keyId, mandate: o.mandate, payment: o.payment, refunded: !!o.refund, adjustments: o.adjustments ?? [] })),
+    recentRefusals: refused.slice(-12).reverse().map((e) => ({ at: e.at, code: e.code, reason: e.reason })),
+    products: products(),
+    subscriptions: subscriptions(),
+    protectDays: PROTECT_DAYS,
+  };
 }

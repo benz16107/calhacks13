@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GurtOS Test Store</title>
+<link rel="stylesheet" href="/kit/gurtos.css">
+<script type="module" src="/kit/gurtos.js"></script>
+<style>
+  main { max-width: 960px; margin: 0 auto; padding: var(--space-lg) var(--space-md) var(--space-xxl); display: flex; flex-direction: column; gap: var(--space-xl); }
+  .tiles { display: grid; gap: var(--space-sm); grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+  .tile { display: flex; flex-direction: column; gap: 4px; }
+  .num { font-size: 34px; line-height: 40px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .stack { display: flex; flex-direction: column; gap: var(--space-sm); }
+  .row { display: flex; flex-wrap: wrap; gap: var(--space-sm); align-items: center; }
+  .scroll { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; vertical-align: top; padding: 8px 10px; border-top: 1px solid var(--color-border-default); }
+  th { font-weight: 500; color: var(--color-text-secondary); }
+  .money { font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .controls { display: grid; gap: var(--space-sm); grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); align-items: end; }
+  .controls label { display: flex; flex-direction: column; gap: 4px; }
+</style>
+<body class="g-page">
+<main>
+  <div class="g-banner" role="note"><g-icon name="dialog-warning"></g-icon><div>
+    <p class="t-body-strong">TEST STORE.</p>
+    <p class="t-caption">Every payment is a test payment with a Visa test card. No real money moves, and nothing ships. It exists because no real store accepts a test card.</p>
+  </div></div>
+  <div class="stack">
+    <h1 class="t-title1">GurtOS Test Store: the merchant's view</h1>
+    <p class="t-body">Checkout takes orders only from agents that sign the request with <a href="https://github.com/visa/trusted-agent-protocol">Visa Trusted Agent Protocol</a>, checked against the agent registry key <span class="t-mono">box-shopper</span>, and only inside a signed shopping mandate the owner approved.</p>
+  </div>
+
+  <section class="g-group" aria-labelledby="gain-h">
+    <div class="g-group-head"><div>
+      <h2 class="g-group-title" id="gain-h">What verified agents bring</h2>
+      <p class="g-group-caption">Why it's here: what a merchant gains from verified agents: real orders from agents it can trust, bots kept out, and no disputes. Commerce impact.</p>
+    </div></div>
+    <div class="tiles" id="tiles" aria-live="polite"></div>
+  </section>
+
+  <section class="g-group" aria-labelledby="ref-h">
+    <div class="g-group-head"><div>
+      <h2 class="g-group-title" id="ref-h">Refused requests</h2>
+      <p class="g-group-caption">Why it's here: the store sees exactly why it said no, so a bot or a tampered order never becomes a sale. Trust and security.</p>
+    </div></div>
+    <div class="g-card stack"><div class="scroll"><table><thead><tr><th>Reason</th><th>What it means</th><th>Count</th></tr></thead><tbody id="codes"></tbody></table></div>
+      <h3 class="t-heading">Latest</h3><div id="recent" class="stack"></div></div>
+  </section>
+
+  <section class="g-group" aria-labelledby="ev-h">
+    <div class="g-group-head"><div>
+      <h2 class="g-group-title" id="ev-h">Order evidence</h2>
+      <p class="g-group-caption">Why it's here: every order keeps who approved it, the mandate it fit, and the signature the store checked. That is what a dispute would ask for. Trust and commerce impact.</p>
+    </div></div>
+    <div id="evidence" class="stack"></div>
+  </section>
+
+  <section class="g-group" aria-labelledby="prod-h">
+    <div class="g-group-head"><div><h2 class="g-group-title" id="prod-h">Products</h2>
+      <p class="g-group-caption">Price protection lasts <span id="days">30</span> days: when a price drops, a verified agent can ask for the difference, and the store checks its own price.</p></div></div>
+    <div class="g-card scroll"><table><thead><tr><th>SKU</th><th>Product</th><th>Category</th><th>Price</th><th>Stock</th></tr></thead><tbody id="products"></tbody></table></div>
+    <form class="g-card controls" id="admin">
+      <p class="t-caption-strong" style="grid-column:1/-1">Store staff (demo controls)</p>
+      <label><span class="t-caption-strong">Product</span><span class="g-combo-wrap"><select class="g-combo" name="sku" id="skus"></select><g-icon name="pan-down"></g-icon></span></label>
+      <label><span class="t-caption-strong">New price, in dollars</span><input class="g-field" name="price" inputmode="decimal" placeholder="6.50"></label>
+      <label><span class="t-caption-strong">Stock</span><span class="g-combo-wrap"><select class="g-combo" name="stock"><option value="">No change</option><option value="1">In stock</option><option value="0">Sold out</option></select><g-icon name="pan-down"></g-icon></span></label>
+      <button class="g-btn">Change it</button>
+      <p class="t-caption t-destructive" id="adminerr" role="alert" style="grid-column:1/-1"></p>
+    </form>
+  </section>
+
+  <section class="g-group" aria-labelledby="subs-h">
+    <div class="g-group-head"><div><h2 class="g-group-title" id="subs-h">Subscriptions</h2>
+      <p class="g-group-caption">A cancel is a signed agent request, made only after the owner's OK.</p></div></div>
+    <div class="g-list" id="subs"></div>
+  </section>
+</main>
+<script type="module">
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+  const money = (c, cur = 'USD') => `$${(Number(c) / 100).toFixed(2)}${cur === 'USD' ? '' : ' ' + cur}`;
+  const when = (t) => new Date(t).toLocaleString();
+  const MEANS = {
+    'unsigned (unknown bot)': 'No Trusted Agent Protocol signature: an unknown bot.',
+    'bad signature': 'The signature did not verify against a registered agent key.',
+    'replayed signature': 'A signature that was already used once.',
+    'changed in transit': 'The order body no longer matches what the agent signed.',
+    'expired signature': 'The signature was too old or not yet valid.',
+    'unknown agent': 'The agent key is not in the registry.',
+    'no mandate': 'An agent order with no shopping mandate from its owner.',
+    'bad mandate signature': 'The mandate was edited after it was signed.',
+    expired: 'The mandate had expired.',
+    'wrong store': 'The mandate does not cover this store.',
+    'wrong item': 'The item is not what the mandate is for.',
+    'over price': 'The price is above the mandate limit.',
+    'over quantity': 'More items than the mandate allows.',
+    'over total': 'The total is above the mandate limit.',
+    'wrong currency': 'The mandate is in another currency.',
+  };
+  let skusDone = false;
+
+  function render(s) {
+    const pct = s.conversion.sessions ? Math.round((s.conversion.ordered / s.conversion.sessions) * 100) : 0;
+    const bots = s.refused.unsignedAtCheckout + s.visits.bots;
+    const sales = [s.orders.usdCents && money(s.orders.usdCents), s.orders.cadCents && money(s.orders.cadCents, 'CAD')].filter(Boolean).join(' and ') || '$0.00';
+    $('tiles').innerHTML = [
+      ['Verified agent orders', s.orders.count, `${sales} in test payments`],
+      ['Unknown bots kept out', bots, `${s.visits.bots} unsigned visits, ${s.refused.unsignedAtCheckout} unsigned orders refused`],
+      ['Conversion from agent shoppers', `${pct}%`, `${s.conversion.ordered} of ${s.conversion.sessions} shopping sessions ordered. A session is one mandate's visits.`],
+      ['Chargebacks', s.chargebacks, `Every order needed a valid TAP signature, a signed mandate it fits, and a person's approval, with Face ID on ${s.orders.withPasskey} of ${s.orders.count}. Nothing to dispute as unauthorized.`],
+      ['Price protection', s.refunds.adjustedCount, `${money(s.refunds.adjustedUsdCents)} given back when prices dropped`],
+      ['Cancellations', s.cancellations, 'Signed agent requests, each after the owner said yes'],
+    ].map(([t, n, sub]) => `<div class="g-card tile"><span class="t-caption-strong t-secondary">${esc(t)}</span><span class="num">${esc(n)}</span><span class="t-caption t-secondary">${esc(sub)}</span></div>`).join('');
+    const codes = Object.entries(s.refused.byCode).sort((a, b) => b[1] - a[1]);
+    $('codes').innerHTML = codes.map(([k, v]) => `<tr><td><span class="g-badge g-badge-destructive">${esc(k)}</span></td><td class="t-caption">${esc(MEANS[k] ?? '')}</td><td class="money">${v}</td></tr>`).join('') || '<tr><td colspan="3" class="t-secondary">Nothing refused yet.</td></tr>';
+    $('recent').innerHTML = s.recentRefusals.map((r) => `<p class="t-caption"><span class="t-mono t-secondary">${esc(new Date(r.at).toLocaleTimeString())}</span> ${esc(r.reason)}</p>`).join('') || '<p class="t-caption t-secondary">None.</p>';
+    $('evidence').innerHTML = s.evidence.map((e) => {
+      const a = e.mandate.approvedBy;
+      return `<div class="g-card stack">
+        <div class="row" style="justify-content:space-between"><span class="t-body-strong">Order <span class="t-mono">${esc(e.order)}</span></span><span class="money t-heading">${money(e.totalCents, e.currency)}</span></div>
+        <p class="t-caption">Agent <span class="t-mono">${esc(e.agent)}</span>, TAP signature verified. Mandate <span class="t-mono">${esc(e.mandate.id)}</span>: ${esc(e.mandate.text)}.</p>
+        <p class="t-caption">${a.method === 'passkey' ? `Approved with Face ID on ${esc(a.by)}` : `Approved with a tap by ${esc(a.by)}`}, ${esc(when(a.at))}.</p>
+        <p class="t-caption t-secondary">TEST payment: ${esc(e.payment.card)}, ${esc(e.payment.provider)} <span class="t-mono">${esc(e.payment.id)}</span>${e.refunded ? '. Refunded.' : '.'}${e.adjustments.length ? ` Price protection: ${e.adjustments.map((x) => money(x.refundCents, e.currency)).join(', ')} back.` : ''}</p>
+      </div>`;
+    }).join('') || '<div class="g-card"><p class="t-body t-secondary">No orders yet.</p></div>';
+    $('days').textContent = s.protectDays;
+    $('products').innerHTML = s.products.map((p) => `<tr><td class="t-mono">${esc(p.sku)}</td><td>${esc(p.name)}</td><td>${esc(p.category)}</td>
+      <td class="money">${money(p.priceCents)}${p.priceCents < p.regularCents ? ` <s class="t-secondary">${money(p.regularCents)}</s>` : ''}</td>
+      <td>${p.inStock ? '<span class="g-badge g-badge-success">In stock</span>' : '<span class="g-badge g-badge-neutral">Sold out</span>'}</td></tr>`).join('');
+    if (!skusDone) { $('skus').innerHTML = s.products.map((p) => `<option value="${esc(p.sku)}">${esc(p.name)}</option>`).join(''); skusDone = true; }
+    $('subs').innerHTML = s.subscriptions.map((x) => `<div class="g-row" style="cursor:default"><span class="g-row-text"><span class="g-row-title">${esc(x.name)}</span><span class="g-row-sub">${money(x.monthlyCents)} a month since ${esc(x.since)}${x.cancelledAt ? `, cancelled ${esc(when(x.cancelledAt))}` : ''}</span></span>
+      <span class="g-row-trail">${x.status === 'cancelled' ? '<span class="g-badge g-badge-neutral">Cancelled</span>' : '<span class="g-badge g-badge-accent">Active</span>'}</span></div>`).join('');
+  }
+
+  async function load() {
+    try {
+      const r = await fetch('/t/shopper/store/stats');
+      const s = await r.json();
+      if (!r.ok) throw new Error(s.error ?? `HTTP ${r.status}`);
+      render(s);
+    } catch (e) {
+      $('tiles').textContent = `The box did not answer: ${e.message}`;
+    }
+  }
+  $('admin').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    $('adminerr').textContent = '';
+    const f = e.target;
+    const body = { sku: f.sku.value };
+    if (f.price.value.trim()) body.priceCents = Math.round(Number(f.price.value.trim().replace(/^\$/, '')) * 100);
+    if (f.stock.value) body.inStock = f.stock.value === '1';
+    const r = await fetch('/t/shopper/store/admin', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+    if (!r.ok) $('adminerr').textContent = (await r.json().catch(() => ({}))).error ?? `HTTP ${r.status}`;
+    else { f.price.value = ''; window.gurtos?.toast?.('Changed'); }
+    load();
+  });
+  load();
+  setInterval(load, 3000);
+</script>
+</html>

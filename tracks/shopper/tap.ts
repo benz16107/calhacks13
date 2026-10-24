@@ -5,7 +5,8 @@
 import { createHash, createPrivateKey, createPublicKey, generateKeyPairSync, randomUUID, sign, verify } from 'node:crypto';
 
 export const KEY_ID = 'box-shopper';
-export const PAYER = 'agent-payer-auth'; // Visa's tag for a checkout; 'agent-browser-auth' is for browsing
+export const PAYER = 'agent-payer-auth'; // Visa's tag for a checkout
+export const BROWSE = 'agent-browser-auth'; // and for looking at products
 const COMPONENTS = '("@authority" "@path" "content-digest")';
 const LIFETIME = 8 * 60; // seconds, as in Visa's sample agent
 
@@ -20,6 +21,20 @@ export function publicKeyOf(vaultKey: string): string {
   return der.subarray(-32).toString('base64');
 }
 
+const privateKey = (vaultKey: string) => createPrivateKey({ key: Buffer.from(vaultKey, 'base64'), format: 'der', type: 'pkcs8' });
+const rawPublic = (pub: string) => createPublicKey({ key: Buffer.concat([Buffer.from('302a300506032b6570032100', 'hex'), Buffer.from(pub, 'base64')]), format: 'der', type: 'spki' });
+
+/** Sign bytes with the agent key (the mandate uses this too). Base64. */
+export const signBytes = (vaultKey: string, data: string) => sign(null, Buffer.from(data), privateKey(vaultKey)).toString('base64');
+/** Check a signature against a raw 32-byte public key from the registry. */
+export function verifyBytes(pub: string, data: string, sig: string) {
+  try {
+    return verify(null, Buffer.from(data), rawPublic(pub), Buffer.from(sig, 'base64'));
+  } catch {
+    return false;
+  }
+}
+
 export const digest = (body: string) => `sha-256=:${createHash('sha256').update(body).digest('base64')}:`;
 
 const base = (authority: string, path: string, contentDigest: string, params: string) =>
@@ -31,8 +46,7 @@ export function signRequest(vaultKey: string, url: string, body: string, tag = P
   const created = Math.floor(now / 1000);
   const params = `${COMPONENTS}; created=${created}; expires=${created + LIFETIME}; keyId="${KEY_ID}"; alg="ed25519"; nonce="${randomUUID()}"; tag="${tag}"`;
   const contentDigest = digest(body);
-  const key = createPrivateKey({ key: Buffer.from(vaultKey, 'base64'), format: 'der', type: 'pkcs8' });
-  const sig = sign(null, Buffer.from(base(u.host, u.pathname, contentDigest, params)), key).toString('base64');
+  const sig = signBytes(vaultKey, base(u.host, u.pathname, contentDigest, params));
   return { 'content-digest': contentDigest, 'signature-input': `sig2=${params}`, signature: `sig2=:${sig}:` };
 }
 
@@ -66,9 +80,7 @@ export function verifyRequest(
   const pub = lookup(attr.keyId);
   if (!pub) throw new Error(`unknown agent key ${attr.keyId}: not in the agent registry`);
   if (req.headers.get('content-digest') !== digest(req.body)) throw new Error('the body does not match its signed Content-Digest: the order was changed');
-  const spki = Buffer.concat([Buffer.from('302a300506032b6570032100', 'hex'), Buffer.from(pub, 'base64')]);
-  const ok = verify(null, Buffer.from(base(req.authority, req.path, req.headers.get('content-digest')!, params)), createPublicKey({ key: spki, format: 'der', type: 'spki' }), Buffer.from(sig, 'base64'));
-  if (!ok) throw new Error('the signature does not verify against the agent key');
+  if (!verifyBytes(pub, base(req.authority, req.path, req.headers.get('content-digest')!, params), sig)) throw new Error('the signature does not verify against the agent key');
   if (!seen(attr.nonce, expires)) throw new Error('replay: this signature was already used');
   return { keyId: attr.keyId, tag: attr.tag, nonce: attr.nonce, created };
 }

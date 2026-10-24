@@ -1,67 +1,155 @@
-# Shopper: an agent that shops for you, and pays only after your tap
+# Shopper: an agent that shops for you, on a computer you own
 
-**Every payment here is a TEST payment.** Purchases go through Stripe test mode with a Visa test card. No real
-money moves, nothing ships, and no real store accepts a test card. So checkout happens at the **GurtOS Test Store**,
-a small store this track runs on the box. Where a payment is simulated instead (no Stripe key yet, or an offline
-demo run), the app, the log and the order all say so.
+**Every payment here is a TEST payment.** Purchases use a Visa test card through a test-mode processor (Stripe
+test mode, or the Cybersource sandbox), or are simulated and labelled so. No real money moves, nothing ships, and
+no real store accepts a test card, so checkout happens at the **GurtOS Test Store**, a small store this app runs
+on the box. The app, the log, the store and every order say which.
 
-The shopper is an app on the box (Visa track: Reimagining Shopping). It does three things:
+Visa track: Reimagining Shopping. Open it at `/t/shopper/` on a GurtOS box; the store is at `/t/shopper/store`.
 
-1. **Restock and price watcher.** "Get me the Chemex filters when they're under $16." The box checks the store
-   on a schedule. When the item is in stock at or under your price, your phone asks: *Buy 2 × Hario V60 02 paper
-   filters, 100 count for $13.00? $6.50 each, down from $8.99, under your $7.00 limit. TEST PAYMENT.* Tap
-   Approve and it pays. Best Buy Canada is checked live through the Apify track's `apify.checkPrice`.
-2. **Household reorder.** Claude reads the receipts in the household's mailbox, works out what runs out this
-   week (here: coffee filters and paper towels), and proposes one reorder for your OK. It sees the receipts,
-   never the mailbox login and never your other email.
-3. **Agents buying their own supplies.** An agent pays for an API it needs with the wallet track's x402
-   payments, in USDC on Solana devnet, which is test money. A task asks the price with `wallet.quote`; then a
-   second task pays exactly that with `wallet.pay`. Above your budget it waits for your OK first. Both reach only
-   that API. We did not rebuild the wallet: see `tracks/wallet/README.md`.
+## The problem
 
-Open it at `/t/shopper/` on the box. The store is at `/t/shopper/store`. Both are in the portal's app list.
-Off the box (a paired phone or laptop), the page reads the pairing token the portal puts in its URL
-(`?access_token=`) and sends it as `Authorization: Bearer` on every call, and on its link to the store.
+Today's shopping agents need your card number or your store password. Stores can't tell a good agent from a bot.
+You can't see or stop what they buy. And cloud agents run on someone else's computer, where you don't know what
+happens.
 
-## How a purchase is made safe
+## So GurtOS
 
-```
- you, in words ──► Droid (Claude) ──► shopper.watch          finds the product, sets the rule. Cannot buy.
-                                         │
- schedule (20 s tick) ──► check task ──► apify.checkPrice / shopper.checkPrice   no network, no secrets
-                                         │ result in the action log
- log reader, in code: in stock and price <= your limit?
-                                         │ yes
- purchase task ──► "Buy …? TEST PAYMENT" ──► your phone or the portal ──► Approve
-                                         │
- shopper.buy (in the core) ── vault: card + signing key ──► signs with Visa TAP ──► GurtOS Test Store
-                                                                                    checks the signature,
-                                                                                    the price, the stock,
-                                                                                    then charges Stripe test mode
-```
+GurtOS is a safe place for agents on a computer you own, even an old laptop: it is a light OS. GurtOS Server needs
+4 GB of memory and a 17 GB disk; GurtOS Personal needs 4 GB and 29 GB
+([install-server](../../site/src/content/docs/get-started/install-server.md),
+[install-personal](../../site/src/content/docs/get-started/install-personal.md)). On it, Shopper is built so that:
 
-- **The model never holds a buy tool or a card.** Droid gets `shopper.watch` (set a rule) and `shopper.propose`
-  (suggest a reorder). Only purchase tasks the box itself starts hold `shopper.buy`, and each one asks you first.
-- **Prices come from the store, not the model.** `shopper.propose` takes SKUs and quantities. It looks up the
-  prices itself, so a confused or hijacked model cannot make up a price.
-- **Two gates on money.** The approval you tap, then the task's budget (your limit times the quantity). A
-  purchase above the budget stops and asks again (the core's budget pause, moment 3).
-- **Secrets stay in the vault.** The card, the signing key, the mailbox password and the Stripe key are read
-  only by tools in the core. The demo checks that none of them is anywhere in the action log.
-- **Undo is a refund.** Undo a purchase task (moment 1) and the store refunds its order. The purchase step
-  carries `data.undo` ("Undo refunds this $13.00 test payment.") for the portal's Undo button to show.
-- **Power cuts don't pay twice.** Each checkout carries the broker's stable call key as its Idempotency-Key, at
-  the store and at Stripe. A purchase cut off mid-way returns the same order when the task resumes (moment 4).
-- **One proposal and one watch per agent task**, so a looping agent cannot flood your phone.
-- **Test money only, enforced.** The store refuses a live Stripe key (`sk_live_`), and a simulated charge
-  accepts only Stripe's test cards. Orders above $500 are refused.
+- **The agent never sees your card.** The card, the signing key and every payment key stay in the box's vault.
+  Payments run in the box's core; the agent's task has no secrets and no network of its own.
+- **Every purchase needs your tap**, with **Face ID** once you set up a passkey.
+- **The store can verify the agent.** Every request is signed with Visa Trusted Agent Protocol, and every order
+  carries a signed shopping mandate the store checks.
+- **Every purchase can be undone.** Undo on a purchase is a refund.
 
-## Visa Trusted Agent Protocol
+The GurtOS portal and phone app show live what every agent is doing, on your laptop or your server, and let you
+approve, deny, pause or undo. **Security is the headline.**
 
-[TAP](https://github.com/visa/trusted-agent-protocol) is Visa's open spec for a merchant to tell a trusted
-shopping agent from a bot. The agent signs each request with an RFC 9421 HTTP message signature, and the
-merchant checks it against the agent's public key in a registry. We follow Visa's sample agent: the `sig2`
-label, Ed25519, `keyId`, `nonce`, `created`, `expires` (8 minutes), and the `agent-payer-auth` tag for checkout.
+**Editions.** Shopper is best in **GurtOS Personal**, on your own computer, and in **GurtOS Server** for routines that
+keep running after you close your laptop: price watching, reorders and subscription checks.
+
+## What it does, why each part is here, and which criterion it serves
+
+Visa's criteria: innovation in reimagining shopping 25%, user experience 25%, technical execution with AI 20%,
+commerce impact 15%, trust and responsibility 15%.
+
+| Part | Why it's here | Criterion |
+|---|---|---|
+| 1. Approve with Face ID | A stolen session can't buy anything: the box checks your passkey signature before it pays | Trust, user experience |
+| 2. A signed shopping mandate | The store refuses anything outside what you approved: another item, a higher price, another store, more items, too late | Innovation, trust |
+| 3. The store's side | Merchants see verified agent orders, bots refused, conversion, and zero chargebacks | Commerce impact |
+| 4. Comparison across stores | Real prices from two real stores through Apify; the best total wins, with the reason | Technical execution, user experience |
+| 5. Saving after you buy | Price protection inside the return window; unused subscriptions found and cancelled with your OK | Innovation, loyalty |
+| 6. Spending rules | Card-style caps and "never buy" words, enforced by the box before any payment | Trust, user experience |
+| 7. Real Visa tools behind one interface | Cybersource sandbox works today; Visa Intelligent Commerce is ready to drop in | Technical execution |
+| Visa Trusted Agent Protocol | Every request to the store is signed, so the store knows it is this agent | Trust, commerce impact |
+| Household reorder and x402 supplies | Claude reads receipts and proposes; agents pay for APIs they need, within a budget | Innovation, technical execution |
+
+### 1. Approve with Face ID (passkeys)
+
+Each purchase approval can be signed with a WebAuthn passkey on your phone or computer (Face ID, Touch ID, or the
+device's PIN). The box builds what gets signed from its own records: the approval's exact question and amount, bound
+into the challenge, so a signature for "Buy 2 filters for $13.00" can't approve "$130.00" or another purchase, and
+can't be used twice. The box verifies the signature (`@simplewebauthn/server`) before it answers the approval.
+
+Once a passkey is set up, `shopper.buy` refuses to pay for a purchase approved without one: "approved without Face
+ID". So a stolen pairing token can still press Approve, and nothing is paid. Changing your spending rules needs Face
+ID too. Only the box's own screen or the owner's phone can set up the first passkey; adding another needs a
+signature from an existing one.
+
+This follows Visa's direction for payment passkeys. It is our own implementation with open tools, not Visa's
+payment passkey service.
+
+**Where there's no HTTPS.** WebAuthn needs a secure address: the box's own `https://<name>.box.gurtos.com` (from
+GurtOS remote access; TLS ends on the box) or `localhost` on the box itself. Browsers never make a passkey for an IP
+address. On any other address the app says so, and approvals fall back to a plain tap. A passkey belongs to the
+address it was made on.
+
+### 2. A signed shopping mandate
+
+"Chemex filters, under $16, from Best Buy or Gold Roast, by Friday" becomes a mandate (`mandate.ts`): the item
+words or exact SKUs, the stores, the price per item, the quantity, the total, the category and the expiry (at most
+30 days). You approve it on your phone, seeing every limit, and the box signs exactly those terms with its agent
+key (Ed25519, with a `gurtos-mandate-v1` domain prefix). The agent carries it on every checkout. The store checks the
+TAP signature, then the mandate: its signature, that its issuer is the agent that signed the request, and that the
+order fits. Over the mandate's lifetime, not just one order, it refuses another item, a higher price, another store,
+more items or a higher total, an expired mandate, or one edited after signing. Each purchase still asks you first.
+
+Reorders and cancellations get a one-time mandate for exactly the approved lines, good for 15 minutes.
+
+This mirrors the "payment instruction" in Visa Intelligent Commerce, built with open tools: here the box signs the
+instruction where in Visa's version Visa would. We say so plainly; nothing here is a Visa product.
+
+### 3. The store's side: the merchant's dashboard
+
+The GurtOS Test Store (`store.ts`, page `store.html`) counts every request it sees:
+- **Verified agent orders**, and how many were approved with Face ID.
+- **Unknown bots refused**: requests without a valid TAP signature, sorted by reason (unsigned, bad signature,
+  replayed, changed in transit, unknown agent) and the mandate refusals (over price, wrong item, wrong store...).
+- **Conversion from agent shoppers**: shopping sessions (one mandate's visits) that ended in an order. The shopper's
+  price checks browse the store with a TAP `agent-browser-auth` signature, so the store can tell them from bots.
+- **Zero chargebacks**, and why: every order needed a valid TAP signature, a signed mandate it fits, and a person's
+  approval, so there is nothing to dispute as unauthorized. The store keeps that evidence per order.
+- Price adjustments and cancellations.
+
+### 4. Comparison across stores
+
+A mandate can cover several stores in one currency. Each check round is one small task per store, with no network
+and no secrets of its own, calling that store's price tool through the box:
+
+| Store | How it is read | Shipping used in the comparison | What its terms say about agents |
+|---|---|---|---|
+| Best Buy Canada | The Apify track's `apify.checkPrice` (Best Buy's product JSON, through Apify) | Free over $35 on Best Buy's own items; Marketplace sellers set their own, so not confirmed | robots.txt does not block product data, but its Conditions of Use, section 7, prohibit scraping. See Limits. |
+| Gold Roast (goldroast.ca) | `apify.run` with Apify's Playwright Scraper on the Shopify store's open product JSON (`stores.ts`) | $15.00 under $75 in Ontario, free from $75 ([policy](https://goldroast.ca/policies/shipping-policy)) | robots.txt names no bot or agent and allows product pages; its terms page has no terms text |
+| GurtOS Test Store | `shopper.checkPrice` | Free (ours) | Ours |
+
+`compare()` ranks the in-stock offers within your limit by total for the quantity, with shipping, and explains the
+choice in a sentence (including the price per filter when pack sizes differ). The purchase approval quotes it. Amazon
+is left out: it refuses AI agents. Store choice, robots.txt and terms were checked on Oct 24.
+
+### 5. Saving after you buy
+
+- **Price protection.** For 30 days after a purchase at the GurtOS Test Store, the box re-checks the price. If it
+  drops, it sends a TAP-signed request to `/store/price-adjust`; the store checks its own price and refunds the
+  difference (a partial TEST refund). No approval is needed, since money only comes back. It runs only at our store,
+  which knows its own price.
+- **Unused subscriptions.** The demo inbox has monthly receipts for three subscriptions and one activity email for
+  each. `shopper.receipts` returns each subscription with when it was last used. Claude (or the scripted agent in the
+  demo) proposes cancelling what nobody uses, here Streaming Plus, unused for 74 days ($191.88 a year). You approve,
+  and a signed request cancels it at the store.
+
+### 6. Spending rules
+
+Like the controls in a card app (`rules.ts`): a monthly cap, a cap per store, a cap per category (0 blocks it), and
+"never buy" phrases matched as whole words. Set from the phone; with a passkey set up, saving needs Face ID. The box
+checks them twice: before it asks you about a deal (so it never asks for something your rules forbid), and again
+inside `shopper.buy` right before paying, one payment at a time. Amounts are in US dollars; CAD prices count at a
+fixed 0.73.
+
+### 7. Real Visa tools behind one interface
+
+`payments.ts` has one `pay()` with four providers, picked by which keys are in the vault, in this order:
+- **Visa Intelligent Commerce.** An adapter written against Visa's MIT-licensed toolkit
+  ([github.com/visa/mcp](https://github.com/visa/mcp), `sandbox.api.visa.com`, `/vacp/v1`): x-pay-token, JWE message
+  encryption, enroll card, initiate instruction, retrieve credentials. It needs onboarding with a Visa representative,
+  so it has **never been called**; request values are placeholders. Ben is asking at Visa's Saturday chat.
+- **Cybersource sandbox** (a Visa company). Implemented for real: REST payments and refunds with HTTP Signature
+  auth, test cards only, sandbox host only. Tested live on Oct 24 with Cybersource's public sandbox sample merchant
+  (a charge, a partial refund, a full refund).
+- **Stripe test mode**, with Stripe's Visa test card `pm_card_visa`. Refuses a live key.
+- **Simulated**, when no payment keys are set, and in offline demo runs. Labelled so.
+
+### Visa Trusted Agent Protocol
+
+[TAP](https://github.com/visa/trusted-agent-protocol) is Visa's open spec for a merchant to tell a trusted shopping
+agent from a bot. The agent signs each request with an RFC 9421 HTTP message signature, and the merchant checks it
+against the agent's public key in a registry. We follow Visa's sample agent: the `sig2` label, Ed25519, `keyId`,
+`nonce`, `created`, `expires` (8 minutes), `agent-payer-auth` for checkout and `agent-browser-auth` for browsing.
 
 ```
 Signature-Input: sig2=("@authority" "@path" "content-digest"); created=1761271440; expires=1761271920;
@@ -70,132 +158,128 @@ Signature:       sig2=:…:
 Content-Digest:  sha-256=:…:
 ```
 
-One addition: Visa's sample signs only `@authority` and `@path`. We also sign `content-digest` (RFC 9530), so an
-order cannot be changed in transit: a different item, quantity or price fails the check. Visa's sample verifier
-only knows the first two components, so it would not accept our signatures as they are.
+One addition: Visa's sample signs only `@authority` and `@path`. We also sign `content-digest` (RFC 9530), so an order
+cannot be changed in transit. Visa's sample verifier only knows the first two components, so it would not accept our
+signatures as they are. The box publishes its public key at `GET /t/shopper/keys/box-shopper` in the shape of TAP's
+registry. In real use Visa runs that registry.
 
-The GurtOS Test Store refuses, with the reason on its page:
-- an unsigned order (any agent or script without the box's key),
-- a signed order whose body changed,
-- a signature used twice (replay), even when the first use bought nothing,
-- an expired signature, an unknown key, or a signature made for another store.
+### Household reorder, and agents buying their own supplies
 
-The box publishes its public key at `GET /t/shopper/keys/box-shopper` in the shape of TAP's registry
-(`{key_id, algorithm, public_key, is_active}`). In real use Visa runs that registry. Visa Intelligent Commerce
-needs a Visa representative, so nothing here depends on it.
+Claude reads the receipts in a demo mailbox (a small POP3 server on the box with sample receipts we wrote; its login
+is in the vault), works out what runs out this week, and proposes one reorder. It sees the receipts and subscription
+notices, never the mailbox login or other email. Agents can also pay for an API they need with the wallet track's
+x402 payments (Coinbase x402, devnet USDC test money): a task asks the price, then pays exactly that, and above its
+budget it waits for your OK.
 
-## The tools
+## How a purchase is made safe
+
+```
+ you, in words or a form ──► a mandate ──► you approve it (Face ID) ──► the box signs it
+                                                                          │
+ schedule ──► one check task per store (no network, no secrets) ──► apify.checkPrice / apify.run / shopper.checkPrice
+                                                                          │ results in the action log
+ compare(): best total, in stock, under your limit ──► your spending rules ──► "Buy …? TEST PAYMENT" on your phone
+                                                                          │ Face ID
+ shopper.buy (in the core): approval checked, rules again, one at a time ──► TAP-signed checkout + mandate
+                                                                          │
+ GurtOS Test Store: TAP signature, mandate, its lifetime use, price, stock ──► test charge (Stripe, Cybersource or simulated)
+```
+
+- **The model never holds a buy tool or a card.** Claude gets `shopper.watch` (propose a mandate), `shopper.propose`
+  (suggest a reorder) and `shopper.proposeCancel`. Only tasks the box starts hold `shopper.buy`, `shopper.sign` and
+  `shopper.cancel`, and each one asks you first.
+- **Prices come from the store, not the model.**
+- **Power cuts don't pay twice.** Each checkout carries the broker's stable call key as its Idempotency-Key.
+- **One proposal and one watch per agent task**, so a looping agent cannot flood your phone.
+
+## Tools and routes
 
 | Tool | Who gets it | What it does |
 |---|---|---|
-| `shopper.buy` | Purchase tasks the box starts, after the owner's OK | Signs the order with TAP and pays the GurtOS Test Store with the vault's card. Cost = the order total |
-| `shopper.checkPrice` | Check tasks, Droid | Price and stock at the GurtOS Test Store, in the same shape as `apify.checkPrice` |
-| `shopper.watch` | Droid | Sets up a watch: store, SKU, price limit, quantity, price drop or restock |
-| `shopper.receipts` | Droid | Reads the demo inbox over POP3 with the vault's password. Returns receipts only, how many other emails stayed behind, and when each regular item runs out |
-| `shopper.propose` | Droid | Proposes a reorder at the store's prices. Starts a purchase task that asks the owner |
+| `shopper.buy` | Purchase tasks the box starts, after your OK | Checks the approval (Face ID once set up) and your rules, then pays with a TAP-signed checkout carrying the mandate |
+| `shopper.sign` | Mandate tasks the box starts | Signs a watch's mandate after you approved it |
+| `shopper.checkPrice` | Check tasks, Claude | Price and stock at the GurtOS Test Store, browsed with a TAP signature |
+| `shopper.watch` | Claude | Proposes a mandate; you approve it before anything is checked |
+| `shopper.receipts` | Claude | The demo inbox's receipts and subscriptions, with what runs low and what goes unused |
+| `shopper.propose` | Claude | Proposes a reorder at the store's prices |
+| `shopper.proposeCancel`, `shopper.cancel` | Claude, then the box | Proposes cancelling a subscription; after your OK, cancels it with a signed request |
+| `shopper.priceAdjust` | Price protection tasks | Asks the store for the difference when its price dropped |
 
-The date arithmetic (how often an item is bought, when it runs out) is code in `shopper.receipts`. Claude does
-the judgment: which receipts matter, what to skip, how much to buy, and the one-line reason you read.
-
-## Routes (under `/t/shopper/`)
-
-| Route | Does |
-|---|---|
-| `GET /` | The app |
-| `GET /state` | Watches, pending approvals, recent tasks, orders, and which secrets the vault has |
-| `POST /watches {store, product, maxCents, qty?, when?, everyMinutes?}` | Watch a product. `store` is `test` or `bestbuy.ca`; `maxCents` is in that store's currency |
-| `POST /watches/check {id}`, `POST /watches/cancel {id}` | Check now, stop watching |
-| `POST /ask {text}` | Droid turns your words into a watch |
-| `POST /reorder` | Droid reads the receipts and proposes a reorder |
-| `POST /supplies {url, cents}` | An agent buys a supply from an x402 API through the wallet track: it asks the price, then pays exactly that, asking you first above `cents` |
-| `GET /store`, `GET /store/products` | The GurtOS Test Store: products, orders, refused requests |
-| `POST /store/checkout` | Checkout. TAP signature and Idempotency-Key required |
-| `POST /store/admin {sku, priceCents?, inStock?}` | Demo controls: change a price or the stock |
-| `GET /keys/box-shopper` | The agent registry entry |
+Routes under `/t/shopper/`: `GET /` the app, `GET /state`, `POST /watches`, `/watches/check`, `/watches/cancel`,
+`POST /ask` (Claude proposes a mandate), `POST /reorder`, `POST /supplies`, `POST /savings/check`,
+`POST /savings/subscriptions`, `GET`/`POST /rules`, the passkey routes (`GET /passkey/status`,
+`POST /passkey/register/options`, `/passkey/register`, `/passkey/options`, `/passkey/approve`) and `GET /passkey.js`
+(the browser module: `approve(id)`, `enroll(name)`, `saveRules(rules)`), the store (`GET /store`, `/store/stats`,
+`/store/products`, `/store/subscriptions`, `POST /store/checkout`, `/store/price-adjust`,
+`/store/subscriptions/cancel`, `/store/admin` for demo price and stock changes) and the agent registry
+`GET /keys/box-shopper`.
 
 ## Setup
 
-On each box or test VM, as root: `tracks/shopper/setup.sh`. It adds what is missing to `/etc/box/vault.env`:
-
-| Key | Value |
-|---|---|
-| `SHOPPER_CARD` | `pm_card_visa`, Stripe's test PaymentMethod for the Visa test card 4242 4242 4242 4242 |
-| `SHOPPER_AGENT_KEY` | A new Ed25519 private key (PKCS#8, base64). The box signs checkouts with it |
-| `SHOPPER_MAIL_PASSWORD` | A new random password for the demo inbox |
-
-Then add `STRIPE_SECRET_KEY=sk_test_...` by hand. Until it is there, payments are simulated and labeled so.
-`STRIPE_PUBLISHABLE_KEY` is not needed: nothing here runs Stripe in a browser.
-
-Live Best Buy checks need the Apify track's `APIFY_TOKEN`. x402 supplies need the wallet track's funded
-`WALLET_SOLANA_KEY` and a seller: `node --experimental-strip-types tracks/wallet/seller.ts` serves a $0.03 report on port 4021.
+On each box, as root: `tracks/shopper/setup.sh`. It adds `SHOPPER_CARD` (`pm_card_visa`), `SHOPPER_AGENT_KEY` (a new
+Ed25519 key) and `SHOPPER_MAIL_PASSWORD` to `/etc/box/vault.env`. Payment keys are optional (without them, payments
+are simulated and say so): `STRIPE_SECRET_KEY=sk_test_...`; or `CYBERSOURCE_MERCHANT_ID`, `CYBERSOURCE_KEY_ID`,
+`CYBERSOURCE_SECRET_KEY` and `CYBERSOURCE_TEST_CARD` (`number|MM|YYYY`, a Cybersource test card) from a free sandbox
+account at developer.cybersource.com; or the Visa Intelligent Commerce keys listed in `payments.ts` once Visa
+onboards you. Live store checks need the Apify track's `APIFY_TOKEN`. For Face ID, open the box at its https address
+(Settings, Reach this box from anywhere) or at `http://localhost:7700` on the box itself, and press "Set up Face ID".
 
 ## The demo step
 
-`./demo` runs `demo.ts` offline in about 7 seconds:
+`./demo` runs `demo.ts` offline in about 20 seconds, with the scripted agent and a software authenticator (a P-256
+key, `softauth.ts`) standing in for Face ID:
+- TAP at checkout: unsigned, changed and replayed orders refused; a paired phone works off the box with its token.
+- A mandate you approve with a tap, a check above the limit, a price drop, a purchase inside the mandate.
+- Face ID: a non-owner phone can't set up the first passkey; it is set up from the box's screen; a second needs the
+  first. A reorder approved with a plain tap is refused at payment ("approved without Face ID"); approved with Face
+  ID, it pays; the same signature can't be reused; undo refunds it.
+- The store refuses, with a valid TAP signature, a higher price, another item, more items, and an edited mandate.
+- Spending rules saved with Face ID; a cable proposal is refused before you are even asked.
+- Price protection refunds $1.50 when the price drops; the unused subscription is found and cancelled with Face ID.
+- The merchant's dashboard counts, x402 supplies (denied, nothing spent), and no secret anywhere in the log.
 
-- TAP at the checkout: the registry serves the public key; unsigned, changed and replayed orders are refused.
-- Flow 1 on the GurtOS Test Store: a check sees the filters at $8.99, above the $7.00 limit. The store drops the
-  price to $6.50, the next check asks "Buy 2 × … for $13.00? … TEST PAYMENT", the phone approves, and the task
-  pays $13.00 within its $14.00 budget. The store verified the signature before charging.
-- Flow 2: a scripted agent reads 10 receipts (2 other emails withheld), sees filters and paper towels run out
-  this week, and proposes them. Approved, it pays $17.99; undone, the store refunds it.
-- Flow 3: a supplies task asks a stand-in seller the price ($0.03, the same 402 answer as the wallet's test API).
-  That is above its 2-cent budget, so the payment asks first; denied, the wallet never runs.
-- No secret is anywhere in the action log.
+`DEMO_LIVE=shopper ./demo` (or `visa`) adds real test-mode payments and refunds, x402 on Solana devnet, and a real
+comparison of Best Buy Canada and Gold Roast through Apify, bought with Face ID. `DEMO_LIVE=droid` adds Claude (in
+Factory's Droid) reading the receipts for unused subscriptions and a reorder.
 
-Without the three shopper keys in the vault it prints `skip` and says to run `setup.sh`.
-
-`DEMO_LIVE=shopper ./demo` (or `visa`) runs the same flows with real Stripe test-mode charges and refunds, and adds:
-an agent paying $0.03 of devnet USDC for a report over x402 after your OK (its budget is 2 cents), Droid reading the receipts and proposing (denied, so
-nothing is bought), a live Best Buy watch on Chemex filters (SKU 20220310) through Apify, bought at Best Buy's
-live price, and Droid turning "Get me the Chemex coffee filters at Best Buy when they're under $14" into a watch.
-
-It ran on Oct 23 on an x86 test VM: Stripe test mode charged the filters (`pi_3UTv9jA2XM7HasiU0WFlJgLU`) and
-refunded the undone reorder (`re_3UTv9lA2XM7HasiU0SsOoCt1`); the agent paid $0.03 of devnet USDC for its
-report ([transaction](https://explorer.solana.com/tx/5PCwxRVPZ7hzjHaXPLtpbYH2k3nEdkzwjUxZXaVYcm46TsnGqkvGYtbCctcgWdpnAMzgRQu76MKW2HfByAzkcFvB?cluster=devnet));
-Droid proposed exactly the filters and paper towels; Apify read the Chemex filters at $15.36 CAD and the box
-bought them at that price after the OK (`pi_3UTvAGA2XM7HasiU1M2tDyqT`); and Droid set "under $14" as a $13.99
-limit.
-
-Unit tests, offline: `node --experimental-strip-types --test tracks/shopper/shopper.test.ts`.
+Unit tests, offline: `node --experimental-strip-types --test tracks/shopper/*.test.ts` (shopper, stores, payments,
+passkey). `passkey.browser.mjs` runs the passkey flow in a real Chromium with a virtual authenticator.
 
 ## What is real and what is simulated
 
 | Part | Status |
 |---|---|
-| Best Buy Canada prices and stock | Live, through Apify's Playwright Scraper (the Apify track's `apify.checkPrice`) |
-| Product matching from your words, reading receipts | Live: Droid with Claude |
-| The GurtOS Test Store | Ours. It stands in for the merchant, because no real store takes a test card. A Best Buy deal is bought here at Best Buy's live price |
-| Payments | Stripe test mode with a Visa test card once `STRIPE_SECRET_KEY` is in the vault; simulated before that, and in offline demo runs. Never real money |
-| Visa Trusted Agent Protocol | Real signatures and checks, per Visa's open sample. The registry is the box's own route, not Visa's |
-| The mailbox | A demo POP3 server on the box with sample receipts we wrote, standing in for Gmail (we could not make a Gmail account for the demo) |
-| CAD prices against US-cent budgets | A fixed rate of 0.73 |
-| x402 supplies | Real x402 payments by the wallet track, in USDC on Solana devnet (test money) |
-
-Best Buy Canada does not sell Hario V60 filters, so the live example watches Chemex filters. The test store sells
-the Hario filters from the design.
-
-## Visa's criteria
-
-- **Innovation in reimagining shopping (25%).** Shopping becomes standing instructions: "when it's under $16",
-  "when it's back", "keep us stocked". An always-on box carries them out, and you only answer yes or no.
-- **User experience (25%).** Say it in words, or fill four fields. The phone shows one card: what, how many, the
-  price against your limit, TEST PAYMENT, Approve. Undo gives the money back.
-- **Technical execution with AI (20%).** Claude (inside Factory's Droid) matches products and reads receipts.
-  Code does the money: the price rule, the budget, the signature, idempotent charges that survive a power cut.
-  Apify supplies live prices. Every check, approval and payment is a line in the action log.
-- **Commerce impact (15%).** Merchants get agent orders they can verify (TAP) instead of blocking all bots, and
-  sales at the price the buyer named. Households stop running out.
-- **Trust and responsibility (15%).** The agent never sees the card or the mailbox login and cannot buy on its
-  own. Every purchase needs your tap and stays within its budget. Signed orders cannot be changed or replayed.
-  Test money only, enforced in code.
+| Best Buy Canada and Gold Roast prices and stock | Live, through Apify |
+| Product matching from your words, reading receipts, finding unused subscriptions | Live: Claude in Factory's Droid (scripted in the offline demo) |
+| Face ID approvals | Real WebAuthn passkeys, verified on the box. The demo uses a software authenticator |
+| Trusted Agent Protocol and the mandate | Real signatures and checks. The registry is the box's own route, not Visa's |
+| The GurtOS Test Store | Ours. It stands in for every merchant, because no real store takes a test card. A Best Buy or Gold Roast deal is bought here at that store's live price |
+| Payments | Stripe test mode or the Cybersource sandbox when their keys are set; simulated otherwise and in offline demo runs. Never real money |
+| Visa Intelligent Commerce | An adapter only, never called (needs Visa onboarding) |
+| The mailbox and the subscriptions | A demo POP3 server with sample receipts we wrote, and three sample subscriptions at the test store |
+| CAD against US-dollar budgets and rules | A fixed rate of 0.73 |
 
 ## Limits
 
-- A watch closes after one purchase, or when you deny it. Watch again for another.
-- The running-low estimate assumes each purchase lasts until the next, whatever the quantity.
-- The test store keeps price and stock changes in memory; they reset when the box restarts. Orders are on disk.
-- The store remembers used nonces in memory. After a restart a captured signature could be sent again within its
-  8 minutes, but its Idempotency-Key still returns the first order instead of charging twice.
-- Routes reach the vault through model jobs (`shopper.pay`, `shopper.agentKey`, `shopper.mailLogin`), because
-  routes and triggers have no `secrets` slot. Any track's code could call those jobs.
+- **Best Buy Canada's Conditions of Use prohibit scraping** (section 7). The Apify track reads its public product
+  JSON through Apify; we disclose it here and in the app. Gold Roast's robots.txt and terms do not prohibit it.
+- **One stand-in store for every merchant.** The store reads `from` on a line to know which real store priced it, so
+  in this demo the store trusts that label. In real use each store runs its own checkout and checks the mandate
+  against its own id.
+- **Shipping and tax are compared, not charged.** The test store charges items only, so the mandate's total and your
+  caps cover items.
+- **A passkey belongs to one address.** Set it up where you approve (the box's https address on your phone). There
+  is no remove button yet.
+- Challenges for passkeys and TAP nonces are kept in memory: a restart clears pending ones (you tap again), and the
+  Idempotency-Key still stops a replayed order from being charged twice.
+- The test store keeps price and stock changes in memory; orders and its dashboard counts are on disk.
+- A watch closes after one purchase, or when you deny it.
+
+## Reviews that changed it
+
+The mandate and the rules were reviewed in a public Mana chat (written by us in Ben's voice):
+https://www.mana.space/shared-chats/x5CqxyjcOgVCAyrvUBqK2LNRcMJ2/0017928345352081015a15392384766a029. Its agent ran
+`outside()` and `blocked()` on test inputs and found that a mandate could be reused across orders, could name no
+item, accepted NaN and negative lines, that a $0 monthly cap meant no cap, that "never buy" matched parts of words,
+and that the approval text hid limits. All of those are fixed and tested. The AP2-style split into an intent mandate
+and a per-store cart mandate is not built yet.
