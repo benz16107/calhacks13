@@ -270,7 +270,7 @@ PhoneTabBar (`88:337`), LiveActivity (`88:338`), and the app icons for Elastic i
 
 ## On GNOME (Personal)
 
-**Proposed, waiting for Ben:** GurtOS Personal gets its own shell theme, accent, icon theme, cursor, font,
+**Approved Sat Oct 24, replaces the bullets below:** GurtOS Personal gets its own shell theme, accent, icon theme, cursor, font,
 wallpapers, login and boot splash, and a native top-bar item and Quick Settings tile in place of the AppIndicator
 below. See `personal-os/README.md`.
 

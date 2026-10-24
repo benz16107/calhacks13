@@ -1,0 +1,127 @@
+/* GurtOS colour tokens, generated from the Figma variables "GurtOS Color" (Light and Dark).
+   The shell (top bar, popovers, Quick Settings, notifications, lock screen) always uses the dark values. */
+:root {
+  --color-window-bg: #F6F5F2;
+  --color-view-bg: #FDFCFA;
+  --color-sidebar-bg: #ECEAE5;
+  --color-headerbar-bg: #EDEBE6;
+  --color-card-bg: #FEFDFB;
+  --color-card-hover: #F2F0EB;
+  --color-popover-bg: #FEFDFB;
+  --color-button-bg: #E3E0DA;
+  --color-button-hover: #D9D6CF;
+  --color-border-default: #DCD8D0;
+  --color-border-strong: #8A8D92;
+  --color-text-primary: #1D2127;
+  --color-text-secondary: #565C64;
+  --color-text-disabled: #9A9EA4;
+  --color-accent-bg: #2F64A6;
+  --color-accent-fg: #2A5C99;
+  --color-accent-on: #FFFFFF;
+  --color-accent-subtle: #DCE6F3;
+  --color-attention-bg: #F2B544;
+  --color-attention-on: #1A1206;
+  --color-attention-fg: #7E5200;
+  --color-attention-subtle: #FBEFD5;
+  --color-success-fg: #2E6B3A;
+  --color-success-subtle: #E0EFDF;
+  --color-destructive-bg: #B3392B;
+  --color-destructive-on: #FFFFFF;
+  --color-destructive-fg: #A3322A;
+  --color-destructive-subtle: #F8E1DD;
+  --color-scrim: rgba(11, 14, 18, 0.45);
+  --color-switch-knob: #FFFFFF;
+  --color-desktop-sky: #27313F;
+  --color-desktop-hill-far: #46586B;
+  --color-desktop-hill-mid: #36475A;
+  --color-desktop-hill-near: #28343F;
+  --color-desktop-hill-front: #1C252D;
+  --color-desktop-moon: #E9DFC8;
+  --color-topbar-bg: #0F1318;
+  --color-topbar-fg: #F2EFE8;
+  --color-topbar-fg-secondary: #B9C0C8;
+  --color-topbar-pill: rgba(242, 239, 232, 0.12);
+  --color-dock-surface: rgba(20, 26, 33, 0.8);
+  --color-dock-edge: rgba(255, 255, 255, 0.12);
+  --color-dock-button: rgba(242, 239, 232, 0.1);
+  --color-dock-divider: rgba(255, 255, 255, 0.2);
+  --color-app-glyph: #F7F3EA;
+  --color-app-tasks: #2F64A6;
+  --color-app-activity: #2E6B5E;
+  --color-app-time-machine: #8A4F3A;
+  --color-app-settings: #5A6270;
+  --color-app-app-center: #3C6B3F;
+  --color-app-credit-desk: #1F4E5A;
+  --color-app-shopper: #B0503A;
+  --color-app-wallet: #7A5A22;
+  --color-app-find: #4B5F86;
+  --color-app-jira: #2B4F7E;
+  --color-app-asi-one: #3E4148;
+  --color-app-elastic: #7A4E6B;
+  --color-app-mana: #2F6E73;
+  --color-app-web: #5C6B2E;
+}
+
+/* Dark style: apps that follow the system style, and every shell surface. */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-window-bg: #1E2228;
+    --color-view-bg: #262B32;
+    --color-sidebar-bg: #181B20;
+    --color-headerbar-bg: #2B3038;
+    --color-card-bg: #2C3139;
+    --color-card-hover: #343A43;
+    --color-popover-bg: #30363F;
+    --color-button-bg: #3A404A;
+    --color-button-hover: #444B56;
+    --color-border-default: #3B414B;
+    --color-border-strong: #737A84;
+    --color-text-primary: #EEECE7;
+    --color-text-secondary: #AEB4BC;
+    --color-text-disabled: #6C727A;
+    --color-accent-bg: #78A9E6;
+    --color-accent-fg: #8DB8EE;
+    --color-accent-on: #0F1B2A;
+    --color-accent-subtle: #2C4361;
+    --color-attention-fg: #F2C063;
+    --color-attention-subtle: #4A3A1A;
+    --color-success-fg: #7CC48A;
+    --color-success-subtle: #233A28;
+    --color-destructive-bg: #E06A5B;
+    --color-destructive-on: #2A0B07;
+    --color-destructive-fg: #F08A7D;
+    --color-destructive-subtle: #4A2420;
+    --color-scrim: rgba(0, 0, 0, 0.55);
+    --color-switch-knob: #F4F2EE;
+  }
+}
+.gurtos-dark {
+  --color-window-bg: #1E2228;
+  --color-view-bg: #262B32;
+  --color-sidebar-bg: #181B20;
+  --color-headerbar-bg: #2B3038;
+  --color-card-bg: #2C3139;
+  --color-card-hover: #343A43;
+  --color-popover-bg: #30363F;
+  --color-button-bg: #3A404A;
+  --color-button-hover: #444B56;
+  --color-border-default: #3B414B;
+  --color-border-strong: #737A84;
+  --color-text-primary: #EEECE7;
+  --color-text-secondary: #AEB4BC;
+  --color-text-disabled: #6C727A;
+  --color-accent-bg: #78A9E6;
+  --color-accent-fg: #8DB8EE;
+  --color-accent-on: #0F1B2A;
+  --color-accent-subtle: #2C4361;
+  --color-attention-fg: #F2C063;
+  --color-attention-subtle: #4A3A1A;
+  --color-success-fg: #7CC48A;
+  --color-success-subtle: #233A28;
+  --color-destructive-bg: #E06A5B;
+  --color-destructive-on: #2A0B07;
+  --color-destructive-fg: #F08A7D;
+  --color-destructive-subtle: #4A2420;
+  --color-scrim: rgba(0, 0, 0, 0.55);
+  --color-switch-knob: #F4F2EE;
+}

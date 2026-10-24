@@ -1,0 +1,36 @@
+<?xml version="1.0"?>
+<!DOCTYPE wallpapers SYSTEM "gnome-wp-list.dtd">
+<wallpapers>
+  <wallpaper deleted="false">
+    <name>Hills</name>
+    <filename>/usr/share/backgrounds/gurtos/hills-light.svg</filename>
+    <filename-dark>/usr/share/backgrounds/gurtos/hills-dark.svg</filename-dark>
+    <options>zoom</options>
+    <shade_type>solid</shade_type>
+    <pcolor>#DCE5ED</pcolor>
+  </wallpaper>
+  <wallpaper deleted="false">
+    <name>Lake</name>
+    <filename>/usr/share/backgrounds/gurtos/lake-light.svg</filename>
+    <filename-dark>/usr/share/backgrounds/gurtos/lake-dark.svg</filename-dark>
+    <options>zoom</options>
+    <shade_type>solid</shade_type>
+    <pcolor>#E6ECF1</pcolor>
+  </wallpaper>
+  <wallpaper deleted="false">
+    <name>Dunes</name>
+    <filename>/usr/share/backgrounds/gurtos/dunes-light.svg</filename>
+    <filename-dark>/usr/share/backgrounds/gurtos/dunes-dark.svg</filename-dark>
+    <options>zoom</options>
+    <shade_type>solid</shade_type>
+    <pcolor>#E6ECF1</pcolor>
+  </wallpaper>
+  <wallpaper deleted="false">
+    <name>Strata</name>
+    <filename>/usr/share/backgrounds/gurtos/strata-light.svg</filename>
+    <filename-dark>/usr/share/backgrounds/gurtos/strata-dark.svg</filename-dark>
+    <options>zoom</options>
+    <shade_type>solid</shade_type>
+    <pcolor>#E6ECF1</pcolor>
+  </wallpaper>
+</wallpapers>
