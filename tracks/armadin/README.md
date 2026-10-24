@@ -36,7 +36,7 @@ anything. It is the harness `demo.ts` runs an `npm install` of inside a real box
 | other-tasks | — | lists `/var/lib/box*/tasks` for other tasks' files | blocked |
 | persist-workflow | drop a workflow file for continued leaking | writes into the project | contained (its own copy only; undo removes it) |
 | persist-system | — | writes a login script into `/etc/profile.d` | blocked (`EROFS`) |
-| exfil-decoy-fetch | send the stolen cloud keys to the attacker | sends the decoy `AWS_SECRET_ACCESS_KEY` in a URL with Node `fetch` | blocked by the host allowlist. The tripwire does not see it: Node's `fetch` asks the proxy for a CONNECT tunnel even for plain HTTP, and the box checks only the host name there |
+| exfil-decoy-fetch | send the stolen cloud keys to the attacker | sends the decoy `AWS_SECRET_ACCESS_KEY` in a URL with Node `fetch` | blocked by the host allowlist: Node's `fetch` asks the proxy for a CONNECT tunnel even for plain HTTP, and the tunnel to the attacker's host is refused before any bytes are sent, so the key never leaves. (Through a tunnel to an allowed host on any port but 443, the box reads the bytes for the decoy and trips the wire; core's demo covers that.) |
 | exfil-decoy (last step) | the same, from a shell script | sends the same key in a URL with `curl` | tripwire: the box refuses the request, writes a `security` note, and undoes the task |
 
 The planted canary token appears nowhere in the action log. The last step (`curl`) trips the wire, so the task ends undone,
@@ -60,10 +60,11 @@ task's leftovers in `/tmp` · DNS exfiltration (UDP 53) · firewall bypass over 
 - **Exfiltration through an allowed host.** The proxy checks which hostname a task may reach, never what it
   sends there. A task can still put arbitrary bytes (a query string, a header, a body) on a request to a host
   it is legitimately allowed to use. The one exception is the decoy cloud key: the proxy looks for it in the
-  URL and headers of a plain-HTTP request that arrives as a full URL (`curl` sends one; Node's `fetch` opens a
-  CONNECT tunnel instead), in a tunnel's host name, in tool-call inputs and in the log, and the box stops the
-  task if it appears. It does not look in request bodies, inside tunnels or in the model relay, and it only knows
-  the decoy, not a real secret. Closing the rest needs a track-level control (an allowlisted
+  URL and headers of a plain-HTTP request that arrives as a full URL (`curl` sends one), in the bytes of a
+  tunnel to an allowed host on any port but 443 (Node's `fetch` opens one, even for plain HTTP), in a tunnel's
+  host name, in tool-call inputs and in the log, and the box stops the task if it appears. It does not look
+  inside a tunnel on port 443 (HTTPS), in the model relay, or (from reading `core/net.ts`; this track has not
+  tested it) in the body of a plain-HTTP request sent as a full URL. It only knows the decoy, not a real secret. Closing the rest needs a track-level control (an allowlisted
   request shape), not a core one.
 
 ## 3. The hijacked payment

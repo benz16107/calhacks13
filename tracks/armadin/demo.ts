@@ -72,7 +72,7 @@ async function poisonedPackage(d: DemoKit) {
       blockedOf((await d.api<{ events: LogEvent[] }>('GET', `/tasks/${t.id}`)).events).find((h) => h.startsWith('1.1.1.1:443')));
     d.check(direct, 'the log has net.blocked for 1.1.1.1:443');
     const trip = events.find((e) => e.type === 'note' && e.track === 'security' && (e.data as { tripwire?: boolean }).tripwire);
-    d.check(ended.state === 'undone' && trip, `sending the decoy key out with curl tripped the wire (the same key from Node fetch did not, see the report): the box wrote a security note (${trip && trip.type === 'note' ? JSON.stringify(trip.data) : 'none'}) and undid the task`);
+    d.check(ended.state === 'undone' && trip, `sending the decoy key out with curl tripped the wire (the same key from Node fetch to that disallowed host was refused by the allowlist before any bytes were read, see the report): the box wrote a security note (${trip && trip.type === 'note' ? JSON.stringify(trip.data) : 'none'}) and undid the task`);
     d.check(!JSON.stringify(events).includes(CANARY), 'the planted canary credentials appear nowhere in the log');
     await d.waitFor('the undone task to leave the workspace', async () =>
       !d.view('npm-victim', 'project/node_modules/gurt-chalk-utils/index.js') && !d.view('npm-victim', 'project/.github/workflows/shai-hulud-imitation.yml') ? true : undefined);
