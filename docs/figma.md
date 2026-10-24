@@ -15,11 +15,23 @@ the tab. Research and the three directions are in `docs/figma/refs/` and `docs/f
 Credit desk, Shopper, Wallet, Find, pairing, and the session restore. On the phone: home, the approval as a
 notification, running tasks as Live Activities, and the task list. The clickable prototype is in Figma Design and Figma Make (below).
 
+## GurtOS system v2 (checkpoint, waiting for Ben's review)
+
+Ben found the built UI looked like a SaaS product: each app had been designed as its own page, with no shared system.
+Version 2 puts one OS design system underneath every screen. Its rules are in [`figma/system.md`](figma/system.md),
+our HIG: tokens in Light and Dark, Atkinson Hyperlegible Next as the one system typeface, GNOME's Adwaita symbolic
+icons, window chrome, boxed-list rows, and when to use a window, a sheet, a popover, a toast or a notification. The
+research is in `figma/refs/os-system/` and on the FigJam board.
+
+Four checkpoint screens, built only from the system's components, are in `figma/os-v2/` (node IDs in its README):
+setup Welcome, setup Apps, Settings on Permissions (Light and Dark), and the desktop with Tasks. The portal is not
+rebuilt yet: that follows Ben's approval, and the screens below stay the reference until then.
+
 ## Files
 
 | File | Link | What is in it |
 |---|---|---|
-| Design system and screens | https://www.figma.com/design/oppzH621OOOMA31rgLbxbM | Page "OS screens": the current screens. Page "Design system": tokens, text styles, components. Page "Directions": the three OS directions. Page "Screens": the first, dashboard-style screens (superseded) |
+| Design system and screens | https://www.figma.com/design/oppzH621OOOMA31rgLbxbM | Pages "GurtOS system" and "GurtOS screens v2": the OS design system and its first screens (see below). Page "OS screens": the direction A screens the portal is built from today. Page "Design system": tokens, text styles, components. Page "Directions": the three OS directions. Page "Screens": the first, dashboard-style screens (superseded) |
 | Ideation board (FigJam) | https://www.figma.com/board/KvHiDv5HIJuGYOZDDkp8VG | Architecture, the four demo moments, the 25 tracks by slot, the moodboard |
 | Prototype (Figma Design) | Phone: https://www.figma.com/proto/oppzH621OOOMA31rgLbxbM/?node-id=23-304&starting-point-node-id=23%3A304 · Server: https://www.figma.com/proto/oppzH621OOOMA31rgLbxbM/?node-id=24-454&starting-point-node-id=24%3A454 | The two flows below, wired between the real screens |
 | Prototype (Figma Make) | https://www.figma.com/make/PuKKW48akjbEKogpI59pdL | The same two flows as a small working web page, in direction A's tokens. It replaces the first Make file (`19hhCgh3CFsgfi1eBienAS`), which still says Box |
