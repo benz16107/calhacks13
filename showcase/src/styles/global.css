@@ -68,7 +68,7 @@ pre.astro-code span {
 }
 
 .mono {
-  font-family: var(--font-mono);
+  font-family: var(--font-code);
 }
 
 /* Markdown bodies of track pages: a number and heading in the left column, the section in the right (showcase option B). */
@@ -182,7 +182,7 @@ pre.astro-code span {
   font-size: 12px;
 }
 .diagram svg .mono {
-  font-family: var(--font-mono);
+  font-family: var(--font-code);
   font-size: 12px;
 }
 .diagram svg .node {

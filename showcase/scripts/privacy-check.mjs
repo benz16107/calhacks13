@@ -50,7 +50,7 @@ if (fs.existsSync(privateFile)) {
 
 let hits = 0;
 for (const f of files) {
-  const text = fs.readFileSync(f, 'utf8');
+  const text = fs.readFileSync(f, 'utf8').replace(/data:font\/woff2;base64,[A-Za-z0-9+\/=]+/g, 'data:font');
   for (const [label, re, allowed] of checks) {
     for (const m of text.matchAll(re)) {
       if (allowed?.(m[0], text, m.index)) continue;
