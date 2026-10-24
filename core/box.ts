@@ -259,7 +259,8 @@ class Core {
     if (!['droid', 'fake'].includes(s.worker)) throw new Error(`no worker ${s.worker}`);
     const why = modelProblem(s.model);
     if (why) throw new Error(why);
-    if (s.worker === 'droid') s.model = resolveModel(s.model); // the task records the exact model it ran on
+    if (s.worker === 'droid') s.model = resolveModel(s.model); // the task records the exact model it ran on, the default too
+    else delete s.model; // a scripted worker runs no model
     if (s.seat !== undefined && (typeof s.seat !== 'string' || !s.seat.trim() || s.seat.length > 60)) throw new Error('seat: text, at most 60 characters, like "Credit analyst"');
     // A demo run spends no Factory credit unless it was asked to: a track that wants a real agent must be gated behind DEMO_LIVE=droid.
     if (s.worker === 'droid' && process.env.BOX_NO_DROID) throw new Error('real Droid is off in this demo run (it spends Factory credit); DEMO_LIVE=droid ./demo, or ./demo --live-droid, turns it on');

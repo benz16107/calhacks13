@@ -6,12 +6,12 @@ export const DEFAULT_MODEL = MODELS.sonnet;
 
 /** A task's model id: its alias or id, else the box's BOX_MODEL, else the default. */
 export function resolveModel(asked?: string): string {
-  const pick = asked || process.env.BOX_MODEL?.replace(/^custom:/, '') || DEFAULT_MODEL;
+  const pick = (asked as string | null | undefined) || process.env.BOX_MODEL?.replace(/^custom:/, '') || DEFAULT_MODEL;
   return MODELS[pick as keyof typeof MODELS] ?? pick;
 }
 
-/** Why a model name is refused, or undefined. Ids are letters, digits, dots and hyphens, as Anthropic names them. */
+/** Why a model name is refused, or undefined. Only an alias or a Claude model id: the box prices and records Claude. */
 export function modelProblem(asked: unknown): string | undefined {
-  if (asked === undefined) return;
-  if (typeof asked !== 'string' || !/^[a-z0-9][a-z0-9.-]{1,60}$/.test(asked)) return 'model: haiku, sonnet, opus, or a Claude model id such as claude-sonnet-5-5';
+  if (asked === undefined || asked === null || asked === '') return;
+  if (typeof asked !== 'string' || !(asked in MODELS || /^claude-[a-z0-9][a-z0-9.-]{1,50}$/.test(asked))) return 'model: haiku, sonnet, opus, or a Claude model id that starts with claude-';
 }

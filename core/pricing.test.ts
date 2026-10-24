@@ -30,6 +30,9 @@ test('a task names its model by alias or id; the box records the id', () => {
   assert.equal(resolveModel(), 'claude-sonnet-5-5');
   assert.equal(modelProblem(undefined), undefined);
   assert.equal(modelProblem('haiku'), undefined);
-  assert.ok(modelProblem('Bad Model; rm -rf'));
+  assert.equal(modelProblem(null), undefined);
+  assert.equal(modelProblem('claude-sonnet-4-6'), undefined);
+  assert.ok(modelProblem('gpt-5') && modelProblem('Bad Model; rm -rf') && modelProblem('claude-') && modelProblem('claude'));
+  assert.equal(resolveModel(null as any), 'claude-sonnet-5-5');
   assert.ok(modelProblem(5));
 });
