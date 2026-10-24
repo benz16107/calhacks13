@@ -48,4 +48,4 @@ echo "demo: $BOX_SHELL, in $dest"
     tar -czf - -T - | base64
   echo EOF
   echo "DEMO_SKIP_DROID=$skip exec $dest/demo --here"
-} | $BOX_SHELL sudo bash -s
+} | $BOX_SHELL sudo bash -s || { code=$?; [[ $code == 255 ]] && echo "demo: could not reach the test machine ($BOX_SHELL)" >&2; exit $code; }
