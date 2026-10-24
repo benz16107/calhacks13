@@ -362,6 +362,14 @@ relay on a real phone.
 shows the pairing code and opens pairing for 10 minutes, so a requester or an auditor could pair their own ASI:One
 account as the agent's owner. QA read the code and saw the agent off on its box; not exploited. Filed with Fetch at 06:50 PT.
 
+**P2-31. The per-task `model` option accepts any lowercase word.** Owner: anthropic, core. `model: "gpt-5"` is not
+refused (the check only wants a slug, though the message says "haiku, sonnet, opus, or a Claude model id"), and a real
+Droid task with it started and finished for 2.8 cents, so it isn't clear which model ran. Accept only haiku, sonnet,
+opus or an id starting with `claude-`, and refuse the rest with the 400 the feature promises. The task's JSON also
+shows `model: null` when none was chosen; the window says "Model", but the default (`claude-sonnet-5-5`) isn't in the
+API response. Found at 07:10 PT on 4b075fa. Not walked: the Haiku second look, the attack test (35 cents), and the
+install script.
+
 ## Docs site (gurtos.com)
 
 **D-1 to D-4 and D-7 fixed in 199dce5 and live, spot-checked 00:00 PT:** real ISO names, `gurt-<id>`, the Personal ISO

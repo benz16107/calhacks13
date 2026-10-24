@@ -404,6 +404,8 @@ at a time and only when the load is under 8. QA's fresh-install passes run on se
 | Sat 04:20 | 984f4b1 | 21 passed, 5 failed: QA changed its checkout during the run (a missing wallet file), not main |
 | Sat 04:40 | 3799b74, clean worktree, load about 9 | 26 passed, 1 failed, 1 pending. The failure is Fetch's "restarted, the chat agent picked up where it was". Sent to the Fetch thread |
 | Sat 05:00 | 8a4cbf4, clean worktree (after a symlink of mine broke the first start) | **29 passed, 0 failed, 1 pending**. Fetch's wait fix (5f099f1) works |
+| Sat 06:40 | d7f9fc1 (Fetch agent team) | 29 passed, 0 failed, 1 pending |
+| Sat 07:10 | 4b075fa (Anthropic, Armadin, Elastic merged) | **31 passed, 0 failed, 1 pending** |
 
 
 ## Collisions
