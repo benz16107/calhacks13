@@ -363,7 +363,7 @@ class Core {
           ...(process.env.BOX_REVIEW ? { BOX_REVIEW: process.env.BOX_REVIEW } : {}),
         });
       }
-      const ids = sandbox.prepare(t);
+      const ids = await sandbox.prepare(t);
       if (byok) {
         // Droid reads its own-key models from the task user's ~/.factory/settings.json; the key there is a placeholder.
         const dir = path.join(dirs.task(t.id), 'home', '.factory');

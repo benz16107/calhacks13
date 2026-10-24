@@ -9,7 +9,8 @@
 //     upper/           the task's changes (its layer)    work/  overlayfs scratch
 //     root/            the task's copy of the workspace, only its user can enter
 //     home/            the task user's home              broker.sock  worker.log
-import { execFileSync, spawn, spawnSync, type ChildProcess } from 'node:child_process';
+import { execFile, execFileSync, spawn, spawnSync, type ChildProcess } from 'node:child_process';
+import { promisify } from 'node:util';
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -104,7 +105,7 @@ function mountOverlay(target: string, lowers: string[], upper?: string) {
 const unmount = (dir: string) => mounted(dir) && tryRun('umount', '-l', dir);
 
 /** Create the task's user, folders and copy of the workspace. Safe to call again after a reboot. */
-export function prepare(task: Task): { uid: number; gid: number } {
+export async function prepare(task: Task): Promise<{ uid: number; gid: number }> {
   const t = dirs.task(task.id);
   if (!tryRun('id', '-u', task.user)) {
     // Task users live in uids 30000-39999 so one firewall rule can cover all of them.
@@ -128,15 +129,24 @@ export function prepare(task: Task): { uid: number; gid: number } {
   let base = dirs.workspace(task.workspace);
   if (isLinked(task.workspace)) {
     base = path.join(t, 'base');
-    fs.rmSync(base, { recursive: true, force: true });
-    fs.mkdirSync(base, { recursive: true });
-    // shortcut: whole-folder copies; fine for document folders, chunk it for huge trees
-    for (const [label, real] of rootsOf(task.workspace)) fs.cpSync(real, label ? path.join(base, label) : base, { recursive: true });
-    // The copy belongs to this task's user alone and is closed to everyone else, with the owner's files keeping
-    // their own modes (a 0600 file stays 0600). The user can still change every file in it: overlayfs checks the
-    // caller against the file's own owner and mode, so the owner bits are made writable, no one else's.
-    run('chown', '-R', `${uid}:${gid}`, base);
-    run('chmod', '-R', 'u+rwX,go-rwx', base);
+    // A task resumed after a restart keeps the copy it started with: faster, and its snapshot stays its snapshot.
+    if (!fs.existsSync(path.join(t, 'base.done'))) {
+      fs.rmSync(base, { recursive: true, force: true });
+      fs.mkdirSync(base, { recursive: true });
+      // cp shares the data blocks where the filesystem can (btrfs, XFS), and runs without blocking the box.
+      // shortcut: a full copy on ext4; an idmapped lower would need none (docs/perf/filesystem.md)
+      for (const [label, real] of rootsOf(task.workspace)) {
+        const dest = label ? path.join(base, label) : base;
+        fs.mkdirSync(dest, { recursive: true });
+        await exec('cp', ['-a', '--reflink=auto', `${real}/.`, dest]);
+      }
+      // The copy belongs to this task's user alone and is closed to everyone else, with the owner's files keeping
+      // their own modes (a 0600 file stays 0600). The user can still change every file in it: overlayfs checks the
+      // caller against the file's own owner and mode, so the owner bits are made writable, no one else's.
+      await exec('chown', ['-R', `${uid}:${gid}`, base]);
+      await exec('chmod', ['-R', 'u+rwX,go-rwx', base]);
+      fs.writeFileSync(path.join(t, 'base.done'), '');
+    }
   }
   mountOverlay(dirs.root(task.id), [...task.layers.map(dirs.upper), base], dirs.upper(task.id));
   return { uid, gid };
@@ -246,9 +256,26 @@ export function diff(task: Task, maxBytes = 200_000): { changes: Change[]; diff:
 const changesOf = changes;
 
 const sha = (file: string) => createHash('sha256').update(fs.readFileSync(file)).digest('hex');
+const exec = promisify(execFile);
+// A file's size and modification time: enough to tell an owner's edit, without reading the file.
+const stamp = (file: string) => {
+  const st = fs.statSync(file);
+  return `${st.size}:${st.mtimeMs}`;
+};
+// Records from before stamps hold a SHA-256 and are still checked that way.
+const unchanged = (file: string, rec: string | undefined) => rec !== undefined && (/^[0-9a-f]{64}$/.test(rec) ? sha(file) === rec : stamp(file) === rec);
+// A second name for the same file where it can (instant, and the old content stays with it when the real path is
+// replaced by a rename); a copy, sharing blocks where the filesystem can, across filesystems.
+const place = (src: string, dst: string) => {
+  try {
+    fs.linkSync(src, dst);
+  } catch {
+    fs.copyFileSync(src, dst, fs.constants.COPYFILE_FICLONE);
+  }
+};
 
-/** Record a hash of every file the task started with (its own clean copy), to catch owner edits at Keep time.
- *  Only for linked (real-folder) workspaces. */
+/** Record the size and modification time of every real file the task started with, to catch owner edits at Keep
+ *  time. Only for linked (real-folder) workspaces. */
 export function snapshotBase(task: Task) {
   if (!isLinked(task.workspace)) return;
   const base = taskBase(task.id);
@@ -258,7 +285,10 @@ export function snapshotBase(task: Task) {
       const r = rel ? path.join(rel, name) : name;
       const st = fs.lstatSync(path.join(base, r));
       if (st.isDirectory()) walk(r);
-      else if (st.isFile()) manifest[r] = sha(path.join(base, r));
+      else if (st.isFile()) {
+        const real = realOf(task.workspace, r);
+        if (fs.existsSync(real)) manifest[r] = stamp(real);
+      }
     }
   };
   if (fs.existsSync(base)) walk('');
@@ -303,9 +333,9 @@ export function keep(task: Task): { kept?: Change[]; conflicts?: string[] } {
   const conflicts: string[] = [];
   for (const c of cs) {
     const real = realOf(task.workspace, c.path);
-    const now = fs.existsSync(real) && fs.statSync(real).isFile() ? sha(real) : undefined;
-    if (c.change === 'added' && now !== undefined) conflicts.push(c.path); // the owner created it too
-    if ((c.change === 'modified' || c.change === 'deleted') && now !== manifest[c.path]) conflicts.push(c.path);
+    const isFile = fs.existsSync(real) && fs.statSync(real).isFile();
+    if (c.change === 'added' && isFile) conflicts.push(c.path); // the owner created it too
+    if ((c.change === 'modified' || c.change === 'deleted') && !(isFile ? unchanged(real, manifest[c.path]) : manifest[c.path] === undefined)) conflicts.push(c.path);
   }
   if (conflicts.length) return { conflicts };
 
@@ -321,7 +351,7 @@ export function keep(task: Task): { kept?: Change[]; conflicts?: string[] } {
       m.before = { mode: st.mode & 0o7777, uid: st.uid, gid: st.gid };
       // a before-image so Time Machine can undo this Keep
       fs.mkdirSync(path.dirname(path.join(saveDir, c.path)), { recursive: true });
-      fs.copyFileSync(real, path.join(saveDir, c.path));
+      place(real, path.join(saveDir, c.path)); // the real path is replaced by a rename below, so this keeps the old content
     }
     if (c.change === 'deleted') {
       fs.rmSync(real, { force: true });
@@ -333,11 +363,11 @@ export function keep(task: Task): { kept?: Change[]; conflicts?: string[] } {
       const mode = m.before?.mode ?? (srcMode & 0o111 ? 0o755 : 0o644);
       const owner = m.before ?? { uid: dirStat.uid, gid: dirStat.gid };
       const tmp = `${real}.box-${process.pid}`;
-      fs.copyFileSync(src, tmp);
+      fs.copyFileSync(src, tmp, fs.constants.COPYFILE_FICLONE);
       fs.chownSync(tmp, owner.uid, owner.gid);
       fs.chmodSync(tmp, mode);
       fs.renameSync(tmp, real); // atomic per file
-      m.after = sha(real);
+      m.after = stamp(real);
     }
     meta.push(m);
   }
@@ -358,7 +388,7 @@ export function unkeep(task: Task): { reverted?: Change[]; conflicts?: string[] 
     .filter((m) => m.after !== undefined)
     .filter((m) => {
       const real = realOf(task.workspace, m.path);
-      return !fs.existsSync(real) || sha(real) !== m.after;
+      return !fs.existsSync(real) || !unchanged(real, m.after);
     })
     .map((m) => m.path);
   if (conflicts.length) return { conflicts };
@@ -367,7 +397,7 @@ export function unkeep(task: Task): { reverted?: Change[]; conflicts?: string[] 
     if (m.before) {
       mkdirOwned(path.dirname(real));
       const tmp = `${real}.box-${process.pid}`;
-      fs.copyFileSync(path.join(saveDir, m.path), tmp);
+      place(path.join(saveDir, m.path), tmp);
       fs.chownSync(tmp, m.before.uid, m.before.gid);
       fs.chmodSync(tmp, m.before.mode);
       fs.renameSync(tmp, real);
