@@ -1097,6 +1097,18 @@ class Core {
     return loopback && !relayed && !foreign;
   }
 
+  /**
+   * Who is calling, for a track route (the x-box-caller header): 'screen' (the box's own screen), 'owner' (a phone
+   * paired as the owner), 'device:<id>' (another paired phone), 'service' (a helper on the box, like the ASI:One
+   * agent) or 'none' (an open route reached through a proxy with no token).
+   */
+  callerOf(req: http.IncomingMessage): string {
+    const device = this.deviceOf(req);
+    if (device) return device.owner ? 'owner' : `device:${device.id}`;
+    if (this.isLocal(req)) return this.serviceCaller(req) ? 'service' : 'screen';
+    return 'none';
+  }
+
   /** The box's own screen, or a device that was paired as the owner. */
   isOwner(req: http.IncomingMessage): boolean {
     return (this.isLocal(req) && !this.serviceCaller(req)) || !!this.deviceOf(req)?.owner;
@@ -1376,7 +1388,7 @@ data: ${JSON.stringify(e)}
         const hasBody = req.method !== 'GET' && req.method !== 'HEAD';
         const request = new Request(url, {
           method: req.method,
-          headers: req.headers as Record<string, string>,
+          headers: { ...(req.headers as Record<string, string>), 'x-box-caller': this.callerOf(req) }, // set by the box, never by the caller
           body: hasBody ? Buffer.concat(chunks) : undefined,
         });
         const r = await entry.route(request, this.boxFor(entry.track));

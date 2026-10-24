@@ -34,6 +34,8 @@ export default {
   routes: {
     'GET /': () => new Response('<h1>Example app</h1>', { headers: { 'content-type': 'text/html' } }),
     // A route reading a vault secret directly (no model-job workaround). It returns a derived fact, never the secret.
+    // Who is calling, as the box says: 'screen', 'owner', 'device:<id>', 'service' or 'none'.
+    'GET /whoami': (req) => Response.json({ caller: req.headers.get('x-box-caller') }),
     'GET /secret-check': (_req, box) => Response.json({ looksLikeTestKey: box.secret('DEMO_SECRET').startsWith('sk_test_') }),
     'POST /start': async (req, box) => {
       const { title = 'Example task', prompt = 'write hello.txt hi', workspace = 'example' } = await req.json();

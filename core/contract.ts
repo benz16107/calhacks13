@@ -243,6 +243,10 @@ export interface App {
   href: string;
 }
 
+/**
+ * A track's HTTP route. `req.headers.get('x-box-caller')` says who is calling, set by the box (a copy the caller
+ * sends is replaced): 'screen', 'owner', 'device:<id>', 'service' or 'none'.
+ */
 export type Route = (req: Request, box: Box) => Response | Promise<Response>;
 
 // ---------- Demo steps ----------
