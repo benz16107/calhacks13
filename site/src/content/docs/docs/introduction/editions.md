@@ -31,7 +31,7 @@ When a task finishes, you look at what it changed and choose **Keep** or **Undo*
 
 It installs from its own GurtOS Personal ISO. GNOME's first-boot setup makes your account, and GurtOS makes that
 account the owner. Approvals arrive as desktop notifications, a top-bar indicator shows what agents are doing, the
-GurtOS app opens the portal in a window, and **Ask an Agent** in Files hands an agent a folder. You can undo a Keep
+GurtOS app shows Needs you, running tasks and what is ready to review, and **New Agent Task…** in Files hands an agent a folder. You can undo a Keep
 later, too.
 
 **Status: Preview.** It installs and runs, and has been walked end to end on a fresh install. Pairing a phone still

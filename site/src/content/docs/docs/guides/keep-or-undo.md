@@ -9,8 +9,8 @@ sidebar:
 
 In GurtOS Personal, agents work beside you on your own computer. In this guide you hand an agent one of your
 folders, let it work on a copy, and then decide what happens to its changes. **Keep** applies them to your real
-folder. **Undo** throws them away. Your folder is not touched until you choose, and **Undo Keep** can put it back
-later.
+folder. **Undo task** throws them away. Your folder is not touched until you choose, and **Undo task** can put it back
+later, after a Keep.
 
 :::note[Preview]
 This works on GurtOS Personal installed from its ISO, and on Ubuntu with the GNOME desktop layer installed. Names of
@@ -34,19 +34,20 @@ buttons and dialogs may change.
 
 ## With the desktop
 
-1. In Files, right-click the folder and choose **Ask an Agent**.
+1. In Files, right-click the folder and choose **New Agent Task…**.
 2. Describe the work, for example "Rename the scanned receipts by date and vendor, and list any that are missing a
    total." Set a budget. Spending above it pauses the task until you approve it. Start the task.
 3. The agent runs as its own Linux user, without `sudo`, on a copy of the folder. The GurtOS indicator in the top bar
    shows how many agents are running and how many requests need you. A request for your OK arrives as a notification
-   with **Deny** and **Approve**.
-4. When the task finishes, a notification opens the review: every file it added, changed or deleted, the diff and
-   the cost.
-5. Choose **Keep** or **Undo**. After a Keep, **Undo Keep** in the review puts your files back.
+   with **Deny** and **Approve**, and waits under **Needs you** in the GurtOS app.
+4. When the task finishes, it waits under **Ready to review**. Its page in the GurtOS app shows every file it added,
+   changed or deleted, the changes line by line, what it could reach and the cost.
+5. Choose **Keep changes** or **Undo task…**, on the task's page or in the folder's menu in Files (**Keep Changes**,
+   **Undo Task…**). After a Keep, **Undo task** puts your files back.
 
-![A review window titled with the task, listing two modified files and their diff, with Undo and Keep buttons.](../../../../assets/screens/personal-review.png)
+![The GurtOS app's page for a finished task: one changed file, what it can reach, its steps, and Undo task and Keep changes buttons.](../../../../assets/screens/personal-review.png)
 
-*The review on GurtOS Personal, after a task fixed the spelling in a thesis chapter and sorted a reference list.*
+*A finished task waiting for you, after it added October's receipts to a budget.*
 
 ## With the API
 
@@ -124,7 +125,7 @@ the owner.
 - The task's `review` is `kept`, `conflict` or `undone`.
 - The action log has a `keep` event for each decision, with `result` `pending`, `kept`, `conflict` or `reverted`, and
   the changes or conflicts.
-- After Keep, the folder shows the agent's changes. After Undo or Undo Keep, it is as it was.
+- After Keep, the folder shows the agent's changes. After Undo task, before or after a Keep, it is as it was.
 
 ## Limits
 
@@ -132,7 +133,7 @@ the owner.
 - Keep works only on tasks that ran on your folders. Tasks on ordinary workspaces use Undo.
 - The task's copy is a whole copy of the folder, made when it starts. That suits folders of documents. A very large
   folder takes time and disk space.
-- **Ask an Agent** in Files offers one folder at a time. Several folders per task work through the API.
+- **New Agent Task…** in Files takes one folder, or up to ten selected together.
 
 ## Related
 

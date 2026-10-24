@@ -7,6 +7,7 @@ import DisplayFrame from '../theme/DisplayFrame.astro';
 import { NAME, REPO, LICENSE_NAME } from '../product.ts';
 import server from '../assets/home/server-screen.png';
 import personal from '../assets/home/personal-everyday.png';
+import personalDark from '../assets/home/personal-everyday-dark.png';
 import businessDesktop from '../assets/home/business-desktop.png';
 import businessPhone from '../assets/home/business-phone.png';
 import homeLight from '../assets/home/iphone-home-light.png';
@@ -67,7 +68,7 @@ const core = [
 
       <article class="edition" id="personal">
         <figure class="media rig">
-          <div class="desk"><DisplayFrame src={personal} alt="GurtOS Personal in everyday use: mail, a browser and Files open, while the GurtOS app and a notification ask to approve a $42.10 grocery order." /></div>
+          <div class="desk"><DisplayFrame src={personal} dark={personalDark} alt="GurtOS Personal in everyday use: mail, a browser and Files open, while the GurtOS app and a notification ask to approve a $42.10 grocery order." /></div>
           <div class="phone"><PhoneFrame src={approvalLight} dark={approvalDark} alt="A request on the iPhone: Buy a GPU hour, $8, with Deny and Approve $8." /></div>
           <div class="watch"><WatchFrame src={watch} alt="The GurtOS Apple Watch app: Buy a GPU hour, $8, with a red deny and a green approve button." /></div>
         </figure>

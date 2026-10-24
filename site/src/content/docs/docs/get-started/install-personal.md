@@ -76,26 +76,27 @@ If you start a task before adding a key, it fails at once and a notification say
 
 ## Use it
 
-Right-click a folder in Files and choose **Ask an Agent**. Describe the job and set a budget. The agent works on a
+Right-click a folder in Files and choose **New Agent Task…**. Describe the job and set a budget. The agent works on a
 copy of the folder as its own user.
 
-![Files with a folder's menu open, showing an Ask an Agent item.](../../../../assets/screens/personal-files-ask.png)
+![Files with a folder's menu open, showing New Agent Task…, and Keep Changes and Undo Task for a task that is waiting for you.](../../../../assets/screens/personal-files-ask.png)
 
-*Ask an Agent in Files, on a fresh GurtOS Personal install.*
+*New Agent Task in Files. Keep Changes and Undo Task appear while a task's changes wait for you.*
 
-Requests for your OK arrive as GNOME notifications with **Deny** and **Approve**. The log records your answer as
+Requests for your OK arrive as notifications with **Deny** and **Approve**, and wait under **Needs you** in the GurtOS app. The log records your answer as
 `desktop:<your user name>`.
 
-![A GNOME notification from GurtOS asking to approve an $8.00 test spend, with Deny and Approve buttons.](../../../../assets/screens/personal-approval.png)
+![A GurtOS notification asking to approve a $2.99 renewal, with Deny and Approve, and the GurtOS app listing two requests under Needs you.](../../../../assets/screens/personal-approval.png)
 
-*An approval as a notification. The spend is test money.*
+*A request as a notification, and both requests under Needs you in the GurtOS app. Amounts are test money.*
 
-When the task is done, a review window shows every changed file and the diff. **Keep** writes the changes into your
-folder; **Undo** throws them away. Your folder is untouched until you choose.
+When the task is done, it waits under **Ready to review**. Its page shows what changed, line by line, and what the task
+could reach. **Keep changes** writes the changes into your folder; **Undo task** throws them away. Your folder is
+untouched until you choose.
 
-![A review window listing two modified files with their diff, and Undo and Keep buttons.](../../../../assets/screens/personal-review.png)
+![The GurtOS app's page for the task Add October's receipts to the budget: one changed file, what it can reach, its steps, and Undo task and Keep changes buttons.](../../../../assets/screens/personal-review.png)
 
-*The review after a task fixed spelling in a thesis chapter.*
+*A finished task on its page in the GurtOS app.*
 
 See [Give an agent a folder, then keep or undo](/docs/guides/keep-or-undo/) for the details, including undoing a Keep.
 
