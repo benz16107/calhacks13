@@ -13,18 +13,6 @@ export const mountsUnder = (dir: string) =>
     .map((l) => l.split(' ')[4])
     .filter((m): m is string => !!m && m.startsWith(dir + '/'));
 
-/** A box process whose BOX_HOME is `home` is alive. */
-function ownerAlive(home: string): boolean {
-  for (const pid of fs.readdirSync('/proc')) {
-    if (!/^\d+$/.test(pid)) continue;
-    try {
-      const env = fs.readFileSync(`/proc/${pid}/environ`, 'utf8');
-      if (env.split('\0').includes(`BOX_HOME=${home}`)) return true;
-    } catch {} // the process ended, or not ours to read
-  }
-  return false;
-}
-
 /** The task users a run created, read from its log. */
 function usersOf(home: string): string[] {
   const log = path.join(home, 'log.jsonl');
@@ -50,15 +38,26 @@ export function teardown(home: string, boxPid?: number) {
   for (const u of users) for (let i = 0; i < 10 && spawnSync('id', [u]).stdout; i++) if (spawnSync('userdel', [u]).status === 0) break;
 }
 
-/** Remove demo boxes left by runs that are no longer alive and are older than maxAgeMs. Leaves live runs. */
+/**
+ * Remove stale demo boxes. A demo finishes in a couple of minutes and tears itself down, so any box older
+ * than maxAgeMs is a stuck orphan (its demo was SIGKILLed before its trap could run); kill it even if its
+ * box process is still alive. `force` reaps every demo box now, regardless of age. Never touches /var/lib/box.
+ */
 export function reap(maxAgeMs = 3600_000, force = false) {
   if (!fs.existsSync(DEMO_ROOT)) return;
   for (const name of fs.readdirSync(DEMO_ROOT)) {
     const home = path.join(DEMO_ROOT, name);
     try {
-      if (!fs.statSync(home).isDirectory() || ownerAlive(home)) continue;
+      if (!fs.statSync(home).isDirectory()) continue;
       const age = Date.now() - fs.statSync(home).mtimeMs;
-      if (!force && age < maxAgeMs) continue; // young and ownerless: a run may still be starting up
+      if (!force && age < maxAgeMs) continue; // a healthy run is minutes old; leave it be
+      // The box here is detached, so find and kill it by its BOX_HOME before removing the files.
+      for (const pid of fs.readdirSync('/proc')) {
+        if (!/^\d+$/.test(pid)) continue;
+        try {
+          if (fs.readFileSync(`/proc/${pid}/environ`, 'utf8').split('\0').includes(`BOX_HOME=${home}`)) process.kill(Number(pid), 'SIGKILL');
+        } catch {} // gone, or not ours
+      }
       teardown(home);
       fs.rmSync(home, { recursive: true, force: true });
       spawnSync('spacetime', ['delete', '--server', 'local', '-y', `box-demo-${name}`]);
