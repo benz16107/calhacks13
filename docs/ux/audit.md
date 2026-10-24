@@ -24,7 +24,7 @@ finding gets a **Fixed** line with the commit and an after-screenshot in `after/
 | Owner | Open |
 |---|---|
 | personal | P-29 waits for Ben |
-| image | S2, S15, S16, S24, P-4, P-17, P-28, E-1 to E-11, E-15, then P-1 with release |
+| image | S2, S15, S16, S24, P-4, P-17, P-28, E-1 to E-11, E-13 (About logo), E-15, then P-1 with release |
 | personal (parity) | E-14 (re-measuring) |
 
 Release (P-1): one rebuild of all four ISOs from one main commit, about 75 minutes to a verified release plus 20 for
