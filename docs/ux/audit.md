@@ -18,7 +18,7 @@ How it was walked:
 
 ## Status
 
-**Fixed 38, closed 1, open 34** (73 findings: 15 web, 22 Server, 36 Personal; parity findings join when measured). Each fixed
+**Fixed 38, closed 1, open 49** (88 findings: 15 web, 22 Server, 36 Personal, 15 parity). Each fixed
 finding gets a **Fixed** line with the commit and an after-screenshot in `after/`.
 
 | Owner | Open |
@@ -26,7 +26,8 @@ finding gets a **Fixed** line with the commit and an after-screenshot in `after/
 | portal | W4 to W12, W14, W15, S1, S5 to S7, S11, S14, S17 to S23, S25, S26, S27 |
 | factory track | S11 (Factory half) |
 | personal | P-36; P-29 waits for Ben |
-| image | S2, S15, S16, S24, P-4, P-17, P-28, then P-1 with release |
+| image | S2, S15, S16, S24, P-4, P-17, P-28, E-1 to E-11, E-15, then P-1 with release |
+| personal (parity) | E-3 (GurtOS update row), E-12, E-13, E-14 |
 
 Release (P-1): one rebuild of all four ISOs from one main commit, about 75 minutes to a verified release plus 20 for
 the download pages. The UX thread sends the commit once the Personal, image and core P0 and P1 fixes are in. Target
@@ -545,7 +546,46 @@ From `docs/perf/filesystem.md` (baeabc5): 50,246 files, 2.3 GB, ext4, Ubuntu 24.
 Not measured yet: `npm install` inside a task. Fast folders (no copy, 53 to 67 ms) is on a branch and not working
 yet, so it isn't quoted here.
 
-PARITY
+### Against stock Ubuntu 24.04 (measured)
+
+Full write-up: `parity.md`. Stock Ubuntu 24.04.5.1 Desktop (Default selection) and GurtOS Personal from the
+released ISO, both in QEMU with KVM, 4 GB, 4 vCPUs, 1080p, two clean boots each.
+
+| | Stock Ubuntu | GurtOS Personal | |
+|---|---|---|---|
+| Boot (kernel + userspace) | 20.1 s, 18.2 s | 5.1 s, 5.7 s | 3.5 times faster |
+| Login to a settled desktop | 3.4 s, 3.1 s | 1.7 s, 1.8 s | 2 times faster |
+| Idle memory in use | 1,047 MB | 902 MB (GurtOS's own service 273 MB of it) | lower |
+| Disk after install | 10.2 GB | 5.3 GB | half |
+| Warm app launch (Files, Settings, Terminal, Editor) | 0.39 to 0.45 s | 0.55 to 0.72 s | **slower (E-14)** |
+
+**Worse than stock Ubuntu, so P0** (all image, unless noted):
+- **E-1** no printing: no CUPS; Settings says "No Print Service".
+- **E-2** no app store, and what `apt` installs is lost at the next system update. Fix: Flatpak with GNOME Software
+  and Flathub as a per-user install (on `/data`).
+- **E-3** (image, personal) Software Updater offers "Upgrade to Ubuntu 26.04" and shows no GurtOS update. Fix: remove
+  update-manager and update-notifier; show `box-update` state in GurtOS Settings.
+- **E-4** Online Accounts lists Google and Microsoft but can't sign in (`gnome-online-accounts` missing).
+- **E-5** Settings, Sharing is missing.
+- **E-6** the inbound firewall drops everything a desktop uses (ssh, SMB, remote desktop, mDNS). **Ben's call**:
+  open what the person turns on in Sharing and keep the drop for agent users only, or keep it locked and say so.
+- **E-7** no swap, zram or oomd. Fix: `systemd-zram-generator` and `systemd-oomd`.
+- **E-8** no screen reader, braille or input methods (Orca, brltty, ibus).
+- **E-9** laptop packages: power profiles, firmware updates, fingerprint, Thunderbolt, iPhone, NTFS, SMB and network
+  drives in Files, and the small utilities (Disks, Logs, Clocks, Characters, Fonts, Passwords and Keys).
+- **E-10** H.264 and AAC won't play in GNOME Web; apt has no `restricted` or `multiverse`.
+- **E-11** kernel 6.8, where stock installs 7.0 (HWE): newer laptops' Wi-Fi, GPU and audio need it.
+
+**P1:** E-12 (personal, image) no Wi-Fi page in first-run setup; E-14 (personal) warm launches about 0.2 s slower,
+look at the session's window-open hook, dock blur and window animation; E-15 (image) no language, keyboard or disk
+choice before install, so say "erases the disk" on the download page.
+**P2:** E-13 (personal) About shows the Ubuntu logo and "Ubuntu Desktop"; search lists both Terminal and Console.
+
+**Release risk:** E-1, E-4, E-5 and E-7 to E-11 add about 540 MB of packages. The Personal ISOs are 1.78 GB against
+GitHub's 2 GiB limit per file, so image and release must check the size, and decide what goes to the mirror only.
+
+**Ben's calls:** E-6 (firewall), and "Time Machine": GurtOS Setup and both apps use Apple's product name. Rename it
+(for example "History") or keep it.
 
 ## Not covered
 
