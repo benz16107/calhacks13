@@ -86,7 +86,8 @@ In Vultr: Orchestration, ISOs, Add ISO, paste the URL. Deploy a Cloud Compute in
 image (at least 25 GB of disk). Open the instance's console. A new instance first shows iPXE ("Custom OS
 selected. Please mount an ISO") for about a minute while Vultr attaches the ISO, then restarts into the disc by
 itself. The installer's screen stays dark for a minute or two, then copies the system with a progress bar; from
-the disc's menu to the box's screen takes about 3 minutes. Detach the ISO afterwards: GurtOS starts from its disk
+the disc's menu to the box's screen takes about 3 minutes on a 4-vCPU instance and 5 to 8 on a 1-vCPU one: wait for
+the box's screen before detaching the ISO or restarting. Detach the ISO afterwards: GurtOS starts from its disk
 either way, but with the ISO attached every start waits 30 seconds at the disc's menu. To reinstall, restart with
 the ISO attached and pick Install within those 30 seconds (Vultr's reinstall refuses ISO instances).
 
@@ -169,11 +170,10 @@ in `core/`). The image only gets a person to it:
 - **Server:** the kiosk opens the portal's box screen (`/screen`), which shows the wizard until setup is done.
   Its "pair your phone" step is the pairing QR code. `BOX_URL` is the box's own address from the first start
   (`box-env`), so the QR opens on a phone on the same network.
-- **Personal:** GNOME's own setup makes the account first. At that person's first login, once GNOME's
-  first-login pages are done, the "GurtOS Setup" autostart (`rootfs-personal/etc/xdg/autostart/gurtos-setup.desktop`)
-  asks the box whether setup is done, and if not opens the Box window (`personal/box-ui.py app`), which shows the
-  wizard to the owner. It only runs for the person in the `sudo` group, and does nothing once setup is done. A
-  build without `personal/` opens the portal in GNOME Web instead.
+- **Personal:** GNOME's own setup makes the account first. At that person's first login the Personal layer's own
+  "GurtOS Setup" (`personal/setupwin.py`, started from `/etc/xdg/autostart/box-setup.desktop`) opens for the owner
+  until the box says setup is done. It is native, with seven steps. The portal's longer wizard shows only on a
+  Server box's screen, and in the Box window until setup is done.
 
 Updates do not touch it: setup's state lives with the box on the data partition.
 
@@ -203,6 +203,17 @@ kiosk:
   (`rootfs-personal/usr/share/glib-2.0/schemas/`; the layer's own icon theme sits on top of it). GNOME's distributor
   logo is GurtOS's (`LOGO=gurtos-logo` in `/etc/os-release`). Ubuntu's crash
   reporting is off (`/etc/default/apport`): its Python hook fails on any system whose `ID` is not `ubuntu`.
+- **The GurtOS theme** comes from `personal/theme`: Papirus-based GurtOS icons, the Bibata cursor, GNOME Console,
+  and a Plymouth boot splash (`splash` is on Personal's kernel line with `plymouth.ignore-serial-consoles`, and
+  `/etc/plymouth/plymouthd.conf` names the theme; Server boots without one). The login screen offers only the GurtOS
+  session: Ubuntu's own sessions are removed. The image installs
+  their packages up front, so the layer's install needs no network. It does not ship a software store (GNOME
+  Software or Snap Store): software installed with `apt` is gone after the next system update (see the trade-off
+  below), so a store would install things that later disappear.
+- **Talk to your computer** needs a local speech model (faster-whisper `base.en`, about 600 MB with its Python
+  environment). It is not in the image, which would then be larger than 2 GiB: `box-voice.service` runs
+  `personal/voice-setup.sh` once the network is up, retrying every minute, into `/opt/box/voice-venv` and
+  `/opt/box/voice-models`, which live on the data partition, so a system update keeps them.
 - **First boot runs GNOME's own setup** (`gnome-initial-setup`, started by GDM because the machine has no
   account yet). The account it makes is an administrator, so that person is in the `sudo` group. Root's password
   stays locked. The box's task users (`box-*`) are never in `sudo`.
@@ -262,9 +273,9 @@ With `image/test` in QEMU on an x86_64 Linux machine:
   hostname, and boot menus that say GurtOS.
 - Personal: installs on a blank 40 GB disk and shows GNOME's first-boot welcome. An account made the way GNOME's
   setup makes one (AccountsService, administrator) lands in `sudo`; no task user does. The box learns its owner,
-  GurtOS Setup would open the wizard, and after an update the account, its sudo and its files are still there.
+  and after an update the account, its sudo and its files are still there.
 
-On a Vultr cloud VM (vc2-4c-8gb) the Server ISO installed on a blank 160 GB disk with BIOS in about 3 minutes
+On a Vultr cloud VM (vc2-4c-8gb; on a 1-vCPU instance it took about 5 minutes) the Server ISO installed on a blank 160 GB disk with BIOS in about 3 minutes
 from the disc booting to the box's screen, came back about 25 s after a hard power-off, and the disc started the
 box from disk when it was already installed. GurtOS Personal was also installed on a Vultr VM and walked through
 its first run on Wayland.
@@ -287,6 +298,7 @@ Stock Ubuntu Server 24.04 has a login prompt, a user with sudo, snapd, cloud-ini
   `/etc/box-os/release`.
 - **Starts straight into the box.** `box.service` (from `core/install.sh`) and `spacetimedb.service` (from
   `core/setup.sh`) are installed in the image. Node 24 and SpacetimeDB come from `core/setup.sh`.
+- **Includes `age`**, which an app's backup uses to encrypt to the owner's key.
 - **Downloads Droid on first start.** Factory's Droid CLI, the agent worker, may not be shipped inside the
   image, so the build runs `core/setup.sh` with `BOX_NO_DROID=1` and stops if Droid is in the image anyway. Once
   the network is up, `box-droid.service` runs `core/setup.sh droid` (pinned version, checked checksum), retrying
@@ -324,4 +336,4 @@ Every file the image adds is in `rootfs/` (both editions; the kiosk and networki
 | `rootfs/usr/local/lib/box-os/` | The disk's GRUB menu and the kiosk browser |
 | `rootfs/etc/initramfs-tools/` | The live boot method for the install disc |
 | `rootfs/etc/systemd/` | The services, and drop-ins that put core's services on the data partition |
-| `rootfs-personal/` | Personal only: its fstab, NetworkManager, GurtOS Setup, the Yaru override, the update carry-over |
+| `rootfs-personal/` | Personal only: its fstab, NetworkManager, the Yaru override, the update carry-over |

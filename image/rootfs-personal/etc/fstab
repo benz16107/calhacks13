@@ -12,3 +12,5 @@ LABEL=box-data       /data                                ext4  defaults        
 /data/spacetimedb    /var/lib/spacetimedb                 none  bind,x-systemd.requires-mounts-for=/data         0 0
 /data/spacetime-cli  /root/.config/spacetime              none  bind,x-systemd.requires-mounts-for=/data         0 0
 /data/journal        /var/log/journal                     none  bind,x-systemd.requires-mounts-for=/data         0 0
+/data/voice-venv     /opt/box/voice-venv                  none  bind,x-systemd.requires-mounts-for=/data         0 0
+/data/voice-models   /opt/box/voice-models                none  bind,x-systemd.requires-mounts-for=/data         0 0

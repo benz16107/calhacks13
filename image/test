@@ -21,8 +21,10 @@ for a in "$@"; do
   esac
 done
 name=$edition$arch$debug
-slow=1
+slow=1 accel=(-enable-kvm -cpu host)
 [[ $arch == arm64 ]] && slow=5
+# Without KVM (a cloud VM, for instance) x86_64 is emulated too, and everything takes about five times longer.
+[[ $arch == x86_64 && ! -w /dev/kvm ]] && { slow=5 accel=(-accel tcg,thread=multi -cpu max); }
 dir=${TEST_DIR:-$HOME/.cache/box-image-test}
 out=/var/lib/box-image/out
 mkdir -p "$dir"
@@ -61,7 +63,7 @@ else
     cp "$share/edk2-i386-vars.fd" "$run/vars.fd"
     fw=(-drive "if=pflash,format=raw,readonly=on,file=$share/edk2-x86_64-code.fd" -drive "if=pflash,format=raw,file=$run/vars.fd")
   fi
-  qemu-system-x86_64 -machine q35 -enable-kvm -cpu host "${common[@]}" "${fw[@]}" -device ide-cd,drive=cd,bootindex=0 \
+  qemu-system-x86_64 -machine q35 "${accel[@]}" "${common[@]}" "${fw[@]}" -device ide-cd,drive=cd,bootindex=0 \
     -device virtio-vga
 fi
 trap 'kill $(cat "$run/qemu.pid") 2>/dev/null || true' EXIT
@@ -89,6 +91,9 @@ sleep $((15 * slow)) && shot screen-1
 echo "test: removing the disc and pulling the plug"
 mon "eject -f cd"
 mon system_reset
+if [[ $edition == personal- ]]; then # the boot splash
+  for i in 1 2 3 4; do sleep $((4 * slow)); shot boot-$i; done
+fi
 wait_for 'box: up and healthy' 2 600
 [[ $(box_id 1) == "$(box_id 2)" && -n $(box_id 1) ]] || { echo "test: FAILED, the box's identity changed"; exit 1; }
 echo "test: back up after the power cut, same box $(box_id 2)"
@@ -118,12 +123,6 @@ if [[ $edition == personal- ]]; then
   owner() { for _ in $(seq 30); do vm 'grep -q BOX_OWNER=ana /etc/systemd/system/box.service.d/personal.conf' 2>/dev/null && return; sleep 2; done
     echo "test: FAILED, the box did not learn its owner ($1)"; exit 1; }
   owner "after the first account" && echo "test: the box knows its owner: ana"
-  # GurtOS Setup at ana's first login: with GNOME's pages done and setup not done, it opens the wizard.
-  vm 'sed -e "s#^if \[ -x /opt/box/personal/box-ui.py \]; then exec .*#echo would-open-the-wizard; exit 0#" \
-    /usr/local/lib/box-os/gurtos-setup > /tmp/gs && install -d -o ana -g ana /home/ana/.config &&
-    sudo -u ana touch /home/ana/.config/gnome-initial-setup-done && sudo -u ana HOME=/home/ana bash /tmp/gs' |
-    grep -q would-open-the-wizard || { echo "test: FAILED, GurtOS Setup would not open the wizard"; exit 1; }
-  echo "test: GurtOS Setup opens the wizard at the owner's first login"
   check() { vm "$2" >/dev/null 2>&1 || { echo "test: FAILED, $1"; exit 1; }; }
   check "a Python error prints apport's second traceback" '! python3 -c "raise ValueError" 2>&1 | grep -q "package manager"'
   check "no BOX_URL" 'grep -q "^BOX_URL=http" /run/box-os/box.env'
@@ -132,9 +131,15 @@ if [[ $edition == personal- ]]; then
   echo "test: no apport hook, BOX_URL set, pretty hostname set, no Adwaita icons outside Ubuntu's session"
 fi
 
-droid() { for _ in $(seq 60); do vm "/usr/local/bin/droid --version >/dev/null 2>&1 && [ -x /data/droid/droid ]" && return; sleep 5; done
+droid() { for _ in $(seq $((60 * slow))); do vm "/usr/local/bin/droid --version >/dev/null 2>&1 && [ -x /data/droid/droid ]" && return; sleep 5; done
   echo "test: FAILED, no Droid after 5 minutes ($1)"; exit 1; }
 droid "first boot" && echo "test: the image has no Droid, and the box downloaded it"
+if [[ $edition == personal- ]]; then
+  for _ in $(seq $((120 * slow))); do vm '[ -x /opt/box/voice-venv/bin/python ] && [ -e /opt/box/voice-models/.ready ] && mountpoint -q /opt/box/voice-models' 2>/dev/null && break; sleep 5; done
+  vm 'mountpoint -q /opt/box/voice-models && [ -x /opt/box/voice-venv/bin/python ] && du -sh /data/voice-venv /data/voice-models' ||
+    { echo "test: FAILED, no speech model after 10 minutes"; exit 1; }
+  echo "test: the speech model was downloaded onto the data partition"
+fi
 echo "test: system update to slot B"
 vm 'mkdir -p /data/update && cat > /data/update/root.sqfs' < "$dir/gurtos-$name.sqfs"
 vm 'cat > /data/update/root.sqfs.sha256' < "$dir/gurtos-$name.sqfs.sha256"

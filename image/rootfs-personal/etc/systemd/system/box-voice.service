@@ -1,0 +1,21 @@
+# "Talk to your computer" needs a local speech model (faster-whisper base.en, about 600 MB with its Python
+# environment). It is not in the image, which would grow past 2 GiB, so each machine fetches it once it has a
+# network, retrying until it works, onto the data partition (fstab), where system updates keep it.
+[Unit]
+Description=Download the speech model for Talk to your computer
+ConditionKernelCommandLine=!box.install
+ConditionPathExists=!/opt/box/voice-models/.ready
+Wants=network-online.target
+After=network-online.target
+RequiresMountsFor=/opt/box/voice-venv /opt/box/voice-models
+StartLimitIntervalSec=0
+
+[Service]
+Type=oneshot
+ExecStart=/bin/sh -c "/opt/box/personal/voice-setup.sh && touch /opt/box/voice-models/.ready"
+Restart=on-failure
+RestartSec=60
+Nice=10
+
+[Install]
+WantedBy=multi-user.target

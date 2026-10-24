@@ -1,9 +1,0 @@
-[Desktop Entry]
-Type=Application
-Name=GurtOS Setup
-Comment=Finish setting up GurtOS on the owner's first login, after GNOME's own setup
-Exec=/usr/local/lib/box-os/gurtos-setup
-Icon=dev.box.Box
-NoDisplay=true
-OnlyShowIn=GNOME;Unity;
-X-GNOME-Autostart-Delay=5

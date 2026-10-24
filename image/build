@@ -80,7 +80,7 @@ flock -n 8 || { say "another build of $name is running; waiting for it"; flock 8
 base_packages="systemd systemd-sysv systemd-resolved systemd-timesyncd libpam-systemd dbus udev kmod passwd
   linux-image-generic initramfs-tools zstd $grub grub2-common
   e2fsprogs dosfstools gdisk squashfs-tools util-linux procps iproute2
-  nftables ripgrep rsync curl ca-certificates xz-utils openssl"
+  nftables ripgrep rsync curl ca-certificates xz-utils openssl age"
 if [[ $edition == server ]]; then
   packages="$base_packages qrencode
   cage seatd python3-gi gir1.2-webkit2-4.1 libegl-mesa0 libgl1-mesa-dri fonts-dejavu-core"
@@ -94,7 +94,10 @@ else
   yaru-theme-gnome-shell yaru-theme-gtk yaru-theme-icon yaru-theme-sound fonts-ubuntu fonts-noto-color-emoji
   gsettings-ubuntu-schemas ubuntu-wallpapers
   python3-gi gir1.2-gtk-4.0 gir1.2-adw-1 gir1.2-webkit-6.0 gir1.2-gtk-3.0 gir1.2-ayatanaappindicator3-0.1
-  gnome-shell-extension-appindicator python3-nautilus"
+  gnome-shell-extension-appindicator python3-nautilus
+  papirus-icon-theme bibata-cursor-theme gnome-console plymouth plymouth-label plymouth-theme-spinner qrencode
+  python3-venv espeak-ng alsa-utils libnotify-bin
+  dconf-cli librsvg2-common"
 fi
 [[ -f $src/image/.ssh-key ]] && packages+=" openssh-server" # debug builds only
 
@@ -171,7 +174,11 @@ in_root env BOX_NO_DROID=1 /tmp/src/core/install.sh
 rm "$root/usr/local/sbin/systemctl"
 if [[ $edition == personal ]]; then
   if [[ -x $root/tmp/src/personal/install.sh ]]; then
-    in_root /tmp/src/personal/install.sh # the Box desktop layer; it promises to work in a chroot
+    in_root env BOX_NO_VOICE=1 /tmp/src/personal/install.sh # the Box desktop layer; it promises to work in a chroot
+    # The speech model (about 600 MB) would push the ISO past 2 GiB: box-voice.service fetches it at first boot,
+    # onto the data partition. These folders are its mount points.
+    rm -rf "$root/opt/box/voice-venv" "$root/opt/box/voice-models"
+    mkdir -p "$root/opt/box/voice-venv" "$root/opt/box/voice-models"
   else
     say "no personal/install.sh in this checkout, so no Box desktop layer"
   fi
@@ -218,7 +225,7 @@ printf 'GurtOS %s %s \\n \\l\n\n' "$Edition" "$version" > "$root/etc/issue"
 printf 'GurtOS %s %s\n' "$Edition" "$version" > "$root/etc/issue.net"
 [[ $edition == personal ]] && printf 'EDITION=personal\nSLOT_MB=12288\n' >> "$root/etc/box-os/release"
 
-[[ $edition == server ]] && in_root bash -euo pipefail -c '
+if [[ $edition == server ]]; then in_root bash -euo pipefail -c '
   useradd --system --home-dir /var/lib/kiosk --create-home --shell /usr/sbin/nologin kiosk
   usermod -p "!" root
   # State lives on the data partition. These are its mount points; what the image put there is hidden at boot.
@@ -232,13 +239,21 @@ printf 'GurtOS %s %s\n' "$Edition" "$version" > "$root/etc/issue.net"
   ln -sf "$(ls vmlinuz-* | sort -V | tail -1)" vmlinuz
   ln -sf "$(ls initrd.img-* | sort -V | tail -1)" initrd.img
 '
-[[ $edition == personal ]] && in_root bash -euo pipefail -c '
+fi
+if [[ $edition == personal ]]; then in_root bash -euo pipefail -c '
   usermod -p "!" root
   # State lives on the data partition. These are its mount points; what the image put there is hidden at boot.
   rm -rf /etc/box /var/lib/box /var/lib/spacetimedb /root/.config/spacetime
   mkdir -p /data /boot/efi /etc/box /var/lib/box /var/lib/spacetimedb /root/.config/spacetime /var/log/journal
   locale-gen en_US.UTF-8 >/dev/null
   update-locale LANG=en_US.UTF-8
+  # Only the GurtOS session at the login screen: the Ubuntu one has no GurtOS top bar.
+  rm -f /usr/share/wayland-sessions/ubuntu*.desktop /usr/share/xsessions/ubuntu*.desktop
+  # The boot splash (personal/theme sets the GurtOS Plymouth theme; update-initramfs below puts it in place).
+  # Plymouth stays in text mode while a serial console is listed, unless told to ignore it.
+  sed -i "s/^set opts=\"rw quiet /set opts=\"rw quiet splash plymouth.ignore-serial-consoles /" /usr/local/lib/box-os/grub.cfg
+  grep -q " splash " /usr/local/lib/box-os/grub.cfg
+  systemctl enable box-voice
   systemctl enable nftables box-firstboot box-droid box-confirm box-install box-owner.service box-owner.path >/dev/null 2>&1
   # The distributor logo GNOME shows (its first-boot setup, Settings > About) is GurtOS, not Ubuntu.
   logo=/usr/share/icons/hicolor/symbolic/apps/dev.box.Box-symbolic.svg
@@ -256,6 +271,7 @@ printf 'GurtOS %s %s\n' "$Edition" "$version" > "$root/etc/issue.net"
   ln -sf "$(ls vmlinuz-* | sort -V | tail -1)" vmlinuz
   ln -sf "$(ls initrd.img-* | sort -V | tail -1)" initrd.img
 '
+fi
 if [[ -f $src/image/.ssh-key ]]; then
   say "debug build: sshd with a root key"
   install -d -m 700 "$root/root/.ssh"
