@@ -9,6 +9,7 @@ import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import type { Approval, DemoKit, LogEvent, Task } from './contract.ts';
+import { notifyPeople } from './business.ts';
 
 // The rules and people from the approved designs (docs/figma/business/).
 export const POLICY = `# Fogline Supply: who approves what. A ceiling applies first; then the first rule that matches decides.
@@ -113,6 +114,8 @@ async function steps(d: DemoKit, send: (h: Record<string, string>, m: string, p:
     "Waiting for me, on Rosa's phone: the $40,000 approval, the fraud referral and the $2,400 write-off, and not the $75,000 one or her own");
   d.check(mSam.waiting.length === 0 && mSam.requests.length === 4 && mSam.requests.every((a: Approval) => a.route?.why), "Sam is sent no approvals; he sees his own four requests and who each waits for");
   d.check(mPriya.waiting.length === 0, 'Priya (IT admin) is sent none of them');
+  const notify = notifyPeople({ to: aHuge.route!.to, amountCents: aHuge.route!.amountCents, askedBy: aHuge.askedBy, rule: aHuge.route!.rule }, ok(await priya('GET', '/api/people'), 'people'));
+  d.check(notify.stuck && notify.ids.includes('rosa') && !notify.ids.includes('sam'), `the $75,000 one nobody can approve still notifies someone: ${notify.ids.join(', ')} (who may deny it), never Sam who asked`);
   d.check(mRosa.stuck?.some((a: Approval) => a.id === aHuge.id) && !mSam.stuck?.length, "the $75,000 one nobody can approve is on Rosa's list under \"Nobody can approve these\", for her to deny");
   const warned = ok(await priya('PUT', '/api/business', { policy: `${POLICY}\nRefunds go to Treasury.` }), 'warn');
   ok(await priya('PUT', '/api/business', { policy: POLICY }), 'restore');

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import type { LogEvent, Task } from './contract.ts';
-import { amountOf, auditRows, checkPerson, checkShadow, goLiveRules, parsePolicy, pilot, refusal, route, toCsv, type Person } from './business.ts';
+import { amountOf, auditRows, checkPerson, checkShadow, goLiveRules, notifyPeople, parsePolicy, pilot, refusal, route, toCsv, type Person } from './business.ts';
 
 const POLICY = `# Fogline Supply
 Fraud referrals go to the Controller.
@@ -135,4 +135,13 @@ test('shadow mode: go-live lines, the setting, and the agreement rate counted fr
   const more = [...events, suggest('d'), answer('d', true, 'rosa'), suggest('e'), answer('e', true, 'rosa')];
   assert.deepEqual(pilot(more, ['Credit analyst'], goLive, [])[0].ready, true, '3 of 4 agreed (75%) after 4: ready');
   assert.equal(pilot(more, [], goLive, [])[0].ready, false, 'a live seat is not "ready"');
+});
+
+test('a request nobody can approve still notifies whoever may deny it, and the owner', () => {
+  const owner = checkPerson({ id: 'martin', name: 'Martin Hale', role: 'owner', limitCents: 1_000_000 }, []);
+  const ceiling = { to: 'nobody', amountCents: 7_500_000, askedBy: 'sam', rule: "Requests over $50,000 can't be approved in GurtOS." };
+  const n = notifyPeople(ceiling, [...people, owner]);
+  assert.equal(n.stuck, true);
+  assert.ok(n.ids.includes('rosa') && n.ids.includes('martin') && !n.ids.includes('sam'));
+  assert.deepEqual(notifyPeople({ to: 'the Controller', amountCents: 4_000_000, askedBy: 'sam' }, people), { ids: ['rosa'], stuck: false });
 });

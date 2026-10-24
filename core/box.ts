@@ -9,7 +9,7 @@ import http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
 import type { App, Approval, ApprovalRoute, Box, FullSpec, Ctx, LogEvent, LogReader, ModelJob, NewEvent, Route, Task, TaskSpec, TaskState, Tool, Track, Who } from './contract.ts';
-import { DEFAULT_POLICY, amountOf, approversFor, auditRows, checkPerson, checkSeats, checkShadow, goLiveRules, holds, parsePolicy, pilot, refusal, route, toCsv, whoOf, type Business, type Person } from './business.ts';
+import { DEFAULT_POLICY, amountOf, approversFor, notifyPeople, auditRows, checkPerson, checkSeats, checkShadow, goLiveRules, holds, parsePolicy, pilot, refusal, route, toCsv, whoOf, type Business, type Person } from './business.ts';
 import { DB, Live } from './live.ts';
 import { Log, apply, canMove, doneLayers, fold, type State } from './log.ts';
 import { ANTHROPIC_PLACEHOLDER, PLACEHOLDER_KEY, firewall, logBlocked, stopLoggingBlocked, uidOf, relayCert, reservePort, startProxy } from './net.ts';
@@ -1593,11 +1593,18 @@ class Core {
 
   /** Tell the phones that should answer this approval. Quiet hours hold it back; the request still waits in the inbox. */
   async pushApproval(a: Approval) {
-    const to = push.recipients(a, this.devices);
+    // Business: the request's approvers, or, if nobody can approve it, whoever may deny it and the owner (plus owner
+    // phones paired before Business), so a stuck request never waits unseen.
+    const t0 = this.state.tasks.get(a.task);
+    const n = this.business.on && a.route && t0 ? notifyPeople({ to: a.route.to, amountCents: a.route.amountCents, askedBy: a.askedBy ?? t0.requestedBy, rule: a.route.rule }, this.business.people) : undefined;
+    const routed = n ? { ...a, route: { ...a.route!, people: n.ids.map((id) => ({ id, name: '' })) } } : a;
+    const to = [...push.recipients(routed, this.devices), ...(n?.stuck ? this.devices.filter((d) => d.owner && !d.person && d.push && !d.revoked) : [])];
     if (!to.length || !this.remote.saved) return;
     if (push.quiet(this.settings.quietHours, system.timezone())) return void console.log(`push for ${a.id} held for quiet hours`);
     const t = this.state.tasks.get(a.task);
-    const text = push.approvalText(a, t?.title ?? '');
+    const text = n?.stuck
+      ? { title: 'Nobody can approve this', body: `${a.question.slice(0, 120)} Nobody's limit or rule allows it: deny it, or an admin can raise a limit.`.slice(0, 200) }
+      : push.approvalText(a, t?.title ?? '');
     // `source` lets the app hold back one-tap Approve where the approval needs a ceremony in the app (Shopper's Face ID).
     await Promise.allSettled(to.map((d) => this.pushTo(d, { type: 'approval', id: a.id, task: a.task, source: t?.source ?? '', costCents: a.costCents, ...text }, a.id)));
   }

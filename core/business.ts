@@ -307,6 +307,18 @@ export function approversFor(req: { to: string; amountCents: number; askedBy?: s
   return named.length ? named : can.filter((p) => p.role === 'owner');
 }
 
+/**
+ * Who hears about a request (a push): its approvers; or, when nobody can approve it (above every limit, past a
+ * ceiling, or only the asker approves for its name), everyone who may still deny it and every owner, so it never
+ * waits unseen. `stuck` says which, for the notification's words.
+ */
+export function notifyPeople(req: { to: string; amountCents: number; askedBy?: string; rule?: string }, people: Person[]): { ids: string[]; stuck: boolean } {
+  const can = approversFor(req, people);
+  if (can.length) return { ids: can.map((p) => p.id), stuck: false };
+  const deny = people.filter((p) => p.id !== req.askedBy && (p.role === 'owner' || !refusal(p, req, false)));
+  return { ids: deny.map((p) => p.id), stuck: true };
+}
+
 /** Where the policy sends a request, who can approve it now, and why. */
 export function route(rules: Rule[], ask: Ask, people: Person[], askedBy?: string): ApprovalRoute {
   // A ceiling applies wherever it is in the list; otherwise the first rule that matches decides.
