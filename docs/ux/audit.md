@@ -18,12 +18,12 @@ How it was walked:
 
 ## Status
 
-**Fixed 6, open 61** (67 findings: 15 web, 20 Server, 32 Personal; parity findings join when measured). Each fixed
+**Fixed 4, open 64** (68 findings: 15 web, 21 Server, 32 Personal; parity findings join when measured). Each fixed
 finding gets a **Fixed** line with the commit and an after-screenshot in `after/`.
 
 | Owner | Open |
 |---|---|
-| portal | W4 to W12, W14, W15, S1, S5 to S7, S11, S12, S14, S17 to S23, S25, S26 |
+| portal | W4 to W12, W14, W15, S1, S5 to S7, S11, S14, S17 to S23, S25, S26 |
 | personal | P-2 to P-13, P-15, P-18 to P-27, P-29 to P-32 |
 | image | S2, S15, S16, S24, P-4, P-17, P-28, then P-1 with release |
 
@@ -268,6 +268,12 @@ for the paired phone's OK to unlock. Owner: portal.
 The literal `<name>.box.gurtos.com`, the heading repeated as the group title, and a greyed Turn on with no reason.
 Fix: fill the name from the box name (W9), show the real address as you type, drop the duplicate title, add
 "Type a name first" under a disabled button. Owner: portal.
+
+### S11. P1. The Factory and Live windows are unstyled and full of jargon
+![](shots/server/36-dock-920.png)
+Native checkboxes and selects, another heading style, and text like "Droid works here as a team of custom droids",
+"no FACTORY_API_KEY in the vault", "the spacetime.claim tool" (36, 37). Fix: the kit's controls, and plain copy
+("No tasks shared between agents yet."). Owners: portal with the factory and spacetime threads.
 
 ### S1. P1. A restart with no tasks says nothing
 ![](shots/server/50-plugpull-restored-desktop.png)
