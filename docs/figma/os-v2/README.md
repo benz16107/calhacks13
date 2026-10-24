@@ -108,6 +108,27 @@ send their device token with every answer (`Authorization: Bearer <token>`).
 | `phone/6-pairing.png` | `91:6834` | What the phone shows after scanning: the code to compare, a name for the phone, the owner switch, Pair. `POST /api/pair {code, name}` |
 | `phone/7-setup-step-5.png` | `91:6883` | The setup wizard on the phone: step progress, "the box's screen follows along", one step at a time, Back and Next pinned |
 
+## Personal, on GNOME (`personal/`)
+
+GNOME Shell draws the top bar, the indicator menu and notifications, so they keep Ubuntu Sans and Shell's own look,
+with GurtOS content and app icons. GurtOS's own windows (review, Ask an Agent, setup) use the GurtOS system, which is
+built on libadwaita's patterns, so they sit naturally on the GNOME desktop. Folder grants are `agentFolders` and a
+task's `folder` (`POST /api/tasks {folder}`).
+
+| PNG | Node | What it shows |
+|---|---|---|
+| `personal/indicator-menu.png` | `93:6840` | The AppIndicator menu: what needs your OK (with amounts), what runs, then Ask an Agent, Open GurtOS, Pause all agents, GurtOS settings |
+| `personal/approval-notification.png` | `93:7037` | The approval as a GNOME notification over the app you are using, with Deny and Approve |
+| `personal/review-keep-or-undo.png` | `93:7177` | A finished task for one folder: what changed (moves, renames, a new file with its diff), that nothing outside the folder changed, and Keep or Undo |
+| `personal/ask-an-agent-dialog.png` | `93:7425` | Ask an Agent from a folder in Files: the task, may change (the folder clicked), may also read, internet, budget, worker. Start stays off until the task is written |
+| `personal/setup-1-welcome.png` | `94:7497` | GurtOS Setup after GNOME's own setup, 7 steps: what keeps agents safe |
+| `personal/setup-2-ai-models.png` | `94:7709` | The worker and the write-only `FACTORY_API_KEY` |
+| `personal/setup-3-folders.png` | `94:7906` | The folders agents may use, each May change, May read or Not allowed (`agentFolders`) |
+| `personal/setup-4-permissions.png` | `94:8138` | Internet, the single-spend limit, the default budget, quiet hours |
+| `personal/setup-5-apps.png` | `94:8359` | Apps with what they reach and the keys they need |
+| `personal/setup-6-pair-a-phone.png` | `94:8720` | Optional pairing with a QR and the code |
+| `personal/setup-7-done.png` | `94:8897` | A four-card tour: Ask an Agent, the top bar, Keep or Undo, Time Machine |
+
 ## System sheets
 
 `system-foundations.png` (colors in both modes, type, spacing, radius, elevation, motion), `system-icons.png` (the
