@@ -326,3 +326,11 @@ screens (people, rules, routed approvals, the audit trail) in the browser for no
 - Plain zeros (P-29, Ben's call): Atkinson Hyperlegible Next draws 0 with a slash and has no plain alternate, so
   `fonts/plain_zero.py` redraws it: the two half-counters become one oval counter at every weight, and the tabular
   zero follows. The font is OFL with no reserved name, so it keeps its name; Mono, used for code, keeps the slash.
+
+## Screenshots for the sites (Oct 24, after the UX fixes)
+
+Taken on the Personal test VM from main, at 1920x1080, with invented demo data (a local demo inbox, never real mail):
+`screenshots/os/everyday.png` and `everyday-dark.png` (mail, a browser and Files with the GurtOS app, the top-bar pill
+and a request banner), and in `screenshots/site/`: `approval.png` (a request banner and Needs you), `indicator.png` (the
+top-bar popover), `review.png` (a finished task with Keep changes and Undo task) and `files-menu.png` (Files' menu on a
+folder with changes waiting). They replace the site copies made from the older `setup/` and `install/` shots.
