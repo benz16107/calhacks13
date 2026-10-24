@@ -58,6 +58,7 @@ network all work on main as of 717bc3f.
 | Showcase S-2, S-3, S-5, S-6, S-7 | Fixed, rechecked 01:00 on all 22 pages; only /tracks/elastic/ still says "Box log" (now "GurtOS log") | showcase ab8e509 |
 | Showcase S-1 GitHub links 404 | **Ben's call**: the repo is still private at 01:00 PT | Ben |
 | Stage log Devpost paragraphs | Fixed, checked 01:20: paragraphs and table agree (32 sessions, 364 min; ideation 32, prototyping 26, handoff 19, code generation 162). The showcase still says 137 / 31 / 339; sent to the submission thread | figma 809b1bf |
+| P2-19 "spent today" shows an old total at load | Fixed, verified 01:25: three fresh loads sampled every 200 ms showed "…" then only the right total | portal 1832a59 |
 | Jira through Caddy after the token gate | Fixed. The Jira thread checked Approve and Roll back from the real panel on BOX-14 through Caddy. QA confirmed from outside at 00:45: /t/jira/task 401 without the secret, /t/mana/status 200, everything else 404 | core 6879fb9, jira c82fcdb |
 | D-1 to D-4, D-6, D-7 docs | Fixed, live. D-6 spot-checked 00:52: the Elastic, Jira and Shopper guides say GurtOS log (gurtos-log), GurtOS agent task and GurtOS Test Store, with no "Box" names left | docs 199dce5, 9cc7d92 |
 | P1-7 live banner names the wrong hosts | Fixed, verified 00:54 on a phone off the box: the first banner text is "Find me a road bike (live banner 2) tried to reach attacker.example. It may only reach shop.localhost:8123." (shot 79) | portal d64cb80 |
