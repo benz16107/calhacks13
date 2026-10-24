@@ -8,6 +8,7 @@ cd "$(dirname "$0")/.."
 out=$(mktemp -d)/gurtos-app
 cp -r portal/dist "$out"
 cp relay/app/vercel.json "$out/"
+cp -r relay/app/.well-known "$out/" # the Android app (Digital Asset Links) and the iPhone app (universal links for /pair)
 cd "$out"
 vercel link --yes --project gurtos-app >/dev/null
 vercel deploy --prod --yes

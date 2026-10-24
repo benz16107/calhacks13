@@ -1,0 +1,10 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.gurtos.app",
+      "sha256_cert_fingerprints": ["EB:29:4F:A3:AC:FA:3B:DE:C9:FA:30:88:3D:43:C8:08:57:3E:5E:01:25:76:68:86:EC:7A:9F:35:C0:9A:55:EF"]
+    }
+  }
+]
