@@ -12,33 +12,55 @@ This folder builds GurtOS, in the two editions from Editions in `CLAUDE.md`:
 a machine from, and what comes up is the box. The system updates as a whole and rolls itself back if a new
 version is not healthy. Both editions are Ubuntu 24.04 underneath (`ID_LIKE=ubuntu` in `/etc/os-release`).
 
-## Build it
+## Build it yourself
+
+You need an Ubuntu 24.04 machine or VM with root (sudo), about 10 GB of free disk for each edition and
+architecture you build, and a network connection: the build downloads Ubuntu's packages, Node.js and
+SpacetimeDB. (Droid is not in the image: each machine downloads it on first start.) The build runs as root, installs build tools, mounts loop devices and runs chroots, so use a
+VM or a machine set aside for it.
 
 ```
-image/build                      # GurtOS Server, x86_64: about 12 minutes the first time, 3 after that
-image/build arm64                # GurtOS Server, arm64, cross-built under emulation: about an hour
-image/build all                  # Server, both
-image/build personal [arch]      # GurtOS Personal (x86_64 unless arm64)
-BUILD_SHELL='ssh benmac /opt/homebrew/bin/limactl shell box --' image/build arm64
-                                 # arm64 built natively in the laptop's Lima VM: about 20 minutes, mostly downloads
+git clone https://github.com/benz16107/calhacks13 gurtos && cd gurtos
+image/build                      # GurtOS Server for x86_64
+image/build personal             # GurtOS Personal for x86_64
+image/build arm64                # GurtOS Server for arm64
+image/build personal arm64       # GurtOS Personal for arm64
 ```
 
-It ships this checkout to the build VM (`ssh vultrbox`; any Ubuntu 24.04 VM with root works:
-`BUILD_SHELL='ssh my-vm' image/build`) and builds there as root. Never run it on linuxbox itself. x86_64 builds
-need an x86_64 build VM. The outputs stay on the build VM in `/var/lib/box-image/out/`:
+It builds on this machine (it asks for sudo). To build on another machine instead, give it a shell there:
+`BUILD_SHELL='ssh my-vm' image/build`. It copies this checkout over and builds there as root. Build each
+architecture on a machine of that architecture: arm64 on an x86_64 machine works, under emulation, but takes
+about an hour (`BUILD_SHELL='ssh my-arm-vm' image/build arm64`).
+
+How long: GurtOS Server for x86_64 took about 12 minutes the first time and 3 after that, on a 6-core VM with
+16 GB of memory. GurtOS Personal takes longer, as it downloads the GNOME desktop. Most of the first build is
+downloads.
+
+The outputs are on the build machine in `/var/lib/box-image/out/`:
 
 | File | What |
 |---|---|
 | `gurtos-<edition>-<arch>.iso` | The install disc. Boots BIOS and UEFI. Also a live system. |
 | `gurtos-<edition>-<arch>.sqfs` | The whole system as one image. It is on the disc, and it is also the update file. |
-| `gurtos-<edition>-<arch>.sqfs.sha256`, `.sig` | Its hash, and the hash signed with the build VM's update key |
+| `gurtos-<edition>-<arch>.sqfs.sha256`, `.sig` | Its hash, and the hash signed with the update key |
 
 Edition is `server` or `personal`. The first build caches Ubuntu plus the dependencies in
 `/var/lib/box-image/<arch>/base-*` (`personal-<arch>` for Personal). That cache is rebuilt only when the package
 list in `build` or `core/setup.sh` changes.
 
-`BOX_SSH_KEY=~/.ssh/id_ed25519.pub image/build` makes a **debug build** (`...-debug.iso`): it adds sshd and lets
-that key log in as root. Release builds have no sshd.
+Options, as environment variables:
+
+| Variable | Does |
+|---|---|
+| `BOX_VERSION=0.1.0-preview` | The version in `/etc/os-release`, the disc menu and the console banner. Default: the build date. |
+| `BOX_UPDATE_KEY=<file>` | An ed25519 private key (PEM) to sign updates with. The image trusts its public half. Default: a key the build machine makes once in `/var/lib/box-image/update-signing.key`. |
+| `BOX_TIMEZONE=Europe/Paris` | The time zone until someone changes it. Default: UTC. |
+| `BOX_SSH_KEY=~/.ssh/id_ed25519.pub` | A **debug build** (`...-debug.iso`): adds sshd and lets that key log in as root. Release builds have no sshd. |
+
+The update key decides which updates a machine accepts, for as long as it runs. Keep it outside the repository,
+and keep it: machines installed from an image only take updates signed with the same key. With `BOX_UPDATE_KEY`
+it is copied to the build machine for the build (outside the source folder, so it never enters the image) and
+deleted afterwards. To make one: `openssl genpkey -algorithm ed25519 -out update.key`.
 
 ## Start it
 
@@ -49,7 +71,8 @@ disk with anything on it is erased only after someone types `erase` on the scree
 into GurtOS. Server's screen opens GurtOS's setup wizard; Personal shows GNOME's welcome, which makes the first
 account, and then GurtOS Setup (see First-run setup below).
 
-**linuxbox, in a VM** (no root): `image/test` fetches the ISO, installs it on an empty QEMU disk, restarts into
+**In a QEMU VM on a Linux machine** (no root): `image/test` takes the ISO from `/var/lib/box-image/out` (or
+from `BUILD_HOST` over ssh), installs it on an empty QEMU disk, restarts into
 it and waits for the box to report healthy on the serial console. Then it removes the disc and pulls the plug,
 and the box must come back from its own disk, healthy, with the same identity. It saves screenshots of the
 screen. `--uefi` uses UEFI firmware instead of BIOS. `--arm64` tests the arm64 ISO, emulated, so about 5 times
@@ -57,8 +80,8 @@ slower. `--personal` tests the Personal edition. `--debug` tests a debug build a
 and a broken update that must roll back by itself; with `--personal` it also checks that a person's account, sudo
 and files survive the update.
 
-**Vultr** (Server): put the ISO at a URL (for example on the build VM:
-`cd /var/lib/box-image/out && python3 -m http.server 8080`, then `http://<build-vm-ip>:8080/gurtos-server-x86_64.iso`).
+**Vultr** (Server): put the ISO at a URL, for example a release download, or from the build machine:
+`cd /var/lib/box-image/out && python3 -m http.server 8080`, then `http://<build-machine>:8080/gurtos-server-x86_64.iso`.
 In Vultr: Orchestration, ISOs, Add ISO, paste the URL. Deploy a Cloud Compute instance with that ISO as its
 image (at least 25 GB of disk). Open the instance's console. A new instance first shows iPXE ("Custom OS
 selected. Please mount an ISO") for about a minute while Vultr attaches the ISO, then restarts into the disc by
@@ -67,8 +90,10 @@ the disc's menu to the box's screen takes about 3 minutes. Detach the ISO afterw
 either way, but with the ISO attached every start waits 30 seconds at the disc's menu. To reinstall, restart with
 the ISO attached and pick Install within those 30 seconds (Vultr's reinstall refuses ISO instances).
 
-A box on Vultr has only a public address, so its firewall lets nothing reach the box's API: use it from Vultr's
-console, or put the box on a private network (Tailscale's addresses are allowed).
+On any cloud VM with only a public address, the firewall lets nothing reach the box's API, so first-run setup
+happens on the provider's web console, which shows the box's screen. To reach the portal afterwards from your own
+computer or phone, join the box to a private network such as Tailscale (its addresses are allowed), or, on a
+debug build, forward the port over ssh: `ssh -L 7700:127.0.0.1:7700 root@<box>`, then open `http://127.0.0.1:7700`.
 
 **UTM on a Mac** (Apple silicon), the quickest way to try it:
 1. In UTM: Create a New Virtual Machine, then **Virtualize** (not Emulate: emulation is about 10 times slower).
@@ -95,7 +120,7 @@ The installer splits the disk into five parts:
 
 | Partition | Label | Holds |
 |---|---|---|
-| BIOS boot, 1 MB (x86) | `box-bios` | GRUB, for BIOS machines like Vultr |
+| BIOS boot, 1 MB (x86) | `box-bios` | GRUB, for BIOS machines such as many cloud VMs |
 | ESP, 512 MB | `BOX-ESP` | GRUB, its menu, and `grubenv`, which says which slot starts |
 | System slot A, 6 GB (Personal: 12 GB) | `box-a` | A whole system: kernel, Ubuntu, the box service |
 | System slot B, the same size | `box-b` | The other system. Empty until the first update. |
@@ -115,14 +140,14 @@ box-update rollback                     # make the other slot the default again
 ```
 
 The update image is the `.sqfs` the build makes, fetched with its `.sha256` and `.sig`. The signature must
-verify against `/etc/box-os/update.pub`, the build VM's key, baked into the image. That key stays on the build
-VM in `/var/lib/box-image/update-signing.key`. Images from another build VM will not install. An update must be
+verify against `/etc/box-os/update.pub`, the update key's public half, baked into the image (see
+`BOX_UPDATE_KEY`). Images signed with another key will not install. An update must be
 the same edition: a Personal system updated with a Server image would lose its desktop.
 
 What lives on the data partition, bind-mounted in place: `/var/lib/box` (the action log, workspaces, tasks),
 `/etc/box` (the vault and the box's identity key), `/var/lib/spacetimedb`, `/root/.config/spacetime` (the identity
 that owns the box's SpacetimeDB database), and `/var/log/journal`, so logs from a failed update are still there
-after the rollback. An update also copies over `/etc/machine-id`, SSH host keys, and the task users core made
+after the rollback. An update also copies over `/etc/machine-id`, the time zone, SSH host keys, and the task users core made
 (`box-*`, uids 30000 to 39999), so a resumed task keeps its uid.
 
 **Trade-offs, written down:**
@@ -133,8 +158,8 @@ after the rollback. An update also copies over `/etc/machine-id`, SSH host keys,
 - The GRUB menu on the ESP is written once at install and never updated. A change to the boot menu itself
   needs a reinstall.
 - The two 6 GB slots cost 12 GB of disk (24 GB on Personal).
-- Updates are signed with one ed25519 key on one build VM. There is no key rotation and no rollback protection
-  (an old signed image installs fine).
+- Updates are signed with one ed25519 key. There is no key rotation and no rollback protection (an old signed
+  image installs fine).
 
 ## First-run setup
 
@@ -162,24 +187,28 @@ opens on the phone. Never from the public internet: every request that does not 
 already needs a paired phone's token (core's "Who may reach the API"), and the firewall keeps it that way one
 layer further out. SpacetimeDB (port 3000) is never open to the network; the portal falls back to the API's log
 stream. On Personal, `BOX_URL` is read when the box starts, so after a laptop moves to another network it shows
-the old address until the next restart. Debug builds also open ssh (22). The time zone is Pacific (`BOX_TIMEZONE` at build time
-changes it; Personal's own setup asks).
+the old address until the next restart. Debug builds also open ssh (22).
+
+The time zone is UTC unless the build set `BOX_TIMEZONE`. Personal's GNOME setup asks for it. On Server, change
+it with `timedatectl set-timezone` on a debug build; the setup wizard does not set it yet. Updates keep it.
 
 ## GurtOS Personal
 
 `image/build personal` makes the same disc, installer, A/B slots and updates, with a desktop in place of the
 kiosk:
 
-- **Ubuntu's GNOME desktop**, `ubuntu-desktop-minimal` plus the parts Ubuntu only recommends (NetworkManager,
+- **GNOME, from Ubuntu**: `ubuntu-desktop-minimal` plus the parts Ubuntu only recommends (NetworkManager,
   the terminal, text editor, keyring, Yaru themes). No snaps: Ubuntu's Firefox is a snap, which cannot be built
   into an image, so the browser is GNOME Web. Yaru is the theme for every app, not only in Ubuntu's own session
-  (`rootfs-personal/usr/share/glib-2.0/schemas/`). GNOME's distributor logo is GurtOS's. Ubuntu's crash
+  (`rootfs-personal/usr/share/glib-2.0/schemas/`; the layer's own icon theme sits on top of it). GNOME's distributor
+  logo is GurtOS's (`LOGO=gurtos-logo` in `/etc/os-release`). Ubuntu's crash
   reporting is off (`/etc/default/apport`): its Python hook fails on any system whose `ID` is not `ubuntu`.
 - **First boot runs GNOME's own setup** (`gnome-initial-setup`, started by GDM because the machine has no
   account yet). The account it makes is an administrator, so that person is in the `sudo` group. Root's password
   stays locked. The box's task users (`box-*`) are never in `sudo`.
 - **The box service** is the same as on Server, from `core/install.sh`. Its screen is the desktop's, not a kiosk.
-- **The Box desktop layer** comes from `personal/install.sh`, owned by the Personal thread. See the hook below.
+- **The Box desktop layer** comes from `personal/install.sh`, with its GurtOS session and theme. See the hook
+  below.
 - **The computer's name** is `gurt-<id>` until the person names it in Settings. First boot sets it as the
   pretty hostname too, so GNOME's setup offers it instead of naming the machine after the account.
 
@@ -220,30 +249,28 @@ account yet, both in the chroot and at boot.
 
 ## Tested
 
-With `image/test` in QEMU on linuxbox, Oct 24:
-- Server, x86_64, with BIOS (like Vultr) and with UEFI: installs on a blank 24 GB disk in about a minute, starts
-  healthy with every track loaded, shows the portal's box screen, and survives the disc being removed and the
-  power cut.
-- Server, x86_64 debug build: an update to slot B is confirmed, and a broken update (its box service never
-  starts) rolls back to slot B by itself after the 5-minute health check.
+With `image/test` in QEMU on an x86_64 Linux machine:
+- Server, x86_64, with BIOS and with UEFI: installs on a blank 24 GB disk in about a minute, starts healthy with
+  every track loaded, shows the setup wizard, and survives the disc being removed and a power cut. From outside
+  the VM, port 3000 does not answer and port 7700 does from a private address.
+- Server and Personal, x86_64 debug builds: an update to slot B is confirmed, and a broken update (its box service
+  never starts) rolls back to slot B by itself after the 5-minute health check.
 - Server, arm64, emulated with UEFI: installs, starts healthy, shows the screen, and survives the disc being
-  removed and the power cut. It has not run on real Apple hardware or in UTM yet.
+  removed and a power cut.
 - The installer also finds the disc on a USB CD drive.
-- Both editions report `PRETTY_NAME="GurtOS <edition> <version>"`, `ID=gurtos`, `ID_LIKE=ubuntu`, a
-  `gurt-<id>` hostname, and boot menus that say GurtOS.
-- Personal, x86_64 debug build, with the Personal thread's committed `personal/install.sh`: installs on a blank
-  40 GB disk, shows GNOME's first-boot welcome, and survives the disc being removed and the power cut. An account
-  made the way GNOME's setup makes one (AccountsService, administrator) lands in `sudo`; no task user does. After
-  an update to slot B that account, its sudo and its files are still there, and GDM asks for a login instead of
-  running setup again. A broken update rolls back by itself.
+- Both editions report `PRETTY_NAME="GurtOS <edition> <version>"`, `ID=gurtos`, `ID_LIKE=ubuntu`, a `gurt-<id>`
+  hostname, and boot menus that say GurtOS.
+- Personal: installs on a blank 40 GB disk and shows GNOME's first-boot welcome. An account made the way GNOME's
+  setup makes one (AccountsService, administrator) lands in `sudo`; no task user does. The box learns its owner,
+  GurtOS Setup would open the wizard, and after an update the account, its sudo and its files are still there.
 
-On Vultr (by the QA thread, Oct 23, release ISO built 21:34 PT): the ISO installed on a blank 160 GB disk with
-BIOS in about 3 minutes from the disc booting to the box's screen, came back about 25 s after a hard power-off,
-and the disc started the box from disk when it was already installed.
+On a Vultr cloud VM (vc2-4c-8gb) the Server ISO installed on a blank 160 GB disk with BIOS in about 3 minutes
+from the disc booting to the box's screen, came back about 25 s after a hard power-off, and the disc started the
+box from disk when it was already installed. GurtOS Personal was also installed on a Vultr VM and walked through
+its first run on Wayland.
 
-Not tested: Parallels, a real PC, the kernel-panic path of a bad update, an update fetched by URL,
-clicking through GNOME's setup by hand, the Box desktop layer running in a logged-in session, and Personal on
-arm64.
+Not tested: Parallels, a real PC, the kernel-panic path of a bad update, an update fetched by URL, and Personal
+on arm64.
 
 ## What is different from stock Ubuntu
 
@@ -259,7 +286,12 @@ Stock Ubuntu Server 24.04 has a login prompt, a user with sudo, snapd, cloud-ini
   screen or serial port offers a login. Debug builds add sshd with one key for root, and say so in
   `/etc/box-os/release`.
 - **Starts straight into the box.** `box.service` (from `core/install.sh`) and `spacetimedb.service` (from
-  `core/setup.sh`) are installed in the image. Node 24, Droid and SpacetimeDB come from `core/setup.sh`.
+  `core/setup.sh`) are installed in the image. Node 24 and SpacetimeDB come from `core/setup.sh`.
+- **Downloads Droid on first start.** Factory's Droid CLI, the agent worker, may not be shipped inside the
+  image, so the build runs `core/setup.sh` with `BOX_NO_DROID=1` and stops if Droid is in the image anyway. Once
+  the network is up, `box-droid.service` runs `core/setup.sh droid` (pinned version, checked checksum), retrying
+  every 30 seconds until it works, and keeps a copy in `/data/droid`, so a system update puts it back without
+  downloading it again. Until then a Droid task waits with a message saying so.
 - **Its screen is the box.** `box-kiosk.service` runs cage, a Wayland compositor that shows one window, with a
   full-screen WebKit view (`rootfs/usr/local/lib/box-os/kiosk.py`) as the `kiosk` user (no password, no shell).
   seatd, a small root daemon, hands that user the display and keyboard. Ubuntu's own browsers are snaps, which
@@ -284,7 +316,7 @@ Every file the image adds is in `rootfs/` (both editions; the kiosk and networki
 | Path | What |
 |---|---|
 | `build` | The one command. Ubuntu base, core's own install scripts, `rootfs/`, then the squashfs and ISO. |
-| `test` | Boot test in QEMU on linuxbox: install, health, power cut, update, rollback |
+| `test` | Boot test in QEMU: install, health, power cut, firewall, update, rollback |
 | `iso-grub.cfg` | The install disc's menu |
 | `rootfs/usr/local/sbin/box-install` | The installer (partitions, slot A, GRUB) |
 | `rootfs/usr/local/sbin/box-update` | Updates, rollback, and the health check at every start |
@@ -292,4 +324,4 @@ Every file the image adds is in `rootfs/` (both editions; the kiosk and networki
 | `rootfs/usr/local/lib/box-os/` | The disk's GRUB menu and the kiosk browser |
 | `rootfs/etc/initramfs-tools/` | The live boot method for the install disc |
 | `rootfs/etc/systemd/` | The services, and drop-ins that put core's services on the data partition |
-| `rootfs-personal/` | Personal only: its fstab, GDM's first-boot setup, NetworkManager, the update carry-over |
+| `rootfs-personal/` | Personal only: its fstab, NetworkManager, GurtOS Setup, the Yaru override, the update carry-over |

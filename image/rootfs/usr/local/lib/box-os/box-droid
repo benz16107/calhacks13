@@ -1,0 +1,10 @@
+#!/bin/bash
+# Put the Droid CLI in /usr/local/bin. A copy on the data partition survives system updates, so a new slot
+# gets it back without a download; core/setup.sh droid replaces it if its version pin changed.
+set -euo pipefail
+keep=/data/droid/droid
+mountpoint -q /data || keep= # running from the install disc
+[ -n "$keep" ] && [ -x $keep ] && [ ! -e /usr/local/bin/droid ] && install -m 0755 $keep /usr/local/bin/droid
+/opt/box/core/setup.sh droid
+[ -n "$keep" ] && ! cmp -s /usr/local/bin/droid $keep && install -D -m 0755 /usr/local/bin/droid $keep.new && mv $keep.new $keep
+exit 0

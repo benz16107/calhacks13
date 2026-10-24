@@ -64,7 +64,7 @@ apply)
   edition() { (. "$1/etc/os-release" && echo "${VARIANT_ID:-}"); }
   [ "$(edition $root)" = "$(edition /)" ] || { umount $root; die "the update is a different edition: $(edition $root)"; }
   # The new system keeps this machine's identity and the box's task users (core makes them, uids 30000-39999).
-  cp -a /etc/machine-id $root/etc/
+  cp -a /etc/machine-id /etc/localtime /etc/timezone $root/etc/ # the time zone someone chose stays
   cp -a /etc/ssh/ssh_host_* $root/etc/ssh/ 2>/dev/null || true
   for n in $(awk -F: '$3 >= 30000 && $3 <= 39999 { print $1 }' /etc/passwd); do
     for f in passwd group shadow gshadow; do

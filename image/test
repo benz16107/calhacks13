@@ -4,12 +4,13 @@
 #   2. the disc is removed and the plug pulled: the box must start from its own disk, healthy, same identity
 #   3. with --debug (a debug build: sshd with your key): a system update to slot B, then a broken update that
 #      must roll back by itself
-#   image/test [--debug] [--uefi]   x86_64 with KVM. BIOS by default, like Vultr.
+#   image/test [--debug] [--uefi]   x86_64 with KVM. BIOS by default, like most cloud VMs.
 #   image/test --arm64               arm64 with UEFI, emulated (no KVM), so about 5 times slower
 #   image/test --personal            the Personal edition. With --debug it also checks that a person's account, sudo
 #                                    and files survive the update.
-# It fetches the build from the build VM.
-# Env: ISO (a local ISO instead), BUILD_HOST (default vultrbox), TEST_DIR (default ~/.cache/box-image-test)
+# Needs qemu-system (x86_64, or aarch64 for --arm64), qemu-img, ssh, curl, nc and ImageMagick's convert.
+# It takes the build from /var/lib/box-image/out on this machine, or from BUILD_HOST over ssh.
+# Env: ISO (a local ISO instead), BUILD_HOST (an ssh host that ran image/build), TEST_DIR (default ~/.cache/box-image-test)
 set -Eeuo pipefail
 trap 'echo "test: FAILED at line $LINENO: $BASH_COMMAND"' ERR
 uefi= arch=x86_64 debug= edition=server-
@@ -27,12 +28,12 @@ out=/var/lib/box-image/out
 mkdir -p "$dir"
 iso=${ISO:-$dir/gurtos-$name.iso}
 if [[ -z ${ISO:-} ]]; then
-  files=("${BUILD_HOST:-vultrbox}:$out/gurtos-$name.iso")
-  [[ -n $debug ]] && files+=("${BUILD_HOST:-vultrbox}:$out/gurtos-$name.sqfs*")
+  from=${BUILD_HOST:+$BUILD_HOST:}$out
+  files=("$from/gurtos-$name.iso")
+  [[ -n $debug ]] && files+=("$from/gurtos-$name.sqfs" "$from/gurtos-$name.sqfs.sha256" "$from/gurtos-$name.sqfs.sig")
   rsync -t --info=progress2 "${files[@]}" "$dir/"
 fi
-# linuxbox is shared by many agent sessions, and the out-of-memory killer takes them first: one test VM at a time,
-# 2.5 GB each, and only when 6 GB are free. A test that needs more belongs on a Vultr machine.
+# The VM takes 2.5 GB. So the rest of this machine keeps room, one test VM runs at a time, and only once 6 GB are free.
 exec 7>"$dir/vm.lock"
 flock -n 7 || { echo "test: another test VM is running here; waiting for it"; flock 7; }
 until (( $(free -g | awk '/^Mem:/ { print $7 }') >= 6 )); do echo "test: waiting for 6 GB of free memory"; sleep 30; done
@@ -127,10 +128,13 @@ if [[ $edition == personal- ]]; then
   check "a Python error prints apport's second traceback" '! python3 -c "raise ValueError" 2>&1 | grep -q "package manager"'
   check "no BOX_URL" 'grep -q "^BOX_URL=http" /run/box-os/box.env'
   check "no pretty hostname" 'grep -q "^PRETTY_HOSTNAME=gurt-" /etc/machine-info'
-  check "Yaru only in Ubuntu's session" '[ "$(sudo -u ana env -u XDG_CURRENT_DESKTOP gsettings get org.gnome.desktop.interface icon-theme)" = "'"'"'Yaru'"'"'" ]'
-  echo "test: no apport hook, BOX_URL set, pretty hostname set, Yaru outside Ubuntu's session"
+  check "Adwaita icons outside Ubuntu's session" '! sudo -u ana env -u XDG_CURRENT_DESKTOP gsettings get org.gnome.desktop.interface icon-theme | grep -q Adwaita'
+  echo "test: no apport hook, BOX_URL set, pretty hostname set, no Adwaita icons outside Ubuntu's session"
 fi
 
+droid() { for _ in $(seq 60); do vm "/usr/local/bin/droid --version >/dev/null 2>&1 && [ -x /data/droid/droid ]" && return; sleep 5; done
+  echo "test: FAILED, no Droid after 5 minutes ($1)"; exit 1; }
+droid "first boot" && echo "test: the image has no Droid, and the box downloaded it"
 echo "test: system update to slot B"
 vm 'mkdir -p /data/update && cat > /data/update/root.sqfs' < "$dir/gurtos-$name.sqfs"
 vm 'cat > /data/update/root.sqfs.sha256' < "$dir/gurtos-$name.sqfs.sha256"
@@ -138,6 +142,7 @@ vm 'cat > /data/update/root.sqfs.sig' < "$dir/gurtos-$name.sqfs.sig"
 vm 'box-update apply /data/update/root.sqfs' || true
 wait_for 'box: update confirmed: slot b' 1 600
 vm 'box-update status'
+droid "after the update" && echo "test: Droid is back after the update, from the data partition"
 if [[ $edition == personal- ]]; then
   vm 'id ana | grep -q "(sudo)" && grep -qx kept /home/ana/note' || { echo "test: FAILED, ana or her files did not survive the update"; exit 1; }
   echo "test: ana, her sudo and her files survived the update"

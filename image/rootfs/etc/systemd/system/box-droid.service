@@ -1,0 +1,19 @@
+# Factory's Droid CLI (the agent worker) may not ship inside GurtOS images, so each machine downloads it once it
+# has a network, with the version pin and checksum in core/setup.sh, and keeps a copy on the data partition.
+# Tasks that need Droid wait for it with a clear message; nothing else does.
+[Unit]
+Description=Download the Droid CLI for agent tasks
+ConditionKernelCommandLine=!box.install
+Wants=network-online.target
+After=network-online.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/lib/box-os/box-droid
+Restart=on-failure
+RestartSec=30
+
+[Install]
+WantedBy=multi-user.target
