@@ -32,7 +32,9 @@ Every Figma variable is a CSS variable with the same name: `--color-window-bg`, 
 `--shadow-4`, sizes `--size-control` (34) and `--size-control-large` (44). Use them instead of new colors, and the
 page is right in Dark for free.
 
-Type is Atkinson Hyperlegible Next, and Atkinson Hyperlegible Mono for IDs, paths and code. The classes are
+Type is Atkinson Hyperlegible Next, and Atkinson Hyperlegible Mono for IDs, paths and code, with a plain 0 in
+both: Atkinson's own 0 has a slash, so `kit/fonts/` holds a 0-only face that loads first (`plain-zero.py` makes it).
+The classes are
 `t-display`, `t-title1`, `t-title2`, `t-title3`, `t-heading`, `t-body-strong`, `t-body`, `t-caption-strong`,
 `t-caption` and `t-mono`, plus the colors `t-secondary`, `t-accent`, `t-attention`, `t-success`, `t-destructive`.
 

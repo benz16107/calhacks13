@@ -7,6 +7,12 @@
 @font-face { font-family: 'Atkinson Hyperlegible Next'; font-weight: 600; font-display: swap; src: url(../../node_modules/@fontsource/atkinson-hyperlegible-next/files/atkinson-hyperlegible-next-latin-600-normal.woff2) format('woff2'); }
 @font-face { font-family: 'Atkinson Hyperlegible Next'; font-weight: 700; font-display: swap; src: url(../../node_modules/@fontsource/atkinson-hyperlegible-next/files/atkinson-hyperlegible-next-latin-700-normal.woff2) format('woff2'); }
 @font-face { font-family: 'Atkinson Hyperlegible Mono'; font-weight: 400; font-display: swap; src: url(../../node_modules/@fontsource/atkinson-hyperlegible-mono/files/atkinson-hyperlegible-mono-latin-400-normal.woff2) format('woff2'); }
+/* Plain zeros (UX P-29): Atkinson's 0 has a slash; these faces hold only a plain 0 and come first (fonts/plain-zero.py). */
+@font-face { font-family: 'GurtOS Digits'; font-weight: 400; font-display: swap; unicode-range: U+0030; src: url(./fonts/digits-400.woff2) format('woff2'); }
+@font-face { font-family: 'GurtOS Digits'; font-weight: 500; font-display: swap; unicode-range: U+0030; src: url(./fonts/digits-500.woff2) format('woff2'); }
+@font-face { font-family: 'GurtOS Digits'; font-weight: 600; font-display: swap; unicode-range: U+0030; src: url(./fonts/digits-600.woff2) format('woff2'); }
+@font-face { font-family: 'GurtOS Digits'; font-weight: 700; font-display: swap; unicode-range: U+0030; src: url(./fonts/digits-700.woff2) format('woff2'); }
+@font-face { font-family: 'GurtOS Mono Digits'; font-weight: 400; font-display: swap; unicode-range: U+0030; src: url(./fonts/mono-digits-400.woff2) format('woff2'); }
 
 /* ---------- tokens: GurtOS Color (Light) and GurtOS Size ---------- */
 
@@ -89,8 +95,8 @@
 
   /* Type: Atkinson Hyperlegible Next and Mono. Larger text scales every style by 1.25. */
   --text-scale: 1;
-  --font: 'Atkinson Hyperlegible Next', system-ui, sans-serif;
-  --font-mono: 'Atkinson Hyperlegible Mono', ui-monospace, monospace;
+  --font: 'GurtOS Digits', 'Atkinson Hyperlegible Next', system-ui, sans-serif;
+  --font-mono: 'GurtOS Mono Digits', 'Atkinson Hyperlegible Mono', ui-monospace, monospace;
   --fs-display: calc(34px * var(--text-scale)); --lh-display: calc(40px * var(--text-scale));
   --fs-title1: calc(28px * var(--text-scale)); --lh-title1: calc(34px * var(--text-scale));
   --fs-title2: calc(22px * var(--text-scale)); --lh-title2: calc(28px * var(--text-scale));
