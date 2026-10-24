@@ -51,7 +51,8 @@ network all work on main as of 717bc3f.
 | P2-15 no size limits, raw JSON errors | Fixed, verified: 200-character titles, 100,000-character prompts, "the request body isn't valid JSON" | core 5942002 |
 | P2-16 a restart announced as a power cut | Fixed, verified: /api/health says cleanStart true after a clean restart; the portal says "Back after a restart" | core 5942002, portal 717bc3f |
 | P2-9 undo doesn't say it refunds | Fixed, verified: "Undo and refund (test)" | portal 717bc3f, shopper |
-| P2-14 "Box" names | Store, Mana app and Jira panel renamed ("GurtOS agent task", Forge v3); Elastic agent renamed in ca03219, not checked in Kibana | tracks |
+| P2-14 "Box" names | Store, Mana app and Jira panel renamed ("GurtOS agent task", Forge v3); Elastic agent is "GurtOS log" (id gurtos-log), checked through the Kibana API at 00:48 | tracks |
+| P2-13 Elastic index mixes test boxes | Fixed, verified 00:48: 505 documents from installed boxes plus one demo run kept for screenshots (a18523); no dev boxes; the agent filters to installed boxes by default | elastic ca03219, portal 717bc3f |
 | Jira through Caddy after the token gate | Fixed. The Jira thread checked Approve and Roll back from the real panel on BOX-14 through Caddy. QA confirmed from outside at 00:45: /t/jira/task 401 without the secret, /t/mana/status 200, everything else 404 | core 6879fb9, jira c82fcdb |
 | D-1 to D-4, D-7 docs | Fixed, live | docs 199dce5 |
 | P1-7 live banner names the wrong hosts | **Still open** at 00:21 on a phone: "tm2diipf4e2 tried to reach attacker.example. It may not reach any host." (id instead of title, and its host is shop.localhost:8123) | portal |
