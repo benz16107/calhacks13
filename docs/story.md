@@ -18,7 +18,7 @@ has not been signed off yet.
 5. **The portal and phone app give live visibility and control** on any of your machines.
 6. **Open source (Apache-2.0):** anyone can run it, customise it and reuse it.
 7. **Name the edition that shows each track best.** GurtOS Business is on main (people and roles, routed approvals, audit, kill switch);
-   sign-in with work accounts and shadow mode are not built. Say which part each Business-led page shows.
+   sign-in with a work account (Entra ID) is built and tested against a stand-in provider; shadow mode is not built. Say which part each Business-led page shows.
 8. **Every feature says why it is there and which criterion it serves.**
 9. **Label what comes from the OS and what from the track.**
 10. **Lightweight, and it solves security problems existing systems can't.** The box service is one Node process
@@ -146,7 +146,7 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 
 **Best shown in:** GurtOS Business
 
-**Pitch:** A finance team needs roles, segregation of duties and an audit trail on every agent decision, which is what Business adds: who may approve what, up to how much. GurtOS Business is on main: people and roles, approvals routed by rules written in plain words, refusals for answering your own request or above your limit, a Waiting for me inbox, an audit with CSV export and a kill switch. Sign-in with work accounts and shadow mode are not built. The scored credit desk runs were on GurtOS Server; the Business screens are from a box seeded as the made-up Fogline Supply.
+**Pitch:** A finance team needs roles, segregation of duties and an audit trail on every agent decision, which is what Business adds: who may approve what, up to how much. GurtOS Business is on main: people and roles, approvals routed by rules written in plain words, refusals for answering your own request or above your limit, a Waiting for me inbox, an audit with CSV export and a kill switch. Sign-in with a work account (Microsoft Entra ID, roles from groups) is built and tested against a stand-in provider; shadow mode is not built. The scored credit desk runs were on GurtOS Server; the Business screens are from a box seeded as the made-up Fogline Supply.
 
 **The problem:** Companies want AI employees, but today's computers and clouds weren't built for them. An agent runs as you, with your keys, on one shared filesystem, with no separation of duties, no record you can trust and no undo, so nobody lets one do real finance work.
 
@@ -246,7 +246,7 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 
 **Best shown in:** GurtOS Business
 
-**Pitch:** Companies want agents on finance work, but an ordinary OS gives an agent its owner's keys, no separation of duties, no record and no undo, so pilots stay pilots. GurtOS Business gives each seat its own user, routes approvals to the right person, keeps a full audit and a kill switch, on a box the company owns. Next (being built): shadow mode, Entra ID sign-in, measured impact, a Responsible AI mapping, sourced facts and an incident drill. GurtOS Business is on main: people and roles, approvals routed by rules written in plain words, refusals for answering your own request or above your limit, a Waiting for me inbox, an audit with CSV export and a kill switch. Sign-in with work accounts and shadow mode are not built. The scored credit desk runs were on GurtOS Server; the Business screens are from a box seeded as the made-up Fogline Supply.
+**Pitch:** Companies want agents on finance work, but an ordinary OS gives an agent its owner's keys, no separation of duties, no record and no undo, so pilots stay pilots. GurtOS Business gives each seat its own user, routes approvals to the right person, keeps a full audit and a kill switch, on a box the company owns. Next (being built): shadow mode, measured impact, a Responsible AI mapping, sourced facts and an incident drill. GurtOS Business is on main: people and roles, approvals routed by rules written in plain words, refusals for answering your own request or above your limit, a Waiting for me inbox, an audit with CSV export and a kill switch. Sign-in with a work account (Microsoft Entra ID, roles from groups) is built and tested against a stand-in provider; shadow mode is not built. The scored credit desk runs were on GurtOS Server; the Business screens are from a box seeded as the made-up Fogline Supply.
 
 **The problem:** Companies want agents doing finance work, but an ordinary OS gives an agent its owner's keys, no separation of duties, no record and no undo, so pilots never reach production.
 
@@ -264,7 +264,7 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 | An audit with filters by person, agent seat and date, and CSV export, read-only for an auditor | Something an auditor can read without asking IT | Path to production | GurtOS Business | Shipped. The gate checks the filters, the CSV header and that an auditor can change nothing |
 | One kill switch pauses every agent at once from any admin's phone or the box; requests waiting for an OK stay open | The first thing a company asks about is how to stop it | Path to production | GurtOS Business (shared with Personal's pause) | Shipped. The gate checks six tasks stopped where they were, every screen says who pulled it, and both pulls are in the log |
 | Shadow mode and a one-week pilot plan: the desk runs beside the people, changes nothing, and is compared with what they did | A company starts with a pilot it can switch off | Path to production | GurtOS Business (shadow mode) and the desk (the plan) | Being built; not on main yet |
-| Sign-in with Entra ID work accounts, roles taken from groups | Nobody makes new passwords or a second list of who may approve | Path to production | GurtOS Business | Being built; not on main yet |
+| Sign-in with a work account (OpenID Connect, Microsoft Entra ID), with each person's role taken from their Entra groups | Joining, leaving and changing team happen in Entra, in one place, not by pairing each phone with a code | Path to production | GurtOS Business | Shipped. The merge gate runs the whole flow against a small provider of its own, with PKCE, signature, issuer, audience, expiry and nonce checks, and refuses someone in no mapped group. It has not been tried against a live Entra tenant |
 | Measured impact: human minutes saved, dollars stopped and cost per application | A controller can say what the desk is worth | Measurable usefulness | The desk | Being built; not on main yet |
 | A mapping to Microsoft's Responsible AI Standard, a protected-attribute test and a plain decline letter | An applicant gets an honest reason and the desk can show it does not use what it must not | Responsible design | The desk | Being built; not on main yet |
 | Sourced customer facts: each fact in a decision carries where it came from | A decision can be checked, not just trusted | Customer understanding | The desk | Being built; not on main yet |
@@ -275,7 +275,6 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 **Still to do:**
 
 - Shadow mode and a one-week pilot plan: the desk runs beside the people, changes nothing, and is compared with what they did
-- Sign-in with Entra ID work accounts, roles taken from groups
 - Measured impact: human minutes saved, dollars stopped and cost per application
 - A mapping to Microsoft's Responsible AI Standard, a protected-attribute test and a plain decline letter
 - Sourced customer facts: each fact in a decision carries where it came from
@@ -338,7 +337,13 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 | Settlement through Coinbase's CDP facilitator, which pays the network fee | The wallet needs no SOL, and Coinbase verifies each payment | Usefulness | The wallet app, on Coinbase CDP | Shipped |
 | An installable skill (`skill/x402-wallet/SKILL.md`) and two box tools any agent can call | Any agent on any box can pay without new code | Ease of reuse | The wallet app | Shipped |
 | Open source, Apache-2.0 | Anyone can run GurtOS, customise it, and reuse the wallet | Ease of reuse | GurtOS | Shipped |
-| The box earning over x402 and listed in the Bazaar, agents shopping for APIs, CDP Server Wallets with Coinbase policies, metered "upto" payments, one-command reuse, Onramp top-up, a tamper-evident Solana log fingerprint | Next steps for each criterion; this page adds each one with its reason when it ships | All four | The wallet app | Being built; not on main yet |
+| The box earns over x402: it sells its audit proof ($0.01), a metered search of the owner's published files ($0.002 a result, at most $0.02) and rental of its agent ($0.25, only after the owner approves), settled by Coinbase's CDP facilitator, with a daily sales cap | A box can earn as well as spend | Usefulness, technical design | The wallet app | Shipped. The offline gate checks a stranger can read the price list but not the wallet or log. Declared for the x402 Bazaar, but the listing needs a public HTTPS address and one paid call through it, so it is not shown listed yet |
+| Agents shop for APIs: `wallet.discover` searches the x402 Bazaar, ranks offers payable first and cheapest first, and drops anything above the agent's limit or the task's budget | An agent finds what it needs without a human choosing | Usefulness, ease of reuse | The wallet app and Coinbase's Bazaar | Shipped |
+| Two locks on the money: a CDP Server Wallet whose Coinbase policy signs only for listed payees, under the cap, in USDC, behind GurtOS's budgets and phone approvals | One lock can be argued with, two cannot | Technical design | The wallet app, Coinbase CDP and GurtOS (budgets, approvals) | Built and unit-tested, not run live yet: it needs a CDP Wallet Secret that is pending. Live runs so far use the vault key with the owner's policy enforced by GurtOS, and the page says so. A box whose CDP key can manage policies could loosen its own policy |
+| Metered APIs: `wallet.payMetered` pays x402 upto offers, the agent authorizes a cap and the seller charges for what it used | Pay for use, not for a guess | Technical design | The wallet app | Shipped. The gate's metered step capped a search at $0.02 and charged $0.002. Until the core reads the settled amount, a metered payment counts at its cap in the task's cost |
+| Reuse in one command: `install.sh` installs the wallet as an MCP server and skill for Claude Code, Droid or any MCP client, with a budget and an approval prompt | Anyone can use it outside a GurtOS box | Ease of reuse | The wallet app | Shipped. A real Claude Code session installed it that way and paid $0.01 for a joke over MCP |
+| Top up from the phone with a Coinbase Onramp session for the wallet's address | The owner can fund the wallet from the phone | Usefulness | The wallet app and Coinbase Onramp | Built in sandbox mode only. Sandbox orders move no money and cannot deliver devnet USDC, so test money comes from Circle's faucet |
+| Builder feedback kept as each Coinbase tool was used | Coinbase asks for it | Builder feedback | The wallet thread | Shipped in `tracks/wallet/FEEDBACK.md` |
 
 **Demo moment and proof:** A real agent (Droid with Claude) was told only "buy one joke and one report". It quoted both, paid $0.01, waited for the OK on the $0.03 report, then paid it. Both payments settled through Coinbase's CDP facilitator and are confirmed on Solana devnet, and neither the wallet key nor the CDP secret appears anywhere in the task's log.
 
@@ -346,7 +351,6 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 
 - Verified Coinbase account. (partly)
 - CDP wallets (not built)
-- The box earning over x402 and listed in the Bazaar, agents shopping for APIs, CDP Server Wallets with Coinbase policies, metered "upto" payments, one-command reuse, Onramp top-up, a tamper-evident Solana log fingerprint
 
 ## Fetch.ai: ASI:One Agent Challenge
 
@@ -498,24 +502,18 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 | A scraped page is data: the task has no network and no secrets to act on a hidden instruction | A booby-trapped page can spoil its own result, nothing more | Overall quality | GurtOS (network rule, no keys) | Shipped |
 | Spending is capped twice: Apify's `maxTotalChargeUsd` and the box's task budget, with a pause for your OK above it | You decide what a web job may spend | Overall quality | GurtOS (budget and approval) and Apify (the cap) | Shipped. The box counts the cap or the Actor's list price, an estimate |
 | Live view and control on the portal and phone | You can see and stop what a web agent is doing | Overall quality | GurtOS | Shipped |
-| Agent-Safe Page Reader, our own published Actor: reads a page and flags hidden instructions in it | The agent gets the text with the risky parts marked, instead of raw page text | Best Actor | The track (the Actor), with GurtOS treating the result as untrusted | Being built; not on main yet |
-| Apify's MCP server through the broker: an agent finds and runs any Store Actor | Apify's hosted MCP asks the agent to hold the token; through the broker it never does | Meaningful use | GurtOS (broker) and Apify | Being built; not on main yet |
-| Schedules and webhooks that start Apify tasks while you are away | Web jobs, like a price check or a nightly crawl, run with the laptop closed (Server) | Meaningful use | GurtOS (triggers) | Being built; not on main yet |
-| Apify's Crawler into /find | The pages you care about become searchable by meaning, on your own box | Meaningful use | The track and /find (Moss) | Being built; not on main yet |
-| A web source for the credit desk | The credit desk can check an application against the web, not only its own data | Meaningful use | The track and the credit desk | Being built; not on main yet |
-| The real Apify cost of a run counts against the task budget | The budget reflects what Apify charged, not an estimate | Overall quality | GurtOS (budget) and the app | Being built; not on main yet |
+| Agent-Safe Page Reader, our own Actor: reads a page and flags hidden instructions in it, with a risk score and the evidence | The agent gets the text with the risky parts marked, and a high-risk page is withheld | Best Actor | The track (the Actor) and GurtOS (the agent has no network) | Built and used by every page read through `apify.readPage`: on the trap page it scores risk 100 and withholds it, on example.com it finds none. Not public yet: the Apify account's public profile has to be switched on in the Console, so there is no Store link to show |
+| Apify's MCP server through the broker: an agent finds and runs a Store Actor without holding the token | Apify's hosted MCP asks the agent to hold the token; through the broker it never does | Meaningful use | GurtOS (broker) and the track (`apify.mcp`) | Built, with four Actors and `get-actor-run` allowed and the storage tools that can read other runs' data not allowed. Tested live. It cannot cap a call's spend on Apify's side, so the estimate and a 45-second wait bound it |
+| Schedules and webhooks that start tasks while you are away (`apify.watch`) | Web jobs, like a price check, run with the laptop closed (Server) | Meaningful use | GurtOS (triggers) and the track | Built: an Apify schedule checks a product and, when its run finishes, Apify calls the box, which starts a task only if the price dropped or the product came back. Set-up and teardown were tested live; delivery was tested only with Apify's payload shape, and needs the box reachable and its webhook keys in the vault |
+| The Website Content Crawler feeds /find (`apify.indexSite`) | The pages you care about become searchable by meaning, on your own box | Meaningful use | The track and /find (Moss) | Built: a live run wrote the crawled pages where /find looks. The /find answer step runs in `DEMO_LIVE=apify` |
+| A web source for the credit desk (`apify.webSource`): an applicant's website and Google Maps listing set against what they claimed, with reviews screened before the credit agent sees them | The web is evidence that does not depend on what the applicant typed | Meaningful use | The track and the credit desk | Built as a tool that finds disagreements. The credit desk has not added it to its analyst's tool list yet, so no scored run uses it |
+| Apify run cost counts in the task budget; an approval names Apify as the payee and the run; an Apify spend app lists the counted cost and Apify's reported usage per task | The budget shows what the web costs, and nobody is surprised | Overall quality | GurtOS (budget, approvals) and the track | Built. The counted cost is an estimate, and for pay-per-event Actors such as Google Maps Apify's reported usage leaves out the event price |
 
 **Demo moment and proof:** The live run on Oct 23, on both the x86 and the ARM64 test VMs, started two tasks with no network at all. Both Actors ran on Apify at the same time and came back with AirPods Pro 3 at $299.99 CAD, in stock, at Best Buy Canada, and Cole Coffee Café at 6255 College Ave, Oakland. The token was nowhere in either task's log.
 
 **Still to do:**
 
-- Best Actor: our own published Actor. (open)
-- Agent-Safe Page Reader, our own published Actor: reads a page and flags hidden instructions in it
-- Apify's MCP server through the broker: an agent finds and runs any Store Actor
-- Schedules and webhooks that start Apify tasks while you are away
-- Apify's Crawler into /find
-- A web source for the credit desk
-- The real Apify cost of a run counts against the task budget
+- Best Actor: our own published Actor. (partly)
 
 ## CRS: Overall, Best Financial AI Agent, Best Identity/Fraud, and Most Unexpected
 
@@ -523,7 +521,7 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 
 **Best shown in:** GurtOS Business
 
-**Pitch:** The unexpected part is the OS: we built a whole operating system for agents to do credit and fraud checks safely, where on an ordinary one the agent holds the keys, approves its own work and can pull any report. Each seat is its own user without the CRS login, a person approves what the rules send them, and every pull keeps its request id. GurtOS Business is on main: people and roles, approvals routed by rules written in plain words, refusals for answering your own request or above your limit, a Waiting for me inbox, an audit with CSV export and a kill switch. Sign-in with work accounts and shadow mode are not built. The scored credit desk runs were on GurtOS Server; the Business screens are from a box seeded as the made-up Fogline Supply. Next (being built): know-your-agent, permissible purpose with a pull limit, CRS's MCP server behind the broker, nightly re-checks, a fraud case file on the phone and a fraudster who argues, measured.
+**Pitch:** The unexpected part is the OS: we built a whole operating system for agents to do credit and fraud checks safely, where on an ordinary one the agent holds the keys, approves its own work and can pull any report. Each seat is its own user without the CRS login, a person approves what the rules send them, and every pull keeps its request id. GurtOS Business is on main: people and roles, approvals routed by rules written in plain words, refusals for answering your own request or above your limit, a Waiting for me inbox, an audit with CSV export and a kill switch. Sign-in with a work account (Microsoft Entra ID, roles from groups) is built and tested against a stand-in provider; shadow mode is not built. The scored credit desk runs were on GurtOS Server; the Business screens are from a box seeded as the made-up Fogline Supply. Next (being built): know-your-agent, permissible purpose with a pull limit, CRS's MCP server behind the broker, nightly re-checks, a fraud case file on the phone and a fraudster who argues, measured.
 
 **The problem:** Credit bureaus and lenders are what attackers go after, and on an ordinary OS an agent doing identity and fraud checks holds the keys, can approve its own work and can pull any report.
 
@@ -572,14 +570,15 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 | The wallet holds no SOL; a facilitator pays each fee | An agent wallet needs only the asset it spends | Use of Solana | The wallet app, on Coinbase CDP | Shipped |
 | Each transfer confirmed on chain before the receipt is logged | The log never claims a payment the chain does not have | Best use of Solana | The wallet app and GurtOS's log | Shipped |
 | Key in the root-only vault, per-task budget, approval on the phone | Spending is safe enough to leave running | Best use of Solana | GurtOS | Shipped |
-| A tamper-evident fingerprint of the box's log on Solana | Anyone could check the record was not rewritten | Best use of Solana | The wallet app | Being built; not on main yet |
+| A daily fingerprint of the box's action log written to Solana, and a verify route that checks the log still matches it | Anyone can check the log was not changed after the fingerprint was written | Best use of Solana | The wallet app | Shipped. The live demo run on Oct 24 showed a fingerprint at log entry 595 on devnet that still matched. It detects a change after it was written, not one made before |
+| A memo with the task id on every payment | A payment on chain names the task that made it | Best use of Solana | The wallet app | Shipped. The gate showed the task id on chain as a memo |
+| Box-to-box payments: one box's agent pays another box's audit proof | Boxes can pay each other | Best use of Solana | The wallet app | Shipped. In the demo the second box is a second shop with its own wallet, because Coinbase's facilitator refuses a wallet paying itself |
 
 **Demo moment and proof:** The wallet's whole history is public on Solana Explorer: one 20 USDC faucet deposit, then 36 x402 payments of $0.01 or $0.03 made by agents on the box, 0.76 USDC in all, every one a finalized SPL TransferChecked whose fee was paid by the facilitator, never by the wallet.
 
 **Still to do:**
 
 - Mainnet (not built)
-- A tamper-evident fingerprint of the box's log on Solana
 
 ## Vultr: MLH: Best use of Vultr
 

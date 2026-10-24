@@ -85,7 +85,9 @@ no GPU. GurtOS is open source under Apache-2.0, so anyone can run it, customise 
 | The wallet holds no SOL; a facilitator pays each fee | An agent wallet needs only the asset it spends | Use of Solana | The wallet app, on Coinbase CDP | Shipped |
 | Each transfer confirmed on chain before the receipt is logged | The log never claims a payment the chain does not have | Best use of Solana | The wallet app and GurtOS's log | Shipped |
 | Key in the root-only vault, per-task budget, approval on the phone | Spending is safe enough to leave running | Best use of Solana | GurtOS | Shipped |
-| A tamper-evident fingerprint of the box's log on Solana | Anyone could check the record was not rewritten | Best use of Solana | The wallet app | Being built; not on main yet |
+| A daily fingerprint of the box's action log written to Solana, and a verify route that checks the log still matches it | Anyone can check the log was not changed after the fingerprint was written | Best use of Solana | The wallet app | Shipped. The live demo run on Oct 24 showed a fingerprint at log entry 595 on devnet that still matched. It detects a change after it was written, not one made before |
+| A memo with the task id on every payment | A payment on chain names the task that made it | Best use of Solana | The wallet app | Shipped. The gate showed the task id on chain as a memo |
+| Box-to-box payments: one box's agent pays another box's audit proof | Boxes can pay each other | Best use of Solana | The wallet app | Shipped. In the demo the second box is a second shop with its own wallet, because Coinbase's facilitator refuses a wallet paying itself |
 
 ## Evidence
 
