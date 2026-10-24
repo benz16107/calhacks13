@@ -18,19 +18,19 @@ How it was walked:
 
 ## Status
 
-**Fixed 1, open 66** (67 findings: 15 web, 20 Server, 32 Personal; parity findings join when measured). Each fixed
+**Fixed 6, open 61** (67 findings: 15 web, 20 Server, 32 Personal; parity findings join when measured). Each fixed
 finding gets a **Fixed** line with the commit and an after-screenshot in `after/`.
 
 | Owner | Open |
 |---|---|
-| portal | W1, W2, W4 to W12, W14, W15, S1, S3, S5 to S7, S11 to S14, S17 to S23, S25, S26 |
+| portal | W4 to W12, W14, W15, S1, S5 to S7, S11, S12, S14, S17 to S23, S25, S26 |
 | personal | P-2 to P-13, P-15, P-18 to P-27, P-29 to P-32 |
 | image | S2, S15, S16, S24, P-4, P-17, P-28, then P-1 with release |
 
 Release (P-1): one rebuild of all four ISOs from one main commit, about 75 minutes to a verified release plus 20 for
 the download pages. The UX thread sends the commit once the Personal, image and core P0 and P1 fixes are in. Target
 before midnight PT, hard cutoff 6:30 AM PT Sunday (at 5:30 AM the best demo-ready commit goes regardless).
-| core | W2, W13, S5 to S8, S13, P-2, P-14, P-16 |
+| core | W2 (sleep steps), W13, S5 to S8, S12 (apps on by default), P-2, P-14, P-16 |
 
 ## Top 10
 
@@ -90,6 +90,9 @@ On a 390 px phone the Name row keeps the label, its description and the input on
 column shrinks to one character wide ("Na / me / Low / erca / se ..."). Fix: below 700 px, stack the row (label and
 description full width, the input full width under them). Owner: portal.
 
+
+**Fixed in 4cdd461** (portal): the row stacks on phones, the name starts as "home-box" and the address shows as you
+type. ![](after/phone-settings-remote.png)
 ### W2. P0. Activity and Audit open with raw JSON and test steps
 ![](shots/web/srv-activity.png)
 After first-run setup, Activity's first 26 rows read `setup: {"step":"network"}`, Kind "note", and the detail pane
@@ -99,6 +102,10 @@ sentences ("Setup: network checked", "Setup finished") or the portal renders `tr
 the detail pane hides `prev` behind "Show details"; Audit opens with nothing selected or the newest request.
 Owners: core (event text), portal (rendering).
 
+
+**Fixed in 4cdd461** (portal): sentences ("Setup: Network done"), Kind in words, raw fields under Technical details,
+Audit opens with nothing selected and its actor is GurtOS. ![](after/srv-activity.png) ![](after/biz-audit-owen.png)
+Still open (core): the scripted worker's `sleep 2` steps show in Audit.
 ### W3. P0. App descriptions are hackathon notes
 ![](shots/web/srv-app-center.png)
 App Center, Settings > Apps and app details show text written for judges and sponsors, not users:
@@ -212,6 +219,10 @@ They need no more keys." Fix: one chip "Needs 22 keys" (or "No keys needed"), ac
 sandbox"), names and paths only in App Center's details; setup offers the curated six; everything off by default
 except the worker. Owner: portal (labels from track manifests).
 
+
+**Fixed in 4cdd461** (portal): six apps, one access chip in words and one keys chip; the Keys step lists each key
+by its plain name with the variable underneath; `example` hidden (S13 fixed too). ![](after/setup-08.png)
+![](after/setup-09.png) Still open (core, S12): five apps start on by default, so the footer says "5 apps on".
 ### S5. P1. A fake key is "saved, tasks can run"
 ![](shots/server/21-model-key-fake-saved.png)
 "not-a-real-key" gives "Saved to the vault." and "A model key is in the vault. Tasks can run." Same as P-2 on
