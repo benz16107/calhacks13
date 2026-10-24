@@ -50,6 +50,11 @@ def row(title, subtitle='', icon=None, activate=None, suffix=None):
     return r
 
 
+def short(title):
+    """An app's name without its bracketed note, as the portal shows it: "Agent wallet", "Shopper"."""
+    return title.split(' (')[0].strip() or title
+
+
 def group(title='', description=''):
     return Adw.PreferencesGroup(title=GLib.markup_escape_text(title), description=GLib.markup_escape_text(description))
 
@@ -218,7 +223,7 @@ class AgentsWindow(Adw.ApplicationWindow):
         self.badge = Gtk.Label(css_classes=['gurt-count'], visible=False, valign=Gtk.Align.CENTER)
         items = [('agents', 'Agents', 'applications-science-symbolic'), ('activity', 'Activity', 'view-list-symbolic'),
                  ('timemachine', 'Time Machine', 'document-open-recent-symbolic')]
-        items += [(f"app:{a['name']}", a['title'], a) for a in self.apps]
+        items += [(f"app:{a['name']}", short(a['title']), a) for a in self.apps]
         if self.system.get('edition') == 'business':
             items.append(('business', 'Company (opens in your browser)', 'system-users-symbolic'))
         for n, (pid, title, icon) in enumerate(items):
