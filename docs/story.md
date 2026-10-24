@@ -39,6 +39,12 @@ Where they show up on the site: the overview opens with 12, 11, 10 and 13; princ
 "Runs on top of GurtOS" box on every track page; 7 is the "Best shown in" band; 1, 8 and 9 are the page summary
 and its "Why" table.
 
+## Videos and the freeze
+
+Ben does not film. The videos are produced by the team after the build is done: screen recordings of the real app,
+animation, and possibly narration in Ben's own cloned voice. Until then every page shows a silent screen recording.
+The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
+
 ## Status
 
 | Track | Edition | Story |
@@ -104,7 +110,7 @@ and its "Why" table.
 - *A Forge app for Jira or Confluence.* (met): A Jira issue panel (UI Kit, native render) with a resolver in Atlassian's cloud, plus a jira:entityProperty index so state, cost, blocked attempts and pending approvals are searchable in JQL. Installed on the demo site in production.
 - *Technical use of Forge.* (met): The resolver reads the issue property as the signed-in user, checks EDIT_ISSUES before any action, and is the only place that holds the box's shared secret (a Forge encrypted variable). It calls one declared external host. Scopes are read-only: the app never writes to Jira; the box does.
 - *Usefulness to Atlassian users.* (met): The morning-after question is one JQL search: project = BOX AND boxBlocked > 0. Agent work moves across a normal board (To Do, In Progress, In Review, Done), so a team reviews agents the way it reviews people.
-- *Demo video, 3 minutes at most.* (partly): Shot list in the repo's docs/videos.md; the video is embedded above once uploaded.
+- *Demo video, 3 minutes at most.* (partly): The narrated video is produced after the build and will be embedded above; until then the clip above shows the real app.
 - *Repo link.* (met): The track lives in tracks/jira/ (box side) and tracks/jira/forge/ (the Forge app).
 
 **Demo moment and proof:** BOX-2, a scripted agent that misread a rule, changed three configs instead of one and tried to send the repo to a paste site. It was blocked, approved from Jira, then rolled back from Jira: its configs came back and the README fix another task made a minute earlier stayed.
@@ -545,7 +551,7 @@ and its "Why" table.
 - *Figma Slides (required).* (met): The pitch deck is a 16-slide Figma Slides file in the GurtOS system, with v2 screens in its 16 image slots, a setup-wizard slide and a design-system slide. It opens signed out.
 - *An embedded Make or prototype.* (met): The v2 Figma Design prototype is embedded on this page: approve a spend on the phone, and undo one task on the box. Four flows are wired in all (setup, phone, undo, desktop and Settings). A Figma Make file holds two of them as a small working web page in the v2 system.
 - *Files shared with 'Anyone'.* (met): The FigJam board, the design file, the deck and both prototype flows open in a signed-out browser (checked Oct 24). The Make file opens too; its preview inside Figma was not verified by the import.
-- *Demo video, 3 minutes at most.* (partly): Shot list in the repo's docs/videos.md; the video goes at the top of this page once uploaded.
+- *Demo video, 3 minutes at most.* (partly): The narrated video is produced after the build and will go at the top of this page; until then the clip shows the real app.
 
 **Demo moment and proof:** The portal the box runs today was generated from the v2 frames through Figma's MCP server, and every Figma variable is a CSS custom property of the same name: Figma's accent/bg (#2F64A6 Light, #78A9E6 Dark) is --color-accent-bg in the shipped kit, with the same two values. The screenshots below put each frame next to the running app.
 

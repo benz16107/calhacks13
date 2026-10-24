@@ -73,6 +73,10 @@ out = ["# The story bible", "",
  "Where they show up on the site: the overview opens with 12, 11, 10 and 13; principles 2 to 6 and 10 to 13 are the",
  "\"Runs on top of GurtOS\" box on every track page; 7 is the \"Best shown in\" band; 1, 8 and 9 are the page summary",
  "and its \"Why\" table.", "",
+ "## Videos and the freeze", "",
+ "Ben does not film. The videos are produced by the team after the build is done: screen recordings of the real app,",
+ "animation, and possibly narration in Ben's own cloned voice. Until then every page shows a silent screen recording.",
+ "The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.", "",
  "## Status", "",
  "| Track | Edition | Story |", "|---|---|---|"]
 tracks = sorted(E, key=lambda k: front(k)[0]['order'])

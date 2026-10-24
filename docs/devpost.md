@@ -3,7 +3,7 @@
 Everything for the Devpost page, field by field. The showcase site with one page per track is
 https://calhacks.gurtos.com. Keep this file and the site in step: when a track changes, change both.
 
-Placeholders still waiting on Ben are marked **TODO (Ben)** and listed at the end.
+Placeholders still open are marked **TODO** and listed at the end.
 
 ## Project name
 
@@ -15,7 +15,7 @@ An OS where AI agents do real work safely: each task runs as its own Linux user,
 
 ## Video
 
-**TODO (Ben):** the unlisted YouTube link of the main video (2 to 3 minutes; shot list in `docs/videos.md`).
+The main video is produced by the team after the build (screen recordings and animation). Its unlisted YouTube link goes here when it is ready.
 
 ## Image gallery (upload in this order)
 
@@ -29,7 +29,7 @@ The thumbnail is image 1.
 
 - https://calhacks.gurtos.com (the showcase: one page per sponsor track, with evidence)
 - https://gurtos.com (the product docs)
-- https://github.com/benz16107/calhacks13 (the code, Apache License 2.0; **TODO (Ben):** say go on making it public)
+- https://github.com/benz16107/calhacks13 (the code, open source under the Apache License 2.0)
 - https://www.figma.com/slides/SBrJtJiY20k88X3IGzKwZW (the pitch deck, Figma Slides)
 
 ## Built with
@@ -134,7 +134,7 @@ Every task an agent runs on GurtOS becomes a Jira issue holding what it was aske
 
 **Proof:** BOX-2: a scripted agent misread a rule, changed three configs instead of one and tried to send the repo to a paste site. The box blocked it, it was approved from Jira, then rolled back from Jira: its configs came back and another task's README fix stayed. `DEMO_LIVE=jira ./demo` passes all 12 checks against the real Jira site.
 
-Forge app: `jira:issuePanel` (UI Kit), a resolver that reads the task as the signed-in user and checks `EDIT_ISSUES` before acting, `jira:entityProperty` for the JQL fields, and an encrypted variable for the box's secret; read-only scopes. Repo: `tracks/jira/` and `tracks/jira/forge/`. Demo video (3 minutes or less): **TODO (Ben)**.
+Forge app: `jira:issuePanel` (UI Kit), a resolver that reads the task as the signed-in user and checks `EDIT_ISSUES` before acting, `jira:entityProperty` for the JQL fields, and an encrypted variable for the box's secret; read-only scopes. Repo: `tracks/jira/` and `tracks/jira/forge/`. Demo video: produced by the team after the build (screen recordings and animation).
 
 [Full write-up, video and evidence →](https://calhacks.gurtos.com/tracks/atlassian/)
 
@@ -207,7 +207,7 @@ A production-minded finance agent: two agent seats run a small wholesaler's cred
 
 **Proof:** In the Oct 23 live run, Apify read Chemex filters at Best Buy Canada for $15.36 CAD. After the tap, the box bought them at that price as a Stripe test-mode charge on a Visa test card, and undoing a reorder refunded it. All test money.
 
-Video: **TODO (Ben)**. All payments are test payments: Stripe test mode, Visa test card 4242. The GurtOS Test Store is our own stand-in merchant. The household mailbox is a demo POP3 inbox, not Gmail.
+Video: produced by the team after the build (screen recordings and animation). All payments are test payments: Stripe test mode, Visa test card 4242. The GurtOS Test Store is our own stand-in merchant. The household mailbox is a demo POP3 inbox, not Gmail.
 
 GurtOS is open source (Apache-2.0): anyone can run it, customise it and reuse this shopping agent in their own agents.
 
@@ -250,7 +250,7 @@ Agents:
 - `box`: `agent1qvuk46tnt9lnscher0pawl7pr5y525mak66ptwsrvg4kff0pfy9m2sy0us6`
 - `box-test`: `agent1qdcex5gzkjnl08fc6wswejxv9h7swvfnewk35fyntrklthx57sv3jkzxz3u`
 
-Badges: ![tag:innovationlab](https://img.shields.io/badge/innovationlab-3D8BD3) ![tag:hackathon](https://img.shields.io/badge/hackathon-5F43F1). Uses the Agent Chat Protocol (uAgents, Agentverse mailbox). The main flow runs inside the ASI:One chat. Real tool use: Droid edits and tests code; Apify `rag-web-browser` searches the web. Run steps are in `tracks/fetch/README.md`. Video (3 to 5 min): **TODO (Ben)**. Also submitted through the ASI:One Submission Agent: **TODO (Ben)**.
+Badges: ![tag:innovationlab](https://img.shields.io/badge/innovationlab-3D8BD3) ![tag:hackathon](https://img.shields.io/badge/hackathon-5F43F1). Uses the Agent Chat Protocol (uAgents, Agentverse mailbox). The main flow runs inside the ASI:One chat. Real tool use: Droid edits and tests code; Apify `rag-web-browser` searches the web. Run steps are in `tracks/fetch/README.md`. Video: produced by the team after the build (screen recordings and animation). Also submitted through the ASI:One Submission Agent: **TODO**.
 
 GurtOS is open source (Apache-2.0): anyone can run it, customise it and reuse this Agentverse agent in their own agents.
 
@@ -444,11 +444,9 @@ Public links: chat https://www.mana.space/shared-chats/x5CqxyjcOgVCAyrvUBqK2LNRc
 
 <!-- TODO START -->
 
-1. **Six videos.** Record and upload as Unlisted on YouTube (shot lists in `docs/videos.md`): main, Fetch.ai, Atlassian,
-   Figma, Hyphenate, Visa. Put each id in `showcase/src/data/videos.ts` and redeploy; paste the main video's link in
-   Devpost's video field. Until then every page shows a silent screen recording of the real app.
-2. **Say go on making the repo public** (Apache-2.0, full history; the release thread does it). The site and this
-   text link to files in it, and judges get a 404 until then. The link checker verifies those paths against main.
+1. **Videos.** Ben does not film. The main video and the track videos are produced by the team after the build (screen recordings and animation), possibly
+   narrated in Ben's own cloned voice. Until then every page shows a silent screen recording of the real app.
+2. **Repo:** public since Oct 24, 01:02 PT. Done.
 3. **Root `README.md`** still says "Working name"; the release thread owns it. Factory ("the README says where and
    how"), Fetch.ai (agent names, addresses and badges) and Coinbase (setup steps) read it, so it should point to the
    track READMEs and to https://calhacks.gurtos.com.

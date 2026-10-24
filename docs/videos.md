@@ -1,18 +1,10 @@
-# Videos: shot lists
+# Videos
 
-Six videos, all recorded by Ben, all uploaded to YouTube as **Unlisted** (Devpost's video field takes YouTube or
-Vimeo). After uploading, put each video's id (the part after `watch?v=`) into `showcase/src/data/videos.ts`, then
-rebuild and redeploy the showcase (`showcase/README.md`). Until an id is set, each showcase page shows a silent
-screen recording of the real app instead.
-
-| Video | Length | Key in `videos.ts` | Shown on |
-|---|---|---|---|
-| Main | 2 to 3 min | `main` | Devpost's video field, the overview, Anthropic, Factory, Armadin, Spacetime and others |
-| Fetch.ai | 3 to 5 min, inside ASI:One | `fetch` | Fetch.ai page; also submit it to the ASI:One Submission Agent |
-| Atlassian | 3 min or less | `atlassian` | Atlassian page |
-| Figma | 3 min or less | `figma` | Figma page |
-| Hyphenate | opens with its moment; aim for 3 min | `hyphenate` | Hyphenate, Microsoft, CRS and Nessie pages |
-| Visa | aim for 2 to 3 min | `visa` | Visa page |
+**Ben does not film.** The videos are produced by the team after the build is done (the freeze is Sat Oct 24, 9 PM PT):
+screen recordings of the real app, animation, and possibly narration in Ben's own cloned voice. The shot lists below
+are notes for that work, not a recording plan for Ben. Each finished video goes up on YouTube as **Unlisted**; its id
+goes into `showcase/src/data/videos.ts`, and the showcase is rebuilt and redeployed. Until then every page shows a
+silent screen recording of the real app.
 
 ## Before any recording
 

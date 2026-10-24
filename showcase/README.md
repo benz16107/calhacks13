@@ -34,7 +34,8 @@ adding it. The pairing screenshots in `portal/screenshots/` show a private addre
 
 ## Update a video
 
-Upload as Unlisted on YouTube, put the id into `src/data/videos.ts`, then build, check and deploy.
+Videos are produced by the team after the build. Upload each as Unlisted on YouTube, put the id into
+`src/data/videos.ts`, then build, check and deploy.
 
 ## Update the merge gate output
 
