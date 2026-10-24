@@ -6,6 +6,8 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { addMachine, api, box, changed, hosted, machine, machines, pairing, patchSettings, setPairing, signIn, signedIn, surface, switchMachine, undo, useBox, type Approval, type Pairing } from './live.ts';
 import { AddToHomeScreen, InstallCard, ios, standalone } from './pwa/pwa.tsx';
 import { NotificationsCard, forget } from './apps/remote.tsx';
+import { openMachines } from './apps/machines.tsx';
+import { FolderReview } from './apps/folders.tsx';
 import { AnswerButtons } from './apps/answer.tsx';
 import { Avatar, WaitingList, askInfo } from './apps/business.tsx';
 import { Alert, AppIcon, Badge, Button, Icon, Menu, Popover, Progress, Switch } from './kit/ui.tsx';
@@ -814,21 +816,20 @@ export function PhoneHome() {
     );
   const list = asks();
   const running = ofState('running');
-  const [anchor, setAnchor] = useState<HTMLElement | null>(null);
   return (
     <main class="gos-home" aria-label="Home">
       <header class="gos-home-head">
-        <button type="button" class="gos-plain gos-home-box" aria-expanded={shell.open === 'boxes'} onClick={(e) => (setAnchor(e.currentTarget as HTMLElement), toggle('boxes'))}>
+        <button type="button" class="gos-plain gos-home-box" aria-haspopup="dialog" onClick={openMachines}>
           <h1 class="t-display">{selfBox().name}</h1>
           <Icon name="pan-down" />
         </button>
         <p class="t-caption t-secondary">
-          {b.down ? 'Out of reach' : 'Online'} · {running.length} running · {spentToday()} spent today (test money)
+          {editionName(b.system?.edition)} · {b.down ? 'Out of reach' : 'Online'} · {running.length} running · {spentToday()} today (test money)
         </p>
       </header>
       <InstallCard />
       <NotificationsCard />
-      {shell.open === 'boxes' && <BoxMenu anchor={anchor} />}
+      <FolderReview />
       <section class="g-group" aria-label="Needs you">
         <div class="g-group-head">
           <h2 class="g-group-title">Needs you</h2>
@@ -890,6 +891,14 @@ export function PhoneHome() {
           )}
         </div>
       </section>
+      {b.owner && b.system?.edition === 'server' && (
+        <section class="g-group" aria-label="Kill switch">
+          <div class="g-group-head">
+            <h2 class="g-group-title">Kill switch</h2>
+          </div>
+          <KillSwitchCard />
+        </section>
+      )}
       <Button kind="suggested" large icon="list-add" onClick={() => open('tasks/new')}>
         Ask the box
       </Button>
@@ -1093,7 +1102,7 @@ export function PairFirst() {
             <Icon name="phone" size={32} />
           </span>
           <h1 class="t-title2" id="pair-first-title">
-            {adding ? 'Add a machine' : standalone() && !fromLink ? 'Type the pairing code' : `Pair this ${surface === 'phone' ? 'phone' : 'device'} first`}
+            {adding ? 'Add a machine' : hosted && fromLink && boxAddr ? `Pair with ${boxAddr}?` : standalone() && !fromLink ? 'Type the pairing code' : `Pair this ${surface === 'phone' ? 'phone' : 'device'} first`}
           </h1>
           <p class="t-body t-secondary">
             {revoked ? 'This device was removed from the box, so it needs a new code. ' : ''}

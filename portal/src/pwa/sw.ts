@@ -104,8 +104,10 @@ self.addEventListener('push', (e) => {
       const m = await trusted(p).catch(() => undefined);
       // A browser must show something for every push, so one that fails the check says only that it was ignored.
       if (!m) return self.registration.showNotification('GurtOS', { body: 'A message that could not be checked was ignored.', tag: 'unchecked', icon: '/icon-192.png' });
+      // The title names the machine and the body is the question (docs/figma/phone-app, 3a): the phone already shows
+      // GurtOS's name and icon, so the text doesn't repeat them.
       const options: NotificationOptions & { actions?: { action: string; title: string }[] } = {
-        body: `${p.box ?? m.box.name}: ${p.body ?? ''}`.trim(),
+        body: p.body ?? p.title,
         tag: p.id ?? `${p.machine}-${p.type}`,
         data: p,
         icon: '/icon-192.png',
@@ -115,7 +117,7 @@ self.addEventListener('push', (e) => {
       // Face ID, which a service worker can't ask for, so it offers Deny only and a tap opens it in the app.
       if (p.type === 'approval')
         options.actions = p.source?.startsWith('shopper:') ? [{ action: 'deny', title: 'Deny' }] : [{ action: 'approve', title: 'Approve' }, { action: 'deny', title: 'Deny' }];
-      await self.registration.showNotification(p.title ?? 'GurtOS', options);
+      await self.registration.showNotification(p.box ?? m.box.name, options);
     })(),
   );
 });

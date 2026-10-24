@@ -34,37 +34,36 @@ export function AddToHomeScreen({ pairCode, box, onSafari }: { pairCode: string;
         <div class="gos-pair">
           <img class="gos-a2hs-icon" src="/icon-180.png" alt="" width="64" height="64" />
           <h1 class="t-title2" id="a2hs-title">
-            Add {PRODUCT} to your Home Screen
+            Install {PRODUCT} on this phone
           </h1>
-          <p class="t-body t-secondary">So requests for your OK reach this iPhone as notifications. It takes three taps.</p>
+          <p class="t-body t-secondary">
+            To answer {box ?? 'the box'} from this phone, add {PRODUCT} to your Home Screen, then open it from there. It pairs inside the app.
+          </p>
           <ol class="gos-a2hs-steps">
-            <li>
-              <span class="gos-a2hs-n">1</span>
-              <span>
-                Tap <b>Share</b>{' '}
-                <svg class="g-icon" viewBox="0 0 16 16" width="16" height="16" role="img" aria-label="the Share button">
-                  <path d="M8 1 5 4l1 1 1.3-1.3V10h1.4V3.7L10 5l1-1zM3 6h3v1.4H4.4v6.2h7.2V7.4H10V6h3v9H3z" fill="currentColor" />
-                </svg>{' '}
-                in Safari's toolbar.
-              </span>
-            </li>
-            <li>
-              <span class="gos-a2hs-n">2</span>
-              <span>
-                Tap <b>Add to Home Screen</b>, then <b>Add</b>.
-              </span>
-            </li>
-            <li>
-              <span class="gos-a2hs-n">3</span>
-              <span>
+            {[
+              <>
+                Tap <b>⋯</b> below, then <b>Share</b>
+              </>,
+              <>
+                Tap <b>Add to Home Screen</b>
+              </>,
+              <>
+                Leave <b>Open as Web App</b> on, then tap <b>Add</b>
+              </>,
+              <>
                 Open <b>{PRODUCT}</b> from your Home Screen and type {box ? <>the box address <b>{box}</b> and </> : ''}this code:
-              </span>
-            </li>
+              </>,
+            ].map((step, n) => (
+              <li key={n}>
+                <span class="gos-a2hs-n">{n + 1}</span>
+                <span>{step}</span>
+              </li>
+            ))}
           </ol>
           <p class="gos-code t-mono" aria-label={`Pairing code ${pairCode.split('').join(' ')}`}>
             {code(pairCode)}
           </p>
-          <p class="t-caption t-secondary">The code works for 5 minutes. If it runs out, the box's screen shows a new one.</p>
+          <p class="t-caption t-secondary">The code works for 5 minutes. If it runs out, the box's screen shows a new one. Already have {PRODUCT}? Open it and choose Add a machine.</p>
           <Button kind="flat" onClick={onSafari}>
             Use it in Safari instead (no notifications)
           </Button>

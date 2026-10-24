@@ -1,7 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-  <!-- The GurtOS app icon: the wallpaper's night sky, hills and crescent moon. Full bleed, so it also works as a
-       maskable icon (the moon sits inside the safe circle). PNGs: node icons.mjs. -->
-  <rect width="512" height="512" fill="#27313F"/>
-  <g transform="translate(0 228) scale(0.26667)"><path id="hill-far" d="M0 640C300 560 520 600 760 570C1000 540 1250 520 1500 580C1750 640 1800 560 1920 590V1080H0V640Z" fill="#46586B"/><path id="hill-mid" d="M0 720C260 650 520 700 820 660C1120 620 1300 690 1560 640C1820 590 1820 680 1920 660V1080H0V720Z" fill="#36475A"/><path id="hill-near" d="M0 820C300 760 640 800 960 770C1280 740 1500 800 1920 750V1080H0V820Z" fill="#28343F"/><path id="hill-front" d="M0 930C400 880 900 940 1300 900C1700 860 1750 920 1920 890V1080H0V930Z" fill="#1C252D"/></g>
-  <path transform="translate(-544 -394) scale(4)" d="M191.368 118C188.117 122.775 186.216 128.543 186.216 134.756C186.216 151.218 199.562 164.564 216.024 164.564C222.237 164.564 228.004 162.662 232.779 159.411C228.616 172.944 216.018 182.78 201.12 182.78C182.828 182.78 168 167.952 168 149.66C168 134.763 177.836 122.163 191.368 118Z" fill="#E9DFC8"/>
+  <!-- The GurtOS app icon: the Tasks tile (docs/figma/phone-app, "The app icon is the GurtOS Tasks tile"). Full bleed,
+       so it also works as a maskable icon: the glyph sits inside the safe circle. PNGs: node icons.mjs. -->
+  <rect width="512" height="512" fill="#2F64A6"/>
+  <path transform="scale(10.6667)" d="M33 30.5C33.8284 30.5 34.5 31.1716 34.5 32C34.5 32.8284 33.8284 33.5 33 33.5H12C11.1716 33.5 10.5 32.8284 10.5 32C10.5 31.1716 11.1716 30.5 12 30.5H33ZM30 22.5C30.8284 22.5 31.5 23.1716 31.5 24C31.5 24.8284 30.8284 25.5 30 25.5H12C11.1716 25.5 10.5 24.8284 10.5 24C10.5 23.1716 11.1716 22.5 12 22.5H30ZM36 14.5C36.8284 14.5 37.5 15.1716 37.5 16C37.5 16.8284 36.8284 17.5 36 17.5H12C11.1716 17.5 10.5 16.8284 10.5 16C10.5 15.1716 11.1716 14.5 12 14.5H36Z" fill="#F7F3EA"/>
 </svg>

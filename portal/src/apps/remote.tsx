@@ -231,3 +231,48 @@ export function RemoteAccess() {
 export async function forget(m: Machine) {
   await callMachine(m, 'DELETE', '/pair/self').catch(() => {}); // an older box has no such route: forget it here anyway
 }
+
+/** Machines paired since notifications were turned on (or with no push key yet) join them, silently. */
+export function syncPush() {
+  if (!pushWorks() || needsHomeScreen() || Notification.permission !== 'granted') return;
+  if (machines().some((m) => !m.pushKey)) void turnOn().catch(() => {});
+}
+
+/**
+ * The installed app's first screen, before pairing (docs/figma/phone-app, 4d). iOS asks for notifications only after
+ * a tap in the Home Screen app, so this has its own button. Pairing then joins this phone's subscription.
+ */
+export function NotifyFirst({ onDone }: { onDone: () => void }) {
+  const [error, setError] = useState('');
+  const done = () => (localStorage.setItem('gurtos.notify-asked', '1'), onDone());
+  const on = () =>
+    Notification.requestPermission()
+      .then((p) => (p === 'granted' ? subscription().then(() => {}) : undefined))
+      .then(done, (e) => setError((e as Error).message));
+  return (
+    <div class="gos-setup-layer">
+      <section class="g-window gos-pair-first" aria-labelledby="notify-first-title">
+        <div class="gos-pair">
+          <img class="gos-a2hs-icon" src="/icon-180.png" alt="" width="64" height="64" />
+          <h1 class="t-title2" id="notify-first-title">
+            Get approvals on this phone
+          </h1>
+          <p class="t-body t-secondary">{PRODUCT} sends a notification when something needs your OK, and names the machine it came from. Nothing else.</p>
+          <Button kind="suggested" large onClick={() => void on()}>
+            Turn on notifications
+          </Button>
+          <Button kind="flat" onClick={done}>
+            Not now
+          </Button>
+          {error && (
+            <p class="gos-error" role="alert">
+              {error}
+            </p>
+          )}
+        </div>
+      </section>
+    </div>
+  );
+}
+/** Show NotifyFirst: the installed app, push works, and the phone has not been asked yet. */
+export const askNotifyFirst = () => standalone() && pushWorks() && Notification.permission === 'default' && !localStorage.getItem('gurtos.notify-asked');

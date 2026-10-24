@@ -1,7 +1,7 @@
 // One task's window (Figma 84:4845): its state, cost, blocked attempts, steps from the log, the files it changed
 // and what it was allowed. Undo task is the header bar's main action, behind an alert (84:5090).
 import { useEffect, useState } from 'preact/hooks';
-import { api, onEvent, undo, useBox, type Approval, type LogEvent, type Task } from '../live.ts';
+import { api, box, hosted, machine, onEvent, undo, useBox, type Approval, type LogEvent, type Task } from '../live.ts';
 import { Alert, AppIcon, Badge, Button, Icon, IconButton, Menu, Popover, StatusPage } from '../kit/ui.tsx';
 import { HeaderBar, open, useWin } from '../wm.tsx';
 import { STATE, appOf, clock, dollars, needsModelKey, taskTitle } from '../util.ts';
@@ -131,6 +131,13 @@ export function TaskApp({ id }: { id: string }) {
       {head}
       {popover}
       <div class="g-window-content gos-scroll">
+        {hosted && machine() && (
+          <p class="g-chip gos-machine-chip">
+            <Icon name="computer" />
+            {machine()!.box.name}
+            {box.business.me?.person ? ` · signed in as ${box.business.me.person.name}` : ''}
+          </p>
+        )}
         <div class="gos-w-task">
           <div class="gos-w-task-main">
             <p class="gos-w-state t-body">

@@ -12,6 +12,8 @@ import { SetupWizard } from './setup.tsx';
 import { StatusPage } from './kit/ui.tsx';
 import { PRODUCT } from './product.ts';
 import { registerWorker } from './pwa/pwa.tsx';
+import { MachinesSheet } from './apps/machines.tsx';
+import { NotifyFirst, askNotifyFirst, syncPush } from './apps/remote.tsx';
 
 /** The route in the address: #tasks, #task/<id>, #settings/devices, #app/<track>/<name>, and /pair#<code>. */
 const routeOf = () => (location.pathname === '/pair' ? `pair/${location.hash.slice(1)}` : decodeURIComponent(location.hash.slice(1)));
@@ -36,7 +38,8 @@ function App() {
   // Off the box's own screen the box answers only paired devices.
   // On app.gurtos.com, /pair adds a machine even when others are paired already.
   // A work-account sign-in comes back to /#sso/<code>, even on a device paired as someone else.
-  if (b.unpaired || (hosted && location.pathname === '/pair') || location.hash.startsWith('#sso/')) return <PairFirst />;
+  if (b.unpaired || (hosted && location.pathname === '/pair') || location.hash.startsWith('#sso/'))
+    return askNotifyFirst() && !location.hash.startsWith('#sso/') ? <NotifyFirst onDone={changed} /> : <PairFirst />;
   // On the box's own screen, the box out of reach means its service is starting: show the boot screen.
   if (b.down && surface === 'box screen') return <BootScreen />;
   // First run: the wizard on the box's screen (or the owner's phone) until setup is done. Nothing else shows.
@@ -61,6 +64,7 @@ function App() {
       <OutageBar />
       <Windows />
       {mobile ? <TabBar /> : <Dock />}
+      {mobile && <MachinesSheet />}
       {shell.open === 'apps' && <Launcher />}
       <Banners />
       {shell.locked && <LockScreen />}
@@ -87,4 +91,4 @@ if (surface === 'box screen') {
 render(<App />, document.getElementById('app')!);
 // The installable app: open offline, and notifications. The box's own screen (the kiosk) stays a plain page.
 if (surface !== 'box screen') registerWorker();
-void start();
+void start().then(syncPush);

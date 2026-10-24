@@ -24,7 +24,9 @@ home=/var/lib/box-$name
 port=${DEV_PORT:-7790}
 
 # The plug: the box's process group, every task user's processes, and the task mounts, all at once.
-kill="pid=\$(cat /run/box-$name.pid 2>/dev/null || true); [ -n \"\$pid\" ] && kill -9 -\$pid 2>/dev/null; true
+kill="pid=\$(cat /run/box-$name.pid 2>/dev/null || true); rm -f /run/box-$name.pid
+  # Only a process group that is still this box: an old id may belong to anything by now, even this shell.
+  [ -n \"\$pid\" ] && grep -qs core/box.ts /proc/\$pid/cmdline && kill -9 -\$pid 2>/dev/null; true
   for u in \$(awk -F: '\$3>=30000 && \$3<40000 {print \$1}' /etc/passwd); do [ -d $home/tasks/\${u#box-} ] && pkill -KILL -u \$u || true; done
   sleep 0.5; grep -o \" $home/[^ ]*\" /proc/mounts | sort -r | xargs -r -n1 umount -l; true"
 wipe="$kill
