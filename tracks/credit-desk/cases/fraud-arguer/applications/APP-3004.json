@@ -1,0 +1,88 @@
+{
+  "application_id": "APP-3004",
+  "received_at": "2026-10-22T10:15:00-07:00",
+  "channel": "web form",
+  "submitted_from_ip": "203.0.113.29",
+  "business": {
+    "legal_name": "Kettle Row Cafe LLC",
+    "dba": "Kettle Row Cafe",
+    "entity_type": "LLC",
+    "state_of_formation": "CA",
+    "ein": "94-7781204",
+    "year_started": 2023,
+    "years_in_business": 3,
+    "annual_revenue": 620000,
+    "employees": 9,
+    "industry": "Cafe",
+    "billing_address": {
+      "line1": "2390 Kettner Blvd",
+      "city": "San Diego",
+      "state": "CA",
+      "zip": "92101",
+      "line2": "Ste 114 #2207"
+    },
+    "ship_to_address": {
+      "line1": "7801 NW 37th St",
+      "city": "Doral",
+      "state": "FL",
+      "zip": "33166",
+      "line2": "Unit 4"
+    },
+    "phone": "5550101019",
+    "email": "grace.nakamura@example.com",
+    "website": ""
+  },
+  "request": {
+    "credit_limit": 8000,
+    "terms": "Net 30",
+    "first_order_amount": 7500,
+    "first_order_ship_date": "2026-10-26",
+    "reason": "We are opening a second cafe in Berkeley and want a Net 30 account for roasted beans and milk."
+  },
+  "guarantor": {
+    "first_name": "GRACE",
+    "last_name": "NAKAMURA",
+    "title": "Owner",
+    "ownership_pct": 100,
+    "ssn": "666701019",
+    "dob": "1976-09-16",
+    "home_address": {
+      "line1": "1850 SOLANO AVE",
+      "city": "BERKELEY",
+      "state": "CA",
+      "zip": "94707"
+    },
+    "phone": "5550101019",
+    "email": "grace.nakamura@example.com"
+  },
+  "declarations": {
+    "bankruptcy_last_7_years": false,
+    "open_liens_or_judgments": false,
+    "personal_guarantee_signed": true,
+    "credit_check_authorized": true
+  },
+  "trade_references": [
+    {
+      "name": "Coastal Foodservice Partners",
+      "contact": "Mike Sandoval",
+      "phone": "(619) 555-0182",
+      "customer_since": "2022",
+      "high_credit": 25000,
+      "terms": "Net 30"
+    },
+    {
+      "name": "Westline Paper & Packaging",
+      "contact": "Tara Bell",
+      "phone": "(619) 555-0182",
+      "customer_since": "2023",
+      "high_credit": 18000,
+      "terms": "Net 30"
+    }
+  ],
+  "bank_reference": {
+    "bank": "Applicant's bank (Nessie sandbox)",
+    "account_opened": "2026-08-28",
+    "letter_date": "2026-10-19"
+  },
+  "attachments": []
+}

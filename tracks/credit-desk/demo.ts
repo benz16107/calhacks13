@@ -9,6 +9,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import type { Approval, DemoKit, LogEvent, Task } from '../../core/contract.ts';
 import { parseLedger } from './books.ts';
+import crsPush from './demo-crs.ts';
 
 const results = (events: LogEvent[], tool: string) =>
   events.flatMap((e) => (e.type === 'tool.call' && e.tool === tool ? [e.key] : []))
@@ -101,6 +102,8 @@ export default async function (d: DemoKit) {
   const keys = ['CRS_USERNAME', 'CRS_PASSWORD', 'NESSIE_API_KEY'].map((k) => vault.match(new RegExp(`^${k}=(.*)$`, 'm'))?.[1]).filter((v): v is string => !!v && v.length > 4);
   const log = JSON.stringify(await d.api('GET', '/log'));
   d.check(keys.length === 3 && keys.every((k) => !log.includes(k)), 'no CRS or Nessie key is anywhere in the log');
+
+  await crsPush(d); // the CRS push: a reason for every pull, the fraudster who argues, CRS's MCP server, the nightly re-check, the fraud case
 
   // Real Droid only when the gate allows it too (droid in DEMO_LIVE, and Factory's 5-hour use under the core's limit).
   const live = (process.env.DEMO_LIVE ?? '').split(/[\s,]+/);

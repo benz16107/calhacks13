@@ -1,0 +1,84 @@
+{
+  "_note": "Test people only (CRS sandbox personas). consent_on_file is the date the guarantor signed a credit check consent that covers reviews (REV-5); a customer without it is never pulled. then is what the desk knew when the limit was last set.",
+  "C-1001": {
+    "consent_on_file": "2026-02-11",
+    "guarantor": {
+      "first_name": "MARGARET",
+      "last_name": "OKAFOR",
+      "ssn": "666701001",
+      "dob": "1984-03-14",
+      "home_address": {
+        "line1": "1420 WILLOW CREEK DR",
+        "city": "SAN JOSE",
+        "state": "CA",
+        "zip": "95125"
+      },
+      "phone": "5550101001",
+      "email": "margaret.okafor@example.com"
+    },
+    "then": {
+      "date": "2026-02-11",
+      "transunion": 790,
+      "equifax": 790,
+      "experian": 790,
+      "fraud_score": 11,
+      "identity": "verified",
+      "collections": 0,
+      "public_records": 0
+    }
+  },
+  "C-1002": {
+    "consent_on_file": "2024-05-20",
+    "guarantor": {
+      "first_name": "RICKY",
+      "last_name": "DALTON",
+      "ssn": "666701005",
+      "dob": "1988-09-09",
+      "home_address": {
+        "line1": "7031 SUNSET RIDGE RD",
+        "city": "ORLANDO",
+        "state": "FL",
+        "zip": "32819"
+      },
+      "phone": "5550101005",
+      "email": "ricky.dalton@example.com"
+    },
+    "then": {
+      "date": "2024-05-20",
+      "transunion": 742,
+      "equifax": 738,
+      "experian": 745,
+      "fraud_score": 12,
+      "identity": "verified",
+      "collections": 0,
+      "public_records": 0
+    }
+  },
+  "C-1004": {
+    "consent_on_file": "2025-12-01",
+    "guarantor": {
+      "first_name": "TERRENCE",
+      "last_name": "ABERNATHY",
+      "ssn": "666701018",
+      "dob": "1980-02-29",
+      "home_address": {
+        "line1": "2102 S HALSTED ST",
+        "city": "CHICAGO",
+        "state": "IL",
+        "zip": "60608"
+      },
+      "phone": "5550101018",
+      "email": "terrence.abernathy@example.com"
+    },
+    "then": {
+      "date": "2025-12-01",
+      "transunion": 585,
+      "equifax": 585,
+      "experian": 585,
+      "fraud_score": 14,
+      "identity": "verified",
+      "collections": 2,
+      "public_records": 0
+    }
+  }
+}

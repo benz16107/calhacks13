@@ -68,7 +68,7 @@ export function scoreRun(info: RunInfo, events: LogEvent[], tasks: Task[]) {
 
   // ---------- application decisions ----------
   const credit = lastBy(recorded(uses, 'credit-desk.credit_decision'), (u) => u.input.application_id);
-  const crs = lastBy(uses.filter((u) => u.tool === 'credit-desk.crs' && u.ok), (u) => u.input.application_id);
+  const crs = lastBy(uses.filter((u) => u.tool === 'credit-desk.crs' && u.ok && u.output?.credit), (u) => u.input.application_id);
   const norm = (s: unknown) => String(s ?? '').toLowerCase().replace(/\s+/g, ' ').trim();
   const applications = (key.application_decisions ?? []).map((d: any) => {
     const want = {

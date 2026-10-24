@@ -132,6 +132,15 @@ to the Controller. Rosa Delgado can approve it."
 | Planning chats | The code that changed | The reviews |
 | Guide | The docs it reads | The agent, its search and its model |
 
+## Credit requests from a stranger's agent (the CRS push)
+
+A third guest kind, `credit`, goes through the same limits and the same owner approval. The request also carries the
+person behind the agent (`identity`) and the account asked for (`credit`). Before the owner is asked, CRS checks the
+person (identity, Fraud Finder, phone owner, no credit report); a person CRS cannot confirm is refused in plain words
+that name no check, and the owner is never asked. Only CRS's 20 sandbox people are accepted, checked before any CRS call.
+After the OK the credit desk's analyst works the application. A guest sees a fixed message, never the analyst's text.
+Code: `tracks/credit-desk/kya.ts`; the story is in `tracks/credit-desk/CRS.md`.
+
 ## The code
 
 | File | What it is |

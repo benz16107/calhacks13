@@ -68,7 +68,7 @@ export function checkRules(rules: Rules, cited: unknown): string[] {
 // ---------- runs ----------
 // A run is one case worked by one or both seats. Its workspace holds the case without the answer key.
 
-export interface RunInfo { run: string; caseId: string; caseDir: string; rulesFile: string; workspace: string; nessie: boolean }
+export interface RunInfo { run: string; caseId: string; caseDir: string; rulesFile: string; workspace: string; nessie: boolean; /** A stranger's agent asked for it through the guest path: /find and other readers can tell it from the owner's own runs. */ guest?: boolean }
 
 /** The run's starting files, staged in a root-only folder for box.workspace: the case without its answer key. */
 export function stageWorkspace(info: RunInfo): string {

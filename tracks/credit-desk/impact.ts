@@ -26,7 +26,7 @@ export function impact(info: RunInfo, events: LogEvent[], tasks: Task[], score: 
   const ids = new Set(run.map((t) => t.id));
   const uses = toolUses(events, ids);
   const asked = events.filter((e) => e.type === 'approval.asked' && ids.has(e.task)).map((e) => (e as { approval: { id: string; question: string } }).approval);
-  const applications = [...new Set(uses.filter((u) => u.tool === 'credit-desk.crs').map((u) => u.input.application_id))];
+  const applications = [...new Set(uses.filter((u) => u.tool === 'credit-desk.crs' && u.input.application_id).map((u) => u.input.application_id))];
   const onApplications = asked.filter((a) => /\[APP-/.test(a.question)).length;
 
   const decided = new Map<string, any>();

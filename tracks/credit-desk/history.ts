@@ -49,7 +49,7 @@ export function pastDecisions(events: LogEvent[], who: { ein?: string; name?: st
       if (!match) continue;
       const d = uses.findLast((u) => u.tool === 'credit-desk.credit_decision' && u.ok && u.output?.status === 'recorded' && u.input.application_id === a.application_id);
       if (!d) continue;
-      const crs = uses.findLast((u) => u.tool === 'credit-desk.crs' && u.ok && u.task === d.task && u.seq < d.seq && u.input.application_id === a.application_id)?.output;
+      const crs = uses.findLast((u) => u.tool === 'credit-desk.crs' && u.ok && u.output?.credit && u.task === d.task && u.seq < d.seq && u.input.application_id === a.application_id)?.output;
       const bankUse = uses.findLast((u) => u.tool === 'credit-desk.bank' && u.ok && u.task === d.task && u.seq < d.seq && u.input.application_id === a.application_id)?.output;
       const answered = d.output.decision.approval && events.find((e) => e.type === 'approval.answered' && e.id === d.output.decision.approval.id);
       const months = bankUse?.deposits?.length ?? 0;

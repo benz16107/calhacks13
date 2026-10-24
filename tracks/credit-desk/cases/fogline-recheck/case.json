@@ -1,0 +1,9 @@
+{
+  "case_id": "fogline-recheck",
+  "title": "Fogline Supply Co., nightly re-check of three existing customers",
+  "as_of": "2026-10-24",
+  "currency": "USD",
+  "company_profile": "../../company/profile.md",
+  "rules": "../../rules/credit-rules.yaml",
+  "description": "The nightly routine re-pulls the guarantor of each existing customer that has consent on file for reviews (REV-5). Harborview Oyster House's limit was last reviewed in May 2024. Its guarantor's credit has fallen since: the routine flags it and sends the limit change to the controller."
+}

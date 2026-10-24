@@ -1,0 +1,4 @@
+customer_id,legal_name,ein,phone,email,address_line1,address_line2,city,state,zip,terms,credit_limit,last_credit_review,on_credit_hold,created_on,sales_rep,notes
+C-1001,Golden Gate Bagel Co.,94-3307716,(415) 555-0121,ap@ggbagel.example,3150 Geary Blvd,,San Francisco,CA,94118,Net 30,20000,2026-02-11,no,2019-04-02,Sam Chen,Two shops: Geary Blvd (bill-to) and 780 Valencia St
+C-1002,Harborview Oyster House,68-0551942,415.555.0134,accounts@harborviewoysters.example,610 Bridgeway,,Sausalito,CA,94965,Net 30,30000,2024-05-20,no,2016-09-12,Sam Chen,
+C-1004,Greenleaf Juice Co.,82-1176350,(510) 555-0142,hello@greenleafjuice.example,2100 Shattuck Ave,Unit 3,Berkeley,CA,94704,Net 30,8000,2025-12-01,no,2021-11-15,Jae Park,

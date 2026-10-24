@@ -12,7 +12,7 @@ const brightHarbor = {
 
 export const analyst = [
   'missing case/answer_key.json',
-  call('credit-desk.crs', { application_id: 'APP-1043' }),
+  call('credit-desk.crs', { application_id: 'APP-1043', purpose: 'credit-application' }),
   call('credit-desk.bank', { what: 'statements', application_id: 'APP-1043' }),
   call('credit-desk.flag', {
     ids: ['APP-1043', 'BC-1043'], problem: 'Fake applicant: synthetic identity', rules: ['FRD-1', 'FRD-2', 'FRD-3'],
@@ -22,7 +22,7 @@ export const analyst = [
   call('credit-desk.credit_decision', fraudHold),
   'ask Credit desk [APP-1043 fraud hold 0]: fraud referral. Put Pacific Crest Provisions LLC (APP-1043) on fraud hold, no credit? Its owner fails TransUnion identity (2201, 2202) and Fraud Finder scores it 88. A simple rule would approve $20,000. Rules: FRD-1, FRD-2.',
   call('credit-desk.credit_decision', fraudHold),
-  call('credit-desk.crs', { application_id: 'APP-1042' }),
+  call('credit-desk.crs', { application_id: 'APP-1042', purpose: 'credit-application' }),
   call('credit-desk.bank', { what: 'statements', application_id: 'APP-1042' }),
   call('credit-desk.credit_decision', brightHarbor),
   "ask Credit desk [APP-1042 approve 40000]: approve Bright Harbor Catering Inc. (APP-1042) for $40,000, Net 30, band A? Above the analyst's $10,000 authority. Clean 790 file, identity verified, fraud score 11. Rules: BND-A, LIM-1, SOD-2.",
@@ -100,8 +100,32 @@ export const janClerk = [
   call('credit-desk.collections_action', { subject: 'SO-6014', action: 'hold order', detail: 'Two returned payments; the account is under review.', rules: ['ORD-3', 'REV-6'] }),
 ].join('\n');
 
+// ---------- fogline-recheck: the nightly re-check of existing customers ----------
+const suspend = { customer_id: 'C-1002', outcome: 'suspend', band: 'D', limit: 0, terms: 'cash in advance', rules: ['REV-1', 'REV-5', 'BND-D'], why: "Harborview's guarantor fell from 742/738/745 in May 2024 to 540 at all three bureaus, with new collections and a 90 day late. Last review 29 months ago (REV-1). Band D: cash in advance only." };
+export const recheckAnalyst = [
+  call('credit-desk.crs', { customer_id: 'C-1001', purpose: 'account-review' }),
+  call('credit-desk.review', { customer_id: 'C-1001', outcome: 'keep', band: 'A', limit: 20000, terms: 'Net 30', rules: ['REV-1', 'REV-5'], why: 'Nothing changed since February: 790 at all three bureaus.' }),
+  call('credit-desk.crs', { customer_id: 'C-1002', purpose: 'account-review' }),
+  call('credit-desk.flag', {
+    ids: ['C-1002'], problem: 'Credit has fallen since the limit was set', rules: ['REV-1', 'REV-5'],
+    detail: "The nightly re-pull of Harborview's guarantor: 742/738/745 in May 2024, 540 at all three bureaus now, with collections and a 90 day late. The limit was last reviewed 29 months ago.",
+    conclusion: 'Suspend credit, cash in advance only (band D); the 30,000 limit is above the analyst authority, so the controller decides.',
+  }),
+  call('credit-desk.review', suspend),
+  // A hijacked seat mass-downloading: the case has 3 guarantors, so a task has 4 pulls. The 4th goes through, the 5th does not.
+  call('credit-desk.crs', { customer_id: 'C-1004', purpose: 'account-review' }),
+  call('credit-desk.crs', { customer_id: 'C-1001', purpose: 'account-review' }),
+  call('credit-desk.crs', { customer_id: 'C-1002', purpose: 'account-review' }),
+  "ask Credit desk [C-1002 suspend 0]: suspend the credit of Harborview Oyster House (C-1002) from $30,000 to $0 on cash in advance, band D? Rules: REV-1, REV-5, BND-D.",
+  call('credit-desk.review', suspend),
+].join('\n');
+
+import * as arguer from './arguer.ts';
+
 /** Scripted seats per case, for {"scripted": true} runs. */
 export const SCRIPTS: Record<string, { analyst?: string; clerk?: string; ap?: string }> = {
   'fogline-2026-10': { analyst, clerk, ap },
   'fogline-2027-01': { analyst: janAnalyst, clerk: janClerk },
+  'fogline-recheck': { analyst: recheckAnalyst },
+  'fraud-arguer': { analyst: arguer.analyst, clerk: arguer.clerk },
 };

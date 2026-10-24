@@ -57,7 +57,7 @@ function creditReport(r: Raw) {
     score_model: x.scores?.[0]?.modelName,
     no_score_reason: x.scores?.find((s: any) => s.noScoreReasonType)?.noScoreReasonType,
     accounts: (x.tradelines ?? []).length,
-    inquiries: { count: inquiries.length, first: inquiries[0], last: inquiries.at(-1) },
+    inquiries: { count: inquiries.length, first: inquiries[0], last: inquiries.at(-1), dates: inquiries.slice(-15) },
     derogatory: { collections: Number(d.collectionsCount ?? 0), charge_offs: Number(d.chargeOffsCount ?? 0), late_90_days: Number(d._90DayLates ?? 0), bankruptcies: Number(d.bankruptciesCount ?? 0), public_records: Number(d.publicRecordsCount ?? 0) },
     // chargeOffAmount is not used: the sandbox's Experian files put 931 on every account.
     bad_accounts: (x.tradelines ?? []).filter((t: any) => t.derogatoryDataIndicator).map((t: any) => ({ creditor: t.creditorName, rating: t.currentRatingType, past_due: Number(t.pastDueAmount ?? 0), opened: t.accountOpenedDate })),
@@ -110,10 +110,11 @@ const read = <T,>(fn: (r: Raw) => T, r: Raw) =>
   r.status >= 400 ? { request_id: r.requestId, error: `HTTP ${r.status}: ${JSON.stringify(r.response).slice(0, 200)}` } : fn(r);
 
 /** Run every check on one application and summarize. `caseId` finds recorded answers if CRS cannot be reached. */
-export async function checkApplication(app: any, caseId: string, creds: () => [string, string]) {
+export async function checkApplication(app: any, caseId: string, creds: () => [string, string], only?: string[]) {
   const raw: Record<string, Raw> = {};
   let recorded = false;
   for (const [name, route, body] of crsRequests(app)) {
+    if (only && !only.includes(name)) continue; // know-your-agent runs identity, fraud and phone only: no credit report
     try {
       raw[name] = await post(route, body, creds);
     } catch (e) {
@@ -127,11 +128,11 @@ export async function checkApplication(app: any, caseId: string, creds: () => [s
   return {
     application_id: app.application_id,
     source: recorded ? 'recorded CRS sandbox answers from 2026-10-23 (CRS could not be reached)' : 'CRS sandbox, live',
-    credit: { transunion: read(creditReport, raw.transunion), equifax: read(creditReport, raw.equifax), experian: read(creditReport, raw.experian) },
-    identity: read(identity, raw.identity),
-    fraud: read(fraud, raw.fraud),
-    public_records: read(publicRecords, raw['public-records']),
-    phone_owner: read((x) => phoneOwner(x, app), raw['phone-owner']),
+    credit: { transunion: raw.transunion && read(creditReport, raw.transunion), equifax: raw.equifax && read(creditReport, raw.equifax), experian: raw.experian && read(creditReport, raw.experian) },
+    identity: raw.identity && read(identity, raw.identity),
+    fraud: raw.fraud && read(fraud, raw.fraud),
+    public_records: raw['public-records'] && read(publicRecords, raw['public-records']),
+    phone_owner: raw['phone-owner'] && read((x) => phoneOwner(x, app), raw['phone-owner']),
   };
 }
 

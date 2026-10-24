@@ -2,8 +2,9 @@
 // records credit decisions and reviews, only the collections clerk records collections actions, only the AP clerk
 // enters and pays supplier bills. The tools enforce the rest (limits, the controller, duplicates, bank changes).
 
-export const ANALYST_TOOLS = ['credit-desk.crs', 'credit-desk.bank', 'credit-desk.flag', 'credit-desk.credit_decision', 'credit-desk.history', 'credit-desk.review'];
-export const CLERK_TOOLS = ['credit-desk.bank', 'credit-desk.flag', 'credit-desk.collections_action', 'credit-desk.post_entry'];
+export const ANALYST_TOOLS = ['credit-desk.crs', 'credit-desk.bank', 'credit-desk.flag', 'credit-desk.credit_decision', 'credit-desk.history', 'credit-desk.review', 'credit-desk.crs_docs', 'credit-desk.crs_lookup'];
+// The clerk may read CRS's documentation but has no way to pull a report: it is not given credit-desk.crs or credit-desk.crs_lookup.
+export const CLERK_TOOLS = ['credit-desk.bank', 'credit-desk.flag', 'credit-desk.collections_action', 'credit-desk.post_entry', 'credit-desk.crs_docs'];
 export const AP_TOOLS = ['credit-desk.bank', 'credit-desk.flag', 'credit-desk.enter_bill', 'credit-desk.pay_bill', 'credit-desk.ap_action', 'credit-desk.post_entry'];
 
 export const OUTCOMES = ['approve', 'decline', 'cash in advance', 'fraud hold'];
@@ -43,8 +44,10 @@ ${b.applications.length ? `- case/applications/: the credit applications to deci
 - case/*.csv: the company's ledger. The collections clerk works it; you read it for reviews.
 
 Tools:
-- credit-desk.crs {application_id}: the CRS checks on an application's guarantor: credit reports from all three
-  bureaus, identity verification, fraud signals, public records and who owns the phone number.
+- credit-desk.crs {application_id, purpose: "credit-application"}: the CRS checks on an application's guarantor: credit
+  reports from all three bureaus, identity verification, fraud signals, public records and who owns the phone number.
+  Every pull names its purpose and one subject, and a task has a limited number of pulls. For an existing customer on
+  file use {customer_id, purpose: "account-review"}. A pull outside a live application asks the controller first.
 ${b.bank ? '- credit-desk.bank {what: "statements", application_id}: an applicant\'s deposits as the bank (Nessie) shows them.\n  {what: "deposits"}: what the bank received and paid out for the company, including returned payments.\n' : ''}${flagTool}
 - credit-desk.credit_decision {application_id, outcome, band, limit, terms, rules, data, why, needs_controller}:
   record a decision on an application. outcome is one of ${OUTCOMES.join(', ')}. data holds the figures you used.
@@ -54,7 +57,7 @@ ${b.bank ? '- credit-desk.bank {what: "statements", application_id}: an applican
   review of an existing customer's credit. The tool attaches what the desk knew then next to what it knows now.
 
 ${b.applications.length ? `For each application:
-1. Read it and every source about it, then run credit-desk.crs.
+1. Read it and every source about it, then run credit-desk.crs with purpose credit-application.
 2. Compare what the applicant says with what CRS, the business credit file and the bank show. Identity and fraud first.
 3. Flag every problem, citing the rule it breaks.
 4. Apply the rules to set the band, limit and terms, and record the decision.

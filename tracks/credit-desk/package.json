@@ -1,0 +1,8 @@
+{
+  "name": "credit-desk",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@crscreditapi/crs-calhacks-mcp-server": "1.1.2"
+  }
+}
