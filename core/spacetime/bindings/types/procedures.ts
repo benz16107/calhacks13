@@ -6,5 +6,8 @@
 import { type Infer as __Infer } from "spacetimedb";
 
 // Import all procedure arg schemas
+import * as ClaimJobProcedure from "../claim_job_procedure.ts";
 
+export type ClaimJobArgs = __Infer<typeof ClaimJobProcedure.params>;
+export type ClaimJobResult = __Infer<typeof ClaimJobProcedure.returnType>;
 

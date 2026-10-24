@@ -397,8 +397,11 @@ answer against the people as they are now. Each refusal is a `403` with the reas
 4. Approving only within your limit. Denying above it is allowed.
 
 The answer records `by` (the person's name) and `person` (their id). A track route called from a person's phone
-gets a box bound to that person: its tasks are asked by them, and its answers are theirs. SpacetimeDB's `answer`
-reducer is closed on a Business box (the box vouches for no identity), so every answer goes through these checks.
+gets a box bound to that person: its tasks are asked by them, and its answers are theirs. In SpacetimeDB a Business
+box vouches only for people: a phone paired to a person that gives its identity is that person there, and is sent
+only the requests routed to them (the `my_requests` view over the private `request` and `routed_to` tables). The
+public `approval` table still holds every approval for the box's own screens. They answer with `answerRequest`; the first answer wins in the database, and the box then runs these same
+checks as that person (`answerAs`). If the checks refuse it, the request goes back to pending.
 
 **Waiting for me.** `GET /api/me` returns `{person, company, edition, paused, directory, waiting, requests}`: the
 requests this person may approve now, and their own requests (the last 50, newest first, answered ones too), each with
@@ -618,12 +621,20 @@ on another origin needs `BOX_ORIGINS=http://localhost:5173` (comma separated, or
 
 ### Live: SpacetimeDB
 
-`ws://<box>:3000`, database `box` (the demo uses its own). Public tables, mirrored from the log by the box:
+`ws://<box>:3000` on the box only; database `box` (the demo uses its own). Each box publishes the module with its own login (`BOX_HOME/spacetime/cli.toml`, first copied from
+root's), so boxes side by side on one machine never change each other's identity. Public tables:
 
 | Table | Columns |
 |---|---|
 | `task` | `id, title, state, source, workspace, worker, costCents, budgetCents, updatedAt, step, note` (`note` is the error, else the summary) |
 | `approval` | `id, task, question, costCents, state` (`pending`, `approved`, `denied`)`, by` |
+| `job`, `agent` | Shared work queues and who is doing what (`tracks/spacetime`: `spacetime.claim`, `.finish`, `.post`, `.team`) |
+| `meter`, `activity` | Tasks per state and total spent, kept as tasks change; activity per minute for the last day |
+
+Views, each sent per connection: `my_requests` (a Business person's routed requests; every request for the box's
+screen) and `viewers` (who else has a request open: "Rosa is viewing", from the `look({id})` reducer, gone when that
+connection drops). Private: `person`, `request`, `routed_to`, `viewer`, `device`, `owner`. A `reminder` schedule
+table brings more people into a still-pending request when the route asks for it. See `tracks/spacetime/README.md`.
 
 The `approval` table carries `costCents`, `payee` (who gets paid, or the host) and `purpose`, so the phone can
 fill its amount and "to" rows. A tool supplies them with an optional `approval(input)` returning `{ payee, purpose }`.
@@ -633,7 +644,7 @@ paired phone, after it tells the box its SpacetimeDB identity with `POST /api/pa
 characters, `identity.toHexString()` after connecting; accepted from the box's own screen, or from a phone with its
 token). The answer is recorded under the vouched name (`box screen`, or the phone's device name); the `by` the
 caller sends is ignored, and any other connection is refused. The first answer wins, and the box writes it to the
-log within milliseconds. `putTask`, `putApproval`, `registerDevice` and `removeDevice` are for the box only.
+log within milliseconds; a later answer is refused with `already approved by <name>`, so that screen can say so. `putTask`, `putApproval`, `registerDevice` and `removeDevice` are for the box only.
 This is a second lock: SpacetimeDB also listens on loopback only (see *Who may reach the API*).
 
 TypeScript client (`npm i spacetimedb@2.13.0`). Import the generated bindings from `core/spacetime/bindings/`,

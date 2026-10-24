@@ -12,11 +12,15 @@ import { DbConnection } from './spacetime/bindings/index.ts';
 
 const URI = process.env.BOX_STDB_URL ?? 'ws://127.0.0.1:3000';
 export const DB = process.env.BOX_STDB_DB ?? 'box';
-const cliConfig = path.join(os.homedir(), '.config', 'spacetime', 'cli.toml');
+// The box's own SpacetimeDB login, in its home. Boxes side by side on one machine (demo runs on a test VM) used to
+// share root's, and one box logging in again changed the identity under every other box, so their next publish
+// was refused. A box installed before this starts from root's login, which owns its database.
+const cliConfig = path.join(process.env.BOX_HOME ?? '/var/lib/box', 'spacetime', 'cli.toml');
+const sharedConfig = path.join(os.homedir(), '.config', 'spacetime', 'cli.toml');
 const exec = promisify(execFile);
-// One spacetime CLI at a time per machine (boxes side by side share its login), and async so publishing
-// never blocks the box's boot or its event loop while the lock is held.
-const run = (...args: string[]) => exec('flock', ['/run/lock/box-spacetime-cli.lock', 'spacetime', ...args], { encoding: 'utf8' }).then((r) => r.stdout);
+// One spacetime CLI at a time per machine, and async so publishing never blocks the box's boot or its event loop
+// while the lock is held.
+const run = (...args: string[]) => exec('flock', ['/run/lock/box-spacetime-cli.lock', 'spacetime', '--config-path', cliConfig, ...args], { encoding: 'utf8' }).then((r) => r.stdout);
 
 /** Publish the module as the box. Whoever publishes owns the database, so only the box can write to it. */
 async function publish(): Promise<string> {
@@ -30,6 +34,10 @@ async function publish(): Promise<string> {
       await run('publish', '--server', 'local', '--module-path', mod, '--delete-data', '-y', DB); // only a mirror; the box refills it
     }
   };
+  if (!fs.existsSync(cliConfig)) {
+    fs.mkdirSync(path.dirname(cliConfig), { recursive: true, mode: 0o700 });
+    if (fs.existsSync(sharedConfig)) fs.copyFileSync(sharedConfig, cliConfig);
+  }
   if (!fs.existsSync(cliConfig) || !token()) await login();
   try {
     await attempt();
@@ -57,10 +65,35 @@ const taskRow = (t: Task) => ({
 });
 const approvalRow = (a: Approval) => ({ id: a.id, task: a.task, question: a.question, state: a.state, costCents: Math.round(a.costCents), payee: a.payee ?? '', purpose: a.purpose ?? '', by: a.by ?? '' });
 
+/** A person a Business request is routed to. `canApprove` is false above their limit: they may still deny. */
+export type Routed = { person: string; name: string; canApprove: boolean };
+export type Routing = { people: Routed[]; remind: Routed[]; remindAfterSec: number };
+const requestRow = (a: Approval, r: Routing, reopen = false) => ({
+  ...approvalRow(a),
+  person: a.person ?? '',
+  askedBy: a.askedBy ?? '',
+  rule: a.route?.rule ?? '',
+  to: a.route?.to ?? '',
+  why: a.route?.why ?? '',
+  ...r,
+  reopen,
+});
+
 export class Live {
   private conn?: DbConnection;
   private token = '';
-  private box: { tasks(): Task[]; approvals(): Approval[]; answer(id: string, approved: boolean, by: string): unknown; identities(): [string, string][] };
+  private box: {
+    tasks(): Task[];
+    approvals(): Approval[];
+    /** An answer given in SpacetimeDB. On GurtOS Business it names the person, and the box's own checks may refuse it (throw). */
+    answer(id: string, approved: boolean, by: string, person?: string): unknown;
+    /** Devices and screens the box vouches for: [identity, name]. */
+    identities(): [string, string][];
+    /** Business: people's connections: [identity, person id, name]. */
+    people(): [string, string, string][];
+    /** Business: who a routed approval goes to, or nothing for an ordinary approval. */
+    routed(a: Approval): Routing | undefined;
+  };
 
   constructor(box: Live['box']) {
     this.box = box;
@@ -89,16 +122,21 @@ export class Live {
       .withToken(this.token)
       .onConnect((conn) => {
         conn.db.approval.onUpdate((_ctx, _old, row) => this.answered(row));
+        conn.db.myRequests.onInsert((_ctx, row) => this.answered(row)); // a view: a changed row arrives as a new one
         conn.subscriptionBuilder()
           .onApplied(() => {
             // Answers given while the box was away come first, then the box refills everything.
             for (const row of conn.db.approval.iter()) this.answered(row);
+            for (const row of conn.db.myRequests.iter()) this.answered(row);
             this.conn = conn;
             for (const [identity, name] of this.box.identities()) this.register(identity, name);
+            for (const [identity, person, name] of this.box.people()) this.registerPerson(identity, person, name);
             for (const t of this.box.tasks()) this.task(t);
             for (const a of this.box.approvals()) this.approval(a);
+            conn.reducers.recountMeter({}); // runs after the refill above: reducer calls are applied in order
           })
-          .subscribeToAllTables();
+          // The box is the database's owner, so my_requests sends it every Business request.
+          .subscribe(['SELECT * FROM task', 'SELECT * FROM approval', 'SELECT * FROM my_requests']);
       })
       .onDisconnect(() => {
         this.conn = undefined;
@@ -111,10 +149,27 @@ export class Live {
       .build();
   }
 
-  private answered(row: { id: string; state: string; by: string }) {
+  private answered(row: { id: string; state: string; by: string; person?: string }) {
     if (row.state === 'pending') return;
     const a = this.box.approvals().find((x) => x.id === row.id);
-    if (a?.state === 'pending') this.box.answer(row.id, row.state === 'approved', row.by || 'someone');
+    if (a?.state !== 'pending') return;
+    try {
+      this.box.answer(row.id, row.state === 'approved', row.by || 'someone', row.person || undefined);
+    } catch (e) {
+      // The box's own checks refused it (the person was removed, or their limit changed): it waits again.
+      console.error(`spacetime: refused ${row.state === 'approved' ? 'an approval' : 'a denial'} of ${row.id} by ${row.by}: ${(e as Error).message}`);
+      const r = this.box.routed(a);
+      if (r) this.conn?.reducers.putRequest(requestRow(a, r, true));
+    }
+  }
+
+  /** Business: vouch for a person's connection, so it is sent the requests routed to them and may answer them. */
+  registerPerson(identity: string, person: string, name: string) {
+    this.conn?.reducers.registerPerson({ identity: Identity.fromString(identity), person, name, at: new Date().toISOString() });
+  }
+
+  removePerson(identity: string) {
+    this.conn?.reducers.removePerson({ person: '', identity: Identity.fromString(identity) });
   }
 
   /** Vouch for a SpacetimeDB identity (a paired phone or the box's own screen) so its answers are accepted. */
@@ -130,7 +185,10 @@ export class Live {
     this.conn?.reducers.putTask(taskRow(t));
   }
 
+  /** Every approval goes to the public table, as before (the box's screen, the portal and Personal read it). A routed Business request is also written to the private table that `my_requests` sends only to its people. */
   approval(a: Approval) {
     this.conn?.reducers.putApproval(approvalRow(a));
+    const r = this.box.routed(a);
+    if (r) this.conn?.reducers.putRequest(requestRow(a, r));
   }
 }

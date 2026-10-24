@@ -10,6 +10,28 @@ import {
   type Infer as __Infer,
 } from "spacetimedb";
 
+export const Activity = __t.object("Activity", {
+  minute: __t.string(),
+  steps: __t.u32(),
+  costCents: __t.u32(),
+  asked: __t.u32(),
+  finished: __t.u32(),
+  failed: __t.u32(),
+});
+export type Activity = __Infer<typeof Activity>;
+
+export const Agent = __t.object("Agent", {
+  task: __t.string(),
+  name: __t.string(),
+  queue: __t.string(),
+  status: __t.string(),
+  job: __t.u64(),
+  jobTitle: __t.string(),
+  done: __t.u32(),
+  at: __t.timestamp(),
+});
+export type Agent = __Infer<typeof Agent>;
+
 export const Approval = __t.object("Approval", {
   id: __t.string(),
   task: __t.string(),
@@ -29,10 +51,136 @@ export const Device = __t.object("Device", {
 });
 export type Device = __Infer<typeof Device>;
 
+export const Job = __t.object("Job", {
+  id: __t.u64(),
+  queue: __t.string(),
+  title: __t.string(),
+  payload: __t.string(),
+  state: __t.string(),
+  agent: __t.string(),
+  agentName: __t.string(),
+  claimKey: __t.string(),
+  result: __t.string(),
+  postedAt: __t.timestamp(),
+  updatedAt: __t.timestamp(),
+});
+export type Job = __Infer<typeof Job>;
+
+export const Looking = __t.object("Looking", {
+  id: __t.string(),
+  name: __t.string(),
+  person: __t.string(),
+  since: __t.timestamp(),
+});
+export type Looking = __Infer<typeof Looking>;
+
+export const Meter = __t.object("Meter", {
+  id: __t.u8(),
+  queued: __t.u32(),
+  running: __t.u32(),
+  waiting: __t.u32(),
+  done: __t.u32(),
+  failed: __t.u32(),
+  undone: __t.u32(),
+  spentCents: __t.u64(),
+  at: __t.timestamp(),
+});
+export type Meter = __Infer<typeof Meter>;
+
+export const MyRequest = __t.object("MyRequest", {
+  id: __t.string(),
+  task: __t.string(),
+  question: __t.string(),
+  costCents: __t.u32(),
+  payee: __t.string(),
+  purpose: __t.string(),
+  state: __t.string(),
+  by: __t.string(),
+  person: __t.string(),
+  askedBy: __t.string(),
+  rule: __t.string(),
+  to: __t.string(),
+  why: __t.string(),
+  at: __t.timestamp(),
+  reminded: __t.string(),
+  canApprove: __t.bool(),
+  remindedMe: __t.bool(),
+});
+export type MyRequest = __Infer<typeof MyRequest>;
+
+export const MyRequests = __t.object("MyRequests", {});
+export type MyRequests = __Infer<typeof MyRequests>;
+
+export const NewJob = __t.object("NewJob", {
+  title: __t.string(),
+  payload: __t.string(),
+});
+export type NewJob = __Infer<typeof NewJob>;
+
 export const Owner = __t.object("Owner", {
   identity: __t.identity(),
 });
 export type Owner = __Infer<typeof Owner>;
+
+export const Person = __t.object("Person", {
+  identity: __t.identity(),
+  person: __t.string(),
+  name: __t.string(),
+  at: __t.string(),
+});
+export type Person = __Infer<typeof Person>;
+
+export const Reminder = __t.object("Reminder", {
+  scheduledId: __t.u64(),
+  scheduledAt: __t.scheduleAt(),
+  request: __t.string(),
+  person: __t.string(),
+  name: __t.string(),
+  canApprove: __t.bool(),
+});
+export type Reminder = __Infer<typeof Reminder>;
+
+export const Request = __t.object("Request", {
+  id: __t.string(),
+  task: __t.string(),
+  question: __t.string(),
+  costCents: __t.u32(),
+  payee: __t.string(),
+  purpose: __t.string(),
+  state: __t.string(),
+  by: __t.string(),
+  person: __t.string(),
+  askedBy: __t.string(),
+  rule: __t.string(),
+  to: __t.string(),
+  why: __t.string(),
+  at: __t.timestamp(),
+  reminded: __t.string(),
+});
+export type Request = __Infer<typeof Request>;
+
+export const RoutedPerson = __t.object("RoutedPerson", {
+  person: __t.string(),
+  name: __t.string(),
+  canApprove: __t.bool(),
+});
+export type RoutedPerson = __Infer<typeof RoutedPerson>;
+
+export const RoutedTo = __t.object("RoutedTo", {
+  key: __t.string(),
+  request: __t.string(),
+  person: __t.string(),
+  name: __t.string(),
+  canApprove: __t.bool(),
+  reminded: __t.bool(),
+});
+export type RoutedTo = __Infer<typeof RoutedTo>;
+
+export const SweepTimer = __t.object("SweepTimer", {
+  scheduledId: __t.u64(),
+  scheduledAt: __t.scheduleAt(),
+});
+export type SweepTimer = __Infer<typeof SweepTimer>;
 
 export const Task = __t.object("Task", {
   id: __t.string(),
@@ -48,4 +196,17 @@ export const Task = __t.object("Task", {
   note: __t.string(),
 });
 export type Task = __Infer<typeof Task>;
+
+export const Viewer = __t.object("Viewer", {
+  conn: __t.connectionId(),
+  identity: __t.identity(),
+  id: __t.string(),
+  name: __t.string(),
+  person: __t.string(),
+  since: __t.timestamp(),
+});
+export type Viewer = __Infer<typeof Viewer>;
+
+export const Viewers = __t.object("Viewers", {});
+export type Viewers = __Infer<typeof Viewers>;
 

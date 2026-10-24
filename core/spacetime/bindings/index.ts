@@ -35,32 +35,100 @@ import {
 
 // Import all reducer arg schemas
 import AnswerReducer from "./answer_reducer.ts";
+import AnswerRequestReducer from "./answer_request_reducer.ts";
+import FinishJobReducer from "./finish_job_reducer.ts";
+import LookReducer from "./look_reducer.ts";
+import PostJobsReducer from "./post_jobs_reducer.ts";
 import PutApprovalReducer from "./put_approval_reducer.ts";
+import PutRequestReducer from "./put_request_reducer.ts";
 import PutTaskReducer from "./put_task_reducer.ts";
+import RecountMeterReducer from "./recount_meter_reducer.ts";
 import RegisterDeviceReducer from "./register_device_reducer.ts";
+import RegisterPersonReducer from "./register_person_reducer.ts";
 import RemoveDeviceReducer from "./remove_device_reducer.ts";
+import RemovePersonReducer from "./remove_person_reducer.ts";
 
 // Import all procedure arg schemas
+import * as ClaimJobProcedure from "./claim_job_procedure.ts";
 
 // Import all table schema definitions
+import ActivityRow from "./activity_table.ts";
+import AgentRow from "./agent_table.ts";
 import ApprovalRow from "./approval_table.ts";
+import JobRow from "./job_table.ts";
+import MeterRow from "./meter_table.ts";
+import MyRequestsRow from "./my_requests_table.ts";
 import TaskRow from "./task_table.ts";
+import ViewersRow from "./viewers_table.ts";
 
 /** Type-only namespace exports for generated type groups. */
 
 /** The schema information for all tables in this module. This is defined the same was as the tables would have been defined in the server. */
 const tablesSchema = __schema({
+  activity: __table({
+    name: 'activity',
+    indexes: [
+      { accessor: 'minute', name: 'activity_minute_idx_btree', algorithm: 'btree', columns: [
+        'minute',
+      ] },
+    ],
+    constraints: [
+      { name: 'activity_minute_key', constraint: 'unique', columns: ['minute'] },
+    ],
+  }, ActivityRow),
+  agent: __table({
+    name: 'agent',
+    indexes: [
+      { accessor: 'task', name: 'agent_task_idx_btree', algorithm: 'btree', columns: [
+        'task',
+      ] },
+    ],
+    constraints: [
+      { name: 'agent_task_key', constraint: 'unique', columns: ['task'] },
+    ],
+  }, AgentRow),
   approval: __table({
     name: 'approval',
     indexes: [
       { accessor: 'id', name: 'approval_id_idx_btree', algorithm: 'btree', columns: [
         'id',
       ] },
+      { accessor: 'state', name: 'approval_state_idx_btree', algorithm: 'btree', columns: [
+        'state',
+      ] },
     ],
     constraints: [
       { name: 'approval_id_key', constraint: 'unique', columns: ['id'] },
     ],
   }, ApprovalRow),
+  job: __table({
+    name: 'job',
+    indexes: [
+      { accessor: 'agent', name: 'job_agent_idx_btree', algorithm: 'btree', columns: [
+        'agent',
+      ] },
+      { accessor: 'id', name: 'job_id_idx_btree', algorithm: 'btree', columns: [
+        'id',
+      ] },
+      { accessor: 'queue', name: 'job_queue_idx_btree', algorithm: 'btree', columns: [
+        'queue',
+      ] },
+    ],
+    constraints: [
+      { name: 'job_id_key', constraint: 'unique', columns: ['id'] },
+    ],
+  }, JobRow),
+  meter: __table({
+    name: 'meter',
+    indexes: [
+      { accessor: 'id', name: 'meter_id_idx_btree', algorithm: 'btree', columns: [
+        'id',
+      ] },
+    ],
+    constraints: [
+      { name: 'meter_id_key', constraint: 'unique', columns: ['id'] },
+    ],
+  }, MeterRow),
   task: __table({
     name: 'task',
     indexes: [
@@ -72,19 +140,42 @@ const tablesSchema = __schema({
       { name: 'task_id_key', constraint: 'unique', columns: ['id'] },
     ],
   }, TaskRow),
+  myRequests: __table({
+    name: 'my_requests',
+    indexes: [
+    ],
+    constraints: [
+    ],
+  }, MyRequestsRow),
+  viewers: __table({
+    name: 'viewers',
+    indexes: [
+    ],
+    constraints: [
+    ],
+  }, ViewersRow),
 });
 
 /** The schema information for all reducers in this module. This is defined the same way as the reducers would have been defined in the server, except the body of the reducer is omitted in code generation. */
 const reducersSchema = __reducers(
   __reducerSchema("answer", AnswerReducer),
+  __reducerSchema("answer_request", AnswerRequestReducer),
+  __reducerSchema("finish_job", FinishJobReducer),
+  __reducerSchema("look", LookReducer),
+  __reducerSchema("post_jobs", PostJobsReducer),
   __reducerSchema("put_approval", PutApprovalReducer),
+  __reducerSchema("put_request", PutRequestReducer),
   __reducerSchema("put_task", PutTaskReducer),
+  __reducerSchema("recount_meter", RecountMeterReducer),
   __reducerSchema("register_device", RegisterDeviceReducer),
+  __reducerSchema("register_person", RegisterPersonReducer),
   __reducerSchema("remove_device", RemoveDeviceReducer),
+  __reducerSchema("remove_person", RemovePersonReducer),
 );
 
 /** The schema information for all procedures in this module. This is defined the same way as the procedures would have been defined in the server. */
 const proceduresSchema = __procedures(
+  __procedureSchema("claim_job", ClaimJobProcedure.params, ClaimJobProcedure.returnType),
 );
 
 /** The remote SpacetimeDB module schema, both runtime and type information. */

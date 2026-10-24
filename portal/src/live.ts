@@ -575,7 +575,8 @@ export async function answer(a: Approval, approved: boolean) {
   let got: Approval | undefined;
   // A Business box takes answers only through the API, as the person signed in here.
   if (!pairing() && conn && box.live === 'spacetimedb' && !box.business.on) {
-    conn.reducers.answer({ id: a.id, approved, by: surface });
+    // A late answer is refused by the database ("already approved by <name>"). That is not a lost connection: the check below finds who won, and the API call after it says so.
+    conn.reducers.answer({ id: a.id, approved, by: surface }).catch(() => {});
     for (let i = 0; i < 25 && box.approvals.get(a.id)?.state === 'pending'; i++) await new Promise((r) => setTimeout(r, 200));
     got = box.approvals.get(a.id)?.state === 'pending' ? undefined : box.approvals.get(a.id);
   }

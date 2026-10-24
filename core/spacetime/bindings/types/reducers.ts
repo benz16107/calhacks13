@@ -7,14 +7,30 @@ import { type Infer as __Infer } from "spacetimedb";
 
 // Import all reducer arg schemas
 import AnswerReducer from "../answer_reducer.ts";
+import AnswerRequestReducer from "../answer_request_reducer.ts";
+import FinishJobReducer from "../finish_job_reducer.ts";
+import LookReducer from "../look_reducer.ts";
+import PostJobsReducer from "../post_jobs_reducer.ts";
 import PutApprovalReducer from "../put_approval_reducer.ts";
+import PutRequestReducer from "../put_request_reducer.ts";
 import PutTaskReducer from "../put_task_reducer.ts";
+import RecountMeterReducer from "../recount_meter_reducer.ts";
 import RegisterDeviceReducer from "../register_device_reducer.ts";
+import RegisterPersonReducer from "../register_person_reducer.ts";
 import RemoveDeviceReducer from "../remove_device_reducer.ts";
+import RemovePersonReducer from "../remove_person_reducer.ts";
 
 export type AnswerParams = __Infer<typeof AnswerReducer>;
+export type AnswerRequestParams = __Infer<typeof AnswerRequestReducer>;
+export type FinishJobParams = __Infer<typeof FinishJobReducer>;
+export type LookParams = __Infer<typeof LookReducer>;
+export type PostJobsParams = __Infer<typeof PostJobsReducer>;
 export type PutApprovalParams = __Infer<typeof PutApprovalReducer>;
+export type PutRequestParams = __Infer<typeof PutRequestReducer>;
 export type PutTaskParams = __Infer<typeof PutTaskReducer>;
+export type RecountMeterParams = __Infer<typeof RecountMeterReducer>;
 export type RegisterDeviceParams = __Infer<typeof RegisterDeviceReducer>;
+export type RegisterPersonParams = __Infer<typeof RegisterPersonReducer>;
 export type RemoveDeviceParams = __Infer<typeof RemoveDeviceReducer>;
+export type RemovePersonParams = __Infer<typeof RemovePersonReducer>;
 

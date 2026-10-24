@@ -85,7 +85,7 @@ function stop(keepFiles: boolean) {
   if (toreDown) return;
   toreDown = true;
   teardown(HOME, box?.pid);
-  spawnSync('spacetime', ['delete', '--server', 'local', '-y', DB]);
+  spawnSync('spacetime', ['--config-path', path.join(HOME, 'spacetime', 'cli.toml'), 'delete', '--server', 'local', '-y', DB]); // as this box, which owns it
   fs.rmSync(OWNER_ROOT, { recursive: true, force: true });
   if (keepFiles) console.log(`\nkept ${HOME} for a look (box.log, log.jsonl, tasks/*/worker.log)`);
   else fs.rmSync(HOME, { recursive: true, force: true });

@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Live</title>
+<link rel="stylesheet" href="/kit/gurtos.css" />
+<script type="module" src="/kit/gurtos.js"></script>
+<style>
+  body { margin: 0; }
+  #app { padding: var(--space-l, 18px) var(--space-xl, 24px); display: flex; flex-direction: column; gap: var(--space-m, 12px); max-width: 1200px; margin: 0 auto; }
+  .bar { display: flex; align-items: center; gap: var(--space-s, 8px); }
+  .meters { display: grid; grid-template-columns: repeat(4, minmax(110px, 1fr)) minmax(220px, 2fr); gap: var(--space-s, 8px); }
+  .tile { background: var(--color-card-bg); border: 1px solid var(--color-border-default); border-radius: var(--radius-md); padding: 10px 14px; display: flex; flex-direction: column; gap: 2px; }
+  .spark { width: 100%; height: 40px; margin-top: 4px; }
+  .spark rect { fill: var(--color-accent-bg); }
+  .g-toggle-group { align-self: flex-start; }
+  main { min-height: 300px; }
+  .queue-head { display: flex; align-items: center; gap: var(--space-s, 8px); flex-wrap: wrap; margin-bottom: var(--space-s, 8px); }
+  .team { display: flex; gap: var(--space-s, 8px); flex-wrap: wrap; margin-bottom: var(--space-m, 12px); }
+  .agent { padding: 10px 14px; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; min-width: 190px; }
+  .board { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-m, 12px); }
+  .col h3 { margin: 0 0 6px; }
+  .job { padding: 8px 12px; margin-bottom: 6px; display: flex; flex-direction: column; gap: 2px; }
+  .job.claimed { border-left: 0; box-shadow: inset 0 0 0 2px var(--color-accent-subtle); }
+  .job.failed .t-body-strong { color: var(--color-destructive-fg); }
+  .empty { padding: 8px 0; }
+  .req .g-row-text { background: none; border: 0; text-align: left; font: inherit; color: inherit; cursor: pointer; display: flex; flex-direction: column; gap: 2px; padding: 0; }
+  .viewing { color: var(--color-accent-fg); display: inline-flex; gap: 4px; align-items: center; }
+  .req .g-row-trail { display: flex; gap: 6px; }
+  .machines { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: var(--space-m, 12px); margin-top: var(--space-m, 12px); }
+  .machine { padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; }
+  .m-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .m-stats { display: flex; flex-wrap: wrap; gap: 4px 14px; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--color-text-disabled); }
+  .dot.on { background: var(--color-success-fg); }
+  @media (max-width: 760px) { .meters { grid-template-columns: repeat(2, 1fr); } .spark-tile { grid-column: 1 / -1; } .board { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body class="g-page">
+<div id="app"></div>
+<script type="module" src="live.js"></script>
+</body>
+</html>

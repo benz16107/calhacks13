@@ -161,9 +161,16 @@ class Core {
   live = new Live({
     tasks: () => [...this.state.tasks.values()],
     approvals: () => [...this.state.approvals.values()],
-    // A Business box vouches for no SpacetimeDB identity, so its answers come only through the API as a person.
-    answer: (id, approved, by) => (this.business.on ? console.error(`spacetime: ignored an answer to ${id}; on GurtOS Business people answer through the API`) : this.answer(id, approved, by)),
+    // On GurtOS Business only a person's connection answers in SpacetimeDB, and the box checks it again as that person.
+    answer: (id, approved, by, person) =>
+      this.business.on
+        ? person
+          ? this.answerAs(id, approved, this.person(person), 'SpacetimeDB')
+          : console.error(`spacetime: ignored an answer to ${id}; on GurtOS Business only a person answers`)
+        : this.answer(id, approved, by),
     identities: () => this.identities(),
+    people: () => this.peopleIdentities(),
+    routed: (a) => this.routing(a),
   });
 
   write(e: NewEvent): LogEvent {
@@ -544,6 +551,27 @@ class Core {
     return this.answer(id, approved, p!.name, p!.id, by); // `by` is the phone's name, or what the box's screen says
   }
 
+  /** Business: every paired connection that belongs to a person, for SpacetimeDB: [identity, person id, name]. */
+  peopleIdentities(): [string, string, string][] {
+    if (!this.business.on) return [];
+    return this.devices.flatMap((d) => {
+      const p = !d.revoked && d.identity ? this.person(d.person) : undefined;
+      return p ? [[d.identity!, p.id, p.name] as [string, string, string]] : [];
+    });
+  }
+
+  /** Business: who SpacetimeDB sends a routed request to, and whether each may approve it (or only deny). */
+  routing(a: Approval) {
+    if (!this.business.on || !a.route) return undefined;
+    const r = a.route;
+    const t = this.state.tasks.get(a.task);
+    const may = (id: string) => !refusal(this.person(id), { to: r.to, amountCents: r.amountCents, askedBy: a.askedBy ?? t?.requestedBy, rule: r.rule }, true);
+    const people = r.people.map((p) => ({ person: p.id, name: p.name, canApprove: may(p.id) }));
+    // A route may name people to remind when nobody has answered in time; SpacetimeDB's timer brings them in.
+    const remind = (r as { remind?: { afterMs: number; people: { id: string; name: string }[] } }).remind;
+    return { people, remind: (remind?.people ?? []).map((p) => ({ person: p.id, name: p.name, canApprove: may(p.id) })), remindAfterSec: Math.round((remind?.afterMs ?? 0) / 1000) };
+  }
+
   saveBusiness() {
     writeJson(this.businessPath, this.business);
   }
@@ -617,8 +645,11 @@ class Core {
     Object.assign(this.business, b);
     this.saveBusiness();
     this.write({ type: 'note', track: 'business', data: { changed: Object.keys(b), on: this.business.on, by: name, ...('shadow' in b ? { shadow: this.business.shadow } : {}) }, ...(who ? { who } : {}) });
-    // Business answers only through the API as a person, so the box stops vouching for SpacetimeDB identities.
-    if (was !== this.business.on) for (const [identity, n] of [...this.screens, ...this.devices.filter((d) => d.identity && !d.revoked).map((d) => [d.identity!, d.name] as [string, string])]) this.business.on ? this.live.unregister(identity) : this.live.register(identity, n);
+    // On Business only people answer in SpacetimeDB: the box stops vouching for devices and vouches for people instead.
+    if (was !== this.business.on) {
+      for (const [identity, n] of [...this.screens, ...this.devices.filter((d) => d.identity && !d.revoked).map((d) => [d.identity!, d.name] as [string, string])]) this.business.on ? this.live.unregister(identity) : this.live.register(identity, n);
+      for (const d of this.devices) if (d.identity && !d.revoked && d.person) this.business.on ? this.live.registerPerson(d.identity, d.person, this.person(d.person)?.name ?? d.name) : this.live.removePerson(d.identity);
+    }
     return this.businessView();
   }
 
@@ -1278,6 +1309,7 @@ class Core {
     else this.screens.set(id, name);
     if (device) this.saveDevices();
     if (!this.business.on) this.live.register(id, name);
+    else if (this.person(device?.person)) this.live.registerPerson(id, device!.person!, this.person(device!.person)!.name); // sent only their own requests
     return { identity: id, name };
   }
 
@@ -1407,6 +1439,7 @@ class Core {
     this.devices.push(device);
     this.saveDevices();
     if (device.identity && !this.business.on) this.live.register(device.identity, device.name);
+    else if (device.identity && person) this.live.registerPerson(device.identity, person.id, person.name);
     // The edition comes along, so a phone shows the right home (GurtOS Business: Waiting for me) from its first frame.
     return { token: device.token, device: { id: device.id, name: device.name, ...(person ? { person: person.id } : {}) }, box: { id: BOX_ID, name: BOX_NAME }, edition: system.edition(this.owner, this.business.on) };
   }
@@ -1631,6 +1664,7 @@ class Core {
     d.revoked = true;
     this.saveDevices();
     if (d.identity) this.live.unregister(d.identity);
+    if (d.identity && d.person) this.live.removePerson(d.identity);
     return { id, revoked: true };
   }
 
