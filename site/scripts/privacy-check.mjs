@@ -5,6 +5,8 @@ import path from 'node:path';
 const root = process.argv[2];
 const walk = (d) => fs.readdirSync(d, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? walk(path.join(d, e.name)) : [path.join(d, e.name)]));
 const files = walk(root).filter((f) => /\.(html|txt|xml|json|svg|css|js|yaml)$/.test(f) && !f.includes('/pagefind/') && !/\/_astro\/.*\.js$/.test(f));
+// Published release checksums and the release signing key's public fingerprint (the Download page): public on purpose.
+const PUBLIC_SUMS = ['FWKFb1eAvEBmMhVJwMwTnLnhrmZ5yQZ5947pDvFKcpY', '159753d9a02e546f215c9553512c0bfb43e3b4b3f82f1fc92569a8eef1796a07', 'c9444fe07f2405c21e23ba700b1e8bac97517a630f1a21d6ede61210e08c8b28'];
 const checks = [
   ['machine name', /linuxbox|macserver|benmac|vultrbox|gx10|dellserver|estella/gi],
   ['tailnet', /tailb51682|\.ts\.net\b/gi],
@@ -14,9 +16,9 @@ const checks = [
   ['lima/sslip', /[\w.*-]*sslip\.io|lima\.internal|limactl/gi, (m) => m === '*.sslip.io'],
   ['ipv4', /(?<![\d.])(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})(?![\d.])/g, (m) => m.split('.').some((o) => +o > 255 || (o.length > 1 && o[0] === '0')) || /^(127\.0\.0\.1|0\.0\.0\.0|192\.0\.2\.\d+|198\.51\.100\.\d+|203\.0\.113\.\d+|1\.1\.1\.1|8\.8\.8\.8|10\.0\.0\.0|172\.16\.0\.0|192\.168\.0\.0|100\.64\.0\.0|169\.254\.0\.0)$/.test(m)],
   ['agentverse address', /agent1q[0-9a-z]{20,}/g],
-  ['base58 key or address', /\b[1-9A-HJ-NP-Za-km-z]{32,44}\b/g, (m) => !/[0-9]/.test(m) || /^[a-z]+$/i.test(m)],
+  ['base58 key or address', /\b[1-9A-HJ-NP-Za-km-z]{32,44}\b/g, (m) => !/[0-9]/.test(m) || /^[a-z]+$/i.test(m) || PUBLIC_SUMS.includes(m)],
   ['secret prefix', /sk_(live|test)_[A-Za-z0-9]{6,}|\bpi_[A-Za-z0-9]{12,}|\bre_[A-Za-z0-9]{12,}|AKIA[0-9A-Z]{12,}|ghp_[A-Za-z0-9]{10,}|xox[bp]-[A-Za-z0-9-]+|-----BEGIN [A-Z ]*PRIVATE/g],
-  ['long hex', /\b[0-9a-f]{32,}\b/g, (m) => /^(0123456789abcdef)+$/.test(m)],
+  ['long hex', /\b[0-9a-f]{32,}\b/g, (m) => /^(0123456789abcdef)+$/.test(m) || PUBLIC_SUMS.includes(m)],
   ['uuid', /\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/gi],
   ['event word', /hackathon|cal ?hacks|sponsor|devpost|demo moment/gi, (m, at) => /benz16107\/calhacks13/.test(at)],
   ['private link', /mana\.space|figma\.com|docs\.google|one-atlas/gi],

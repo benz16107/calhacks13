@@ -27,9 +27,9 @@ is optional and stays off until you add its keys.
 |---|---|---|
 | CPU | x86_64 or arm64 | 4 cores |
 | Memory | 4 GB | 8 GB or more. Each task may use up to 2 GB. |
-| Disk | 17 GB | 32 GB. The two system slots take 12 GB. |
+| Disk | 20 GB | 32 GB. The two system slots take 12 GB. |
 | Firmware | BIOS or UEFI, with **Secure Boot off** | |
-| Network | A wired connection with DHCP | |
+| Network | A wired connection with DHCP, and internet on first start: the box downloads Factory's Droid CLI then | |
 
 Secure Boot must be off because the box's boot loader is not signed. The box configures every wired network card
 with DHCP. Wi-Fi is not set up.
