@@ -8,7 +8,7 @@ import { checkCase } from './check-case.ts';
 import { DEFAULT_RULES, loadRules, stageWorkspace, type RunInfo } from './desk.ts';
 import * as scripted from './scripts.ts';
 import { caseDirOf } from './uploads.ts';
-import { ANALYST_TOOLS, AP_TOOLS, CLERK_TOOLS, analystPrompt, apPrompt, clerkPrompt } from './seats.ts';
+import { ANALYST_TOOLS, AP_TOOLS, CLERK_TOOLS, COORDINATE_TOOLS, analystPrompt, apPrompt, clerkPrompt, coordinatedAnalystPrompt } from './seats.ts';
 
 /** {case} or {dir}, optional {rules}, {seats}, {scripted}, {script: {analyst: "fake worker lines"}} (no model), and {extra}: more instructions for the analyst seat. */
 export async function startRun(box: Box, body: any): Promise<Response> {
@@ -16,6 +16,7 @@ export async function startRun(box: Box, body: any): Promise<Response> {
   if (body.scripted && (body.dir || !scripted.SCRIPTS[body.case ?? 'fogline-2026-10'])) {
     return Response.json({ error: `scripted seats exist only for ${Object.keys(scripted.SCRIPTS).join(' and ')}` }, { status: 400 });
   }
+  if (body.coordinate === true && (body.scripted || body.script)) return Response.json({ error: 'coordinate works with Droid seats only; the scripted seats are one analyst' }, { status: 400 });
   const caseDir = body.dir ? path.resolve(String(body.dir)) : caseDirOf(String(body.case ?? 'fogline-2026-10'));
   if (!caseDir) return Response.json({ error: `no case ${body.case}` }, { status: 404 });
   const { problems } = checkCase(caseDir);
@@ -50,13 +51,29 @@ export async function startRun(box: Box, body: any): Promise<Response> {
     { key: 'clerk', title: 'Collections clerk', tools: CLERK_TOOLS, prompt: clerkPrompt, when: has('customers.csv') },
     { key: 'ap', title: 'AP clerk', tools: AP_TOOLS, prompt: apPrompt, when: has('bills.csv') },
   ] as const;
+  // Opt-in: two analysts take the applications from one SpacetimeDB queue. Everything else is as usual.
+  const coordinate = body.coordinate === true && seats.includes('analyst') && apps.length > 0;
+  const queue = `credit-desk:${run}:applications`;
+  if (coordinate) {
+    const names = apps.map((id) => JSON.parse(fs.readFileSync(path.join(caseDir, 'applications', `${id}.json`), 'utf8')).business?.legal_name ?? id);
+    box.note({ jobs: { queue, items: apps.map((id, i) => ({ title: `Application: ${names[i]}`, payload: { id } })) } });
+  }
   for (const seat of SEATS) {
     if (!seats.includes(seat.key) || !seat.when) continue;
     const prompt = worker === 'fake' ? (script as Record<string, string>)[seat.key] : seat.prompt(brief) + (body.extra && seat.key === 'analyst' ? `\n\n${body.extra}` : '');
     if (!prompt) continue;
-    tasks[seat.key] = (await box.createTask({
-      title: `${seat.title}: ${meta.case_id}`, workspace: info.workspace, worker, seat: seat.title, source: `credit-desk:${run}`, tools: withBank([...seat.tools]), prompt,
-    })).id;
+    const coordinated = coordinate && seat.key === 'analyst';
+    try {
+      for (const n of coordinated ? [1, 2] : [0]) {
+        tasks[n > 1 ? 'analyst2' : seat.key] = (await box.createTask({
+          title: `${seat.title}: ${meta.case_id}${n > 1 ? ' (2)' : ''}`, workspace: info.workspace, worker, seat: seat.title, source: `credit-desk:${run}`,
+          tools: withBank([...seat.tools, ...(coordinated ? COORDINATE_TOOLS : [])]), prompt: coordinated ? coordinatedAnalystPrompt(brief, queue, n) + (body.extra ? `\n\n${body.extra}` : '') : prompt,
+        })).id;
+      }
+    } catch (e) {
+      if (coordinated) return Response.json({ error: `coordinate needs the Live app (SpacetimeDB) on this box: ${(e as Error).message}` }, { status: 400 });
+      throw e;
+    }
   }
   return Response.json({ run, workspace: info.workspace, rules: rulesFile, tasks });
 }

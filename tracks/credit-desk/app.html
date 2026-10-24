@@ -89,6 +89,7 @@
       <label class="sr-only" for="case">Case</label><select id="case"></select>
       <button id="quick" title="Scripted seats call the real tools, live against CRS and Nessie. No model. About 10 seconds.">Quick run</button>
       <button id="full" class="primary" title="Every seat with Droid and Claude on the whole case. About 10 to 15 minutes of model time.">New run</button>
+      <label class="small" title="Two credit analysts take applications from one shared queue in SpacetimeDB (needs the Live app). Only with New run."><input type="checkbox" id="coordinate"> Coordinate</label>
     </div>
   </div>
   <p id="status" class="small" role="status" aria-live="polite"></p>
@@ -393,7 +394,7 @@
     $('quick').disabled = $('full').disabled = true;
     status(scripted ? 'Starting the scripted seats...' : 'Starting the seats with Droid...');
     try {
-      const r = await api('POST', '/t/credit-desk/run', { case: caseId, scripted });
+      const r = await api('POST', '/t/credit-desk/run', { case: caseId, scripted, coordinate: !scripted && $('coordinate').checked });
       runId = r.run;
       status(`Run ${r.run} started.`);
       show('decisions');

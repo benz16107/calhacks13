@@ -131,3 +131,18 @@ How to work, for a payment run as of ${b.asOf}:
 5. Write ap-report.md: the bills, what you did with each and why, and the problems flagged.
 Never invent data.`;
 }
+
+/** Two analysts share the applications through a SpacetimeDB queue (opt-in, POST /run {coordinate: true}). */
+export const COORDINATE_TOOLS = ['spacetime.claim', 'spacetime.finish'];
+export function coordinatedAnalystPrompt(b: Brief, queue: string, n: number) {
+  return `${analystPrompt(b)}
+
+SHARED QUEUE. You are analyst ${n} of 2. The applications are not split up in advance, so ignore "For each application"
+above: do not work on an application you did not claim. Repeat until the queue is empty:
+1. Call spacetime.claim {"queue": "${queue}"}. If it returns {"job": null}, the queue is empty: stop claiming.
+2. The job's payload has the application id. Do the steps above for that one application only, ending with
+   credit-desk.credit_decision.
+3. Call spacetime.finish {"id": <the job id>, "result": "<outcome, limit and terms, one line>"}. Do this for every job
+   you claim, even one you hold or send to the controller, or the other analyst will take it again.
+${n === 1 ? 'After the queue is empty, do the existing-customer reviews as described above.' : 'Existing-customer reviews are analyst 1\'s job, not yours.'} Your analyst-report.md covers only what you decided.`;
+}
