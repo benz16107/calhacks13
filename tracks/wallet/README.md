@@ -185,6 +185,24 @@ over budget, never look for a key. Copy it to `.factory/skills/x402-wallet/` for
 | `seller.ts`, `keygen.ts` | A test API and a key maker. |
 | `demo.ts`, `*.test.ts`, `*.live.ts` | The demo step, the unit tests (no money moves), live scripts. |
 
+### Listed in Coinbase's x402 Bazaar
+
+The demo box's `/sell/*` routes are public at `https://gurt-cloud.box.gurtos.com/t/wallet/sell/...` (GurtOS's
+remote access: the box ends the TLS connection itself, and only routes the wallet lists in `openRoutes` answer
+without a paired phone; everything else is 401). The first settled payment through the public address, made
+from a second wallet, got both paid routes cataloged by Coinbase's CDP facilitator within a second. To check:
+
+```ts
+import { listX402DiscoveryMerchant } from '@coinbase/cdp-sdk';
+const r = await listX402DiscoveryMerchant({ payTo: '6PyiR71c9aw3e8bgnxmcLvJECL5zHE5jMSWqJoVjPTxU' });
+// r.resources: /sell/audit (exact, $0.01) and /sell/search (upto, cap $0.02), network Solana devnet
+```
+
+On 2026-10-24 that returned both resources, each with `resource` set to the public URL and Bazaar metadata
+(input schema, output example, description). Free-text search did not find them yet, only the lookup by
+pay-to address did. To list your own box: make `/t/wallet/sell/*` reachable over HTTPS, then pay each route
+once from a different wallet (a wallet can't pay itself).
+
 ### Controls
 
 - **The key never reaches a task.** In vault-key mode it lives in `/etc/box/vault.env` (root only), read only by
@@ -216,7 +234,6 @@ over budget, never look for a key. Copy it to `.factory/skills/x402-wallet/` for
   loosen its own policy. Set the policy, then remove that scope from the box's key (step 4 above).
 - **CDP Server Wallet mode is built and unit-tested but not yet run live**: it needs a CDP Wallet Secret in the
   vault, which is pending. Live runs so far use vault-key mode, with the owner policy enforced by GurtOS.
-- **Bazaar listing** needs a public HTTPS address for the box's `/sell/*` routes and one paid call through it.
 - **Onramp is sandbox only.** Sandbox orders move no money, and Onramp can't deliver devnet USDC, so test
   money comes from Circle's faucet. Onramp also needs an app set up in the CDP Portal.
 - No refunds: if the owner declines a paid "rent the agent" request, the buyer keeps nothing back.
@@ -226,4 +243,4 @@ over budget, never look for a key. Copy it to `.factory/skills/x402-wallet/` for
 
 ## Builder feedback
 
-See [FEEDBACK.md](FEEDBACK.md): what worked and every point of friction, per Coinbase tool.
+See [FEEDBACK.md](FEEDBACK.md): what worked and every point of friction (27 so far), per Coinbase tool.

@@ -125,6 +125,15 @@ Solana memos and Onramp, with `@coinbase/cdp-sdk` 1.60.0 and `@x402/*` 2.28.0.
     mongo: no documents in result") instead of "create an Onramp app in the Portal".
 25. **The JWT key format error is vague.** A wrongly encoded Ed25519 secret gives "Invalid keyData". Naming the
     expected format (base64 of the 64-byte seed plus public key) would save time.
+26. **Free-text Bazaar search doesn't find a fresh listing, merchant lookup does.** Right after the first settled
+    payment, `listX402DiscoveryMerchant({ payTo })` returned both our resources, while `searchX402Resources`
+    for their exact descriptions returned other services and no hit. We can't tell if search indexes later or
+    ranks new listings low. A "listed, indexed for search at ..." status would remove the doubt. The merchant
+    lookup is the thing a seller should be told to use to check their listing.
+27. **Listing happens on the first paid call, and nothing says so.** The only trace was
+    `bazaar: processing` in the settle response. It took one successful call through a public URL, from a
+    second wallet. A "how to get listed" checklist (public HTTPS URL, extension declared, one settled payment,
+    where to verify) would have saved us the guessing.
 
 ## Not Coinbase, for context
 
