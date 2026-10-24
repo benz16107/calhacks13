@@ -80,8 +80,8 @@ export default async function (d: DemoKit) {
   try {
     say(stranger, 'fix the failing test in my project');
     const no = await expect(stranger, 'to a stranger');
-    d.check(no.text.includes('pair') && no.text.includes('turned it down') && (await chatTasks()).length === 0,
-      "a stranger asking for real work gets the pairing step, and the box turns it down without bothering the owner");
+    d.check(no.text.includes('pair') && no.text.includes('nothing else') && (await chatTasks()).length === 0,
+      "a stranger asking for real work gets the pairing step, and the box's one guest path (the Mana app's route) turns it down without bothering the owner");
 
     const { code } = JSON.parse(fs.readFileSync(path.join(state, 'state.json'), 'utf8'));
     say(owner, `pair ${code}`);
@@ -226,8 +226,8 @@ export default async function (d: DemoKit) {
     say(owner, click(gate.card, 'approve_cta'));
     const answered = await expect(guest, 'with the guest answer', (m) => m.text.startsWith('Done'), 30_000);
     const guestTask = (await d.api<Task[]>('GET', '/tasks')).find((x) => x.title === 'Guest lookup: approved');
-    const shared = guestTask?.source.startsWith('guest-run:') ? "through the Mana app's guest route, which holds one set of limits for every front door" : 'through its own copy of the guest rules (the Mana app is off)';
-    d.check(answered && guestTask?.workspace === 'guest' && guestTask.hosts.length === 0, `approved, it ran ${shared}, in the empty guest workspace with no network of its own, and only the guest got the answer`);
+    d.check(answered && guestTask?.source.startsWith('guest-run:') && guestTask.workspace === 'guest' && guestTask.hosts.length === 0,
+      "approved, it ran through the Mana app's guest route (the box's one guest path, with one set of limits for every front door), in the empty guest workspace with no network of its own, and only the guest got the answer");
 
     say(owner, 'status');
     const st = await expect(owner, 'to status', (m) => m.text.includes('Your latest tasks'));

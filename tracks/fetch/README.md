@@ -132,8 +132,8 @@ test money with no value, and it is labelled so everywhere.
   it: ask it to buy a price check, and it pays the Shopper with its own test FET.
 - **Your agents pay others, within budgets.** When an agent you asked for something sends a `RequestPayment`,
   GurtOS pays through a box task that calls the `fetch.pay` tool **[GurtOS]**. The wallet key stays in the box's core,
-  and the task's budget decides: up to $0.25 (test FET counted at $1) it pays on its own, at most $1 a day; above that
-  it pauses and asks you, in the chat and on your phone. `GurtOS test oracle (paid)` asks 0.5 test FET for a fortune,
+  and the core's one spending check decides: within the pay task's $0.25 budget (test FET counted at $1) and under
+  your approval threshold it pays on its own; above either it pauses and asks you, in the chat and on your phone. `GurtOS test oracle (paid)` asks 0.5 test FET for a fortune,
   so you approve it. GurtOS pays once per request, only an agent you asked, at most 5 FET, and records the
   transaction in the action log.
 
@@ -183,9 +183,9 @@ chat and on the phone, and nothing runs before that. Limits: 3 requests per gues
 3 waiting at once. After the OK it runs in an empty `guest` workspace with no network of its own and a 25 cent
 budget, and only the guest gets the answer.
 
-GurtOS has one guest path. The ASI:One agent and the public Mana app both use the Mana app's guest route
-(`tracks/mana/guest.ts`), so the box enforces one set of rules and limits. When that app is off, `brain.py`
-applies the same rules itself.
+GurtOS has one guest path (`core/README.md`, "One path each"). The ASI:One agent and the public Mana app both use
+the Mana app's guest route (`tracks/mana/guest.ts`), so the box keeps one set of rules and limits. The ASI:One
+agent only carries the chat to that route and back. When the Mana app is off, the box takes no guest requests.
 
 ## How it works
 
@@ -230,8 +230,11 @@ ASI:One chat ──► Agentverse mailboxes ◄── agent.py on the box: GurtO
   price check, or a polite no.
 - **[Fetch]** Every relayed reply is screened, and the chat never quotes a blocked instruction. Cards from outside
   agents are not shown. Our own agents' cards get refs only the box made.
-- **[Fetch]** Payments go only to an agent the owner asked, once per request, in FET, at most 5, at most $1 a day
-  without asking. Payments to the box are checked on chain, and a transaction is never accepted twice.
+- **[GurtOS]** Money moves only inside the `fetch.pay` tool, called by a task through the broker, so the task's budget,
+  the owner's threshold and the log cover every payment, the same as x402. Its receipt shows on the Agent wallet page.
+- **[Fetch]** Payments go only to an agent the owner asked, once per request, in FET, at most 5. Payments to the box
+  are checked on chain, and a transaction is never accepted twice. (The test buyer pays from its own wallet: it stands
+  in for a stranger's agent, not for the box.)
 
 ## Real tool use
 
