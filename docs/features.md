@@ -31,12 +31,12 @@ Checked against main `8a4cbf4`, Sat Oct 24 05:30 PT. `./demo` from a clean workt
 | Status | Count |
 |---|---|
 | verified (ISO) | 3 |
-| verified | 51 |
+| verified | 52 |
 | merged | 56 |
-| building | 24 |
+| building | 34 |
 | planned | 24 |
 | not pursued | 3 |
-| **Total** | **161** |
+| **Total** | **172** |
 
 **Collisions** (detail below): none open at 03:27. The three found at 02:25 are resolved and Business is on main. Still
 watched: portal/dist rebuilt from merged sources (C-4).
@@ -319,6 +319,27 @@ the Vultr test box passed every Factory check). QA has not walked them by hand y
 | Droid on GitHub: the box watches `FACTORY_GITHUB_REPO` for issues labelled droid; each becomes a plan-first task on its own clone; `factory.openPullRequest` pushes with the vault's `GITHUB_TOKEN`, never in the task | factory | merged (a real PR exists; not set up on the QA box: no GITHUB_TOKEN in its vault) | da08615 | "Droid opened a pull request through the vault's token" (DEMO_LIVE=droid,github) | Factory |
 | `gurtos-exec`: a safe runner for `droid exec`; submit a job to a box, get back steps, the diff, the cost and credits (text or `-o json`) | factory | merged | da08615 | "gurtos-exec ran a job on the box and got back its diff and cost" | Factory |
 | Factory usage in the portal: per-task Factory credits, and the plan's 5-hour and weekly use through the vault key, which is never shown | factory, core | merged | da08615 | "usage reads Factory's limits without showing the key" | Factory |
+
+## SpacetimeDB
+
+Owner: the Spacetime thread. Branch `spacetime` (13 commits ahead of main, `./demo` 30 passed on the VM, in core review,
+meant to merge before the 9 PM freeze). QA's trial merge at 05:55 PT: clean onto main, and clean together with the `crs-push`
+and `armadin-push` branches. It changes the SpacetimeDB module and `core/spacetime/bindings`, so `portal/dist` must be
+rebuilt from them (the portal's gate fails on a bundle built from older bindings).
+
+| Feature | Owner | Status | Commit | Demo step | Tracks |
+|---|---|---|---|---|---|
+| SpacetimeDB holds live task status and approvals; a paired phone answers through the vouched reducer | core | verified Oct 24 00:09 (two phones, the reducer refusing anonymous calls) | 6879fb9 | moment 3; security | SpacetimeDB |
+| Shared work queue with atomic claims (`spacetime.claim`, `finish`, `post`, `team`): 15 claims by 3 agents on 12 jobs, none twice; 30 simultaneous claims on 10 jobs; jobs return when a task ends holding them | spacetime | building (branch `spacetime`) | | tracks/spacetime/demo.ts on branch | SpacetimeDB |
+| Live agent presence and status (agent table, the Live window's Agents view) | spacetime | building (branch) | | tracks/spacetime/demo.ts on branch | SpacetimeDB |
+| Each person is sent only their own requests (Business `my_requests` view, private tables) | spacetime, business | building (branch) | | tracks/spacetime/demo.ts on branch | SpacetimeDB, Hyphenate |
+| No double approvals: the first answer wins in the reducer, the late one gets "already approved by X" | spacetime, core | building (branch) | | tracks/spacetime/demo.ts on branch | SpacetimeDB |
+| "X is viewing" presence on a request (clears when the connection drops) | spacetime | building (branch) | | tracks/spacetime/demo.ts on branch | SpacetimeDB |
+| A reminder timer in the database ("brings Priya in after N seconds"); the Business policy line that sets the delay is not on main | spacetime, business | building (branch; module and demo only) | | tracks/spacetime/demo.ts on branch | SpacetimeDB |
+| Live meters (`meter`, `activity`) matching the box's task list | spacetime | building (branch) | | tracks/spacetime/demo.ts on branch | SpacetimeDB |
+| Paired devices reach SpacetimeDB at `/stdb/<token>/` (identity and subscription only; wrong token 401; SQL 404) | spacetime, core | building (branch; touches the token gate, so QA tests it) | | tracks/spacetime/demo.ts on branch | SpacetimeDB, Armadin |
+| Live window `/t/spacetime/` | spacetime | building (branch) | | tracks/spacetime/demo.ts on branch | SpacetimeDB |
+| Maincloud fleet view (opt-in, counts only, per-viewer visibility) | spacetime | building (module and offline demo; the live check waits on Ben signing in to SpacetimeDB once: `DEMO_LIVE=spacetime ./demo`) | | DEMO_LIVE=spacetime | SpacetimeDB |
 
 ## Not pursued
 
