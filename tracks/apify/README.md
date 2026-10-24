@@ -138,7 +138,7 @@ at the same time. It checks the results have a real price, a stock answer and re
 is nowhere in either task's log, and that each task's cost was counted. A live run spends about one cent
 and adds about 15 seconds. Run it before merging a change to this folder.
 
-On 2026-10-23 the live run passed on the linuxbox VM (x86) and the laptop VM (ARM64): AirPods Pro 3 at $299.99 CAD, in stock, and Cole Coffee
+On 2026-10-23 the live run passed on two test VMs, one x86 and one ARM64: AirPods Pro 3 at $299.99 CAD, in stock, and Cole Coffee
 Café at 6255 College Ave, Oakland.
 
 ### Live calls in the merge gate: the convention for every track
