@@ -142,9 +142,10 @@ after the rollback. An update also copies over `/etc/machine-id`, SSH host keys,
 GurtOS Server the box's API and portal (port 7700) are also open to private networks (10/8, 172.16/12,
 192.168/16, Tailscale's 100.64/10, link-local, IPv6 ULA), so a phone on the same network can pair; the box
 listens on every address and sets `BOX_URL` to its own address at each start (`box-env`), so the pairing QR code
-opens on the phone. Never from the public internet: most of the API takes no token, so anyone who could reach it
-could approve a spend or start a task. SpacetimeDB (port 3000) is never open to the network, because its
-`answer` reducer takes anonymous calls; the portal falls back to the API's log stream. GurtOS Personal keeps the
+opens on the phone. Never from the public internet: every request that does not come from the box itself
+already needs a paired phone's token (core's "Who may reach the API"), and the firewall keeps it that way one
+layer further out. SpacetimeDB (port 3000) is never open to the network; the portal falls back to the API's log
+stream. GurtOS Personal keeps the
 API on `127.0.0.1`. Debug builds also open ssh (22). The time zone is Pacific (`BOX_TIMEZONE` at build time
 changes it; Personal's own setup asks).
 

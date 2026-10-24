@@ -31,13 +31,18 @@ if [[ -z ${ISO:-} ]]; then
   [[ -n $debug ]] && files+=("${BUILD_HOST:-vultrbox}:$out/gurtos-$name.sqfs*")
   rsync -t --info=progress2 "${files[@]}" "$dir/"
 fi
+# linuxbox is shared by many agent sessions, and the out-of-memory killer takes them first: one test VM at a time,
+# 2.5 GB each, and only when 6 GB are free. A test that needs more belongs on a Vultr machine.
+exec 7>"$dir/vm.lock"
+flock -n 7 || { echo "test: another test VM is running here; waiting for it"; flock 7; }
+until (( $(free -g | awk '/^Mem:/ { print $7 }') >= 6 )); do echo "test: waiting for 6 GB of free memory"; sleep 30; done
 run=$dir/run-$(date +%m%d-%H%M%S)
 mkdir -p "$run"
 echo "test: $run"
 qemu-img create -q -f qcow2 "$run/disk.qcow2" $([[ $edition == personal- ]] && echo 40G || echo 24G)
 share=$(dirname "$(readlink -f "$(command -v qemu-system-x86_64)")")/../share/qemu
 port=${SSH_PORT:-2299}
-common=(-name box-test -m 4096 -smp 4 -display none
+common=(-name box-test -m 2560 -smp 4 -display none
   -drive "if=none,id=cd,media=cdrom,readonly=on,file=$iso" -drive "if=none,id=hd,file=$run/disk.qcow2"
   -device virtio-blk-pci,drive=hd,bootindex=1
   -serial "file:$run/serial.log" -monitor "unix:$run/mon.sock,server,nowait"
