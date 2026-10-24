@@ -287,10 +287,11 @@ phone showed "$18.23 spent today" for about 4 s, then the right "$29.79". Minor.
 **P1-16. A guest lookup asks the owner twice (Mana guest requests, 03bade4).** Owner: mana. The agent's `apify.run`
 default cap ($0.50) is above the guest run's $0.25 budget, so after the owner approves the request, the phone gets a
 second "Spend $0.50 on apify.run? Budget $0.25" and the run waits. Mana's fix (`maxUsd` 0.2 in the guest prompt) is
-in test.
+in test. **Fixed, verified 04:25 PT on main 984f4b1:** a guest price check ran after the one approval with no second
+question (Apify's default cap is now $0.10).
 
 **P2-20. Normal tasks log `net.blocked 127.0.0.53:53`.** Owner: core. Droid's own process tries the resolver stub,
-about eight times in one lookup, and the portal shows them as blocked attempts. Filed with core.
+about eight times in one lookup, and the portal shows them as blocked attempts. Filed with core. **Gone on main 984f4b1 for a guest lookup** (no blocked notices at 04:25 PT).
 
 **P2-21. A Business approver's phone shows the ordinary Server home for the first few seconds after pairing.** Owner:
 portal. Rosa (approver, $50,000 limit) paired and for about 2 to 5 s saw "Needs you" with Approve buttons for every
@@ -306,6 +307,14 @@ target is no person's duty and no role could warn, as the tester does.
 **P2-23. A request above every approver's limit has nobody to answer it.** Owner: business. The $60,000 request went
 to the Controller, whose limit is $50,000: it left Rosa's "Waiting for me" and only the owner could answer it. Say in
 the request that it is above everyone's limit, and who can still answer.
+
+**P2-24. A guest run can cost more than the "25 cent budget" the owner is shown.** Owner: mana. The approved lookup
+cost 28 cents (model tokens count in `costCents`; the budget limits tool spending). The owner's question and the
+README say "a $0.25 budget". Say "up to $0.25 of tools, plus the model", or cap the model too.
+
+**P2-25. The guest price check found the page but no price.** Owner: mana, apify. "AirPods Pro at Best Buy Canada"
+returned the collection URL and said pricing wasn't in the results. For a judge's first guest request, a known case
+(apify.checkPrice, 1 cent) would show a real number.
 
 ## Docs site (gurtos.com)
 
