@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 330" role="img" aria-labelledby="disk-title disk-desc">
+  <title id="disk-title">Disk layout and how an update is applied</title>
+  <desc id="disk-desc">The disk has five partitions: BIOS boot (1 MB), the EFI system partition (512 MB), system slot A (6 GB), system slot B (6 GB) and the data partition (the rest). The box runs from one slot. An update checks its signature and hash, writes the other slot, and starts it once. The box must report healthy within 5 minutes. If it does, the new slot becomes the default. If not, the box restarts into the old slot.</desc>
+  <defs>
+    <marker id="disk-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0L10 5L0 10z" class="arrowhead"/>
+    </marker>
+  </defs>
+
+  <text x="20" y="26" class="muted">The disk (not to scale)</text>
+  <rect x="20" y="36" width="56" height="60" rx="4" class="node-strong"/>
+  <text x="48" y="62" text-anchor="middle" font-size="12">BIOS</text>
+  <text x="48" y="80" text-anchor="middle" class="muted">1 MB</text>
+  <rect x="80" y="36" width="96" height="60" rx="4" class="node-strong"/>
+  <text x="128" y="62" text-anchor="middle">ESP</text>
+  <text x="128" y="80" text-anchor="middle" class="muted">512 MB</text>
+  <rect x="180" y="36" width="160" height="60" rx="4" class="accent"/>
+  <text x="260" y="62" text-anchor="middle">Slot A</text>
+  <text x="260" y="80" text-anchor="middle" class="muted">6 GB, running</text>
+  <rect x="344" y="36" width="160" height="60" rx="4" class="node"/>
+  <text x="424" y="62" text-anchor="middle">Slot B</text>
+  <text x="424" y="80" text-anchor="middle" class="muted">6 GB, the update</text>
+  <rect x="508" y="36" width="232" height="60" rx="4" class="node-strong"/>
+  <text x="624" y="62" text-anchor="middle">Data: the rest</text>
+  <text x="624" y="80" text-anchor="middle" class="muted">log, workspaces, vault</text>
+
+  <text x="20" y="136" class="muted">An update</text>
+  <rect x="20" y="146" width="160" height="64" rx="6" class="node"/>
+  <text x="100" y="172" text-anchor="middle">box-update apply</text>
+  <text x="100" y="192" text-anchor="middle" class="muted">checks signature, hash</text>
+  <path d="M180 178H203" class="line" marker-end="url(#disk-arrow)"/>
+  <rect x="205" y="146" width="160" height="64" rx="6" class="node"/>
+  <text x="285" y="172" text-anchor="middle">Writes the other slot</text>
+  <text x="285" y="192" text-anchor="middle" class="muted">the running one stays</text>
+  <path d="M365 178H388" class="line" marker-end="url(#disk-arrow)"/>
+  <rect x="390" y="146" width="160" height="64" rx="6" class="node"/>
+  <text x="470" y="172" text-anchor="middle">Starts it once</text>
+  <text x="470" y="192" text-anchor="middle" class="muted mono">next_entry</text>
+  <path d="M550 178H573" class="line" marker-end="url(#disk-arrow)"/>
+  <rect x="575" y="146" width="165" height="64" rx="6" class="accent"/>
+  <text x="657" y="172" text-anchor="middle">Health check</text>
+  <text x="657" y="192" text-anchor="middle" class="muted">within 5 minutes</text>
+
+  <path d="M630 210L540 252" class="line" marker-end="url(#disk-arrow)"/>
+  <path d="M684 210L684 252" class="line" marker-end="url(#disk-arrow)"/>
+  <rect x="390" y="254" width="200" height="56" rx="6" class="ok"/>
+  <text x="490" y="278" text-anchor="middle">Healthy</text>
+  <text x="490" y="297" text-anchor="middle" class="muted">the new slot becomes default</text>
+  <rect x="600" y="254" width="140" height="56" rx="6" class="danger"/>
+  <text x="670" y="278" text-anchor="middle">Not healthy</text>
+  <text x="670" y="297" text-anchor="middle" class="muted">back to the old slot</text>
+</svg>

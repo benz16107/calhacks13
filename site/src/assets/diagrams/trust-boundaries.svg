@@ -1,0 +1,93 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 520" role="img" aria-labelledby="trust-title trust-desc">
+  <title id="trust-title">Trust boundaries</title>
+  <desc id="trust-desc">Your devices reach the box's API on port 7700 and SpacetimeDB on port 3000. Inside the box, the core runs as root and holds the API, SpacetimeDB, the action log, the apps, the vault, the brokers and the proxy. Each task runs as its own user in its own zone. A task reaches the core only through its broker socket and the network only through the proxy, which lets it reach its allowed hosts. Three paths are blocked: a task reading the vault, a task connecting straight to any other host, and a task opening another task's copy of the files.</desc>
+  <defs>
+    <marker id="trust-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0L10 5L0 10z" class="arrowhead"/>
+    </marker>
+  </defs>
+
+  <!-- Your devices -->
+  <rect x="20" y="20" width="310" height="92" rx="10" class="zone"/>
+  <text x="34" y="38" class="muted">Your devices</text>
+  <rect x="36" y="48" width="140" height="44" rx="6" class="node"/>
+  <text x="106" y="75" text-anchor="middle">Portal</text>
+  <rect x="186" y="48" width="130" height="44" rx="6" class="node"/>
+  <text x="251" y="75" text-anchor="middle">Phone</text>
+  <text x="350" y="44" class="muted">The API has no login. It listens on 127.0.0.1</text>
+  <text x="350" y="62" class="muted">unless you set BOX_LISTEN. SpacetimeDB listens</text>
+  <text x="350" y="80" class="muted">on port 3000 on every interface.</text>
+
+  <text x="114" y="150" class="muted mono">:7700</text>
+  <text x="259" y="150" class="muted mono">:3000</text>
+
+  <!-- The box -->
+  <rect x="20" y="136" width="560" height="372" rx="10" class="zone"/>
+  <text x="34" y="130" class="muted">The box</text>
+
+  <!-- Root -->
+  <rect x="36" y="168" width="528" height="146" rx="8" class="node-strong"/>
+  <text x="548" y="186" text-anchor="end" class="muted">Root: the core</text>
+  <rect x="52" y="196" width="120" height="48" rx="6" class="accent"/>
+  <text x="112" y="225" text-anchor="middle">API</text>
+  <rect x="184" y="196" width="130" height="48" rx="6" class="accent"/>
+  <text x="249" y="225" text-anchor="middle">SpacetimeDB</text>
+  <rect x="326" y="196" width="110" height="48" rx="6" class="node"/>
+  <text x="381" y="225" text-anchor="middle">Action log</text>
+  <rect x="448" y="196" width="104" height="48" rx="6" class="node"/>
+  <text x="500" y="225" text-anchor="middle">Apps</text>
+  <rect x="52" y="256" width="120" height="44" rx="6" class="node"/>
+  <text x="112" y="283" text-anchor="middle">Vault</text>
+  <rect x="184" y="256" width="130" height="44" rx="6" class="node"/>
+  <text x="249" y="283" text-anchor="middle">Broker</text>
+  <rect x="326" y="256" width="226" height="44" rx="6" class="node"/>
+  <text x="439" y="283" text-anchor="middle">Proxy</text>
+
+  <!-- Tasks -->
+  <rect x="36" y="340" width="256" height="152" rx="8" class="zone"/>
+  <text x="50" y="482" class="muted">Task A's own user</text>
+  <rect x="52" y="376" width="224" height="52" rx="6" class="node"/>
+  <text x="66" y="398">Task A</text>
+  <text x="66" y="418" class="muted">own copy, no keys, no sudo</text>
+
+  <rect x="308" y="340" width="256" height="152" rx="8" class="zone"/>
+  <text x="322" y="482" class="muted">Task B's own user</text>
+  <rect x="324" y="376" width="224" height="52" rx="6" class="node"/>
+  <text x="338" y="398">Task B</text>
+  <text x="338" y="418" class="muted">own copy, no keys, no sudo</text>
+
+  <!-- Allowed -->
+  <path d="M249 376V302" class="line" marker-end="url(#trust-arrow)"/>
+  <text x="200" y="356" class="muted">socket</text>
+  <path d="M470 376V302" class="line" marker-end="url(#trust-arrow)"/>
+  <text x="478" y="356" class="muted">proxy only</text>
+
+  <!-- Blocked -->
+  <path d="M100 376V302" class="line-danger"/>
+  <path d="M94 333L106 345M106 333L94 345" class="line-danger" stroke-dasharray="none" stroke-width="2"/>
+  <text x="62" y="328" class="text-danger" font-size="12">vault</text>
+  <path d="M276 402H324" class="line-danger"/>
+  <path d="M294 396L306 408M306 396L294 408" class="line-danger" stroke-dasharray="none" stroke-width="2"/>
+  <text x="300" y="450" text-anchor="middle" class="text-danger" font-size="12">other tasks' copies</text>
+  <path d="M548 412H608" class="line-danger"/>
+  <path d="M572 406L584 418M584 406L572 418" class="line-danger" stroke-dasharray="none" stroke-width="2"/>
+
+  <!-- Outside -->
+  <rect x="596" y="136" width="194" height="372" rx="10" class="zone"/>
+  <text x="610" y="130" class="muted">Outside</text>
+  <rect x="610" y="196" width="168" height="48" rx="6" class="node"/>
+  <text x="694" y="216" text-anchor="middle">APIs tools call</text>
+  <text x="694" y="234" text-anchor="middle" class="muted">with vault keys</text>
+  <path d="M552 220H608" class="line" marker-end="url(#trust-arrow)"/>
+  <rect x="610" y="256" width="168" height="48" rx="6" class="node"/>
+  <text x="694" y="276" text-anchor="middle">Allowed hosts</text>
+  <text x="694" y="294" text-anchor="middle" class="muted">and the model service</text>
+  <path d="M552 278H608" class="line" marker-end="url(#trust-arrow)"/>
+  <rect x="610" y="388" width="168" height="48" rx="6" class="danger"/>
+  <text x="694" y="408" text-anchor="middle">Any other host</text>
+  <text x="694" y="426" text-anchor="middle" class="muted">refused, logged</text>
+
+  <!-- Drawn last so the boxes above do not cover them -->
+  <path d="M106 92V194" class="line" marker-end="url(#trust-arrow)"/>
+  <path d="M251 92V194" class="line" marker-end="url(#trust-arrow)"/>
+</svg>

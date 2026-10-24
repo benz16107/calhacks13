@@ -1,0 +1,93 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 540" role="img" aria-labelledby="arch-title arch-desc">
+  <title id="arch-title">Architecture</title>
+  <desc id="arch-desc">Your devices reach the box service's API. The box service runs as root and holds the API, the action log, the apps, the vault, a broker for each task and the network proxy. SpacetimeDB mirrors live state. Each task runs as its own Linux user and reaches the core only through its broker socket and the outside world only through the proxy.</desc>
+  <defs>
+    <marker id="arch-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0L10 5L0 10z" class="arrowhead"/>
+    </marker>
+  </defs>
+
+  <!-- Your devices -->
+  <rect x="40" y="24" width="170" height="52" rx="6" class="node"/>
+  <text x="125" y="55" text-anchor="middle">Portal in a browser</text>
+  <rect x="230" y="24" width="170" height="52" rx="6" class="node"/>
+  <text x="315" y="55" text-anchor="middle">The box's screen</text>
+  <rect x="420" y="24" width="170" height="52" rx="6" class="node"/>
+  <text x="505" y="55" text-anchor="middle">Phone</text>
+  <path d="M125 76V94M315 76V94M505 76V94M125 94H505" class="line"/>
+  <text x="134" y="132" class="muted">HTTP API and live updates</text>
+
+  <!-- The box -->
+  <rect x="10" y="110" width="596" height="420" rx="10" class="zone"/>
+  <text x="24" y="522" class="muted">The box: one machine</text>
+
+  <!-- Core -->
+  <rect x="26" y="150" width="564" height="190" rx="8" class="node-strong"/>
+  <text x="574" y="172" text-anchor="end" class="muted">The core: the box service, runs as root</text>
+
+  <rect x="42" y="186" width="160" height="56" rx="6" class="accent"/>
+  <text x="122" y="210" text-anchor="middle">API</text>
+  <text x="122" y="229" text-anchor="middle" class="muted mono">127.0.0.1:7700</text>
+
+  <rect x="216" y="186" width="160" height="56" rx="6" class="node"/>
+  <text x="296" y="210" text-anchor="middle">Action log</text>
+  <text x="296" y="229" text-anchor="middle" class="muted">append-only, fsynced</text>
+
+  <rect x="390" y="186" width="184" height="56" rx="6" class="node"/>
+  <text x="482" y="210" text-anchor="middle">Apps</text>
+  <text x="482" y="229" text-anchor="middle" class="muted">tools, triggers, routes</text>
+
+  <rect x="42" y="262" width="160" height="56" rx="6" class="node"/>
+  <text x="122" y="286" text-anchor="middle">Vault</text>
+  <text x="122" y="305" text-anchor="middle" class="muted">root only</text>
+
+  <rect x="216" y="262" width="160" height="56" rx="6" class="node"/>
+  <text x="296" y="286" text-anchor="middle">Broker</text>
+  <text x="296" y="305" text-anchor="middle" class="muted">one socket per task</text>
+
+  <rect x="390" y="262" width="184" height="56" rx="6" class="node"/>
+  <text x="482" y="286" text-anchor="middle">Proxy</text>
+  <text x="482" y="305" text-anchor="middle" class="muted">each task's allowed hosts</text>
+
+  <!-- SpacetimeDB -->
+  <path d="M122 340V390" class="line" marker-end="url(#arch-arrow)"/>
+  <text x="132" y="370" class="muted">mirrors live state</text>
+  <rect x="42" y="392" width="140" height="96" rx="6" class="node"/>
+  <text x="112" y="428" text-anchor="middle">SpacetimeDB</text>
+  <text x="112" y="448" text-anchor="middle" class="muted">tasks, approvals</text>
+  <text x="112" y="466" text-anchor="middle" class="muted mono">port 3000</text>
+
+  <!-- Tasks -->
+  <rect x="200" y="364" width="390" height="152" rx="8" class="zone"/>
+  <text x="214" y="384" class="muted">Tasks: each its own Linux user</text>
+
+  <rect x="216" y="400" width="160" height="96" rx="6" class="node"/>
+  <text x="296" y="428" text-anchor="middle">Task A</text>
+  <text x="296" y="448" text-anchor="middle" class="muted">own copy of the files</text>
+  <text x="296" y="466" text-anchor="middle" class="muted">no keys</text>
+
+  <rect x="390" y="400" width="184" height="96" rx="6" class="node"/>
+  <text x="482" y="428" text-anchor="middle">Task B</text>
+  <text x="482" y="448" text-anchor="middle" class="muted">own copy of the files</text>
+  <text x="482" y="466" text-anchor="middle" class="muted">no keys</text>
+
+  <path d="M296 400V320" class="line" marker-end="url(#arch-arrow)"/>
+  <text x="304" y="352" class="muted">Unix socket</text>
+  <path d="M482 400V320" class="line" marker-end="url(#arch-arrow)"/>
+  <text x="490" y="352" class="muted">network</text>
+
+  <!-- Outside -->
+  <text x="626" y="104" class="muted">Outside</text>
+  <rect x="626" y="186" width="164" height="56" rx="6" class="node"/>
+  <text x="708" y="210" text-anchor="middle">APIs tools call</text>
+  <text x="708" y="229" text-anchor="middle" class="muted">with vault keys</text>
+  <path d="M574 214H624" class="line" marker-end="url(#arch-arrow)"/>
+
+  <rect x="626" y="262" width="164" height="56" rx="6" class="node"/>
+  <text x="708" y="286" text-anchor="middle">Allowed hosts</text>
+  <text x="708" y="305" text-anchor="middle" class="muted">and the model service</text>
+  <path d="M574 290H624" class="line" marker-end="url(#arch-arrow)"/>
+
+  <!-- Drawn last so the boxes above do not cover them -->
+  <path d="M125 94V184" class="line" marker-end="url(#arch-arrow)"/>
+</svg>

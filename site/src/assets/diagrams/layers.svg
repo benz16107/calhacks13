@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 330" role="img" aria-labelledby="layers-title layers-desc">
+  <title id="layers-title">A workspace as a stack of layers</title>
+  <desc id="layers-desc">The base files sit at the bottom and are never written. Each finished task adds one layer on top, newest highest. Undo takes one layer out; the others stay. The view you see is the base plus every done layer. A running task works in its own copy: its own new layer on top of the layers that were done when it started.</desc>
+  <defs>
+    <marker id="layers-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0L10 5L0 10z" class="arrowhead"/>
+    </marker>
+  </defs>
+
+  <text x="40" y="28" class="muted">One workspace, newest layer on top</text>
+
+  <rect x="40" y="44" width="340" height="44" rx="6" class="ok"/>
+  <text x="58" y="71">Task C</text>
+  <text x="362" y="71" text-anchor="end" class="muted">done</text>
+
+  <rect x="72" y="100" width="340" height="44" rx="6" class="danger" stroke-dasharray="6 4"/>
+  <text x="90" y="127" class="text-danger">Task B</text>
+  <text x="394" y="127" text-anchor="end" class="text-danger">undone: taken out</text>
+
+  <rect x="40" y="156" width="340" height="44" rx="6" class="ok"/>
+  <text x="58" y="183">Task A</text>
+  <text x="362" y="183" text-anchor="end" class="muted">done</text>
+
+  <rect x="40" y="212" width="340" height="44" rx="6" class="node-strong"/>
+  <text x="58" y="239">Base files</text>
+  <text x="362" y="239" text-anchor="end" class="muted">never written</text>
+
+  <text x="40" y="294" class="muted">Undo removes one layer. The others stay, and the base never changes.</text>
+
+  <!-- What each one sees -->
+  <rect x="470" y="44" width="260" height="72" rx="6" class="accent"/>
+  <text x="488" y="72">The workspace view</text>
+  <text x="488" y="94" class="muted">base + A + C, read-only</text>
+  <path d="M468 80H392" class="line" marker-end="url(#layers-arrow)"/>
+
+  <rect x="470" y="156" width="260" height="100" rx="6" class="node"/>
+  <text x="488" y="184">Task D, running</text>
+  <text x="488" y="206" class="muted">its own layer on top of A + C + base</text>
+  <text x="488" y="226" class="muted">only its user can open it</text>
+  <text x="488" y="244" class="muted">joins the stack when done</text>
+  <path d="M468 206H392" class="line" marker-end="url(#layers-arrow)"/>
+</svg>

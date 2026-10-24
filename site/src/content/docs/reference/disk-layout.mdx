@@ -1,0 +1,115 @@
+---
+title: Disk layout and updates
+description: The partitions the GurtOS installer makes, what survives a system update, how an update is checked, tried once and kept or rolled back.
+---
+
+import DiskLayout from '../../../assets/diagrams/disk-layout.svg';
+
+The GurtOS keeps two complete systems on disk, slots A and B, and runs from one. An update is written to the other slot, started once on trial, and kept only if the box comes up healthy. Everything that must outlive an update lives on a separate data partition. For the reasoning, read [System updates](/concepts/system-updates/). To run an update, see [Update and roll back](/guides/update-and-roll-back/).
+
+<figure class="diagram">
+  <DiskLayout />
+  <figcaption>The installer's five partitions. An update fills the slot that is not running, which starts once on trial and becomes the default only after a health check passes.</figcaption>
+</figure>
+
+## Partitions
+
+The installer erases the disk and makes these partitions, in this order:
+
+| Partition | Size | Partition name | Mounted at | Holds |
+|---|---|---|---|---|
+| BIOS boot | 1 MB | `box-bios` | | GRUB for machines that start with BIOS. x86 only. |
+| EFI system partition | 512 MB | `box-esp` (FAT label `BOX-ESP`) | `/boot/efi` | GRUB, its menu, and `grubenv`, which says which slot starts |
+| System slot A | 6 GB | `box-a` | `/` when running | A whole system: kernel, Ubuntu base, the box service |
+| System slot B | 6 GB | `box-b` | `/` when running | The other system. Empty until the first update. |
+| Data | the rest | `box-data` | `/data` | Everything that must outlive an update |
+
+The two system slots take 12 GB. The smallest disk that works is about 17 GB. Use at least 25 GB in practice.
+
+The installer uses a blank disk straight away. It erases a disk that has anything on it only after someone types `erase` on the box's screen.
+
+## What lives on the data partition
+
+The data partition is mounted at `/data`, and these paths are bind-mounted from it, so both slots see the same files:
+
+| Path | What |
+|---|---|
+| `/var/lib/box` | The action log, workspaces and tasks (`BOX_HOME`) |
+| `/etc/box` | The vault and the box's identity key |
+| `/var/lib/spacetimedb` | SpacetimeDB's data |
+| `/root/.config/spacetime` | The identity that owns the box's SpacetimeDB database |
+| `/var/log/journal` | System logs, so a failed update's logs are still there after the rollback |
+
+`/data/update` holds `trial` and `last`: the update in progress and the last result.
+
+An update also copies into the new slot: `/etc/machine-id`, SSH host keys (debug builds), and the task users the core made (uids 30000 to 39999), so a resumed task keeps its uid.
+
+## Which slot starts
+
+GRUB reads `grubenv` on the EFI system partition:
+
+| Variable | Meaning |
+|---|---|
+| `saved_entry` | The default slot, `a` or `b` |
+| `next_entry` | A slot to start once. GRUB clears it as it uses it. |
+
+The running slot is on the kernel command line as `box.slot=a` or `box.slot=b`. The kernel starts with `panic=10`, so a kernel that panics restarts by itself after 10 seconds.
+
+## An update, step by step
+
+1. `box-update apply <file or URL>` fetches `root-<arch>.sqfs` with its `.sha256` and `.sig`.
+2. It checks the signature on the hash against `/etc/box-os/update.pub`, then checks the hash against the file. Either failing stops the update.
+3. It formats the other slot, unpacks the image into it, and checks it holds a kernel and the box service.
+4. It copies the machine's identity and task users across, as above.
+5. It sets `next_entry` to the new slot, writes `/data/update/trial`, and restarts.
+6. At every start, `box-confirm.service` waits up to 5 minutes for `GET /health` on the box's API to answer `ok`.
+   - Healthy on trial: the new slot becomes `saved_entry`, the default. The update is kept.
+   - Not healthy: the box restarts. `saved_entry` never changed, so GRUB starts the old slot.
+   - The new slot did not start at all: the box is already on the old slot, and the result is recorded.
+
+Each result is written to `/data/update/last` and printed on the serial console.
+
+## Update files
+
+`image/build` makes these, and the same `root-<arch>.sqfs` is both on the install disc and the update file:
+
+| File | What |
+|---|---|
+| `box-<arch>.iso` | The install disc. Starts with BIOS and UEFI. Also runs as a live system. |
+| `root-<arch>.sqfs` | The whole system as one compressed image |
+| `root-<arch>.sqfs.sha256` | Its SHA-256 hash |
+| `root-<arch>.sqfs.sig` | The hash, signed with the build machine's ed25519 update key |
+
+`<arch>` is `x86_64` or `arm64`. Debug builds are named `<arch>-debug`.
+
+## `box-update`
+
+Run as root on the box. Release builds have no shell, so today this needs a debug build with SSH.
+
+```sh
+box-update status                                   # the running slot, the other slot, the default, the last result
+box-update apply https://updates.example/root-x86_64.sqfs
+box-update apply /tmp/root-x86_64.sqfs --no-reboot  # write the slot now, restart later
+box-update rollback                                 # make the other slot the default and restart into it
+box-update confirm                                  # what box-confirm.service runs at every start
+```
+
+`apply` with a local file expects the `.sha256` and `.sig` files beside it.
+
+:::caution[Planned]
+Updates from the portal, and a shell-free way to apply them on release builds, are planned.
+:::
+
+## Trade-offs
+
+- The slots are plain writable ext4. They are not read-only and not verified at boot (no dm-verity). Changes made by hand inside a running slot are lost at the next update, by design.
+- A system that hangs, instead of panicking or failing its health check, stays hung until someone restarts it. A hardware watchdog would cover that; not every machine or VM has one.
+- The GRUB menu on the EFI system partition is written once at install and never updated. A change to the boot menu itself needs a reinstall.
+- Updates are signed with one ed25519 key held on one build machine. There is no key rotation and no rollback protection: an older signed image installs fine.
+- The boot loader is not signed, so Secure Boot must be off.
+
+## Related
+
+- [System updates](/concepts/system-updates/)
+- [Install Server](/get-started/install-server/)
+- [Files and paths](/reference/files-and-paths/)

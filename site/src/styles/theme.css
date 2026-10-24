@@ -1,0 +1,203 @@
+/* The product's tokens (docs/figma.md, direction A), mapped onto Starlight.
+   Light is the Paper surface the portal's windows use. Dark is the desktop's night sky. */
+
+:root {
+  --sl-font: 'Instrument Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --sl-font-mono: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  --sl-content-width: 46rem;
+  --sl-line-height: 1.65;
+
+  /* Dark: the desktop */
+  --sl-color-accent-low: #203247;
+  --sl-color-accent: #8db4dd;
+  --sl-color-accent-high: #d3e3f3;
+  --sl-color-white: #f2efe8;
+  --sl-color-gray-1: #e4e1da;
+  --sl-color-gray-2: #c9cdd2;
+  --sl-color-gray-3: #9aa3ad;
+  --sl-color-gray-4: #6b7682;
+  --sl-color-gray-5: #3a4653;
+  --sl-color-gray-6: #222c36;
+  --sl-color-black: #171e25;
+
+  --diagram-ink: #f2efe8;
+  --diagram-muted: #b9c0c8;
+  --diagram-line: #6b7682;
+  --diagram-fill: #222c36;
+  --diagram-fill-strong: #2f3c4a;
+  --diagram-accent: #8db4dd;
+  --diagram-accent-fill: #203247;
+  --diagram-danger: #f0a493;
+  --diagram-danger-fill: #3d2622;
+  --diagram-ok: #9fd0a6;
+  --diagram-ok-fill: #20352a;
+}
+
+:root[data-theme='light'] {
+  /* Light: Paper */
+  --sl-color-accent-low: #dde8f2;
+  --sl-color-accent: #2d5784;
+  --sl-color-accent-high: #1e3d5e;
+  --sl-color-white: #1c201d;
+  --sl-color-gray-1: #2a2f2b;
+  --sl-color-gray-2: #3a403b;
+  --sl-color-gray-3: #535a54;
+  --sl-color-gray-4: #6b726c;
+  --sl-color-gray-5: #d3d6cf;
+  --sl-color-gray-6: #e6e7e1;
+  --sl-color-gray-7: #f3f1ea;
+  --sl-color-black: #fbfaf6;
+
+  --diagram-ink: #1c201d;
+  --diagram-muted: #535a54;
+  --diagram-line: #6b726c;
+  --diagram-fill: #fbfaf6;
+  --diagram-fill-strong: #e6e7e1;
+  --diagram-accent: #2d5784;
+  --diagram-accent-fill: #dde8f2;
+  --diagram-danger: #9c3326;
+  --diagram-danger-fill: #f6e0da;
+  --diagram-ok: #2e6338;
+  --diagram-ok-fill: #dfedDc;
+}
+
+/* Calm headings: semibold, slightly tight, never heavier. */
+.sl-markdown-content :is(h1, h2, h3, h4) {
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+h1#_top {
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+/* Tables: plain rules, mono for code cells. */
+.sl-markdown-content table {
+  font-size: var(--sl-text-sm);
+}
+.sl-markdown-content th {
+  font-weight: 600;
+}
+
+/* Screenshots: a hairline, no shadow. */
+.sl-markdown-content img {
+  border: 1px solid var(--sl-color-gray-5);
+  border-radius: 6px;
+}
+.sl-markdown-content figure {
+  margin-inline: 0;
+}
+.sl-markdown-content figcaption {
+  font-size: var(--sl-text-sm);
+  color: var(--sl-color-gray-3);
+  margin-top: 0.5rem;
+}
+.sl-markdown-content .phone img {
+  max-width: 320px;
+}
+
+/* Diagrams are inline SVG and take their colours from the variables above. */
+.diagram svg {
+  width: 100%;
+  height: auto;
+  font-family: var(--sl-font);
+}
+.diagram svg text {
+  fill: var(--diagram-ink);
+  font-size: 14px;
+}
+.diagram svg .muted {
+  fill: var(--diagram-muted);
+  font-size: 12px;
+}
+.diagram svg .mono {
+  font-family: var(--sl-font-mono);
+  font-size: 12px;
+}
+.diagram svg .node {
+  fill: var(--diagram-fill);
+  stroke: var(--diagram-line);
+  stroke-width: 1.25;
+}
+.diagram svg .node-strong {
+  fill: var(--diagram-fill-strong);
+  stroke: var(--diagram-line);
+  stroke-width: 1.25;
+}
+.diagram svg .zone {
+  fill: none;
+  stroke: var(--diagram-line);
+  stroke-width: 1.25;
+  stroke-dasharray: 6 5;
+}
+.diagram svg .accent {
+  fill: var(--diagram-accent-fill);
+  stroke: var(--diagram-accent);
+  stroke-width: 1.5;
+}
+.diagram svg .danger {
+  fill: var(--diagram-danger-fill);
+  stroke: var(--diagram-danger);
+  stroke-width: 1.5;
+}
+.diagram svg .ok {
+  fill: var(--diagram-ok-fill);
+  stroke: var(--diagram-ok);
+  stroke-width: 1.5;
+}
+.diagram svg .line {
+  fill: none;
+  stroke: var(--diagram-line);
+  stroke-width: 1.5;
+}
+.diagram svg .line-danger {
+  fill: none;
+  stroke: var(--diagram-danger);
+  stroke-width: 1.5;
+  stroke-dasharray: 5 4;
+}
+.diagram svg .arrowhead {
+  fill: var(--diagram-line);
+}
+.diagram svg .arrowhead-danger {
+  fill: var(--diagram-danger);
+}
+.diagram svg .text-danger {
+  fill: var(--diagram-danger);
+}
+.diagram svg .text-accent {
+  fill: var(--diagram-accent);
+}
+
+/* The home page: no hero glow, just type. */
+.hero {
+  padding-block: 2.5rem 1rem;
+}
+.hero h1 {
+  font-weight: 600;
+  letter-spacing: -0.03em;
+}
+
+/* Buttons match the portal's 6 px radius, not pills. */
+.sl-link-button {
+  border-radius: 6px;
+}
+
+/* Sidebar badges: quiet labels, not filled blocks. */
+.sl-badge {
+  font-family: var(--sl-font);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  border-radius: 4px;
+}
+.sl-badge.note,
+.sl-badge.default {
+  background: var(--sl-color-accent-low);
+  color: var(--sl-color-accent-high);
+  border-color: transparent;
+}
+.sl-badge.caution {
+  background: var(--sl-color-orange-low);
+  color: var(--sl-color-orange-high);
+  border-color: transparent;
+}

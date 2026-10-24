@@ -1,0 +1,980 @@
+openapi: 3.1.0
+info:
+  title: GurtOS HTTP API
+  version: 0.1.0 (preview)
+  summary: Tasks, approvals, the action log, pairing and apps on one box.
+  description: |
+    The box's HTTP API is how the portal, a phone and outside tools list tasks, start them, answer
+    approvals, undo work and follow the action log. These pages are generated from the routes the core
+    serves. For a guided overview, read [HTTP API](/reference/http-api/).
+
+    ## Base address
+
+    `http://127.0.0.1:7700/api`. Every route also answers without the `/api` prefix, so
+    `http://127.0.0.1:7700/tasks` and `http://127.0.0.1:7700/api/tasks` are the same route. The same API
+    is served on the Unix socket `BOX_HOME/api.sock` (root only).
+
+    ## Format
+
+    Requests and responses are JSON. Send `content-type: application/json` with a body. A failed request
+    returns a JSON object with one field, `error`, and status 400. An unknown route returns 404. A device
+    token that is unknown or revoked returns 401.
+
+    ## Authentication
+
+    The API has no authentication. Anyone who can reach the port can do anything the API allows, so the
+    box listens on `127.0.0.1` by default. `BOX_LISTEN` changes the address. Only expose it on a network
+    you trust, or behind a VPN. A paired phone sends its device token when it answers an approval, so the
+    log records which phone answered.
+
+    ## Cross-origin requests
+
+    The portal is served from the same address as the API and needs no CORS. A browser app on another
+    origin needs `BOX_ORIGINS` (a comma-separated list of origins, or `*`) in the box's environment.
+
+    ## Not under /api
+
+    App routes are served at `/t/<app>/...` and webhooks at `/hook/<app>/<name>`. Neither answers under
+    the `/api` prefix.
+  license:
+    name: Licence to be decided
+servers:
+  - url: http://127.0.0.1:7700/api
+    description: On the box itself (the default listen address)
+  - url: http://box.local:7700/api
+    description: From another device, when BOX_LISTEN allows it
+tags:
+  - name: Tasks
+    description: Start tasks, read them with their steps and diffs, and undo them.
+  - name: Approvals
+    description: Requests for an OK, and their answers. The first answer wins.
+  - name: Action log
+    description: Every event the box writes, by cursor or as a live stream.
+  - name: Apps
+    description: Pages that installed apps add to the portal.
+  - name: Health
+    description: Whether the box service is up.
+  - name: Pairing
+    description: One-time codes that give a phone its own device token.
+  - name: Boxes
+    description: This box and its peers, for a portal that drives more than one box.
+  - name: Webhooks
+    description: Start tasks from outside. Served without the /api prefix.
+  - name: Personal
+    description: 'Preview. The owner of a Personal box and their real folders: work on a copy, then Keep or Undo.'
+
+paths:
+  /tasks:
+    get:
+      tags: [Tasks]
+      operationId: listTasks
+      summary: List tasks
+      description: Every task the box knows, in the order they were created. The list is rebuilt from the action log at boot, so it includes finished and undone tasks.
+      responses:
+        '200':
+          description: All tasks.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Task' }
+              example:
+                - id: t3k9x2a1b2
+                  title: Fix the failing test
+                  prompt: Fix the failing test in this project.
+                  workspace: project
+                  worker: droid
+                  tools: []
+                  hosts: []
+                  budgetCents: 25
+                  source: portal
+                  state: done
+                  user: box-t3k9x2a1b2
+                  layers: []
+                  costCents: 5.2
+                  step: All 4 tests pass.
+                  createdAt: '2026-10-24T09:12:03.411Z'
+                  updatedAt: '2026-10-24T09:13:40.902Z'
+    post:
+      tags: [Tasks]
+      operationId: createTask
+      summary: Start a task
+      description: |
+        Creates a task and starts it straight away. The response is the task after it started, usually
+        `running`. If the task cannot start (for example, a Droid task when the vault has no
+        `FACTORY_API_KEY`), the task is returned as `failed` with an `error`.
+
+        Defaults: `workspace` is `home`, `worker` is `droid`, `tools` and `hosts` are empty, `budgetCents`
+        is 0 and `source` is `api`. The workspace must exist and every tool must be installed. Host names
+        are not checked here; the proxy checks them on every connection.
+
+        **Personal (preview).** Send `folder`, an absolute path to one of the owner's folders, instead of
+        `workspace`. The box links that folder to a workspace named `owner-<folder name>` and starts the
+        task on a copy of it. The real folder is not touched until the owner keeps the task.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/TaskSpec'
+                - type: object
+                  properties:
+                    folder:
+                      type: string
+                      description: 'Personal (preview): an absolute path to a real folder. Replaces `workspace`.'
+            example:
+              title: Summarise the meeting notes
+              prompt: Read notes.md and write a five-line summary to summary.md.
+              workspace: home
+              budgetCents: 50
+      responses:
+        '200':
+          description: The new task.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Task' }
+        '400':
+          description: A missing title or prompt, an unknown workspace, worker or tool.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+              example: { error: 'no workspace notes' }
+
+  /tasks/{id}:
+    get:
+      tags: [Tasks]
+      operationId: getTask
+      summary: Get a task with its approvals and log
+      description: The task, every approval it asked for, and every action log event that belongs to it, in order.
+      parameters:
+        - $ref: '#/components/parameters/TaskId'
+      responses:
+        '200':
+          description: The task, its approvals and its events.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [task, approvals, events]
+                properties:
+                  task: { $ref: '#/components/schemas/Task' }
+                  approvals:
+                    type: array
+                    items: { $ref: '#/components/schemas/Approval' }
+                  events:
+                    type: array
+                    items: { $ref: '#/components/schemas/LogEvent' }
+        '400':
+          description: No task with this id.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+              example: { error: 'no task t3k9x2a1b2' }
+
+  /tasks/{id}/diff:
+    get:
+      tags: [Tasks]
+      operationId: getTaskDiff
+      summary: Get what a task changed
+      description: |
+        The files the task added, modified or deleted, read from its own layer only, and a unified diff.
+        The diff is cut at 200,000 bytes. An undone task's layer is kept on disk, so its diff still
+        answers.
+      parameters:
+        - $ref: '#/components/parameters/TaskId'
+      responses:
+        '200':
+          description: The task's changes.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Diff' }
+              example:
+                changes:
+                  - { path: a.txt, change: modified }
+                  - { path: summary.md, change: added }
+                diff: "--- a/a.txt\n+++ b/a.txt\n@@ -1 +1 @@\n-original a\n+changed by A\n"
+        '400':
+          description: No task with this id.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /tasks/{id}/undo:
+    post:
+      tags: [Tasks]
+      operationId: undoTask
+      summary: Undo a task
+      description: |
+        Stops the task if it is still going, denies its pending approvals (answered by `undo`) and takes
+        its layer out of the workspace's view. Other tasks keep their changes. A task in any state can be
+        undone. Undoing a task that is already undone returns it unchanged.
+
+        Undo removes file changes on the box. It cannot recall something a task already sent out through a
+        tool or an allowed host.
+      parameters:
+        - $ref: '#/components/parameters/TaskId'
+      responses:
+        '200':
+          description: The task, now `undone`.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Task' }
+        '400':
+          description: No task with this id.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /tasks/{id}/keep:
+    post:
+      tags: [Personal]
+      operationId: keepTask
+      summary: Keep a task's changes in the real folder
+      description: |
+        Preview. For a done task that worked on one of the owner's real folders: applies its changes to that
+        folder, one file at a time, each replaced atomically. Before each file is written, its old version
+        is saved under `BOX_HOME/timemachine/<id>/`, so the Keep can be reversed later.
+
+        If the owner changed, created or deleted any of the same files since the task started, nothing is
+        applied and the response lists the clashing paths.
+      parameters:
+        - $ref: '#/components/parameters/TaskId'
+      responses:
+        '200':
+          description: The changes applied, or the conflicts that stopped them.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: object
+                    required: [kept]
+                    properties:
+                      kept:
+                        type: array
+                        items: { $ref: '#/components/schemas/Change' }
+                  - type: object
+                    required: [conflicts]
+                    properties:
+                      conflicts:
+                        type: array
+                        items: { type: string }
+              examples:
+                kept:
+                  value: { kept: [{ path: intro.md, change: modified }] }
+                conflict:
+                  value: { conflicts: [notes.md] }
+        '400':
+          description: No such task, the task is not done, or its workspace is not a real folder.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+              example: { error: 'task t3k9x2a1b2 is running; only a done task can be kept' }
+
+  /owner:
+    get:
+      tags: [Personal]
+      operationId: getOwner
+      summary: Get the box's owner
+      description: Preview. On a Personal box, the owner's Linux user and home folder. On a Server box, `null`.
+      responses:
+        '200':
+          description: The owner, or null.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: 'null'
+                  - type: object
+                    required: [user, home]
+                    properties:
+                      user: { type: string }
+                      home: { type: string }
+              example: { user: alex, home: /home/alex }
+
+  /approvals:
+    get:
+      tags: [Approvals]
+      operationId: listApprovals
+      summary: List approvals
+      description: Every approval, or only those in one state. `state=pending` is the inbox.
+      parameters:
+        - name: state
+          in: query
+          required: false
+          description: Only approvals in this state.
+          schema: { $ref: '#/components/schemas/ApprovalState' }
+      responses:
+        '200':
+          description: The approvals.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Approval' }
+              example:
+                - id: t3k9x2a1b2.budget.example.spend:9f2c41d07a6be315
+                  task: t3k9x2a1b2
+                  question: Spend $8.00 to Test Vendor on example.spend (test spend on a GPU hour)? Budget $5.00, spent $0.00.
+                  costCents: 800
+                  payee: Test Vendor
+                  purpose: test spend on a GPU hour
+                  state: pending
+
+  /approvals/{id}:
+    post:
+      tags: [Approvals]
+      operationId: answerApproval
+      summary: Approve or deny
+      description: |
+        Answers one approval. The first answer wins: an approval that is already answered is returned
+        unchanged. `approved` must be `true` to approve; any other value denies.
+
+        `by` names who answered and goes into the action log. If the request carries a device token
+        (`Authorization: Bearer <token>`), the token must belong to a paired phone that is not revoked, and
+        the phone's name replaces `by`.
+
+        The path does not decode percent-escapes. An approval id with a space or a slash in it (Droid's own
+        questions) cannot be answered here; answer it through the SpacetimeDB `answer` reducer instead.
+      security:
+        - {}
+        - deviceToken: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: The approval id, `<task id>.<key>`.
+          schema: { type: string }
+          example: t3k9x2a1b2.budget.example.spend:9f2c41d07a6be315
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [approved]
+              properties:
+                approved:
+                  type: boolean
+                  description: '`true` approves. Anything else denies.'
+                by:
+                  type: string
+                  description: Who answered, for the log. Default `api`. Replaced by the device name when a device token is sent.
+            example: { approved: true, by: portal }
+      responses:
+        '200':
+          description: The approval after the answer, or as it was if someone answered first.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Approval' }
+        '400':
+          description: No approval with this id.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+              example: { error: 'no approval t3k9x2a1b2.deploy' }
+        '401':
+          description: The device token is unknown or revoked.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+              example: { error: 'pair this phone with the box first' }
+
+  /log:
+    get:
+      tags: [Action log]
+      operationId: readLog
+      summary: Read the action log
+      description: Log events after a cursor, optionally for one task. Pass the last `seq` you saw as `after` to read only what is new.
+      parameters:
+        - name: after
+          in: query
+          required: false
+          description: Return events with a `seq` greater than this. Default 0, the whole log.
+          schema: { type: integer, minimum: 0, default: 0 }
+        - name: task
+          in: query
+          required: false
+          description: Only events of this task.
+          schema: { type: string }
+      responses:
+        '200':
+          description: The events, in order.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/LogEvent' }
+
+  /log/stream:
+    get:
+      tags: [Action log]
+      operationId: streamLog
+      summary: Follow the action log live
+      description: |
+        Server-Sent Events. The box replays every event after the cursor, then sends new events as they are
+        written. Each event is `id: <seq>` and `data: <event as JSON>`. A comment line `: beat` arrives
+        every 25 seconds to keep the connection open.
+
+        To resume after a disconnect, send the `Last-Event-ID` header (browsers do this for you) or
+        `?after=<seq>`. The header wins when both are present.
+      parameters:
+        - name: after
+          in: query
+          required: false
+          description: Replay events with a `seq` greater than this. Default 0.
+          schema: { type: integer, minimum: 0, default: 0 }
+        - name: task
+          in: query
+          required: false
+          description: Only events of this task.
+          schema: { type: string }
+        - name: Last-Event-ID
+          in: header
+          required: false
+          description: The last `seq` you received. Takes precedence over `after`.
+          schema: { type: integer }
+      responses:
+        '200':
+          description: An event stream that stays open.
+          content:
+            text/event-stream:
+              schema: { type: string }
+              example: |
+                id: 41
+                data: {"seq":41,"at":"2026-10-24T09:13:40.902Z","type":"task.state","task":"t3k9x2a1b2","state":"done"}
+
+  /apps:
+    get:
+      tags: [Apps]
+      operationId: listApps
+      summary: List app pages
+      description: The pages installed apps add to the portal's app grid. Open each at `/t/<track><href>`.
+      responses:
+        '200':
+          description: The app pages.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/AppEntry' }
+              example:
+                - { name: wallet, title: 'Agent wallet (Solana devnet, test money)', href: /, track: wallet }
+
+  /health:
+    get:
+      tags: [Health]
+      operationId: getHealth
+      summary: Check the box service
+      description: Answers once the box has replayed its log, loaded its apps and opened the API. The OS image's update check waits for `ok` here before it keeps a new system.
+      responses:
+        '200':
+          description: The box is up.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Health' }
+              example:
+                ok: true
+                startedAt: '2026-10-24T09:00:01.210Z'
+                resumed: [t3k9x2a1b2]
+                tasks: 12
+                tools: [example.spend, wallet.quote, wallet.pay]
+                spacetime: { port: 3000, database: box }
+
+  /boxes:
+    get:
+      tags: [Boxes]
+      operationId: listBoxes
+      summary: List this box and its peers
+      description: This box first, with `self` set and its `url` from `BOX_URL`, then each peer named in the `BOX_PEERS` environment variable, as given there.
+      responses:
+        '200':
+          description: The boxes.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/BoxEntry' }
+              example:
+                - { id: box-3f9a1c7b2e, name: Home box, url: 'http://box.local:7700', stdb: box, self: true }
+                - { id: box-8d02e4a6f1, name: Cloud box, url: 'http://192.0.2.20:7700', stdb: box }
+
+  /pair/start:
+    post:
+      tags: [Pairing]
+      operationId: newPairingCode
+      summary: Make a pairing code
+      description: A one-time code for the QR code in the portal's Settings. It works once and expires after 5 minutes. `POST /pair/new` is the same route under its older name.
+      responses:
+        '200':
+          description: The code.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PairCode' }
+              example:
+                code: 7f3a9c21
+                url: '/pair#7f3a9c21'
+                expiresAt: '2026-10-24T09:17:03.000Z'
+                box: { id: box-3f9a1c7b2e, name: Home box }
+
+  /pair:
+    post:
+      tags: [Pairing]
+      operationId: redeemPairingCode
+      summary: Pair a phone
+      description: A phone trades a pairing code for its own device token. The code stops working once used. Keep the token; the box does not show it again.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code]
+              properties:
+                code: { type: string, description: The code from `POST /pair/start`. }
+                name: { type: string, maxLength: 40, description: 'A name for the phone, shown in the log when it answers. Default `phone`.' }
+            example: { code: 7f3a9c21, name: My phone }
+      responses:
+        '200':
+          description: The phone's token.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PairResult' }
+        '400':
+          description: The code is wrong, used or expired.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+              example: { error: 'bad or expired pairing code' }
+
+  /devices:
+    get:
+      tags: [Pairing]
+      operationId: listDevices
+      summary: List paired phones
+      description: Phones that are paired and not revoked. Tokens are never listed. `GET /pair/devices` is the same route under its older name.
+      responses:
+        '200':
+          description: The devices.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Device' }
+
+  /devices/{id}:
+    delete:
+      tags: [Pairing]
+      operationId: revokeDevice
+      summary: Revoke a phone
+      description: The phone's token stops working at once. An approval it sends afterwards gets 401. `POST /pair/devices/{id}/revoke` does the same.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+          example: d4e5f6a7b8c
+      responses:
+        '200':
+          description: The device is revoked.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id, revoked]
+                properties:
+                  id: { type: string }
+                  revoked: { type: boolean, const: true }
+        '404':
+          description: No device with this id.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /hook/{app}/{name}:
+    servers:
+      - url: http://127.0.0.1:7700
+        description: Webhooks are served without the /api prefix.
+    post:
+      tags: [Webhooks]
+      operationId: callWebhook
+      summary: Call an app's webhook
+      description: |
+        Runs the webhook an app registered with the `webhook` trigger (or `box.onWebhook`). The JSON body
+        and the headers go to the app, which usually starts a task. The response is the new task, or
+        `{"ok": true}` when the app returns nothing. This route has no `/api` form.
+      parameters:
+        - name: app
+          in: path
+          required: true
+          description: The app's name.
+          schema: { type: string }
+          example: example
+        - name: name
+          in: path
+          required: true
+          description: The webhook's name, letters, digits, `_` and `-`.
+          schema: { type: string, pattern: '^[\w-]+$' }
+          example: start
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { type: object }
+            example: { title: From a webhook }
+      responses:
+        '200':
+          description: What the app returned.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/Task'
+                  - type: object
+                    properties:
+                      ok: { type: boolean, const: true }
+        '400':
+          description: The app's handler failed or the body was not JSON.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+components:
+  securitySchemes:
+    deviceToken:
+      type: http
+      scheme: bearer
+      description: A phone's device token from `POST /pair`. Optional, and only read by `POST /approvals/{id}`.
+
+  parameters:
+    TaskId:
+      name: id
+      in: path
+      required: true
+      description: The task id.
+      schema: { type: string }
+      example: t3k9x2a1b2
+
+  schemas:
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error: { type: string, description: What went wrong, in words. }
+
+    TaskState:
+      type: string
+      enum: [queued, running, waiting, done, failed, undone]
+      description: |
+        `queued` created, not started. `running` the worker is working. `waiting` paused until an
+        approval is answered. `done` finished; its changes are part of the workspace. `failed` stopped with
+        an error; its changes are not applied. `undone` removed; its changes are gone and other tasks keep
+        theirs.
+
+    TaskSpec:
+      type: object
+      required: [title, prompt]
+      properties:
+        title: { type: string, description: A short name for people. }
+        prompt: { type: string, description: 'What the worker should do. For the `fake` worker, one command per line.' }
+        workspace:
+          type: string
+          pattern: '^[\w.-]+$'
+          default: home
+          description: A folder in `BOX_HOME/workspaces`. The task works on its own copy of it.
+        worker:
+          type: string
+          enum: [droid, fake]
+          default: droid
+          description: '`droid` is Droid with Claude. `fake` runs scripted steps with no model, for tests.'
+        tools:
+          type: array
+          items: { type: string }
+          default: []
+          description: Tool names the task may call through its broker, such as `wallet.pay`.
+        hosts:
+          type: array
+          items: { type: string }
+          default: []
+          description: 'Hosts the task''s network may reach: `example.com` (any port), `example.com:8080` (one port) or `*.example.com` (subdomains).'
+        budgetCents:
+          type: number
+          default: 0
+          description: Spending above this, in US cents, pauses the task for an OK.
+        source:
+          type: string
+          default: api
+          description: 'Who started it, for the log and the portal: `portal`, `schedule`, `asi1`, `jira:BOX-12`.'
+
+    Task:
+      allOf:
+        - $ref: '#/components/schemas/TaskSpec'
+        - type: object
+          required: [id, state, user, layers, costCents, createdAt, updatedAt, workspace, worker, tools, hosts, budgetCents, source]
+          properties:
+            id: { type: string, example: t3k9x2a1b2 }
+            state: { $ref: '#/components/schemas/TaskState' }
+            user: { type: string, description: 'The Linux user the task runs as, `box-<id>`.', example: box-t3k9x2a1b2 }
+            layers:
+              type: array
+              items: { type: string }
+              description: Finished tasks whose changes this task saw when it started, newest first.
+            costCents: { type: number, description: 'Tool spending plus model cost, in US cents. Not rounded.' }
+            step: { type: string, description: The latest step, up to 200 characters. }
+            createdAt: { type: string, format: date-time }
+            updatedAt: { type: string, format: date-time }
+            error: { type: string, description: Why it failed. }
+            summary: { type: string }
+
+    ApprovalState:
+      type: string
+      enum: [pending, approved, denied]
+
+    Approval:
+      type: object
+      required: [id, task, question, costCents, state]
+      properties:
+        id: { type: string, description: '`<task id>.<key>`. The same key asked twice is the same approval.' }
+        task: { type: string }
+        question: { type: string, description: The question shown to people. }
+        costCents: { type: number, description: The spending being asked about, in US cents. 0 when it is not about money. }
+        payee: { type: string, description: Who gets paid, or the host being reached. }
+        purpose: { type: string, description: What the spend or action is for. }
+        state: { $ref: '#/components/schemas/ApprovalState' }
+        by: { type: string, description: "Who answered: `portal`, `phone`, a device name, `jira:<name>`, `undo`, or `task ended`." }
+
+    Change:
+      type: object
+      required: [path, change]
+      properties:
+        path: { type: string, description: Path inside the workspace. }
+        change: { type: string, enum: [added, modified, deleted] }
+
+    Diff:
+      type: object
+      required: [changes, diff]
+      properties:
+        changes:
+          type: array
+          items: { $ref: '#/components/schemas/Change' }
+        diff: { type: string, description: A unified diff of every change, cut at 200,000 bytes. }
+
+    Tokens:
+      type: object
+      required: [input, output, cacheWrite, cacheRead]
+      properties:
+        input: { type: integer }
+        output: { type: integer }
+        cacheWrite: { type: integer }
+        cacheRead: { type: integer }
+
+    EventBase:
+      type: object
+      required: [seq, at, type]
+      properties:
+        seq: { type: integer, minimum: 1, description: The line number in `log.jsonl`, from 1. }
+        at: { type: string, format: date-time }
+        task: { type: string, description: The task the event belongs to, if any. }
+
+    TaskCreatedEvent:
+      allOf:
+        - $ref: '#/components/schemas/EventBase'
+        - type: object
+          required: [type, task, spec, user]
+          properties:
+            type: { const: task.created }
+            spec: { $ref: '#/components/schemas/TaskSpec' }
+            user: { type: string }
+    TaskStateEvent:
+      allOf:
+        - $ref: '#/components/schemas/EventBase'
+        - type: object
+          required: [type, task, state]
+          properties:
+            type: { const: task.state }
+            state: { $ref: '#/components/schemas/TaskState' }
+            layers: { type: array, items: { type: string } }
+            error: { type: string }
+            summary: { type: string }
+    TaskStepEvent:
+      allOf:
+        - $ref: '#/components/schemas/EventBase'
+        - type: object
+          required: [type, task, text]
+          properties:
+            type: { const: task.step }
+            text: { type: string }
+            data: { description: What the worker needs to resume. }
+    ToolCallEvent:
+      allOf:
+        - $ref: '#/components/schemas/EventBase'
+        - type: object
+          required: [type, task, key, tool, input]
+          properties:
+            type: { const: tool.call }
+            key: { type: string }
+            tool: { type: string }
+            input: {}
+    ToolResultEvent:
+      allOf:
+        - $ref: '#/components/schemas/EventBase'
+        - type: object
+          required: [type, task, key, ok]
+          properties:
+            type: { const: tool.result }
+            key: { type: string }
+            ok: { type: boolean }
+            output: {}
+            error: { type: string }
+            cents: { type: number, description: What the call spent. Counts toward the task's cost. }
+    ApprovalAskedEvent:
+      allOf:
+        - $ref: '#/components/schemas/EventBase'
+        - type: object
+          required: [type, task, approval]
+          properties:
+            type: { const: approval.asked }
+            approval: { $ref: '#/components/schemas/Approval' }
+    ApprovalAnsweredEvent:
+      allOf:
+        - $ref: '#/components/schemas/EventBase'
+        - type: object
+          required: [type, task, id, approved, by]
+          properties:
+            type: { const: approval.answered }
+            id: { type: string }
+            approved: { type: boolean }
+            by: { type: string }
+    CostEvent:
+      allOf:
+        - $ref: '#/components/schemas/EventBase'
+        - type: object
+          required: [type, cents, what]
+          properties:
+            type: { const: cost }
+            cents: { type: number }
+            what: { type: string }
+            model: { type: string }
+            tokens: { $ref: '#/components/schemas/Tokens' }
+    NetBlockedEvent:
+      allOf:
+        - $ref: '#/components/schemas/EventBase'
+        - type: object
+          required: [type, task, host]
+          properties:
+            type: { const: net.blocked }
+            host: { type: string, description: '`host:port` the task tried to reach.' }
+    NoteEvent:
+      allOf:
+        - $ref: '#/components/schemas/EventBase'
+        - type: object
+          required: [type, track, data]
+          properties:
+            type: { const: note }
+            track: { type: string, description: The app that wrote the note. }
+            data: {}
+
+    LogEvent:
+      description: One line of the action log. See [Log events](/reference/log-events/).
+      oneOf:
+        - $ref: '#/components/schemas/TaskCreatedEvent'
+        - $ref: '#/components/schemas/TaskStateEvent'
+        - $ref: '#/components/schemas/TaskStepEvent'
+        - $ref: '#/components/schemas/ToolCallEvent'
+        - $ref: '#/components/schemas/ToolResultEvent'
+        - $ref: '#/components/schemas/ApprovalAskedEvent'
+        - $ref: '#/components/schemas/ApprovalAnsweredEvent'
+        - $ref: '#/components/schemas/CostEvent'
+        - $ref: '#/components/schemas/NetBlockedEvent'
+        - $ref: '#/components/schemas/NoteEvent'
+      discriminator:
+        propertyName: type
+        mapping:
+          task.created: '#/components/schemas/TaskCreatedEvent'
+          task.state: '#/components/schemas/TaskStateEvent'
+          task.step: '#/components/schemas/TaskStepEvent'
+          tool.call: '#/components/schemas/ToolCallEvent'
+          tool.result: '#/components/schemas/ToolResultEvent'
+          approval.asked: '#/components/schemas/ApprovalAskedEvent'
+          approval.answered: '#/components/schemas/ApprovalAnsweredEvent'
+          cost: '#/components/schemas/CostEvent'
+          net.blocked: '#/components/schemas/NetBlockedEvent'
+          note: '#/components/schemas/NoteEvent'
+
+    AppEntry:
+      type: object
+      required: [name, title, href, track]
+      properties:
+        name: { type: string }
+        title: { type: string }
+        href: { type: string, description: 'Path under `/t/<track>/`.' }
+        track: { type: string, description: The app package that added it. }
+
+    Health:
+      type: object
+      required: [ok, startedAt, resumed, tasks, tools, spacetime]
+      properties:
+        ok: { type: boolean, const: true }
+        startedAt: { type: string, format: date-time, description: When the box service started. }
+        resumed:
+          type: array
+          items: { type: string }
+          description: Tasks the box restarted at boot because they were still going when it went down.
+        tasks: { type: integer, description: How many tasks the log holds. }
+        tools:
+          type: array
+          items: { type: string }
+          description: Every installed tool name.
+        spacetime:
+          type: object
+          required: [port, database]
+          properties:
+            port: { type: integer, example: 3000 }
+            database: { type: string, example: box }
+
+    BoxEntry:
+      type: object
+      required: [id, name]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        url: { type: string, description: 'Where its portal and API answer. Empty for this box when `BOX_URL` is unset.' }
+        stdb: { type: string, description: The box's SpacetimeDB database name. }
+        self: { type: boolean, description: Set on this box only. }
+
+    PairCode:
+      type: object
+      required: [code, url, expiresAt, box]
+      properties:
+        code: { type: string, description: Eight hexadecimal characters. Works once. }
+        url: { type: string, description: 'The pairing path, `/pair#<code>`. The portal opens pairing at `/#pair/<code>`.' }
+        expiresAt: { type: string, format: date-time, description: Five minutes after it was made. }
+        box:
+          type: object
+          properties:
+            id: { type: string }
+            name: { type: string }
+
+    PairResult:
+      type: object
+      required: [token, device, box]
+      properties:
+        token: { type: string, description: 'The phone''s device token. Send it as `Authorization: Bearer <token>`.' }
+        device:
+          type: object
+          properties:
+            id: { type: string }
+            name: { type: string }
+        box:
+          type: object
+          properties:
+            id: { type: string }
+            name: { type: string }
+
+    Device:
+      type: object
+      required: [id, name, pairedAt]
+      properties:
+        id: { type: string, example: d4e5f6a7b8c }
+        name: { type: string }
+        pairedAt: { type: string, format: date-time }
