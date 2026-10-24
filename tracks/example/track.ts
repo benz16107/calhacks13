@@ -21,6 +21,7 @@ export default {
       input: { type: 'object', properties: { cents: { type: 'number' }, on: { type: 'string' } }, required: ['cents', 'on'] },
       secrets: ['DEMO_SECRET'],
       cost: (input: { cents: number }) => input.cents,
+      approval: (input: { on: string }) => ({ payee: 'Test Vendor', purpose: `test spend on ${input.on}` }),
       async run(input: { cents: number; on: string }, ctx) {
         ctx.secret('DEMO_SECRET'); // a real tool would call an API with it here; it never leaves the core
         return { paid: input.cents, on: input.on, test: true, receipt: ctx.key };

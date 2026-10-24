@@ -56,6 +56,10 @@ export interface Approval {
   question: string;
   /** The spending being asked about, in US cents. 0 when it is not about money. */
   costCents: number;
+  /** Who gets paid, or the host being reached. For the phone's "to" row. */
+  payee?: string;
+  /** What the spend or action is for. */
+  purpose?: string;
   state: 'pending' | 'approved' | 'denied';
   /** Who answered: 'portal', 'phone', 'jira:ben'. */
   by?: string;
@@ -167,6 +171,8 @@ export interface Tool {
   hosts?: string[];
   /** US cents this call will spend. Above the task's remaining budget, the broker asks for an OK first. */
   cost?(input: any): number;
+  /** Structured fields for the budget approval the phone shows: who gets paid and what for. */
+  approval?(input: any): { payee?: string; purpose?: string };
   run(input: any, ctx: Ctx): Promise<unknown>;
 }
 

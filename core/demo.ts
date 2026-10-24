@@ -353,8 +353,10 @@ await moment('moment 3: a pause for your OK', async () => {
   await settled([Q.id]);
   check((await task(P.id)).state === 'waiting', 'another task kept running and finished while P waited');
 
-  const inbox = await api<{ id: string }[]>('GET', '/api/approvals?state=pending');
-  check(inbox.some((a) => a.id === ask.id), "the portal's inbox lists it too (GET /api/approvals?state=pending)");
+  const inbox = await api<{ id: string; payee?: string }[]>('GET', '/api/approvals?state=pending');
+  const inboxAsk = inbox.find((a) => a.id === ask.id);
+  check(inboxAsk, "the portal's inbox lists it too (GET /api/approvals?state=pending)");
+  check(ask.cost_cents === 800 && ask.payee === 'Test Vendor' && !!ask.purpose, 'the request carries the amount ($8.00), payee and purpose, so the phone can fill its rows');
 
   await stdb('/call/answer', JSON.stringify([ask.id, true, 'phone'])); // what the phone's Approve button does
   await settled([P.id]);
@@ -364,6 +366,13 @@ await moment('moment 3: a pause for your OK', async () => {
   check(p.costCents === 800 && view('shop', 'bought.txt') === 'yes', 'P carried on, spent $8.00 (test money) and finished');
   const row = await waitFor('SpacetimeDB to show P done', async () => (await stdbRows(`SELECT * FROM task WHERE id = '${P.id}'`)).find((r) => r.state === 'done'));
   check(row.cost_cents === 800 && row.step === 'write bought.txt yes', 'SpacetimeDB shows it done live, with its cost and last step');
+
+  // Two payments at once must not both slip under the budget.
+  const two = await api<Task>('POST', '/tasks', { ...base, title: 'Two payments at once', tools: ['example.spend'], budgetCents: 100, prompt: 'callpar example.spend {"cents":60,"on":"a GPU hour"}' });
+  const secondAsk = await waitFor('the second payment to ask', async () => (await api<{ id: string; task: string; state: string }[]>('GET', '/api/approvals?state=pending')).find((a) => a.task === two.id));
+  await api('POST', `/api/approvals/${secondAsk.id}`, { approved: false, by: 'demo' });
+  await settled([two.id]);
+  check((await task(two.id)).costCents === 60, 'only one of the two parallel $0.60 payments went through: $0.60 spent, not $1.20 (atomic budget)');
 });
 await moment('moment 4: pull the plug', async () => {
   workspace('long', {});

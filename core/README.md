@@ -63,7 +63,8 @@ portal and phone). The first answer wins. The task carries on, and other tasks n
 ## Cost
 
 Tools declare `cost(input)` in US cents. The broker counts it when the call succeeds, in the same log line as
-the result. A Droid task's model cost is real: the worker reports its token counts and model, and the core
+the result, and reserves it before the call runs, so two payments a task fires at once cannot both pass the
+budget check and overspend. A tool's optional `approval(input)` returns `{ payee, purpose }` for the approval. A Droid task's model cost is real: the worker reports its token counts and model, and the core
 prices them at the model's list rates (`core/pricing.ts`), writing a `cost` event with `model` and a `tokens`
 breakdown. `task.costCents` is tool spending plus model cost. Workers report model
 spending with `POST /cost`. `task.costCents` is the total.
@@ -177,6 +178,9 @@ on another origin needs `BOX_ORIGINS=http://localhost:5173` (comma separated, or
 |---|---|
 | `task` | `id, title, state, source, workspace, worker, costCents, budgetCents, updatedAt, step, note` (`note` is the error, else the summary) |
 | `approval` | `id, task, question, costCents, state` (`pending`, `approved`, `denied`)`, by` |
+
+The `approval` table carries `costCents`, `payee` (who gets paid, or the host) and `purpose`, so the phone can
+fill its amount and "to" rows. A tool supplies them with an optional `approval(input)` returning `{ payee, purpose }`.
 
 Reducers anyone may call: `answer({id, approved, by})`. The first answer wins, and the box writes it to the log
 within milliseconds. `putTask` and `putApproval` are for the box only and refuse anyone else.

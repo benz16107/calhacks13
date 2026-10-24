@@ -54,7 +54,7 @@ const taskRow = (t: Task) => ({
   step: t.step ?? '',
   note: t.error ?? t.summary ?? '',
 });
-const approvalRow = (a: Approval) => ({ ...a, costCents: Math.round(a.costCents), by: a.by ?? '' });
+const approvalRow = (a: Approval) => ({ ...a, costCents: Math.round(a.costCents), payee: a.payee ?? '', purpose: a.purpose ?? '', by: a.by ?? '' });
 
 export class Live {
   private conn?: DbConnection;

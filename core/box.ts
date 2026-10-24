@@ -63,6 +63,7 @@ class Core {
   workers = new Map<string, ChildProcess>();
   brokers = new Map<string, http.Server>();
   waiters = new Map<string, ((approved: boolean) => void)[]>();
+  reserved = new Map<string, number>(); // cents a task has in-flight tool calls committed but not yet logged
   webhooks = new Map<string, (payload: unknown, headers: Record<string, string>) => unknown>();
   uidTask = new Map<number, string>();
   relay = relayCert(HOME);
@@ -193,10 +194,11 @@ class Core {
   // ---------- approvals ----------
 
   /** Pause the task until someone answers. The same key returns the same approval, even after a restart. */
-  async ask(t: Task, key: string, question: string, costCents = 0): Promise<boolean> {
+  async ask(t: Task, key: string, opts: { question: string; costCents?: number; payee?: string; purpose?: string }): Promise<boolean> {
     const id = `${t.id}.${key}`;
     if (!this.state.approvals.has(id)) {
-      this.write({ type: 'approval.asked', task: t.id, approval: { id, task: t.id, question, costCents, state: 'pending' } });
+      const approval: Approval = { id, task: t.id, question: opts.question, costCents: opts.costCents ?? 0, payee: opts.payee, purpose: opts.purpose, state: 'pending' };
+      this.write({ type: 'approval.asked', task: t.id, approval });
     }
     const a = this.state.approvals.get(id)!;
     const settle = () => {
@@ -253,16 +255,23 @@ class Core {
       return r;
     };
     const cost = entry.tool.cost?.(input) ?? 0;
-    if (cost > 0 && t.costCents + cost > t.budgetCents) {
-      const q = `Spend ${dollars(cost)} on ${name}? Budget ${dollars(t.budgetCents)}, spent ${dollars(t.costCents)}.`;
-      if (!(await this.ask(t, `budget.${key}`, q, cost))) return result({ ok: false, error: 'not approved' });
+    // Count spending already committed by this task's other in-flight calls, so two parallel payments
+    // cannot both pass a budget check and together overspend.
+    const committed = () => t.costCents + (this.reserved.get(t.id) ?? 0);
+    if (cost > 0 && committed() + cost > t.budgetCents) {
+      const meta = entry.tool.approval?.(input) ?? {};
+      const q = `Spend ${dollars(cost)}${meta.payee ? ` to ${meta.payee}` : ''} on ${name}${meta.purpose ? ` (${meta.purpose})` : ''}? Budget ${dollars(t.budgetCents)}, spent ${dollars(t.costCents)}.`;
+      if (!(await this.ask(t, `budget.${key}`, { question: q, costCents: cost, payee: meta.payee, purpose: meta.purpose }))) return result({ ok: false, error: 'not approved' });
     }
+    this.reserved.set(t.id, (this.reserved.get(t.id) ?? 0) + cost); // reserve now, with no await before it, so a parallel call sees this spend
     this.write({ type: 'tool.call', task: t.id, key, tool: name, input });
     try {
       const output = await entry.tool.run(input, this.ctx(entry.track, key, entry.tool.secrets, t));
       return result({ ok: true, output, ...(cost ? { cents: cost } : {}) }); // result and cost in one line: counted once
     } catch (e) {
       return result({ ok: false, error: (e as Error).message });
+    } finally {
+      this.reserved.set(t.id, (this.reserved.get(t.id) ?? 0) - cost); // release; the real cost is now in the log
     }
   }
 
@@ -299,7 +308,7 @@ class Core {
         return this.write({ type: 'cost', task: t.id, cents: usageCents(String(body.model), tokens), what: String(body.what ?? 'model'), model: String(body.model), tokens });
       }
       if (route === 'POST /call') return this.callTool(t, String(body.key), String(body.tool), body.input);
-      if (route === 'POST /ask') return { approved: await this.ask(t, String(body.key), String(body.question), Number(body.costCents ?? 0)) };
+      if (route === 'POST /ask') return { approved: await this.ask(t, String(body.key), { question: String(body.question), costCents: Number(body.costCents ?? 0), payee: body.payee, purpose: body.purpose }) };
     });
     this.brokers.set(t.id, server);
     await listenSocket(server, dirs.socket(t.id), owner);

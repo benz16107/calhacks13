@@ -15,6 +15,8 @@ export default {
   task: __t.string(),
   question: __t.string(),
   costCents: __t.u32(),
+  payee: __t.string(),
+  purpose: __t.string(),
   state: __t.string(),
   by: __t.string(),
 };

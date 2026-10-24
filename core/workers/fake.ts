@@ -2,6 +2,7 @@
 //   write <file> <text>     append <file> <text>     rm <file>     sleep <seconds>
 //   expect <file> <text>    missing <file>           whoami <file>
 //   call <tool> <json>      ask <question>           fetch <url> <file>      fail <message>
+//   callpar <tool> <json>   (fires the tool twice at once, to test the budget under parallel calls)
 //   steal <file> <out>      env <out>                connect <host:port> <out>      procs <out>
 // The last four, and fetch, write what happened instead of failing: they act out a hijacked agent.
 // Each finished line is logged as a step, so after a hard kill it carries on from the next line.
@@ -49,6 +50,15 @@ for (let n = done + 1; n <= lines.length; n++) {
       const r = await call(sock, 'POST', '/call', { key: `line${n}`, tool: arg, input: text ? JSON.parse(text) : {} });
       if (!r.ok) throw new Error(`${arg}: ${r.error}`);
       note = `${line} -> ${JSON.stringify(r.output)}`;
+      break;
+    }
+    case 'callpar': {
+      const input = text ? JSON.parse(text) : {};
+      const [ra, rb] = await Promise.all([
+        call(sock, 'POST', '/call', { key: `line${n}a`, tool: arg, input }),
+        call(sock, 'POST', '/call', { key: `line${n}b`, tool: arg, input }),
+      ]);
+      note = `${line} -> ${[ra, rb].map((r) => (r.ok ? 'ok' : r.error)).join(', ')}`;
       break;
     }
     case 'ask': {

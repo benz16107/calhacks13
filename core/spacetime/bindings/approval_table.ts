@@ -15,6 +15,8 @@ export default __t.row({
   task: __t.string(),
   question: __t.string(),
   costCents: __t.u32().name("cost_cents"),
+  payee: __t.string(),
+  purpose: __t.string(),
   state: __t.string(),
   by: __t.string(),
 });

@@ -22,6 +22,8 @@ const approvalCols = {
   task: t.string(),
   question: t.string(),
   costCents: t.u32(),
+  payee: t.string(),
+  purpose: t.string(),
   state: t.string(),
   by: t.string(),
 };
