@@ -34,10 +34,11 @@ checks the app's shared secret itself.
 
    ```sh
    sudo mkdir -p /var/lib/box/jira
-   echo '{"project":"BOX","skipSources":["schedule"]}' | sudo tee /var/lib/box/jira/config.json
+   echo '{"project":"BOX","skipSources":["schedule","shopper:check:"]}' | sudo tee /var/lib/box/jira/config.json
    ```
 
-   `skipSources` leaves out tasks whose source starts with any of the listed values, such as frequent scheduled checks.
+   `skipSources` leaves out tasks whose source starts with any of the listed values. This example skips scheduled
+   routines and the Shopper app's frequent price checks. Shopper's purchases, which ask for your OK, still get issues.
 
 3. **Expose only the Jira routes over HTTPS.** Put a reverse proxy in front of the box that serves `/t/jira/*` and nothing else. With Caddy:
 
@@ -57,7 +58,11 @@ checks the app's shared secret itself.
 
    The rest of the box's API stays unreachable from the internet.
 
-4. **Point the Forge app at your box.** In `tracks/jira/forge/manifest.yml`, set the external fetch address to your box's name (`box.example.com`). Set the plain Forge variable `BOX_URL` to the box's Jira routes, `https://box.example.com/t/jira`.
+4. **Point the Forge app at your box.** In `tracks/jira/forge/manifest.yml`, the external fetch address under
+   `permissions.external.fetch.backend` ships as `"*.sslip.io"`. Replace it with your box's own name
+   (`box.example.com`); Forge refuses calls to any other host. Then set the Forge variable `BOX_URL` to the box's Jira
+   routes, `https://box.example.com/t/jira`, in the next step. `BOX_URL` is required: the panel has no default
+   address and cannot reach the box without it.
 
 5. **Deploy and install the Forge app.** From `tracks/jira/forge/`:
 

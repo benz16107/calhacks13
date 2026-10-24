@@ -11,7 +11,7 @@ const checks = [
   ['personal name', /\bBen\b|Ben Zhou|benz16107(?!\/calhacks13)|benzhou|thebenzhou/g],
   ['email', /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g, (m) => /@example\.(com|org|net)$/.test(m)],
   ['jira site', /[a-z0-9-]+\.atlassian\.net/gi, (m) => /^(your-site|your-org|example)\.atlassian\.net$/i.test(m)],
-  ['lima/sslip', /sslip\.io|lima\.internal|limactl/gi],
+  ['lima/sslip', /[\w.*-]*sslip\.io|lima\.internal|limactl/gi, (m) => m === '*.sslip.io'],
   ['ipv4', /(?<![\d.])(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})(?![\d.])/g, (m) => m.split('.').some((o) => +o > 255 || (o.length > 1 && o[0] === '0')) || /^(127\.0\.0\.1|0\.0\.0\.0|192\.0\.2\.\d+|198\.51\.100\.\d+|203\.0\.113\.\d+|1\.1\.1\.1|8\.8\.8\.8|10\.0\.0\.0|172\.16\.0\.0|192\.168\.0\.0|100\.64\.0\.0|169\.254\.0\.0)$/.test(m)],
   ['agentverse address', /agent1q[0-9a-z]{20,}/g],
   ['base58 key or address', /\b[1-9A-HJ-NP-Za-km-z]{32,44}\b/g, (m) => !/[0-9]/.test(m) || /^[a-z]+$/i.test(m)],
