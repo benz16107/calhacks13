@@ -74,28 +74,51 @@ export function prepare(task: Task): { uid: number; gid: number } {
 
 const WORKERS = new URL('./workers/', import.meta.url).pathname;
 
-/** Start the task's worker as the task's user, inside its copy. No secrets in its environment. */
+// What a task's worker may not do, on top of being its own user: see other processes, share /tmp, write
+// outside its copy and home, use devices, gain privileges, reach D-Bus, or use more than its share.
+const HARDENING = [
+  'NoNewPrivileges=yes',
+  'ProtectProc=invisible',
+  'PrivateTmp=yes',
+  'ProtectSystem=strict',
+  'ProtectHome=yes',
+  'PrivateDevices=yes',
+  'CapabilityBoundingSet=',
+  'RestrictSUIDSGID=yes',
+  'InaccessiblePaths=-/run/dbus',
+  'RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6 AF_NETLINK',
+  'MemoryMax=2G',
+  'TasksMax=512',
+];
+
+/** Start the task's worker as a hardened systemd unit, as the task's user, inside its copy. No secrets in its environment. */
 export function spawnWorker(task: Task, ids: { uid: number; gid: number }, extraEnv: Record<string, string> = {}): ChildProcess {
-  const out = fs.openSync(path.join(dirs.task(task.id), 'worker.log'), 'a', 0o600);
-  const child = spawn(
-    process.execPath,
-    ['--experimental-strip-types', '--disable-warning=ExperimentalWarning', path.join(WORKERS, `${task.worker}.ts`)],
-    {
-      cwd: dirs.root(task.id),
-      ...ids,
-      stdio: ['ignore', out, out],
-      env: {
-        HOME: path.join(dirs.task(task.id), 'home'),
-        PATH: '/usr/local/bin:/usr/bin:/bin',
-        LANG: 'C.UTF-8',
-        BOX_TASK: task.id,
-        BOX_SOCKET: dirs.socket(task.id),
-        ...extraEnv,
-      },
-    },
+  const unit = `box-task-${task.id}`;
+  const home = path.join(dirs.task(task.id), 'home');
+  const log = path.join(dirs.task(task.id), 'worker.log');
+  const env = { HOME: home, PATH: '/usr/local/bin:/usr/bin:/bin', LANG: 'C.UTF-8', BOX_TASK: task.id, BOX_SOCKET: dirs.socket(task.id), ...extraEnv };
+  tryRun('systemctl', 'stop', unit); // left running by a box that died without the machine going down
+  tryRun('systemctl', 'reset-failed', unit);
+  const props = [...HARDENING, `ReadWritePaths=${dirs.root(task.id)} ${home}`, `StandardOutput=append:${log}`, `StandardError=append:${log}`];
+  return spawn(
+    'systemd-run',
+    [
+      '--wait',
+      '--quiet',
+      '--collect',
+      `--unit=${unit}`,
+      `--uid=${ids.uid}`,
+      `--gid=${ids.gid}`,
+      `--working-directory=${dirs.root(task.id)}`,
+      ...Object.entries(env).map(([k, v]) => `--setenv=${k}=${v}`),
+      ...props.flatMap((p) => ['-p', p]),
+      process.execPath,
+      '--experimental-strip-types',
+      '--disable-warning=ExperimentalWarning',
+      path.join(WORKERS, `${task.worker}.ts`),
+    ],
+    { stdio: 'ignore' },
   );
-  fs.closeSync(out);
-  return child;
 }
 
 export type Change = { path: string; change: 'added' | 'modified' | 'deleted' };

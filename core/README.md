@@ -10,7 +10,9 @@ its network may reach, and a budget. States: `queued`, `running`, `waiting` (for
 `failed`, `undone`.
 
 Each task runs as its own Linux user (`box-<id>`, uid 30000 to 39999, no sudo, no shell) in its own
-overlayfs copy of the workspace. Its changes stay in its own layer. When it finishes, that layer goes on top
+overlayfs copy of the workspace, as a hardened systemd unit (`box-task-<id>`): it sees only its own
+processes, has a private `/tmp`, can write only its copy and its home, cannot reach D-Bus, and gets at most
+2 GB of memory. Its changes stay in its own layer. When it finishes, that layer goes on top
 of the workspace's view. **Undo** takes one layer out of the stack. Other tasks keep theirs, and the base
 files are never written.
 
@@ -22,6 +24,16 @@ The worker inside a task is Droid with Claude (`worker: 'droid'`), or a scripted
 `BOX_HOME/log.jsonl`, one JSON event per line, append-only, fsynced per line. Every state change, step, tool
 call and result, approval, cost and blocked connection is in it. At boot the core rebuilds every task from it
 and resumes what was running. SpacetimeDB only mirrors live status and approvals; the log is the truth.
+
+## The network
+
+Task users reach nothing but the box's proxy (an nftables rule on their uids), and the proxy lets a task
+reach only the hosts in its spec. `example.com` allows any port, `example.com:8080` one port, `*.example.com`
+subdomains. A name that lands on the box itself (like `shop.localhost`) needs the exact `host:port`, and
+never reaches the box's own ports. Every refusal is a `net.blocked` event in the log.
+
+Droid tasks hold a placeholder Factory key. The proxy swaps in the vault's key on the way to Factory, for
+plain calls and, through the box's own TLS certificate, for model calls. So the real key never enters a task.
 
 ## The broker and the vault
 

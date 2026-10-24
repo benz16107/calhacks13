@@ -2,8 +2,8 @@
 //   write <file> <text>     append <file> <text>     rm <file>     sleep <seconds>
 //   expect <file> <text>    missing <file>           whoami <file>
 //   call <tool> <json>      ask <question>           fetch <url> <file>      fail <message>
-//   steal <file> <out>      env <out>                connect <host:port> <out>
-// The last three, and fetch, write what happened instead of failing: they act out a hijacked agent.
+//   steal <file> <out>      env <out>                connect <host:port> <out>      procs <out>
+// The last four, and fetch, write what happened instead of failing: they act out a hijacked agent.
 // Each finished line is logged as a step, so after a hard kill it carries on from the next line.
 import fs from 'node:fs';
 import net from 'node:net';
@@ -83,6 +83,13 @@ for (let n = done + 1; n <= lines.length; n++) {
         s.setTimeout(3000, () => (s.destroy(), resolve('blocked: timeout')));
       });
       fs.writeFileSync(text, out);
+      break;
+    }
+    case 'procs': {
+      // The users of every process this task can see.
+      const pids = fs.readdirSync('/proc').filter((d) => /^\d+$/.test(d));
+      const uids = new Set(pids.flatMap((p) => { try { return [fs.statSync(`/proc/${p}`).uid]; } catch { return []; } }));
+      fs.writeFileSync(arg, [...uids].join(','));
       break;
     }
     case 'fail':
