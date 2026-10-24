@@ -72,26 +72,26 @@ Cut list if long: drop the montage's credit desk shot first, then the ISO shot.
 
 ## 2. Fetch.ai (3 to 5 minutes, inside ASI:One)
 
-Fetch.ai wants the main flow inside an ASI:One chat. Keep the portal off screen except one shot. Open with the
-problem (a chat agent has to run somewhere: a cloud you can't see into, or your computer with full access), then show
-GurtOS as its safe body. If the Fetch thread's stranger-agent call (with a blocked hidden instruction) or guest
-requests have merged, add them after the stock check.
+Fetch.ai wants the main flow inside an ASI:One chat. Keep the portal off screen except the phone shot. The story is
+Hyphenate's shape: the problem, then the safe body, with security as the headline. The README's "Why" section has the words.
+Before recording: the installed box's agents must be on (`POST /t/fetch/agent {"on": true, "testAgents": true}`), pair once with
+the code from the ASI:One page on the box, and have the phone paired so Approve can be tapped there once.
 
 | Time | On screen | Say |
 |---|---|---|
-| 0:00 | Title card: "A chat agent has to run somewhere. A cloud you can't see into, or your computer with full access." | "For an agent to act, it has to run somewhere. Usually that's a cloud you can't see into, or your own computer with full access, on an OS built for one person at a keyboard. GurtOS is a third option: a lightweight OS for agents, where every request gets its own space and its own copy of the files." |
-| 0:10 | The `box` agent's Agentverse profile: name, address, the innovationlab and hackathon badges, Agent Chat Protocol | "This is my box on Agentverse: an always-on computer where AI agents work safely. It speaks the Agent Chat Protocol, so ASI:One can find it and give it work." |
-| 0:20 | ASI:One. Search "box" (or paste the address `agent1qvuk46tnt9lnscher0pawl7pr5y525mak66ptwsrvg4kff0pfy9m2sy0us6`), open a chat | "I find it in ASI:One and open a chat." |
-| 0:35 | Send "hi". The reply asks to pair. Cut to the box screen's ASI:One app with the six-digit code, back to the chat: `pair <code>`. "Paired." | "Only the owner can give it work. I pair once with the code on the box's screen. Anyone else only ever gets the pairing step." |
-| 1:00 | "Fix the failing test in my project." Progress replies arrive | "Now real work. The box starts a task: Droid, Factory's coding agent running Claude, in its own Linux user, with its own copy of the project, no network and a 25 cent budget." |
-| 1:40 | The result: summary, changed files, the diff, and the card with Keep and Undo | "It found the cent the bill-splitter was losing, fixed it and ran the tests. The diff is right here, with Keep and Undo." |
-| 2:00 | "Check if the Hario V60 paper filters, size 02, 100 count, are back in stock." | "Something that costs money: a web search through Apify." |
-| 2:20 | The Interactive Card: "Paused for your OK: Spend $0.50 on apify.run? Budget $0.25" with Approve and Deny | "A search costs more than the budget, so the task stops and asks, with an ASI Interactive Card." |
-| 2:35 | One shot: the same request on the box screen or the phone | "The same request is on my phone and the box. The first answer wins." |
-| 2:45 | Approve in the chat. The answer: in stock on Hario's US store at the price it found | "I approve in the chat, and it answers from the live web." |
-| 3:10 | Type "status", then "undo" | "Status lists my tasks and their cost. Undo takes back the last one, and only that one." |
-| 3:30 | Diagram: ASI:One, Agentverse mailbox, agent.py on the box, the box's API, the task (the showcase's Fetch.ai page has it) | "The agent runs on the box as an unprivileged user, through an Agentverse mailbox, so the box needs no open port. It uses the same API as my phone, so the chat has no powers the phone doesn't. Tasks never hold keys." |
-| 4:00 | The README's agent table and the repo link | "Agent names, addresses and run steps are in the repo." |
+| 0:00 | A chat with any agent in ASI:One, asking it to "fix my code". A slide: "Runs in someone's cloud, or on your computer with all your keys and files" | "An agent you chat with can only do real things if it runs somewhere. Today that is someone's cloud, or your own computer with access to everything: your keys, every file. And when agents talk to strangers' agents, any reply can carry hidden instructions." |
+| 0:25 | The `GurtOS` agent's Agentverse profile: name, address, badges, the team list | "So I built GurtOS: an operating system for a computer you own, even an old one. It needs 4 GB of memory. This is its agent on Agentverse, with a team: a shopper, a finder and a credit desk." |
+| 0:45 | ASI:One: open a chat with GurtOS. `pair <code>` from the box's screen. "Paired." | "Only the owner gives it work. I pair once with the code on the box's screen." |
+| 1:00 | "Fix the failing test in my project." Progress replies, then the diff card with Keep and Undo | "Real work: Droid with Claude, as its own Linux user, in its own copy of the project, with no keys and no network. Here is the diff. Undo takes back this one task." |
+| 1:35 | "Is the Hario V60 filter back in stock?" GurtOS Shopper's reply, quoted | "GurtOS routes it to its Shopper agent over the Agent Chat Protocol. It reports back, and GurtOS shows it as a quote from that agent." |
+| 1:55 | "Ask the test weather agent for the weather in Berkeley." The Blocked card | "Now a stranger's agent. Its reply hides an instruction to hand over my keys and send money. GurtOS blocks it, says what it tried, and logs the exact text. And even if it got through, no task holds a key to leak." |
+| 2:30 | "Ask the test oracle for a fortune." The Approve card, then the phone for a second, tap Approve in the chat. The receipt card, the fortune | "Agents can pay each other with Fetch's Payment Protocol, in test money on Fetch's testnet. This one asks half a FET, which is over the budget, so the box asks me first." |
+| 3:05 | "Ask the test buyer to buy a price check." Show the log line "payment received" on the phone or portal | "And the other way: another agent paid my box, 0.05 test FET, and the box checked it on chain before it ran the job." |
+| 3:30 | Pull the plug mid-task (stop the VM), start it. The chat says "GurtOS restarted and is resuming ..." then the result | "Pull the plug. The box restarts, tells the chat, and finishes the task." |
+| 4:00 | A second ASI:One account asks the box for a price. The Approve card on the owner's phone | "Anyone can ask my box for a web lookup or a price check. Nothing runs until I approve it on my phone, with limits per hour." |
+| 4:25 | The README's agent table and "Security, and where it comes from" | "Names, addresses and run steps are in the repo. GurtOS enforces the safety on every agent. The Fetch integration adds pairing, screening and payments." |
+
+Cut list if long: the pull-the-plug shot, then the guest shot.
 
 After recording: share the chat link, and submit the project through the **ASI:One Submission Agent** as Fetch.ai
 asks.
