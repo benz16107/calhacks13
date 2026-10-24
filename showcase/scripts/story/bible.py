@@ -4,7 +4,7 @@ root = sys.argv[1]
 import os
 HERE = os.path.dirname(os.path.abspath(__file__))
 exec(open(os.path.join(HERE, 'pitches.py')).read().split("if __name__")[0])
-DECIDED = {'hyphenate', 'visa', 'fetch', 'coinbase', 'solana', 'apify', 'anthropic', 'microsoft'}
+DECIDED = {'hyphenate', 'visa', 'fetch', 'coinbase', 'solana', 'apify', 'anthropic', 'microsoft', 'elastic'}
 EXTRA_TODO = {'anthropic': ['How to enter: pending; Ben will ask a director (the prize is not on Devpost yet)']}
 PROBLEM = {
  'hyphenate': "Companies want AI employees, but today's computers and clouds weren't built for them. An agent runs as you, with your keys, on one shared filesystem, with no separation of duties, no record you can trust and no undo, so nobody lets one do real finance work.",
@@ -20,7 +20,7 @@ PROBLEM = {
  'crs': "Draft: identity and fraud checks are exactly where a fooled or hijacked agent costs real money, and today the agent that runs them holds the keys and can approve its own work.",
  'nessie': "Draft: an agent that reconciles a company's bank against its books needs bank access, and today that means handing it the key and trusting whatever it changes.",
  'spacetime': "Draft: when agents run unattended, the people responsible need to see every request live, on every screen at once, and answer from wherever they are.",
- 'elastic': "Draft: after a week of agents working, nobody can answer \"what did they change, what did it cost, why did that fail\" without digging through raw logs.",
+ 'elastic': "After a week of agents working, an ordinary OS cannot tell you what they did: its logs are scattered and anyone with root can edit them.",
  'moss': "Draft: a personal agent is only useful if it remembers your photos, files and past work, and today that memory means uploading your life to someone's cloud.",
  'apify': "Web agents today drive your logged-in browser with your accounts, read booby-trapped pages, and you can't see what they spend.",
  'vultr': "Draft: an agent box should be reachable around the clock without exposing everything on it to the internet.",

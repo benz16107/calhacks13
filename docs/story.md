@@ -59,7 +59,7 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 | Coinbase | GurtOS Server, and GurtOS Business | decided |
 | Fetch.ai | GurtOS Server (always reachable), and GurtOS Personal too | decided |
 | SpacetimeDB | All three editions, strongest in GurtOS Business | to review with Ben |
-| Elastic | GurtOS Business (preview) and GurtOS Server | to review with Ben |
+| Elastic | GurtOS Business (preview) and GurtOS Server | decided |
 | Moss | GurtOS Personal | to review with Ben |
 | Apify | GurtOS Personal and GurtOS Server | decided |
 | CRS | GurtOS Business (preview) | to review with Ben |
@@ -372,25 +372,39 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 
 ## Elastic: Best use of Elastic Agent Builder on Serverless
 
-**Status:** to review with Ben. **Page:** https://calhacks.gurtos.com/tracks/elastic/
+**Status:** decided. **Page:** https://calhacks.gurtos.com/tracks/elastic/
 
 **Best shown in:** GurtOS Business (preview) and GurtOS Server
 
-**Pitch:** "What did every agent do this week?" is an audit question. A Server owner asks it the morning after; a Business team would ask it across everyone's tasks. Business is not built yet, so today the agent answers for GurtOS Server boxes.
+**Pitch:** After a week of agents working, an ordinary OS cannot tell you what they did, and anyone with root can edit its logs. GurtOS keeps one action log of every action and Elastic keeps a copy the box cannot rewrite; its agent answers and investigates, and acting still needs your OK. Business is not built yet, so today the agent answers for GurtOS Server boxes. Next (being built): a tamper-evident log with a verify tool, detection rules with phone alerts, pause, undo and stop through approvals, a fleet view, semantic search, and asking from the portal and phone.
 
-**The problem:** Draft: after a week of agents working, nobody can answer "what did they change, what did it cost, why did that fail" without digging through raw logs.
+**The problem:** After a week of agents working, an ordinary OS cannot tell you what they did: its logs are scattered and anyone with root can edit them.
 
-**Features, by the sponsor's criteria** (no OS-vs-track table yet; to write when reviewed):
+**Features** (from the page's table):
 
-- *An Elastic Agent Builder agent.* (met): A custom agent, gurtos-log (shown as GurtOS log), with seven custom tools: six parameterized ES|QL tools and one index search tool. The agent, its instructions and its tools are code in tracks/elastic/agent.ts, created or updated with one command through the Agent Builder API, and asked through Kibana's chat and the converse API.
-- *On a Serverless instance.* (met): An Elasticsearch Serverless project on GCP us-east4. The box-actions index, the data and the agent all live there.
-- *Real data, used for something that matters.* (met): Every document comes from a box's own action log: the installed GurtOS boxes, and DEMO_LIVE=elastic demo runs with Droid tasks running Claude, the credit desk and the four demo moments. Dev boxes stay out of the index. The questions are the ones an owner asks the morning after: what changed, what it cost, why something failed, and what got blocked.
+| Feature | Why it is there | Elastic criterion | From | Today |
+|---|---|---|---|---|
+| One append-only action log of every step, tool call, cost, approval, block, undo and failure | One place to ask, not scattered files | Real data used for something that matters | GurtOS (the log) | Shipped |
+| The log streams into a Serverless index, each event once, with the Elastic key held only by one core job | The record lives outside the box and no task can reach the key | On a Serverless instance | GurtOS (vault, core job) and Elastic (the index) | Shipped. A live run shipped all 156 events of a demo run, each exactly once |
+| An Agent Builder agent, GurtOS log, with six query tools and one index search tool, as code in the repo | Plain-words answers to what changed, what it cost, why it failed, what got blocked | An Agent Builder agent | Elastic (agent, tools) | Shipped |
+| Anything that acts waits for your OK on the portal or phone | An investigator that can also act would be a new thing to trust | Real data used for something that matters | GurtOS (the approval pause) | Shipped for tasks; the agent has no action tools yet |
+| A hash-chained log with an add-only copy in Elastic and a verify tool | Removes the limit that root can edit the log: a changed line breaks the chain and the copy shows it | Real data used for something that matters | GurtOS (the chain, the verify tool) and Elastic (the add-only copy) | Being built; not on main yet. The "root can edit the log" limit stays listed until it merges |
+| Detection rules with alerts to the phone | The morning after becomes the minute it happens | Real data used for something that matters | Elastic (rules) and GurtOS (the phone alert) | Being built; not on main yet |
+| Agent tools that request pause, undo or stop through GurtOS approvals | The investigator can act, but only with your yes | An Agent Builder agent | Elastic (tools) and GurtOS (approvals) | Being built; not on main yet |
+| A fleet view and a who-approved-what view, with role-scoped access | A team sees every box, and each person sees only what their role allows | Real data used for something that matters | Elastic (the views) and GurtOS Business (roles) | Being built; not on main yet |
+| Semantic search over what agents did | Find "the task that tried to send the repo out" without knowing its words | An Agent Builder agent | Elastic | Being built; not on main yet |
+| Ask from the portal and phone, plus a Kibana dashboard | The answer is where you already look | An Agent Builder agent | GurtOS (portal, phone) and Elastic (Kibana) | Being built; not on main yet |
 
 **Demo moment and proof:** Asked "Why did the job routine fail? Look at demo run a18523.", the agent found the failed task with box.failures, read its timeline and named the root cause itself: the routine was allowed to reach only boards.greenhouse.io, its plan needed www.linkedin.com, the box blocked it, and the task failed right after. A live run shipped all 156 events of a demo run to Serverless, each exactly once.
 
 **Still to do:**
 
-- Review the story with Ben: problem, features with their why, OS vs track
+- A hash-chained log with an add-only copy in Elastic and a verify tool
+- Detection rules with alerts to the phone
+- Agent tools that request pause, undo or stop through GurtOS approvals
+- A fleet view and a who-approved-what view, with role-scoped access
+- Semantic search over what agents did
+- Ask from the portal and phone, plus a Kibana dashboard
 
 ## Moss: A personal agent that remembers you
 
