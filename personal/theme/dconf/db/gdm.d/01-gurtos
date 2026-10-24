@@ -3,3 +3,13 @@ logo='/usr/share/gurtos/gurtos-logo-gdm.png'
 
 [org/gnome/desktop/interface]
 font-name='Atkinson Hyperlegible Next 11'
+
+# GNOME's first-boot setup runs as the gnome-initial-setup user with this profile: show Hills behind it, not Ubuntu's.
+[org/gnome/desktop/background]
+picture-uri='file:///usr/share/backgrounds/gurtos/hills-light.svg'
+picture-uri-dark='file:///usr/share/backgrounds/gurtos/hills-dark.svg'
+picture-options='zoom'
+primary-color='#27313F'
+
+[org/gnome/desktop/screensaver]
+picture-uri='file:///usr/share/backgrounds/gurtos/hills-dark.svg'

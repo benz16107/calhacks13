@@ -42,6 +42,7 @@ install -Dm644 -t /usr/share/gurtos "$t"/wordmark/*.svg
 install -Dm644 "$t/../icons/dev.box.Box.svg" /usr/share/icons/hicolor/scalable/apps/gurtos-logo.svg # os-release LOGO=gurtos-logo
 
 # Boot splash, when Plymouth is installed. The image rebuilds the initramfs.
+rm -rf /usr/share/plymouth/themes/gurtos # our own folder: drop files an older theme left
 install -Dm644 -t /usr/share/plymouth/themes/gurtos "$t"/plymouth/gurtos/*
 if [[ -d /usr/share/plymouth/themes ]]; then
   update-alternatives --install /usr/share/plymouth/themes/default.plymouth default.plymouth /usr/share/plymouth/themes/gurtos/gurtos.plymouth 200 >/dev/null

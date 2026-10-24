@@ -15,7 +15,7 @@ ISO walked as a new person, on Wayland (Ubuntu's default) and Xorg.
 |---|---|---|
 | The GurtOS session | Its own GNOME session and Shell mode, like Ubuntu's own: it loads the GurtOS Shell extension, Ubuntu's dock, AppIndicator support and tiling. GDM starts it by default, on Wayland or Xorg. An extension a session mode loads cannot be switched off by accident | `theme/session/`, `theme/install.sh` |
 | The top bar | An amber "1 needs you" pill and "▶ 2 running". Its popover: Agents with the counts, Needs your OK as an amber card with Deny and Approve, Ready to review, Running with a working bar, then Ask an Agent…, Open GurtOS, GurtOS Settings | `shell/gurtos@gurtos.dev/` |
-| Quick Settings | An Agents tile with the flask icon, on while agents run, subtitle "1 needs you". Its menu: Pause all agents (once the core has it), Quiet hours ("Until 07:00. Requests wait without a sound"), Needs your OK and Running with counts, GurtOS Settings | `shell/gurtos@gurtos.dev/` |
+| Quick Settings | An Agents tile with the flask icon, on while agents run, subtitle "1 needs you". Its menu: Pause all agents (the core's `paused` setting, the same one Business's kill switch uses; the top bar then says Paused), Quiet hours ("Until 07:00. Requests wait without a sound"), Needs your OK and Running with counts, GurtOS Settings | `shell/gurtos@gurtos.dev/` |
 | Approvals as Shell notifications | Deny and Approve (Approve names the amount); clicking the body opens the task; answered anywhere else, it goes away; in quiet hours it waits in the list without a banner | `shell/gurtos@gurtos.dev/` |
 | The lock screen | Each approval as a card in the lock screen's notification list. Deny works while locked. Unlock to approve asks for the password, then approves, because approving can spend money | `shell/gurtos@gurtos.dev/` |
 | Activities search | Two sections in the overview: GurtOS (agent tasks by title) and Find (files and photos /find knows, by what is in them). A result opens in the GurtOS app | `search-provider.py` |
@@ -32,7 +32,9 @@ ISO walked as a new person, on Wayland (Ubuntu's default) and Xorg.
 
 ![The top-bar popover](screenshots/os/03-popover.png)
 
-![The Agents tile in Quick Settings](screenshots/os/06-agents-tile.png)
+![The Agents tile in Quick Settings, paused](screenshots/os/06-agents-tile.png)
+
+![Paused: the top bar says so](screenshots/os/05-paused.png)
 
 ![The lock screen: Deny, or Unlock to approve](screenshots/os/07-lock.png)
 
@@ -67,7 +69,7 @@ builds the `GurtOS` icon theme from the installed Papirus with its folders recol
 | Shell theme | Yaru's dark blue Shell theme, with the GurtOS tokens, font and radii from the extension's `stylesheet.css` | a full `gnome-shell-theme.gresource` (and the Hills login background in GDM) is not built yet |
 | The Files bar (Review changes, Undo, Keep changes) | the same actions in the folder's right-click menu | nautilus-python 4 on GNOME 46 has no way to add a bar to a Files window |
 | GTK 3 apps | Yaru-blue | adw-gtk3 is not in Ubuntu 24.04's archive, so it is not shipped or credited |
-| May read, Pause all agents | not shown; the Pause switch appears by itself once the core's settings have `paused` | the core has no API for them yet |
+| May read | not shown | the core has no API for it yet |
 | Software in the dock | listed, shown when installed | the test VM has no Software app; the image decides which one ships |
 
 **The design.** These windows follow the GurtOS system (`docs/figma/system.md`) and the Personal frames in
@@ -202,6 +204,9 @@ at first boot). What the image adds itself:
 - Optional: drop Ubuntu's sessions from `/usr/share/{wayland-sessions,xsessions}/ubuntu*.desktop`, so the login
   screen offers only GurtOS.
 - Rebuild the initramfs after install.sh (`update-initramfs -u`), for the two-step Plymouth theme.
+  The theme carries its own `lock.png`, `entry.png` and `bullet.png` (drawn for GurtOS): two-step will not load
+  without them. The image also ships `/etc/plymouth/plymouthd.conf` and `plymouth.ignore-serial-consoles`.
+- GNOME's first-boot setup shows Hills too: `dconf/db/gdm.d/01-gurtos` sets the background for its session.
 
 ## How it works
 
@@ -269,5 +274,5 @@ delete it afterwards.
 - **Pairing a phone** on Personal: the box has no address a phone can reach yet, so Setup's phone step says so and
   offers Skip until `GET /api/boxes` reports one. The QR path (with `qrencode`) is written but not walked.
 - **From the Personal frames, waiting on the core:** "May read" for a folder (the core has one kind of grant, may
-  change), "May also read" in Ask an Agent, Pause all agents in the top-bar menu, and a per-task internet choice (the
+  change), "May also read" in Ask an Agent and a per-task internet choice (the
   dialog shows what Settings gives a new task).

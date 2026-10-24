@@ -135,9 +135,11 @@ class Indicator extends PanelMenu.Button {
         const c = counts(tasks, pending);
         this.needs.text = String(c.needsYou);
         this.needsBox.visible = c.needsYou > 0;
-        this.runningLabel.text = online === false ? 'offline' : c.running ? `${c.running} running` : 'Agents';
-        this.runIcon.icon_name = online === false ? 'network-offline-symbolic' : c.running ? 'media-playback-start-symbolic' : 'applications-science-symbolic';
-        this.runBox.visible = !c.needsYou || c.running > 0 || online === false;
+        const paused = !!this.ext.settings?.paused;
+        this.runningLabel.text = online === false ? 'offline' : paused ? 'Paused' : c.running ? `${c.running} running` : 'Agents';
+        this.runIcon.icon_name = online === false ? 'network-offline-symbolic' : paused ? 'media-playback-pause-symbolic'
+            : c.running ? 'media-playback-start-symbolic' : 'applications-science-symbolic';
+        this.runBox.visible = !c.needsYou || c.running > 0 || paused || online === false;
         this.rebuild(); // kept current, so the menu opens on what is true now
     }
 
@@ -243,7 +245,8 @@ class AgentsToggle extends QuickMenuToggle {
         const c = counts(tasks, pending);
         const quiet = !!settings?.quietHours?.enabled;
         this.checked = c.running > 0 || c.needsYou > 0; // on while agents run
-        this.subtitle = c.needsYou ? `${c.needsYou} need${c.needsYou === 1 ? 's' : ''} you` : c.running ? `${c.running} running` : quiet ? 'Quiet hours' : 'Nothing running';
+        this.subtitle = c.needsYou ? `${c.needsYou} need${c.needsYou === 1 ? 's' : ''} you` : settings?.paused ? 'Paused'
+            : c.running ? `${c.running} running` : quiet ? 'Quiet hours' : 'Nothing running';
         this.menu.removeAll();
         if (settings && 'paused' in settings)
             this.menu.addMenuItem(switchRow('Pause all agents', 'Running tasks stop where they are', !!settings.paused, v => this.ext.patch({paused: v})));
@@ -432,6 +435,7 @@ export default class GurtOS extends Extension {
         } catch (e) {
             this.notice('GurtOS did not save that', e.message);
         }
+        this.indicator?.update();
         this.agents?.toggle.update();
     }
 
