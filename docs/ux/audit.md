@@ -18,14 +18,14 @@ How it was walked:
 
 ## Status
 
-**Fixed 61, closed 1, open 30** (92 findings: 19 web, 22 Server, 36 Personal, 15 parity). Each fixed
+**Fixed 62, closed 1, open 29** (92 findings: 19 web, 22 Server, 36 Personal, 15 parity). Each fixed
 finding gets a **Fixed** line with the commit and an after-screenshot in `after/`.
 
 | Owner | Open |
 |---|---|
 | portal | W16, W17, W18, S27 |
 | apify track | A-1 |
-| personal | P-36; P-29 waits for Ben |
+| personal | P-29 waits for Ben |
 | image | S2, S15, S16, S24, P-4, P-17, P-28, E-1 to E-11, E-15, then P-1 with release |
 | personal (parity) | E-3 (GurtOS update row), E-12, E-13, E-14 |
 
@@ -107,7 +107,7 @@ Owners: core (event text), portal (rendering).
 
 **Fixed in 4cdd461** (portal): sentences ("Setup: Network done"), Kind in words, raw fields under Technical details,
 Audit opens with nothing selected and its actor is GurtOS. ![](after/srv-activity.png) ![](after/biz-audit-owen.png)
-The scripted worker's `sleep 2` steps stay: test worker only (see W13).
+The scripted worker's `sleep` steps are gone too (a6c3552).
 ### W3. P0. App descriptions are hackathon notes
 ![](shots/web/srv-app-center.png)
 App Center, Settings > Apps and app details show text written for judges and sponsors, not users:
@@ -573,7 +573,7 @@ plain-zero alternate, so the only fix is a second typeface for numbers. Recommen
 - **P-35. P2. Fixed in ab2a67c** ([after](after/srv-app-find.png)). The Find panel shows `FIND_CLOUD_SYNC=1` and "Described by claude-sonnet-4-6 via Droid task
   tzw81bc1dd" (`after/personal-panel-dark.png`). Fix: "Search runs on this computer." and "Described by Claude".
   Owner: find track.
-- **P-36. P2.** The sidebar cuts "Agent wallet (Solana devne..."; drop the bracketed note as the portal does
+- **P-36. P2. Fixed in 4b72d44.** The sidebar cuts "Agent wallet (Solana devne..."; drop the bracketed note as the portal does
   ("Agent wallet"). Owner: personal.
 
 ![](after/personal-sidebar-apps.png)
