@@ -54,9 +54,9 @@ network all work on main as of 717bc3f.
 | P2-14 "Box" names | Store, Mana app and Jira panel renamed ("GurtOS agent task", Forge v3); Elastic agent is "GurtOS log" (id gurtos-log), checked through the Kibana API at 00:48 | tracks |
 | P2-13 Elastic index mixes test boxes | Fixed, verified 00:48: 505 documents from installed boxes plus one demo run kept for screenshots (a18523); no dev boxes; the agent filters to installed boxes by default | elastic ca03219, portal 717bc3f |
 | Jira through Caddy after the token gate | Fixed. The Jira thread checked Approve and Roll back from the real panel on BOX-14 through Caddy. QA confirmed from outside at 00:45: /t/jira/task 401 without the secret, /t/mana/status 200, everything else 404 | core 6879fb9, jira c82fcdb |
-| D-1 to D-4, D-7 docs | Fixed, live | docs 199dce5 |
+| D-1 to D-4, D-6, D-7 docs | Fixed, live. D-6 spot-checked 00:52: the Elastic, Jira and Shopper guides say GurtOS log (gurtos-log), GurtOS agent task and GurtOS Test Store, with no "Box" names left | docs 199dce5, 9cc7d92 |
 | P1-7 live banner names the wrong hosts | **Still open** at 00:21 on a phone: "tm2diipf4e2 tried to reach attacker.example. It may not reach any host." (id instead of title, and its host is shop.localhost:8123) | portal |
-| Open P1s | P1-12 ASI:One not paired; P1-13 real agent probes the proxy in moment 2; D-5, D-6; showcase S-1 to S-6 | |
+| Open P1s | P1-12 ASI:One not paired; P1-13 real agent probes the proxy in moment 2; D-5; showcase S-1 to S-6 | |
 
 **Not re-tested yet:** P2-6, P2-7, P2-8, P2-10 (portal says fixed), and the installed boxes. **At 00:40:** Vultr runs current main (the public Mana app answers 200; Jira's route
 refuses calls without its secret), linuxbox runs main as of bb0ccde (has the P0-7 fix), and **the laptop, Sunday's
