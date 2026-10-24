@@ -201,7 +201,7 @@ A shopping agent holds money and card details, so it is a target for the same at
 
 </Details>
 
-<Evidence title="Evidence" run="Today's run of this track's merge-gate step (<code>DEMO_ONLY=shopper ./demo</code>) on main, x86 test VM, Oct 24, 4:37 PM PT: 10 checks pass, then it stops at a new second question (see below). The live run on Oct 23 used <code>DEMO_LIVE=shopper</code> with Stripe test mode, Apify, Droid and devnet USDC." numbers={[{ value: '$15.36 CAD', label: 'Chemex filters, live Best Buy Canada price, bought after the tap (test money)' }, { value: '$0.03', label: 'devnet USDC an agent paid over x402 for a report (test money)' }, { value: '0', label: 'cards, keys or passwords in the action log' }]} sources={[{ label: 'Tracks README', href: 'https://github.com/benz16107/calhacks13/tree/main/tracks/shopper' }]}>
+<Evidence title="Evidence" run="Run of this track's merge-gate step (<code>DEMO_ONLY=shopper ./demo</code>) on main, x86 test VM, Oct 24, 4:37 PM PT, before core's fix <code>1afca16</code>: the first 10 checks pass and the log below stops there. After the fix core reports the full gate at 35 passed, 0 failed with the Shopper included; this page's log was not re-run after it. The live run on Oct 23 used <code>DEMO_LIVE=shopper</code> with Stripe test mode, Apify, Droid and devnet USDC." numbers={[{ value: '$15.36 CAD', label: 'Chemex filters, live Best Buy Canada price, bought after the tap (test money)' }, { value: '$0.03', label: 'devnet USDC an agent paid over x402 for a report (test money)' }, { value: '0', label: 'cards, keys or passwords in the action log' }]} sources={[{ label: 'Tracks README', href: 'https://github.com/benz16107/calhacks13/tree/main/tracks/shopper' }]}>
 
 - Stripe test mode charged the Hario filters bought from the watch, and refunded the household reorder when its task was undone.
 - An agent paid $0.03 of devnet USDC for a report over x402 ([the transaction](https://explorer.solana.com/tx/5PCwxRVPZ7hzjHaXPLtpbYH2k3nEdkzwjUxZXaVYcm46TsnGqkvGYtbCctcgWdpnAMzgRQu76MKW2HfByAzkcFvB?cluster=devnet)).
@@ -220,10 +220,9 @@ track shopper
   ok    approved with a tap (no passkey yet), the box signed the mandate and started watching
   ok    a check saw $8.99, above the $7.00 limit, so it keeps watching ($8.99 each is over your limit of $7.00)
   ok    it dropped to $6.50 and the buy waits for you: "Buy 2 × Hario V60 02 paper filters, 100 count from GurtOS Test Store for $13.00?..."
-  FAIL  timed out waiting for task tmv0qwwc14e to finish
 ```
 
-**Why it stops.** After the owner approves "Buy 2 × Hario V60 02 paper filters ... for $13.00?", the core asks a second question: "Spend $13.00 to GurtOS Test Store on shopper.buy ... Spends above $5.00 always ask." Core's 3:45 PM commit (`baeabc5`, "safer defaults") lowered the default threshold for that rule from $100 to $5, and the Shopper's step still expects one approval. The purchase still waits for the owner, now twice for anything above $5. The Oct 23 and Oct 24 (3 AM) runs above passed before the change. The core and Shopper owners need to settle it (answer both questions in the step, or count the purchase approval); this page's gate output will be re-run after that.
+**The double ask, fixed.** After the owner approved "Buy 2 × Hario V60 02 paper filters ... for $13.00?", the core asked a second question, "Spends above $5.00 always ask", because a UX-audit change (`baeabc5`) lowered that default from $100 to $5. Core fixed it in `1afca16`: an approved question that names the amount now covers the task's spends up to it, the budget still caps them, and the Shopper's buy asks with the total. The $5 default stays, so a purchase waits for the owner once.
 
 </Evidence>
 
