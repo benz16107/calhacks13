@@ -363,7 +363,10 @@ class Core {
           ...(process.env.BOX_REVIEW ? { BOX_REVIEW: process.env.BOX_REVIEW } : {}),
         });
       }
-      const ids = await sandbox.prepare(t);
+      const t0 = Date.now();
+      const ids = await sandbox.prepare(t, { fast: this.settings.fastFolders });
+      // Fast folders (preview): say which way the task got its copy, and why when it fell back to copying.
+      if (ids.fast !== undefined) this.write({ type: 'note', track: 'files', task: t.id, data: { fast: ids.fast, ms: Date.now() - t0, ...(ids.why ? { why: ids.why } : {}) } });
       if (byok) {
         // Droid reads its own-key models from the task user's ~/.factory/settings.json; the key there is a placeholder.
         const dir = path.join(dirs.task(t.id), 'home', '.factory');

@@ -559,15 +559,24 @@ await moment('moment 4: pull the plug', async () => {
     prompt: ['append progress.txt 1', 'sleep 0.3', 'append progress.txt 2', 'sleep 3', 'append progress.txt 3', 'append progress.txt 4'].join('\n'),
   });
   const W = await api<Task>('POST', '/tasks', { ...base, title: 'Deploy', prompt: 'ask Deploy the new build?\nwrite deployed.txt yes' });
+  // A fast-folders task (a mapped mount of the owner's folder, no copy) rides through the plug too.
+  const fastDir = path.join(OWNER_ROOT, 'fast-plug');
+  fs.mkdirSync(fastDir, { recursive: true });
+  fs.writeFileSync(path.join(fastDir, 'f.md'), 'start\n');
+  execFileSync('chown', ['-R', '4242:4343', OWNER_ROOT]);
+  await api('PATCH', '/api/settings', { fastFolders: true });
+  const F = await api<Task>('POST', '/tasks', { worker: 'fake', source: 'demo', title: 'Fast folder job', folder: fastDir, prompt: 'append f.md 1\nsleep 3\nappend f.md 2' });
+  await api('PATCH', '/api/settings', { fastFolders: false });
   await waitFor('R to be mid-job and W to wait', async () => {
     const { events } = await api<{ events: LogEvent[] }>('GET', `/tasks/${R.id}`);
     const mid = events.some((e) => e.type === 'task.step' && (e.data as { n?: number })?.n === 3);
-    return mid && (await task(W.id)).state === 'waiting';
+    const fmid = (await api<{ events: LogEvent[] }>('GET', `/tasks/${F.id}`)).events.some((e) => e.type === 'task.step' && (e.data as { n?: number })?.n === 1);
+    return mid && fmid && (await task(W.id)).state === 'waiting';
   });
 
   // The plug: every process of the box and its tasks dies at once, mounts are gone, half a line is written.
   process.kill(-box!.pid!, 'SIGKILL');
-  for (const t of [R, W]) spawnSync('pkill', ['-KILL', '-u', t.user]);
+  for (const t of [R, W, F]) spawnSync('pkill', ['-KILL', '-u', t.user]);
   await sleep(200);
   for (const m of mountsUnder(HOME)) execFileSync('umount', ['-l', m]);
   fs.appendFileSync(path.join(HOME, 'log.jsonl'), '{"seq":');
@@ -585,6 +594,9 @@ await moment('moment 4: pull the plug', async () => {
   await settled([W.id]);
   check(view('long', 'deployed.txt') === 'yes', 'approved after the restart, it finished');
   check(view('notes', 'b.txt') === 'made by B' && view('notes', 'a.txt') === 'original a', 'earlier work survived too: B kept, A still undone');
+  await settled([F.id]);
+  const fd = await api<{ diff: string }>('GET', `/api/tasks/${F.id}/diff`);
+  check(/\+1\n\+2/.test(fd.diff) && fs.readFileSync(path.join(fastDir, 'f.md'), 'utf8') === 'start\n', 'the fast-folders task resumed after the plug from its next step, and the real folder is still untouched');
 });
 
 // ---------- approvals: idempotent, long waits, closed at the end ----------
@@ -744,6 +756,51 @@ await moment("personal: an agent works on the owner's folder, then Keep or Undo"
   // A task spec with a field the box doesn't know is refused, not silently run somewhere else.
   const bad = await api('POST', '/tasks', { title: 'Typo', worker: 'fake', prompt: 'x', folderz: [folder] }).then(() => '', (e: Error) => e.message);
   check(/unknown task field.*folderz/.test(bad), `an unknown task field is refused with a clear error ("${bad.slice(0, 60)}")`);
+});
+
+await moment('fast folders (preview): a mapped mount of the real folder instead of a copy', async () => {
+  const OWNER = { uid: 4242, gid: 4343 };
+  const dir = path.join(OWNER_ROOT, 'fast');
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, 'a.md'), 'A\n');
+  fs.writeFileSync(path.join(dir, 'b.md'), 'B\n');
+  fs.writeFileSync(path.join(dir, 'secret.md'), 'mine\n');
+  execFileSync('chown', ['-R', `${OWNER.uid}:${OWNER.gid}`, dir]);
+  fs.chmodSync(path.join(dir, 'secret.md'), 0o600);
+  const noteOf = async (id: string) =>
+    (await api<{ events: LogEvent[] }>('GET', `/tasks/${id}`)).events.find((e) => e.type === 'note' && (e as { track?: string }).track === 'files') as { data: { fast: boolean; ms: number; why?: string } } | undefined;
+  await api('PATCH', '/api/settings', { fastFolders: true });
+  try {
+    const T = await api<Task>('POST', '/tasks', { title: 'Fast edit', worker: 'fake', source: 'demo', folder: dir, prompt: 'append a.md fast\nexpect secret.md mine\nsleep 2' });
+    await waitFor('the edit', async () => ((await api<{ events: LogEvent[] }>('GET', `/tasks/${T.id}`)).events.some((e) => e.type === 'task.step' && (e.data as { n?: number })?.n === 1) ? true : undefined));
+    const n = await noteOf(T.id);
+    check(n?.data.fast === true && n.data.ms < 3000, `the task's workspace is a mapped mount, ready in ${n?.data.ms} ms with no copy`);
+    check(fs.readFileSync(path.join(dir, 'a.md'), 'utf8') === 'A\n', "the task's write went to its own layer: the real file is unchanged while it runs");
+    await settled([T.id]);
+    check(!fs.existsSync(path.join(HOME, 'tasks', T.id, 'base', 'a.md')), 'the mount is gone once the task ends; nothing of the real folder is left under the task');
+    await api('POST', `/api/tasks/${T.id}/keep`);
+    const kept = fs.statSync(path.join(dir, 'a.md'));
+    check(fs.readFileSync(path.join(dir, 'a.md'), 'utf8') === 'A\nfast\n' && kept.uid === OWNER.uid && kept.gid === OWNER.gid, 'Keep wrote the change into the real folder, with the owner still the owner');
+    await api('POST', `/api/tasks/${T.id}/unkeep`);
+    check(fs.readFileSync(path.join(dir, 'a.md'), 'utf8') === 'A\n', 'undoing the Keep put the file back');
+
+    // The owner edits a file while the task works on it: Keep refuses instead of losing the owner's edit.
+    const C = await api<Task>('POST', '/tasks', { title: 'Fast clash', worker: 'fake', source: 'demo', folder: dir, prompt: 'append b.md from the task\nsleep 3' });
+    await waitFor('the clash edit', async () => ((await api<{ events: LogEvent[] }>('GET', `/tasks/${C.id}`)).events.some((e) => e.type === 'task.step' && (e.data as { n?: number })?.n === 1) ? true : undefined));
+    fs.appendFileSync(path.join(dir, 'b.md'), 'from the owner\n');
+    await settled([C.id]);
+    const clash = await api<{ conflicts?: string[] }>('POST', `/api/tasks/${C.id}/keep`).catch((e: Error) => ({ conflicts: [e.message] }));
+    check(JSON.stringify(clash).includes('b.md') && fs.readFileSync(path.join(dir, 'b.md'), 'utf8') === 'B\nfrom the owner\n', "an owner's edit made mid-task is caught at Keep, and the owner's version stays");
+
+    // A file that isn't the owner's can't be mapped: the task falls back to a copy and says why.
+    fs.writeFileSync(path.join(dir, 'roots.md'), 'root\n');
+    const X = await api<Task>('POST', '/tasks', { title: 'Mixed owners', worker: 'fake', source: 'demo', folder: dir, prompt: 'write x.md x' });
+    await settled([X.id]);
+    const nx = await noteOf(X.id);
+    check(nx?.data.fast === false && /roots\.md belongs to another user/.test(nx.data.why ?? ''), `a folder with someone else's file uses a copy instead, and the log says why ("${nx?.data.why}")`);
+  } finally {
+    await api('PATCH', '/api/settings', { fastFolders: false });
+  }
 });
 
 

@@ -105,7 +105,43 @@ function mountOverlay(target: string, lowers: string[], upper?: string) {
 const unmount = (dir: string) => mounted(dir) && tryRun('umount', '-l', dir);
 
 /** Create the task's user, folders and copy of the workspace. Safe to call again after a reboot. */
-export async function prepare(task: Task): Promise<{ uid: number; gid: number }> {
+/**
+ * Fast folders: the task's base is the owner's real folder, mounted again with the owner's user and group mapped to
+ * the task's, instead of a copy. Writes still go to the task's own layer; the real folder only changes on Keep.
+ * Returns why it can't be used for this task, or '' after mounting.
+ */
+function mountFast(task: Task, base: string, uid: number, gid: number): string {
+  const roots = rootsOf(task.workspace);
+  if (roots.length !== 1 || roots[0][0]) return 'a task on several folders uses a copy';
+  const real = roots[0][1];
+  const owner = fs.statSync(real);
+  // Every file must be the owner's: anyone else's would be unreadable to the task through the mapping.
+  const walk = (dir: string): string => {
+    for (const name of fs.readdirSync(dir)) {
+      const f = path.join(dir, name);
+      const st = fs.lstatSync(f);
+      if (st.uid !== owner.uid || st.gid !== owner.gid) return `${path.relative(real, f)} belongs to another user`;
+      if (st.isDirectory()) {
+        const why = walk(f);
+        if (why) return why;
+      }
+    }
+    return '';
+  };
+  const why = walk(real);
+  if (why) return why;
+  fs.mkdirSync(base, { recursive: true });
+  try {
+    if (!mounted(base)) run('mount', '--bind', '-o', `X-mount.idmap=u:${owner.uid}:${uid}:1 g:${owner.gid}:${gid}:1`, real, base);
+  } catch (e) {
+    return `this kernel can't map a folder (${(e as Error).message.split('\n')[0]})`;
+  }
+  return '';
+}
+
+const isFast = (id: string) => fs.existsSync(path.join(HOME, 'tasks', id, 'fast'));
+
+export async function prepare(task: Task, opts: { fast?: boolean } = {}): Promise<{ uid: number; gid: number; fast?: boolean; why?: string }> {
   const t = dirs.task(task.id);
   if (!tryRun('id', '-u', task.user)) {
     // Task users live in uids 30000-39999 so one firewall rule can cover all of them.
@@ -127,10 +163,17 @@ export async function prepare(task: Task): Promise<{ uid: number; gid: number }>
   // the agent write access to copy them up. Give the task a writable copy of the folder as its lower instead.
   // It is also a clean snapshot, so the owner editing the folder mid-task can't disturb the agent.
   let base = dirs.workspace(task.workspace);
+  let fast: boolean | undefined, why: string | undefined;
   if (isLinked(task.workspace)) {
     base = path.join(t, 'base');
+    // Fast folders, for a new task with the setting on, or a resumed fast task (its mount is gone after a restart).
+    if (isFast(task.id) || (opts.fast && !fs.existsSync(path.join(t, 'base.done')))) {
+      why = mountFast(task, base, uid, gid);
+      fast = !why;
+      if (fast) fs.writeFileSync(path.join(t, 'fast'), '');
+    }
     // A task resumed after a restart keeps the copy it started with: faster, and its snapshot stays its snapshot.
-    if (!fs.existsSync(path.join(t, 'base.done'))) {
+    if (!fast && !fs.existsSync(path.join(t, 'base.done'))) {
       fs.rmSync(base, { recursive: true, force: true });
       fs.mkdirSync(base, { recursive: true });
       // cp shares the data blocks where the filesystem can (btrfs, XFS), and runs without blocking the box.
@@ -149,7 +192,7 @@ export async function prepare(task: Task): Promise<{ uid: number; gid: number }>
     }
   }
   mountOverlay(dirs.root(task.id), [...task.layers.map(dirs.upper), base], dirs.upper(task.id));
-  return { uid, gid };
+  return { uid, gid, ...(fast !== undefined ? { fast, ...(why ? { why } : {}) } : {}) };
 }
 
 const WORKERS = new URL('./workers/', import.meta.url).pathname;
@@ -222,7 +265,7 @@ export type Change = { path: string; change: 'added' | 'modified' | 'deleted' };
 export function changes(task: Task): Change[] {
   const upper = dirs.upper(task.id);
   const lowers = [...task.layers.map(dirs.upper), isLinked(task.workspace) && fs.existsSync(taskBase(task.id)) ? taskBase(task.id) : dirs.workspace(task.workspace)];
-  const below = (rel: string) => lowers.map((l) => path.join(l, rel)).find((f) => fs.existsSync(f));
+  const below = (rel: string) => lowers.map((l) => path.join(l, rel)).find((f) => fs.existsSync(f)) ?? fastBelow(task, rel);
   const out: Change[] = [];
   const walk = (rel: string) => {
     for (const name of fs.readdirSync(path.join(upper, rel)).sort()) {
@@ -241,7 +284,7 @@ export function changes(task: Task): Change[] {
 export function diff(task: Task, maxBytes = 200_000): { changes: Change[]; diff: string } {
   const upper = dirs.upper(task.id);
   const lowers = [...task.layers.map(dirs.upper), isLinked(task.workspace) && fs.existsSync(taskBase(task.id)) ? taskBase(task.id) : dirs.workspace(task.workspace)];
-  const below = (rel: string) => lowers.map((l) => path.join(l, rel)).find((f) => fs.existsSync(f));
+  const below = (rel: string) => lowers.map((l) => path.join(l, rel)).find((f) => fs.existsSync(f)) ?? fastBelow(task, rel);
   const changes = changesOf(task);
   let text = '';
   for (const c of changes) {
@@ -254,6 +297,12 @@ export function diff(task: Task, maxBytes = 200_000): { changes: Change[]; diff:
   return { changes, diff: text.slice(0, maxBytes) };
 }
 const changesOf = changes;
+// A fast task's base is a mount of the real folder; once it is unmounted, what it started from is the real folder.
+function fastBelow(task: Task, rel: string) {
+  if (!isFast(task.id) || !isLinked(task.workspace)) return undefined;
+  const real = realOf(task.workspace, rel);
+  return fs.existsSync(real) ? real : undefined;
+}
 
 const sha = (file: string) => createHash('sha256').update(fs.readFileSync(file)).digest('hex');
 const exec = promisify(execFile);
@@ -453,7 +502,8 @@ export function seal(task: Task) {
   // User and group ids are handed out again, so once the task ends nothing of it may stay readable by "its" id.
   // The snapshot of a folder lingers until the owner decides (days, on Personal); it is root's alone from now on.
   const base = path.join(dirs.task(task.id), 'base');
-  if (fs.existsSync(base)) tryRun('chown', '-R', 'root:root', base);
+  if (isFast(task.id)) unmount(base); // the owner's real folder: never walk it as the task's copy
+  if (fs.existsSync(base) && !mounted(base)) tryRun('chown', '-R', 'root:root', base);
   if (fs.existsSync(dirs.task(task.id))) {
     tryRun('chown', 'root:root', dirs.task(task.id));
     tryRun('chmod', '0700', dirs.task(task.id));
@@ -467,6 +517,7 @@ export function seal(task: Task) {
 
 /** Delete an undone task's files: its layer, scratch space and copy. The caller makes sure nothing still reads them. */
 export function purge(task: Task) {
+  if (isFast(task.id)) unmount(path.join(dirs.task(task.id), 'base'));
   for (const d of ['upper', 'work', 'base', 'root']) {
     const dir = path.join(dirs.task(task.id), d);
     if (!fs.existsSync(dir)) continue;

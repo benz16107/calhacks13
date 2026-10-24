@@ -39,6 +39,8 @@ export interface Settings {
   appearance: { theme: 'light' | 'dark' | 'system'; accent: string };
   /** Pause all agents: no task starts, and running ones hold before their next step or tool call. */
   paused: boolean;
+  /** Fast folders (preview): a task's copy of a real folder is a mapped mount of it, not a copy (docs/perf/filesystem.md). */
+  fastFolders: boolean;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -53,6 +55,7 @@ export const DEFAULT_SETTINGS: Settings = {
   autoUpdate: true,
   appearance: { theme: 'system', accent: '' },
   paused: false,
+  fastFolders: false,
 };
 
 const fail = (field: string, why: string): never => {
@@ -158,6 +161,9 @@ export function applyPatch(current: Settings, patch: unknown): Settings {
         break;
       case 'paused':
         next.paused = bool(key, v);
+        break;
+      case 'fastFolders':
+        next.fastFolders = bool(key, v);
         break;
       case 'appearance': {
         if (!isObj(v)) fail(key, 'must be {theme, accent}');
