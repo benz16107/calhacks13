@@ -20,5 +20,6 @@ export default {
   costCents: __t.u32(),
   budgetCents: __t.u32(),
   updatedAt: __t.string(),
+  step: __t.string(),
   note: __t.string(),
 };

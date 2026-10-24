@@ -94,20 +94,80 @@ for each thing your part shows. `./demo` runs it after the four moments on a fre
 loaded. Keep it under about 10 seconds. Test-mode keys go in `/etc/box/vault.env` on the test VM; the demo
 copies them into each run's vault.
 
-## The box's API
+## The API for the portal and the phone
 
-`127.0.0.1:7700` and `BOX_HOME/api.sock` (root only). JSON.
+Two parts. **The box's HTTP API** for lists, details and actions. **SpacetimeDB** for live updates and for
+answering approvals from a phone. The types are in `contract.ts` (`Task`, `Approval`, `LogEvent`).
+
+### HTTP
+
+`http://<box>:7700/api/...`, JSON. It listens on `127.0.0.1` (`BOX_LISTEN` changes that). Every route also
+answers without `/api`, which is what the demo and tracks use.
 
 | Request | Returns |
 |---|---|
-| `GET /tasks`, `POST /tasks {TaskSpec}` | Tasks, or the new task |
-| `GET /tasks/<id>` | `{task, events}` |
-| `GET /tasks/<id>/diff` | `{changes: [{path, change}], diff}`: what it added, modified or deleted, and a unified diff |
-| `POST /tasks/<id>/undo` | The task |
-| `GET /approvals`, `POST /approvals/<id> {approved, by}` | Approvals |
-| `GET /log?after=<seq>` | Log events |
-| `GET /apps`, `GET /health` | Apps; status |
+| `GET /api/tasks` | Every task: `id, title, state, source, workspace, costCents, budgetCents, step, summary, error, createdAt, updatedAt` |
+| `POST /api/tasks {title, prompt, workspace?, tools?, hosts?, budgetCents?}` | The new task. Workspace defaults to `home`, worker to Droid. |
+| `GET /api/tasks/<id>` | `{task, approvals, events}`: the task, its approvals, and its whole action log |
+| `GET /api/tasks/<id>/diff` | `{changes: [{path, change}], diff}`: what it added, modified or deleted, and a unified diff |
+| `POST /api/tasks/<id>/undo` | The task, now `undone` |
+| `GET /api/approvals?state=pending` | The inbox. Leave out `state` for all of them. |
+| `POST /api/approvals/<id> {approved: true or false, by: "portal"}` | The approval. The first answer wins. |
+| `GET /api/log?after=<seq>&task=<id>` | Log events, both filters optional |
+| `GET /api/apps` | Apps from tracks: `{name, title, href, track}`. Open `/t/<track><href>`. |
+| `GET /api/health` | `{ok, tasks, tools, spacetime: {port, database}}` |
 | `/t/<track>/...` | Track routes |
+
+What a screen needs, and where it comes from:
+
+- **Task list:** `GET /api/tasks` once, then the SpacetimeDB `task` table live. `step` is what it is doing now;
+  `costCents` includes tool spending and the model estimate.
+- **One task:** `GET /api/tasks/<id>` for its steps (`task.step` events, in order), tool calls, costs and
+  blocked hosts. `GET /api/tasks/<id>/diff` for its changes. An Undo button posts to `/undo`.
+- **Inbox:** the SpacetimeDB `approval` table where `state` is `pending`. Approve or Deny with the `answer`
+  reducer, or `POST /api/approvals/<id>`.
+
+**Hosting the portal.** Build it into `portal/dist` (or point `BOX_PORTAL` at a folder) and the box serves it on
+the same address as the API: files as they are, and `index.html` for any other page load, so client-side
+routes work. Then the box's own screen and a phone need one address and no CORS. During development a portal
+on another origin needs `BOX_ORIGINS=http://localhost:5173` (comma separated, or `*`) in the box's environment.
+
+### Live: SpacetimeDB
+
+`ws://<box>:3000`, database `box` (the demo uses its own). Public tables, mirrored from the log by the box:
+
+| Table | Columns |
+|---|---|
+| `task` | `id, title, state, source, workspace, worker, costCents, budgetCents, updatedAt, step, note` (`note` is the error, else the summary) |
+| `approval` | `id, task, question, costCents, state` (`pending`, `approved`, `denied`)`, by` |
+
+Reducers anyone may call: `answer({id, approved, by})`. The first answer wins, and the box writes it to the log
+within milliseconds. `putTask` and `putApproval` are for the box only and refuse anyone else.
+
+TypeScript client (`npm i spacetimedb@2.13.0`). Import the generated bindings from `core/spacetime/bindings/`,
+or regenerate them for your app with `spacetime generate --lang typescript --module-path core/spacetime`:
+
+```ts
+import { DbConnection } from '../core/spacetime/bindings/index.ts';
+
+DbConnection.builder()
+  .withUri(`ws://${location.hostname}:3000`)
+  .withDatabaseName('box')
+  .onConnect((conn) => {
+    conn.db.task.onInsert((_ctx, task) => render(task));
+    conn.db.task.onUpdate((_ctx, _old, task) => render(task));
+    conn.db.approval.onUpdate((_ctx, _old, a) => renderInbox(a));
+    conn.subscriptionBuilder().subscribeToAllTables();
+    // Approve button:
+    // conn.reducers.answer({ id: approval.id, approved: true, by: 'phone' });
+  })
+  .build();
+```
+
+Column names are camelCase in the TypeScript client and snake_case in SQL (`cost_cents`).
+
+Reaching the box from a phone is not set up yet: the API listens on `127.0.0.1:7700` and SpacetimeDB on port
+3000 of every interface of the box. Tailscale or a port forward comes with the portal.
 
 ## Running it
 

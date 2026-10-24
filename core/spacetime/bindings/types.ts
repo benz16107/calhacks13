@@ -35,6 +35,7 @@ export const Task = __t.object("Task", {
   costCents: __t.u32(),
   budgetCents: __t.u32(),
   updatedAt: __t.string(),
+  step: __t.string(),
   note: __t.string(),
 });
 export type Task = __Infer<typeof Task>;

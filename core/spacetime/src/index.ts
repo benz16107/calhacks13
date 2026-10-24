@@ -12,6 +12,8 @@ const taskCols = {
   costCents: t.u32(),
   budgetCents: t.u32(),
   updatedAt: t.string(),
+  /** The latest step: what it is doing now. */
+  step: t.string(),
   /** The error if it failed, else its summary. */
   note: t.string(),
 };

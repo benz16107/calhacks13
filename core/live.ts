@@ -48,6 +48,7 @@ const taskRow = (t: Task) => ({
   costCents: Math.round(t.costCents),
   budgetCents: Math.round(t.budgetCents),
   updatedAt: t.updatedAt,
+  step: t.step ?? '',
   note: t.error ?? t.summary ?? '',
 });
 const approvalRow = (a: Approval) => ({ ...a, costCents: Math.round(a.costCents), by: a.by ?? '' });

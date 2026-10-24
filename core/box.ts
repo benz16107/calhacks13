@@ -7,7 +7,7 @@ import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
 import type { App, Approval, Box, Ctx, LogEvent, LogReader, ModelJob, NewEvent, Route, Task, TaskSpec, TaskState, Tool, Track } from './contract.ts';
-import { Live } from './live.ts';
+import { DB, Live } from './live.ts';
 import { Log, apply, canMove, doneLayers, fold, type State } from './log.ts';
 import { PLACEHOLDER_KEY, firewall, relayCert, reservePort, startProxy } from './net.ts';
 import * as sandbox from './sandbox.ts';
@@ -75,7 +75,7 @@ class Core {
     const full = this.log.append(e);
     apply(this.state, full);
     try {
-      if (full.type === 'task.created' || full.type === 'task.state' || full.type === 'cost' || full.type === 'tool.result') {
+      if (['task.created', 'task.state', 'task.step', 'cost', 'tool.result'].includes(full.type)) {
         const t = full.task && this.state.tasks.get(full.task);
         if (t) this.live.task(t);
       }
@@ -371,57 +371,93 @@ class Core {
 
   // ---------- the API: portal, demo, phone ----------
 
+  // ---------- the API: portal, phone, demo. Every route also answers under /api/. ----------
+
   api = () =>
     jsonServer(
       async (method, url, body) => {
-        const [, a, id, action] = url.pathname.split('/');
+        const [, a, id, action] = url.pathname.replace(/^\/api(?=\/)/, '').split('/');
         const route = `${method} /${a ?? ''}${id ? '/:id' : ''}${action ? '/' + action : ''}`;
+        const q = (name: string) => url.searchParams.get(name);
         switch (route) {
           case 'GET /tasks':
             return [...this.state.tasks.values()];
           case 'POST /tasks':
             return this.createTask(body);
           case 'GET /tasks/:id':
-            return { task: this.must(id), events: this.log.events.filter((e) => e.task === id) };
+            return {
+              task: this.must(id),
+              approvals: [...this.state.approvals.values()].filter((x) => x.task === id),
+              events: this.log.events.filter((e) => e.task === id),
+            };
           case 'GET /tasks/:id/diff':
             return sandbox.diff(this.must(id));
           case 'POST /tasks/:id/undo':
             return this.undo(id);
           case 'GET /approvals':
-            return [...this.state.approvals.values()];
+            return [...this.state.approvals.values()].filter((x) => !q('state') || x.state === q('state'));
           case 'POST /approvals/:id':
             return this.answer(id, body.approved === true, String(body.by ?? 'api'));
           case 'GET /log':
-            return this.log.events.slice(Number(url.searchParams.get('after') ?? 0));
+            return this.log.events.slice(Number(q('after') ?? 0)).filter((e) => !q('task') || e.task === q('task'));
           case 'GET /apps':
             return this.apps;
           case 'GET /health':
-            return { ok: true, tasks: this.state.tasks.size, tools: [...this.tools.keys()] };
+            return { ok: true, tasks: this.state.tasks.size, tools: [...this.tools.keys()], spacetime: { port: 3000, database: DB } };
         }
       },
-      (req, res) => {
-        const url = new URL(req.url ?? '/', 'http://box');
-        const entry = this.routes.get(`${req.method} ${url.pathname}`);
-        if (!entry) return false;
-        void (async () => {
-          try {
-            const chunks: Buffer[] = [];
-            for await (const c of req) chunks.push(c as Buffer);
-            const hasBody = req.method !== 'GET' && req.method !== 'HEAD';
-            const request = new Request(url, {
-              method: req.method,
-              headers: req.headers as Record<string, string>,
-              body: hasBody ? Buffer.concat(chunks) : undefined,
-            });
-            const r = await entry.route(request, this.boxFor(entry.track));
-            res.writeHead(r.status, Object.fromEntries(r.headers)).end(Buffer.from(await r.arrayBuffer()));
-          } catch (e) {
-            res.writeHead(500, { 'content-type': 'application/json' }).end(JSON.stringify({ error: (e as Error).message }));
-          }
-        })();
-        return true;
-      },
+      (req, res) => this.cors(req, res) || this.trackRoute(req, res) || this.portal(req, res),
     );
+
+  /** Browsers on other origins (a portal dev server) need BOX_ORIGINS, comma separated, or '*'. */
+  cors(req: http.IncomingMessage, res: http.ServerResponse) {
+    const origin = req.headers.origin;
+    const allowed = (process.env.BOX_ORIGINS ?? '').split(',').map((o) => o.trim());
+    if (!origin || !(allowed.includes(origin) || allowed.includes('*'))) return false;
+    res.setHeader('access-control-allow-origin', origin);
+    res.setHeader('access-control-allow-headers', 'content-type');
+    res.setHeader('access-control-allow-methods', 'GET, POST, OPTIONS');
+    if (req.method !== 'OPTIONS') return false;
+    res.writeHead(204).end();
+    return true;
+  }
+
+  trackRoute(req: http.IncomingMessage, res: http.ServerResponse) {
+    const url = new URL(req.url ?? '/', 'http://box');
+    const entry = this.routes.get(`${req.method} ${url.pathname}`);
+    if (!entry) return false;
+    void (async () => {
+      try {
+        const chunks: Buffer[] = [];
+        for await (const c of req) chunks.push(c as Buffer);
+        const hasBody = req.method !== 'GET' && req.method !== 'HEAD';
+        const request = new Request(url, {
+          method: req.method,
+          headers: req.headers as Record<string, string>,
+          body: hasBody ? Buffer.concat(chunks) : undefined,
+        });
+        const r = await entry.route(request, this.boxFor(entry.track));
+        res.writeHead(r.status, Object.fromEntries(r.headers)).end(Buffer.from(await r.arrayBuffer()));
+      } catch (e) {
+        res.writeHead(500, { 'content-type': 'application/json' }).end(JSON.stringify({ error: (e as Error).message }));
+      }
+    })();
+    return true;
+  }
+
+  /** The built portal, if there is one, on the same address as the API: files, and index.html for page loads. */
+  portal(req: http.IncomingMessage, res: http.ServerResponse) {
+    const root = path.resolve(process.env.BOX_PORTAL ?? new URL('../portal/dist/', import.meta.url).pathname);
+    const { pathname } = new URL(req.url ?? '/', 'http://box');
+    if (req.method !== 'GET' || pathname.startsWith('/api/') || pathname.startsWith('/t/') || !fs.existsSync(root)) return false;
+    const file = path.resolve(root, '.' + decodeURIComponent(pathname));
+    const isFile = file.startsWith(root + path.sep) && fs.existsSync(file) && fs.statSync(file).isFile();
+    if (!isFile && !(req.headers.accept ?? '').includes('text/html')) return false; // fetch('/tasks') still gets the API
+    const target = isFile ? file : path.join(root, 'index.html');
+    const types: Record<string, string> = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png', '.json': 'application/json', '.woff2': 'font/woff2', '.ico': 'image/x-icon' };
+    res.writeHead(200, { 'content-type': types[path.extname(target)] ?? 'application/octet-stream' }).end(fs.readFileSync(target));
+    return true;
+  }
 
   async boot() {
     sandbox.workspace('home');

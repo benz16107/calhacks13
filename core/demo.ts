@@ -272,12 +272,17 @@ await moment('moment 3: a pause for your OK', async () => {
   await settled([Q.id]);
   check((await task(P.id)).state === 'waiting', 'another task kept running and finished while P waited');
 
+  const inbox = await api<{ id: string }[]>('GET', '/api/approvals?state=pending');
+  check(inbox.some((a) => a.id === ask.id), "the portal's inbox lists it too (GET /api/approvals?state=pending)");
+
   await stdb('/call/answer', JSON.stringify([ask.id, true, 'phone'])); // what the phone's Approve button does
   await settled([P.id]);
   const { task: p, events } = await api<{ task: Task; events: LogEvent[] }>('GET', `/tasks/${P.id}`);
   const answered = events.find((e) => e.type === 'approval.answered');
   check(answered?.type === 'approval.answered' && answered.by === 'phone', 'the OK from the phone came back through SpacetimeDB into the log');
   check(p.costCents === 800 && view('shop', 'bought.txt') === 'yes', 'P carried on, spent $8.00 (test money) and finished');
+  const row = await waitFor('SpacetimeDB to show P done', async () => (await stdbRows(`SELECT * FROM task WHERE id = '${P.id}'`)).find((r) => r.state === 'done'));
+  check(row.cost_cents === 800 && row.step === 'write bought.txt yes', 'SpacetimeDB shows it done live, with its cost and last step');
 });
 await moment('moment 4: pull the plug', async () => {
   workspace('long', {});

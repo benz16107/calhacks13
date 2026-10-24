@@ -39,6 +39,8 @@ export interface Task extends Required<TaskSpec> {
   /** Finished tasks whose changes this task saw when it started, newest first. */
   layers: string[];
   costCents: number;
+  /** The latest step, for a one-line "doing now". */
+  step?: string;
   createdAt: string;
   updatedAt: string;
   error?: string;

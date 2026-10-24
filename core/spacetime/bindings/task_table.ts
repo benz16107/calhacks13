@@ -20,5 +20,6 @@ export default __t.row({
   costCents: __t.u32().name("cost_cents"),
   budgetCents: __t.u32().name("budget_cents"),
   updatedAt: __t.string().name("updated_at"),
+  step: __t.string(),
   note: __t.string(),
 });
