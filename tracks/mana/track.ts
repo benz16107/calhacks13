@@ -1,9 +1,11 @@
 // The Mana track: what the public Mana apps reach on this box, through its public HTTPS address.
 //   GET /t/mana/status  the read-only box status (task titles, states, cost, questions waiting for an OK)
 //   /t/mana/guest       guest requests the owner approves first (guest.ts)
+//   /t/mana/policy      GurtOS Business rules drafted in Mana, applied after an owner or admin says yes (policy.ts)
 // Public on purpose, so none of them returns prompts, tool calls, log lines or secrets.
 import type { Task, TaskState, Track } from '../../core/contract.ts';
 import { expiry, guestReader, guestRoutes } from './guest.ts';
+import { policyReader, policyRoutes } from './policy.ts';
 
 const STATES: TaskState[] = ['queued', 'running', 'waiting', 'done', 'failed', 'undone'];
 const brief = (t: Task) => ({ id: t.id, title: t.title, state: t.state, step: t.step?.slice(0, 160), costCents: t.costCents, source: t.source, updatedAt: t.updatedAt });
@@ -12,7 +14,7 @@ const newest = (ts: Task[]) => ts.sort((a, b) => b.updatedAt.localeCompare(a.upd
 export default {
   name: 'mana',
   // The public Mana apps call these through the box's public address; every other route still needs a paired phone.
-  openRoutes: ['GET /status', 'OPTIONS /guest', 'POST /guest', 'GET /guest'],
+  openRoutes: ['GET /status', 'OPTIONS /guest', 'POST /guest', 'GET /guest', 'OPTIONS /policy', 'POST /policy', 'GET /policy'],
   routes: {
     'GET /status': (_req, box) => {
       const tasks = box.tasks();
@@ -33,7 +35,8 @@ export default {
       );
     },
     ...guestRoutes,
+    ...policyRoutes,
   },
-  logReaders: [guestReader],
+  logReaders: [guestReader, policyReader],
   triggers: [expiry],
 } satisfies Track;

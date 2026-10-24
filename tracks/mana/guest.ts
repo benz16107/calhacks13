@@ -201,7 +201,9 @@ export const expiry: Trigger = {
   name: 'guest-expiry',
   start(box) {
     const sweep = () => {
-      for (const g of gates(box)) if (open(g) && Date.now() - Date.parse(g.createdAt) > EXPIRE_MS) box.undo(g.id).catch(() => {});
+      // guest requests and rule changes from Mana alike: unanswered after 30 minutes, nothing happens
+      const asks = box.tasks().filter((t) => t.source.startsWith('guest:') || t.source === 'mana:policy');
+      for (const g of asks) if (open(g) && Date.now() - Date.parse(g.createdAt) > EXPIRE_MS) box.undo(g.id).catch(() => {});
     };
     setInterval(sweep, 60_000).unref();
   },
