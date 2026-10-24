@@ -21,7 +21,7 @@ quota was used up; /find searched locally and the find thread is fixing the sync
 
 ## Summary
 
-Status at 23:55 PT Friday. **6 P0, 20 P1 (14 product, 6 docs), 17 P2.** Fixed and verified: P0-1, P0-3, P1-1 (core
+Status at 23:55 PT Friday. **6 P0, 21 P1 (15 product, 6 docs), 18 P2.** Fixed and verified: P0-1, P0-3, P1-1 (core
 c6f747e), P0-5 (portal 3ae539b), P0-2 and P0-6 (core 6879fb9). Open P0: P0-4 (portal rebuild pending). The image's
 firewall is on main (881318a); the rebuilt ISO is still to be installed on Vultr. Portal batch 1 is fixed in a rebuild not yet on
 main.
@@ -165,6 +165,10 @@ The Vultr box's agent is off (no Agentverse key in its vault), which is fine if 
 tools and workers, and workspaces like `../../etc` are refused correctly. Core was asked to validate both fields
 and check what each accepted value lets a task reach.
 
+**P1-15. A Personal task's copy of the owner's folder may be readable by other tasks (unverified).** Owner: core.
+Found by the docs thread: `tasks/<id>/base` is a+rwX under 0711 parents, so another task's user who knows the id could
+read it. Not reproduced by QA yet.
+
 ### P2
 
 **P2-1. The losing phone gets no word.** Owner: portal. Two phones answered one request (Approve and Deny at the
@@ -221,7 +225,16 @@ prompt are accepted and pushed to every screen. Invalid JSON returns the parser'
 (a deploy), the box screen said "Welcome back. The box went down after 06:44 and booted at 06:46" with "restored
 after a power cut" (shot 57). A clean stop could leave a marker so only a real outage gets the banner.
 
+**P2-17. The ASI:One agent calls the API from 127.0.0.1, so it has owner rights.** Owners: fetch, core. Safe only as
+long as brain.py never passes chat text into folders, hosts, tools, budgets, the vault or settings. From the docs
+thread. Also: CORS allows only content-type, so cross-origin clients must use `?access_token=` (core);
+image/README.md still says "most of the API takes no token" (image).
+
 ## Docs site (gurtos.com)
+
+**D-1 to D-4 and D-7 fixed in 199dce5 and live, spot-checked 00:00 PT:** real ISO names, `gurt-<id>`, the Personal ISO
+page, "the portal has no button for a new task yet", unkeep in the Keep guide, robots.txt 200. D-5 is Ben's call;
+D-6 waits for the tracks to rename.
 
 Checked 22:40 to 22:46 PT by a helper agent. Nothing private leaked: no keys, tokens, tailnet names, home paths or
 emails in the 82 pages or llms-full.txt. All 158 internal links, every anchor and all 53 OpenGraph images load. No em
