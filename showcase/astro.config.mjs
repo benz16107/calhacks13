@@ -12,4 +12,5 @@ export default defineConfig({
     shikiConfig: { theme: 'github-light' },
   },
   integrations: [mdx()],
+  redirects: { '/tracks/nessie': '/tracks/hyphenate/' },
 });

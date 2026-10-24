@@ -35,7 +35,7 @@ has not been signed off yet.
     (app.gurtos.com), remote access (`<name>.box.gurtos.com` with push to the phone), the app platform that
     integrations plug into, the public docs (gurtos.com), and the open-source code.
 
-14. **Finance tracks (CRS, Hyphenate, Microsoft, Capital One, Visa, Coinbase): the unexpected part is the OS.** We built
+14. **Finance tracks (CRS, Hyphenate, Microsoft, Visa, Coinbase): the unexpected part is the OS.** We built
     an entire operating system, a whole ecosystem, for agents to do this work safely, where on an ordinary OS the agent
     holds the keys, can approve its own work and can pull any report. Each of these pages cites real attacks on financial
     companies, only with a source (name, date, link, what was taken, as the source states it), then says what GurtOS's
@@ -69,7 +69,6 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 | Moss | GurtOS Personal | to review with Ben |
 | Apify | GurtOS Personal and GurtOS Server | decided |
 | CRS | GurtOS Business | decided |
-| Capital One | GurtOS Business, then GurtOS Personal | to review with Ben |
 | Solana | GurtOS Server, and GurtOS Business | decided |
 | Vultr | GurtOS Server | to review with Ben |
 | GoDaddy Registry | All three editions | to review with Ben |
@@ -520,30 +519,6 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 - A fraud case file on the phone
 - A fraudster who argues, measured
 
-## Capital One: Best use of the Nessie banking API
-
-**Status:** to review with Ben. **Page:** https://calhacks.gurtos.com/tracks/nessie/
-
-**Best shown in:** GurtOS Business, then GurtOS Personal
-
-**Pitch:** Agents today run as you, with your keys and no separation of duties, so no company lets one near the books. A collections clerk agent reconciles the ledger against the bank for a finance team, and only a controller releases a hold. On Personal the same pattern becomes a bill-paying agent for your own accounts that asks before it pays (not built). GurtOS Business is on main: people and roles, approvals routed by rules written in plain words, refusals for answering your own request or above your limit, a Waiting for me inbox, an audit with CSV export and a kill switch. Sign-in with work accounts and shadow mode are not built. The scored credit desk runs were on GurtOS Server; the Business screens are from a box seeded as the made-up Fogline Supply.
-
-**The problem:** Draft: an agent that reconciles a company's bank against its books needs bank access, and today that means handing it the key and trusting whatever it changes.
-
-**Features, by the sponsor's criteria** (no OS-vs-track table yet; to write when reviewed):
-
-- *Best use of the Nessie banking API.* (met): Nessie is the bank behind a finance agent's daily work, not a balance display. Both seats read it through credit-desk.bank, a tool that runs in the box's core with the Nessie key from a root-only vault. The agents never hold the key.
-- *Completeness.* (met): nessie-seed.ts loads the case: 1 Fogline customer and operating account, 12 trade customers and accounts, 38 bills, 14 payment deposits, and 6 applicants with 31 monthly deposits. It looks everything up before creating it, so running it again creates nothing, and it writes an id map back.
-- *Creativity.* (met): The bank is the second source that disagrees with the books, which is where real collections work happens: a payment memo that names a different invoice, a check that never cleared, an applicant whose deposits are a tenth of the revenue they claim.
-- *Complexity.* (met): The ledger maps onto customers, accounts, bills and deposits with each deposit carrying payer, reference, memo and exact amount. Live behavior that differs from the spec, found while loading, is handled and written down: deposits drop cents, a bill without recurring_date breaks every bill list on its account, and balances do not move on deposits.
-
-**Demo moment and proof:** Nessie shows Golden Gate Bagel's $1,940 deposit with the memo INV-24098, while the ledger applied that payment to another customer's invoice, and it shows no deposit at all for a check dated after the case date that the ledger marked paid. The clerk caught both in the live run, and the merge gate checks them in Nessie on every merge.
-
-**Still to do:**
-
-- Review the story with Ben: problem, features with their why, OS vs track
-- Writing back to the bank (not built)
-
 ## Solana: MLH: Best use of Solana
 
 **Status:** decided. **Page:** https://calhacks.gurtos.com/tracks/solana/
@@ -668,6 +643,12 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 **Still to do:**
 
 - Review the story with Ben: problem, features with their why, OS vs track
+
+## Not entered
+
+**Capital One (Nessie).** Ben decided on Oct 24 not to enter it. Its showcase page and Devpost section are removed and
+`/tracks/nessie/` redirects to the Hyphenate page. Nessie stays in the product as the credit desk's test bank, so the
+credit desk, Hyphenate and Microsoft pages still name it. No new Nessie features.
 
 ## How this file is made
 
