@@ -32,9 +32,9 @@ Checked against main `8a4cbf4`, Sat Oct 24 05:30 PT. `./demo` from a clean workt
 |---|---|
 | verified (ISO) | 3 |
 | verified | 53 |
-| merged | 57 |
-| building | 42 |
-| planned | 23 |
+| merged | 60 |
+| building | 41 |
+| planned | 21 |
 | not pursued | 3 |
 | **Total** | **181** |
 
@@ -184,10 +184,10 @@ controller's clear-the-flag path (FRR-5), an ASI:One chat intent for credit.
 |---|---|---|---|---|---|
 | The box as an ASI:One agent: pairing, tasks, approvals, results, undo in chat | fetch | merged (page verified Oct 24 00:45; chat not paired, needs Ben) | 2b013a3, 5dfd3f7 | tracks/fetch/demo.ts | Fetch.ai |
 | Chat limited to its own tasks, fixed tools and budget | fetch | merged | 5dfd3f7 | fetch demo offline check | Fetch.ai, Armadin |
-| An agent team on Agentverse | fetch | planned (subagent researching) | | | Fetch.ai |
-| Safe calls to strangers' agents, a blocked hidden instruction | fetch | planned | | | Fetch.ai |
-| Payment Protocol | fetch | building (worktree pay.py, testnet FET subagent) | | | Fetch.ai |
-| Rich cards | fetch | merged (Interactive Cards for approve and undo) | 2b013a3 | fetch demo | Fetch.ai |
+| An agent team on Agentverse | fetch | merged (on main; QA has not walked it) | d7f9fc1 |  | Fetch.ai |
+| Safe calls to strangers' agents, a blocked hidden instruction | fetch | merged (on main; QA has not walked it; the stranger's reply is treated as untrusted) | d7f9fc1 |  | Fetch.ai |
+| Payment Protocol | fetch | merged (on main; QA has not walked it) | d7f9fc1 |  | Fetch.ai |
+| Rich cards | fetch | merged (Interactive Cards for approve and undo; richer cards in d7f9fc1) | 2b013a3, d7f9fc1 | fetch demo | Fetch.ai |
 | Reliability shown in chat | fetch | planned | | | Fetch.ai |
 | Picking a machine from chat | fetch | planned | | | Fetch.ai |
 | Guest requests (one guest path shared with Mana) | fetch, mana | planned (showcase says "not built") | | | Fetch.ai, Mana |
