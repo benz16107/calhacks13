@@ -14,7 +14,16 @@ Devpost text, and Ben's approved list.
 **Demo step** names the check in `./demo` (`core/demo.ts` moments, or `tracks/<name>/demo.ts`). "none" means no
 automated check yet.
 
-Checked against main `babd897`, Sat Oct 24 02:55 PT. `./demo` on that commit: 25 passed, 0 failed, 1 pending (real Droid, off by default).
+Checked against main `7867c1f`, Sat Oct 24 03:00 PT. `./demo` on that commit: 25 passed, 0 failed, 1 pending (real Droid, off by default).
+
+## Freeze plan
+
+- **Sat Oct 24, 9:00 PM PT:** no new features merge after this, only fixes. Anything still "building" then is cut
+  from the release and from the Devpost and showcase text, not half-merged.
+- **Overnight:** QA installs the final ISOs fresh and walks every row of this ledger.
+- **Sun 6:00 AM PT:** the final release. **Sun 9:00 AM PT:** Devpost closes.
+- **GurtOS Business:** on the `business` branch (9886d27), not merged at 02:55 Sat. If it isn't merged and verified by
+  the freeze, QA flags it for a clean cut: no Business rows on the showcase or Devpost, and no Business code on main.
 
 ## Summary
 
@@ -24,8 +33,8 @@ Checked against main `babd897`, Sat Oct 24 02:55 PT. `./demo` on that commit: 25
 | verified | 27 |
 | merged | 28 |
 | building | 23 |
-| planned | 28 |
-| **Total** | **109** |
+| planned | 33 |
+| **Total** | **114** |
 
 **Collisions** (detail below): none open at 02:40. The three found at 02:25 were resolved on the `business` branch
 (rebased, kill switch on core's `settings.paused`). Still watched: portal/dist rebuilt from merged sources (C-4).
@@ -201,7 +210,19 @@ Owner: the Mana thread.
 | Elastic: log in Serverless, GurtOS log agent | elastic | verified Oct 24 00:48 (index and agent via API) | 70f3673, ca03219 | tracks/elastic/demo.ts | Elastic |
 | /find: search page, photos described on request, Moss local index | find | verified Oct 24 00:33 (search on a phone) | a0d6dbd, 4351905 | tracks/find/demo.ts | Moss |
 | Apify: run any Actor, Best Buy price check, places | apify | verified Oct 23 23:40 (live Best Buy price) | 97694e0 | tracks/apify/demo.ts | Apify |
-| Figma: design, prototype, deck, stage log | figma | merged (stage log totals checked Oct 24 01:20) | many | none | Figma |
+
+## Figma
+
+Owner: the Figma thread. `docs/figma-products.md` is not on main yet; its items get added when it lands.
+
+| Feature | Owner | Status | Commit | Demo step | Tracks |
+|---|---|---|---|---|---|
+| Design system and screens, Make prototype, Slides deck, stage log | figma | merged (stage log totals checked Oct 24 01:20) | many | none | Figma |
+| Code Connect (Figma components mapped to portal code) | figma, portal | planned | | | Figma |
+| Token sync with a drift check | figma, portal | planned | | | Figma |
+| A Community playbook | figma | planned | | | Figma |
+| App-vs-Figma comparisons (the built screen next to its frame) | figma, portal | planned | | | Figma |
+| A Figma Sites landing page | figma | planned (named on the showcase's Figma page) | | | Figma, GoDaddy |
 
 ## Collisions
 
