@@ -18,8 +18,8 @@ import path from 'node:path';
 import tls from 'node:tls';
 import type { Task } from './contract.ts';
 
-export const PROXY_PORT = Number(process.env.BOX_PROXY_PORT ?? 8888);
-const PROXY_PORTS = '8800-8899'; // the installed box uses 8888; demo runs pick from 8800-8887
+// The installed box uses 8888. BOX_PROXY_PORT=auto (the demo) takes a free one in 8800-8887.
+const PROXY_PORTS = '8800-8899';
 export const TASK_UIDS = '30000-39999'; // the range sandbox.ts gives task users
 export const PLACEHOLDER_KEY = 'fk-placeholder-the-box-adds-the-key';
 const FACTORY = /^([a-z0-9-]+\.)*factory\.ai$/;
@@ -79,7 +79,9 @@ export function allowed(hosts: string[], host: string, port: string) {
 }
 
 /** Box ports a task must never reach, even through a name it may use: the API, SpacetimeDB, the proxies. */
-const boxPort = (port: number) => port === Number(process.env.BOX_PORT ?? 7700) || port === 3000 || (port >= 8800 && port <= 8899);
+const reserved = new Set([3000]);
+export const reservePort = (port: number) => reserved.add(port);
+const boxPort = (port: number) => reserved.has(port) || (port >= 8800 && port <= 8899);
 
 /** An address on the box itself: loopback, link-local, or one of its own interfaces. */
 function onTheBox(ip: string) {
@@ -106,7 +108,8 @@ export interface ProxyHooks {
   factoryKey(): string | undefined;
 }
 
-export function startProxy(hooks: ProxyHooks, cert: { key: Buffer; cert: Buffer }) {
+/** Start the proxy. Resolves to its port. */
+export async function startProxy(hooks: ProxyHooks, cert: { key: Buffer; cert: Buffer }): Promise<number> {
   const who = (sock: net.Socket) => {
     const uid = uidOf(sock);
     return uid === undefined ? undefined : hooks.taskOf(uid);
@@ -200,6 +203,15 @@ export function startProxy(hooks: ProxyHooks, cert: { key: Buffer; cert: Buffer 
   });
   server.on('clientError', (_e, sock) => sock.destroy());
 
-  server.listen(PROXY_PORT, '127.0.0.1');
-  return server;
+  const want = process.env.BOX_PROXY_PORT ?? '8888';
+  const ports = want === 'auto' ? Array.from({ length: 88 }, (_, i) => 8800 + i).sort(() => Math.random() - 0.5) : [Number(want)];
+  for (const port of ports) {
+    const err = await new Promise<NodeJS.ErrnoException | undefined>((resolve) => {
+      server.once('error', resolve);
+      server.listen(port, '127.0.0.1', () => resolve(undefined));
+    });
+    if (!err) return port;
+    if (err.code !== 'EADDRINUSE' || want !== 'auto') throw err;
+  }
+  throw new Error('no free proxy port in 8800-8887');
 }

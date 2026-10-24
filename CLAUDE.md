@@ -46,7 +46,11 @@ The core thread owns this section. Don't add other top-level folders; ask the co
 - `spikes/` throwaway tests (spike thread). `docs/` tracks and the Figma stage log. `image/` the bootable
   image, last.
 - `demo` the merge gate. `./demo` ships your checkout to a test VM and runs the four moments, then every
-  `tracks/*/demo.ts`. Exit 0 means you may merge.
+  `tracks/*/demo.ts`. Exit 0 means you may merge. **Runs from different checkouts are isolated and go side by
+  side on one VM**: each has its own `BOX_HOME` (`/var/lib/box-demo/<run>`), task users, ports and SpacetimeDB
+  database, and cleans up after itself. A second run from the same checkout (same folder name) waits for the
+  first. Machine setup and the SpacetimeDB CLI take a short lock. Don't touch `/var/lib/box` on a VM: that is
+  the installed box.
 
 On the box: `BOX_HOME=/var/lib/box` holds `log.jsonl`, `workspaces/`, `views/` and `tasks/<id>/`. The vault
 is `/etc/box/vault.env` (root, 0600). The API is `127.0.0.1:7700`. Task users are `box-<id>`, uids 30000 to

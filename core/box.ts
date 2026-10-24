@@ -9,7 +9,7 @@ import path from 'node:path';
 import type { App, Approval, Box, Ctx, LogEvent, LogReader, ModelJob, NewEvent, Route, Task, TaskSpec, TaskState, Tool, Track } from './contract.ts';
 import { Live } from './live.ts';
 import { Log, apply, canMove, doneLayers, fold, type State } from './log.ts';
-import { PLACEHOLDER_KEY, PROXY_PORT, firewall, relayCert, startProxy } from './net.ts';
+import { PLACEHOLDER_KEY, firewall, relayCert, reservePort, startProxy } from './net.ts';
 import * as sandbox from './sandbox.ts';
 import { HOME, dirs } from './sandbox.ts';
 import { loadVault } from './vault.ts';
@@ -64,6 +64,7 @@ class Core {
   waiters = new Map<string, ((approved: boolean) => void)[]>();
   uidTask = new Map<number, string>();
   relay = relayCert(HOME);
+  proxyPort = 0;
   live = new Live({
     tasks: () => [...this.state.tasks.values()],
     approvals: () => [...this.state.approvals.values()],
@@ -127,7 +128,7 @@ class Core {
       sandbox.kill(t); // a worker left over from a core that died without the box rebooting
       if (t.state === 'queued') this.move(t, 'running', { layers: doneLayers(this.log.events, this.state, t.workspace) });
       // Everything goes through the box's proxy. Its own address stays direct, for Droid's Factory calls.
-      const proxy = `http://127.0.0.1:${PROXY_PORT}`;
+      const proxy = `http://127.0.0.1:${this.proxyPort}`;
       const env: Record<string, string> = {
         HTTP_PROXY: proxy,
         HTTPS_PROXY: proxy,
@@ -429,7 +430,7 @@ class Core {
     } catch (e) {
       console.error(`WARNING: the firewall rule did not load, so tasks are not network-limited: ${(e as Error).message}`);
     }
-    startProxy({
+    this.proxyPort = await startProxy({
       taskOf: (uid) => {
         const t = this.state.tasks.get(this.uidTask.get(uid) ?? '');
         return t?.state === 'running' || t?.state === 'waiting' ? t : undefined;
@@ -449,8 +450,15 @@ class Core {
     }
     for (const pump of this.readers) pump();
     await listenSocket(this.api(), path.join(HOME, 'api.sock'));
-    const port = Number(process.env.BOX_PORT ?? 7700);
-    if (port) this.api().listen(port, process.env.BOX_LISTEN ?? '127.0.0.1');
+    // BOX_PORT=auto (the demo) takes any free port and writes it to BOX_HOME/api.port.
+    const want = process.env.BOX_PORT ?? '7700';
+    if (want !== '0') {
+      const server = this.api();
+      await new Promise<void>((resolve) => server.listen(want === 'auto' ? 0 : Number(want), process.env.BOX_LISTEN ?? '127.0.0.1', resolve));
+      const port = (server.address() as { port: number }).port;
+      reservePort(port);
+      fs.writeFileSync(path.join(HOME, 'api.port'), String(port));
+    }
     for (const track of tracks) {
       for (const trig of track.triggers ?? []) {
         Promise.resolve()

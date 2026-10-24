@@ -11,7 +11,8 @@ import { DbConnection } from './spacetime/bindings/index.ts';
 const URI = process.env.BOX_STDB_URL ?? 'ws://127.0.0.1:3000';
 export const DB = process.env.BOX_STDB_DB ?? 'box';
 const cliConfig = path.join(os.homedir(), '.config', 'spacetime', 'cli.toml');
-const run = (...args: string[]) => execFileSync('spacetime', args, { stdio: 'pipe', encoding: 'utf8' });
+// One spacetime CLI at a time per machine: boxes side by side share its login.
+const run = (...args: string[]) => execFileSync('flock', ['/run/lock/box-spacetime-cli.lock', 'spacetime', ...args], { stdio: 'pipe', encoding: 'utf8' });
 
 /** Publish the module as the box. Whoever publishes owns the database, so only the box can write to it. */
 function publish(): string {

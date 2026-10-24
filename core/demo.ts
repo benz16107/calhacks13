@@ -37,7 +37,7 @@ async function stdbRows(sql: string): Promise<Record<string, any>[]> {
 }
 
 let box: ReturnType<typeof spawn> | undefined;
-const PORT = 17000 + Math.floor(Math.random() * 1000);
+let PORT = 0; // the box's API port, which the box picks and writes to BOX_HOME/api.port
 const mountsUnder = (dir: string) =>
   fs.readFileSync('/proc/self/mountinfo', 'utf8').split('\n').map((l) => l.split(' ')[4]).filter((m) => m?.startsWith(dir + '/'));
 
@@ -47,10 +47,13 @@ async function startBox() {
   box = spawn(process.execPath, [...process.execArgv, new URL('./box.ts', import.meta.url).pathname], {
     detached: true,
     stdio: ['ignore', out, out],
-    env: { ...process.env, BOX_HOME: HOME, BOX_PORT: String(PORT), BOX_VAULT: path.join(HOME, 'vault.env'), BOX_STDB_DB: DB, BOX_PROXY_PORT: String(8800 + Math.floor(Math.random() * 88)) },
+    env: { ...process.env, BOX_HOME: HOME, BOX_PORT: 'auto', BOX_VAULT: path.join(HOME, 'vault.env'), BOX_STDB_DB: DB, BOX_PROXY_PORT: 'auto' },
   });
   for (let i = 0; i < 100; i++) {
-    if (await api('GET', '/health').catch(() => undefined)) return;
+    if (await api('GET', '/health').catch(() => undefined)) {
+      PORT = Number(fs.readFileSync(path.join(HOME, 'api.port'), 'utf8'));
+      return;
+    }
     await sleep(100);
   }
   throw new Error(`the box did not start; see ${HOME}/box.log`);
@@ -331,7 +334,10 @@ if (box?.pid) process.kill(-box.pid, 'SIGKILL');
 for (const u of users) spawnSync('pkill', ['-KILL', '-u', u]);
 await sleep(200);
 for (const m of mountsUnder(HOME)) execFileSync('umount', ['-l', m]);
-for (const u of users) spawnSync('userdel', [u]); // most are gone already
+for (const u of users) {
+  // Most are gone already. userdel can collide with another run on /etc/passwd's lock, so try a few times.
+  for (let i = 0; i < 10 && spawnSync('id', [u]).status === 0; i++) spawnSync('userdel', [u]).status === 0 || (await sleep(200));
+}
 spawnSync('spacetime', ['delete', '--server', 'local', '-y', DB]);
 if (failed) console.log(`\nkept ${HOME} for a look (box.log, log.jsonl, tasks/*/worker.log)`);
 else fs.rmSync(HOME, { recursive: true, force: true });

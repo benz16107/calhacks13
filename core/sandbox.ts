@@ -33,6 +33,18 @@ const tryRun = (cmd: string, ...args: string[]) => {
   }
 };
 
+/** useradd and userdel lock /etc/passwd, and boxes running side by side can collide on it. Try again. */
+function runLocked(cmd: string, ...args: string[]) {
+  for (let i = 0; ; i++) {
+    try {
+      return run(cmd, ...args);
+    } catch (e) {
+      if (i >= 20) throw e;
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 100 + Math.random() * 200);
+    }
+  }
+}
+
 export function init() {
   for (const d of ['workspaces', 'views', 'tasks']) fs.mkdirSync(path.join(HOME, d), { recursive: true, mode: 0o700 });
   // Task users may pass through HOME and tasks/ to reach their own folder, and read nothing else.
@@ -68,7 +80,7 @@ export function prepare(task: Task): { uid: number; gid: number } {
   const t = dirs.task(task.id);
   if (!tryRun('id', '-u', task.user)) {
     // Task users live in uids 30000-39999 so one firewall rule can cover all of them.
-    run('useradd', '--system', '-K', 'SYS_UID_MIN=30000', '-K', 'SYS_UID_MAX=39999', '--user-group',
+    runLocked('useradd', '--system', '-K', 'SYS_UID_MIN=30000', '-K', 'SYS_UID_MAX=39999', '--user-group',
       '--no-create-home', '--home-dir', path.join(t, 'home'), '--shell', '/usr/sbin/nologin', task.user);
   }
   const uid = Number(run('id', '-u', task.user));
@@ -175,7 +187,9 @@ export function seal(task: Task) {
   tryRun('chmod', '-R', 'a+rwX', dirs.upper(task.id));
   tryRun('chown', 'root:root', dirs.upper(task.id));
   tryRun('chmod', '0700', dirs.upper(task.id));
-  tryRun('userdel', task.user);
+  try {
+    runLocked('userdel', task.user);
+  } catch {} // already gone
 }
 
 /** Rebuild a workspace's read-only view from its done layers, newest first. */
