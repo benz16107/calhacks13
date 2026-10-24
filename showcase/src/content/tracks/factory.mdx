@@ -10,7 +10,7 @@ proof: 'In every merge-gate run, a Droid task (Claude) edits a file as its own L
 criteriaSource: "From Factory's track description and its Friday workshop notes, as copied into the project's track plan."
 criteria:
   - ask: 'Droid SDK (TypeScript or Python) does real work.'
-    how: 'Droid, through <code>@factory/droid-sdk</code> 0.10.0, is the default worker for every task. It fixes code and runs the tests (from an ASI:One chat), works a credit desk with live CRS and bank data (two seats, every planted error of the original 14-error case caught in the best run; the key has since grown and a new run is being scored), reads receipts and proposes a reorder, describes photos for search, and edits a folder on GurtOS Personal.'
+    how: 'Droid, through <code>@factory/droid-sdk</code> 0.10.0, is the default worker for every task. It fixes code and runs the tests (from an ASI:One chat), works a credit desk with live CRS and bank data (three seats, 16 of 17 planted errors caught with 1 false alarm in the full live run), reads receipts and proposes a reorder, describes photos for search, and edits a folder on GurtOS Personal.'
   - ask: 'The README says where and how.'
     how: 'The worker is <code>core/workers/droid.ts</code>, about 70 lines: <code>createSession</code> or <code>resumeSession</code>, a box MCP server for tools, and handlers that turn Droid''s questions into box approvals. <code>core/README.md</code> covers tasks, the broker and the key swap, and this page lays out the whole path.'
   - ask: 'Triggers you designed.'
@@ -107,7 +107,7 @@ Live Droid runs from the tracks, each with its log saved:
 
 | Where | What Droid did | Result |
 |---|---|---|
-| Credit desk, two seats | Worked a planted case against live CRS and Nessie data | Best run, on the original 14-error case: every planted error caught, 0 false alarms, 6 of 6 credit decisions, 13 minutes, about $4.67 of model use |
+| Credit desk, two seats | Worked a planted case against live CRS and Nessie data | Full live run, three seats: 16 of 17 planted errors, 1 false alarm, 6 of 6 credit decisions, 12 minutes, about $5.24 of model use |
 | ASI:One chat | "Fix the failing test in my project" | Ran `node --test`, fixed the bug, sent the diff back to the chat; $0.05 |
 | Agent wallet | "Buy one joke and one report, then write both into answers.md" | Paid $0.01, waited for the OK on the $0.03 report, paid, wrote the file; 6 cents in all (devnet test money plus 2 cents of model) |
 | Jira | Asked to spend $3.00 on a $1.00 budget | Paused, approved from Jira, paid (test money), wrote the receipt |

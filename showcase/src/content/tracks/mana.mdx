@@ -2,10 +2,10 @@
 order: 20
 sponsor: Mana
 prize: Building with Mana
-editions: 'GurtOS Personal'
-pitch: 'Mana is a personal workspace for planning and small apps; GurtOS Personal is the computer where your agents do the work. Here a Mana chat rewrote the credit desk''s rules, and a Mana app shows a box''s live status.'
+editions: 'GurtOS Personal and GurtOS Business'
+pitch: 'AI workspaces are great for thinking, but there is no safe place for an AI to act on your real computer. Mana plans it, GurtOS does it safely in an isolated space, and you approve from your phone. Four public Mana chats shaped the credit desk rules, Business approval rules, Visa mandates and the Fetch agent team, each with what it changed in code.'
 title: The Mana chat that rewrote the credit desk's rules
-summary: 'Mana was used three ways. A public planning chat with Mana''s agent reviewed the credit desk''s draft rules and changed what the agents now follow. A public project page describes the build. And a GurtOS status app, built and hosted inside Mana, shows a live GurtOS box: tasks running, approvals waiting, and what they cost.'
+summary: 'AI workspaces are great for thinking, but there is no safe place for an AI to act on your real computer. Mana plans it, GurtOS does it safely in an isolated space, and you approve from your phone. Mana was used five ways. A public planning chat reviewed the credit desk''s draft rules and changed what the agents follow. Three more planning chats shaped Business approval rules, Visa mandates and the Fetch agent team, each with what it changed in code. Ask GurtOS, an app inside Mana, lets anyone ask a GurtOS box for a lookup or a price check that the owner approves on the phone. A GurtOS guide agent inside Mana answers from gurtos.com with links. And a public home page ties it together. The chats were written by us in Ben''s voice; Mana''s replies are its own.'
 proof: 'Mana''s review found that two customer records for one business (C-1007 and C-1011) each carried a $10,000 limit: <strong>$20,000 of credit in two pieces, each inside the analyst''s authority</strong>. Rules REL-1 and SOD-5 now treat them as one business, and the next live Droid runs cited both. 35 of Mana''s 69 proposed rules are in the file the agents work from.'
 criteriaSource: "From Mana's track description, as copied into the project's track plan (docs/tracks.md). Mana published no detailed criteria."
 video: main
@@ -44,15 +44,30 @@ shots:
     caption: 'The same app at phone size.'
     tall: true
 links:
-  - label: The planning chat (the moment Mana changed what we built)
+  - label: The home page for the entry (start here)
+    href: https://www.mana.space/home/x5CqxyjcOgVCAyrvUBqK2LNRcMJ2/gurtos-built-with-mana
+    note: 'Public, no sign-in. Everything below in one place.'
+  - label: Ask GurtOS, the app inside Mana
+    href: https://www.mana.space/home/x5CqxyjcOgVCAyrvUBqK2LNRcMJ2/apps/box-status
+    note: 'Public, no sign-in. Anyone asks the Vultr box for a lookup or a price check, the owner approves on the phone, and the answer shows in Mana. One guest path shared with Fetch''s ASI:One agent.'
+  - label: GurtOS guide, the agent inside Mana
+    href: https://www.mana.space/home/x5CqxyjcOgVCAyrvUBqK2LNRcMJ2/apps/gurtos-guide
+    note: 'Public, no sign-in. Answers from gurtos.com with links.'
+  - label: 'Planning chat 1: the credit desk rules'
     href: https://www.mana.space/shared-chats/x5CqxyjcOgVCAyrvUBqK2LNRcMJ2/001792810018092cc50381027f1410c8fcb
-    note: 'Public, no sign-in. A snapshot of the three turns.'
+    note: 'Public, no sign-in. The moment Mana changed what we built.'
+  - label: 'Planning chat 2: Business approval rules'
+    href: https://www.mana.space/shared-chats/x5CqxyjcOgVCAyrvUBqK2LNRcMJ2/0017928365556691b0fcbf607c944e98acb
+    note: 'Public, no sign-in. The rules were synced into the box after the owner''s OK, and Business took two engine fixes (commit aa91999).'
+  - label: 'Planning chat 3: Visa shopping mandates'
+    href: https://www.mana.space/shared-chats/x5CqxyjcOgVCAyrvUBqK2LNRcMJ2/0017928345352081015a15392384766a029
+    note: 'Public, no sign-in. It found 6 working exploits, and 10 of 12 fixes shipped.'
+  - label: 'Planning chat 4: the Fetch agent team'
+    href: https://www.mana.space/shared-chats/x5CqxyjcOgVCAyrvUBqK2LNRcMJ2/00179283461982929f73ae5c99e41fe8cde
+    note: 'Public, no sign-in. It found 2 critical holes, and all 9 fixes were taken.'
   - label: The project page
     href: https://www.mana.space/home/x5CqxyjcOgVCAyrvUBqK2LNRcMJ2/documents/cal-hacks-13-a-computer-where-ai-agents-work-safely
     note: 'Public, no sign-in.'
-  - label: The GurtOS status app, inside Mana
-    href: https://www.mana.space/home/x5CqxyjcOgVCAyrvUBqK2LNRcMJ2/apps/box-status
-    note: 'Public, no sign-in. Live from the always-on GurtOS box on Vultr, refreshing every 5 seconds.'
   - label: The rules file, version 0.2
     href: https://github.com/benz16107/calhacks13/blob/main/tracks/credit-desk/rules/credit-rules.yaml
     note: 'Its header names the chat and carries the changelog Mana wrote.'
@@ -126,8 +141,7 @@ mentioned inside a rule exists. None of the 35 changes a decision in the answer 
 
 Under the 0.2 rules, live Droid runs cite the new rules: FRR-1 and FRR-2 on the fraud referral, REL-1 and SOD-5 on
 the duplicate customer, COL-10 on the misapplied payment, COL-8 on the post-dated check, ORD-2 on order releases,
-LIM-4 and TRM-1 on every credit decision. The latest of them, run `73c47b`, caught every planted error of the original 14-error case with 0
-false alarms.
+LIM-4 and TRM-1 on every credit decision. The latest of them, the full live run on Oct 24, caught 16 of 17 planted errors with 1 false alarm.
 
 ### The status route, on every merge
 

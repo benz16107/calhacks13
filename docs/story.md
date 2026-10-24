@@ -73,7 +73,7 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 | Vultr | GurtOS Server | to review with Ben |
 | GoDaddy Registry | All three editions | to review with Ben |
 | Figma | All three editions | to review with Ben |
-| Mana | GurtOS Personal | to review with Ben |
+| Mana | GurtOS Personal and GurtOS Business | to review with Ben |
 
 ## Anthropic: Claude used well for a specific group of people
 
@@ -179,7 +179,7 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 | A public benchmark slice: the 10 public DABstep dev questions run through GurtOS tasks, 7 of 10 correct, one attempt each with no network, about $3.22 of model use | Proof beyond our own planted case | The desk (`bench/`) on GurtOS tasks | Shipped. A slice, not a leaderboard entry |
 | Credit rules, the planted case, the scorer, the Credit desk window | The desk | Shipped |
 
-**Demo moment and proof:** Live Droid run 73c47b, scored from the action log against the answer key: every planted error of the original 14-error case caught, 0 false alarms, 6 of 6 credit decisions right (the answer key has since grown to 19 planted errors; tonight's live run on it is being scored) (outcome, band, limit and terms). It held APP-1043, a synthetic identity that a simple rule approves for $20,000.
+**Demo moment and proof:** The full live run with real Droid on all three seats, scored from the action log against the answer key: 16 of 17 planted errors caught, 1 false alarm (precision 97%), all 6 credit decisions right (outcome, band, limit and terms), in 12 minutes for about $5.24. It held APP-1043, a synthetic identity that a simple rule approves for $20,000. The January review caught 2 of 2.
 
 **Still to do:**
 
@@ -197,7 +197,7 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 
 **Features, by the sponsor's criteria** (no OS-vs-track table yet; to write when reviewed):
 
-- *Droid SDK (TypeScript or Python) does real work.* (met): Droid, through @factory/droid-sdk 0.10.0, is the default worker for every task. It fixes code and runs the tests (from an ASI:One chat), works a credit desk with live CRS and bank data (two seats, every planted error of the original 14-error case caught in the best run; the key has since grown and a new run is being scored), reads receipts and proposes a reorder, describes photos for search, and edits a folder on GurtOS Personal.
+- *Droid SDK (TypeScript or Python) does real work.* (met): Droid, through @factory/droid-sdk 0.10.0, is the default worker for every task. It fixes code and runs the tests (from an ASI:One chat), works a credit desk with live CRS and bank data (three seats, 16 of 17 planted errors caught with 1 false alarm in the full live run), reads receipts and proposes a reorder, describes photos for search, and edits a folder on GurtOS Personal.
 - *The README says where and how.* (met): The worker is core/workers/droid.ts, about 70 lines: createSession or resumeSession, a box MCP server for tools, and handlers that turn Droid's questions into box approvals. core/README.md covers tasks, the broker and the key swap, and this page lays out the whole path.
 - *Triggers you designed.* (met): Droid tasks start from an ASI:One chat, the box's API (the portal and the Personal desktop use it), the credit desk's run route (two seats at once), "Ask an Agent" on a folder in Files, the shopper's "watch this for me" and reorder, and the box itself when no vision model answers for a new photo. core/triggers.ts adds generic schedule, webhook and new-file triggers. A Droid task's tool call can start another task (the reorder proposal starts a purchase task that waits for your OK).
 - *Careful limits on what Droid can touch.* (met): Each Droid runs as its own Linux user with no sudo, in an overlay copy of its workspace, as a hardened systemd unit (private /tmp, read-only system, no D-Bus, 2 GB of memory). An nftables rule sends its traffic only to the box's proxy, which allows only the task's hosts. It sees only the box tools its task lists, through an MCP relay that holds no secrets. Spending above its budget waits for a person.
@@ -271,17 +271,17 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 | One kill switch pauses every agent at once from any admin's phone or the box; requests waiting for an OK stay open | The first thing a company asks about is how to stop it | Path to production | GurtOS Business (shared with Personal's pause) | Shipped. The gate checks six tasks stopped where they were, every screen says who pulled it, and both pulls are in the log |
 | Shadow mode and a one-week pilot plan: the desk runs beside the people, changes nothing, and is compared with what they did | A company starts with a pilot it can switch off | Path to production | GurtOS Business (shadow mode) and the desk (the plan) | Being built; not on main yet |
 | Sign-in with a work account (OpenID Connect, Microsoft Entra ID), with each person's role taken from their Entra groups | Joining, leaving and changing team happen in Entra, in one place, not by pairing each phone with a code | Path to production | GurtOS Business | Shipped. The merge gate runs the whole flow against a small provider of its own, with PKCE, signature, issuer, audience, expiry and nonce checks, and refuses someone in no mapped group. It has not been tried against a live Entra tenant |
-| Measured impact: human minutes saved, dollars stopped and cost per application | A controller can say what the desk is worth | Measurable usefulness | The desk | Being built; not on main yet |
-| A mapping to Microsoft's Responsible AI Standard, a protected-attribute test and a plain decline letter | An applicant gets an honest reason and the desk can show it does not use what it must not | Responsible design | The desk | Being built; not on main yet |
+| Measured impact: a person's minutes per application, bad credit stopped, supplier payments stopped and model cost per application, against doing it by hand and against the simple rule | A controller can say what the desk is worth | Measurable usefulness | The desk | Being built; not on main yet. We state no minutes-by-hand figure, because no source times hands-on minutes; the 3 minutes a person needs to answer one request is our assumption |
+| A mapping to Microsoft's Responsible AI Standard, a protected-attribute test and a plain decline letter | An applicant gets an honest reason and the desk can show it does not use what it must not | Responsible design | The desk | Being built; not on main yet. The letters are not a claim of legal compliance: a lawyer should check the fraud-hold wording |
 | Sourced customer facts: each fact in a decision carries where it came from | A decision can be checked, not just trusted | Customer understanding | The desk | Being built; not on main yet |
 | A measured incident drill: pull the kill switch, undo a seat, resume, and time each | The answer to "what if it goes wrong" is a number | Path to production | GurtOS Business (kill switch, undo, resume) | Being built; not on main yet |
 
-**Demo moment and proof:** Scored from the action log against an answer key, the latest live run caught every planted error of the original 14-error case with 0 false alarms (the answer key has since grown to 19; tonight's live run on it is being scored) and decided all 6 credit applications as the key does. A simple rule on the same CRS data approves all six for $153,000, including $20,000 to a fake applicant whose $18,500 rush order would have shipped to a freight forwarder.
+**Demo moment and proof:** Scored from the action log against an answer key, the full live run with real Droid on all three seats caught 16 of 17 planted errors with 1 false alarm and decided all 6 credit applications as the key does. A simple rule on the same CRS data approves all six for $153,000, including $20,000 to a fake applicant whose $18,500 rush order would have shipped to a freight forwarder.
 
 **Still to do:**
 
 - Shadow mode and a one-week pilot plan: the desk runs beside the people, changes nothing, and is compared with what they did
-- Measured impact: human minutes saved, dollars stopped and cost per application
+- Measured impact: a person's minutes per application, bad credit stopped, supplier payments stopped and model cost per application, against doing it by hand and against the simple rule
 - A mapping to Microsoft's Responsible AI Standard, a protected-attribute test and a plain decline letter
 - Sourced customer facts: each fact in a decision carries where it came from
 - A measured incident drill: pull the kill switch, undo a seat, resume, and time each
@@ -665,11 +665,11 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 
 **Status:** to review with Ben. **Page:** https://calhacks.gurtos.com/tracks/mana/
 
-**Best shown in:** GurtOS Personal
+**Best shown in:** GurtOS Personal and GurtOS Business
 
-**Pitch:** Mana is a personal workspace for planning and small apps; GurtOS Personal is the computer where your agents do the work. Here a Mana chat rewrote the credit desk's rules, and a Mana app shows a box's live status.
+**Pitch:** AI workspaces are great for thinking, but there is no safe place for an AI to act on your real computer. Mana plans it, GurtOS does it safely in an isolated space, and you approve from your phone. Four public Mana chats shaped the credit desk rules, Business approval rules, Visa mandates and the Fetch agent team, each with what it changed in code.
 
-**The problem:** Draft: planning an agent's rules and showing its status usually happen in separate tools that never touch the running system.
+**The problem:** AI workspaces are great for thinking, but there is no safe place for an AI to act on your real computer.
 
 **Features, by the sponsor's criteria** (no OS-vs-track table yet; to write when reviewed):
 

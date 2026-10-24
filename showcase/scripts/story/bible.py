@@ -25,7 +25,7 @@ PROBLEM = {
  'vultr': "Draft: an agent box should be reachable around the clock without exposing everything on it to the internet.",
  'godaddy': "Draft: the product needs one name a person can remember for every edition, the domain and the OS itself.",
  'figma': "Draft: an OS for agents has to feel like an OS people trust, not another dashboard, and the design has to reach the code without drift.",
- 'mana': "Draft: planning an agent's rules and showing its status usually happen in separate tools that never touch the running system.",
+ 'mana': "AI workspaces are great for thinking, but there is no safe place for an AI to act on your real computer.",
 }
 def strip(t): return html.unescape(re.sub(r'<[^>]+>', '', t or '')).strip()
 FM = json.loads(subprocess.run(['node', os.path.join(HERE, 'frontmatter.mjs'), root], check=True, capture_output=True, text=True).stdout)

@@ -6,7 +6,7 @@ editions: 'GurtOS Business'
 pitch: 'A finance team needs roles, segregation of duties and an audit trail on every agent decision, which is what Business adds: who may approve what, up to how much. GurtOS Business is on main: people and roles, approvals routed by rules written in plain words, refusals for answering your own request or above your limit, a Waiting for me inbox, an audit with CSV export and a kill switch. Sign-in with a work account (Microsoft Entra ID, roles from groups) is built and tested against a stand-in provider; shadow mode is not built. The scored credit desk runs were on GurtOS Server; the Business screens are from a box seeded as the made-up Fogline Supply.'
 title: A credit desk that catches the fake applicant a simple rule would approve
 summary: 'Companies want AI employees, but today''s computers and clouds were not built for them. An agent runs as you, with your keys, on one shared filesystem, with no separation of duties, no record you can trust and no undo, so nobody lets one do real finance work. GurtOS is an environment for AI employees. Here, two of them run the trade-credit desk of Fogline Supply Co., a made-up Oakland wholesaler: a credit analyst checks new customers through CRS, and a collections clerk works the ledger against the bank, Capital One''s Nessie. Each has its own Linux user and its own copy of the files, never sees a password, and cannot approve its own work. A human controller signs off above $10,000 and on every fraud referral.'
-proof: 'Live Droid run <code>73c47b</code>, scored from the action log against the answer key: <strong>every planted error of the original 14-error case caught, 0 false alarms, 6 of 6 credit decisions right</strong> (the answer key has since grown to 19 planted errors; tonight''s live run on it is being scored) (outcome, band, limit and terms). It held APP-1043, a synthetic identity that a simple rule approves for $20,000.'
+proof: 'The full live run with real Droid on all three seats, scored from the action log against the answer key: <strong>16 of 17 planted errors caught, 1 false alarm (precision 97%), all 6 credit decisions right</strong> (outcome, band, limit and terms), in 12 minutes for about $5.24. It held APP-1043, a synthetic identity that a simple rule approves for $20,000. The January review caught 2 of 2.'
 criteriaSource: "From Hyphenate's brief, as copied into the project's track plan (docs/tracks.md)."
 criteria:
   - ask: 'An autonomous system for one corner of a company''s finance team, plus the company around it.'
@@ -14,7 +14,7 @@ criteria:
   - ask: 'Pick a company and a few seats.'
     how: '<strong>Seats:</strong> a credit analyst agent and a collections clerk agent, with a human controller who signs off above $10,000 and on every fraud referral. The two agent seats are two box tasks with different tools (<code>seats.ts</code>).'
   - ask: 'Messy data with planted errors.'
-    how: 'The case <code>fogline-2026-10</code>: 12 trade customers, 38 invoices, 15 payments, 6 open orders and 6 credit applications, with 14 planted errors and 7 things that look wrong but are fine. Names are remitted several ways ("MISSION ST TAQ INC"), formats vary, and there is an "Oakalnd" typo.'
+    how: 'The case <code>fogline-2026-10</code>: 12 trade customers, 38 invoices, 15 payments, 6 open orders and 6 credit applications, with 17 planted errors in October and 2 more in a January review, and things that look wrong but are fine. Names are remitted several ways ("MISSION ST TAQ INC"), formats vary, and there is an "Oakalnd" typo.'
   - ask: 'Handle sources that disagree.'
     how: 'Three credit bureaus that disagree on one applicant (760, no file, 700 with a collection). The application against the business credit file and the bank. The ledger against Nessie''s deposits, where a payment''s memo names a different invoice than the one it was applied to.'
   - ask: 'Time.'
@@ -161,7 +161,11 @@ A lender or a bureau holds exactly what a finance agent would be asked to handle
 
 ## Evidence
 
-### Three live runs with Droid, scored against the answer key
+### The full live run, three seats (Oct 24)
+
+From the full live ./demo on Oct 24 (real Droid on all three seats, the real CRS sandbox and the Nessie sandbox with test money, a script answering the controller's questions yes), the October case (Fogline, rules 0.3) caught 16 of 17 planted errors with 1 false alarm (precision 97%) and decided all 6 credit applications as the answer key does; the simple rule approves the fake applicant, APP-1043, for $20,000, and the desk held it. It missed one (E14, the credit report that disagrees with the application) and its one false alarm was the "Oakalnd" typo. The January review caught 2 of 2 with no false alarms and cut Bright Harbor's October $40,000 to $7,500 on Net 15 after the controller's yes, as the key does. The October run took about 12 minutes and $5.24 of model use, with 8 of 11 collection steps, 5 of 6 order decisions and 7 of 8 supplier bills matching the key. The January review took about 5 minutes and $1.79. The reports, score and log for each run are in the repo under `tracks/credit-desk/runs/` (October, rules 0.3, and January review); the crash handoff run is there too.
+
+### Earlier runs: two seats, on the first and smaller key (14 planted errors)
 
 Both seats worked the whole case with Droid running Claude, live against the CRS sandbox and Nessie. A script
 answered the controller's questions yes. Each run's reports, score and log are in the repo under `runs/`.
@@ -172,7 +176,7 @@ answered the controller's questions yes. Each run's reports, score and log are i
 |---|---|---|---|---|---|---|---|
 | `88d75b` | 0.1 draft | 13 of 14 | 1 | 6 of 6 | 9 of 11 | 6 of 6 | 9 min, about $1.50 |
 | `6f5c0b` | 0.2 (Mana) | 13 of 14 | 1 | 6 of 6 | 9 of 11 | 6 of 6 | 9 min, about $3.54 |
-| **`73c47b`** | 0.2, seats told to record follow-ups | **every one of the original 14** | **0** | **6 of 6** | 9 of 11 | 5 of 6 | 13 min, about $4.67 |
+| `73c47b` | 0.2, seats told to record follow-ups | 14 of 14 | 0 | 6 of 6 | 9 of 11 | 5 of 6 | 13 min, about $4.67 |
 
 </div>
 

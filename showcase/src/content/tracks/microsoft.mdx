@@ -6,7 +6,7 @@ editions: 'GurtOS Business'
 pitch: 'Companies want agents on finance work, but an ordinary OS gives an agent its owner''s keys, no separation of duties, no record and no undo, so pilots stay pilots. GurtOS Business gives each seat its own user, routes approvals to the right person, keeps a full audit and a kill switch, on a box the company owns. Next (being built): shadow mode, measured impact, a Responsible AI mapping, sourced facts and an incident drill. GurtOS Business is on main: people and roles, approvals routed by rules written in plain words, refusals for answering your own request or above your limit, a Waiting for me inbox, an audit with CSV export and a kill switch. Sign-in with a work account (Microsoft Entra ID, roles from groups) is built and tested against a stand-in provider; shadow mode is not built. The scored credit desk runs were on GurtOS Server; the Business screens are from a box seeded as the made-up Fogline Supply.'
 title: A finance agent with a path to production
 summary: 'Companies want agents doing finance work, but an ordinary operating system gives an agent its owner''s keys, no separation of duties, no record and no undo, so pilots never reach production. The credit desk is a small wholesaler''s credit analyst agent and collections clerk agent with a human controller, and GurtOS is its path to production: each seat is its own Linux user without keys, every action lands in an append-only log, approvals reach a phone, and the box picks up where it was after a power cut. It runs on a computer the company owns.'
-proof: 'Scored from the action log against an answer key, the latest live run caught <strong>every planted error of the original 14-error case with 0 false alarms</strong> (the answer key has since grown to 19; tonight''s live run on it is being scored) and decided all 6 credit applications as the key does. A simple rule on the same CRS data approves all six for $153,000, including $20,000 to a fake applicant whose $18,500 rush order would have shipped to a freight forwarder.'
+proof: 'Scored from the action log against an answer key, the full live run with real Droid on all three seats caught <strong>16 of 17 planted errors with 1 false alarm</strong> and decided all 6 credit applications as the key does. A simple rule on the same CRS data approves all six for $153,000, including $20,000 to a fake applicant whose $18,500 rush order would have shipped to a freight forwarder.'
 criteriaSource: "From Microsoft's track description and judging criteria, as copied into the project's track plan (docs/tracks.md)."
 video: hyphenate
 clip: credit-desk
@@ -16,7 +16,7 @@ criteria:
   - ask: 'Customer understanding.'
     how: 'A small wholesaler''s credit desk is one or two people doing credit checks and collections by hand, where one fake customer or one misapplied payment costs real money. The case is built from those everyday failures: a synthetic identity, a payment applied to the wrong customer, a post-dated check booked as cash, an invoice billed twice, a limit nobody reviewed in 29 months.'
   - ask: 'Measurable usefulness.'
-    how: 'Every run is scored from its log: planted errors caught out of 14, false alarms, and decisions matched on 6 applications, 11 customers and 6 orders. Three live Droid runs on the original 14-error case caught 13, 13 and all 14 and decided all six applications right; the key has since grown and a new run is being scored. The simple rule is the baseline on the same data.'
+    how: 'Every run is scored from its log: planted errors caught out of 14, false alarms, and decisions matched on 6 applications, 11 customers and 6 orders. The full live run on Oct 24 caught 16 of 17 planted errors with 1 false alarm (precision 97%), decided all 6 applications as the key does and took 12 minutes for about $5.24 of model use; a January review caught 2 of 2. The simple rule is the baseline on the same data.'
   - ask: 'Path to production.'
     how: 'It runs on GurtOS: each seat is its own Linux user with its own copy of the files, keys stay in a root-only vault, every action is in an append-only log, approvals reach a phone, the box resumes after a power cut, and the OS updates as a whole and rolls itself back. The rules are a file, so the controller changes policy without code.'
   - ask: 'Responsible design.'
@@ -134,8 +134,8 @@ is light (one Node service, 4 GB of memory) and open source under Apache-2.0, so
 | One kill switch pauses every agent at once from any admin's phone or the box; requests waiting for an OK stay open | The first thing a company asks about is how to stop it | Path to production | GurtOS Business (shared with Personal's pause) | Shipped. The gate checks six tasks stopped where they were, every screen says who pulled it, and both pulls are in the log |
 | Shadow mode and a one-week pilot plan: the desk runs beside the people, changes nothing, and is compared with what they did | A company starts with a pilot it can switch off | Path to production | GurtOS Business (shadow mode) and the desk (the plan) | Being built; not on main yet |
 | Sign-in with a work account (OpenID Connect, Microsoft Entra ID), with each person's role taken from their Entra groups | Joining, leaving and changing team happen in Entra, in one place, not by pairing each phone with a code | Path to production | GurtOS Business | Shipped. The merge gate runs the whole flow against a small provider of its own, with PKCE, signature, issuer, audience, expiry and nonce checks, and refuses someone in no mapped group. It has not been tried against a live Entra tenant |
-| Measured impact: human minutes saved, dollars stopped and cost per application | A controller can say what the desk is worth | Measurable usefulness | The desk | Being built; not on main yet |
-| A mapping to Microsoft's Responsible AI Standard, a protected-attribute test and a plain decline letter | An applicant gets an honest reason and the desk can show it does not use what it must not | Responsible design | The desk | Being built; not on main yet |
+| Measured impact: a person's minutes per application, bad credit stopped, supplier payments stopped and model cost per application, against doing it by hand and against the simple rule | A controller can say what the desk is worth | Measurable usefulness | The desk | Being built; not on main yet. We state no minutes-by-hand figure, because no source times hands-on minutes; the 3 minutes a person needs to answer one request is our assumption |
+| A mapping to Microsoft's Responsible AI Standard, a protected-attribute test and a plain decline letter | An applicant gets an honest reason and the desk can show it does not use what it must not | Responsible design | The desk | Being built; not on main yet. The letters are not a claim of legal compliance: a lawyer should check the fraud-hold wording |
 | Sourced customer facts: each fact in a decision carries where it came from | A decision can be checked, not just trusted | Customer understanding | The desk | Being built; not on main yet |
 | A measured incident drill: pull the kill switch, undo a seat, resume, and time each | The answer to "what if it goes wrong" is a number | Path to production | GurtOS Business (kill switch, undo, resume) | Being built; not on main yet |
 
@@ -158,7 +158,11 @@ A company that switches an agent on has to ask what an insider or a third-party 
 
 ## Evidence
 
-### Measured: three live runs
+### Measured: the full live run, three seats (Oct 24)
+
+From the full live ./demo on Oct 24 (real Droid on all three seats, the real CRS sandbox and the Nessie sandbox with test money, a script answering the controller's questions yes), the October case (Fogline, rules 0.3) caught 16 of 17 planted errors with 1 false alarm (precision 97%) and decided all 6 credit applications as the answer key does; the simple rule approves the fake applicant, APP-1043, for $20,000, and the desk held it. It missed one (E14, the credit report that disagrees with the application) and its one false alarm was the "Oakalnd" typo. The January review caught 2 of 2 with no false alarms and cut Bright Harbor's October $40,000 to $7,500 on Net 15 after the controller's yes, as the key does. It missed E14 and took about $5.24 and 12 minutes in October (8 of 11 collection steps, 5 of 6 order decisions and 7 of 8 supplier bills matching the key) and about $1.79 and 5 minutes in January.
+
+### Earlier runs: two seats, on the first and smaller key (14 planted errors)
 
 <div class="table-wrap">
 
@@ -166,7 +170,7 @@ A company that switches an agent on has to ask what an insider or a third-party 
 |---|---|---|---|---|---|---|---|
 | `88d75b` | 0.1 draft | 13 of 14 | 1 | 6 of 6 | 9 of 11 | 6 of 6 | 9 min, about $1.50 |
 | `6f5c0b` | 0.2 (Mana) | 13 of 14 | 1 | 6 of 6 | 9 of 11 | 6 of 6 | 9 min, about $3.54 |
-| **`73c47b`** | 0.2, seats told to record follow-ups | **every one of the original 14** | **0** | **6 of 6** | 9 of 11 | 5 of 6 | 13 min, about $4.67 |
+| `73c47b` | 0.2, seats told to record follow-ups | 14 of 14 | 0 | 6 of 6 | 9 of 11 | 5 of 6 | 13 min, about $4.67 |
 
 </div>
 
