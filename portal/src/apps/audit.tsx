@@ -7,7 +7,7 @@ import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { base, api, box, onEvent, pairing, signedIn, useBox, type Approval, type LogEvent, type Person } from '../live.ts';
 import { AppIcon, Badge, Button, Icon, IconButton, Menu, Popover, StatusPage, ToggleGroup, type MenuItem } from '../kit/ui.tsx';
 import { HeaderBar, phone, useWin } from '../wm.tsx';
-import { hhmm, plural, zone } from '../util.ts';
+import { hhmm, plural, who, zone } from '../util.ts';
 import { noteText } from './log.tsx';
 
 interface AuditRow { seq: number; at: string; event: string; task: string; title: string; app: string; seat: string; asked: string; approver: string; by: string; what: string }
@@ -108,9 +108,9 @@ function entryOf(r: AuditRow, ev: LogEvent | undefined, c: Ctx): Entry {
       }
       case 'approval.answered': {
         const ok = ev?.type === 'approval.answered' ? ev.approved : /^Approved/.test(r.what);
-        const who = r.approver || (ev?.type === 'approval.answered' ? ev.by : '') || 'Someone';
-        const via = ev?.type === 'approval.answered' && ev.via && ev.via !== who ? `On ${ev.via}. ` : '';
-        return mk(ok ? 'Approved' : 'Denied', ok ? 'success' : 'destructive', 'person', who, 'avatar-default', `${ok ? 'Approved' : 'Denied'} by ${who}`, `${via}For ${task}.`);
+        const whom = who(r.approver || (ev?.type === 'approval.answered' ? ev.by : '') || 'Someone');
+        const via = ev?.type === 'approval.answered' && ev.via && ev.via !== whom ? `On ${ev.via}. ` : '';
+        return mk(ok ? 'Approved' : 'Denied', ok ? 'success' : 'destructive', 'person', whom, 'avatar-default', `${ok ? 'Approved' : 'Denied'} by ${whom}`, `${via}For ${task}.`);
       }
       case 'net.blocked':
         return mk('Blocked', 'destructive', 'system', 'The network rules', 'process-stop', r.what, `${task} asked for it and was not allowed.`, true);
@@ -122,7 +122,7 @@ function entryOf(r: AuditRow, ev: LogEvent | undefined, c: Ctx): Entry {
       case 'tool.result':
         return mk('Tool', 'neutral', 'agent', agent, 'applications-science', r.what, `In ${task}.`);
       case 'note': {
-        const by = r.by || 'Someone';
+        const by = who(r.by || 'Someone');
         // The box's own screen acts without a person: show it as the box, not as initials.
         const act: Actor = c.people.has(by) ? 'person' : 'system';
         const glyph = act === 'person' ? 'avatar-default' : 'computer';

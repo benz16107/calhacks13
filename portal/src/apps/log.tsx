@@ -1,6 +1,6 @@
 // The action log in words, and a task's diff. Shared by Tasks, Activity and Time Machine.
 import { box, type LogEvent, type Task } from '../live.ts';
-import { STATE, clock, dollars } from '../util.ts';
+import { STATE, clock, dollars, who } from '../util.ts';
 import { STEPS } from '../setup.tsx';
 import './windows.css';
 
@@ -27,7 +27,7 @@ export function noteText(e: Extract<LogEvent, { type: 'note' }>): string {
   const d = (e.data ?? {}) as Record<string, any>;
   if (typeof e.data === 'string') return `${appName(e.track)}: ${e.data}`;
   if (typeof d.text === 'string') return d.text;
-  const by = typeof d.by === 'string' ? d.by : '';
+  const by = typeof d.by === 'string' ? who(d.by) : '';
   switch (e.track) {
     case 'setup':
       if (d.finished) return 'Setup finished';
@@ -70,7 +70,7 @@ export function describe(e: LogEvent, events: LogEvent[]): { text: string; data:
     case 'task.created': {
       const s = e.spec;
       return {
-        text: `Created by ${s.source}: worker ${s.worker === 'droid' ? 'Droid' : 'scripted (test)'}, ${s.hosts.length ? `hosts ${s.hosts.join(', ')}` : 'no network'}${s.budgetCents ? `, budget ${dollars(s.budgetCents)}` : ''}`,
+        text: `Started by ${s.source}, ${s.worker === 'droid' ? 'a Claude agent' : 'a scripted agent (test)'}, ${s.hosts.length ? `may reach ${s.hosts.join(', ')}` : 'no internet'}${s.budgetCents ? `, budget ${dollars(s.budgetCents)}` : ''}`,
         data: `task.created  user ${e.user}  hosts ${s.hosts.join(' ') || 'none'}`,
       };
     }
@@ -88,7 +88,7 @@ export function describe(e: LogEvent, events: LogEvent[]): { text: string; data:
         data: `keep ${e.result}`,
       };
     case 'tool.call':
-      return { text: `Asked the box to run ${e.tool}`, data: `tool.call  ${e.tool}  ${short(e.input, 80)}` };
+      return { text: `Asked GurtOS to run ${e.tool}`, data: `tool.call  ${e.tool}  ${short(e.input, 80)}` };
     case 'tool.result':
       return e.ok
         ? { text: `${toolOf(events, e.key)} finished${e.cents ? `, spent ${dollars(e.cents)}` : ''}`, data: `tool.result  ok${e.cents ? `  ${dollars(e.cents)}` : ''}`, tone: e.cents ? 'money' : undefined }
@@ -96,7 +96,7 @@ export function describe(e: LogEvent, events: LogEvent[]): { text: string; data:
     case 'approval.asked':
       return { text: `Asks: ${e.approval.question}`, data: `approval.asked  ${e.approval.id}`, tone: 'ask' };
     case 'approval.answered':
-      return { text: `${e.approved ? 'Approved' : 'Denied'} by ${e.by}`, data: `approval.answered  by ${e.by}`, tone: 'ask' };
+      return { text: `${e.approved ? 'Approved' : 'Denied'} by ${who(e.by)}`, data: `approval.answered  by ${e.by}`, tone: 'ask' };
     case 'cost':
       return { text: `Spent ${dollars(e.cents)} on ${e.what}${e.model ? ` (${e.model})` : ''}`, data: `cost  ${e.model ?? ''}`.trim(), tone: 'money' };
     case 'net.blocked':

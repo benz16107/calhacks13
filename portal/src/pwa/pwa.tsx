@@ -37,7 +37,7 @@ export function AddToHomeScreen({ pairCode, box, onSafari }: { pairCode: string;
             Install {PRODUCT} on this phone
           </h1>
           <p class="t-body t-secondary">
-            To answer {box ?? 'the box'} from this phone, add {PRODUCT} to your Home Screen, then open it from there. It pairs inside the app.
+            To answer {box ?? 'your computer'} from this phone, add {PRODUCT} to your Home Screen, then open it from there. It pairs inside the app.
           </p>
           <ol class="gos-a2hs-steps">
             {[
@@ -51,7 +51,7 @@ export function AddToHomeScreen({ pairCode, box, onSafari }: { pairCode: string;
                 Leave <b>Open as Web App</b> on, then tap <b>Add</b>
               </>,
               <>
-                Open <b>{PRODUCT}</b> from your Home Screen and type {box ? <>the box address <b>{box}</b> and </> : ''}this code:
+                Open <b>{PRODUCT}</b> from your Home Screen and type {box ? <>the address <b>{box}</b> and </> : ''}this code:
               </>,
             ].map((step, n) => (
               <li key={n}>
@@ -63,7 +63,7 @@ export function AddToHomeScreen({ pairCode, box, onSafari }: { pairCode: string;
           <p class="gos-code t-mono" aria-label={`Pairing code ${pairCode.split('').join(' ')}`}>
             {code(pairCode)}
           </p>
-          <p class="t-caption t-secondary">The code works for 5 minutes. If it runs out, the box's screen shows a new one. Already have {PRODUCT}? Open it and choose Add a machine.</p>
+          <p class="t-caption t-secondary">The code works for 5 minutes. If it runs out, the computer's screen shows a new one. Already have {PRODUCT}? Open it and choose Add a computer.</p>
           <Button kind="flat" onClick={onSafari}>
             Use it in Safari instead (no notifications)
           </Button>
@@ -91,7 +91,7 @@ export function InstallCard() {
         <p class="t-body-strong">Install {PRODUCT}</p>
         <p class="t-caption">
           {prompt
-            ? 'It opens like an app, and requests for your OK can reach you as notifications.'
+            ? 'It opens like an app, and requests can reach you as notifications.'
             : ios()
               ? 'Tap Share, then Add to Home Screen. In the app, pair again with a new code: it keeps its own storage.'
               : "Open Chrome's menu, then Install app or Add to Home screen."}

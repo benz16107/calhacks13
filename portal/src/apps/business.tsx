@@ -100,7 +100,7 @@ export function WaitingList({ selected, onPick, home }: { selected?: string; onP
   if (!me.person)
     return (
       <StatusPage icon="avatar-default" title="Sign in to see what waits for you">
-        On {b.business.company || 'this box'}, each person sees what the rules send to them. Pick who you are from the person menu in the top bar.
+        On {b.business.company || 'this computer'}, each person sees what the rules send to them. Pick who you are from the person menu in the top bar.
       </StatusPage>
     );
   const waiting = me.waiting;
@@ -112,7 +112,7 @@ export function WaitingList({ selected, onPick, home }: { selected?: string; onP
         {home && (
           // The phone's home: the company opens the Machines sheet, as on the other homes.
           <button type="button" class="gos-plain gos-home-box biz-company" aria-haspopup="dialog" onClick={openMachines}>
-            <span class="t-heading">{b.business.company || 'This box'}</span>
+            <span class="t-heading">{b.business.company || 'This computer'}</span>
             <Icon name="pan-down" />
           </button>
         )}

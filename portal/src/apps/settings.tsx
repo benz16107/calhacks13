@@ -6,7 +6,7 @@ import { Notifications, RemoteAccess } from './remote.tsx';
 import type { ComponentChildren, JSX } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
 import qrcode from 'qrcode-generator';
-import { api, box, loadApps, loadSetup, onEvent, patchSettings, useBox, type AppInfo, dayOf } from '../live.ts';
+import { api, box, loadApps, loadSetup, onEvent, pairing, patchSettings, useBox, type AppInfo, dayOf } from '../live.ts';
 import { AddRow, Alert, AppIcon, Badge, Button, ComboRow, Group, Icon, IconButton, LinkRow, Row, Sheet, SwitchRow } from '../kit/ui.tsx';
 import { HeaderBar, InWindow, open, phone, useWin } from '../wm.tsx';
 import { access } from '../shell.tsx';
@@ -92,7 +92,7 @@ export function KeySheet({ name, onClose, onSaved }: { name?: string; onClose: (
       await loadApps();
       onSaved?.();
       onClose();
-      win?.toast(`${key} is set`);
+      win?.toast(`${keyLabel(key)} saved`);
     } catch (e) {
       setError((e as Error).message);
       setBusy(false);
@@ -102,7 +102,9 @@ export function KeySheet({ name, onClose, onSaved }: { name?: string; onClose: (
     <InWindow>
       <Sheet title={name ? 'Replace a key' : 'Add a key'} onCancel={onClose} onDone={() => void save()} done="Save" doneDisabled={busy || !okName || !value.trim()}>
         {name ? (
-          <p class="gos-set-mono">{name}</p>
+          <p>
+            <span class="t-body-strong">{keyLabel(name)}</span> <span class="t-caption t-secondary gos-set-mono">{name}</span>
+          </p>
         ) : (
           <label class="gos-field">
             <span class="t-body-strong">Name</span>
@@ -160,7 +162,7 @@ export function useToggleApp() {
 export const ReadOnly = () => (
   <div class="g-banner g-banner-accent gos-set-banner" role="note">
     <Icon name="security-high" />
-    <div class="t-body">Only the owner changes these: on the box's own screen, or the owner's paired phone. Here you can look.</div>
+    <div class="t-body">Only the owner changes these: on this computer's own screen, or the owner's paired phone. Here you can look.</div>
   </div>
 );
 
@@ -266,15 +268,14 @@ function General() {
   const s = b.system;
   const [busy, setBusy] = useState(false);
   const nets = (s?.network.interfaces ?? []).filter((i) => !i.address.startsWith('127.') && i.address !== '::1');
-  const wifi = nets.some((i) => /^wl/.test(i.name));
   const reopen = () => {
     setBusy(true);
     api('POST', '/setup/reopen').then(loadSetup, () => setBusy(false));
   };
   return (
     <>
-      <Group title="This box">
-        <Row icon="network-server" title="Name" sub="Set when the box was installed">
+      <Group title="This computer">
+        <Row icon="network-server" title="Name" sub="Set during setup">
           <Value>{s?.boxName ?? selfBox().name}</Value>
         </Row>
         <Row title="Address on your network">
@@ -290,17 +291,9 @@ function General() {
             <Value tone={s?.network.online ? 'success' : undefined}>{s?.network.online ? 'Connected' : 'No internet'}</Value>
           </Row>
         ))}
-        {!wifi && (
-          <Row icon="network-wireless-signal-excellent" title="Wi-Fi" sub="Joining Wi-Fi from here is not built yet. Use a cable.">
-            <Value>Not connected</Value>
-          </Row>
-        )}
-        {!nets.length && <Row icon="network-offline" title="No network" sub="The box reports no address" />}
+        {!nets.length && <Row icon="network-offline" title="No network" sub="This computer reports no address" />}
       </Group>
-      <Group title="Power and setup">
-        <Row icon="system-shutdown" title="Restart" sub="Not built into Settings yet. After a power cut, every task resumes on its own.">
-          <Button disabled>Restart…</Button>
-        </Row>
+      <Group title="Setup">
         <Row title="Run setup again" sub="Shows the setup window on this screen">
           <Button onClick={reopen} disabled={!b.owner || busy}>
             Run setup
@@ -341,8 +334,8 @@ function Agents() {
   };
   return (
     <>
-      <Group title="Worker" caption="Every task runs as its own Linux user, with this worker inside.">
-        <Row icon="applications-science" title="Droid with Claude" sub="Factory Droid SDK">
+      <Group title="Agents" caption="Every task runs as its own user, with an agent inside. Agents use Claude.">
+        <Row icon="applications-science" title="Claude" sub="Through Factory's Droid">
           <Value>Default</Value>
         </Row>
         <Row title="Model" sub={modelId ? 'The last one a task used' : "Droid's own default for Claude"}>
@@ -389,16 +382,16 @@ function Permissions() {
       <Group title="Internet" caption="What a new task may reach. An app's own hosts are listed in App Center.">
         <ComboRow
           title="Internet for new tasks"
-          sub={s.networkDefault === 'none' ? 'A task reaches only the hosts it names. The rest is blocked and logged.' : 'Other hosts are blocked and the attempt is logged'}
+          sub={s.networkDefault === 'none' ? 'A task reaches only the sites it names. The rest is blocked and logged.' : 'Other sites are blocked and logged'}
           value={s.networkDefault}
           options={[
             ['none', 'No internet'],
-            ['allowlist', 'Only listed hosts'],
+            ['allowlist', 'Only the sites below'],
           ]}
           onChange={(v) => set({ networkDefault: v })}
           disabled={ro}
         />
-        <LinkRow title="Listed hosts" sub={s.defaultHosts.length ? s.defaultHosts.join(', ') : undefined} value={s.defaultHosts.length ? plural(s.defaultHosts.length, 'host') : 'None'} onClick={() => !ro && setSheet('hosts')} />
+        <LinkRow title="Sites any task may reach" sub={s.defaultHosts.length ? s.defaultHosts.join(', ') : undefined} value={s.defaultHosts.length ? plural(s.defaultHosts.length, 'site') : 'None'} onClick={() => !ro && setSheet('hosts')} />
       </Group>
       <Group title="Folders agents may use" caption={s.agentFolders.length ? 'Agents work on a copy. You keep or undo their changes in Time Machine.' : 'None chosen yet, so a task may work on a copy of any folder you give it.'}>
         {s.agentFolders.map((f) => (
@@ -452,7 +445,7 @@ function HostsSheet({ onClose }: { onClose: () => void }) {
     patchSettings({ defaultHosts: text.split(/[\s,]+/).filter(Boolean) }).then(onClose, (e) => setError((e as Error).message));
   return (
     <InWindow>
-      <Sheet title="Listed hosts" onCancel={onClose} onDone={() => void save()} done="Save">
+      <Sheet title="Sites any task may reach" onCancel={onClose} onDone={() => void save()} done="Save">
         <label class="gos-field">
           <span class="t-body-strong">One host on each line</span>
           <textarea class="g-field gos-set-mono" rows={6} value={text} placeholder={'api.example.com\n*.example.com'} spellcheck={false} onInput={(e) => setText((e.target as HTMLTextAreaElement).value)} />
@@ -587,6 +580,8 @@ interface Device {
   owner?: boolean;
   /** It gets notifications (GET /api/devices never shows the subscription itself). */
   push?: boolean;
+  /** When it last called GurtOS, if GurtOS reports it. */
+  lastSeen?: string;
 }
 interface PairCode {
   code: string;
@@ -654,23 +649,48 @@ function Devices() {
   const url = typeof code === 'object' && /^https?:/.test(code.url) ? code.url : origin && typeof code === 'object' ? `${origin}/#pair/${code.code}` : undefined;
   const left = typeof code === 'object' ? Math.max(0, Math.round((Date.parse(code.expiresAt) - now) / 1000)) : 0;
   const paired = (d: Device) => new Date(d.pairedAt).toLocaleString('en-US', { weekday: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).replace(',', '');
+  // The same phone paired twice leaves an older pairing with its name: offer to remove those.
+  const me = pairing()?.device.id;
+  const newest = new Map<string, string>();
+  for (const d of [...(devices ?? [])].sort((x, y) => x.pairedAt.localeCompare(y.pairedAt))) newest.set(d.name, d.id);
+  const older = (devices ?? []).filter((d) => newest.get(d.name) !== d.id && d.id !== me);
+  const [clearing, setClearing] = useState(false);
+  const clearOlder = async () => {
+    setClearing(true);
+    for (const d of older) await api('DELETE', `/devices/${d.id}`).catch(() => {});
+    setDevices(devices?.filter((x) => !older.includes(x)));
+    setClearing(false);
+    win?.toast(`Removed ${plural(older.length, 'older pairing')}`);
+  };
   return (
     <>
       <Notifications />
       <Group title="Paired phones" caption="A phone can approve or deny. It never holds a key. Revoking one stops its token at once.">
         {devices?.map((d) => (
-          <Row icon="phone" title={d.name} sub={`${d.owner ? 'Owner' : 'Can approve'} · paired ${paired(d)}${d.push ? ' · notifications on' : ''}`} key={d.id}>
+          <Row
+            icon="phone"
+            title={d.id === me ? `${d.name} (this phone)` : d.name}
+            sub={`${d.owner ? 'Owner' : 'Can approve'} · ${older.includes(d) ? `older pairing, paired again later` : `paired ${paired(d)}`}${d.lastSeen ? ` · seen ${when(d.lastSeen)}` : ''}${d.push ? ' · notifications on' : ''}`}
+            key={d.id}
+          >
             <Button onClick={() => setRevoke(d)} disabled={!b.owner}>
               Revoke
             </Button>
           </Row>
         ))}
         {devices?.length === 0 && <Row icon="phone" title="No phone yet" sub="Pair one below" />}
-        {!devices && <Row title={b.owner ? 'The box did not list its phones' : 'Only the owner sees the paired phones'} />}
+        {b.owner && older.length > 0 && (
+          <Row title={`${plural(older.length, 'older pairing')} of the same ${older.length === 1 ? 'phone' : 'phones'}`} sub="Each phone was paired again. The newest pairing of each keeps working.">
+            <Button onClick={() => void clearOlder()} disabled={clearing}>
+              Remove {older.length === 1 ? 'it' : 'them'}
+            </Button>
+          </Row>
+        )}
+        {!devices && <Row title={b.owner ? 'GurtOS did not list the paired phones' : 'Only the owner sees the paired phones'} />}
       </Group>
       {!b.owner ? (
         <Group title="Pair a phone">
-          <Row icon="security-high" title="Pair from the box's own screen" sub="Pairing codes come from the box's screen or the owner's phone, so a stranger on the network can't pair." />
+          <Row icon="security-high" title="Pair from this computer's own screen" sub="Pairing codes come from this computer's screen or the owner's phone, so a stranger on the network can't pair." />
         </Group>
       ) : (
       <Group title="Pair a phone">
@@ -688,7 +708,7 @@ function Devices() {
           </div>
           <div class="gos-set-pair-text">
             <p class="t-body">1. Point the phone's camera at the code.</p>
-            <p class="t-body">2. {PRODUCT} opens on the phone, on this box's address.</p>
+            <p class="t-body">2. {PRODUCT} opens on the phone, on this computer's address.</p>
             <p class="t-body">3. Check the phone shows the same code, then name it.</p>
             {typeof code === 'object' && (
               <>
@@ -752,19 +772,8 @@ function Updates() {
             {sys ? `${sys.editionName} ${sys.version}, build ${sys.build}. Started ${when(sys.startedAt)}.` : 'Loading…'}
           </p>
         </div>
-        <div class="gos-set-slot gos-set-row-off">
-          <div class="gos-set-slot-head">
-            <Icon name="network-server" />
-            The other system
-            <Badge kind="neutral">Not reported</Badge>
-          </div>
-          <p>The box does not report its second system to Settings yet.</p>
-        </div>
       </div>
       <Group title="Updates">
-        <Row icon="emblem-system" title="Last check" sub="The updater does not report here yet">
-          <Value>Not reported</Value>
-        </Row>
         <SwitchRow title="Install updates automatically" sub="At night, when no task is running" checked={s.autoUpdate} onChange={(v) => set({ autoUpdate: v })} disabled={ro} />
         <ComboRow
           title="Channel"
@@ -776,13 +785,6 @@ function Updates() {
           onChange={(v) => set({ updateChannel: v })}
           disabled={ro}
         />
-      </Group>
-      <Group title="Go back" caption="Restarts into the other system. Your tasks, log and keys stay as they are.">
-        <Row title="Go back to the previous version" sub="Not available from Settings yet">
-          <Button kind="destructive" disabled>
-            Go back…
-          </Button>
-        </Row>
       </Group>
     </>
   );
@@ -804,12 +806,12 @@ function Privacy() {
     return a ? (
       <SwitchRow title={title} sub={sub} checked={a.status === 'enabled'} onChange={(v) => void toggle(a, v)} disabled={ro} />
     ) : (
-      <Row title={title} sub="Not installed on this box" />
+      <Row title={title} sub="Not installed on this computer" />
     );
   };
   return (
     <>
-      <Group title="The action log" caption="Every step every agent takes. It stays on this box and holds no keys.">
+      <Group title="The action log" caption="Every step every agent takes. It stays on this computer and holds no keys.">
         <ComboRow
           title="Keep the log for"
           value={days}
@@ -822,7 +824,7 @@ function Privacy() {
         </Row>
         <Row title="Where it lives">
           <span class="gos-set-value">
-            <code class="gos-set-mono">log.jsonl</code> in the box's data folder
+            <code class="gos-set-mono">log.jsonl</code> in GurtOS's data folder
           </span>
         </Row>
         <Row title="Read the log">
@@ -832,9 +834,6 @@ function Privacy() {
       <Group title="Sharing" caption="Off unless you turn it on.">
         {share('elastic', 'Copy the log to Elastic', 'With the Elastic insights app')}
         {share('mana', 'Public status page', 'Mana status shows task titles and states, never prompts or files')}
-      </Group>
-      <Group title="Phones">
-        <SwitchRow title="Show task titles on the lock screen" sub="Not a setting yet: phones always show titles" checked disabled onChange={() => {}} />
       </Group>
     </>
   );
@@ -920,7 +919,6 @@ function Appearance() {
         <Row icon="computer" title="Wallpaper">
           <Value>Night hills</Value>
         </Row>
-        <SwitchRow icon="weather-clear-night" title="Dim the screen at night" sub="Not built yet" checked={false} disabled onChange={() => {}} />
       </Group>
       <Group title="Accessibility" caption="These apply to this screen only.">
         <SwitchRow icon="preferences-desktop-accessibility" title="Larger text" checked={access.get('larger-text')} onChange={acc('larger-text')} />
@@ -957,7 +955,7 @@ function About() {
         </p>
         <p class="t-body t-secondary">{s ? `${s.editionName} ${s.version}` : PRODUCT}</p>
       </div>
-      <Group title="This box">
+      <Group title="This computer">
         <Row title="Name">
           <Value>{s?.boxName ?? selfBox().name}</Value>
         </Row>
@@ -970,7 +968,7 @@ function About() {
         <Row title="Base">
           <Value>Ubuntu 24.04 LTS</Value>
         </Row>
-        <Row title="Box ID">
+        <Row title="Computer ID">
           <span class="gos-set-value gos-set-mono">{s?.boxId ?? '…'}</span>
         </Row>
         <Row title="Up for">

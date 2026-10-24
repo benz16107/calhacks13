@@ -53,14 +53,34 @@ const APP_ICONS: Record<string, { glyph: string; tile: string }> = {
   waiting: { glyph: waiting, tile: 'var(--color-app-waiting)' },
   audit: { glyph: audit, tile: 'var(--color-app-audit)' },
 };
-export const hasAppIcon = (id: string) => id in APP_ICONS;
+// Apps without a drawn glyph: an Adwaita symbolic icon on their own tile. An id is a track, or track/window.
+const APP_SYMBOLS: Record<string, { icon: string; tile: string }> = {
+  'shopper/store': { icon: 'user-home', tile: 'var(--color-app-web)' },
+  apify: { icon: 'web-browser', tile: 'var(--color-app-mana)' },
+  factory: { icon: 'utilities-terminal', tile: 'var(--color-app-tasks)' },
+  spacetime: { icon: 'view-grid', tile: 'var(--color-app-activity)' },
+  anthropic: { icon: 'applications-science', tile: 'var(--color-app-time-machine)' },
+  armadin: { icon: 'security-high', tile: 'var(--color-app-audit)' },
+  elastic: { icon: 'edit-find', tile: 'var(--color-app-elastic)' },
+  mana: { icon: 'dialog-information', tile: 'var(--color-app-mana)' },
+  vultr: { icon: 'network-server', tile: 'var(--color-app-find)' },
+  example: { icon: 'preferences-desktop-apps', tile: 'var(--color-app-other)' },
+};
+export const hasAppIcon = (id: string) => id in APP_ICONS || id in APP_SYMBOLS;
 
-/** An app icon at any size. An app without its own glyph shows its first letter on a neutral tile. */
+/** An app icon at any size. An app with neither a glyph nor a symbol shows its first letter on a neutral tile. */
 export function AppIcon({ id, title, size = 52 }: { id: string; title?: string; size?: number }) {
-  const a = APP_ICONS[id];
+  const sym = APP_SYMBOLS[id] ?? (APP_ICONS[id] ? undefined : APP_SYMBOLS[id.split('/')[0]]);
+  const a = sym ? undefined : (APP_ICONS[id] ?? APP_ICONS[id.split('/')[0]]);
   return (
-    <span class="g-app-icon" style={{ '--size': `${size}px`, '--tile': a?.tile } as JSX.CSSProperties} aria-hidden="true">
-      {a ? <img src={a.glyph} alt="" draggable={false} /> : <span class="g-app-letter">{(title ?? id).trim()[0]?.toUpperCase()}</span>}
+    <span class="g-app-icon" style={{ '--size': `${size}px`, '--tile': (a ?? sym)?.tile } as JSX.CSSProperties} aria-hidden="true">
+      {a ? (
+        <img src={a.glyph} alt="" draggable={false} />
+      ) : sym ? (
+        <svg class="g-app-sym" viewBox="0 0 16 16" dangerouslySetInnerHTML={{ __html: ICONS[sym.icon] ?? '' }} />
+      ) : (
+        <span class="g-app-letter">{(title ?? id).trim()[0]?.toUpperCase()}</span>
+      )}
     </span>
   );
 }

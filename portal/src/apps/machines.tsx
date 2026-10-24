@@ -66,14 +66,14 @@ export function MachinesSheet() {
   const list = machines();
   return (
     <div class="g-sheet-layer gos-msheet-layer" onClick={(e) => e.target === e.currentTarget && close()} onKeyDown={(e) => e.key === 'Escape' && close()}>
-      <section class="g-sheet gos-msheet" role="dialog" aria-modal="true" aria-label="Machines">
+      <section class="g-sheet gos-msheet" role="dialog" aria-modal="true" aria-label="Computers">
         <header class="g-headerbar">
           <div class="g-headerbar-start">
             <Button kind="flat" onClick={close}>
               Close
             </Button>
           </div>
-          <h2 class="g-headerbar-title">Machines</h2>
+          <h2 class="g-headerbar-title">Computers</h2>
           <div class="g-headerbar-end" />
         </header>
         <div class="g-sheet-body">
@@ -105,7 +105,7 @@ export function MachinesSheet() {
               <button type="button" class="g-row g-row-add" onClick={() => ((sheet.open = 'add'), changed())}>
                 <Icon name="list-add" />
                 <span class="g-row-text">
-                  <span class="g-row-title">Add a machine</span>
+                  <span class="g-row-title">Add a computer</span>
                   <span class="g-row-sub">Scan the QR code on its screen</span>
                 </span>
                 <Icon name="pan-end" />
@@ -113,7 +113,7 @@ export function MachinesSheet() {
             )}
           </div>
           <p class="t-caption t-secondary">
-            Each machine has its own pairing. On a {PRODUCT} Business machine you are a person with a role; on the others, this phone answers for the owner. Approvals from every machine reach this phone, each named by its machine.
+            Each computer has its own pairing. On a {PRODUCT} Business machine you are a person with a role; on the others, this phone answers for the owner. Requests from every computer reach this phone, each named by its computer.
           </p>
         </div>
       </section>
@@ -156,19 +156,19 @@ function AddMachine() {
     return () => (clearTimeout(timer), stream?.getTracks().forEach((t) => t.stop()));
   }, []);
   return (
-    <div class="gos-add-machine" role="dialog" aria-modal="true" aria-label="Add a machine">
+    <div class="gos-add-machine" role="dialog" aria-modal="true" aria-label="Add a computer">
       <header class="gos-add-head">
         <Button kind="flat" onClick={() => ((sheet.open = 'machines'), changed())}>
           Cancel
         </Button>
-        <h2 class="t-heading">Add a machine</h2>
+        <h2 class="t-heading">Add a computer</h2>
         <span />
       </header>
       <div class="gos-add-view">
         {state === 'none' ? (
           <p class="t-body gos-add-hint">
             <Icon name="phone" size={32} />
-            Open the Camera app and point it at the QR code. It offers app.gurtos.com: tap it, and this app adds the machine.
+            Open the Camera app and point it at the QR code. It offers app.gurtos.com: tap it, and this app adds the computer.
           </p>
         ) : (
           <video ref={video} playsInline muted aria-label="Camera" />
@@ -176,7 +176,7 @@ function AddMachine() {
         {state !== 'none' && state !== 'scanning' && state !== 'start' && <p class="gos-add-error" role="alert">{state}</p>}
       </div>
       <div class="gos-add-foot">
-        <h3 class="t-title3">Point the camera at the QR code on the machine's screen</h3>
+        <h3 class="t-title3">Point the camera at the QR code on the computer's screen</h3>
         <p class="t-caption t-secondary">
           {PRODUCT} Server: Settings › Devices › Pair a phone. {PRODUCT} Personal: {PRODUCT} Settings › Phone. {PRODUCT} Business: an admin makes a one-time pairing code for you.
         </p>

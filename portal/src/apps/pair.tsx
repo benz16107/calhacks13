@@ -31,7 +31,7 @@ export function PairApp({ code }: { code: string }) {
             <>
               <h3 class="t-title2">Paired as {state.device.name}</h3>
               <p class="t-body t-secondary">
-                When a task on {state.box.name} asks for your OK, it shows here, and your answer goes in the log under this name. This phone never holds a key: it can only answer.
+                When a task on {state.box.name} needs you, it shows here, and your answer goes in the log under this name. This phone never holds a key: it can only answer.
               </p>
               <div class="gos-actions">
                 <Button kind="suggested" large href="/">
@@ -45,7 +45,7 @@ export function PairApp({ code }: { code: string }) {
           ) : (
             <form onSubmit={go} class="gos-pair-form">
               <h3 class="t-title2">Check the code</h3>
-              <p class="t-body t-secondary">The box's screen shows the same code.</p>
+              <p class="t-body t-secondary">The computer's screen shows the same code.</p>
               <p class="gos-code t-mono">{code ? formatCode(code) : 'No code in the link'}</p>
               <label class="gos-field">
                 <span class="t-body-strong">Name this phone</span>
@@ -61,7 +61,7 @@ export function PairApp({ code }: { code: string }) {
               </div>
               {state !== 'ask' && state !== 'busy' && (
                 <p class="gos-error" role="alert">
-                  Could not pair: {state}. Ask the box's screen for a new code.
+                  Could not pair: {state}. Ask its screen for a new code.
                 </p>
               )}
             </form>

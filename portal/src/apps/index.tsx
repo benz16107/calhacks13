@@ -52,7 +52,7 @@ export function launchable(): Launchable[] {
     id: `${a.track}/${a.name}`,
     route: `app/${a.track}/${a.name}`,
     title: a.title.replace(/\s*\(.*\)$/, ''),
-    icon: a.track,
+    icon: `${a.track}/${a.name}`,
     track: a.track,
   }));
   return [

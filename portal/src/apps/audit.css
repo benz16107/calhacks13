@@ -70,7 +70,8 @@
 @media (max-width: 699px) {
   .gos-au-body { grid-template-columns: minmax(0, 1fr); }
   .gos-au-side, .gos-au-count, .gos-au-caption { display: none; }
-  .gos-au-filters { overflow-x: auto; padding: 10px 12px; scrollbar-width: none; }
+  .gos-au-filters { flex-wrap: wrap; padding: 10px 12px; }
+  .gos-au-search { flex: 1 0 100%; }
   .gos-au-count-m { display: block; padding: 10px 20px 0; color: var(--color-text-secondary); font: 400 var(--fs-caption) / var(--lh-caption) var(--font); }
   .gos-au-days { padding: 0 8px 18px; }
   .gos-au-entry { grid-template-columns: 44px 28px minmax(0, 1fr); column-gap: 10px; padding: 10px 8px; }
@@ -78,4 +79,9 @@
   .gos-au-head { display: block; }
   .gos-au-head > .g-badge { margin-right: 8px; vertical-align: 1px; }
   .gos-au-title { display: inline; white-space: normal; }
+}
+
+@media (max-width: 699px), (pointer: coarse) {
+  .gos-au-pill { min-height: 44px; }
+  .gos-au-search input { min-height: 44px; }
 }

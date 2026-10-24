@@ -44,7 +44,8 @@ export function TaskApp({ id }: { id: string }) {
 
   const t: Task | undefined = detail && { ...detail.task, ...b.tasks.get(id), hosts: detail.task.hosts, tools: detail.task.tools, user: detail.task.user };
   const app = t ? appOf(t) : undefined;
-  const undoable = !!t && t.state !== 'undone' && t.state !== 'running' && t.state !== 'queued';
+  // Undo only when there is something to undo: changed files or money spent. A waiting task answers in its body.
+  const undoable = !!t && !['undone', 'running', 'queued', 'waiting'].includes(t.state) && (!!diff?.changes.length || t.costCents > 0);
   const head = (
     <HeaderBar
       start={
@@ -56,7 +57,6 @@ export function TaskApp({ id }: { id: string }) {
         )
       }
       title={t?.title ?? taskTitle(id)}
-      sub={`Task ${id}${t ? ` · runs as ${t.user}` : ''}`}
       end={
         <>
           {undoable && (
@@ -235,7 +235,13 @@ export function TaskApp({ id }: { id: string }) {
             <h3 class="t-heading">What it was allowed</h3>
             <div class="gos-w-card">
               <div class="gos-w-fact">
-                <span>Hosts</span>
+                <span>Runs as</span>
+                <span>
+                  Its own user <span class="t-mono t-secondary">({t.user})</span>
+                </span>
+              </div>
+              <div class="gos-w-fact">
+                <span>Sites it may reach</span>
                 <span class="t-mono">{t.hosts.join(', ') || 'none'}</span>
               </div>
               <div class="gos-w-fact">
@@ -247,8 +253,8 @@ export function TaskApp({ id }: { id: string }) {
                 <span>{t.budgetCents > 0 ? dollars(t.budgetCents) : 'none, every spend asks'}</span>
               </div>
               <div class="gos-w-fact">
-                <span>Worker</span>
-                <span>{t.worker === 'droid' ? 'Droid with Claude' : 'Scripted (test)'}</span>
+                <span>Agent</span>
+                <span>{t.worker === 'droid' ? 'Claude' : 'Scripted (test)'}</span>
               </div>
               {t.model && (
                 <div class="gos-w-fact">

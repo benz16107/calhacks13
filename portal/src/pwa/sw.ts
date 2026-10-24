@@ -142,12 +142,12 @@ async function answer(p: Push, approved: boolean) {
       body: JSON.stringify({ approved }),
     });
     const out = (await r.json().catch(() => ({}))) as { error?: string; state?: string; by?: string };
-    if (r.status === 401) title = 'This device is not paired with that box any more. Your answer did not go through.';
-    else if (!r.ok) title = `Not answered: ${out.error ?? `the box said ${r.status}`}`;
+    if (r.status === 401) title = 'This device is not paired with that computer any more. Your answer did not go through.';
+    else if (!r.ok) title = `Not answered: ${out.error ?? `GurtOS answered ${r.status}`}`;
     else if (out.state && out.state !== (approved ? 'approved' : 'denied')) title = `Already ${out.state}${out.by ? ` on ${out.by}` : ''}`;
     else title = approved ? 'Approved' : 'Denied';
   } catch (err) {
-    title = (err as { unpaired?: boolean }).unpaired ? 'This device is not paired with that box any more.' : 'The box is out of reach. Your answer did not go through.';
+    title = (err as { unpaired?: boolean }).unpaired ? 'This device is not paired with that computer any more.' : 'That computer is out of reach. Your answer did not go through.';
   }
   await self.registration.showNotification(title, { body: `${p.box ?? m?.box.name ?? ''}: ${p.title ?? ''}`, tag: p.id, data: { ...p, type: 'answered' }, icon: '/icon-192.png' });
 }

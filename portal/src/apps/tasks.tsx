@@ -39,7 +39,8 @@ export function now(t: Task): { text: string; tone?: 'attention' | 'destructive'
   return { text: t.step || (t.state === 'queued' ? 'Waiting to start' : 'Starting') };
 }
 
-const COLS = 'minmax(240px, 380fr) minmax(90px, 120fr) minmax(150px, 190fr) minmax(110px, 130fr) minmax(200px, 360fr) minmax(120px, 150fr) minmax(70px, 114fr)';
+// Task, App (only when some task came from an app), State, Now, Cost, Started.
+const cols = (app: boolean) => `minmax(240px, 380fr)${app ? ' minmax(90px, 140fr)' : ''} minmax(110px, 130fr) minmax(200px, 400fr) minmax(120px, 150fr) minmax(70px, 114fr)`;
 
 export function TasksApp({ view }: { view: string }) {
   const b = useBox();
@@ -57,6 +58,7 @@ export function TasksApp({ view }: { view: string }) {
   const test = VIEWS.find(([k]) => k === v)![2];
   const needle = q.trim().toLowerCase();
   const shown = all.filter((t) => test(t) && (!needle || `${t.title} ${t.id} ${appOf(t).title}`.toLowerCase().includes(needle)));
+  const showApp = shown.some((t) => appOf(t).id !== 'tasks');
 
   const doUndo = async (t: Task) => {
     setBusy(true);
@@ -143,11 +145,10 @@ export function TasksApp({ view }: { view: string }) {
         </Popover>
       )}
       <div class="g-window-content gos-tasks">
-        <div class="g-table" role="grid" aria-label="Tasks" aria-rowcount={shown.length} style={{ '--cols': COLS } as JSX.CSSProperties} onKeyDown={keys}>
+        <div class="g-table" role="grid" aria-label="Tasks" aria-rowcount={shown.length} style={{ '--cols': cols(showApp) } as JSX.CSSProperties} onKeyDown={keys}>
           <div class="g-thead" role="row">
             <span role="columnheader">Task</span>
-            <span role="columnheader">App</span>
-            <span role="columnheader">Runs as</span>
+            {showApp && <span role="columnheader">App</span>}
             <span role="columnheader">State</span>
             <span role="columnheader">Now</span>
             <span role="columnheader">Cost</span>
@@ -175,15 +176,13 @@ export function TasksApp({ view }: { view: string }) {
                     <AppIcon id={app.id} title={app.title} size={28} />
                     <span class="gos-two">
                       <span class="t-body gos-ellipsis">{t.title}</span>
-                      <span class="t-caption t-secondary">Task {t.id}</span>
                     </span>
                   </span>
-                  <span class="g-td t-body" role="gridcell">
-                    {app.title}
-                  </span>
-                  <span class="g-td t-mono t-secondary" role="gridcell">
-                    {t.user}
-                  </span>
+                  {showApp && (
+                    <span class="g-td t-body" role="gridcell">
+                      {app.title}
+                    </span>
+                  )}
                   <span class="g-td" role="gridcell">
                     <Badge kind={kind}>{word}</Badge>
                   </span>

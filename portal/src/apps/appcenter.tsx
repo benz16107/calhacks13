@@ -136,7 +136,7 @@ export function AppCenterApp({ id }: { id: string }) {
           </span>
           {app.description && <p class="t-body t-secondary">{app.description}</p>}
           {app.status === 'error' && <p class="t-body t-destructive">{app.error}</p>}
-          {app.restartNeeded && <p class="t-caption t-secondary">One of its triggers keeps running until the box restarts.</p>}
+          {app.restartNeeded && <p class="t-caption t-secondary">One of its triggers keeps running until GurtOS restarts.</p>}
           <div class="gos-actions">
             {app.status === 'enabled' && app.ui.length > 0 && (
               <Button kind="suggested" onClick={() => openApp(app)}>
@@ -152,7 +152,7 @@ export function AppCenterApp({ id }: { id: string }) {
       <Group title="What it can reach" caption={app.access.hosts.length ? 'Its tools reach only these. Everything else is blocked and logged.' : undefined}>
         {app.access.hosts.length ? app.access.hosts.map((h) => <Row icon="web-browser" title={h} key={h} />) : <Row icon="network-offline" title="No internet" sub="Its tools reach nothing outside this box" />}
       </Group>
-      <Group title="Keys it needs" caption={app.access.secrets.length ? 'The box holds them. The app never sees one, and neither do agents.' : undefined}>
+      <Group title="Keys it needs" caption={app.access.secrets.length ? 'GurtOS keeps them where agents can\'t read them. The app never sees one either.' : undefined}>
         {app.access.secrets.length ? (
           app.access.secrets.map((s) => (
             <Row title={<span class="gos-set-mono">{s.name}</span>} sub={s.optional ? 'Optional: the app works without it' : undefined} key={s.name}>
@@ -205,7 +205,7 @@ export function AppCenterApp({ id }: { id: string }) {
           {id ? (
             (detail ?? (
               <StatusPage icon="preferences-desktop-apps" title="No such app" action={<Button onClick={() => win?.navigate('app-center')}>All apps</Button>}>
-                {`Nothing called ${id} is installed on this box.`}
+                {`Nothing called ${id} is installed on this computer.`}
               </StatusPage>
             ))
           ) : (

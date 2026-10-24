@@ -97,7 +97,7 @@ export const STEPS: Step[] = [
       <div class="gos-setup-split">
         <div class="gos-setup-col">
           <Intro big title={`Welcome to ${PRODUCT}`}>
-            {PRODUCT} runs AI agents on this box. Each agent works in its own space and asks you before it spends money or reaches somewhere new. Setup takes about 10 minutes. Steps marked optional can be skipped.
+            {PRODUCT} runs AI agents on this computer. Each agent works in its own space and asks you before it spends money or reaches somewhere new. Setup takes about 10 minutes. Steps marked optional can be skipped.
           </Intro>
           <div class="g-list">
             <ComboRow icon="preferences-desktop-locale" title="Language" value={w.draft.language} options={[['en-US', 'English (United States)']]} onChange={(v) => w.set({ language: v })} />
@@ -119,14 +119,14 @@ export const STEPS: Step[] = [
       const online = box.system?.network.online !== false;
       return (
         <div class="gos-setup-col">
-          <Intro title="Connect to a network">The box needs the internet for AI models and for apps that reach the web. A cable is the most reliable.</Intro>
+          <Intro title="Connect to a network">GurtOS needs the internet for AI models and for apps that reach the web. A cable is the most reliable.</Intro>
           <Group title="Wired">
             {all.filter((i) => !wifi(i.name)).map((i) => (
               <Row icon="network-wired" title={`Ethernet (${i.name})`} sub={i.address} key={i.name}>
                 <span class={online ? 't-success' : 't-secondary'}>{online ? 'Connected' : 'No internet'}</span>
               </Row>
             ))}
-            {!all.some((i) => !wifi(i.name)) && <Row icon="network-offline" title="No cable" sub="Plug a network cable into the box." />}
+            {!all.some((i) => !wifi(i.name)) && <Row icon="network-offline" title="No cable" sub="Plug a network cable into this computer." />}
           </Group>
           <Group title="Wi-Fi" caption="Use Wi-Fi when there is no cable.">
             {all.filter((i) => wifi(i.name)).map((i) => (
@@ -134,14 +134,13 @@ export const STEPS: Step[] = [
                 <span class="t-success">Connected</span>
               </Row>
             ))}
-            {!all.some((i) => wifi(i.name)) && <Row icon="network-wireless-signal-excellent" title="Joining Wi-Fi from this screen is not ready yet" sub="Use a cable for now. The box keeps working on it." />}
           </Group>
         </div>
       );
     },
     summary: () => {
       const i = iface();
-      if (box.system?.network.online === false) return 'The box is offline. Connect it to finish setting up AI models.';
+      if (box.system?.network.online === false) return 'This computer is offline. Connect it to finish setting up AI models.';
       return i ? `Online through ${wifi(i.name) ? 'Wi-Fi' : 'Ethernet'}.` : 'Online.';
     },
     data: () => ({ online: box.system?.network.online ?? null, interface: iface()?.name ?? null }),
@@ -150,7 +149,8 @@ export const STEPS: Step[] = [
     id: 'name',
     label: 'Name and time zone',
     page: (w) => <NameStep w={w} />,
-    summary: () => 'Quiet hours and update times use this time zone.',
+    ready: (w) => NAME_OK.test(w.draft.boxName.trim()),
+    summary: (w) => (NAME_OK.test(w.draft.boxName.trim()) ? 'Quiet hours and update times use this time zone.' : 'Give this computer a name to go on.'),
     data: (w) => ({ boxName: w.draft.boxName.trim(), timezone: w.draft.timezone, autoTime: w.draft.autoTime }),
   },
   {
@@ -178,7 +178,7 @@ export const STEPS: Step[] = [
     page: (w) => <ModelsStep w={w} />,
     ready: (w) => !!modelKey(w),
     skipLabel: 'Skip for now',
-    summary: (w) => (modelKey(w) ? 'A model key is in the vault. Tasks can run.' : "Add one key to go on. If you skip, tasks can't run until a key is added in Settings."),
+    summary: (w) => (modelKey(w) ? 'Model key saved. Agents can start tasks.' : "Add one key to go on. If you skip, agents can't start a task until you add a key in Settings."),
     data: (w) => ({ worker: 'droid', via: modelKey(w) === 'ANTHROPIC_API_KEY' ? 'anthropic' : modelKey(w) === 'FACTORY_API_KEY' ? 'factory' : 'none' }),
   },
   {
@@ -226,7 +226,10 @@ export const STEPS: Step[] = [
     label: 'Privacy and logs',
     optional: true,
     page: (w) => <PrivacyStep w={w} />,
-    summary: () => 'Nothing leaves the box unless you turn it on here.',
+    summary: () => {
+      const shared = [on('elastic') && 'the log copy to Elastic', on('mana') && 'the public status page'].filter(Boolean) as string[];
+      return shared.length ? `On: ${list(shared)}. Everything else stays on this computer.` : 'Nothing leaves this computer unless you turn it on here.';
+    },
     data: () => ({ logRetentionDays: box.settings?.logRetentionDays, elastic: on('elastic'), mana: on('mana') }),
   },
   {
@@ -283,12 +286,16 @@ export function SetupWizard() {
   // The system facts may arrive after the first render: fill the name and time zone once they do.
   useEffect(() => {
     if (!b.system) return;
-    setDraft((d) => ({ ...d, boxName: d.boxName || b.system!.boxName, timezone: d.timezone || b.system!.timezone }));
+    // A computer fresh from the installer is on UTC; a phone or laptop doing setup knows the real time zone.
+    const here = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const guess = /^(Etc\/)?UTC$/.test(b.system.timezone) && here && !/^(Etc\/)?UTC$/.test(here) ? here : b.system.timezone;
+    setDraft((d) => ({ ...d, boxName: d.boxName || b.system!.boxName, timezone: d.timezone || guess }));
   }, [b.system?.boxName]);
   // Another screen (the owner's phone, or the box's own) moved setup on: follow it.
   const count = Object.keys(recorded).length;
   useEffect(() => setCur((c) => Math.max(c, firstOpen())), [count]);
-  useEffect(() => (heading.current?.querySelector('h1') as HTMLElement | null)?.focus(), [cur]);
+  // Each step starts with its heading focused, so Tab goes on from there (in the kiosk too, which starts unfocused).
+  useEffect(() => (window.focus(), (heading.current?.querySelector('h1') as HTMLElement | null)?.focus()), [cur]);
 
   const w: Wiz = { draft, set: (p) => setDraft((d) => ({ ...d, ...p })), vault, reloadVault, setKey: setKeyFor, fail: (e) => setError((e as Error).message) };
   const step = STEPS[cur];
@@ -411,6 +418,12 @@ function Access() {
       {row('larger-text', 'Larger text')}
       {row('contrast', 'High contrast')}
       {row('reduce-motion', 'Reduce motion')}
+      {/* This computer's own screen has no screen reader; the phone's does, and every step works there. */}
+      <Row
+        icon="preferences-desktop-accessibility"
+        title="Screen reader"
+        sub={surface === 'box screen' ? "Scan the code with your phone to set up with VoiceOver or TalkBack. Every step works there." : "Your device's screen reader reads every step."}
+      />
     </Group>
   );
 }
@@ -482,7 +495,7 @@ function PairState({ p }: { p: ReturnType<typeof usePairing> }) {
   if (typeof p.code !== 'object') return <p class="t-caption t-secondary">{p.code ? `Pairing is not available: ${p.code}` : 'Making a code…'}</p>;
   const left = Math.max(0, Math.round((Date.parse(p.code.expiresAt) - now) / 1000));
   return (
-    <p class="t-caption t-accent">
+    <p class="t-caption t-secondary" role="status">
       Waiting for your phone. The code changes in {Math.floor(left / 60)}:{String(left % 60).padStart(2, '0')}.
     </p>
   );
@@ -497,7 +510,7 @@ const Paired = ({ name }: { name: string }) => (
   </div>
 );
 
-const NoQr = () => <p class="t-caption t-secondary gos-setup-noqr">This screen does not know the address phones use to reach the box. Set BOX_URL on the box, or open {PRODUCT} from a laptop to show the code.</p>;
+const NoQr = () => <p class="t-caption t-secondary gos-setup-noqr">This screen does not know the address phones use to reach this computer. Set BOX_URL on it, or open {PRODUCT} from a laptop to show the code.</p>;
 
 function PhoneHandoff() {
   const p = usePairing();
@@ -543,7 +556,7 @@ function OwnerStep({ w }: { w: Wiz }) {
   );
   return (
     <div class="gos-setup-col">
-      <Intro title="Who owns this box">The owner approves spending and changes settings. Pair your phone so approvals reach you anywhere, or keep the owner on this screen.</Intro>
+      <Intro title="Who owns this computer">The owner approves spending and changes settings. Pair your phone so approvals reach you anywhere, or keep the owner on this screen.</Intro>
       <div class="gos-setup-choices" role="radiogroup" aria-label="Owner">
         {choice(
           'phone',
@@ -564,7 +577,7 @@ function OwnerStep({ w }: { w: Wiz }) {
             )}
           </>,
         )}
-        {choice('screen', 'system-lock-screen', 'Only this screen', <p class="t-body t-secondary">For a box with no phone nearby. Whoever stands at this screen is the owner. You can pair a phone later in Settings &gt; Devices.</p>)}
+        {choice('screen', 'system-lock-screen', 'Only this screen', <p class="t-body t-secondary">For a computer with no phone nearby. Whoever stands at this screen is the owner. You can pair a phone later in Settings &gt; Devices.</p>)}
       </div>
     </div>
   );
@@ -576,12 +589,17 @@ let zones: [string, string][] | undefined;
 function zoneList(current: string): [string, string][] {
   zones ??= (Intl as any).supportedValuesOf('timeZone').map((z: string) => {
     const off = new Intl.DateTimeFormat('en-US', { timeZone: z, timeZoneName: 'shortOffset' }).formatToParts().find((p) => p.type === 'timeZoneName')?.value ?? '';
-    return [z, `${z.split('/').at(-1)!.replaceAll('_', ' ')} (${off.replace('GMT', 'UTC').replace('-', '−') || 'UTC'})`];
+    const city = z.split('/').at(-1)!.replaceAll('_', ' ');
+    return [z, city === 'UTC' ? 'UTC' : `${city} (${off.replace('GMT', 'UTC').replace('-', '−') || 'UTC'})`];
   });
-  return zones!.some(([z]) => z === current) ? zones! : [[current, current], ...zones!];
+  return zones!.some(([z]) => z === current) ? zones! : [[current, current.replace(/^Etc\//, '')], ...zones!];
 }
 
+/** A computer's name: letters, digits, spaces, apostrophes and hyphens ("Ben's laptop"), 1 to 40 characters. */
+const NAME_OK = /^[\p{L}\p{N}][\p{L}\p{N} '’-]{0,39}$/u;
+
 function NameStep({ w }: { w: Wiz }) {
+  const name = w.draft.boxName.trim();
   const now = useNow(10_000);
   const tz = w.draft.timezone;
   let time = '';
@@ -590,11 +608,13 @@ function NameStep({ w }: { w: Wiz }) {
   } catch {}
   return (
     <div class="gos-setup-col">
-      <Intro title="Name this box">The name shows in the top bar, on your phone and on your network.</Intro>
+      <Intro title="Name this computer">The name shows in the top bar, on your phone and on your network.</Intro>
       <label class="gos-setup-field">
-        <span class="t-heading">Box name</span>
-        <input class="g-field" value={w.draft.boxName} maxLength={40} autoComplete="off" onInput={(e) => w.set({ boxName: (e.target as HTMLInputElement).value })} />
-        <span class="t-caption t-secondary">On your network as {box.system?.hostname ?? 'this box'}. You can rename it later in Settings &gt; General.</span>
+        <span class="t-heading">Computer name</span>
+        <input class="g-field" value={w.draft.boxName} maxLength={40} autoComplete="off" aria-invalid={!NAME_OK.test(name)} aria-describedby="gos-name-hint" onInput={(e) => w.set({ boxName: (e.target as HTMLInputElement).value })} />
+        <span id="gos-name-hint" class={`t-caption ${NAME_OK.test(name) ? 't-secondary' : 't-destructive'}`}>
+          {!name ? 'Type a name.' : NAME_OK.test(name) ? `On your network as ${box.system?.hostname ?? 'this computer'}. You can rename it later in Settings > General.` : 'Use letters, digits, spaces, apostrophes and hyphens.'}
+        </span>
       </label>
       <Group title="Time">
         <ComboRow icon="preferences-system-time" title="Time zone" value={tz} options={zoneList(tz)} onChange={(v) => w.set({ timezone: v })} />
@@ -613,19 +633,21 @@ function ModelsStep({ w }: { w: Wiz }) {
   const [via, setVia] = useState<(typeof MODEL_KEYS)[number]>(modelKey(w) ?? 'ANTHROPIC_API_KEY');
   const [value, setValue] = useState('');
   const [saved, setSaved] = useState('');
+  const anthropic = via === 'ANTHROPIC_API_KEY';
+  // A quick shape check here; GurtOS itself checks the key with Anthropic or Factory and says if it was refused.
+  const shape = anthropic && value.trim() && !value.trim().startsWith('sk-ant-') ? "That isn't an Anthropic key. Anthropic keys start with sk-ant-." : '';
   const save = () => {
-    if (!value.trim()) return;
-    api('PUT', `/vault/${via}`, { value: value.trim() }).then(
-      () => (setValue(''), setSaved('Saved to the vault.'), w.reloadVault()),
-      w.fail,
+    if (!value.trim() || shape) return;
+    api<{ checked?: boolean }>('PUT', `/vault/${via}`, { value: value.trim() }).then(
+      (r) => (setValue(''), setSaved(r?.checked === false ? "Saved. GurtOS couldn't check it yet." : `${anthropic ? 'Anthropic' : 'Factory'} key saved.`), w.reloadVault()),
+      (e) => setSaved(`Not saved: ${(e as Error).message}`),
     );
   };
-  const anthropic = via === 'ANTHROPIC_API_KEY';
   const vultr = 'VULTR_INFERENCE_KEY';
   return (
     <div class="gos-setup-col">
       <Intro title="Add a model key">
-        {PRODUCT} needs one key so agents can think. Use either an Anthropic API key or a Factory API key. The key goes into the vault. Agents never see it: the box adds it to their model calls on the way out.
+        {PRODUCT} needs one key so agents can think. Use either an Anthropic API key or a Factory API key. GurtOS keeps keys where agents can't read them, and adds the key to their model calls on the way out.
       </Intro>
       <ToggleGroup
         label="Which key"
@@ -658,14 +680,14 @@ function ModelsStep({ w }: { w: Wiz }) {
         </span>
       </div>
       <div class="gos-setup-save">
-        <Button kind="suggested" disabled={!value.trim()} onClick={save}>
-          Save to vault
+        <Button kind="suggested" disabled={!value.trim() || !!shape} onClick={save}>
+          Save key
         </Button>
-        <span class={`t-caption${saved || keySet(w, via) ? ' t-success' : ' t-secondary'}`} role="status">
-          {saved || (keySet(w, via) ? `${setText(w, via)}. Write-only: you can replace it, never read it.` : 'Write-only: you can replace a key, never read it.')}
+        <span class={`t-caption${shape || saved.startsWith('Not saved') ? ' t-destructive' : saved || keySet(w, via) ? ' t-success' : ' t-secondary'}`} role="status">
+          {shape || saved || (keySet(w, via) ? `${setText(w, via)}. You can replace it but never see it.` : 'You can replace a key but never see it.')}
         </span>
       </div>
-      <Group title="Model keys in the vault">
+      <Group title="Model keys">
         {MODEL_KEYS.map((k) => (
           <Row icon="dialog-password" title={k === 'ANTHROPIC_API_KEY' ? 'Anthropic' : 'Factory'} sub={k} key={k}>
             <span class={`g-row-value${keySet(w, k) ? ' t-success' : ''}`}>{keySet(w, k) ? setText(w, k) : 'Not set'}</span>
@@ -721,19 +743,19 @@ function SafetyStep({ w }: { w: Wiz }) {
   const q = s.quietHours;
   return (
     <div class="gos-setup-col">
-      <Intro title="Safety defaults">What a task may do before it has to ask you. Change them any time in Settings &gt; Permissions.</Intro>
+      <Intro title="What agents may reach and spend">What a task may do before it has to ask you. Change them any time in Settings &gt; Permissions.</Intro>
       <Group title="Internet">
         <ComboRow
           title="Internet for new tasks"
-          sub="Other hosts are blocked and the attempt is logged"
+          sub="Other sites are blocked and logged"
           value={s.networkDefault}
           options={[
-            ['none', 'Only hosts the task names'],
-            ['allowlist', 'Only listed hosts'],
+            ['none', 'Only sites the task names'],
+            ['allowlist', 'Only the sites below'],
           ]}
           onChange={(v) => apply(w, { networkDefault: v })}
         />
-        <LinkRow title="Listed hosts" sub="A task that names no hosts gets these" value={s.defaultHosts.length ? s.defaultHosts.join(', ') : 'None yet'} onClick={() => setHosts(s.defaultHosts.join('\n'))} />
+        <LinkRow title="Sites any task may reach" sub="For a task that names no sites" value={s.defaultHosts.length ? s.defaultHosts.join(', ') : 'None yet'} onClick={() => setHosts(s.defaultHosts.join('\n'))} />
       </Group>
       <Group title="Spending">
         <ComboRow title="Always ask before a single spend over" value={String(s.approvalThresholdCents)} options={money([100, 500, 1000, 2500, 5000, 10000, 25000], s.approvalThresholdCents)} onChange={(v) => apply(w, { approvalThresholdCents: +v })} />
@@ -744,13 +766,13 @@ function SafetyStep({ w }: { w: Wiz }) {
       </Group>
       {hosts !== undefined && (
         <Sheet
-          title="Listed hosts"
+          title="Sites any task may reach"
           onCancel={() => setHosts(undefined)}
           onDone={() => (apply(w, { defaultHosts: hosts.split(/[\s,]+/).filter(Boolean) }), setHosts(undefined))}
           done="Save"
         >
           <label class="gos-setup-field">
-            <span class="t-heading">One host per line</span>
+            <span class="t-heading">One site per line</span>
             <textarea class="g-field" rows={6} value={hosts} placeholder="api.example.com" onInput={(e) => setHosts((e.target as HTMLTextAreaElement).value)} />
             <span class="t-caption t-secondary">Tasks that name no hosts may reach only these. Everything else is blocked and logged.</span>
           </label>
@@ -837,7 +859,7 @@ function UpdatesStep({ w }: { w: Wiz }) {
   const sys = box.system;
   return (
     <div class="gos-setup-col">
-      <Intro title="Updates">{PRODUCT} installs each update as a whole system, into a second copy. If the new one does not start cleanly, the box goes back to the old one by itself.</Intro>
+      <Intro title="Updates">{PRODUCT} installs each update as a whole system, into a second copy. If the new one does not start cleanly, GurtOS goes back to the old one by itself.</Intro>
       <div class="gos-setup-choices">
         <div class="gos-setup-system is-running">
           <span class="gos-setup-choice-head">
@@ -889,7 +911,7 @@ function PrivacyStep({ w }: { w: Wiz }) {
     return (
       <SwitchRow
         title={title}
-        sub={a ? sub : `${sub}. Not installed on this box.`}
+        sub={a ? sub : `${sub}. Not installed on this computer.`}
         checked={a?.status === 'enabled'}
         disabled={!a}
         onChange={(v) => void api('POST', `/apps/${id}/${v ? 'enable' : 'disable'}`).then(loadApps, w.fail)}
@@ -899,7 +921,7 @@ function PrivacyStep({ w }: { w: Wiz }) {
   const days = s?.logRetentionDays ?? 365;
   return (
     <div class="gos-setup-col">
-      <Intro title="Privacy and logs">The action log records every step every agent takes. It stays on this box and holds no keys.</Intro>
+      <Intro title="Privacy and logs">The action log records every step every agent takes. It stays on this computer and holds no keys.</Intro>
       <Group title="The action log">
         <ComboRow
           title="Keep the log for"
@@ -954,7 +976,7 @@ function AppearanceStep({ w }: { w: Wiz }) {
   const color = (v: string) => apply(w, { appearance: { accent: v === ACCENTS[0][0] ? '' : v } });
   return (
     <div class="gos-setup-col">
-      <Intro title="Appearance">How the box's screen and the portal look. Each phone can choose its own.</Intro>
+      <Intro title="Appearance">How this computer's screen and the portal look. Each phone can choose its own.</Intro>
       <div class="gos-setup-themes" role="radiogroup" aria-label="Style" onKeyDown={radioKeys(THEMES.map(([v]) => v), a.theme, theme)}>
         {THEMES.map(([v, label]) => (
           <button type="button" role="radio" aria-checked={a.theme === v} tabIndex={a.theme === v ? 0 : -1} class="gos-setup-theme" onClick={() => theme(v)} key={v}>
@@ -1002,7 +1024,7 @@ function DoneStep({ w }: { w: Wiz }) {
         <Badge>3</Badge>
       </span>,
       'The top bar',
-      'An amber count means something waits for your OK. Your phone gets it too.',
+      'An amber count means something needs you. Your phone gets it too.',
     ],
   ];
   return (
@@ -1030,7 +1052,7 @@ function DoneStep({ w }: { w: Wiz }) {
           <span class="g-row-value">{owner}</span>
         </Row>
         <Row title="Worker">
-          <span class="g-row-value">{modelKey(w) === 'ANTHROPIC_API_KEY' ? 'Droid with Claude, Anthropic key' : modelKey(w) ? 'Droid with Claude, Factory key' : "No model key yet: tasks can't run"}</span>
+          <span class="g-row-value">{modelKey(w) === 'ANTHROPIC_API_KEY' ? 'Claude, with your Anthropic key' : modelKey(w) ? 'Claude, with your Factory key' : "No model key yet: agents can't start"}</span>
         </Row>
         <Row title="Apps">
           <span class="g-row-value">{enabled().map(nice).join(', ') || 'None'}</span>
@@ -1039,7 +1061,7 @@ function DoneStep({ w }: { w: Wiz }) {
           <span class="g-row-value">{s ? `${s.autoUpdate ? 'Automatic' : 'By hand'}, ${s.updateChannel}` : ''}</span>
         </Row>
       </Group>
-      {surface !== 'box screen' && <p class="t-caption t-secondary">The box's own screen opens the desktop at the same time.</p>}
+      {surface !== 'box screen' && <p class="t-caption t-secondary">This computer's own screen opens the desktop at the same time.</p>}
     </div>
   );
 }

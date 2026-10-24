@@ -78,7 +78,7 @@ export function Notifications() {
   return (
     <Group
       title="Notifications on this device"
-      caption={`Requests for your OK arrive here even when ${PRODUCT} is closed, with Approve and Deny. They reach the owner's phone (in Business, whoever the rules send them to). Quiet hours hold them back.`}
+      caption={`Requests arrive here even when ${PRODUCT} is closed, with Approve and Deny. They reach the owner's phone (in Business, whoever the rules send them to). Quiet hours hold them back.`}
     >
       {!pushWorks() ? (
         <Row icon="preferences-system-notifications" title="This browser can't show notifications" sub={isSecureContext ? 'Open GurtOS in Safari, Chrome or Firefox.' : "Open GurtOS at its https address. Notifications don't work on a plain http page."} />
@@ -86,7 +86,7 @@ export function Notifications() {
         <Row icon="preferences-system-notifications" title="Add GurtOS to your Home Screen first" sub="An iPhone shows notifications only for apps on the Home Screen. In Safari tap Share, then Add to Home Screen, and pair again from there." />
       ) : (
         <>
-          <Row icon="preferences-system-notifications" title={on ? 'On' : 'Off'} sub={on === undefined ? 'Checking…' : on ? `${many ? 'From every paired machine. ' : ''}You can turn them off any time.` : Notification.permission === 'denied' ? 'Blocked for this app in the browser or phone settings.' : 'Turn them on to get requests as notifications.'}>
+          <Row icon="preferences-system-notifications" title={on ? 'On' : 'Off'} sub={on === undefined ? 'Checking…' : on ? `${many ? 'From every paired computer. ' : ''}You can turn them off any time.` : Notification.permission === 'denied' ? 'Blocked for this app in the browser or phone settings.' : 'Turn them on to get requests as notifications.'}>
             {on ? (
               <Button onClick={() => run(turnOff, 'Notifications are off.')} disabled={busy}>
                 Turn off
@@ -98,7 +98,7 @@ export function Notifications() {
             )}
           </Row>
           {on && (
-            <Row title="Send a test" sub="The box sends one through the push service, as it would a request.">
+            <Row title="Send a test" sub="GurtOS sends one through the push service, as it would a request.">
               <Button onClick={() => run(() => callMachine<{ sent: number }>(machine()!, 'POST', '/push/test').then((r) => (r.sent ? undefined : Promise.reject(new Error('The box had no subscription to send to.')))), 'Sent. It should arrive in a few seconds.')} disabled={busy}>
                 Send a test
               </Button>
@@ -273,7 +273,7 @@ export function NotifyFirst({ onDone }: { onDone: () => void }) {
           <h1 class="t-title2" id="notify-first-title">
             Get approvals on this phone
           </h1>
-          <p class="t-body t-secondary">{PRODUCT} sends a notification when something needs your OK, and names the machine it came from. Nothing else.</p>
+          <p class="t-body t-secondary">{PRODUCT} sends a notification when something needs you, and names the computer it came from. Nothing else.</p>
           <Button kind="suggested" large onClick={() => void on()}>
             Turn on notifications
           </Button>

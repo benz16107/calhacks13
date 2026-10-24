@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { HOLD, answer, base, box, changed, pairing, useBox, type Approval } from '../live.ts';
 import { Button, Icon } from '../kit/ui.tsx';
-import { dollars } from '../util.ts';
+import { dollars, who } from '../util.ts';
 
 let lastAnswer = 0;
 /** What an Approve button names: the spend, or on GurtOS Business the amount the rules checked (not for a fraud flag). */
@@ -48,7 +48,7 @@ export function AnswerButtons({ a, after, large, denyOnly }: { a: Approval; afte
   if (live.state !== 'pending' || r) {
     const ok = r ? r.approved : live.state === 'approved';
     const by = r?.by ?? live.by;
-    const text = r?.mine ? (ok ? 'Approved' : 'Denied') : `Already ${ok ? 'approved' : 'denied'}${by ? ` on ${by}` : ''}`;
+    const text = r?.mine ? (ok ? 'Approved' : 'Denied') : `Already ${ok ? 'approved' : 'denied'}${by ? ` on ${who(by)}` : ''}`;
     return (
       <p class={`gos-answered${ok ? ' is-ok' : ''}`} role="status">
         <Icon name={ok ? 'object-select' : 'process-stop'} />

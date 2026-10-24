@@ -175,7 +175,7 @@ export function PeoplePage() {
         })}
       </Group>
       {view.seats.length > 0 && (
-        <Group title="Shadow mode" caption="A seat in shadow mode only suggests. Each decision goes to a person through the rules, like any request, and the box counts how often they decide the same. Turn it off to take the seat live.">
+        <Group title="Shadow mode" caption="A seat in shadow mode only suggests. Each decision goes to a person through the rules, like any request, and GurtOS counts how often they decide the same. Turn it off to take the seat live.">
           {view.seats.map((s) => {
             const p = pilot(s.name);
             return (
@@ -359,7 +359,7 @@ function PairSheet({ person, added, onClose }: { person: Person; added: boolean;
           </div>
           <div class="gos-set-pair-text">
             <p class="t-body">1. Point {person.name}'s phone camera at the code.</p>
-            <p class="t-body">2. {PRODUCT} opens on the phone, on this box's address.</p>
+            <p class="t-body">2. {PRODUCT} opens on the phone, on this computer's address.</p>
             <p class="t-body">3. Check the phone shows the same code, then name it.</p>
             {typeof code === 'object' && (
               <>
@@ -670,11 +670,11 @@ export function KillSwitchPage() {
     setConfirm(false);
   };
   const where = pairing() ? 'this phone is paired to you' : surface === 'box screen' ? 'this screen' : 'this browser';
-  const you = me.person ? `${me.person.name} · ${me.person.title || ROLES[me.person.role][0]} · ${where}` : `The box owner · ${where}`;
+  const you = me.person ? `${me.person.name} · ${me.person.title || ROLES[me.person.role][0]} · ${where}` : `The owner · ${where}`;
   if (paused) {
     const mine = !!me.person && paused.by === me.person.name;
     const here = mine && (pairing() ? pairing()!.device.name === paused.via : surface === 'box screen' && paused.via === 'box screen');
-    const from = here ? (pairing() ? 'this phone' : 'this screen') : paused.via === 'box screen' ? 'the box screen' : paused.via;
+    const from = here ? (pairing() ? 'this phone' : 'this screen') : paused.via === 'box screen' ? "this computer's screen" : paused.via;
     const stopped = ofState('running', 'waiting', 'queued');
     return (
       <>
@@ -699,7 +699,7 @@ export function KillSwitchPage() {
           ))}
           {!stopped.length && <Row title="No tasks were running" />}
         </Group>
-        <p class="t-caption t-secondary">{waiting ? `${plural(waiting, 'request')} waiting for an OK stay${waiting === 1 ? 's' : ''} open. Whoever the rules send ${waiting === 1 ? 'it' : 'them'} to can still answer.` : 'No requests are waiting for an OK.'}</p>
+        <p class="t-caption t-secondary">{waiting ? `${plural(waiting, 'request')} that need${waiting === 1 ? 's' : ''} you stay${waiting === 1 ? 's' : ''} open. Whoever the rules send ${waiting === 1 ? 'it' : 'them'} to can still answer.` : 'No requests are waiting for an OK.'}</p>
       </>
     );
   }
@@ -709,7 +709,7 @@ export function KillSwitchPage() {
         <Row title="Running now">
           <span class="g-row-value">{plural(running, 'task')}</span>
         </Row>
-        <Row title="Waiting for an OK">
+        <Row title="Needs you">
           <span class="g-row-value">{plural(waiting, 'request')}</span>
         </Row>
         <Row title="Agent seats">
@@ -722,13 +722,13 @@ export function KillSwitchPage() {
         </Button>
         {!may && <p class="t-caption t-secondary">Only an IT admin can pause or resume the agents.</p>}
       </div>
-      <p class="t-body t-secondary">Every running task stops where it is and nothing new starts. Requests waiting for an OK stay open. Only an IT admin can resume, and both the pause and the resume go in the audit log.</p>
+      <p class="t-body t-secondary">Every running task stops where it is and nothing new starts. Requests that need you stay open. Only an IT admin can resume, and both the pause and the resume go in the audit log.</p>
       <p class="t-caption t-secondary">{you}</p>
       {confirm && (
         <Alert
           title={`Pause all agents at ${view.company}?`}
           body={`${running} running ${running === 1 ? 'task stops where it is' : 'tasks stop where they are'}, and nothing new starts. ${
-            waiting ? `The ${plural(waiting, 'request')} waiting for an OK stay${waiting === 1 ? 's' : ''} open.` : 'No requests are waiting for an OK.'
+            waiting ? `The ${plural(waiting, 'request')} that need${waiting === 1 ? 's' : ''} you stay${waiting === 1 ? 's' : ''} open.` : 'No requests are waiting for an OK.'
           } Only an IT admin can resume. The pause goes in the audit log.`}
           action="Pause all agents"
           destructive

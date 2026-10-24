@@ -50,7 +50,7 @@ function App() {
       <div class="gos-setup-layer">
         <section class="g-window gos-setup-wait">
           <StatusPage icon="emblem-system" title={`${PRODUCT} is being set up`}>
-            Finish setup on the box's own screen, or scan its QR code with the owner's phone. This page opens the desktop when setup is done.
+            Finish setup on this computer's own screen, or scan its QR code with the owner's phone. This page opens the desktop when setup is done.
           </StatusPage>
         </section>
       </div>

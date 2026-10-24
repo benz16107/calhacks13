@@ -257,7 +257,7 @@ export async function api<T = any>(method: string, path: string, body?: unknown,
   // app.gurtos.com has no API of its own: with no machine, there is nothing to ask, only pairing.
   if (noMachine()) {
     if (!box.unpaired) ((box.unpaired = true), changed());
-    throw Object.assign(new Error('No box is paired with this app'), { status: 401 });
+    throw Object.assign(new Error('No computer is paired with this app'), { status: 401 });
   }
   const token = pairing()?.token;
   const r = await fetch(`${base()}/api${path}`, {
@@ -266,7 +266,7 @@ export async function api<T = any>(method: string, path: string, body?: unknown,
     body: body === undefined ? undefined : JSON.stringify(body),
     signal: AbortSignal.timeout(timeoutMs),
   }).catch((e: Error) => {
-    throw new Error(e.name === 'TimeoutError' ? 'The box did not answer in time' : 'The box is out of reach');
+    throw new Error(e.name === 'TimeoutError' ? `${named()} did not answer in time` : `${named()} is out of reach`);
   });
   const out = await r.json().catch(() => ({ error: `${r.status} ${r.statusText}` }));
   if (r.status === 401) {
@@ -426,7 +426,7 @@ async function cameBack(before: string[]) {
   await Promise.all([refresh(), loadHealth()]).catch(() => {});
   const restarted = !!box.health?.startedAt && box.health.startedAt !== started;
   const tasks = before.filter((id) => ['running', 'waiting', 'done', 'queued'].includes(box.tasks.get(id)?.state ?? ''));
-  if (tasks.length && (restarted || Date.now() - dropAt > 3000)) box.restored = { at: Date.now(), tasks, restarted, lostAt: dropAt };
+  if (restarted || (tasks.length && Date.now() - dropAt > 3000)) box.restored = { at: Date.now(), tasks, restarted, lostAt: dropAt };
   changed();
 }
 
@@ -516,6 +516,8 @@ export function machines(): Machine[] {
 export const machine = (): Machine | undefined => machines().find((m) => m.box.id === localStorage.getItem('gurtos.machine')) ?? machines()[0];
 export const pairing = (): Pairing | undefined => machine();
 /** Where this page's machine answers: '' (this page's own origin) on a box, its https address on app.gurtos.com. */
+/** This computer's name for sentences: "Home box is out of reach". */
+const named = () => box.system?.boxName ?? machine()?.box.name ?? 'This computer';
 export const base = () => (hosted ? (machine()?.url ?? '') : '');
 const noMachine = () => hosted && !machine();
 // Another tab (or Forget) removed the machine this page shows: go to pairing or the next machine.
@@ -570,7 +572,7 @@ export function setPairing(p: Pairing | undefined) {
  * and checks the row changed, else through the HTTP API. If the box is out of reach, the answer fails and says so.
  */
 export async function answer(a: Approval, approved: boolean) {
-  if (box.down) throw new Error('The box is out of reach. Your answer did not go through.');
+  if (box.down) throw new Error(`${named()} is out of reach. Your answer did not go through.`);
   const mine = pairing()?.device.name ?? surface;
   let got: Approval | undefined;
   // A Business box takes answers only through the API, as the person signed in here.
@@ -677,6 +679,11 @@ export async function start() {
   const log = await api<LogEvent[]>('GET', '/log?after=0').catch(() => undefined);
   for (const e of log ?? []) take(e);
   box.logLoaded = !!log;
+  // Started in the last ten minutes with a log from before: a restart, even with nothing to resume.
+  const h = box.health;
+  if (!box.restored && h?.startedAt && Date.now() - Date.parse(h.startedAt) < 600_000 && log?.some((e) => e.at < h.startedAt!)) {
+    box.restored = { at: Date.parse(h.startedAt), tasks: [], restarted: true };
+  }
   changed();
   follow();
   // SpacetimeDB listens on the box's loopback only (core c6f747e): the box's own screen subscribes, others follow the log.

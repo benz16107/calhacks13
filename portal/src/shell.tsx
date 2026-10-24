@@ -73,7 +73,7 @@ export function TopBar() {
             {PRODUCT}
           </span>
         </TopButton>
-        <TopButton pill label={`Box: ${b.business.company || selfBox().name}. Switch box`} onClick={pop('boxes')} expanded={shell.open === 'boxes'}>
+        <TopButton pill label={`Computer: ${b.business.company || selfBox().name}. Switch computer`} onClick={pop('boxes')} expanded={shell.open === 'boxes'}>
           <Icon name="computer" />
           <span>{b.business.company || selfBox().name}</span>
           <Icon name="pan-down" />
@@ -89,13 +89,13 @@ export function TopBar() {
       <div class="gos-tb-group gos-tb-end">
         {b.down ? (
           <span class="gos-tb-note" role="status">
-            <Icon name="network-offline" /> Box out of reach
+            <Icon name="network-offline" /> Out of reach
           </span>
         ) : (
           need > 0 && (
-            <TopButton label={`${plural(need, 'request')} need you`} onClick={pop('notifications')}>
+            <TopButton label={`${need} ${need === 1 ? 'needs' : 'need'} you`} onClick={pop('notifications')}>
               <Badge>{need}</Badge>
-              <span>need you</span>
+              <span>{need === 1 ? 'needs' : 'need'} you</span>
             </TopButton>
           )
         )}
@@ -151,9 +151,9 @@ function machineItems() {
       run: () => (m.box.id === now?.box.id ? undefined : switchMachine(m.box.id)),
     })),
     'sep' as const,
-    { label: 'Add a machine…', icon: 'list-add', run: () => location.assign('/pair') },
+    { label: 'Add a computer…', icon: 'list-add', run: () => location.assign('/pair') },
     ...(now
-      ? [{ label: `Forget ${now.box.name}…`, icon: 'user-trash', destructive: true, run: () => confirm(`Forget ${now.box.name} on this device? The box stops sending it notifications, and it needs a new code to pair again.`) && void forget(now).then(() => (setPairing(undefined), location.replace('/'))) }]
+      ? [{ label: `Forget ${now.box.name}…`, icon: 'user-trash', destructive: true, run: () => confirm(`Forget ${now.box.name} on this device? It stops sending this device notifications, and it needs a new code to pair again.`) && void forget(now).then(() => (setPairing(undefined), location.replace('/'))) }]
       : []),
   ];
 }
@@ -183,7 +183,7 @@ function PersonMenu({ anchor }: { anchor: HTMLElement | null }) {
     ? [{ label: `This phone is paired to ${me?.person?.name ?? 'nobody'}`, icon: 'phone', disabled: true, run: () => {} }]
     : [
         ...(me?.directory ?? []).map((p) => ({ label: `${p.name} · ${roleWord(p)}`, icon: p.id === signedIn() ? 'object-select' : 'avatar-default', run: () => signIn(p.id) })),
-        ...(signedIn() ? (['sep', { label: "Sign out: the box's own screen", icon: 'system-lock-screen', run: () => signIn(undefined) }] as const) : []),
+        ...(signedIn() ? (['sep', { label: "Sign out of this screen", icon: 'system-lock-screen', run: () => signIn(undefined) }] as const) : []),
       ];
   return (
     <Popover anchor={anchor} onClose={close} align="end" label="Who is using this screen">
@@ -202,7 +202,7 @@ function BoxMenu({ anchor }: { anchor: HTMLElement | null }) {
         items={[
           ...(hosted ? machineItems() : []),
           ...(hosted ? [] : boxList()).map((x) => ({
-            label: x.self ? `${x.name} (this box)` : x.name,
+            label: x.self ? `${x.name} (this computer)` : x.name,
             icon: x.self ? 'object-select' : 'computer',
             disabled: !x.self && !x.url,
             run: () => (x.self ? undefined : x.url && (location.href = x.url)),
@@ -247,10 +247,10 @@ function askNotices(): Notice[] {
         ask: a,
         app: app.id,
         appTitle: app.title,
-        title: a.costCents ? `${taskTitle(a.task)} needs your OK` : a.question,
+        title: a.costCents ? `${taskTitle(a.task)} needs you` : a.question,
         body: a.costCents ? `${a.question}${a.question.includes('test') ? '' : ' Test money.'}` : `${taskTitle(a.task)} asks. Other tasks keep running.`,
         open: () => open(box.business.on ? `request/${a.id}` : `task/${a.task}`),
-        ...(box.business.on ? { title: askInfo(a).fraud ? `Fraud flag on ${askInfo(a).title}` : `${askInfo(a).title} needs your OK`, body: a.route?.why ?? a.question } : {}),
+        ...(box.business.on ? { title: askInfo(a).fraud ? `Fraud flag on ${askInfo(a).title}` : `${askInfo(a).title} needs you`, body: a.route?.why ?? a.question } : {}),
       };
     })
     .sort((x, y) => y.at - x.at);
@@ -318,7 +318,9 @@ function newsNotices(): Notice[] {
       app: 'tasks',
       appTitle: PRODUCT,
       title: r.restarted ? 'Back after a restart' : 'Back in reach',
-      body: `${box.tasks.size} tasks rebuilt from the action log. ${plural(r.tasks.length, 'task')} picked up where ${r.tasks.length === 1 ? 'it' : 'they'} stopped${pending().length ? `. ${pending().length} still wait for your OK` : ''}.`,
+      body: r.tasks.length
+        ? `${box.tasks.size} tasks rebuilt from the action log. ${plural(r.tasks.length, 'task')} picked up where ${r.tasks.length === 1 ? 'it' : 'they'} stopped${pending().length ? `. ${pending().length} still ${pending().length === 1 ? 'needs' : 'need'} you` : ''}.`
+        : 'Nothing was running, so nothing needed to resume. The action log is complete.',
       open: () => open('tasks/running'),
     });
   const day = Date.now() - 86_400_000;
@@ -392,7 +394,7 @@ function NotificationCenter({ anchor }: { anchor: HTMLElement | null }) {
         {waiting.length + earlier.length === 0 && (
           <div class="gos-empty">
             <Icon name="preferences-system-notifications" size={32} />
-            <p class="t-body t-secondary">No notifications. Requests for your OK, blocked attempts and restarts show up here.</p>
+            <p class="t-body t-secondary">No notifications. Requests, blocked attempts and restarts show up here.</p>
           </div>
         )}
       </div>
@@ -469,7 +471,8 @@ function ControlCenter({ anchor }: { anchor: HTMLElement | null }) {
   const b = useBox();
   const [error, setError] = useState('');
   const s = b.settings;
-  const dark = document.documentElement.dataset.theme === 'dark';
+  const dark = document.documentElement.dataset.theme === 'dark'; // the style in effect (applyTheme)
+  const system = (b.settings?.appearance.theme ?? 'system') === 'system';
   const set = (patch: Record<string, unknown>) => patchSettings(patch).catch((e) => setError((e as Error).message));
   const net = b.system?.network;
   const iface = net?.interfaces.find((i) => !i.address.startsWith('127.') && !i.address.includes(':')) ?? net?.interfaces[0];
@@ -497,7 +500,7 @@ function ControlCenter({ anchor }: { anchor: HTMLElement | null }) {
         <Tile
           icon={b.down || net?.online === false ? 'network-offline' : wifi ? 'network-wireless-signal-excellent' : 'network-wired'}
           label={wifi ? 'Wi-Fi' : 'Wired'}
-          sub={b.down ? 'Box out of reach' : net?.online === false ? 'Offline' : iface ? `Connected · ${iface.address}` : 'Connected'}
+          sub={b.down ? 'Out of reach' : net?.online === false ? 'Offline' : iface ? `Connected · ${iface.address}` : 'Connected'}
           on={!b.down && net?.online !== false}
           onClick={() => (toggle('control'), open('settings/general'))}
         />
@@ -509,10 +512,10 @@ function ControlCenter({ anchor }: { anchor: HTMLElement | null }) {
           disabled={!b.owner || !s}
           onClick={() => set({ quietHours: { enabled: !s!.quietHours.enabled } })}
         />
-        <Tile icon="preferences-desktop-appearance" label="Dark style" sub={dark ? 'On' : 'Off'} on={dark} disabled={!b.owner} onClick={() => set({ appearance: { theme: dark ? 'light' : 'dark' } })} />
+        <Tile icon="preferences-desktop-appearance" label="Dark style" sub={`${dark ? 'On' : 'Off'}${system ? ', like the system' : ''}`} on={dark} disabled={!b.owner} onClick={() => set({ appearance: { theme: dark ? 'light' : 'dark' } })} />
         <Tile icon="preferences-desktop-accessibility" label="Larger text" sub="This screen" on={access.get('larger-text')} onClick={() => access.set('larger-text', !access.get('larger-text'))} />
       </div>
-      {!b.owner && <p class="t-caption t-secondary">Quiet hours and Dark style change from the box's own screen or the owner's phone.</p>}
+      {!b.owner && <p class="t-caption t-secondary">Quiet hours and Dark style change from this computer's own screen or the owner's phone.</p>}
       {error && (
         <p class="gos-error" role="alert">
           {error}
@@ -579,7 +582,7 @@ function KillSwitchCard() {
       <div class="gos-two gos-grow">
         <span class="t-body-strong gos-kill-title">{paused ? 'All agents are paused' : 'Kill switch'}</span>
         <span class="t-caption">
-          {paused ? `${paused.by} paused them at ${hhmm(paused.at)}. Requests waiting for an OK stay open.` : `${b.business.on ? 'IT admins only' : 'Owner only'}. Stops every agent at once.`}
+          {paused ? `${paused.by} paused them at ${hhmm(paused.at)}. Requests that need you stay open.` : `${b.business.on ? 'IT admins only' : 'Owner only'}. Stops every agent at once.`}
         </span>
         {!mayPause() && <span class="t-caption t-secondary">Only {resumer()} can {paused ? 'resume' : 'pause'} the agents.</span>}
         {error && (
@@ -645,8 +648,10 @@ export function DesktopHome() {
   const r = b.restored && now - b.restored.at < 15 * 60_000 ? b.restored : undefined;
   const blocked = b.today.blocked;
   const summary = r
-    ? `${r.lostAt ? `The box was out of reach from ${hhmm(r.lostAt)}` : 'The box restarted'} and came back at ${hhmm(r.at)}. Every task is where it was.`
-    : [need.length ? `${plural(need.length, 'task')} ${need.length === 1 ? 'needs' : 'need'} your OK.` : 'Nothing needs you.', `${running.length} ${running.length === 1 ? 'is' : 'are'} running.`, blocked ? `${plural(blocked, 'attempt')} ${blocked === 1 ? 'was' : 'were'} blocked today.` : ''].filter(Boolean).join(' ');
+    ? `${r.lostAt ? `${selfBox().name} was out of reach from ${hhmm(r.lostAt)}` : `${selfBox().name} restarted`} and came back at ${hhmm(r.at)}. Every task is where it was.`
+    : !b.tasks.size
+      ? 'Start a task, or open App Center to turn on apps.'
+      : [need.length ? `${plural(need.length, 'task')} ${need.length === 1 ? 'needs' : 'need'} you.` : 'Nothing needs you.', `${running.length} ${running.length === 1 ? 'is' : 'are'} running.`, blocked ? `${plural(blocked, 'attempt')} ${blocked === 1 ? 'was' : 'were'} blocked today.` : ''].filter(Boolean).join(' ');
   const twice = paidTwice();
   return (
     <section class="gos-desk" aria-label="Today">
@@ -656,14 +661,14 @@ export function DesktopHome() {
       </h1>
       <p class="t-body gos-desk-sub">{summary}</p>
       <div class="gos-desk-widgets">
-        <Widget label="Needs you" value={need.length} tone={need.length ? 'attention' : undefined} lines={need.length ? need.slice(0, 3).map(askLine) : ['Nothing waits for your OK']} onClick={() => toggle('notifications')} />
+        <Widget label="Needs you" value={need.length} tone={need.length ? 'attention' : undefined} lines={need.length ? need.slice(0, 3).map(askLine) : ['Nothing needs you']} onClick={() => toggle('notifications')} />
         {r ? (
           <Widget label="Resumed" value={r.tasks.length} lines={r.tasks.slice(0, 3).map((id) => short(`${taskTitle(id)}${b.tasks.get(id)?.step ? `: ${b.tasks.get(id)!.step}` : ''}`, 40))} onClick={() => open('tasks/running')} />
         ) : (
           <Widget label="Running" value={running.length} lines={running.length ? running.slice(0, 3).map((t) => short(`${t.title}${t.step ? `: ${t.step}` : ''}`, 40)) : ['No task is working now']} onClick={() => open('tasks/running')} />
         )}
         {r ? (
-          <Widget label="Paid twice" value={twice} lines={twice ? ['A paid call ran again after the restart'] : ['A call that had paid kept its key,', 'so the resume did not pay again']} onClick={() => open('activity')} />
+          <Widget label="Paid twice" value={twice} lines={twice ? ['A payment was made again after the restart'] : ['A payment that went through before', 'the power cut was not made again']} onClick={() => open('activity')} />
         ) : (
           <Widget label="Spent today" value={spentToday()} lines={[`${plural(b.tasks.size, 'task')}, ${plural(blocked, 'blocked attempt')}`, 'Test money']} onClick={() => open('activity')} />
         )}
@@ -685,17 +690,17 @@ function PausedHome() {
   const waiting = [...b.approvals.values()].filter((a) => a.state === 'pending');
   const seats = new Map<string, number>();
   for (const t of stopped) seats.set(t.seat ?? t.title, (seats.get(t.seat ?? t.title) ?? 0) + 1);
-  const from = p.via && p.via !== p.by ? ` from ${p.via === 'box screen' ? "the box's screen" : p.via}` : '';
+  const from = p.via && p.via !== p.by ? ` from ${p.via === 'box screen' ? "this computer's screen" : p.via}` : '';
   return (
     <section class="gos-desk" aria-label="All agents are paused">
       <h1 class="t-title1 gos-desk-title">All agents are paused</h1>
       <p class="t-body gos-desk-sub">
         {p.by} paused them at {hhmm(p.at)}
-        {from}. {plural(stopped.length, 'task')} stopped where they were. Requests waiting for an OK stay open.
+        {from}. {plural(stopped.length, 'task')} stopped where they were. Requests that need you stay open.
       </p>
       <div class="gos-desk-widgets">
         <Widget
-          label="Waiting for an OK"
+          label="Needs you"
           value={waiting.length}
           tone={waiting.length ? 'attention' : undefined}
           lines={waiting.slice(0, 3).map((a) => {
@@ -741,7 +746,8 @@ export function Dock() {
   return (
     <nav class="gos-dock" aria-label="Dock">
       {all
-        .filter((a) => !a.system)
+        // An app's icon joins the system apps while its window is open; Show apps has every app.
+        .filter((a) => !a.system && (!a.track || wm.wins.some((w) => w.route === a.route)))
         .map((a) => (
           <DockItem app={a} key={a.route} />
         ))}
@@ -856,7 +862,7 @@ export function PhoneHome() {
           {!list.length && (
             <div class="g-row">
               <span class="g-row-text">
-                <span class="g-row-title">Nothing waits for your OK</span>
+                <span class="g-row-title">Nothing needs you</span>
                 <span class="g-row-sub">Requests show up here and as notifications.</span>
               </span>
             </div>
@@ -900,7 +906,7 @@ export function PhoneHome() {
         </section>
       )}
       <Button kind="suggested" large icon="list-add" onClick={() => open('tasks/new')}>
-        Ask the box
+        New task
       </Button>
       <section class="g-group" aria-label="Apps">
         <div class="g-group-head">
@@ -963,7 +969,7 @@ export function BootScreen() {
       </p>
       <p class="t-title3">{b.events.length ? 'Starting again, every task where it was' : 'Starting'}</p>
       <Progress label="Starting" />
-      <p class="t-mono gos-boot-line">Waiting for the box service · it reads log.jsonl and resumes every task</p>
+      <p class="t-mono gos-boot-line">Starting GurtOS · every task resumes where it was</p>
     </div>
   );
 }
@@ -976,7 +982,7 @@ export function OutageBar() {
     <div class="gos-outage" role="alert">
       <Icon name="network-offline" />
       <span>
-        <b>The box is out of reach.</b> Answers won't go through until it is back. This page reconnects by itself.
+        <b>{selfBox().name} is out of reach.</b> Answers won't go through until it is back. This page reconnects by itself.
       </span>
     </div>
   );
@@ -991,14 +997,15 @@ export function LockScreen() {
   const unlock = () => ((shell.locked = false), changed());
   useEffect(() => {
     ref.current?.focus();
-    const key = (e: KeyboardEvent) => (e.key === 'Enter' || e.key === ' ' || e.key === 'Escape') && unlock();
+    // It hides what agents do from passers-by; it is not a lock. Any key wakes it.
+    const key = (e: KeyboardEvent) => !['Shift', 'Control', 'Alt', 'Meta'].includes(e.key) && unlock();
     addEventListener('keydown', key);
     return () => removeEventListener('keydown', key);
   }, []);
   const first = list[0];
   const app = first && appFor(first.task);
   return (
-    <div ref={ref} class="gos-lock" role="dialog" aria-modal="true" aria-label="Locked" tabIndex={-1} onClick={unlock}>
+    <div ref={ref} class="gos-lock" role="dialog" aria-modal="true" aria-label="Screen asleep" tabIndex={-1} onClick={unlock}>
       <p class="gos-lock-time">{hhmm(now)}</p>
       <p class="gos-lock-date">{dateOf(now, true)}</p>
       <p class="gos-lock-box">
@@ -1012,13 +1019,13 @@ export function LockScreen() {
               <span class="t-caption-strong t-secondary">{app.title}</span>
               <span class="t-caption t-secondary gos-note-time">{hhmm(askedAt(first.id))}</span>
             </div>
-            <span class="t-heading">{first.costCents ? `${taskTitle(first.task)} needs your OK` : first.question}</span>
-            <span class="t-body t-secondary">{first.costCents ? `${first.question} ` : ''}Unlock to answer here, or answer on your phone.</span>
+            <span class="t-heading">{first.costCents ? `${taskTitle(first.task)} needs you` : first.question}</span>
+            <span class="t-body t-secondary">{first.costCents ? `${first.question} ` : ''}Wake the screen to answer here, or answer on your phone.</span>
           </article>
-          {list.length > 1 && <p class="gos-lock-more">{list.length - 1} more need you</p>}
+          {list.length > 1 && <p class="gos-lock-more">{list.length - 1} more {list.length === 2 ? 'needs' : 'need'} you</p>}
         </div>
       )}
-      <p class="gos-lock-hint">Click or press Enter to unlock</p>
+      <p class="gos-lock-hint">Press any key or click to wake</p>
     </div>
   );
 }
@@ -1046,10 +1053,10 @@ const boxUrl = (a: string) => {
 /** app.gurtos.com: redeem a code on that box, ask it which edition it is, and add it to this app's machines. */
 async function pairWith(url: string, body: { code: string; name: string }) {
   const r = await fetch(`${url}/api/pair`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }).catch(() => {
-    throw new Error(`no box answered at ${url}`);
+    throw new Error(`nothing answered at ${url}`);
   });
   const p = (await r.json().catch(() => ({}))) as Pairing & { error?: string };
-  if (!r.ok) throw new Error(p.error ?? `the box said ${r.status}`);
+  if (!r.ok) throw new Error(p.error ?? `GurtOS answered ${r.status}`);
   const sys = await fetch(`${url}/api/system`, { headers: { authorization: `Bearer ${p.token}` } }).then((x) => x.json(), () => ({}));
   addMachine({ token: p.token, device: p.device, box: p.box, url, edition: sys.edition });
 }
@@ -1102,20 +1109,20 @@ export function PairFirst() {
             <Icon name="phone" size={32} />
           </span>
           <h1 class="t-title2" id="pair-first-title">
-            {adding ? 'Add a machine' : hosted && fromLink && boxAddr ? `Pair with ${boxAddr}?` : standalone() && !fromLink ? 'Type the pairing code' : `Pair this ${surface === 'phone' ? 'phone' : 'device'} first`}
+            {adding ? 'Add a computer' : hosted && fromLink && boxAddr ? `Pair with ${boxAddr}?` : standalone() && !fromLink ? 'Type the pairing code' : `Pair this ${surface === 'phone' ? 'phone' : 'device'} first`}
           </h1>
           <p class="t-body t-secondary">
-            {revoked ? 'This device was removed from the box, so it needs a new code. ' : ''}
-            {PRODUCT} shows tasks and requests only to paired devices. On the box's own screen, open Settings, then Devices, and scan the QR code. Or type {hosted ? 'its address and ' : ''}the code it shows.
+            {revoked ? 'This device was unpaired, so it needs a new code. ' : ''}
+            {PRODUCT} shows tasks and requests only to paired devices. On the computer's own screen, open Settings, then Devices, and scan the QR code. Or type {hosted ? 'its address and ' : ''}the code it shows.
           </p>
           {hosted && (
             <label class="gos-field">
-              <span class="t-body-strong">Box address</span>
+              <span class="t-body-strong">Computer's address</span>
               <input class="g-field" value={boxAddr} placeholder="rosa.box.gurtos.com" inputMode="url" autoComplete="off" autoCapitalize="none" spellcheck={false} onInput={(e) => setBoxAddr((e.target as HTMLInputElement).value)} />
             </label>
           )}
           <label class="gos-field">
-            <span class="t-body-strong">Code from the box's screen</span>
+            <span class="t-body-strong">Code from its screen</span>
             <input class="g-field gos-code-field" value={code} placeholder="7Q4M-2KXD" autoComplete="off" autoCapitalize="characters" spellcheck={false} onInput={(e) => setCode((e.target as HTMLInputElement).value)} />
           </label>
           <label class="gos-field">
@@ -1127,7 +1134,7 @@ export function PairFirst() {
           </button>
           {state !== 'ask' && state !== 'busy' && (
             <p class="gos-error" role="alert">
-              Could not pair: {state}. Ask the box's screen for a new code.
+              Could not pair: {state}. Ask its screen for a new code.
             </p>
           )}
           {work?.on && (

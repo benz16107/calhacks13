@@ -395,3 +395,8 @@ html.is-dragging iframe { pointer-events: none; }
 .gos-folder-head { display: flex; align-items: center; gap: var(--space-sm); }
 .gos-folder-head .g-icon { color: var(--color-accent-fg); }
 .gos-folder .gos-home-buttons { align-self: stretch; }
+
+/* Phones: the home screen's own tap targets reach 44 px too (the kit covers buttons and fields). */
+@media (max-width: 699px), (pointer: coarse) {
+  .gos-home-box, .gos-home-row { min-height: 44px; }
+}
