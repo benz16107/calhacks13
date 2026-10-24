@@ -6,6 +6,14 @@ export const dollars = (cents: number) => `$${(cents / 100).toFixed(2)}`;
 /** Today's spending, once the log has been read (before that a total would be too low). */
 export const spentToday = () => (box.logLoaded ? dollars(box.today.cents) : '…');
 export const plural = (n: number, one: string, many = one + 's') => `${n} ${n === 1 ? one : many}`;
+const ACRONYMS = new Set(['API', 'ID', 'URL', 'MLE', 'JWT', 'SSH', 'AWS', 'CDP', 'TAP', 'PAT', 'IMAP', 'SMTP', 'POP3', 'RPC', 'MCP', 'CRS', 'SSO', 'PEM', 'RSA', 'ASI', 'X402', 'USDC', 'JSM']);
+/** A key's name for people: ANTHROPIC_API_KEY is "Anthropic API key". The variable name stays a small caption. */
+export const keyLabel = (name: string) =>
+  name
+    .split('_')
+    .filter(Boolean)
+    .map((w, i) => (ACRONYMS.has(w) ? w : i ? w.toLowerCase() : w[0] + w.slice(1).toLowerCase()))
+    .join(' ');
 /** The box's own screen shows the box's time zone (its browser may run in UTC); a phone or laptop shows its own. */
 export const zone = () => (surface === 'box screen' && box.system?.timezone ? { timeZone: box.system.timezone } : {});
 export const hhmm = (t: string | number) => new Date(t).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', ...zone() });

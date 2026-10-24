@@ -148,12 +148,16 @@ interface Remote {
 }
 const NAME = /^[a-z0-9-]{3,30}$/;
 
-/** Settings and setup: give the box its own https address through the relay. Owner only. */
-export function RemoteAccess() {
+/** An address name from the computer's name: "Home box" becomes "home-box". */
+export const slug = (n = '') => n.toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 30);
+
+/** Settings and setup: give this computer its own https address through the relay. Owner only. */
+export function RemoteAccess({ title = 'Reach this computer from anywhere' }: { title?: string }) {
   const b = useBox();
   const [r, setR] = useState<Remote>();
   const [error, setError] = useState('');
-  const [name, setName] = useState('');
+  const [typed, setName] = useState<string>();
+  const name = typed ?? slug(b.system?.boxName); // starts from the computer's name, so Turn on works in one tap
   const [check, setCheck] = useState<{ name: string; available: boolean; reason?: string }>();
   const [busy, setBusy] = useState(false);
   const [confirm, setConfirm] = useState(false);
@@ -176,12 +180,24 @@ export function RemoteAccess() {
     f().then((x) => (setR(x), setError('')), (e) => setError((e as Error).message)).finally(() => setBusy(false));
   };
   const relay = r?.relay ?? 'box.gurtos.com';
-  const hint = !name ? '' : !NAME.test(name) ? 'Use 3 to 30 lowercase letters, digits and hyphens.' : !check ? 'Checking…' : check.available ? 'Available.' : `Not available${check.reason ? `: ${check.reason}` : ''}.`;
+  const valid = NAME.test(name);
+  const ready = valid && check?.available && check.name === name;
+  const why = !b.owner
+    ? "Only this computer's own screen or the owner's phone can turn it on."
+    : !name
+      ? 'Type a name first.'
+      : !valid
+        ? 'Use 3 to 30 lowercase letters, digits and hyphens.'
+        : !check
+          ? 'Checking the name…'
+          : !check.available
+            ? `That name is taken${check.reason ? `: ${check.reason}` : ''}. Try another.`
+            : undefined;
   const state = r?.state === 'connected' ? (['Connected', 'success'] as const) : r?.state === 'starting' ? (['Getting a certificate…', 'accent'] as const) : r?.state === 'error' ? (['Not working', 'destructive'] as const) : undefined;
   return (
     <Group
-      title="Reach this box from anywhere"
-      caption="Your box gets its own secure address. The relay only passes encrypted traffic along and cannot read it. Every phone still needs a pairing code."
+      title={title || undefined}
+      caption="This computer gets its own secure address. The relay only passes encrypted traffic along and cannot read it. Every phone still needs a pairing code."
     >
       {error && <Row icon="dialog-warning" title="Remote access is not available" sub={error} />}
       {r?.enabled ? (
@@ -198,14 +214,14 @@ export function RemoteAccess() {
       ) : (
         r && (
           <>
-            <Row title="Name" sub={hint || `Lowercase letters, digits and hyphens. The address is <name>.${relay}.`}>
+            <Row title="Name" sub="Lowercase letters, digits and hyphens.">
               <span class="gos-remote-name">
-                <input class="g-field" value={name} placeholder="rosa" maxLength={30} autoCapitalize="none" autoComplete="off" spellcheck={false} aria-label="Name for this box's address" disabled={!b.owner} onInput={(e) => setName((e.target as HTMLInputElement).value.toLowerCase().trim())} />
+                <input class="g-field" value={name} maxLength={30} autoCapitalize="none" autoComplete="off" spellcheck={false} aria-label="Name for this computer's address" disabled={!b.owner} onInput={(e) => setName((e.target as HTMLInputElement).value.toLowerCase().trim())} />
                 <span class="t-body t-secondary">.{relay}</span>
               </span>
             </Row>
-            <Row title={name && NAME.test(name) ? `https://${name}.${relay}` : 'Turn on'} sub={b.owner ? undefined : "Only the box's own screen or the owner's phone can turn it on."}>
-              <Button kind="suggested" onClick={() => act(() => api<Remote>('POST', '/remote', { name }))} disabled={!b.owner || busy || !check?.available || check.name !== name}>
+            <Row title={valid ? `https://${name}.${relay}` : 'Your address'} sub={why ?? 'Available.'}>
+              <Button kind="suggested" onClick={() => act(() => api<Remote>('POST', '/remote', { name }))} disabled={!b.owner || busy || !ready}>
                 Turn on
               </Button>
             </Row>
@@ -215,7 +231,7 @@ export function RemoteAccess() {
       {confirm && (
         <Alert
           title="Turn off remote access?"
-          body={`Phones that use ${r?.url?.replace(/^https:\/\//, '') ?? 'this address'} lose the box until it is on again. The name is released, so someone else may take it.`}
+          body={`Phones that use ${r?.url?.replace(/^https:\/\//, '') ?? 'this address'} lose this computer until it is on again. The name is released, so someone else may take it.`}
           action="Turn off"
           destructive
           busy={busy}

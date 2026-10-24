@@ -11,7 +11,7 @@ import { AddRow, Alert, AppIcon, Badge, Button, ComboRow, Group, Icon, IconButto
 import { HeaderBar, InWindow, open, phone, useWin } from '../wm.tsx';
 import { access } from '../shell.tsx';
 import { PRODUCT } from '../product.ts';
-import { dollars, plural, selfBox, useNow } from '../util.ts';
+import { dollars, keyLabel, plural, selfBox, useNow } from '../util.ts';
 import { KillSwitchPage, PeoplePage, RulesPage } from './company.tsx';
 /** One model key lets agents think: an Anthropic key or a Factory key. */
 const MODEL_KEYS = ['ANTHROPIC_API_KEY', 'FACTORY_API_KEY'];
@@ -332,7 +332,7 @@ function Agents() {
     const k = vault?.find((x) => x.name === name);
     const other = vault?.some((x) => x.name !== name && MODEL_KEYS.includes(x.name));
     return (
-      <Row title={what} sub={!b.owner ? 'Only the owner sees which keys are set' : k ? `${name} · ${k.setAt ? `set ${when(k.setAt)}` : 'put there by hand'}` : `${name} · ${other ? 'not needed, the other key is set' : "not set: tasks can't run until one model key is"}`}>
+      <Row title={what} sub={!b.owner ? 'Only the owner sees which keys are set' : k ? `${name} · ${k.setAt ? `set ${when(k.setAt)}` : 'set outside Settings'}` : `${name} · ${other ? 'not needed, the other key is set' : "not set: tasks can't run until one model key is"}`}>
         <Button onClick={() => setSheet(name)} disabled={!b.owner}>
           {k ? 'Replace' : 'Set key'}
         </Button>
@@ -499,7 +499,7 @@ function Keys() {
   const [sheet, setSheet] = useState<string | null>();
   const [devices, setDevices] = useState<Device[]>();
   useEffect(() => void api<Device[]>('GET', '/devices').then(setDevices, () => setDevices([])), []);
-  const users = new Map<string, string[]>(MODEL_KEYS.map((k) => [k, ['Droid with Claude (one model key is enough)']]));
+  const users = new Map<string, string[]>(MODEL_KEYS.map((k) => [k, ['Agents (one model key is enough)']]));
   for (const a of b.allApps) for (const s of a.access.secrets) users.set(s.name, [...(users.get(s.name) ?? []), appTitle(a)]);
   // Droid's key first, then the rest by name.
   const names = [...new Set([...(vault ?? []).map((k) => k.name), ...users.keys()])].sort((x, y) => +MODEL_KEYS.includes(y) - +MODEL_KEYS.includes(x) || x.localeCompare(y));
@@ -508,15 +508,15 @@ function Keys() {
     <>
       <div class="g-banner g-banner-accent gos-set-banner" role="note">
         <Icon name="security-high" />
-        <div class="t-body">Keys are write-only. You can set or replace a key. No screen, phone or log ever shows one, and agents never see them.</div>
+        <div class="t-body">GurtOS keeps keys where agents can't read them. You can replace a key but never see it. No screen, phone or log shows one.</div>
       </div>
-      <Group title="Keys in the vault">
+      <Group title="Keys">
         {names.map((n) => {
           const k = vault?.find((x) => x.name === n);
           const by = users.get(n)?.join(', ');
-          const state = !b.owner ? undefined : k ? (k.setAt ? `set ${when(k.setAt)}` : 'put there by hand') : 'not set';
+          const state = !b.owner ? undefined : k ? (k.setAt ? `set ${when(k.setAt)}` : 'set outside Settings') : 'not set';
           return (
-            <Row title={<span class="gos-set-mono">{n}</span>} sub={[by, state].filter(Boolean).join(' · ') || undefined} key={n}>
+            <Row title={keyLabel(n)} sub={[n, by, state].filter(Boolean).join(' · ')} key={n}>
               <Button onClick={() => setSheet(n)} disabled={!b.owner}>
                 {k ? 'Replace' : 'Set key'}
               </Button>
@@ -531,7 +531,7 @@ function Keys() {
             <Value>Owner</Value>
           </Row>
         ))}
-        <Row icon="computer" title="This box's own screen" sub={owners.length ? 'Always the owner' : 'Pair the owner\'s phone in Devices to change settings from it too'}>
+        <Row icon="computer" title="This computer's own screen" sub={owners.length ? 'Always the owner' : 'Pair the owner\'s phone in Devices to change settings from it too'}>
           <Value>Owner</Value>
         </Row>
       </Group>

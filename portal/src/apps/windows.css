@@ -23,12 +23,15 @@
 .gos-w-ev > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .gos-w-mono { font: 400 var(--fs-caption) / 20px var(--font-mono); color: var(--color-text-secondary); }
 .gos-w-ev.is-blocked .gos-w-what { color: var(--color-destructive-fg); }
-.gos-w-kind { display: inline-block; max-width: 100%; padding: 2px 8px; border-radius: var(--radius-full); background: var(--color-button-bg); color: var(--color-text-secondary); font: 400 calc(12px * var(--text-scale)) / 16px var(--font-mono); overflow: hidden; text-overflow: ellipsis; vertical-align: middle; }
+.gos-w-kind { display: inline-block; max-width: 100%; padding: 2px 8px; border-radius: var(--radius-full); background: var(--color-button-bg); color: var(--color-text-secondary); font-size: calc(12px * var(--text-scale)); line-height: 16px; overflow: hidden; text-overflow: ellipsis; vertical-align: middle; }
 .gos-w-kind.is-blocked { background: var(--color-destructive-subtle); color: var(--color-destructive-fg); }
 .gos-w-kind.is-ask { background: var(--color-attention-subtle); color: var(--color-attention-fg); }
 .gos-w-kind.is-undone { color: var(--color-text-primary); }
 .gos-w-detail { flex: none; display: flex; flex-direction: column; gap: 8px; padding: 14px 20px; background: var(--color-window-bg); border-top: 1px solid var(--color-border-default); }
-.gos-w-fields { display: flex; flex-wrap: wrap; gap: 6px 36px; margin: 0; font: 400 var(--fs-caption) / 20px var(--font-mono); }
+.gos-w-fields { display: flex; flex-wrap: wrap; gap: 6px 36px; margin: 0; font-size: var(--fs-caption); line-height: 20px; }
+.gos-w-tech { margin-top: 8px; }
+.gos-w-tech summary { cursor: pointer; color: var(--color-text-secondary); }
+.gos-w-tech .gos-w-fields { margin-top: 6px; }
 .gos-w-fields > div { display: flex; gap: 8px; min-width: 0; }
 .gos-w-fields dt { color: var(--color-text-secondary); }
 .gos-w-fields dd { margin: 0; color: var(--color-text-primary); overflow-wrap: anywhere; }

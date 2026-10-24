@@ -639,7 +639,7 @@ export async function loadSetup() {
 export async function loadApps() {
   const [on, all] = await Promise.all([api<AppEntry[]>('GET', '/apps').catch(() => box.apps), api<AppInfo[]>('GET', '/apps?all=1').catch(() => box.allApps)]);
   box.apps = on;
-  box.allApps = all;
+  box.allApps = all.filter((a) => a.id !== 'example' || a.status === 'enabled'); // the developers' sample app, unless someone turned it on
   changed();
 }
 async function loadOwner() {

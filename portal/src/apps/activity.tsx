@@ -12,8 +12,8 @@ const isBlocked = (e: LogEvent) => e.type === 'net.blocked' || (e.type === 'tool
 const FILTERS: [Filter, string, string, (e: LogEvent) => boolean][] = [
   ['all', 'All events', 'utilities-terminal', () => true],
   ['blocked', 'Blocked', 'process-stop', isBlocked],
-  ['approvals', 'Approvals', 'object-select', (e) => e.type === 'approval.asked' || e.type === 'approval.answered'],
-  ['vault', 'Keys and vault', 'dialog-password', (e) => e.type === 'note' && e.track === 'vault'],
+  ['approvals', 'Requests', 'object-select', (e) => e.type === 'approval.asked' || e.type === 'approval.answered'],
+  ['vault', 'Keys', 'dialog-password', (e) => e.type === 'note' && e.track === 'vault'],
   ['tasks', 'Tasks', 'view-app-grid', (e) => e.type === 'task.created' || e.type === 'task.state' || e.type === 'keep'],
 ];
 // shortcut: shows the newest 500 matching events; page through GET /api/log when someone needs older ones here.
@@ -93,7 +93,7 @@ export function ActivityApp() {
             {shown.map((e) => {
               const d = describe(e, b.events);
               const kind = kindOf(e);
-              const tone = d.tone === 'blocked' || isBlocked(e) ? 'is-blocked' : d.tone === 'ask' ? 'is-ask' : kind === 'task.undone' ? 'is-undone' : '';
+              const tone = d.tone === 'blocked' || isBlocked(e) ? 'is-blocked' : d.tone === 'ask' ? 'is-ask' : e.type === 'task.state' && e.state === 'undone' ? 'is-undone' : '';
               return (
                 <div
                   id={`ev-${e.seq}`}
@@ -121,7 +121,7 @@ export function ActivityApp() {
           {selected && (
             <section class="gos-w-detail" aria-label="The selected event">
               <p class="t-heading">
-                Event {selected.seq} · {kindOf(selected)}
+                {kindOf(selected)}
                 {selected.task && (
                   <>
                     {' '}
@@ -132,13 +132,24 @@ export function ActivityApp() {
                 )}
               </p>
               <dl class="gos-w-fields">
-                {fieldsOf(selected).map(([k, v]) => (
+                {fieldsOf(selected).main.map(([k, v]) => (
                   <div key={k}>
                     <dt>{k}</dt>
                     <dd>{v}</dd>
                   </div>
                 ))}
               </dl>
+              <details class="gos-w-tech">
+                <summary class="t-caption">Technical details</summary>
+                <dl class="gos-w-fields">
+                  {fieldsOf(selected).raw.map(([k, v]) => (
+                    <div key={k}>
+                      <dt>{k}</dt>
+                      <dd class="gos-w-mono">{v}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </details>
             </section>
           )}
         </div>

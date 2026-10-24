@@ -8,6 +8,7 @@ import { base, api, box, onEvent, pairing, signedIn, useBox, type Approval, type
 import { AppIcon, Badge, Button, Icon, IconButton, Menu, Popover, StatusPage, ToggleGroup, type MenuItem } from '../kit/ui.tsx';
 import { HeaderBar, phone, useWin } from '../wm.tsx';
 import { hhmm, plural, zone } from '../util.ts';
+import { noteText } from './log.tsx';
 
 interface AuditRow { seq: number; at: string; event: string; task: string; title: string; app: string; seat: string; asked: string; approver: string; by: string; what: string }
 type Tone = 'attention' | 'accent' | 'neutral' | 'success' | 'destructive';
@@ -72,7 +73,7 @@ function learn(known: { people: Map<string, string>; seats: Set<string> }, rows:
 /** One audit row as a timeline entry: a kind, who did it, a title and a line of detail. */
 function entryOf(r: AuditRow, ev: LogEvent | undefined, c: Ctx): Entry {
   const task = r.title ? `"${r.title}"` : 'a task';
-  const agent = r.seat ? `${r.seat} agent` : 'The box';
+  const agent = r.seat ? `${r.seat} agent` : 'GurtOS';
   const role = (n: string) => (c.roster.get(n)?.title ? `${n} (${c.roster.get(n)!.title})` : n);
   const note = (ev?.type === 'note' ? ev.data : undefined) as Record<string, any> | undefined;
   const approval = ev?.type === 'approval.asked' ? ev.approval : ev?.type === 'approval.answered' ? box.approvals.get(ev.id) : undefined;
@@ -84,7 +85,7 @@ function entryOf(r: AuditRow, ev: LogEvent | undefined, c: Ctx): Entry {
         const seat = r.seat ? `Assigned to the ${r.seat} agent.` : '';
         return person
           ? mk('Asked', 'neutral', 'person', r.asked, 'avatar-default', `${role(r.asked)} asked for ${task}`, seat)
-          : mk('Started', 'neutral', 'system', 'The box', 'media-playback-start', `Started ${task}`, [r.asked && `Triggered by ${r.asked}.`, seat].filter(Boolean).join(' '));
+          : mk('Started', 'neutral', 'system', 'GurtOS', 'media-playback-start', `Started ${task}`, [r.asked && `Triggered by ${r.asked}.`, seat].filter(Boolean).join(' '));
       }
       case 'task.state': {
         const s = ev?.type === 'task.state' ? ev.state : r.what.match(/^Task (\w+)/)?.[1];
@@ -114,7 +115,7 @@ function entryOf(r: AuditRow, ev: LogEvent | undefined, c: Ctx): Entry {
       case 'net.blocked':
         return mk('Blocked', 'destructive', 'system', 'The network rules', 'process-stop', r.what, `${task} asked for it and was not allowed.`, true);
       case 'keep':
-        return mk('Kept', 'neutral', 'system', 'The box', 'object-select', r.what, `For ${task}.`);
+        return mk('Kept', 'neutral', 'system', 'GurtOS', 'object-select', r.what, `For ${task}.`);
       case 'cost':
         return mk('Spent', 'neutral', 'agent', agent, 'applications-science', r.what);
       case 'tool.call':
@@ -129,7 +130,7 @@ function entryOf(r: AuditRow, ev: LogEvent | undefined, c: Ctx): Entry {
         // breaks it. Anyone can check it with head -n <seq> log.jsonl | sha256sum.
         if (r.app === 'wallet' && note?.audit) {
           const f = note.audit as { seq: number; sha256: string; tx?: string };
-          return mk('Fingerprint', 'success', 'system', 'The box', 'security-high', `Log up to entry ${f.seq.toLocaleString('en-US')} fingerprinted on Solana devnet (test network)`, `SHA-256 ${f.sha256.slice(0, 16)}…${f.tx ? `, transaction ${f.tx.slice(0, 12)}…` : ''}. Check it: head -n ${f.seq} log.jsonl | sha256sum`);
+          return mk('Fingerprint', 'success', 'system', 'GurtOS', 'security-high', `Log up to entry ${f.seq.toLocaleString('en-US')} fingerprinted on Solana devnet (test network)`, `SHA-256 ${f.sha256.slice(0, 16)}…${f.tx ? `, transaction ${f.tx.slice(0, 12)}…` : ''}. Check it: head -n ${f.seq} log.jsonl | sha256sum`);
         }
         if (r.app === 'kill-switch' && note) {
           const via = note.via && note.via !== by ? note.via : '';
@@ -148,10 +149,10 @@ function entryOf(r: AuditRow, ev: LogEvent | undefined, c: Ctx): Entry {
           const keys = Object.keys(note.changed as object);
           return mk(keys.join() === 'paused' ? 'Setting' : 'Changed', 'neutral', act, by, glyph, `Settings changed: ${list(keys)}`);
         }
-        return mk('Note', 'neutral', 'system', 'The box', 'help-about', r.what);
+        return mk('Note', 'neutral', 'system', 'GurtOS', 'help-about', ev?.type === 'note' ? noteText(ev) : r.what);
       }
       default:
-        return mk('Note', 'neutral', 'system', 'The box', 'help-about', r.what);
+        return mk('Note', 'neutral', 'system', 'GurtOS', 'help-about', r.what);
     }
   })();
   const text = [r.seq, m.kind, m.title, m.sub, m.who, r.title, r.seat, r.asked, r.approver, r.by, approval?.question, r.what].join(' ').toLowerCase();
@@ -291,7 +292,7 @@ export function AuditApp() {
   const needle = q.trim().toLowerCase();
   const filtered = entries.filter((e) => (kinds === 'all' ? true : kinds === 'key' ? !NOISE.has(e.kind) : e.kind === kinds) && (!needle || e.text.includes(needle)));
   const shown = filtered.slice(-LIMIT);
-  const selected = shown.find((e) => e.row.seq === sel) ?? (mobile ? undefined : shown.at(-1));
+  const selected = shown.find((e) => e.row.seq === sel); // nothing until someone picks an entry
   const days: { day: string; label: string; items: Entry[] }[] = [];
   for (const e of shown) {
     const day = dayKey(e.row.at);
@@ -560,7 +561,7 @@ export function AuditApp() {
               )}
             </div>
             <aside class="gos-au-side" aria-label="The selected entry">
-              {selected && <Detail e={selected} c={ctx} />}
+              {selected ? <Detail e={selected} c={ctx} /> : <p class="t-body t-secondary gos-au-pick">Pick an entry to see who did it, when, and under which rule.</p>}
             </aside>
           </div>
         </>

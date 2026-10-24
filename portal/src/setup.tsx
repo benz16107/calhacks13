@@ -9,7 +9,7 @@ import { AppIcon, Badge, Button, Chip, ComboRow, Group, Icon, IconButton, LinkRo
 import { access } from './shell.tsx';
 import { phone } from './wm.tsx';
 import { PRODUCT } from './product.ts';
-import { dollars, hhmm, plural, selfBox, useNow } from './util.ts';
+import { dollars, hhmm, keyLabel, plural, selfBox, useNow } from './util.ts';
 import './setup.css';
 import { RemoteAccess } from './apps/remote.tsx';
 
@@ -68,12 +68,19 @@ const nice = (a: AppInfo) => {
   const t = (a.ui[0]?.title ?? a.title).replace(/\s*\(.*\)$/, '');
   return t === a.id ? a.id[0].toUpperCase() + a.id.slice(1).replaceAll('-', ' ') : t;
 };
+// Setup offers six apps; the rest are in App Center. The model app has its own step.
 const ORDER = ['find', 'shopper', 'wallet', 'credit-desk', 'jira', 'fetch'];
-const rank = (a: AppInfo) => (ORDER.includes(a.id) ? ORDER.indexOf(a.id) : ORDER.length);
-// The developer sample app is not something to offer a new owner.
-const offered = () => box.allApps.filter((a) => a.id !== 'example').sort((x, y) => rank(x) - rank(y) || nice(x).localeCompare(nice(y)));
+const offered = () => ORDER.map((id) => box.allApps.find((a) => a.id === id)).filter((a): a is AppInfo => !!a);
 const enabled = () => offered().filter((a) => a.status === 'enabled');
-const needed = () => enabled().flatMap((a) => a.access.secrets.filter((s) => !s.optional));
+/** The keys the apps that are on need, each once: the Apps step's footer and the Keys step count the same list. */
+const needed = () => [...new Map(enabled().flatMap((a) => a.access.secrets.filter((s) => !s.optional)).map((s) => [s.name, s])).values()];
+const list = (xs: string[]) => (xs.length < 2 ? xs.join('') : `${xs.slice(0, -1).join(', ')} and ${xs.at(-1)}`);
+/** What an app may reach, in words: "Reaches visa.com and cybersource.com", or that it stays on this computer. */
+function reach(a: AppInfo) {
+  const domains = [...new Set(a.access.hosts.filter((h) => /^[a-z0-9.-]+\.[a-z]{2,}$/i.test(h)).map((h) => h.split('.').slice(-2).join('.')))];
+  if (!domains.length) return a.access.hosts.length ? 'Stays on this computer' : 'No internet';
+  return `Reaches ${list(domains.length > 3 ? [...domains.slice(0, 2), `${domains.length - 2} more`] : domains)}`;
+}
 /** The model key that lets agents think: an Anthropic key or a Factory key. Either one is enough. */
 const MODEL_KEYS = ['ANTHROPIC_API_KEY', 'FACTORY_API_KEY'] as const;
 const modelKey = (w: Wiz) => MODEL_KEYS.find((k) => keySet(w, k));
@@ -82,7 +89,7 @@ const wifi = (name = '') => name.startsWith('w');
 
 // ---------- the steps ----------
 
-const STEPS: Step[] = [
+export const STEPS: Step[] = [
   {
     id: 'welcome',
     label: 'Welcome',
@@ -159,11 +166,11 @@ const STEPS: Step[] = [
     optional: true,
     page: () => (
       <div class="gos-setup-col">
-        <Intro title="Reach this box from anywhere">Optional. Off until you turn it on, and you can change it later in Settings.</Intro>
-        <RemoteAccess />
+        <Intro title="Reach this computer from anywhere">Optional. Off until you turn it on, and you can change it later in Settings.</Intro>
+        <RemoteAccess title="" />
       </div>
     ),
-    summary: () => 'Without it, phones reach the box only on your own network.',
+    summary: () => 'Without it, phones reach this computer only on your own network.',
   },
   {
     id: 'models',
@@ -757,6 +764,8 @@ function SafetyStep({ w }: { w: Wiz }) {
 
 function AppRow({ a, w }: { a: AppInfo; w: Wiz }) {
   const [busy, setBusy] = useState(false);
+  const keys = a.access.secrets.filter((s) => !s.optional).length;
+  const missing = a.access.secrets.filter((s) => !s.optional && !keySet(w, s.name)).length;
   const toggle = (v: boolean) => {
     setBusy(true);
     api('POST', `/apps/${a.id}/${v ? 'enable' : 'disable'}`)
@@ -770,13 +779,8 @@ function AppRow({ a, w }: { a: AppInfo; w: Wiz }) {
         <span class="g-approw-name">{nice(a)}</span>
         {a.description && <span class="g-approw-desc">{a.description}</span>}
         <span class="g-chip-set">
-          {a.access.hosts.length ? a.access.hosts.slice(0, 3).map((h) => <Chip icon="web-browser" key={h}>{h}</Chip>) : <Chip icon="process-stop">No internet</Chip>}
-          {a.access.hosts.length > 3 && <Chip>+{a.access.hosts.length - 3} more</Chip>}
-          {a.access.secrets.map((s) => (
-            <Chip icon="dialog-password" key={s.name}>
-              {s.name}
-            </Chip>
-          ))}
+          <Chip icon={a.access.hosts.length ? 'web-browser' : 'process-stop'}>{reach(a)}</Chip>
+          <Chip icon="dialog-password">{keys ? (missing ? `Needs ${plural(missing, 'key')}` : 'Keys set') : 'No keys needed'}</Chip>
         </span>
         {a.status === 'error' && <span class="t-caption t-destructive">{a.error ?? 'It did not start.'}</span>}
       </div>
@@ -788,7 +792,7 @@ function AppRow({ a, w }: { a: AppInfo; w: Wiz }) {
 function AppsStep({ w }: { w: Wiz }) {
   return (
     <div class="gos-setup-col">
-      <Intro title="Choose apps">Optional. Each app stays off until you add its keys. Each one shows what it can reach and which keys it needs, and you can change this later in App Center.</Intro>
+      <Intro title="Choose apps">Optional. Turn on the apps you want. Each one says what it can reach and how many keys it needs. App Center has more, and you can change this any time.</Intro>
       <div class="g-list">
         {offered().map((a) => (
           <AppRow a={a} w={w} key={a.id} />
@@ -800,14 +804,18 @@ function AppsStep({ w }: { w: Wiz }) {
 }
 
 function KeysStep({ w }: { w: Wiz }) {
-  const apps = enabled().filter((a) => a.access.secrets.length);
+  // The keys the footer counts, each once, under the first app that needs it. Optional keys are in App Center.
+  const seen = new Set<string>();
+  const apps = enabled()
+    .map((a) => ({ a, keys: a.access.secrets.filter((s) => !s.optional && !seen.has(s.name) && seen.add(s.name)) }))
+    .filter((x) => x.keys.length);
   return (
     <div class="gos-setup-col">
-      <Intro title="Keys for your apps">Keys go into the vault, which only root can read. Agents never see a key: the box makes the call for them.</Intro>
-      {apps.map((a) => (
+      <Intro title="Keys for your apps">GurtOS keeps keys where agents can't read them. You can replace a key but never see it. Optional keys are in App Center.</Intro>
+      {apps.map(({ a, keys }) => (
         <Group title={nice(a)} caption={/shopper|wallet/.test(a.id) ? 'Test payments only: no real money moves.' : undefined} key={a.id}>
-          {a.access.secrets.map((s) => (
-            <Row title={<span class="t-mono">{s.name}</span>} sub={s.optional ? 'Optional: the app works without it' : undefined} key={s.name}>
+          {keys.map((s) => (
+            <Row title={keyLabel(s.name)} sub={s.name} key={s.name}>
               {keySet(w, s.name) ? <span class="t-success">{setText(w, s.name)}</span> : <Button onClick={() => w.setKey(s.name)}>Set key</Button>}
             </Row>
           ))}
