@@ -106,9 +106,14 @@ class Core {
     try {
       sandbox.kill(t); // a worker left over from a core that died without the box rebooting
       if (t.state === 'queued') this.move(t, 'running', { layers: doneLayers(this.log.events, this.state, t.workspace) });
+      const env: Record<string, string> = {};
+      if (t.worker === 'droid') {
+        env.FACTORY_API_KEY = this.vault.get('FACTORY_API_KEY') ?? '';
+        if (!env.FACTORY_API_KEY) throw new Error('the vault has no FACTORY_API_KEY, which Droid needs');
+      }
       const ids = sandbox.prepare(t);
       await this.openBroker(t, ids);
-      const child = sandbox.spawnWorker(t, ids);
+      const child = sandbox.spawnWorker(t, ids, env);
       this.workers.set(t.id, child);
       child.on('exit', (code, signal) => {
         this.workers.delete(t.id);
@@ -231,6 +236,12 @@ class Core {
       if (route === 'GET /task') {
         const steps = this.log.events.flatMap((e) => (e.type === 'task.step' && e.task === t.id ? [{ text: e.text, data: e.data }] : []));
         return { task: t, steps };
+      }
+      if (route === 'GET /tools') {
+        return t.tools.map((name) => {
+          const { description, input } = this.tools.get(name)!.tool;
+          return { name, description, input: input ?? { type: 'object' } };
+        });
       }
       if (route === 'POST /step') return this.write({ type: 'task.step', task: t.id, text: String(body.text), data: body.data });
       if (route === 'POST /cost') return this.write({ type: 'cost', task: t.id, cents: Number(body.cents), what: String(body.what) });

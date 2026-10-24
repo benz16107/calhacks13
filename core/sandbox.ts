@@ -75,7 +75,7 @@ export function prepare(task: Task): { uid: number; gid: number } {
 const WORKERS = new URL('./workers/', import.meta.url).pathname;
 
 /** Start the task's worker as the task's user, inside its copy. No secrets in its environment. */
-export function spawnWorker(task: Task, ids: { uid: number; gid: number }): ChildProcess {
+export function spawnWorker(task: Task, ids: { uid: number; gid: number }, extraEnv: Record<string, string> = {}): ChildProcess {
   const out = fs.openSync(path.join(dirs.task(task.id), 'worker.log'), 'a', 0o600);
   const child = spawn(
     process.execPath,
@@ -90,6 +90,7 @@ export function spawnWorker(task: Task, ids: { uid: number; gid: number }): Chil
         LANG: 'C.UTF-8',
         BOX_TASK: task.id,
         BOX_SOCKET: dirs.socket(task.id),
+        ...extraEnv,
       },
     },
   );

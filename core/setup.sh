@@ -16,3 +16,16 @@ if ! have_node; then
   rm -rf "$tmp"
 fi
 node -v
+
+# The Droid CLI, for every task user. Not Factory's install script: it kills every running droid.
+DROID_VERSION=0.248.0
+if ! /usr/local/bin/droid --version 2>/dev/null | grep -q "$DROID_VERSION"; then
+  arch=$(uname -m); case $arch in aarch64) arch=arm64;; x86_64) arch=x64; grep -qi avx2 /proc/cpuinfo || arch=x64-baseline;; esac
+  url=https://downloads.factory.ai/factory-cli/releases/$DROID_VERSION/linux/$arch/droid
+  tmp=$(mktemp)
+  curl -fsSL "$url" -o "$tmp"
+  [ "$(sha256sum "$tmp" | cut -d' ' -f1)" = "$(curl -fsSL "$url.sha256")" ] || { echo "droid checksum mismatch" >&2; exit 1; }
+  install -m 0755 "$tmp" /usr/local/bin/droid
+  rm -f "$tmp"
+fi
+droid --version

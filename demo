@@ -9,6 +9,10 @@ cd "$(dirname "$0")"
 if [[ ${1:-} == --here ]]; then
   [[ $(id -u) == 0 ]] || exec sudo "$0" --here
   core/setup.sh >/dev/null
+  lock=$(sha256sum package-lock.json | cut -c1-16)
+  if [[ ! -f node_modules/.lock-$lock ]]; then
+    npm ci --omit=dev --no-audit --no-fund --loglevel=error && touch "node_modules/.lock-$lock"
+  fi
   exec node --experimental-strip-types --disable-warning=ExperimentalWarning core/demo.ts
 fi
 
