@@ -53,10 +53,15 @@ export default async function (d: DemoKit) {
     d.check(b.comments.some((c: string) => c.includes('tried to reach attacker.example')), `${b.key} has a comment for the blocked attempt on attacker.example`);
     d.check(b.comments.some((c: string) => c.includes('Push the new settings to production?')), `${b.key} has a comment asking for the OK`);
 
-    // The calls the Forge panel makes, with and without the shared secret.
+    // The calls the Forge panel makes, with and without the shared secret. They arrive through Caddy, so they
+    // carry X-Forwarded-For: the box treats them as remote, and only the track's own check lets them in.
     const port = fs.readFileSync(path.join(d.home, 'api.port'), 'utf8').trim();
     const panel = (method: string, p: string, token: string, body?: unknown) =>
-      fetch(`http://127.0.0.1:${port}/t/jira${p}`, { method, headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' }, body: body === undefined ? undefined : JSON.stringify(body) });
+      fetch(`http://127.0.0.1:${port}/t/jira${p}`, {
+        method,
+        headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json', 'x-forwarded-for': '203.0.113.7' },
+        body: body === undefined ? undefined : JSON.stringify(body),
+      });
     const approval = `${B.id}.line3`;
     const refused = await Promise.all([panel('POST', '/undo', '', { task: B.id }), panel('POST', '/answer', 'guess'.repeat(10), { task: B.id, approval, approved: true })]);
     d.check(refused.every((r) => r.status === 401), 'without the shared secret the panel routes refuse to approve or roll back (401)');
@@ -73,11 +78,12 @@ export default async function (d: DemoKit) {
     d.check(d.view('jira', 'settings.txt') === undefined && d.view('jira', 'README.md') === 'the box', 'rolled back from Jira: B\'s settings change is gone, A\'s fix stays');
     const audit = await (await panel('GET', `/task?id=${B.id}`, secret)).json();
     d.check(
-      audit.task.state === 'undone' && audit.audit.some((l: { text: string }) => l.text === 'Approved by jira:Ben Zhou') && audit.blocked[0]?.host.startsWith('attacker.example'),
-      'the panel\'s audit view shows the block, who approved and the roll back',
+      audit.task.state === 'undone' && audit.audit.some((l: { text: string }) => l.text === 'Approved by jira:Ben Zhou') && audit.blocked[0]?.host.startsWith('attacker.example') && audit.diff.includes('+retries=0'),
+      'the panel\'s audit view shows the block, who approved, the roll back and the diff it undid',
     );
     const b2 = await issue(B.id, (i) => i.fields.labels.includes('box-undone') && i.comments.some((c: string) => c.includes('Rolled back by jira:Ben Zhou')));
     d.check(b2.fields.status.name === 'Done' && b2.text.includes('Rolled back by jira:Ben Zhou'), `${b2.key} says who rolled it back, in a comment and the description`);
+    d.check(b2.text.includes('+retries=0'), `${b2.key} still shows the diff it undid, though the box deleted those files`);
     const secrets = vault.split('\n').map((l) => l.split('=').slice(1).join('=').trim()).filter((v) => v.length > 8);
     // Live, check the text the box wrote; Jira's own JSON carries the site and email, which are not secrets.
     const sent = stub ? stub.bodies.join('\n') : JSON.stringify([a.text, a.comments, b2.text, b2.comments]);

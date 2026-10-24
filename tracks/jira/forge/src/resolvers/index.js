@@ -5,7 +5,7 @@
 import Resolver from '@forge/resolver';
 import api, { fetch, route } from '@forge/api';
 
-const BOX = process.env.BOX_URL || 'https://45-32-140-213.sslip.io/t/jira';
+const BOX = process.env.BOX_URL; // the box's Jira routes, https://<box>/t/jira
 const resolver = new Resolver();
 
 /** The box task behind this issue, from the property the box wrote when it made the issue. */
@@ -30,6 +30,7 @@ async function me() {
 
 /** Call the box. Only Atlassian's servers hold the secret; the panel in the browser never sees it. */
 async function box(method, path, body) {
+  if (!BOX) throw new Error('Set the Forge variable BOX_URL to the box\'s Jira routes, https://<box>/t/jira.');
   const r = await fetch(BOX + path, {
     method,
     headers: { authorization: `Bearer ${process.env.BOX_SECRET}`, 'content-type': 'application/json' },

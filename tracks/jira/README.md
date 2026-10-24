@@ -1,4 +1,4 @@
-# Box audit for Jira: see what an agent did, then undo only that
+# GurtOS for Jira: see what an agent did, then undo only that
 
 Atlassian Agentic Workforce Challenge, **Track 2: security for agents acting for a user.** The idea in their
 brief is "audit and reversion: record every action with the inputs and reasoning behind it, so an admin can
@@ -8,18 +8,15 @@ that for every agent task the box runs.
 - Every box task becomes a Jira issue in the **Agent tasks** project (`BOX`). The issue holds what the agent
   was asked, what it was allowed to use, its reasoning in its own words, its approvals, every blocked attempt
   to reach a host, the files it changed with a diff, its cost, and its full action log.
-- A **Forge app** adds a **Box agent task** panel to those issues. It shows the task live from the box, with
+- A **Forge app** adds a **GurtOS agent task** panel to those issues. It shows the task live from the box, with
   **Approve** and **Deny** for a pending approval and **Roll back** for the whole task. Roll back removes only
   that task's file changes. Every other task keeps its own.
 - The app also indexes the task's state, cost, blocked attempts and pending approvals for **JQL**, so the
   morning-after question is one search: `project = BOX AND boxBlocked > 0`.
 
-The issues on the demo site: [BOX-1](https://one-atlas-tyfk.atlassian.net/browse/BOX-1) (a Droid task that
-fixed typos), [BOX-2](https://one-atlas-tyfk.atlassian.net/browse/BOX-2) (a scripted agent that misread a rule,
-was blocked, approved, then rolled back from Jira), [BOX-5](https://one-atlas-tyfk.atlassian.net/browse/BOX-5)
-(a Droid task that asked to spend over its budget and was approved from Jira). BOX-3 and BOX-4 are the same
-coffee order from earlier runs, both rolled back; the
-[issue search](https://one-atlas-tyfk.atlassian.net/issues/?jql=project%20%3D%20BOX%20ORDER%20BY%20created%20ASC) has them all.
+On the demo site: BOX-1 is a Droid task that fixed typos. BOX-2 is a scripted agent that misread a rule, was
+blocked, approved, then rolled back from Jira. BOX-5 is a Droid task that asked to spend over its budget and was
+approved from Jira. BOX-3 and BOX-4 are the same coffee order from earlier runs, both rolled back.
 
 **All payments here are test money.** The coffee order uses `example.spend`, the example track's tool, which
 moves no money.
@@ -29,7 +26,7 @@ moves no money.
 The panel on an issue whose agent misread a rule: it changed three service configs instead of one, tried to
 send the repo to a paste site (blocked), and now waits for an OK to push to production.
 
-![The Box panel waiting for an OK, with a blocked attempt and the diff](screenshots/panel-waiting.png)
+![The GurtOS agent task panel waiting for an OK, with a blocked attempt and the diff](screenshots/panel-waiting.png)
 
 Approve in Jira, then **Roll back this task** asks first:
 
@@ -91,8 +88,8 @@ the box's shared secret. It:
    the browser;
 2. asks Jira whether that user may **edit the issue** (`mypermissions`, `EDIT_ISSUES`). Only they can approve,
    deny or roll back;
-3. calls the box at `https://45-32-140-213.sslip.io/t/jira/...` with the secret as a bearer token, passing the
-   user's name, which goes into the box's log as `jira:<name>`.
+3. calls the box's public address (the Forge variable `BOX_URL`, such as `https://box.example.com/t/jira`) with
+   the secret as a bearer token, passing the user's name, which goes into the box's log as `jira:<name>`.
 
 The box checks the secret in constant time, checks that the approval belongs to that task, and runs the same
 undo and answer the portal and phone use. Caddy on the box serves only `/t/jira/*`; the rest of the box's API
@@ -102,12 +99,12 @@ answers 404 from the internet. With no secret in the box's vault, every call is 
 
 | Piece | What it does |
 |---|---|
-| `jira:issuePanel` (UI Kit, `render: native`) | The Box agent task panel, shown on `BOX` issues (`displayConditions: projectKey`) |
+| `jira:issuePanel` (UI Kit, `render: native`) | The GurtOS agent task panel, shown on `BOX` issues (`displayConditions: projectKey`) |
 | Resolver (`@forge/resolver`) | `load`, `answer`, `rollback` |
 | `jira:entityProperty` | Indexes `box.task` for JQL: `boxState`, `boxCost`, `boxBlocked`, `boxPending`, `boxSource` |
 | `api.asUser().requestJira` | Reads the issue property, the user's permissions and name, with the user's own access |
-| `fetch` from `@forge/api`, `permissions.external.fetch.backend` | The call to the box, to one declared host |
-| Encrypted variable `BOX_SECRET` | The shared secret, set with `forge variables set --encrypt` |
+| `fetch` from `@forge/api`, `permissions.external.fetch.backend` | The call to the box, to the host declared in the manifest |
+| Variables `BOX_URL` and `BOX_SECRET` (encrypted) | Where the box is, and the shared secret |
 | Scopes | `read:jira-work`, `read:jira-user`. The app never writes to Jira; the box does. |
 | Jira REST v3 (from the box) | `issue`, `issue/{key}/properties`, `transitions`, `comment`, `search/jql` |
 
@@ -135,7 +132,7 @@ track jira
 `DEMO_LIVE=jira ./demo` runs the same steps against the real demo site's `BOX` project, then deletes the
 issues it made.
 
-It passed on 2026-10-23 on the linuxbox VM (x86). BOX-8 and BOX-9 were real issues on the demo site, deleted at the end:
+It passed on 2026-10-23 on an x86 test VM. BOX-8 and BOX-9 were real issues on the demo site, deleted at the end:
 
 ```
 track jira
@@ -168,7 +165,7 @@ On the box (a test VM), as root:
 3. Public HTTPS for the panel: Caddy with this site block, and ports 80 and 443 open.
 
    ```
-   45-32-140-213.sslip.io {
+   box.example.com {
    	handle /t/jira/* {
    		request_body {
    			max_size 64KB
@@ -185,12 +182,14 @@ The Forge app, from `forge/` with Node 22 and the Forge CLI 14:
 
 ```
 npm install
+forge variables set -e production BOX_URL https://box.example.com/t/jira
 forge variables set --encrypt -e production BOX_SECRET <the same secret>
 forge deploy --non-interactive -e production
-forge install --non-interactive --site one-atlas-tyfk.atlassian.net --product jira --environment production
+forge install --non-interactive --site your-site.atlassian.net --product jira --environment production
 ```
 
-A box at another address sets `BOX_URL` (a plain Forge variable) and changes the host in `manifest.yml`.
+Set the egress address in `manifest.yml` to the box's name too. The demo box has an sslip.io name, so the
+manifest allows `*.sslip.io` and `BOX_URL` picks the box.
 
 On the site, a Jira admin opens the panel once on any `BOX` issue and picks **Show for all work items** from
 its menu, so every box issue shows it without a click.

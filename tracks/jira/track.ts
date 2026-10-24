@@ -64,7 +64,15 @@ type View = { task: Task; approvals: Approval[]; events: LogEvent[] } & Diff;
 
 async function view(id: string): Promise<View> {
   const { task, approvals, events } = await boxApi(`/tasks/${encodeURIComponent(id)}`);
-  const d: Diff = await boxApi(`/tasks/${encodeURIComponent(id)}/diff`).catch(() => ({ changes: [], diff: '' }));
+  let d: Diff = await boxApi(`/tasks/${encodeURIComponent(id)}/diff`).catch(() => ({ changes: [], diff: '' }));
+  // Undo deletes a task's files, so its diff goes empty. Keep the last one: the record of what was rolled back.
+  const kept = syncedFile(id).replace(/\.json$/, '.diff.json');
+  if (d.changes.length) {
+    fs.mkdirSync(DIR, { recursive: true, mode: 0o700 });
+    fs.writeFileSync(kept, JSON.stringify({ changes: d.changes.slice(0, 200), diff: clip(d.diff, 8000) }));
+  } else if (task.state === 'undone' && fs.existsSync(kept)) {
+    d = JSON.parse(fs.readFileSync(kept, 'utf8'));
+  }
   return { task, approvals, events, ...d };
 }
 
@@ -123,7 +131,7 @@ function describe(v: View) {
   return doc([
     para(
       text('State: '), text(task.state, [{ type: 'strong' }]),
-      text(`. ${spent(task)}. Worker ${task.worker}, workspace ${task.workspace}, started by ${task.source}. Box task ${task.id}.`),
+      text(`. ${spent(task)}. Worker ${task.worker}, workspace ${task.workspace}, started by ${task.source}. GurtOS task ${task.id}.`),
     ),
     ...(task.state === 'undone' ? [panel('warning', `Rolled back${by ? ` by ${by}` : ''}. The file changes below are no longer in the workspace. Other tasks kept theirs.`)] : []),
     ...(task.error ? [panel('error', `Failed: ${clip(task.error, 1000)}`)] : []),
@@ -142,15 +150,15 @@ function describe(v: View) {
       ? [capped(changes.map((c) => `${c.path} (${c.change})`), 30), code(clip(diff, 8000), 'diff')]
       : [para(text('No file changes.'))]),
     heading('Action log (UTC)'),
-    ...(log.length > shown.length ? [para(text(`The first ${log.length - shown.length} entries are in the box's log and the Box panel.`, [{ type: 'em' }]))] : []),
+    ...(log.length > shown.length ? [para(text(`The first ${log.length - shown.length} entries are in the box's log and the GurtOS agent task panel.`, [{ type: 'em' }]))] : []),
     bullets(shown.map((l) => `${time(l.at)} ${l.text}`)),
-    para(text('Written by the box from its append-only action log. Approve or roll back this task from the Box panel on this issue.', [{ type: 'em' }])),
+    para(text('Written by GurtOS from the box\'s append-only action log. Approve or roll back this task from the GurtOS agent task panel on this issue.', [{ type: 'em' }])),
   ]);
 }
 
 /** A comment for the events people should notice in the issue's activity. */
 function comment(e: LogEvent, v: View) {
-  if (e.type === 'approval.asked') return panel('warning', `The agent is waiting for an OK: ${e.approval.question} Approve or deny it in the Box panel.`);
+  if (e.type === 'approval.asked') return panel('warning', `The agent is waiting for an OK: ${e.approval.question} Approve or deny it in the GurtOS agent task panel.`);
   if (e.type === 'approval.answered') return panel(e.approved ? 'success' : 'note', `${e.approved ? 'Approved' : 'Denied'} by ${e.by}.`);
   if (e.type === 'net.blocked') return panel('error', `Blocked: the task tried to reach ${e.host}, which is not one of its allowed hosts. The box refused the connection.`);
   if (e.type === 'task.state' && e.state === 'failed') return panel('error', `Failed: ${clip(e.error ?? 'no reason given', 1000)}`);
@@ -276,7 +284,7 @@ export default {
   // Jira's address and API token for the reader; the shared secret the Forge app sends to the routes.
   secrets: ['ATLASSIAN_SITE', 'ATLASSIAN_EMAIL', 'ATLASSIAN_API_TOKEN', 'JIRA_BOX_SECRET'],
 
-  // Served at /t/jira/... The box's public HTTPS address (Caddy on the Vultr box) forwards only these. Each one
+  // Served at /t/jira/... The box's public HTTPS address (Caddy in front of the box) forwards only these. Each one
   // checks the shared secret itself (allowed()), so they are open to the paired-phone rule.
   openRoutes: ['GET /task', 'POST /answer', 'POST /undo'],
   routes: {

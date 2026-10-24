@@ -1,4 +1,4 @@
-// The Box panel on a BOX issue: the task's live state, its pending approvals with Approve and Deny, its blocked
+// The GurtOS agent task panel on a BOX issue: the task's live state, its pending approvals with Approve and Deny, its blocked
 // attempts, a short audit trail, the files it changed, and Roll back. Everything comes from the resolver, which
 // asks the box; this page holds no secret.
 import React, { useEffect, useState } from 'react';
@@ -39,7 +39,7 @@ const App = () => {
   };
 
   if (!data) return error ? <SectionMessage appearance="error" title="Could not reach the box"><Text>{error}</Text></SectionMessage> : <Spinner label="Loading the task" />;
-  if (data.none) return <Text>This issue is not a box task.</Text>;
+  if (data.none) return <Text>This issue is not a GurtOS task.</Text>;
   const { task, pending, blocked, audit, changes, diff, reasoning, canAct } = data;
 
   return (

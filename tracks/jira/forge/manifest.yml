@@ -7,7 +7,7 @@ modules:
       resolver:
         function: resolver
       render: native
-      title: Box agent task
+      title: GurtOS agent task
       icon: https://developer.atlassian.com/platform/forge/images/icons/issue-panel-icon.svg
       displayConditions:
         projectKey: BOX
@@ -45,7 +45,8 @@ permissions:
   external:
     fetch:
       backend:
-        - address: 45-32-140-213.sslip.io
+        # The box's public HTTPS name. BOX_URL (a Forge variable) holds the exact address.
+        - address: "*.sslip.io"
           inScopeEUD: true
 app:
   runtime:
