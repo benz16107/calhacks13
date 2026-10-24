@@ -18,12 +18,11 @@ How it was walked:
 
 ## Status
 
-**Fixed 62, closed 1, open 29** (92 findings: 19 web, 22 Server, 36 Personal, 15 parity). Each fixed
+**Fixed 66, closed 1, open 25** (92 findings: 19 web, 22 Server, 36 Personal, 15 parity). Each fixed
 finding gets a **Fixed** line with the commit and an after-screenshot in `after/`.
 
 | Owner | Open |
 |---|---|
-| portal | W16, W17, W18, S27 |
 | apify track | A-1 |
 | personal | P-29 waits for Ben |
 | image | S2, S15, S16, S24, P-4, P-17, P-28, E-1 to E-11, E-15, then P-1 with release |
@@ -329,13 +328,19 @@ enforces...", "no FACTORY_GITHUB_REPO in the vault", "resets in 9008 min". ![](a
 "ASI one API key" and "Backup age recipient" in Accounts & Keys (`after/srv-settings-keys.png`). Fix: "ASI:One API
 key", "Backup encryption key". Owner: portal.
 
+
+**Fixed in 0c254e5** (portal). ![](after/srv-settings-keys.png)
 ### W17. P2. A window for an app that is off is titled with its route
 "factory/factory" over "This app is off or not installed". Fix: the app's title ("Factory"), and a Turn on button.
 Owner: portal.
 
+
+**Fixed in 0c254e5** (portal): "Factory is off" with Turn on. ![](after/srv-app-factory-off.png)
 ### W18. P2. Setup's privacy step shows a file path
 "/var/lib/box/log.jsonl". Fix: "The action log stays on this computer." Owner: portal.
 
+
+**Fixed in 0c254e5** (portal): "Where it lives: On this computer".
 ### A-1. P1. The Apify page is plain HTML
 Its own H1, browser-default table, and "what the box counted" (`after/srv-app-apify.png`). Fix: the kit like
 Factory and the Live board (9c6a719, bd87b04), "No Apify calls yet. When an agent reads a page or checks a price,
@@ -345,6 +350,8 @@ its cost shows here.", and "this computer". Owner: apify track.
 "/t/spacetime/", "/t/factory/" under the window title (`after/srv-app-live.png`). Fix: no subtitle, or the app's
 one-line description. Owner: portal.
 
+
+**Fixed in 0c254e5** (portal). ![](after/srv-app-live.png)
 ### S1. P1. A restart with no tasks says nothing
 ![](shots/server/50-plugpull-restored-desktop.png)
 After pulling the plug on a box with no tasks: GRUB, black, then the old windows, no message. With tasks running it
