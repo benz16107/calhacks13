@@ -32,8 +32,8 @@ Checked against main `7fe6651`, Sat Oct 24 08:09 PT. `./demo` from a clean workt
 |---|---|
 | verified (ISO) | 3 |
 | verified | 56 |
-| merged | 155 |
-| building | 4 |
+| merged | 158 |
+| building | 1 |
 | planned | 1 |
 | not pursued | 6 |
 | **Total** | **225** |
@@ -160,7 +160,7 @@ Owner on every row: the native thread ("Phone app: native iOS + Android download
 | Watch safety enforced by the box: its own token through the iPhone, approve only with auth wrist, at most `watchLimitCents` ($25), never Business, fraud or Shopper; 403 needs iphone; Deny always works; revoking the iPhone revokes it | native | merged (gate 37 passed, 0 failed; not deployed to the installed computers yet) | 6596e40 | core/demo.ts "native apps: device kinds and the Apple Watch's limits, enforced by the box" (14 checks); native/demo.ts "native apps: every call the apps make" | Anthropic |
 | Mac menu bar app: needs-you count, Approve with Touch ID, Option-Command-G Ask, pairing, Computers, notifications from the live log | native | merged (built and rendered on the build Mac; the notarized DMG waits for a Developer ID certificate only Ben can make) | b95e52a | none (UI) | Anthropic |
 | Send to GurtOS (Mac Share menu): text and links | native | merged on main as text and links; files are the next row | 6596e40 | native/demo.ts: "every call the apps make" | Anthropic |
-| Send to GurtOS files: up to 8 files, 5 MB, into a new task's own workspace | native, core | building (branch `core-native-files`, waiting for core's decision) | | native/demo.ts: shared file read by the task; bad names, too big, too many refused | Anthropic |
+| Send to GurtOS files: up to 8 files, 5 MB, into a new task's own workspace | native, core | merged (the box takes up to 8 files and 5 MB into a new workspace it names: files with a workspace or folder are refused; the log keeps names and sizes, never contents; the Share menu sends files again; check it on a Mac) | 90eb115, de63cb3 | core/demo.ts: shared files go to a new workspace; refused with a workspace or folder; a path in a name, over 5 MB or over 8 files is refused | Anthropic |
 | Android app: signed APK (a Trusted Web Activity of app.gurtos.com) with web push, on the v0.1.0-preview release as `gurtos-android-0.1.0.apk` | native | merged (b95e52a; also on the v0.1.0-preview release as `gurtos-android-0.1.0.apk`; ran in an Android 15 emulator; full screen once app.gurtos.com serves `assetlinks.json` from `relay-apns`) | b95e52a | none | Anthropic |
 | Windows: install app.gurtos.com from Edge | native | merged (checked in Edge 156 on Linux: installable, no errors; not tried on a Windows PC) |  | none | Anthropic |
 
@@ -242,7 +242,7 @@ controller's clear-the-flag path (FRR-5), an ASI:One chat intent for credit.
 | CDP Server Wallets with policies | wallet | merged (signer and policy rules built and unit-tested; the live run waits for a CDP Wallet Secret) | adf801a | | Coinbase |
 | The "upto" scheme | wallet | merged (`wallet.payMetered` pays upto offers with a hard cap) | adf801a | | Coinbase |
 | One-command reuse (MCP or skill) | wallet | merged (`mcp.ts` and `install.sh`: the wallet as an MCP server with a budget and an approval prompt) | adf801a | | Coinbase |
-| Onramp top-up | wallet | merged (Coinbase Onramp, sandbox only) | adf801a | | Coinbase |
+| Onramp top-up | wallet | merged (Coinbase Onramp, sandbox only; verified to the session step on Oct 24, which is all that can be tested: Onramp can't deliver devnet USDC, test money comes from Circle's faucet) | adf801a, 15d4135 | | Coinbase |
 | Daily Solana log fingerprint | wallet | merged (a daily chained fingerprint of the action log written to Solana devnet, with a verify route) | adf801a, 9482cfd, 36c48d4 | | Solana |
 | Payment memos | wallet | merged (the task id on every payment) | adf801a | | Solana |
 | Box-to-box payments: box A's agent quotes and pays box B's public /t/wallet/sell/audit route through A's broker (cost, approval, task budget, action log); A's wallet signs, Coinbase's CDP facilitator settles on Solana devnet, B logs the sale. Test network only. Limit: in the demo "the other box" is a second shop in the same run with the test payee's wallet, not a second machine. The real boxes share one wallet key and the facilitator refuses self payment (self_send_not_allowed), so a real machine-to-machine payment needs a different key in one vault; not done before the freeze. A second wallet did buy /sell/audit and /sell/search from the public Vultr box, both settled | wallet | merged | adf801a | box to box: this box's agent paid the other box $0.01 and got its audit proof | Solana, Coinbase |
@@ -361,9 +361,9 @@ Owner: the Figma thread. `docs/figma-products.md` is not on main yet; its items 
 | Design system and screens, Make prototype, Slides deck, stage log | figma | merged (stage log totals checked Oct 24 01:20) | many | none | Figma |
 | Code Connect (Figma components mapped to portal code) | figma, portal | merged (95 parserless templates in docs/figma/code-connect; publishing to Figma needs an Organization plan, so it is not published) | | | Figma |
 | Token sync with a drift check | figma, portal | merged (`node docs/figma/tokens/sync.ts --check`) | | | Figma |
-| A Community playbook | figma | building (the Cover and Playbook pages are built; publishing to Figma Community is Ben's click) | | | Figma |
+| A Community playbook | figma | merged (published by Ben; QA has not opened the Community page) |  | | Figma |
 | App-vs-Figma comparisons (the built screen next to its frame) | figma, portal | merged (`node docs/figma/compare/compare.ts`) | | | Figma |
-| A Figma Sites landing page | figma | building (designed for desktop and mobile in docs/figma/landing; publishing is Ben's click) | | | Figma, GoDaddy |
+| A Figma Sites landing page | figma | merged (published at https://plum-fabric-10136193.figma.site, which answers 200; QA has not read it) | f360276 | | Figma, GoDaddy |
 
 ## Vultr
 
