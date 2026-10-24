@@ -45,6 +45,7 @@ network all work on main as of 717bc3f.
 | P2-1 the losing phone gets no word | Fixed, verified 00:29: "Already approved on Judge's iPhone" (shot 76) | portal |
 | Unpaired phone sees everything | Fixed, verified: "Pair this phone first", no tasks shown | portal |
 | P1-3 /find starts a Droid task at boot | Fixed, verified 00:33: no describe task on restart | find 7663eb4, 4351905 |
+| P1-10 (credit desk half) | Also verified on a phone paired over the network at 00:10 (shots 67 to 69) | credit desk 7cdd64e |
 | P1-10 (find half) no /find page | Fixed, verified: "whiteboard photo" on a phone finds photos/IMG_2041.jpg (shot 77) | find 76ff3f8 |
 | P1-14 budget and hosts not validated | Fixed, verified: -5, "abc", 0.5, 1e15, "*", "*.*", CIDRs and the box's own port refused with clear messages | core 5942002 |
 | P2-15 no size limits, raw JSON errors | Fixed, verified: 200-character titles, 100,000-character prompts, "the request body isn't valid JSON" | core 5942002 |
@@ -55,9 +56,9 @@ network all work on main as of 717bc3f.
 | P1-7 live banner names the wrong hosts | **Still open** at 00:21 on a phone: "tm2diipf4e2 tried to reach attacker.example. It may not reach any host." (id instead of title, and its host is shop.localhost:8123) | portal |
 | Open P1s | P1-12 ASI:One not paired; P1-13 real agent probes the proxy in moment 2; D-5, D-6; showcase S-1 to S-6 | |
 
-**Not re-tested yet:** P2-6, P2-7, P2-8, P2-10 (portal says fixed), and the installed boxes. **At 00:22 none
-runs current main:** linuxbox and Vultr are at 3a4e4ca (no P0-7 fix), and the laptop, Sunday's demo box, still runs
-code from before c6f747e. Core was asked to deploy all three.
+**Not re-tested yet:** P2-6, P2-7, P2-8, P2-10 (portal says fixed), and the installed boxes. **At 00:40:** Vultr runs current main (the public Mana app answers 200; Jira's route
+refuses calls without its secret), linuxbox runs main as of bb0ccde (has the P0-7 fix), and **the laptop, Sunday's
+demo box, still runs code from before c6f747e** (no tokens, the old UI). Core was asked to deploy it.
 
 ## Findings
 
