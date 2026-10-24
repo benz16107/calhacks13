@@ -171,6 +171,22 @@ notices, never the mailbox login or other email. Agents can also pay for an API 
 x402 payments (Coinbase x402, devnet USDC test money): a task asks the price, then pays exactly that, and above its
 budget it waits for your OK.
 
+## Screenshots
+
+Taken on Oct 24 from a test box, in Chromium with a virtual authenticator standing in for Face ID. The Best Buy and
+Gold Roast prices are live through Apify; the charges are Stripe test mode.
+
+| | |
+|---|---|
+| ![A shopping mandate waiting for Face ID, with every limit spelled out](screenshots/face-id-mandate.png) | ![Buy 1 Chemex filters from Best Buy Canada for $15.36 CAD, with Approve with Face ID](screenshots/face-id-purchase.png) |
+| The mandate you approve shows every limit, and the store enforces it. | The purchase names the winner and the runner-up, and is approved with Face ID. |
+| ![The mandate card with Best Buy Canada and Gold Roast compared, Best Buy marked best](screenshots/comparison.png) | ![The phone: the approval at the top, Approve with Face ID](screenshots/phone-approval.png) |
+| The comparison across two real stores, with the reason. | On the phone. |
+| ![Activity: a reorder approved with a plain tap failed with approved without Face ID](screenshots/stolen-session.png) | ![The merchant's dashboard: verified agent orders, bots kept out, conversion, chargebacks 0](screenshots/store-dashboard.png) |
+| A stolen pairing token taps Approve: the box refuses to pay. | The store's side. |
+| ![Refused requests by reason: unsigned bots, over price, wrong item, over quantity, an edited mandate](screenshots/store-refusals.png) | ![Order evidence: agent key, mandate, approved with Face ID, the test payment](screenshots/order-evidence.png) |
+| Mandate refusals at the store, in plain words. | Every order keeps its evidence. |
+
 ## How a purchase is made safe
 
 ```

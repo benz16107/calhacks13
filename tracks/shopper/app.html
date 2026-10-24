@@ -23,6 +23,8 @@
   .kicker { text-transform: uppercase; letter-spacing: .04em; }
   .store-pick { display: flex; flex-direction: column; gap: 6px; }
   .store-pick label { flex-direction: row; align-items: center; gap: 8px; }
+  .g-notification-actions { flex-wrap: wrap; }
+  .g-notification-actions .g-btn { flex: 1 1 auto; justify-content: center; }
   @media (max-width: 520px) { main { padding: var(--space-md) var(--space-sm) var(--space-xl); } .cards { grid-template-columns: 1fr; } .g-btn { min-height: 44px; } }
 </style>
 <body class="g-page">
@@ -311,7 +313,9 @@
         <p class="t-caption t-secondary">Mandate <span class="t-mono">${esc(o.mandate?.id)}</span>, ${a?.method === 'passkey' ? `approved with Face ID on ${esc(a.by)}` : `approved with a tap by ${esc(a?.by)}`}. Signed with Visa Trusted Agent Protocol and verified by the store. Order <span class="t-mono">${esc(o.id)}</span>, ${esc(ago(o.at))}.</p>${adj}
       </div>`;
     }).join('') || '<div class="g-card"><p class="t-body t-secondary">No orders yet.</p></div>';
-    $('tasks').innerHTML = s.tasks.map((t) => `<div class="g-row" style="cursor:default"><span class="g-row-text"><span class="g-row-title">${esc(t.title)}</span><span class="g-row-sub">${esc(t.error || t.step || '')}</span></span><span class="g-row-trail">${badge(t.state)}<span class="money t-caption">${money(t.costCents)} of ${money(t.budgetCents)}</span></span></div>`).join('') || '<div class="g-row"><span class="g-row-text t-secondary">Nothing yet.</span></div>';
+    // The scripted worker's own lines ("call ...", "ask ...") are for the log, not for people.
+    const said = (t) => (t.error ?? '').replace(/^worker exited with \d+: (Error: )?/, '') || (/^(call|ask) /.test(t.step ?? '') ? '' : t.step ?? '');
+    $('tasks').innerHTML = s.tasks.map((t) => `<div class="g-row" style="cursor:default"><span class="g-row-text"><span class="g-row-title">${esc(t.title)}</span><span class="g-row-sub">${esc(said(t))}</span></span><span class="g-row-trail">${badge(t.state)}<span class="money t-caption">${money(t.costCents)} of ${money(t.budgetCents)}</span></span></div>`).join('') || '<div class="g-row"><span class="g-row-text t-secondary">Nothing yet.</span></div>';
   }
 
   async function load() {
