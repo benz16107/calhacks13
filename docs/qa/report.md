@@ -373,6 +373,13 @@ shows `model: null` when none was chosen; the window says "Model", but the defau
 API response. Found at 07:10 PT on 4b075fa. Not walked: the Haiku second look, the attack test (35 cents), and the
 install script.
 
+**P2-32. A fresh box's setup clock reads UTC until the time-zone step.** Owner: image, portal. From the image thread's boot test
+of the published Server arm64 ISO: it reaches GurtOS Setup and the home screen, but the clock shows UTC until step 3.
+
+**Backup needs `age`, and the published Server ISOs don't have it.** Owner: release. The Vultr thread proved the encrypted
+backup with a hand-added `age`; the image has it from commit 016c4dc, not in the v0.1.0-preview ISOs (built from d8620e9).
+Sent to the release thread.
+
 ## Docs site (gurtos.com)
 
 **D-1 to D-4 and D-7 fixed in 199dce5 and live, spot-checked 00:00 PT:** real ISO names, `gurt-<id>`, the Personal ISO
