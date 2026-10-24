@@ -7,6 +7,7 @@ import { Alert, AppIcon, Badge, Button, ContextMenu, Icon, IconButton, Menu, Pop
 import { HeaderBar, InWindow, open, useWin } from '../wm.tsx';
 import { STATE, appOf, approvalFor, dollars, hhmm, needsModelKey, ofState, pending, plural } from '../util.ts';
 import { AnswerButtons } from './answer.tsx';
+import { undoCopy } from './log.tsx';
 
 type View = 'all' | 'running' | 'waiting' | 'done';
 const VIEWS: [View, string, (t: Task) => boolean][] = [
@@ -244,8 +245,8 @@ export function TasksApp({ view }: { view: string }) {
       {confirm && (
         <Alert
           title={`Undo "${confirm.title}"?`}
-          body={confirm.source.startsWith('shopper') ? 'Its files are removed and its test payment is refunded. Every other task keeps its own.' : "Its files are removed. Every other task keeps its own. This can't be redone."}
-          action={confirm.source.startsWith('shopper') ? 'Undo and refund (test)' : 'Undo task'}
+          body={undoCopy(confirm).body}
+          action={undoCopy(confirm).action}
           destructive
           busy={busy}
           onConfirm={() => void doUndo(confirm)}

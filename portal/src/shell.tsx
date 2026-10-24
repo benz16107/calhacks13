@@ -234,7 +234,7 @@ function newsNotices(): Notice[] {
       at: r.at,
       app: 'tasks',
       appTitle: PRODUCT,
-      title: r.restarted ? 'Restored after a power cut' : 'Back in reach',
+      title: r.restarted ? 'Back after a restart' : 'Back in reach',
       body: `${box.tasks.size} tasks rebuilt from the action log. ${plural(r.tasks.length, 'task')} picked up where ${r.tasks.length === 1 ? 'it' : 'they'} stopped${pending().length ? `. ${pending().length} still wait for your OK` : ''}.`,
       open: () => open('tasks/running'),
     });
@@ -748,7 +748,7 @@ export function BootScreen() {
       <p class="gos-boot-mark" aria-label={PRODUCT}>
         <b>Gurt</b>OS
       </p>
-      <p class="t-title3">{b.events.length ? 'Restoring after a power cut' : 'Starting'}</p>
+      <p class="t-title3">{b.events.length ? 'Starting again, every task where it was' : 'Starting'}</p>
       <Progress label="Starting" />
       <p class="t-mono gos-boot-line">Waiting for the box service · it reads log.jsonl and resumes every task</p>
     </div>

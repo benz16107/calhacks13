@@ -82,13 +82,16 @@ export function fieldsOf(e: LogEvent): [string, string][] {
   return out;
 }
 
-/** What an Undo confirm says. A Shopper purchase also refunds its test payment (Stripe test mode). */
-export function undoCopy(t: Pick<Task, 'source'>, files?: number) {
-  const shop = t.source.startsWith('shopper');
+/** What an Undo confirm says. A track can say what else undo does with `undo` in a step's data (Shopper: "Undo
+ * refunds this $13.00 test payment."); the newest one wins. */
+export function undoCopy(t: Pick<Task, 'id' | 'source'>, files?: number) {
+  const step = box.events.findLast((e) => e.task === t.id && e.type === 'task.step' && typeof (e.data as { undo?: unknown })?.undo === 'string');
+  const extra = step?.type === 'task.step' ? (step.data as { undo: string }).undo : t.source.startsWith('shopper') ? 'Its test payment is refunded.' : '';
+  const refund = /refund/i.test(extra);
   const leave = files === 1 ? 'Its 1 file leaves' : files ? `Its ${files} files leave` : 'Its changes leave';
   return {
-    body: `${shop ? 'Its test payment is refunded. ' : ''}${leave} the workspace and the task is marked undone. Every other task keeps its changes. The log keeps every step.`,
-    action: shop ? 'Undo and refund (test)' : 'Undo task',
+    body: `${extra ? `${extra} ` : ''}${leave} the workspace and the task is marked undone. Every other task keeps its changes. The log keeps every step.`,
+    action: refund ? 'Undo and refund (test)' : 'Undo task',
   };
 }
 

@@ -6,6 +6,7 @@
 #   portal/dev-box.sh dist       ship portal/dist only (the box serves files from disk, no restart)
 #   portal/dev-box.sh restart    pull the plug: kill the box and its tasks at once, then boot it on the same data
 #   portal/dev-box.sh stop       stop it and delete its data
+# It leaves out the Elastic keys, so its seeded tasks never reach the shared Elastic index.
 # Settings, all optional:
 #   DEV_VM='limactl shell --workdir / box --'   how to run a command in the VM (any command that takes one after it)
 #   DEV_URL=http://192.168.1.20:7700            the address a phone uses to reach the box, shown in the pairing QR
@@ -53,7 +54,7 @@ mkdir -p $home/workspaces/home $home/workspaces/notes
 printf 'Groceries: 42.10\nPower: 61.00\n' > $home/workspaces/home/budget.csv
 printf '# Notes\n\nNothing yet.\n' > $home/workspaces/notes/notes.md
 chmod -R a+rwX $home/workspaces
-cp /etc/box/vault.env $home/vault.env && echo DEMO_SECRET=portal-dev-test >> $home/vault.env && chmod 600 $home/vault.env
+grep -v "^ELASTIC_" /etc/box/vault.env > $home/vault.env && echo DEMO_SECRET=portal-dev-test >> $home/vault.env && chmod 600 $home/vault.env
 $start
 task() { curl -fs 127.0.0.1:$port/api/tasks -H 'content-type: application/json' -d "\$1" | sed 's/.*"id":"\([^"]*\)".*/\1/'; }
 f='"worker":"fake","source":"portal-dev"'
