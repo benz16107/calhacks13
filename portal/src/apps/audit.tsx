@@ -125,6 +125,12 @@ function entryOf(r: AuditRow, ev: LogEvent | undefined, c: Ctx): Entry {
         // The box's own screen acts without a person: show it as the box, not as initials.
         const act: Actor = c.people.has(by) ? 'person' : 'system';
         const glyph = act === 'person' ? 'avatar-default' : 'computer';
+        // The wallet's daily fingerprint of the log, written to Solana devnet (a test network): editing any old line
+        // breaks it. Anyone can check it with head -n <seq> log.jsonl | sha256sum.
+        if (r.app === 'wallet' && note?.audit) {
+          const f = note.audit as { seq: number; sha256: string; tx?: string };
+          return mk('Fingerprint', 'success', 'system', 'The box', 'security-high', `Log up to entry ${f.seq.toLocaleString('en-US')} fingerprinted on Solana devnet (test network)`, `SHA-256 ${f.sha256.slice(0, 16)}…${f.tx ? `, transaction ${f.tx.slice(0, 12)}…` : ''}. Check it: head -n ${f.seq} log.jsonl | sha256sum`);
+        }
         if (r.app === 'kill-switch' && note) {
           const via = note.via && note.via !== by ? note.via : '';
           return note.paused
@@ -310,6 +316,30 @@ export function AuditApp() {
     setSel(Number(next.dataset.seq));
   };
 
+  /** The owner checks the wallet's fingerprints against the log as it is now (GET /t/wallet/audit/verify). */
+  async function verifyFingerprints() {
+    const token = pairing()?.token;
+    const as = signedIn();
+    setBusy(true);
+    try {
+      const r = await fetch(`${base()}/t/wallet/audit/verify`, { headers: { ...(token ? { authorization: `Bearer ${token}` } : {}), ...(as ? { 'x-box-person': as } : {}) } });
+      if (!r.ok) throw new Error(r.status === 404 ? 'the Wallet app is off' : (await r.json().catch(() => ({}))).error ?? `${r.status} ${r.statusText}`);
+      const v = (await r.json()) as { checks: { matches: boolean }[]; chain?: { ok?: boolean } };
+      const bad = v.checks.filter((c) => !c.matches).length;
+      win?.toast(
+        !v.checks.length
+          ? 'No fingerprint yet: the wallet writes one a day.'
+          : bad
+            ? `${bad} of ${plural(v.checks.length, 'fingerprint')} no longer match the log: an old entry changed.`
+            : `All ${plural(v.checks.length, 'fingerprint')} match the log${v.chain?.ok ? ', and the latest is on Solana devnet (test network)' : ''}.`,
+      );
+    } catch (e) {
+      win?.toast(`Not checked: ${(e as Error).message}`);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function exportCsv() {
     const token = pairing()?.token;
     const as = signedIn();
@@ -380,9 +410,16 @@ export function AuditApp() {
           forbidden ? undefined : mobile ? (
             <IconButton icon="x-office-document" label="Export CSV" onClick={exportCsv} disabled={busy} />
           ) : (
-            <Button onClick={exportCsv} disabled={busy}>
-              Export CSV
-            </Button>
+            <>
+              {b.owner && b.apps.some((a) => a.track === 'wallet') && (
+                <Button kind="flat" onClick={() => void verifyFingerprints()} disabled={busy}>
+                  Verify fingerprints
+                </Button>
+              )}
+              <Button onClick={exportCsv} disabled={busy}>
+                Export CSV
+              </Button>
+            </>
           )
         }
       />
