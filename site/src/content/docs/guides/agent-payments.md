@@ -12,7 +12,7 @@ The wallet pays only in USDC on Solana devnet, a test network where tokens have 
 ## Before you start
 
 - A box installed on Ubuntu, with a root shell. See [Install on Ubuntu](/get-started/install-on-ubuntu/).
-- `FACTORY_API_KEY` in the vault, for a Droid task. See [Add a secret](/guides/add-a-secret/).
+- A model key in the vault (`ANTHROPIC_API_KEY` or `FACTORY_API_KEY`), for a Droid task. See [Add a secret](/guides/add-a-secret/).
 - Optional: a Coinbase Developer Platform (CDP) Secret API key, if you want payments settled by Coinbase's facilitator.
 
 ## Steps

@@ -100,7 +100,7 @@ The owner can turn an app off and on without a reinstall, in the portal's **App 
 | `POST /api/apps/<id>/disable` | Takes out the app's tools, jobs, routes, webhooks, log readers and windows at once, and stops its triggers. A task that asks for one of its tools is refused. |
 | `POST /api/apps/<id>/enable` | Loads it again |
 
-The choice is saved in `apps.json` in the box's state folder, so it survives a restart. A trigger that returned a stop function from `start` stops cleanly. One that returned nothing keeps running until the box restarts, and the app reports `restartNeeded: true`.
+The choice is saved in `apps.json` in the box's state folder, so it survives a restart. A new box starts with only the apps whose keys are all in the vault turned on, and never the example app, so a fresh install runs nothing it has no keys for. A trigger that returned a stop function from `start` stops cleanly. One that returned nothing keeps running until the box restarts, and the app reports `restartNeeded: true`.
 
 ## What an app cannot do
 

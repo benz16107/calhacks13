@@ -79,7 +79,7 @@ Anything that is not already undone can be undone. Undo is final: an undone task
 
 ## How a task ends
 
-The worker is a process. When it exits with code 0, the task is `done`. Any other exit makes it `failed`. The error is `worker exited with <code>`, followed by the worker's own last error message, so the portal can say what went wrong. If the core cannot start the worker at all, for example because the vault has no `FACTORY_API_KEY` for a Droid task, the task fails with that reason.
+The worker is a process. When it exits with code 0, the task is `done`. Any other exit makes it `failed`. The error is `worker exited with <code>`, followed by the worker's own last error message, so the portal can say what went wrong. If the core cannot start the worker at all, for example because the vault has no model key (`ANTHROPIC_API_KEY` or `FACTORY_API_KEY`) for a Droid task, the task fails with that reason.
 
 When a task ends in any way, the core does the same cleanup:
 

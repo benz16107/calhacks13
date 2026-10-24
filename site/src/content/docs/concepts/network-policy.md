@@ -65,7 +65,7 @@ The portal shows these as red lines in the task's log, and counts them on the ho
 
 ## The model's own traffic
 
-A Droid task talks to Factory to reach its model. That traffic also goes through the proxy, and is allowed only for Droid tasks and only to Factory's hosts. It is where the proxy swaps the placeholder key for the real one. You do not list Factory in `hosts`. See [the vault and the broker](/concepts/vault-and-broker/).
+A Droid task talks to its model service: Factory, or Anthropic's `api.anthropic.com` when the vault holds only an Anthropic key. That traffic also goes through the proxy, and is allowed only for Droid tasks and only to those hosts. It is where the proxy swaps the placeholder key for the real one. You do not list them in `hosts`. See [the vault and the broker](/concepts/vault-and-broker/).
 
 ## Tools are not limited by hosts
 

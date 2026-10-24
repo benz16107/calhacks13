@@ -66,7 +66,12 @@ The core also merges a call that is retried while the first copy is still runnin
 
 ## The one exception: the model key
 
-Droid needs a Factory API key to reach its model, and it sends that key itself. So a Droid task gets a fixed placeholder string in `FACTORY_API_KEY` instead of the key. Every request from the task goes through the box's proxy. The proxy replaces the placeholder with the vault's key on the way to Factory, and only for Factory's hosts. For model calls over HTTPS, the proxy answers TLS itself with a certificate from the box's own certificate authority, which only Droid tasks are told to trust. The real key never enters the task's memory, files or environment.
+Droid sends its model key itself. So a Droid task gets a fixed placeholder instead of the key. GurtOS needs one model key in the vault, either one works:
+
+- **`FACTORY_API_KEY`.** Droid uses Factory. The task's `FACTORY_API_KEY` is a placeholder, and the proxy puts the vault's key on each request to Factory's hosts.
+- **`ANTHROPIC_API_KEY` only.** The box writes a bring-your-own-key model into the task user's `~/.factory/settings.json` (model `BOX_MODEL`, default `claude-sonnet-4-6`) with a placeholder key, and Droid calls Anthropic directly. The proxy relays only `api.anthropic.com` for this and puts the real key in the `x-api-key` header. The spend is on your Anthropic account.
+
+With neither key, a Droid task fails with "the vault has no model key". Every request from the task goes through the box's proxy. For model calls over HTTPS, the proxy answers TLS itself with a certificate from the box's own certificate authority, which only Droid tasks are told to trust. The real key never enters the task's memory, files or environment.
 
 ## Why this design
 

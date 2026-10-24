@@ -19,7 +19,7 @@ The ASI:One app makes the box a chat agent on Agentverse. You find it in ASI:One
    |---|---|---|
    | `AGENTVERSE_API_KEY` | agentverse.ai: Profile, API Keys | The agent's mailbox |
    | `ASI_ONE_API_KEY` | asi1.ai: Developer, API Keys | Sorting messages with ASI:One's model |
-   | `FACTORY_API_KEY` | factory.ai | Droid, the worker in each task |
+   | `ANTHROPIC_API_KEY` or `FACTORY_API_KEY` | console.anthropic.com or app.factory.ai | Droid, the worker in each task. One is enough. |
    | `APIFY_TOKEN` | apify.com: Settings, API & Integrations | Optional: web searches |
 
    Restart the box service after editing the vault.

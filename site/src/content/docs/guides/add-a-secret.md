@@ -107,7 +107,7 @@ A tool whose key is missing fails its call with "the vault has no `<NAME>`", whi
 | A tool | Only the keys in its own `secrets` list. |
 | A model job | Only the keys in its own `secrets` list. |
 | An app's routes and triggers | Only the keys in the app's `secrets` list. |
-| The box's network proxy | `FACTORY_API_KEY`, which it swaps in on calls to Factory, so a Droid task holds only a placeholder. |
+| The box's network proxy | The model key, `FACTORY_API_KEY` or `ANTHROPIC_API_KEY`, which it swaps in on calls to Factory or Anthropic, so a Droid task holds only a placeholder. |
 | You, through the API | Names and when each was set. Never a value. |
 
 ## Limits

@@ -27,7 +27,7 @@ buttons and dialogs may change.
     -d '{"user":"you"}' http://box/api/owner
   ```
 
-- `FACTORY_API_KEY` in the vault. See [add a secret](/guides/add-a-secret/).
+- A model key in the vault (`ANTHROPIC_API_KEY` or `FACTORY_API_KEY`). See [add a secret](/guides/add-a-secret/).
 - A folder for the agent, for example `~/Documents/receipts`. It must be inside your home folder, or in one of the
   folders the owner allows in the box's settings (`agentFolders`). It cannot be a system folder or the box's own
   state, and it cannot belong to root. Links are followed to where they really go before the check.

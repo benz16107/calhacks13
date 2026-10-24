@@ -118,8 +118,8 @@ paths:
       summary: Start a task
       description: |
         Creates a task and starts it straight away. The response is the task after it started, usually
-        `running`. If the task cannot start (for example, a Droid task when the vault has no
-        `FACTORY_API_KEY`), the task is returned as `failed` with an `error`.
+        `running`. If the task cannot start (for example, a Droid task when the vault has no model key,
+        `ANTHROPIC_API_KEY` or `FACTORY_API_KEY`), the task is returned as `failed` with an `error`.
 
         Defaults: `workspace` is `home`, `worker` is `droid`, `tools` are empty and `source` is `api`. A task
         that names no `budgetCents` gets Settings `defaultBudgetCents` (0 unless changed). A task that names
@@ -646,7 +646,7 @@ paths:
       tags: [Setup and settings]
       operationId: getSystem
       summary: Facts about the box
-      description: The product, edition, version and build, hostname, time zone, network, box id and name, owner, start time and uptime. For first-run setup and Settings.
+      description: The product, edition, version and build, hostname, time zone, network, box id and name, owner, whether a model key is set, start time and uptime. For first-run setup and Settings.
       responses:
         '200':
           description: The facts.
@@ -1472,6 +1472,12 @@ components:
       type: object
       required: [done, steps, suggested]
       properties:
+        model:
+          type: object
+          description: 'Whether tasks can run: the vault holds a model key. `via` is `factory` with FACTORY_API_KEY, `anthropic` with only ANTHROPIC_API_KEY, or null with neither.'
+          properties:
+            ready: { type: boolean }
+            via: { type: [string, 'null'], enum: [factory, anthropic, null] }
         done: { type: boolean }
         finishedAt: { type: ['string', 'null'], format: date-time }
         migrated: { type: boolean, description: The box already ran tasks when setup arrived, so it counts as done. }
@@ -1490,6 +1496,12 @@ components:
     SystemFacts:
       type: object
       properties:
+        model:
+          type: object
+          description: 'Whether tasks can run: the vault holds a model key. `via` is `factory` with FACTORY_API_KEY, `anthropic` with only ANTHROPIC_API_KEY, or null with neither.'
+          properties:
+            ready: { type: boolean }
+            via: { type: [string, 'null'], enum: [factory, anthropic, null] }
         product: { type: string, example: GurtOS }
         edition: { type: string, enum: [server, personal, business] }
         editionName: { type: string, example: GurtOS Server }

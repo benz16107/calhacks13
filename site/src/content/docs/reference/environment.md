@@ -63,7 +63,7 @@ Droid tasks also get:
 
 | Variable | Value |
 |---|---|
-| `FACTORY_API_KEY` | A placeholder. The proxy swaps in the real key on the way to Factory. |
+| `FACTORY_API_KEY` | A placeholder. The proxy swaps in the real key on the way to Factory. With only an Anthropic key in the vault, the task user's `~/.factory/settings.json` holds a placeholder Anthropic key instead. |
 | `FACTORY_API_BASE_URL` | The box's proxy |
 | `FACTORY_EXTRA_CA_CERTS`, `NODE_EXTRA_CA_CERTS` | The box's own CA certificate, `BOX_HOME/relay-ca.pem` |
 | `FACTORY_RIPGREP_PATH` | `/usr/bin/rg` |

@@ -7,7 +7,7 @@ In this tutorial you give an agent a small job on a file, follow what it does, a
 watch GurtOS stop a connection the task was not allowed to make, and approve a test payment. It takes about
 15 minutes.
 
-You need a running box with `FACTORY_API_KEY` in its vault. If you do not have one yet, follow
+You need a running box with a model key in its vault: `ANTHROPIC_API_KEY` or `FACTORY_API_KEY`. If you do not have one yet, follow
 [Install on Ubuntu](/get-started/install-on-ubuntu/). Run the commands on the box itself, or through an SSH
 session with the box's port forwarded.
 
@@ -162,7 +162,7 @@ the model's cost. The first answer wins: if your phone had answered first, this 
 See [Approvals and budgets](/concepts/approvals-and-budgets/).
 
 :::tip[No model key yet?]
-You can try steps 2 to 5 without a Factory key. Add `"worker": "fake"` to the task. The test worker reads its
+You can try steps 2 to 5 without a model key. Add `"worker": "fake"` to the task. The test worker reads its
 prompt as a script, one command per line, for example `write hello.txt hi`. It exists for tests and makes no
 model calls.
 :::

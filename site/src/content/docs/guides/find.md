@@ -26,7 +26,7 @@ The Find app keeps one index of every photo, text file and finished task on the 
 
    1. A model behind any OpenAI-compatible chat API that you run, such as Ollama on a machine on your network. The photo stays on hardware you control.
    2. A hosted model behind an OpenAI-compatible API, with its key in the vault (for example `VULTR_INFERENCE_KEY`).
-   3. Claude, as the backup, through one Droid task. It needs `FACTORY_API_KEY`.
+   3. Claude, as the backup, through one Droid task. It needs a model key (`ANTHROPIC_API_KEY` or `FACTORY_API_KEY`).
 
    The list is `MODELS` in `tracks/find/find.ts`: a model name, a base URL, and the name of a vault key if it needs one. The list that ships points at the developers' test machines, so edit it to point at your own model, then [install again](/guides/update-and-roll-back/#update-a-box-installed-on-ubuntu). A model that fails is skipped for 5 minutes, so a dead one costs one timeout, not one per photo.
 

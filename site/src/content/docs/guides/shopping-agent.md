@@ -12,7 +12,7 @@ Every payment here is a test payment: Stripe test mode with Stripe's Visa test c
 ## Before you start
 
 - A box installed on Ubuntu, with a root shell and a source checkout. See [Install on Ubuntu](/get-started/install-on-ubuntu/).
-- `FACTORY_API_KEY` in the vault, so Droid can turn your words into a watch and read receipts.
+- A model key in the vault (`ANTHROPIC_API_KEY` or `FACTORY_API_KEY`), so Droid can turn your words into a watch and read receipts.
 - Optional: a Stripe account in test mode, for test-mode charges instead of simulated ones.
 - Optional: `APIFY_TOKEN` in the vault, for live price checks at Best Buy Canada.
 

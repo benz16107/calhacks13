@@ -45,7 +45,8 @@ A part of the box can read a key only if it declares it: a tool or model job in 
 
 | Key | Read by | For |
 |---|---|---|
-| `FACTORY_API_KEY` | The task proxy | Droid, the worker in every task. Required for Droid tasks. Tasks hold a placeholder; the proxy puts the real key on each request to Factory. |
+| `ANTHROPIC_API_KEY` | The task proxy | One of the two model keys; either is enough. With only this key, Droid runs on your Anthropic account: tasks hold a placeholder, and the proxy puts the real key on each request to `api.anthropic.com`. |
+| `FACTORY_API_KEY` | The task proxy | One of the two model keys; either is enough. Droid uses Factory. Tasks hold a placeholder; the proxy puts the real key on each request to Factory. |
 
 ## Apps
 

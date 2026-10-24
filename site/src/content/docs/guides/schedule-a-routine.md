@@ -8,7 +8,7 @@ A routine is a task the box starts on its own, on a timer. In this guide you wri
 ## Before you start
 
 - A box installed on Ubuntu from a source checkout. See [Install on Ubuntu](/get-started/install-on-ubuntu/). On a box installed from the ISO, apps ship inside the system image, so a new app reaches it as a [system update](/guides/update-and-roll-back/).
-- A `FACTORY_API_KEY` in the vault, because scheduled tasks run Droid with Claude by default. See [Add a secret](/guides/add-a-secret/).
+- A model key in the vault (`ANTHROPIC_API_KEY` or `FACTORY_API_KEY`), because scheduled tasks run Droid with Claude by default. See [Add a secret](/guides/add-a-secret/).
 - Basic TypeScript.
 
 ## Steps

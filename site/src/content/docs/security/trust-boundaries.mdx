@@ -32,7 +32,7 @@ The core trusts apps completely: an app's tools, routes, triggers and log reader
 |---|---|---|---|---|
 | Task | Its broker (Unix socket) | Steps, tool calls, questions, costs | The socket is owned by the task's user, mode `0600`. The core checks the tool is in the task's `tools`, applies the budget and keys the call. | `task.step`, `tool.call`, `tool.result`, `approval.asked`, `cost` |
 | Task | The internet | Network connections | The firewall sends task users only to the proxy. The proxy checks the task's `hosts`, resolves the name once, and refuses the box's own addresses and ports. | Refusals as `net.blocked`. Allowed connections are not logged. |
-| Droid task | The model provider | Model calls with a placeholder key | The proxy relays only Droid tasks, only to Factory's hosts, and puts the vault's key on the request | Token counts and cost as `cost` |
+| Droid task | The model provider | Model calls with a placeholder key | The proxy relays only Droid tasks, only to Factory's hosts or `api.anthropic.com`, and puts the vault's model key on the request | Token counts and cost as `cost` |
 | Task | The vault, the log, other tasks' files, the base files | Nothing | File permissions: all root-only or owned by another user | Not logged. The task gets a permission error. |
 | Task | The API, SpacetimeDB, other local services | Nothing | The firewall rejects the packet; the proxy refuses the box's own ports | The kernel log counts firewall rejects (prefix `box-block`). Proxy refusals are `net.blocked`. |
 | Task | Other tasks' processes | Nothing | `ProtectProc=invisible`, separate users | Not logged |
