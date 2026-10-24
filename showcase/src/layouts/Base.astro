@@ -1,6 +1,9 @@
 ---
 import '../styles/global.css';
 import { LINKS } from '../data/site';
+import ThemeScript from '../../../site/src/theme/ThemeScript.astro';
+import SiteHeader from '../../../site/src/theme/SiteHeader.astro';
+import SiteFooter from '../../../site/src/theme/SiteFooter.astro';
 
 interface Props {
   title: string;
@@ -15,12 +18,13 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
 <html lang="en">
   <head>
     <meta charset="utf-8" />
+    <ThemeScript />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{title}</title>
     <meta name="description" content={description} />
     <link rel="canonical" href={canonical} />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-    <meta name="theme-color" content="#27313F" />
+    <meta name="theme-color" content="#141a21" />
     <meta property="og:type" content="website" />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
@@ -30,118 +34,32 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
   </head>
   <body>
     <a class="skip" href="#main">Skip to content</a>
-    <header class="site">
-      <div class="wrap bar">
-        <nav class="primary" aria-label="Site">
-          <a class="brand" href="/" aria-label="GurtOS at Cal Hacks 13.0, the tracks"><span class="g">Gurt</span><span class="o">OS</span></a>
-          <a href="/">Tracks</a>
-          <a href="/evidence/">Evidence</a>
-          <a href={LINKS.site}>gurtos.com</a>
-        </nav>
-        <p class="where">Cal Hacks 13.0 <span aria-hidden="true">·</span> calhacks.gurtos.com</p>
-      </div>
-    </header>
+    <SiteHeader current="calhacks" origin={LINKS.site} calhacks="/" />
     <main id="main">
       <slot />
     </main>
-    <footer class="site">
-      <div class="wrap note">
-        <p>
-          GurtOS is a solo project by Ben Zhou for Cal Hacks 13.0 (Oct 23 to 25, 2026), open source under the Apache
-          License 2.0. Every payment on this site is test money: Stripe test mode, a Visa test card, or USDC on Solana
-          devnet. Pages say which parts are live and which are simulated.
-        </p>
-      </div>
-      <div class="bottom">
-        <div class="wrap bar">
-          <p>GurtOS v0.1.0-preview <span aria-hidden="true">·</span> Apache-2.0 <span aria-hidden="true">·</span> Built at Cal Hacks 13.0</p>
-          <nav aria-label="Footer">
-            <a href={`${LINKS.site}/download/`}>Download</a>
-            <a href={LINKS.repo}>GitHub</a>
-            <a href={LINKS.docs}>Docs</a>
-            <a href="/terms/">Terms</a>
-            <a href="/privacy/">Privacy</a>
-          </nav>
-        </div>
-      </div>
-    </footer>
+    <div class="wrap note">
+      <p>
+        GurtOS is a solo project by Ben Zhou for Cal Hacks 13.0 (Oct 23 to 25, 2026), open source under the Apache
+        License 2.0. Every payment on this site is test money: Stripe test mode, a Visa test card, or USDC on Solana
+        devnet. Pages say which parts are live and which are simulated.
+      </p>
+    </div>
+    <SiteFooter origin={LINKS.site} />
   </body>
 </html>
 
 <style>
-  header.site,
-  .bottom {
-    background: var(--color-desktop-glass);
-    color: var(--color-desktop-text);
-  }
-  .bar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--space-4);
-    min-height: 40px;
-    flex-wrap: wrap;
-    font-size: 0.86rem;
-  }
-  .bar p {
-    margin: 0;
-  }
-  nav {
-    display: flex;
-    gap: var(--space-5);
-    flex-wrap: wrap;
-    align-items: center;
-  }
-  nav a {
-    color: var(--color-desktop-text);
-    text-decoration: none;
-    padding: var(--space-2) 0;
-  }
-  nav a:hover {
-    text-decoration: underline;
-  }
-  nav a:focus-visible {
-    outline-color: var(--color-desktop-accent);
-  }
-  .brand {
-    font-size: 1rem;
-    letter-spacing: -0.02em;
-  }
-  .brand .g {
-    font-weight: 700;
-  }
-  .brand .o {
-    font-weight: 400;
-  }
-  .where {
-    font-family: var(--font-mono);
-    font-size: 0.78rem;
-    color: var(--color-desktop-text-secondary);
-  }
-  footer.site {
-    margin-top: var(--space-8);
-    font-size: 0.9rem;
-    color: var(--color-text-secondary);
-  }
   .note {
-    padding-top: 0;
-    padding-bottom: var(--space-5);
-    max-width: var(--page);
+    margin-top: var(--space-8);
   }
   .note p {
     max-width: var(--measure);
     margin: 0;
+    font-size: 0.9rem;
+    color: var(--color-text-secondary);
   }
-  .bottom .bar {
-    color: var(--color-desktop-text-secondary);
-    font-size: 0.82rem;
-  }
-  @media (max-width: 640px) {
-    .where {
-      display: none;
-    }
-    nav {
-      gap: var(--space-4);
-    }
+  :global(.gw-footer) {
+    margin-top: var(--space-5);
   }
 </style>

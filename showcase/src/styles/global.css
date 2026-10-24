@@ -1,189 +1,55 @@
-/* GurtOS design tokens (docs/figma.md). Atkinson Hyperlegible, as the OS uses; Paper for reading, the night desktop for the top and bottom bars. Showcase option B (docs/figma/showcase-options). */
-@import '@fontsource/atkinson-hyperlegible-next/400.css';
-@import '@fontsource/atkinson-hyperlegible-next/500.css';
-@import '@fontsource/atkinson-hyperlegible-next/600.css';
-@import '@fontsource/atkinson-hyperlegible-next/700.css';
-@import '@fontsource/atkinson-hyperlegible-mono/400.css';
-@import '@fontsource/atkinson-hyperlegible-mono/500.css';
+/* The theme (tokens, light and dark, fonts, base styles) is the shared GurtOS web design system in site/src/theme. This file only adds what the Cal Hacks pages need on top. */
+@import '../../../site/src/theme/tokens.css';
+@import '../../../site/src/theme/base.css';
 
 :root {
-  --color-desktop-sky: #27313f;
-  --color-desktop-moon: #e9dfc8;
-  --color-desktop-hill-far: #46586b;
-  --color-desktop-hill-mid: #36475a;
-  --color-desktop-hill-near: #28343f;
-  --color-desktop-hill-front: #1c252d;
-  --color-desktop-glass: #141a21;
-  --color-desktop-text: #f2efe8;
-  --color-desktop-text-secondary: #b9c0c8;
-  --color-desktop-accent: #f2b544;
-  --color-desktop-on-accent: #1a1206;
-
-  --color-bg-canvas: #f3f1ea;
-  --color-bg-surface: #fbfaf6;
-  --color-bg-sunken: #e6e7e1;
-  --color-border-default: #d3d6cf;
-  --color-border-strong: #6b726c;
-  --color-text-primary: #1c201d;
-  --color-text-secondary: #535a54;
-  --color-action-primary: #1c201d;
-  --color-action-on-primary: #fbfaf6;
-  --color-focus: #2d5784;
-  --color-state-running-fg: #2d5784;
-  --color-state-running-bg: #dde8f2;
-  --color-state-waiting-fg: #7f4c00;
-  --color-state-waiting-bg: #f8ebd0;
-  --color-state-done-fg: #2e6338;
-  --color-state-done-bg: #dfeddc;
-  --color-state-failed-fg: #9c3326;
-  --color-state-failed-bg: #f6e0da;
-  --color-state-neutral-fg: #535a54;
-  --color-state-neutral-bg: #e6e7e1;
-
-  --space-1: 4px;
-  --space-2: 8px;
-  --space-3: 12px;
-  --space-4: 16px;
-  --space-5: 24px;
-  --space-6: 32px;
-  --space-7: 48px;
-  --space-8: 64px;
-  --radius-sm: 4px;
-  --radius-md: 6px;
-
-  --font-sans: 'Atkinson Hyperlegible Next', system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --font-mono: 'Atkinson Hyperlegible Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
-  --measure: 46rem;
-  --page: 76rem;
+  --color-focus: var(--gw-link);
 }
 
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-}
-
-html {
-  -webkit-text-size-adjust: 100%;
-  text-size-adjust: 100%;
-}
-
-body {
-  margin: 0;
-  background: var(--color-bg-canvas);
-  color: var(--color-text-primary);
-  font: 400 17px/1.6 var(--font-sans);
-  font-kerning: normal;
-}
-
-img,
-video {
-  max-width: 100%;
-  height: auto;
-  display: block;
-}
-
-a {
-  color: var(--color-focus);
-  text-decoration-thickness: 1px;
-  text-underline-offset: 0.18em;
-}
-a:hover {
-  text-decoration-thickness: 2px;
-}
-:focus-visible {
-  outline: 3px solid var(--color-focus);
-  outline-offset: 2px;
-  border-radius: 2px;
-}
-
-h1,
-h2,
-h3,
-h4 {
-  font-weight: 600;
-  line-height: 1.2;
-  letter-spacing: -0.01em;
-  margin: 0;
-  text-wrap: balance;
-}
-h1 {
-  font-size: clamp(2.2rem, 5vw, 3.6rem);
-  letter-spacing: -0.02em;
-}
 h2 {
   font-size: 1.6rem;
 }
 h3 {
   font-size: 1.15rem;
 }
-p {
-  margin: 0 0 var(--space-4);
-  text-wrap: pretty;
-}
-
-code,
-kbd,
-pre,
-samp {
-  font-family: var(--font-mono);
-  font-size: 0.86em;
-}
-:not(pre) > code {
-  background: var(--color-bg-sunken);
-  padding: 0.1em 0.35em;
-  border-radius: var(--radius-sm);
-  overflow-wrap: anywhere;
-}
-pre,
-pre.astro-code {
-  background: var(--color-bg-surface) !important;
-  border: 1px solid var(--color-border-default);
-  border-radius: var(--radius-md);
-  padding: var(--space-4);
-  overflow-x: auto;
-  line-height: 1.55;
-  font-size: 0.8rem;
-  margin: 0 0 var(--space-5);
-  tab-size: 2;
-}
-
 table {
-  border-collapse: collapse;
-  width: 100%;
   font-size: 0.94rem;
   margin: 0 0 var(--space-5);
 }
-th,
-td {
-  text-align: left;
-  vertical-align: top;
-  padding: var(--space-3) var(--space-3) var(--space-3) 0;
-  border-bottom: 1px solid var(--color-border-default);
-}
 th {
-  font-weight: 600;
   font-size: 0.8rem;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--color-text-secondary);
   border-bottom-color: var(--color-border-strong);
 }
+th,
+td {
+  padding: var(--space-3) var(--space-3) var(--space-3) 0;
+}
 .table-wrap {
-  overflow-x: auto;
   margin: 0 0 var(--space-5);
 }
 .table-wrap table {
   margin: 0;
 }
-
-.wrap {
-  max-width: var(--page);
-  margin: 0 auto;
-  padding: 0 var(--space-5);
+pre,
+pre.astro-code {
+  background: var(--color-bg-surface) !important;
+  font-size: 0.8rem;
+  line-height: 1.55;
+  margin: 0 0 var(--space-5);
+  tab-size: 2;
 }
-.measure {
-  max-width: var(--measure);
+/* Code blocks carry both Shiki themes; the page theme picks one. */
+pre.astro-code span {
+  color: var(--shiki-light);
+}
+:root[data-theme='dark'] pre.astro-code span {
+  color: var(--shiki-dark);
+}
+:not(pre) > code {
+  overflow-wrap: anywhere;
 }
 
 .kicker {
@@ -205,20 +71,10 @@ th {
   font-family: var(--font-mono);
 }
 
-.skip {
-  position: absolute;
-  left: -999px;
-  top: 0;
-  background: var(--color-bg-surface);
-  padding: var(--space-2) var(--space-4);
-  z-index: 10;
-}
-.skip:focus {
-  left: var(--space-4);
-}
-
 /* Markdown bodies of track pages: a number and heading in the left column, the section in the right (showcase option B). */
 .prose {
+  max-width: none;
+  padding-top: 0;
   display: grid;
   grid-template-columns: 13rem minmax(0, 1fr);
   column-gap: var(--space-7);
@@ -249,6 +105,7 @@ th {
 }
 .prose h3 {
   margin: var(--space-6) 0 var(--space-3);
+  font-size: 1.15rem;
 }
 .prose ul,
 .prose ol {
@@ -290,28 +147,25 @@ th {
   body {
     font-size: 16px;
   }
-  .wrap {
-    padding: 0 var(--space-4);
-  }
   th,
   td {
     padding-right: var(--space-2);
   }
 }
 
-/* Diagrams from the docs site: inline SVG that takes its colours from these variables (Paper). */
+/* Diagrams from the docs site: inline SVG that takes its colours from these variables (light and dark). */
 .diagram {
-  --diagram-ink: #1c201d;
-  --diagram-muted: #535a54;
-  --diagram-line: #6b726c;
-  --diagram-fill: #fbfaf6;
-  --diagram-fill-strong: #e6e7e1;
-  --diagram-accent: #2d5784;
-  --diagram-accent-fill: #dde8f2;
-  --diagram-danger: #9c3326;
-  --diagram-danger-fill: #f6e0da;
-  --diagram-ok: #2e6338;
-  --diagram-ok-fill: #dfeddc;
+  --diagram-ink: var(--gw-ink);
+  --diagram-muted: var(--gw-ink-2);
+  --diagram-line: var(--gw-rule-strong);
+  --diagram-fill: var(--gw-surface);
+  --diagram-fill-strong: var(--gw-sunken);
+  --diagram-accent: var(--gw-link);
+  --diagram-accent-fill: var(--gw-link-low);
+  --diagram-danger: var(--gw-failed-fg);
+  --diagram-danger-fill: var(--gw-failed-bg);
+  --diagram-ok: var(--gw-done-fg);
+  --diagram-ok-fill: var(--gw-done-bg);
   margin: 0 0 var(--space-6);
 }
 .diagram svg {
@@ -397,5 +251,11 @@ th {
   .prose table {
     display: block;
     overflow-x: auto;
+  }
+}
+
+@media (min-width: 760.02px) {
+  .prose table {
+    display: table;
   }
 }

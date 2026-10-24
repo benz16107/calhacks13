@@ -40,6 +40,26 @@
       "source": "/tracks/godaddy",
       "destination": "/",
       "permanent": true
+    },
+    {
+      "source": "/terms/",
+      "destination": "https://gurtos.com/terms/",
+      "permanent": true
+    },
+    {
+      "source": "/terms",
+      "destination": "https://gurtos.com/terms/",
+      "permanent": true
+    },
+    {
+      "source": "/privacy/",
+      "destination": "https://gurtos.com/privacy/",
+      "permanent": true
+    },
+    {
+      "source": "/privacy",
+      "destination": "https://gurtos.com/privacy/",
+      "permanent": true
     }
   ]
 }

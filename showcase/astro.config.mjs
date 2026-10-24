@@ -9,8 +9,8 @@ export default defineConfig({
   // Straight quotes and plain hyphens, exactly as written.
   markdown: {
     processor: satteri({ features: { smartPunctuation: false } }),
-    shikiConfig: { theme: 'github-light' },
+    shikiConfig: { themes: { light: 'github-light', dark: 'github-dark' }, defaultColor: false },
   },
   integrations: [mdx()],
-  redirects: { '/tracks/nessie': '/tracks/hyphenate/', '/tracks/godaddy': '/' },
+  redirects: { '/tracks/nessie': '/tracks/hyphenate/', '/tracks/godaddy': '/', '/terms': 'https://gurtos.com/terms/', '/privacy': 'https://gurtos.com/privacy/' },
 });

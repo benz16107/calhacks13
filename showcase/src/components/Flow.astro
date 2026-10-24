@@ -109,7 +109,7 @@ const used = (['task', 'core', 'outside', 'you'] as const).filter((z) => steps.s
   .you {
     background: var(--color-state-waiting-bg);
     color: var(--color-state-waiting-fg);
-    border-color: #ead7ad;
+    border-color: color-mix(in srgb, currentColor 30%, transparent);
   }
   .outside {
     background: var(--color-state-neutral-bg);
@@ -119,12 +119,12 @@ const used = (['task', 'core', 'outside', 'you'] as const).filter((z) => steps.s
   .core {
     background: var(--color-state-running-bg);
     color: var(--color-state-running-fg);
-    border-color: #bcd0e4;
+    border-color: color-mix(in srgb, currentColor 30%, transparent);
   }
   .task {
     background: var(--color-state-done-bg);
     color: var(--color-state-done-fg);
-    border-color: #bcd8b8;
+    border-color: color-mix(in srgb, currentColor 30%, transparent);
   }
   .legend {
     margin: var(--space-4) 0 0;

@@ -46,6 +46,13 @@ grep -v '^demo: /\|^added \|^$' /tmp/demo.txt > showcase/src/data/demo-latest.tx
 
 The overview counts the `ok` lines itself.
 
+## Theme
+
+The header, footer, colours, fonts and the light and dark toggle are the shared GurtOS web theme in `../site/src/theme/`,
+imported by `src/layouts/Base.astro` and `src/styles/global.css`. Do not copy it. Astro needs `site/` to resolve
+`astro`, so before the first build run `ln -s ../showcase/node_modules ../site/node_modules` (git ignores it). Terms and
+Privacy redirect to gurtos.com.
+
 ## Deploy
 
 Static files on Vercel, project `gurtos-calhacks`, domain `calhacks.gurtos.com` (a CNAME at GoDaddy). Build here, then
