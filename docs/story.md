@@ -49,7 +49,7 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 
 | Track | Edition | Story |
 |---|---|---|
-| Anthropic | GurtOS Personal and GurtOS Server | to review with Ben |
+| Anthropic | GurtOS Personal and GurtOS Server | decided |
 | Atlassian | GurtOS Business (preview) | to review with Ben |
 | Hyphenate | GurtOS Business (preview) | decided |
 | Factory | GurtOS Server and GurtOS Personal | to review with Ben |
@@ -72,27 +72,42 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 
 ## Anthropic: Claude used well for a specific group of people
 
-**Status:** to review with Ben. **Page:** https://calhacks.gurtos.com/tracks/anthropic/
+**Status:** decided. **Page:** https://calhacks.gurtos.com/tracks/anthropic/
 
 **Best shown in:** GurtOS Personal and GurtOS Server
 
-**Pitch:** Turn an old laptop or any spare computer into your own AI computer, built for agents. You own it and hold the keys, instead of renting someone else's cloud. Next is a GurtOS MCP server (planned), so Claude Desktop and Claude Code can drive your box.
+**Pitch:** GurtOS turns a computer you own, even an old one, into one built for agents: each Claude task runs as its own Linux user in its own copy-on-write copy of your files, with no keys, and you approve, undo or pause it from the portal or your phone. It is light and open source. Next, a GurtOS MCP server (being built) lets Claude Desktop and Claude Code drive your box.
 
-**The problem:** Draft: solo developers already leave agents running at home, but those agents run as their owner, with every key and file, and nothing records or undoes what they did. The alternative is renting someone else's cloud.
+**The problem:** Solo developers already leave agents (Claude Code, OpenClaw) running at home as themselves, with every key and file. An ordinary OS can't separate them, record them or undo them, and the alternative is renting a cloud you can't see into.
 
-**Features, by the sponsor's criteria** (no OS-vs-track table yet; to write when reviewed):
+**Features** (from the page's table):
 
-- *A named community (narrower than 'students').* (met): Solo developers who leave AI agents running unattended on a machine at home: a home server or an always-on desktop doing scheduled and overnight work with real access. Ben is one. The much larger group runs always-on agents such as OpenClaw: 392,891 GitHub stars (GitHub API, Oct 23, 2026), and 21,639 instances anyone on the internet could reach (Censys, Jan 31, 2026). Those agents run as their owner, with broad access to files, accounts and keys.
-- *A problem you lived or heard first-hand.* (met): Ben runs agents unattended on an always-on Linux box at home: a job-application pipeline that fills in forms in a real browser, price and listing watchers, and overnight queues of coding work. Each ran as his own user with his keys in its environment, and the only record of what it did was its own output. One bad page or one wrong edit could reach everything. GurtOS is the computer he wanted for that work.
-- *One thing that works and is usable Monday.* (met): On an Ubuntu 24.04 machine, sudo core/install.sh installs the box service, Droid and SpacetimeDB, and the portal opens at http://<box>:7700/. Add one model key (Anthropic or Factory) and start a task from the portal, a phone, a schedule or a webhook. The bootable image installs on a blank disk in about a minute (tested in QEMU, x86 BIOS and UEFI, and ARM64).
-- *Claude doing something that matters.* (met): Claude does the work in every task: fixes code and runs its tests, reads receipts and proposes a reorder, works a credit desk with live CRS and bank data (14 of 14 planted errors caught in its best run), describes photos for search. Each tool call is a step in the log, and its model cost is priced from real token counts.
-- *Knowing where it could go wrong.* (met): The page names three failures: injected pages, wrong edits and spending. Each has a control the merge gate checks on every run (below). The limits the box does not cover yet, such as a shared kernel and a log that root can edit, are listed at the end of this page.
+| Feature | Why it is there | Anthropic criterion | From | Today |
+|---|---|---|---|---|
+| Claude does every task, inside Droid, as its own Linux user in its own copy-on-write copy of the files | Real work (code, receipts, a credit desk) with no way to touch another task's files | Claude doing something that matters | GurtOS (worker, task space) | Shipped. Model cost is priced from real token counts |
+| Keys never reach the agent: a placeholder key in the task, the real one swapped in by the proxy | A hijacked or confused Claude has no key to leak | Knowing where it could go wrong | GurtOS (vault, proxy) | Shipped. 240 of 240 process samples held only the placeholder |
+| A page with hidden instructions fails: the task reaches only its allowed hosts | Prompt injection cannot send anything out | Knowing where it could go wrong | GurtOS (network rule) | Shipped. Claude refused the page and the box blocked the attempt |
+| Spending waits for your OK, and any one task can be undone | A wrong edit or a wrong purchase costs one tap | Knowing where it could go wrong | GurtOS (approval, undo) | Shipped |
+| Live view and control from the portal and phone | You can watch an unattended agent | Usable Monday | GurtOS | Shipped |
+| `sudo core/install.sh` on Ubuntu 24.04, or an install ISO; one model key (Anthropic or Factory) | Something that works the day you try it | Usable Monday | GurtOS | Shipped. Documented minimum: 4 GB of memory and 17 GB of disk |
+| A GurtOS MCP server, so Claude Code and Claude Desktop can drive your box | The tools you already use start and watch tasks safely | Usable Monday, Claude doing something that matters | GurtOS (core) | Being built; not on main yet |
+| Claude Code as a worker, with full isolation | Run Claude Code itself in a task's own space, with no keys | Claude doing something that matters | GurtOS (core) | Being built; not on main yet |
+| Current Claude models chosen per task, with their cost | Use the right model for each job and see what it costs | Claude doing something that matters | GurtOS (core) | Being built; not on main yet |
+| A Haiku second-opinion check before risky steps | A cheap second look before a step that spends or deletes | Knowing where it could go wrong | GurtOS (core) | Being built; not on main yet |
+| A published attack-test score, including the misses | Honest evidence of where it holds and where it does not | Knowing where it could go wrong | GurtOS | Being built; not on main yet |
+| Measured minimum hardware and a one-line install | The old-computer claim backed by numbers, and a faster first run | Usable Monday | GurtOS | Being built; not on main yet |
 
 **Demo moment and proof:** In every merge-gate run, a real Claude task works as its own Linux user: 240 samples of its processes held only a placeholder key, its changes were undone on their own, and its cost ($0.5378 in the Oct 24 run) was priced from real token counts. The same run reads Claude a web page with hidden instructions to steal keys; it refused, and nothing left the box.
 
 **Still to do:**
 
-- Review the story with Ben: problem, features with their why, OS vs track
+- A GurtOS MCP server, so Claude Code and Claude Desktop can drive your box
+- Claude Code as a worker, with full isolation
+- Current Claude models chosen per task, with their cost
+- A Haiku second-opinion check before risky steps
+- A published attack-test score, including the misses
+- Measured minimum hardware and a one-line install
+- How to enter: pending; Ben will ask a director (the prize is not on Devpost yet)
 
 ## Atlassian: Agentic Workforce Challenge, Track 2 (security for agents acting for a user)
 

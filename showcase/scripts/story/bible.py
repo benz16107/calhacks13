@@ -4,14 +4,15 @@ root = sys.argv[1]
 import os
 HERE = os.path.dirname(os.path.abspath(__file__))
 exec(open(os.path.join(HERE, 'pitches.py')).read().split("if __name__")[0])
-DECIDED = {'hyphenate', 'visa', 'fetch', 'coinbase', 'solana', 'apify'}
+DECIDED = {'hyphenate', 'visa', 'fetch', 'coinbase', 'solana', 'apify', 'anthropic'}
+EXTRA_TODO = {'anthropic': ['How to enter: pending; Ben will ask a director (the prize is not on Devpost yet)']}
 PROBLEM = {
  'hyphenate': "Companies want AI employees, but today's computers and clouds weren't built for them. An agent runs as you, with your keys, on one shared filesystem, with no separation of duties, no record you can trust and no undo, so nobody lets one do real finance work.",
  'visa': "Shopping agents need your card or your password, stores can't tell a good agent from a bot, you can't see or stop what they do, and cloud agents run on computers you don't control.",
  'fetch': "A chat agent can only act if it runs somewhere: a cloud you can't see into, or your own computer with full access. Agents that talk to strangers' agents can be fed hidden instructions.",
  'coinbase': "Giving an agent money means handing it your card or a private key, on a heavy system or a cloud with no layer built for this: no separation, no safe key handling, no record and no undo.",
  'solana': "Giving an agent money means handing it a private key on a system with no layer built for it.",
- 'anthropic': "Draft: solo developers already leave agents running at home, but those agents run as their owner, with every key and file, and nothing records or undoes what they did. The alternative is renting someone else's cloud.",
+ 'anthropic': "Solo developers already leave agents (Claude Code, OpenClaw) running at home as themselves, with every key and file. An ordinary OS can't separate them, record them or undo them, and the alternative is renting a cloud you can't see into.",
  'factory': "Draft: coding agents need keys to work, and tools keep leaking them (the OpenCode Console breach, OpenClaw's plaintext key file, CVE-2026-25253). Today the agent runs as you, on your files, with your keys in its environment.",
  'armadin': "Draft: a web page can carry hidden instructions, and an agent that obeys them can read every key on the machine and send it anywhere, because nothing in a normal OS stands between the agent and your secrets.",
  'microsoft': "Draft: companies want production AI agents for real finance work, but there is no environment that gives an agent separation of duties, approvals, an audit trail and undo, so pilots never reach production.",
@@ -103,6 +104,7 @@ for k in tracks:
     todo = [f"{strip(c['ask'])} ({c['status']})" for c in fm['criteria'] if c.get('status', 'met') != 'met']
     todo += [f"{r['part']} (not built)" for r in fm.get('status', []) if r['state'] == 'not-built']
     if t: todo += [r[0] for r in t[1] if 'Being built' in r[-1]]
+    todo += EXTRA_TODO.get(k, [])
     if k not in DECIDED: todo.insert(0, "Review the story with Ben: problem, features with their why, OS vs track")
     out += ["**Still to do:**", ""] + [f"- {x}" for x in todo or ["Nothing open."]] + [""]
 out += ["## How this file is made", "",

@@ -114,14 +114,20 @@ Built solo by Ben Zhou. Open source under the Apache License 2.0. All payments a
 
 ### Anthropic: Claude used well for a specific group of people
 
-**Best shown in:** GurtOS Personal and GurtOS Server. Turn an old laptop or any spare computer into your own AI computer, built for agents. You own it and hold the keys, instead of renting someone else's cloud. Next is a GurtOS MCP server (planned), so Claude Desktop and Claude Code can drive your box.
+**Best shown in:** GurtOS Personal and GurtOS Server. GurtOS turns a computer you own, even an old one, into one built for agents: each Claude task runs as its own Linux user in its own copy-on-write copy of your files, with no keys, and you approve, undo or pause it from the portal or your phone. It is light and open source. Next, a GurtOS MCP server (being built) lets Claude Desktop and Claude Code drive your box.
 
 
-For solo developers who leave AI agents running unattended on a machine at home. GurtOS runs each Claude task (inside Factory's Droid) as its own Linux user, in its own copy of the files, with keys held in a vault the agent cannot read. It asks before money moves, and you can undo any one task.
+**The community:** solo developers who leave AI agents (Claude Code, OpenClaw) running at home.
+
+**The problem.** Those agents run as you, with every key and file. An ordinary OS can't separate them, record what they did or undo it, and the alternative is renting a cloud you can't see into.
+
+**GurtOS turns a computer you own, even an old one, into one built for agents.** Each Claude task (inside Factory's Droid) runs as its own Linux user in its own copy-on-write copy of the files, with keys held in a vault it cannot read. It asks before money moves, any one task can be undone, and the portal and phone show it live.
 
 **Proof:** in every merge-gate run, a real Claude task held only a placeholder key across 240 samples of its processes, undo removed its changes and nothing else, and its cost ($0.5378) was priced from real token counts. Given a web page with hidden instructions to steal keys, Claude refused and nothing left the box.
 
-Community: solo developers running unattended agents at home. Lived problem: Ben's own always-on agents (a job-application pipeline, watchers, overnight queues) ran as him, with his keys. Usable Monday: `sudo core/install.sh` on Ubuntu 24.04. Where it could go wrong: injected pages, wrong edits and spending each have a tested control; the remaining limits are listed in the threat model.
+Usable Monday: `sudo core/install.sh` on Ubuntu 24.04 (documented minimum 4 GB of memory and 17 GB of disk). Where it could go wrong: injected pages, wrong edits and spending each have a tested control; the remaining limits are listed in the threat model. Being built: a GurtOS MCP server for Claude Code and Desktop, Claude Code as an isolated worker, per-task model choice with cost, a Haiku second-opinion check, a published attack-test score and measured hardware numbers.
+
+GurtOS is open source (Apache-2.0): anyone can run it and customise it.
 
 [Full write-up, video and evidence →](https://calhacks.gurtos.com/tracks/anthropic/)
 
@@ -459,7 +465,7 @@ Public links: chat https://www.mana.space/shared-chats/x5CqxyjcOgVCAyrvUBqK2LNRc
 5. **Figma Make.** The file opens signed out but its preview says "Couldn't load Make". Open it, check the preview
    runs, then Publish. The board, the design file, the deck and both prototypes open signed out.
 6. **Fetch.ai.** Submit through the ASI:One Submission Agent and share the ASI:One chat link.
-7. **Anthropic.** The prize is not on Devpost yet; ask a director how to enter.
+7. **Anthropic: how to enter** is pending. The prize is not on Devpost yet; Ben will ask a director.
 8. **GoDaddy.** Confirm whether gurtos.com was registered with the MLH GoDaddy Registry code (and that a .com
    counts). If yes, change the "through GoDaddy Registry" row in `showcase/src/content/tracks/godaddy.mdx` to `met`.
 9. **Coinbase.** Their track asks for a verified Coinbase account. Confirm it is verified.

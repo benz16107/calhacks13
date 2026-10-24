@@ -3,9 +3,9 @@ order: 1
 sponsor: Anthropic
 prize: Claude used well for a specific group of people
 editions: 'GurtOS Personal and GurtOS Server'
-pitch: 'Turn an old laptop or any spare computer into your own AI computer, built for agents. You own it and hold the keys, instead of renting someone else''s cloud. Next is a GurtOS MCP server (planned), so Claude Desktop and Claude Code can drive your box.'
+pitch: 'GurtOS turns a computer you own, even an old one, into one built for agents: each Claude task runs as its own Linux user in its own copy-on-write copy of your files, with no keys, and you approve, undo or pause it from the portal or your phone. It is light and open source. Next, a GurtOS MCP server (being built) lets Claude Desktop and Claude Code drive your box.'
 title: A safe home for the agents you leave running overnight
-summary: GurtOS is for solo developers who leave AI agents running unattended on a machine at home. Claude, inside Factory's Droid, does every task. The OS runs each task as its own Linux user in its own copy of the files, keeps the keys in a vault the agent cannot read, asks a person before money moves, and lets you undo any one task.
+summary: 'Solo developers already leave agents, Claude Code and OpenClaw among them, running at home as themselves, with every key and file they have. An ordinary operating system cannot separate those agents, record what they did or undo it, and the alternative is renting a cloud you cannot see into. GurtOS turns a computer you own, even an old one, into one built for agents. Claude, inside Factory''s Droid, does every task as its own Linux user in its own copy of the files, with keys in a vault it cannot read, spending that waits for your OK, and any one task undoable.'
 proof: 'In every merge-gate run, a real Claude task works as its own Linux user: 240 samples of its processes held only a placeholder key, its changes were undone on their own, and its cost ($0.5378 in the Oct 24 run) was priced from real token counts. The same run reads Claude a web page with hidden instructions to steal keys; it refused, and nothing left the box.'
 criteriaSource: "From Anthropic's track description, as copied into the project's track plan."
 criteria:
@@ -82,6 +82,27 @@ status:
     state: simulated
     note: 'One run uses a scripted agent that obeys the hidden instructions, so every block is tested each time. A second run uses real Claude, which refused.'
 ---
+
+## Why GurtOS, and what each part is for
+
+**The community:** solo developers who leave agents running unattended at home. **What GurtOS does for them:** the
+agent keeps real access to a copy of your files and never holds your keys, and you can see and stop it from the portal
+or your phone, on a computer you own. Almost all of it comes from the OS, not from any one agent.
+
+| Feature | Why it is there | Anthropic criterion | From | Today |
+|---|---|---|---|---|
+| Claude does every task, inside Droid, as its own Linux user in its own copy-on-write copy of the files | Real work (code, receipts, a credit desk) with no way to touch another task's files | Claude doing something that matters | GurtOS (worker, task space) | Shipped. Model cost is priced from real token counts |
+| Keys never reach the agent: a placeholder key in the task, the real one swapped in by the proxy | A hijacked or confused Claude has no key to leak | Knowing where it could go wrong | GurtOS (vault, proxy) | Shipped. 240 of 240 process samples held only the placeholder |
+| A page with hidden instructions fails: the task reaches only its allowed hosts | Prompt injection cannot send anything out | Knowing where it could go wrong | GurtOS (network rule) | Shipped. Claude refused the page and the box blocked the attempt |
+| Spending waits for your OK, and any one task can be undone | A wrong edit or a wrong purchase costs one tap | Knowing where it could go wrong | GurtOS (approval, undo) | Shipped |
+| Live view and control from the portal and phone | You can watch an unattended agent | Usable Monday | GurtOS | Shipped |
+| `sudo core/install.sh` on Ubuntu 24.04, or an install ISO; one model key (Anthropic or Factory) | Something that works the day you try it | Usable Monday | GurtOS | Shipped. Documented minimum: 4 GB of memory and 17 GB of disk |
+| A GurtOS MCP server, so Claude Code and Claude Desktop can drive your box | The tools you already use start and watch tasks safely | Usable Monday, Claude doing something that matters | GurtOS (core) | Being built; not on main yet |
+| Claude Code as a worker, with full isolation | Run Claude Code itself in a task's own space, with no keys | Claude doing something that matters | GurtOS (core) | Being built; not on main yet |
+| Current Claude models chosen per task, with their cost | Use the right model for each job and see what it costs | Claude doing something that matters | GurtOS (core) | Being built; not on main yet |
+| A Haiku second-opinion check before risky steps | A cheap second look before a step that spends or deletes | Knowing where it could go wrong | GurtOS (core) | Being built; not on main yet |
+| A published attack-test score, including the misses | Honest evidence of where it holds and where it does not | Knowing where it could go wrong | GurtOS | Being built; not on main yet |
+| Measured minimum hardware and a one-line install | The old-computer claim backed by numbers, and a faster first run | Usable Monday | GurtOS | Being built; not on main yet |
 
 ## Evidence
 
