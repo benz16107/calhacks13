@@ -209,11 +209,11 @@ Each box self-hosts SpacetimeDB with a TypeScript module the box publishes at bo
 
 ### Elastic: Agent Builder on Serverless
 
-Every action an agent takes on a GurtOS box streams into an Elasticsearch Serverless project. An Agent Builder agent, "Box log", built from code in the repo with six ES|QL tools and one index search tool, answers what changed, what it cost, why something failed and what got blocked.
+Every action an agent takes on a GurtOS box streams into an Elasticsearch Serverless project. An Agent Builder agent, "GurtOS log", built from code in the repo with six ES|QL tools and one index search tool, answers what changed, what it cost, why something failed and what got blocked. It reads the real installed boxes unless a question names a demo run.
 
-**Proof:** asked "Why did the job routine fail?", where the box had logged only "worker exited with 1", the agent found the cause in the timeline itself: LinkedIn was blocked because the task could reach only boards.greenhouse.io. All 156 events of the run arrived in Serverless, each exactly once.
+**Proof:** asked "Why did the job routine fail? Look at demo run a18523.", the agent found the failed task, read its timeline and named the root cause itself: the routine could reach only boards.greenhouse.io, its plan needed www.linkedin.com, and the box blocked it. A live run shipped all 156 events of a demo run to Serverless, each exactly once.
 
-Agent: `box-log`, 7 tools, created through the Agent Builder API (`tracks/elastic/agent.ts`), on a Serverless project in GCP us-east4.
+Agent: `gurtos-log`, 7 tools, created through the Agent Builder API (`tracks/elastic/agent.ts`), on a Serverless project in GCP us-east4.
 
 [Full write-up, video and evidence →](https://calhacks.gurtos.com/tracks/elastic/)
 
