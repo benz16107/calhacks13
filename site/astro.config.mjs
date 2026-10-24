@@ -114,6 +114,7 @@ export default defineConfig({
             'guides/shopping-agent',
             'guides/asi-one',
             'guides/find',
+            'guides/reach-your-box-from-anywhere',
             'guides/add-a-second-box',
           ],
         },

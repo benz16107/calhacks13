@@ -145,6 +145,28 @@ GurtOS Server has no login prompt and no user with sudo. Root's password is lock
 
 GurtOS Personal is different on purpose: it is your own computer, and your account has `sudo`. The agents' task users never do.
 
+## 12. Remote access through the relay
+
+Remote access is off until the owner turns it on. Then the box opens one outbound tunnel to the GurtOS relay and gets
+its own address, such as `rosa.box.gurtos.com`, with its own Let's Encrypt certificate. TLS ends on the box, with a
+key that never leaves it. A request through the tunnel carries `X-Forwarded-For`, so the box treats it as remote and
+asks for a paired device's token, as on the home network. Every phone still needs a pairing code from the box's own
+screen. See [Reach your box from anywhere](/guides/reach-your-box-from-anywhere/).
+
+The relay **can** see:
+
+- which names exist, and when each box's tunnel connects, and from which address;
+- for each connection to a box, the caller's IP address, the time, the name asked for and the bytes each way;
+- the plain-HTTP requests on port 80, which are certificate challenges and redirects only;
+- for each push, the push service's endpoint, the time and the size.
+
+The relay **cannot** see anything inside a box's HTTPS connections: pages, API calls, pairing codes, device tokens,
+approvals or files. It cannot read a push either: the box encrypts each one for the phone (RFC 8291) before it
+reaches the relay's gateway, and signs it with a key made for that box alone.
+
+**Stops:** a network or the relay reading a box's traffic, and one box posing as another when they share a push
+subscription. See the [threat model](/security/threat-model/) for what a relay operator could still try.
+
 ## What these layers have in common
 
 Every limit is enforced by the kernel, systemd or the box's own core, outside the agent's process. None depends on the model following instructions. The trust that remains is in the core, the apps installed in it, the machine's root account, other software running on the box itself, and the devices you pair. The [threat model](/security/threat-model/) covers those.

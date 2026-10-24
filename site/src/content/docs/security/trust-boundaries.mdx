@@ -17,6 +17,8 @@ A box is divided into zones with different trust. Each arrow between zones is a 
 | Zone | What is in it | Trust |
 |---|---|---|
 | Outside | The internet, the model provider, paid APIs, outside services such as Jira | Untrusted. Reached on purpose, for specific jobs. |
+| The relay | The GurtOS relay machine, only when remote access is on. It carries encrypted tunnel bytes and push messages. | Untrusted with content. It sees names, addresses, connect times and byte counts, never what is inside HTTPS or a push. |
+| The GurtOS app | `app.gurtos.com`, an installable web app served from the public repository | Trusted as much as its host. It holds each box's device token in the browser's storage. |
 | The box's own screen | The portal on the box's display, and anything else that calls the API from the box itself | Trusted like the owner |
 | Your devices | Phones and browsers paired with a one-time code | Trusted to read, start tasks, undo and answer approvals. Owner's actions only for a device paired as the owner. Anyone without a token is refused. |
 | The core, as root | The box service, the vault, every app's code, the action log, the task proxy, SpacetimeDB on `127.0.0.1` | Fully trusted. Holds every key. |
@@ -53,6 +55,8 @@ The core trusts apps completely: an app's tools, routes, triggers and log reader
 | The box's own screen | The HTTP API (port 7700, or the Unix socket) | Everything | The request comes from the box itself with no proxy header | `task.created` with its `source`, `approval.answered` with the `by` it sends, `note` for settings, setup, vault and apps |
 | A paired device | The HTTP API | Reads, new tasks, answers, undo | A valid device token, as a header or `?access_token=`. Without one, `401`. | `approval.answered` with the device's name, whatever the request says |
 | A device paired as the owner | The HTTP API | Also pairing, settings, setup, the vault, apps, the owner, folders, Keep | The token's device was paired as the owner from the box's own screen. Other devices get `403`. | `note` events, `keep` events. A vault key's name, never its value. |
+| A paired device, through the relay | The HTTP API at `https://<name>.box.gurtos.com` | The same as a paired device on the home network | TLS ends on the box. The request carries `X-Forwarded-For`, so a device token is required. | The same as on the home network |
+| The box (remote access on) | The relay | One outbound tunnel, and encrypted push messages | The tunnel is verified against the relay's pinned certificate authority and logs in with the box's secret. The relay allows each name to route only its own address. | Remote access state in Settings |
 | Anyone else | The HTTP API | Only the health check, redeeming a pairing code and the portal's pages | Every other request gets `401` | Not logged |
 | The box's own screen | SpacetimeDB (`127.0.0.1:3000`) | Live tasks and approvals; answers through the `answer` reducer | It listens on loopback, and the firewall never opens port 3000. Only the box writes tasks and approvals, and `answer` works only from a connection the box vouched for. | `approval.answered` with the vouched name |
 | Outside services | App routes `/t/<app>/...` | Whatever the app accepts | A paired device's token, unless the app marks the route open (`openRoutes`). Open routes must check their own secret: the Jira app's routes require a shared secret and check the approval belongs to the task; the Mana app's status route returns only a public summary. | What the app writes, such as `approval.answered` by `jira:<name>` |

@@ -18,7 +18,7 @@ pairing too, the same way as a phone.
 :::note[Preview]
 Pairing and answering work from a phone's browser. GurtOS Server from the ISO opens its API to your private network
 and shows a pairing QR code by itself. On the Ubuntu install and on GurtOS Personal you set the address by hand.
-Phones get no push notifications: a request shows when the portal is open on the phone.
+Without remote access, a request shows when the portal is open on the phone. With remote access on, owner phones also get push notifications: see [Reach your box from anywhere](/guides/reach-your-box-from-anywhere/).
 :::
 
 ## Before you start
@@ -151,7 +151,7 @@ token. Pair it again to get a new one.
 - SpacetimeDB listens on `127.0.0.1` only, because it has no login. A phone follows the box's log stream over the
   API instead. You can open SpacetimeDB to a network with `STDB_LISTEN=<address>` in `/etc/box/stdb.env`, but anyone
   who reaches it can then read every task and answer approvals.
-- Phones do not get push notifications. A request shows when the portal is open on the phone.
+- Push notifications need remote access. Without it, a request shows when the portal is open on the phone.
 
 ## Related
 

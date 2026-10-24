@@ -59,10 +59,21 @@ These are known limits of the current release. Some are planned work; see the [r
 - **The box's own machine is trusted.** A request over the Unix socket, or from `127.0.0.1` without a proxy header, counts as the box's own screen and may do everything, owner's actions included. Task users cannot make such a request, because their network reaches only the proxy. Other software you run on the box can. On GurtOS Personal that includes programs you run in your own desktop session.
 - **A local proxy that drops forwarding headers looks local.** The box tells relayed requests apart by headers such as `X-Forwarded-For`. A proxy or tunnel on the box that forwards outside requests without them would hand every caller the box's own rights.
 - **Device tokens are bearer secrets.** Whoever holds one can use it, and it does not expire. A stolen phone or a copied token works until you remove the device.
-- **No encryption in transit.** The API serves plain HTTP. On a network others can watch, a token or a task's contents can be read on the way. Reach the box over a VPN, or put a TLS proxy in front of it.
+- **Plain HTTP on your own network.** On the home network the API serves plain HTTP, so on a network others can watch, a token or a task's contents can be read on the way. Use a VPN, or turn on remote access: through the relay, traffic is HTTPS end to end to the box.
 - **A paired device is trusted with tasks.** Any paired device, not only the owner's, can start tasks, undo any task and answer any approval.
 - **SpacetimeDB has no login.** It listens on `127.0.0.1`, and its `answer` reducer accepts only vouched connections. If you widen it with `STDB_LISTEN`, anyone who can reach port 3000 can still read every task.
 - **A private network is trusted to reach the API.** On GurtOS Server, anyone on your home network or tailnet can reach port 7700. They still need a paired device's token for anything but the health check and redeeming a pairing code, and a pairing code comes only from the box's own screen.
+- **A relay operator could route a name to itself.** The relay answers for every name under `box.gurtos.com`, so a
+  malicious operator could send a box's name to the relay and pass Let's Encrypt's challenge to get a certificate for
+  it. Every certificate is published in public Certificate Transparency logs, where a second one for your name would
+  show. They would still need a pairing code, which comes only from the box's own screen.
+- **A stolen relay secret takes over a name's routing.** Turn remote access off and on again to issue a new one.
+- **The GurtOS app is only as trustworthy as its host.** `app.gurtos.com` is served by Vercel from the public
+  repository, so whoever controls that deployment controls the app's code. A box's own address serves the box's own
+  copy.
+- **Pushes and a shared subscription.** One box sharing a phone's push subscription cannot pose as another: the app
+  drops a push whose signature does not match that box's key. The relay can drop or delay pushes and connections,
+  but cannot read them.
 - **Webhooks and app routes** accept any paired device's token. An app can also mark routes as open (`openRoutes`), with no token at all, for a route that is public on purpose or checks its own secret. The Mana app's status route and the Jira app's three routes are open. An open route is only as safe as its own check.
 
 ### Data that leaves on purpose
