@@ -32,10 +32,10 @@ Checked against main `7fe6651`, Sat Oct 24 08:09 PT. `./demo` from a clean workt
 |---|---|
 | verified (ISO) | 3 |
 | verified | 56 |
-| merged | 130 |
-| building | 9 |
+| merged | 132 |
+| building | 6 |
 | planned | 0 |
-| not pursued | 5 |
+| not pursued | 6 |
 | **Total** | **203** |
 
 **Collisions** (detail below): none open at 03:27. The three found at 02:25 are resolved and Business is on main. Still
@@ -80,11 +80,11 @@ watched: portal/dist rebuilt from merged sources (C-4).
 | Web Push through the gateway, end-to-end encrypted payloads | remote access, portal | merged (gate: push decrypts only on its phone; gateway forwards ciphertext); phone side in `portal` branch | 6cdeb9a | remote access and push | all |
 | Image: install, A/B updates with rollback, firewall, Pacific time | image | verified (ISO) Oct 24 00:02 (build 881318a on Vultr) | fd537ad, 881318a | image/test (not in ./demo) | Vultr |
 | Signed release ISOs for four builds on GitHub and the Vultr mirror | release, image | merged; QA checked Oct 24: the signature on `SHA256SUMS` verifies against `release/allowed_signers`, the mirror's `SHA256SUMS` is identical, all four checksums in `release/notes/v0.1.0-preview.md` match. ISO contents not yet installed by QA (release thread's own Server x86_64 install passed) | fb3b922, built from e36a6cc | none | Vultr |
-| Elastic hash-chained log, plus the add-only Elastic copy and the verify tool (branch `elastic-hash-chain` is not merged) | core | building | | | Elastic |
-| Tripwire keys | core | building | | | Armadin |
-| The per-task sandbox (seccomp, Landlock, cgroup caps) | core | building | | | Armadin |
-| The GurtOS MCP server for Claude Code and Desktop | core | building | | | Anthropic |
-| Claude Code as a second worker | core | building | | | Anthropic |
+| Elastic hash-chained log, plus the add-only Elastic copy and the verify tool. Both review fixes are in: an event can't set `prev`, and a missing `prev` after the chain starts counts as a break | core | merged | 26e914b | Elastic's step (chain check) | Elastic |
+| Tripwire keys: a decoy AWS key pair per task, caught in the proxy's plain-HTTP requests and host names, in tool inputs and in the log; the task is undone, a security note is written and the phone is alerted. Not inspected: the model relay, and HTTPS bodies to allowed hosts | core | building (branch `core-tripwire`, e246b62; waiting on Armadin's check to accept the decoy env names) | e246b62 | tripwire keys: a decoy key that leaves a task stops it (passes) | Armadin |
+| The per-task sandbox: a seccomp filter, kernel protections, 2 cores, plus the existing 2 GB with no swap and 512 processes. No Landlock (write limits come from `ProtectSystem=strict` and `ReadWritePaths`). No disk quota. On Vultr: Seccomp 2, `cpu.max 200000 100000`, and 14 of 14 Armadin attacks still caught | core | building (same branch, `core-tripwire`, e246b62) | e246b62 | the sandbox: a system-call filter and a CPU cap on every task (passes on Vultr) | Armadin |
+| The GurtOS MCP server for Claude Code and Desktop (`core/claude-mcp.ts`): start, list, log, diff, undo, keep, pending approvals, answer, with a paired device token | core | building (same branch, `core-tripwire`, e246b62) | e246b62 | the GurtOS MCP server: Claude Code drives the box | Anthropic |
+| Claude Code as a second worker | core | not pursued (cut for now as the conductor's cut-first item; revisit only if time remains before 9 PM Saturday) | | | Anthropic |
 | Docs site gurtos.com | docs | verified Oct 24 01:00 (82+ pages, links, privacy scan) | 212c817 | site `npm run check` | all |
 | Showcase calhacks.gurtos.com | submission | verified Oct 24 01:30 | 52fb7f7, 213622e | showcase link checker | all |
 
