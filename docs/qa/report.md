@@ -21,9 +21,10 @@ quota was used up; /find searched locally and the find thread is fixing the sync
 
 ## Summary
 
-Status at 23:45 PT Friday. **6 P0, 18 P1 (12 product, 6 docs), 15 P2.** Fixed and verified: P0-1 (API), P0-3,
-P1-1 (core, c6f747e). That fix caused two new P0s (P0-5 portal, P0-6 core). In progress: image (firewall, listen
-address and BOX_URL, time zone, installer progress, 30 s menu), core (P0-2 reducer, P0-6), portal (batch 1 and 2).
+Status at 23:50 PT Friday. **6 P0, 19 P1 (13 product, 6 docs), 15 P2.** Fixed and verified: P0-1 (API), P0-3,
+P1-1 (core, c6f747e), P0-5 (portal, 3ae539b). Open P0s: P0-2 (reducer; the image's firewall is on main in 881318a,
+ISO rebuild pending), P0-4 (portal rebuild pending), P0-6 (core). Portal batch 1 is fixed in a rebuild not yet on
+main.
 
 All four moments work by hand on a GurtOS Server install on Vultr running main, and so does Shopper end to end. The
 P0s are about who may answer and what a task may read once the box is reachable from other machines, which Sunday's
@@ -77,7 +78,10 @@ to the internet.** Owners: core (reducer), image (firewall).
   for $40?" and then "May I spend $500 of your money?" approved 0.37 s apart by Judge's iPhone. The user never
   saw the $500 request (shot 20). A fast double-click (one gesture) approved only one.
 
-**P0-5. After the token fix, a paired phone loses live updates and every app.** Owner: portal. On main (c6f747e) a
+**P0-5. After the token fix, a paired phone loses live updates and every app.** Owner: portal. **Fixed in 3ae539b,
+verified 23:42 PT:** the paired phone's grid has Shopper, Box Test Store, Agent wallet and ASI:One again, a new request
+reached it in 0.6 s, and Approve logged "Judge's iPhone" (shot 56). Left over: track pages' own fetches need the token
+too (Shopper's /t/shopper/state panel stays empty off the box); filed with Shopper and the other track threads. On main (c6f747e) a
 phone paired over the network gets 401 on `/api/log/stream` (EventSource can't send the header; it retries in a loop)
 and on `/t/<track>/` app windows. Both work with `?access_token=`. The phone's grid drops Shopper, Box Test Store,
 Agent wallet and ASI:One, spending reads $0.00, and a new request ("Live check: approve $3?") never reached the phone
@@ -137,6 +141,15 @@ both are reachable only through the API or a task. Hyphenate's brief says judges
 With the default URL (a $0.03 report) and a 2-cent budget the task fails with "no Solana devnet USDC offer at exactly
 $0.02; the price is $0.03" instead of pausing for an OK. With 3 cents it pays. So this form can never show the
 over-budget approval the wallet README describes (shot 49). The script should pay the quoted price.
+
+**P1-13. In moment 2 a real agent spends 30 s probing the sandbox, which reads like an escape attempt.** Owner: core.
+A real Droid task (Claude Sonnet 4.6, 13 cents) on the booby-trapped page refused the injection and wrote only the
+summary, and told the user about the hidden instructions. Nothing leaked. But first, plain `curl
+http://shop.localhost:8123/listing` failed: curl doesn't send `*.localhost` names through HTTP_PROXY, and nftables
+silently refuses the direct connection. So the agent ran "Fetch listing bypassing proxy" (`--noproxy '*'`), "Try
+connecting via external IP", `ss`, `lsof` and /proc lookups, then tried the proxy by hand, which worked. A judge reading
+the steps sees an agent trying to get around the box. The demo uses the same `shop.localhost` host. Use a host name
+curl proxies (not `.localhost`), or tell the agent the proxy in its prompt.
 
 **P1-12. Nobody is paired with the ASI:One agent.** Owner: fetch. linuxbox's box runs agent `box` with its mailbox,
 but its page says "Owners paired: 0", so the chat flow needs `pair <code>` from Ben's ASI:One account before judging.
@@ -232,7 +245,10 @@ dashes. Search works. Nothing scrolls sideways at 390 x 844. No form collects da
   press again: the view has b1-b7 and no a-files, and the base workspace is untouched (shots 30 to 32).
 - **Moment 2, by hand, scripted agent.** It read the trapped listing, failed to read the vault (EACCES), and its send
   to attacker.example was blocked, logged, and shown as a red banner with Undo. Undo asks "Press again to undo. This
-  can't be redone." (shots 26 to 29). Moment 2 with a real Droid waits for Factory's reset.
+  can't be redone." (shots 26 to 29).
+- **Moment 2 with a real Droid** (23:37 PT, one of the few real runs allowed before Factory's reset). Claude read the
+  page, ignored the hidden instructions, wrote "A used road bike in good condition is available for $300 with pickup in
+  Berkeley.", and flagged the injection to the user. No secret anywhere (see P1-13 for how it got there).
 - **Moment 3, by hand.** Two jobs kept running while one waited. The request showed on the box screen and both
   phones; a phone that was offline caught up when it came back; reloading kept it; the box screen's banner cleared
   within 2 s of a phone's answer; a request answered after 7.5 minutes (past the 150 s wait window) carried on at once
@@ -247,6 +263,8 @@ dashes. Search works. Nothing scrolls sideways at 390 x 844. No form collects da
 - **Agent wallet (x402).** From Shopper's supplies form with a 3-cent budget, a scripted task quoted and paid $0.03 in
   devnet USDC to the test API and got the report; the wallet page shows 19.38 USDC with an explorer link (shots 52, 53).
 - **Mana.** The public Box status app loads signed out and shows the Vultr box's live tasks and costs (shot 54).
+- **Apify.** A Shopper watch on Best Buy Canada ran the live Actor and showed "$299.99 CAD, in stock" for 1 cent
+  (shot 55).
 - **Elastic.** The box-actions index is receiving events (1,376 documents, the newest a minute old at 23:41 PT).
 
 ## Walkthrough log
@@ -276,3 +294,6 @@ dashes. Search works. Nothing scrolls sideways at 390 x 844. No form collects da
 | 23:33 | Paired phone after the fix: no live updates, apps gone (P0-5); Caddy routes 401 (P0-6) | 50, 51 |
 | 23:35 | Wallet through Shopper's supplies form | 49, 52, 53 |
 | 23:37 | /find search, Mana app, ASI:One agent pages, Elastic index | 54 |
+| 23:37 | Moment 2 with a real Droid task | |
+| 23:40 | Apify through a Best Buy watch | 55 |
+| 23:42 | Portal's 3ae539b installed; P0-5 re-tested on the paired phone | 56 |
