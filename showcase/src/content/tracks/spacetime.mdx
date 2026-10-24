@@ -20,11 +20,11 @@ criteria:
 video: main
 shots:
   - src: ../../assets/repo/portal/live-agents.png
-    alt: 'The Live window, Agents view: meters across the top, and a queue of credit applications as Open, In hand and Done columns, with each agent''s status, such as Working, or Waiting for an OK.'
-    caption: 'The Live window, Agents: a queue as Open, In hand and Done, and what each agent is doing, all arriving over SpacetimeDB subscriptions. Demo data.'
+    alt: 'The Live board, Agents view: meters across the top (running, needs you, done, spent, activity), then a queue as Open, In hand and Done columns, with Agent A working on Check invoice 1001 and two invoices still open.'
+    caption: 'The Live board, Agents: a queue as Open, In hand and Done, and what each agent is doing, all arriving over SpacetimeDB subscriptions. Demo data.'
   - src: ../../assets/repo/portal/live-requests.png
-    alt: 'The Live window, Requests view: two waiting requests with Deny and Approve, one marked "Rosa''s phone is viewing".'
-    caption: 'The Live window, Requests: every waiting request, and who is viewing it. The first answer wins and the later one is told who answered.'
+    alt: 'The Live board, Requests view: two waiting requests with Deny and Approve, one marked "Rosa''s phone is viewing".'
+    caption: 'The Live board, Requests: every waiting request, and who is viewing it. The first answer wins and the later one is told who answered.'
   - src: ../../assets/repo/portal/notification-center.png
     alt: 'The GurtOS desktop with Notification Center open: two requests waiting for an OK, each with Deny and Approve, and earlier notices below, including a blocked attempt.'
     caption: 'The box''s screen: requests waiting for an OK, live from the approval table, while other tasks keep running. The amounts are test money.'
@@ -42,7 +42,7 @@ shots:
 links:
   - label: The track README, tracks/spacetime/
     href: https://github.com/benz16107/calhacks13/tree/main/tracks/spacetime
-    note: 'The six features, why each is there, the queue tools, the Live window and the demo steps.'
+    note: 'The six features, why each is there, the queue tools, the Live board and the demo steps.'
   - label: The module, core/spacetime/src/index.ts
     href: https://github.com/benz16107/calhacks13/blob/main/core/spacetime/src/index.ts
     note: 'The public tables and reducers the box''s screens use.'
@@ -82,7 +82,7 @@ status:
     note: 'The $8.00 is test money (<code>example.spend</code>).'
   - part: Phones
     state: live
-    note: 'Phones do not connect to SpacetimeDB: SpacetimeDB listens on the box only, so phones use the token-checked API, and the Live window on a phone is shown the same data every 2 seconds.'
+    note: 'Phones do not connect to SpacetimeDB: SpacetimeDB listens on the box only, so phones use the token-checked API, and the Live board on a phone is shown the same data every 2 seconds.'
   - part: Maincloud fleet view
     state: not-built
     note: 'The module and the opt-in reporter (counts only) are written, but it is not published: it waits on one sign-in to SpacetimeDB. It is not running.'
@@ -150,7 +150,7 @@ log, which is why the deploy in moment 4 is "still waiting for its OK, live in S
 
 **Clients.** The box's own screen calls the HTTP API once, then subscribes to the tables over `ws://127.0.0.1:3000`
 and tells the box its identity so its answers count. A phone or laptop elsewhere never reaches SpacetimeDB: it sends
-its paired token to the API, and the Live window shows it the same data every 2 seconds. Either way the answer lands in
+its paired token to the API, and the Live board shows it the same data every 2 seconds. Either way the answer lands in
 the same row, so every screen agrees. A task never connects to SpacetimeDB at all: it reaches the queue only through the
 broker tools, and the box calls the database for it.
 
@@ -189,7 +189,7 @@ Or open the box screen and a paired phone, and approve on one.
   anyone who could read the port could still read the public tables. Exposing it on a network (`STDB_LISTEN`) is opt-in,
   for a network you trust.
 - **Phones do not connect to SpacetimeDB.** Only the box's own screens and local helpers do. A phone uses the
-  token-checked API, and its Live window is refreshed every 2 seconds. Per-person visibility is enforced by the database
+  token-checked API, and its Live board is refreshed every 2 seconds. Per-person visibility is enforced by the database
   for any connection that reaches it, and the public `approval` table, which the box's screens read, still holds every
   approval.
 - **The module is republished at every boot** (and emptied if its schema changed), and the box refills tasks,
