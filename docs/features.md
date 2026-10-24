@@ -14,7 +14,7 @@ Devpost text, and Ben's approved list.
 **Demo step** names the check in `./demo` (`core/demo.ts` moments, or `tracks/<name>/demo.ts`). "none" means no
 automated check yet.
 
-Checked against main `ae4f52f`, Sat Oct 24 02:30 PT.
+Checked against main `c359ed6`, Sat Oct 24 02:40 PT. `./demo` on that commit: 25 passed, 0 failed, 1 pending (real Droid, off by default).
 
 ## Summary
 
@@ -22,15 +22,13 @@ Checked against main `ae4f52f`, Sat Oct 24 02:30 PT.
 |---|---|
 | verified (ISO) | 3 |
 | verified | 27 |
-| merged | 25 |
-| building | 20 |
+| merged | 28 |
+| building | 18 |
 | planned | 21 |
-| **Total** | **96** |
+| **Total** | **97** |
 
-**Open collisions** (detail in "Collisions" below):
-1. Two pause switches: core's `settings.paused` (main) and Business's `/api/pause` (`business` branch).
-2. The `business` branch conflicts with main in `core/box.ts` and the portal shell.
-3. Three changes are in `core/box.ts` at once: core's uncommitted work, `business` and `remote-access`.
+**Collisions** (detail below): none open at 02:40. The three found at 02:25 were resolved on the `business` branch
+(rebased, kill switch on core's `settings.paused`). Still watched: portal/dist rebuilt from merged sources (C-4).
 
 ## The four moments
 
@@ -57,9 +55,10 @@ Checked against main `ae4f52f`, Sat Oct 24 02:30 PT.
 | Outage bar, double-tap guard, "Already approved on" | portal | verified Oct 24 00:29 | 3b802b9 | none | all |
 | "Today" is the box's day on every screen | portal | verified Oct 24 00:37 | 465fa7a | none | all |
 | Pause all agents (`settings.paused`) | core | merged | 197ebc2 | demo checks both directions | all, Personal |
-| Remote access at `<name>.box.gurtos.com` via the relay | remote access | building (`remote-access` branch: relay, frp, push) | bfe4bfa | relay/demo.ts on branch | all |
+| Track routes learn who is calling (`x-box-caller`) | core | merged | 737ba97 | security step | all |
+| Remote access at `<name>.box.gurtos.com` via the relay | remote access | merged (gate: "remote access and push", relay refuses other names and raw ports) | 6cdeb9a | remote access and push | all |
 | app.gurtos.com companion app and hosted portal | portal, remote access | merged (hosted mode 7aae35d, installable d05efd8); multi-machine switcher and per-edition home: building | 7aae35d, d05efd8 | none | all |
-| Web Push through the gateway, end-to-end encrypted payloads | remote access, portal | building (`remote-access` core/push.ts; `portal` branch pwa/sw.ts) | | core/push.test.ts on branch | all |
+| Web Push through the gateway, end-to-end encrypted payloads | remote access, portal | merged (gate: push decrypts only on its phone; gateway forwards ciphertext); phone side in `portal` branch | 6cdeb9a | remote access and push | all |
 | Image: install, A/B updates with rollback, firewall, Pacific time | image | verified (ISO) Oct 24 00:02 (build 881318a on Vultr) | fd537ad, 881318a | image/test (not in ./demo) | Vultr |
 | Signed release ISOs for four builds on GitHub and the Vultr mirror | release, image | building (`release` branch: notes; repo public bb4cc3e) | bb4cc3e | none | Vultr |
 | Docs site gurtos.com | docs | verified Oct 24 01:00 (82+ pages, links, privacy scan) | 212c817 | site `npm run check` | all |
@@ -87,20 +86,20 @@ Checked against main `ae4f52f`, Sat Oct 24 02:30 PT.
 | GDM and Plymouth branding | personal, image | merged (branding hooks) | d451f8d, b0ab128 | none | Figma |
 | GurtOS Setup (first boot) | personal | merged | 96ce0cb | none | |
 | Approvals as GNOME notifications, Ask an Agent in Files | personal | merged (owner verified) | 65679b2 | personal/demo.ts | |
-| Reach this computer from anywhere (Settings) | personal, remote access | merged UI; relay building | 1d64435 | none | |
+| Reach this computer from anywhere (Settings) | personal, remote access | merged | 1d64435, 6cdeb9a | remote access and push | |
 
 ## GurtOS Business (preview)
 
 | Feature | Owner | Status | Commit | Demo step | Tracks |
 |---|---|---|---|---|---|
-| People and roles | business | building (`business` branch, conflicts with main) | 686f801 | core/business-demo.ts on branch | Hyphenate, Microsoft, Atlassian |
+| People and roles | business | building (`business` 9886d27, rebased on main, merges clean) | 9886d27 | core/business-demo.ts on branch | Hyphenate, Microsoft, Atlassian |
 | Plain-sentence rules, with a rule tester | business | building (rules on branch; no tester found) | | | Hyphenate, Microsoft |
 | Routed approvals | business | building | | business-demo on branch | Hyphenate, Microsoft |
 | No self-approval, no agent approving an agent | business | building | | business-demo on branch | Hyphenate, Armadin |
 | Waiting for me | business | building | | | Hyphenate |
 | My requests | business | building | | | Hyphenate |
 | Audit with CSV export | business | building | | | Hyphenate, Microsoft |
-| Kill switch | business | building (**duplicates core's `settings.paused`**, see Collisions) | | | Hyphenate |
+| Kill switch | business | building (9886d27 now sets core's `settings.paused`) | 9886d27 | business-demo on branch | Hyphenate |
 
 ## Hyphenate (credit desk)
 
@@ -184,9 +183,9 @@ Found by trial merges and by comparing what each branch edits. Each is sent to e
 
 | # | What | Threads | Found | State |
 |---|---|---|---|---|
-| C-1 | Two "stop every agent" switches: core's `settings.paused` (main 197ebc2, used by Personal's Quick Settings tile) and Business's `paused.json` with `POST /api/pause` (`business` branch). Merged as is, they hold different states. | core, business, personal | Oct 24 02:25 | Open. Business asked to build on `settings.paused` |
-| C-2 | `business` (forked at 89f59d3) conflicts with main in core/box.ts, portal/src/shell.tsx, shell.css, dev-box.sh and the built portal/dist | business, portal, core | Oct 24 02:25 | Open. Rebase, and rebuild dist from merged sources |
-| C-3 | core/box.ts edited at once by core (uncommitted in the main checkout), `business` and `remote-access`. Business and remote access both add fields to `interface Device` at the same lines | core, business, remote access | Oct 24 02:25 | Open. Second to merge keeps both |
+| C-1 | Two "stop every agent" switches: core's `settings.paused` (main 197ebc2, used by Personal's Quick Settings tile) and Business's `paused.json` with `POST /api/pause` (`business` branch). Merged as is, they hold different states. | core, business, personal | Oct 24 02:25 | Resolved on the branch (9886d27: /api/pause sets `settings.paused`). Re-check both switches after it merges |
+| C-2 | `business` (forked at 89f59d3) conflicts with main in core/box.ts, portal/src/shell.tsx, shell.css, dev-box.sh and the built portal/dist | business, portal, core | Oct 24 02:25 | Resolved: rebased on 6cdeb9a, trial merge clean at 02:40 |
+| C-3 | core/box.ts edited at once by core (uncommitted in the main checkout), `business` and `remote-access`. Business and remote access both add fields to `interface Device` at the same lines | core, business, remote access | Oct 24 02:25 | Remote access merged (6cdeb9a); Business rebased on it, clean |
 | C-4 | portal/dist is a built file that both `business` and `portal` commit. A merge can keep one side's bundle and silently drop the other's screens | business, portal | Oct 24 02:25 | Watch: QA checks dist/source.txt against sources after each merge |
 
 ## Fresh-install checks
