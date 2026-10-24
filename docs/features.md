@@ -32,8 +32,8 @@ Checked against main `8a4cbf4`, Sat Oct 24 05:30 PT. `./demo` from a clean workt
 |---|---|
 | verified (ISO) | 3 |
 | verified | 54 |
-| merged | 91 |
-| building | 20 |
+| merged | 97 |
+| building | 14 |
 | planned | 20 |
 | not pursued | 5 |
 | **Total** | **193** |
@@ -148,18 +148,17 @@ answers nothing until a person is picked from the top bar.
 | On a Business box, signed in as Rosa on the box's screen, Approve and Deny in the desk window answer as her (`x-box-person`) | credit desk, business | verified Oct 24 05:30 on routing and refusal (fraud referrals reach Rosa with her route sentence; the unsigned box screen is refused with 403); answering as Rosa in the window not clicked | 13b0ff5 | business edition | Hyphenate, Microsoft |
 | Privacy: an agent's copy of an application has no SSN, date of birth or guarantor name | credit desk | verified Oct 24 05:28 (node --test fairness.test.ts: 4 of 4) | 13b0ff5 | tracks/credit-desk/fairness.test.ts | Hyphenate, CRS |
 
-**CRS push** (Business edition; branch `crs-push`, not merged; proven by the `track credit-desk` demo step against the CRS
-sandbox with test personas; detail in `tracks/credit-desk/CRS.md`). Honestly not built: a payment gate for guests, the
+**CRS push** (Business edition; on main as b17dedb; gate 32 passed, 0 failed on the pre-merge head; live against the CRS sandbox with test personas only; detail in `tracks/credit-desk/CRS.md`; needs a deploy to the installed boxes, which core or Ben runs). Honestly not built: a payment gate for guests, the
 controller's clear-the-flag path (FRR-5), an ASI:One chat intent for credit.
 
 | Feature | Owner | Status | Commit | Demo step | Tracks |
 |---|---|---|---|---|---|
-| Know your agent: a stranger's agent asks for credit through the guest path (`POST /t/mana/guest {kind:'credit'}`); CRS identity, Fraud Finder and phone owner run before the owner is asked; fraud persona P13 gets a plain-words 403 with no task and no approval; an honest persona reaches the owner with no SSN in the question or the log | credit desk, mana | building (branch `crs-push`; shares Mana's guest path) | | demo-crs.ts on branch | CRS, Hyphenate, Fetch.ai |
-| A stated reason for every CRS pull (credit application or account review), with the application or customer; a pull for a decided or stale application asks the controller first; a per-task pull limit | credit desk | building (branch) | | demo-crs.ts on branch | CRS, Microsoft |
-| CRS MCP behind the broker (`credit-desk.crs_docs`, `credit-desk.crs_lookup`); login stays in the vault; the clerk can read docs only; SSN and date of birth redacted | credit desk | building (branch) | | demo-crs.ts on branch | CRS |
-| Nightly re-check routine at 02:00 (off by default; `/t/credit-desk/recheck`); a score drop sends the limit change to the controller | credit desk | building (branch) | | demo-crs.ts on branch | CRS, Hyphenate |
-| Fraud case file (`GET /t/credit-desk/case?application=`, HTML or JSON) and the same facts as task steps in the Business request screen | credit desk, business | building (branch) | | demo-crs.ts on branch | CRS, Hyphenate |
-| A fraudster who argues: 9 of 9 attempts to approve or give terms are refused by `credit_decision`; only a fraud hold is recorded, after the controller says yes | credit desk | building (branch) | | demo-crs.ts on branch | CRS, Armadin |
+| Know your agent: a stranger's agent asks for credit through the guest path (`POST /t/mana/guest {kind:'credit'}`); CRS identity, Fraud Finder and phone owner run before the owner is asked; fraud persona P13 gets a plain-words 403 with no task and no approval; an honest persona reaches the owner with no SSN in the question or the log | credit desk, mana | merged (b17dedb; shares Mana's guest path) | b17dedb | track credit-desk (demo-crs.ts) | CRS, Hyphenate, Fetch.ai |
+| A stated reason for every CRS pull (credit application or account review), with the application or customer; a pull for a decided or stale application asks the controller first; a per-task pull limit | credit desk | merged (b17dedb) | b17dedb | track credit-desk (demo-crs.ts) | CRS, Microsoft |
+| CRS MCP behind the broker (`credit-desk.crs_docs`, `credit-desk.crs_lookup`); login stays in the vault; the clerk can read docs only; SSN and date of birth redacted | credit desk | merged (b17dedb) | b17dedb | track credit-desk (demo-crs.ts) | CRS |
+| Nightly re-check routine at 02:00 (off by default; `/t/credit-desk/recheck`); a score drop sends the limit change to the controller | credit desk | merged (b17dedb) | b17dedb | track credit-desk (demo-crs.ts) | CRS, Hyphenate |
+| Fraud case file (`GET /t/credit-desk/case?application=`, HTML or JSON) and the same facts as task steps in the Business request screen | credit desk, business | merged (b17dedb) | b17dedb | track credit-desk (demo-crs.ts) | CRS, Hyphenate |
+| A fraudster who argues: 9 of 9 attempts to approve or give terms are refused by `credit_decision`; only a fraud hold is recorded, after the controller says yes | credit desk | merged (b17dedb) | b17dedb | track credit-desk (demo-crs.ts) | CRS, Armadin |
 
 ## Visa (Shopper)
 
