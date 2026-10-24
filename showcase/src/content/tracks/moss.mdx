@@ -55,9 +55,6 @@ status:
   - part: Photo descriptions
     state: live
     note: 'gemma4 in Ollama on the laptop VM; Claude (<code>claude-sonnet-4-6</code>) through a Droid task on the x86 VM.'
-  - part: Vultr's hosted vision model
-    state: not-built
-    note: 'Untested: the Vultr account has no Serverless Inference subscription yet, so the Vultr box uses the Claude backup.'
   - part: Offline merge gate
     state: simulated
     note: 'Plain <code>./demo</code> uses descriptions gemma4 wrote earlier and a word-match index in place of Moss, so every merge runs without network.'
@@ -149,7 +146,7 @@ a workspace.
 ## Try it
 
 1. Put `MOSS_PROJECT_ID` and `MOSS_PROJECT_KEY` in the box's vault, `/etc/box/vault.env`. Photos are described by
-   the first model in `MODELS` (`tracks/find/find.ts`) that answers: gemma4 in Ollama, then Vultr's hosted model, then
+   the first model in `MODELS` (`tracks/find/find.ts`) that answers: gemma4 in Ollama, then
    Claude through Droid with the box's Factory key. Edit that list to keep photos on your own GPU.
 2. Copy photos into any workspace. The track makes a `photos` workspace with the four test photos on first boot.
 3. Search: `curl -s '127.0.0.1:7700/t/find/search?q=find+the+whiteboard+photo&kind=photo'`.
@@ -160,7 +157,6 @@ a workspace.
 ## Limits
 
 - **Photos can leave the box.** When the local model is not available, Claude describes the photo in a Droid task, which sends it to Anthropic. Only text goes to Moss's cloud copy, and that text includes the descriptions. An opt-in for Claude is being built.
-- **Vultr's vision model is untested.** The account needs a paid Serverless Inference subscription first.
 - **Any task given `find.search` can search every workspace**, not only its own. A photo with text in it can carry
   that text into an agent's context as data.
 - **Only the first 2,000 characters** of a text file are indexed. Long files need chunking.

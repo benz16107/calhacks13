@@ -68,9 +68,6 @@ status:
   - part: Agent payments on the Vultr box
     state: test
     note: 'Tasks behind the Jira issues spend through the example tool, which moves no money.'
-  - part: Vultr Serverless Inference for /find
-    state: not-built
-    note: 'The code calls Vultr''s hosted vision model on a box with no GPU, but the account has no Serverless Inference subscription, so it is untested. The Vultr box describes photos with the Claude backup instead.'
   - part: Booting a GurtOS disc on a Vultr instance
     state: not-built
     note: 'The disc is built on Vultr and the steps are written, but no Vultr instance has booted it yet. It was tested in QEMU with BIOS firmware, which is what Vultr uses.'
@@ -164,7 +161,6 @@ The other Vultr jobs use the same VM over ssh from the build scripts:
 
 - One shared secret guards the Jira routes on the public box. Forge Remote's signed invocation tokens would let
   the box check each call came from the Forge app and that user.
-- The Vultr box has no GPU, so /find describes photos with Claude in a sandboxed task instead of a local model,
-  and Vultr's hosted vision model waits on a Serverless Inference subscription.
+- The Vultr box has no GPU, so /find describes photos with Claude in a sandboxed task instead of a local model.
 - No Vultr instance has booted the GurtOS disc yet; it is tested in QEMU only.
 - The update key lives on the build VM. There is one key, with no rotation.

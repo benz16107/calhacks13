@@ -480,7 +480,6 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 
 **Still to do:**
 
-- Vultr's hosted vision model (not built)
 - Agent memory that cannot be poisoned: what an agent reads from a web page or photo is labelled untrusted and cannot overwrite what you told it
 - One preference honoured across apps: say it once and every app's agent follows it
 - Photos described by a local model only, with Claude used only if the owner opts in
@@ -603,7 +602,6 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 **Still to do:**
 
 - Review the story with Ben: problem, features with their why, OS vs track
-- Vultr Serverless Inference for /find (not built)
 - Booting a GurtOS disc on a Vultr instance (not built)
 - Switching to the Vultr box from another box's portal (not built)
 
