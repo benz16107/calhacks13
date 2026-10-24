@@ -13,3 +13,8 @@ primary-color='#27313F'
 
 [org/gnome/desktop/screensaver]
 picture-uri='file:///usr/share/backgrounds/gurtos/hills-dark.svg'
+
+[com/ubuntu/login-screen]
+background-picture-uri='file:///usr/share/backgrounds/gurtos/hills-dark.svg'
+background-color='#27313F'
+background-size='cover'
