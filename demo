@@ -4,17 +4,21 @@
 #   ./demo laptop|linuxbox|vultr   that test machine
 #   BOX_SHELL='ssh my-vm' ./demo   any test machine with passwordless sudo
 #   ./demo --here                  this machine. Only on a test VM: it needs root.
+#   --skip-droid                   skip the real Droid step, only when Factory itself is down
 set -euo pipefail
 cd "$(dirname "$0")"
+skip=; args=()
+for a in "$@"; do if [[ $a == --skip-droid ]]; then skip=1; else args+=("$a"); fi; done
+set -- "${args[@]+"${args[@]}"}"
 
 if [[ ${1:-} == --here ]]; then
-  [[ $(id -u) == 0 ]] || exec sudo "$0" --here
+  [[ $(id -u) == 0 ]] || exec sudo DEMO_SKIP_DROID="${DEMO_SKIP_DROID:-$skip}" "$0" --here
   core/setup.sh >/dev/null
   lock=$(sha256sum package-lock.json | cut -c1-16)
   if [[ ! -f node_modules/.lock-$lock ]]; then
     npm ci --omit=dev --no-audit --no-fund --no-update-notifier --loglevel=error && touch "node_modules/.lock-$lock"
   fi
-  exec node --experimental-strip-types --disable-warning=ExperimentalWarning core/demo.ts
+  DEMO_SKIP_DROID="${DEMO_SKIP_DROID:-$skip}" exec node --experimental-strip-types --disable-warning=ExperimentalWarning core/demo.ts
 fi
 
 lima=$(command -v limactl || echo /home/linuxbrew/.linuxbrew/bin/limactl)
@@ -43,5 +47,5 @@ echo "demo: $BOX_SHELL, in $dest"
   git ls-files -co --exclude-standard | while IFS= read -r f; do [[ -e $f ]] && printf '%s\n' "$f"; done |
     tar -czf - -T - | base64
   echo EOF
-  echo "exec $dest/demo --here"
+  echo "DEMO_SKIP_DROID=$skip exec $dest/demo --here"
 } | $BOX_SHELL sudo bash -s

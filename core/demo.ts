@@ -159,7 +159,7 @@ const vaultText = fs.readFileSync(path.join(HOME, 'vault.env'), 'utf8');
 const secrets = vaultText.split('\n').map((l) => l.split('=').slice(1).join('=')).filter((v) => v.length > 8);
 await moment(
   'moment 1 with Droid: a real agent (Claude) in its own copy',
-  !vaultText.includes('FACTORY_API_KEY=')
+  !vaultText.includes('FACTORY_API_KEY=') || process.env.DEMO_SKIP_DROID
     ? undefined
     : async () => {
         workspace('repo', { 'notes.md': '# Notes\n' });
@@ -196,7 +196,7 @@ await moment(
         await api('POST', `/tasks/${D.id}/undo`);
         check(view('repo', 'notes.md') === '# Notes', 'undo removed its changes');
       },
-  'no FACTORY_API_KEY in /etc/box/vault.env on this machine',
+  process.env.DEMO_SKIP_DROID ? 'skipped with --skip-droid' : 'no FACTORY_API_KEY in /etc/box/vault.env on this machine',
 );
 
 // ---------- moments 2 to 4 ----------
