@@ -32,11 +32,11 @@ Checked against main `7fe6651`, Sat Oct 24 08:09 PT. `./demo` from a clean workt
 |---|---|
 | verified (ISO) | 3 |
 | verified | 56 |
-| merged | 132 |
+| merged | 139 |
 | building | 6 |
 | planned | 0 |
 | not pursued | 6 |
-| **Total** | **203** |
+| **Total** | **210** |
 
 **Collisions** (detail below): none open at 03:27. The three found at 02:25 are resolved and Business is on main. Still
 watched: portal/dist rebuilt from merged sources (C-4).
@@ -107,6 +107,13 @@ watched: portal/dist rebuilt from merged sources (C-4).
 | Activities search | personal | merged | a3b59e1 | none | Moss |
 | Files emblem with Keep and Undo | personal | merged | a3b59e1 | none | |
 | GurtOS Settings app (native) | personal | merged | a3b59e1, 1d64435 | none | |
+| The GurtOS app on Personal is native (GTK 4 and libadwaita), not the Server screen. Opens from the dock, the top bar's "Open GurtOS", any notification, Activities search and Files; sidebar: Agents, Activity, Time Machine, Apps. With Business on, Company in the sidebar opens the Business screens in the browser. Not tested on a Personal ISO yet (image is rebuilding) | personal | merged (screens in `personal/screenshots/app/`) | c1e790d, a9b1c44 | personal demo (35 passed) | |
+| Native Agents page: Needs you with Approve and Deny inline (logged as `desktop:<user>`), Running live, Ready to review, Done; a Pause all switch in the header; New task (Ctrl+N) | personal | merged | c1e790d, a9b1c44 | personal demo | |
+| Native task page: cost against budget, the waiting approval, Changes with Keep changes, Undo or Put files back, a line-by-line diff, What it can reach (folders, internet, apps, its own `box-` user), live Steps. Keep was checked on the VM: files reach the folder with the owner kept | personal | merged (Keep checked on the VM) | c1e790d, a9b1c44 | personal demo | Anthropic |
+| Native New task: words, folders (GNOME folder chooser), an Internet switch with sites, a budget; no folder means its own workspace | personal | merged | c1e790d, a9b1c44 | personal demo | |
+| Native Activity: the action log, a search box (Ctrl+F) and two filters (task, app) | personal | merged | c1e790d, a9b1c44 | personal demo | |
+| Native Time Machine: take out one task (Undo or Put back) or everything since 15 minutes, 1 hour or today, newest first; stops and says so if you edited a file | personal | merged | c1e790d, a9b1c44 | personal demo | |
+| Native Apps: each installed app is a panel in the window (a web view of the app's own page); links outside the app open in the browser | personal | merged | c1e790d, a9b1c44 | personal demo | |
 | GDM and Plymouth branding | personal, image | merged (branding hooks) | d451f8d, b0ab128 | none | Figma |
 | GurtOS Setup (first boot) | personal | merged | 96ce0cb | none | |
 | Approvals as GNOME notifications, Ask an Agent in Files | personal | merged (owner verified) | 65679b2 | personal/demo.ts | |
