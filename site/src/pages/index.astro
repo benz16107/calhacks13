@@ -1,6 +1,7 @@
 ---
 import { Image } from 'astro:assets';
 import Landing from '../layouts/Landing.astro';
+import HeroHills from '../components/HeroHills.astro';
 import HeroLayers from '../components/HeroLayers.astro';
 import { NAME, REPO, LICENSE_NAME } from '../product.ts';
 import server from '../assets/home/server-screen.png';
@@ -22,7 +23,8 @@ const core = [
 ---
 
 <Landing title={NAME} description={`${NAME} is an operating system where AI agents do real work with real access and never hold your keys. Download GurtOS Server or GurtOS Personal.`}>
-  <section class="hero" aria-labelledby="home-h">
+  <section class="hero" id="hero" data-phase="day" aria-labelledby="home-h">
+    <HeroHills />
     <div class="wrap hero-grid">
       <div class="intro">
         <h1 id="home-h">An operating system where AI agents work safely</h1>
@@ -103,12 +105,19 @@ const core = [
 </script>
 
 <style>
-  .hero { overflow: hidden; margin-bottom: 1rem; }
-  .hero-grid { display: grid; gap: 2rem; padding: 3.5rem 0 4.5rem; align-items: center; }
+  .hero { position: relative; overflow: hidden; isolation: isolate; margin-bottom: 1rem; }
+  .hero-grid { position: relative; z-index: 1; display: grid; gap: 2rem; padding: 3.5rem 0 4.5rem; align-items: center; }
   .intro h1 { margin-bottom: 1rem; max-width: 20ch; }
   .lead { font-size: var(--gw-text-lg); color: var(--gw-ink-2); max-width: 34rem; }
   .actions { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 1.5rem; }
   .btn.primary { font-size: 1.1rem; padding: 0.8rem 1.4rem; }
+  /* The time of day tints the backdrop hills. Light page and dark page each get their own night. */
+  .hero[data-phase='dawn'] { --tint: #e0907a; --tint-amt: 26%; }
+  .hero[data-phase='dusk'] { --tint: #cc7a6a; --tint-amt: 30%; }
+  .hero[data-phase='night'] { --tint: #27313f; --tint-amt: 45%; }
+  :global([data-theme='dark']) .hero[data-phase='night'] { --tint: #0b1015; --tint-amt: 30%; }
+  /* HeroHills pauses the whole hero by adding .paused. */
+  :global(.hero.paused *) { animation-play-state: paused !important; }
   @media (min-width: 900px) { .hero-grid { grid-template-columns: 5fr 7fr; } }
   .section-h { font-size: var(--gw-h2); }
   .edition { display: grid; gap: 1.5rem 3rem; padding: 2rem 0; border-top: 1px solid var(--gw-rule); align-items: center; }

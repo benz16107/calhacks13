@@ -1,20 +1,11 @@
 ---
 // The home hero's picture: your folder, a task's own layer floating above it, the agent writing to the layer,
 // then Keep merges it down or Undo lifts it away. SVG and CSS keyframes, a 13 s loop. The page pauses it
-// when it is off screen or the tab is hidden.
+// (`.hero.paused`) when the hero is off screen or the tab is hidden.
 ---
 
-<figure class="fig" id="hero-layers">
+<figure class="fig">
         <svg viewBox="0 0 520 340" role="img" aria-label="Your folder with a task's own layer floating above it. The task writes to the layer. Keep merges the layer into your folder, and Undo lifts it away, leaving your folder as it was.">
-          <!-- Other tasks, each on its own layer, further back -->
-          <g class="others" aria-hidden="true">
-            <g class="o o2" transform="translate(320 -40)"><rect x="0" y="0" width="200" height="120" rx="8" transform="matrix(0.9 0.32 -0.9 0.32 224 0)" /></g>
-            <g class="o o1" transform="translate(170 22)"><rect x="0" y="0" width="200" height="120" rx="8" transform="matrix(0.9 0.32 -0.9 0.32 224 0)" /></g>
-          </g>
-          <!-- The ground the folder sits on -->
-          <g class="ground" transform="translate(0 204)" aria-hidden="true">
-            <rect class="g1" x="-56" y="-52" width="312" height="224" rx="18" transform="matrix(0.9 0.32 -0.9 0.32 224 0)" />
-          </g>
           <!-- Your folder -->
           <g transform="translate(0 196)">
             <g transform="translate(0 8)"><rect class="under" x="0" y="0" width="200" height="120" rx="8" transform="matrix(0.9 0.32 -0.9 0.32 224 0)" /></g>
@@ -52,25 +43,8 @@
         </figcaption>
       </figure>
 
-<script is:inline>
-  (() => {
-    const fig = document.getElementById('hero-layers');
-    let inView = false;
-    const update = () => fig.classList.toggle('paused', !inView || document.hidden);
-    new IntersectionObserver(([e]) => { inView = e.isIntersecting; update(); }).observe(fig);
-    document.addEventListener('visibilitychange', update);
-  })();
-</script>
-
 <style>
   .fig { margin: 0; }
-  .paused, .paused * { animation-play-state: paused !important; }
-  .g1 { fill: var(--gw-sunken); opacity: 0.7; }
-  .o rect { fill: var(--gw-link-low); stroke: var(--gw-link); stroke-width: 1.5; }
-  .o1 { opacity: 0.32; } .o2 { opacity: 0.16; }
-  .o1 rect { animation: bob 9s ease-in-out infinite alternate; }
-  .o2 rect { animation: bob 11s ease-in-out -4s infinite alternate; }
-  @keyframes bob { from { translate: 0 -3px; } to { translate: 0 4px; } }
   svg { display: block; width: 100%; height: auto; overflow: visible; }
 
   .plate, .under { stroke-width: 1.5; }
@@ -114,7 +88,7 @@
 
   /* A still: the layer floats above the folder with its changes written. */
   @media (prefers-reduced-motion: reduce) {
-    .layer, .wr, .m1, .c, .o rect { animation: none; }
+    .layer, .wr, .m1, .c { animation: none; }
     .c { display: none; }
     .cs { opacity: 1; }
   }
