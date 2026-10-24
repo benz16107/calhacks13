@@ -623,7 +623,7 @@ function Devices() {
   const selfUrl = selfBox().url;
   const origin =
     typeof code === 'object' ? (/^https?:/.test(code.url) ? new URL(code.url).origin : selfUrl ? new URL(selfUrl).origin : loopback ? undefined : location.origin) : undefined;
-  const url = origin && typeof code === 'object' ? `${origin}/#pair/${code.code}` : undefined;
+  const url = typeof code === 'object' && /^https?:/.test(code.url) ? code.url : origin && typeof code === 'object' ? `${origin}/#pair/${code.code}` : undefined;
   const left = typeof code === 'object' ? Math.max(0, Math.round((Date.parse(code.expiresAt) - now) / 1000)) : 0;
   const paired = (d: Device) => new Date(d.pairedAt).toLocaleString('en-US', { weekday: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).replace(',', '');
   return (

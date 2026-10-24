@@ -5,7 +5,7 @@ import { useEffect } from 'preact/hooks';
 import './kit/kit.css';
 import './shell.css';
 import './apps/index.tsx';
-import { changed, start, surface, useBox } from './live.ts';
+import { changed, hosted, start, surface, useBox } from './live.ts';
 import { Banners, BootScreen, DesktopHome, Dock, Launcher, LockScreen, OutageBar, PairFirst, PhoneHome, TabBar, TopBar, access, shell, useIdleLock } from './shell.tsx';
 import { Windows, open, phone, restore, wm } from './wm.tsx';
 import { SetupWizard } from './setup.tsx';
@@ -34,7 +34,8 @@ function App() {
   });
 
   // Off the box's own screen the box answers only paired devices.
-  if (b.unpaired) return <PairFirst />;
+  // On app.gurtos.com, /pair adds a machine even when others are paired already.
+  if (b.unpaired || (hosted && location.pathname === '/pair')) return <PairFirst />;
   // On the box's own screen, the box out of reach means its service is starting: show the boot screen.
   if (b.down && surface === 'box screen') return <BootScreen />;
   // First run: the wizard on the box's screen (or the owner's phone) until setup is done. Nothing else shows.

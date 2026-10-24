@@ -11,6 +11,8 @@
 #   DEV_VM='limactl shell --workdir / box --'   how to run a command in the VM (any command that takes one after it)
 #   DEV_URL=http://192.168.1.20:7700            the address a phone uses to reach the box, shown in the pairing QR
 #   DEV=<name> DEV_PORT=<port>                  a second box beside the first (another checkout), with its own data
+#   DEV_NAME='lab box'                          the box's name (default "dev box")
+#   DEV_ORIGINS='*'                             let pages on other origins call it (the hosted app, app.gurtos.com)
 set -euo pipefail
 cd "$(dirname "$0")/.."
 read -r -a vm_cmd <<< "${DEV_VM:-limactl shell --workdir / box --}"
@@ -29,8 +31,8 @@ wipe="$kill
   rm -rf $home
   flock /run/lock/box-spacetime-cli.lock spacetime delete --server local -y box-$name >/dev/null 2>&1 || true"
 start="cd $dest
-  BOX_ID=dev-box BOX_NAME='dev box' BOX_URL=${DEV_URL:-http://192.168.1.20:7700} BOX_PEERS='[{\"id\":\"peer\",\"name\":\"second box\",\"stdb\":\"box\"}]' \
-  BOX_HOME=$home BOX_PORT=$port BOX_VAULT=$home/vault.env BOX_STDB_DB=box-$name BOX_PROXY_PORT=auto \
+  BOX_ID=${DEV:-dev-box} BOX_NAME='${DEV_NAME:-dev box}' BOX_URL=${DEV_URL:-http://192.168.1.20:7700} BOX_PEERS='[{\"id\":\"peer\",\"name\":\"second box\",\"stdb\":\"box\"}]' \
+  BOX_ORIGINS='${DEV_ORIGINS:-}' BOX_HOME=$home BOX_PORT=$port BOX_VAULT=$home/vault.env BOX_STDB_DB=box-$name BOX_PROXY_PORT=auto \
   BOX_PORTAL=$dest/portal/dist setsid nohup node --experimental-strip-types --disable-warning=ExperimentalWarning core/box.ts \
   >> $home/box.log 2>&1 < /dev/null &
   echo \$! > /run/box-$name.pid

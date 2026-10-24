@@ -445,7 +445,7 @@ function usePairing() {
   // The phone opens the app's own pairing route on the box's address (BOX_URL), never this screen's loopback.
   const origin = typeof code === 'object' ? (/^https?:/.test(code.url) ? new URL(code.url).origin : selfBox().url ? new URL(selfBox().url!).origin : loopback ? undefined : location.origin) : undefined;
   const showCode = !owner || now - owner.at < 10_000;
-  const url = showCode && origin && typeof code === 'object' ? `${origin}/#pair/${code.code}` : undefined;
+  const url = showCode && typeof code === 'object' && /^https?:/.test(code.url) ? code.url : origin && typeof code === 'object' ? `${origin}/#pair/${code.code}` : undefined;
   return { code: showCode ? code : undefined, url, owner: owner?.device, showCode };
 }
 

@@ -3,7 +3,7 @@
 // and the tab bar. The wallpaper is the page's background.
 import type { ComponentChildren } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { api, box, changed, pairing, patchSettings, setPairing, surface, undo, useBox, type Approval, type Pairing } from './live.ts';
+import { addMachine, api, box, changed, hosted, machine, machines, pairing, patchSettings, setPairing, surface, switchMachine, undo, useBox, type Approval, type Pairing } from './live.ts';
 import { AddToHomeScreen, InstallCard, ios, standalone } from './pwa/pwa.tsx';
 import { AnswerButtons } from './apps/answer.tsx';
 import { AppIcon, Badge, Button, Icon, Menu, Popover, Progress, Switch } from './kit/ui.tsx';
@@ -127,6 +127,24 @@ export function TopBar() {
   );
 }
 
+const editionName = (e?: string) => (e ? `${PRODUCT} ${e[0].toUpperCase()}${e.slice(1)}` : PRODUCT);
+/** app.gurtos.com: every paired machine, then Add and Forget. */
+function machineItems() {
+  const now = machine();
+  return [
+    ...machines().map((m) => ({
+      label: `${m.box.name} · ${editionName(m.edition)}`,
+      icon: m === now || m.box.id === now?.box.id ? 'object-select' : 'computer',
+      run: () => (m.box.id === now?.box.id ? undefined : switchMachine(m.box.id)),
+    })),
+    'sep' as const,
+    { label: 'Add a machine…', icon: 'list-add', run: () => location.assign('/pair') },
+    ...(now
+      ? [{ label: `Forget ${now.box.name}…`, icon: 'user-trash', destructive: true, run: () => confirm(`Forget ${now.box.name} on this device? It stays paired on the box until you revoke it there.`) && (setPairing(undefined), location.replace('/')) }]
+      : []),
+  ];
+}
+
 function BoxMenu({ anchor }: { anchor: HTMLElement | null }) {
   const b = useBox();
   return (
@@ -135,7 +153,8 @@ function BoxMenu({ anchor }: { anchor: HTMLElement | null }) {
         label="Boxes"
         onClose={() => toggle('boxes')}
         items={[
-          ...boxList().map((x) => ({
+          ...(hosted ? machineItems() : []),
+          ...(hosted ? [] : boxList()).map((x) => ({
             label: x.self ? `${x.name} (this box)` : x.name,
             icon: x.self ? 'object-select' : 'computer',
             disabled: !x.self && !x.url,
@@ -827,6 +846,22 @@ export function useIdleLock(enabled: boolean) {
 
 // ---------- not paired ----------
 
+/** 'rosa.box.gurtos.com' or a full address, as the base the box's API is under. */
+const boxUrl = (a: string) => {
+  const t = a.trim().replace(/\/+$/, '');
+  return /^https?:\/\//.test(t) ? t : `https://${t}`;
+};
+/** app.gurtos.com: redeem a code on that box, ask it which edition it is, and add it to this app's machines. */
+async function pairWith(url: string, body: { code: string; name: string }) {
+  const r = await fetch(`${url}/api/pair`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }).catch(() => {
+    throw new Error(`no box answered at ${url}`);
+  });
+  const p = (await r.json().catch(() => ({}))) as Pairing & { error?: string };
+  if (!r.ok) throw new Error(p.error ?? `the box said ${r.status}`);
+  const sys = await fetch(`${url}/api/system`, { headers: { authorization: `Bearer ${p.token}` } }).then((x) => x.json(), () => ({}));
+  addMachine({ token: p.token, device: p.device, box: p.box, url, edition: sys.edition });
+}
+
 /** Off the box's own screen the box answers only paired devices. Pair with the code from the box's screen. */
 export function PairFirst() {
   const guess = /iPhone/.test(navigator.userAgent) ? 'iPhone' : /Android/.test(navigator.userAgent) ? 'Android phone' : 'Laptop';
@@ -838,11 +873,14 @@ export function PairFirst() {
   const [state, setState] = useState<'ask' | 'busy' | string>('ask');
   const revoked = !!localStorage.getItem('gurtos.was-paired');
   const [inSafari, setInSafari] = useState(false);
+  // On app.gurtos.com the link names the box: /pair?box=rosa.box.gurtos.com#<code>.
+  const [boxAddr, setBoxAddr] = useState(new URLSearchParams(location.search).get('box') ?? '');
+  const adding = hosted && machines().length > 0;
   const redeem = (c: string) => {
     setState('busy');
-    api<Pairing>('POST', '/pair', { code: c.replace(/[^0-9a-z]/gi, '').toLowerCase(), name: name.trim() || guess })
-      .then((p) => {
-        setPairing(p);
+    const body = { code: c.replace(/[^0-9a-z]/gi, '').toLowerCase(), name: name.trim() || guess };
+    (hosted ? pairWith(boxUrl(boxAddr), body) : api<Pairing>('POST', '/pair', body).then(setPairing))
+      .then(() => {
         localStorage.setItem('gurtos.was-paired', '1');
         location.replace('/');
       })
@@ -850,7 +888,7 @@ export function PairFirst() {
   };
   const go = (e: Event) => (e.preventDefault(), redeem(code));
   // An iPhone's Home Screen app keeps its own storage, so a code redeemed in Safari wouldn't carry over to it.
-  if (fromLink && ios() && !standalone() && !inSafari) return <AddToHomeScreen pairCode={decodeURIComponent(fromLink)} onSafari={() => (setInSafari(true), redeem(code))} />;
+  if (fromLink && ios() && !standalone() && !inSafari) return <AddToHomeScreen pairCode={decodeURIComponent(fromLink)} box={hosted ? boxAddr : undefined} onSafari={() => (setInSafari(true), redeem(code))} />;
   return (
     <div class="gos-setup-layer">
       <section class="g-window gos-pair-first" aria-labelledby="pair-first-title">
@@ -859,12 +897,18 @@ export function PairFirst() {
             <Icon name="phone" size={32} />
           </span>
           <h1 class="t-title2" id="pair-first-title">
-            {standalone() && !fromLink ? 'Type the pairing code' : `Pair this ${surface === 'phone' ? 'phone' : 'device'} first`}
+            {adding ? 'Add a machine' : standalone() && !fromLink ? 'Type the pairing code' : `Pair this ${surface === 'phone' ? 'phone' : 'device'} first`}
           </h1>
           <p class="t-body t-secondary">
             {revoked ? 'This device was removed from the box, so it needs a new code. ' : ''}
-            {PRODUCT} shows tasks and requests only to paired devices. On the box's own screen, open Settings, then Devices, and scan the QR code. Or type the code it shows.
+            {PRODUCT} shows tasks and requests only to paired devices. On the box's own screen, open Settings, then Devices, and scan the QR code. Or type {hosted ? 'its address and ' : ''}the code it shows.
           </p>
+          {hosted && (
+            <label class="gos-field">
+              <span class="t-body-strong">Box address</span>
+              <input class="g-field" value={boxAddr} placeholder="rosa.box.gurtos.com" inputMode="url" autoComplete="off" autoCapitalize="none" spellcheck={false} onInput={(e) => setBoxAddr((e.target as HTMLInputElement).value)} />
+            </label>
+          )}
           <label class="gos-field">
             <span class="t-body-strong">Code from the box's screen</span>
             <input class="g-field gos-code-field" value={code} placeholder="7Q4M-2KXD" autoComplete="off" autoCapitalize="characters" spellcheck={false} onInput={(e) => setCode((e.target as HTMLInputElement).value)} />
@@ -873,7 +917,7 @@ export function PairFirst() {
             <span class="t-body-strong">Name this {surface === 'phone' ? 'phone' : 'device'}</span>
             <input class="g-field" value={name} maxLength={40} autoFocus={!!fromLink} onInput={(e) => setName((e.target as HTMLInputElement).value)} />
           </label>
-          <button type="submit" class="g-btn g-btn-suggested g-btn-large" disabled={code.replace(/[^0-9a-z]/gi, '').length < 4 || state === 'busy'}>
+          <button type="submit" class="g-btn g-btn-suggested g-btn-large" disabled={code.replace(/[^0-9a-z]/gi, '').length < 4 || (hosted && !boxAddr.trim()) || state === 'busy'}>
             Pair
           </button>
           {state !== 'ask' && state !== 'busy' && (
@@ -882,6 +926,11 @@ export function PairFirst() {
             </p>
           )}
           <p class="t-caption t-secondary">A paired device can approve, deny and start tasks. It never holds a key.</p>
+          {adding && (
+            <Button kind="flat" onClick={() => location.replace('/')}>
+              Cancel
+            </Button>
+          )}
         </form>
       </section>
     </div>

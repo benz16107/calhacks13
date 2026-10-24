@@ -66,7 +66,18 @@ export interface Restored { at: number; tasks: string[]; restarted: boolean; los
 /** A box the portal can show: this one, and peers from BOX_PEERS (GET /api/boxes). */
 export interface BoxEntry { id: string; name: string; stdb?: string; self?: boolean; url?: string }
 /** This phone's pairing with this box (POST /api/pair), kept in the browser. */
-export interface Pairing { token: string; device: { id: string; name: string }; box: { id: string; name: string } }
+export interface Pairing { token: string; device: { id: string; name: string; person?: string }; box: { id: string; name: string } }
+/** A box this device is paired with. On a box's own portal there is one, the box itself (url ''). On app.gurtos.com
+ *  there can be many, each called at its own https address with its own token. */
+export interface Machine extends Pairing { url: string; edition?: string; pushKey?: string }
+
+// app.gurtos.com is the portal in hosted mode: same code, but the machines are a list and none is this page's origin.
+// Opening any page with ?hosted tries it on another address (for testing against a dev box).
+if (new URLSearchParams(location.search).has('hosted')) localStorage.setItem('gurtos.hosted', '1');
+export const hosted = location.hostname === 'app.gurtos.com' || localStorage.getItem('gurtos.hosted') === '1';
+// A notification opens /?machine=<box id>#task/<id>: show that machine.
+const picked = new URLSearchParams(location.search).get('machine');
+if (picked) localStorage.setItem('gurtos.machine', picked);
 
 /** Who answers from this screen. It goes into the log as `by`. */
 export const surface: 'box screen' | 'phone' | 'portal' =
@@ -130,7 +141,7 @@ export function useBox() {
 
 export async function api<T = any>(method: string, path: string, body?: unknown, timeoutMs = 15_000): Promise<T> {
   const token = pairing()?.token;
-  const r = await fetch(`/api${path}`, {
+  const r = await fetch(`${base()}/api${path}`, {
     method,
     headers: { ...(body === undefined ? {} : { 'content-type': 'application/json' }), ...(token ? { authorization: `Bearer ${token}` } : {}) },
     body: body === undefined ? undefined : JSON.stringify(body),
@@ -232,7 +243,7 @@ function follow() {
   es?.close();
   if (box.unpaired) return;
   // Start one line back: the box sends the stream's headers with its first event, so a replayed line opens it at once.
-  const stream = new EventSource(`/api/log/stream?after=${Math.max(0, (box.events.at(-1)?.seq ?? 0) - 1)}${tokenQuery('&')}`);
+  const stream = new EventSource(`${base()}/api/log/stream?after=${Math.max(0, (box.events.at(-1)?.seq ?? 0) - 1)}${tokenQuery('&')}`);
   es = stream;
   stream.onmessage = (m) => take(JSON.parse(m.data));
   stream.onopen = () => {
@@ -269,7 +280,7 @@ function drop() {
 let misses = 0;
 function heartbeat() {
   setInterval(async () => {
-    const ok = await fetch('/api/health', { cache: 'no-store', signal: AbortSignal.timeout(3500) }).then((r) => r.ok, () => false);
+    const ok = await fetch(`${base()}/api/health`, { cache: 'no-store', signal: AbortSignal.timeout(3500) }).then((r) => r.ok, () => false);
     if (ok) {
       misses = 0;
       if (box.down && !es) follow();
@@ -363,13 +374,44 @@ function spacetime(h: Health) {
 
 // ---------- actions ----------
 
-export const pairing = (): Pairing | undefined => JSON.parse(localStorage.getItem('pairing') ?? 'null') ?? undefined;
-/** Pair or unpair this device. The service worker keeps its own copy (it can't read localStorage) to answer from a
- *  notification; caches exist only on a secure page, which is also the only place a service worker runs. */
-export function setPairing(p: Pairing | undefined) {
-  if (p) localStorage.setItem('pairing', JSON.stringify(p));
+/** Every machine this device is paired with. */
+export function machines(): Machine[] {
+  if (hosted) return JSON.parse(localStorage.getItem('gurtos.machines') ?? '[]');
+  const p: Pairing | null = JSON.parse(localStorage.getItem('pairing') ?? 'null');
+  return p ? [{ ...p, url: '' }] : [];
+}
+/** The machine this page shows: the one picked in the box switcher, else the first. */
+export const machine = (): Machine | undefined => machines().find((m) => m.box.id === localStorage.getItem('gurtos.machine')) ?? machines()[0];
+export const pairing = (): Pairing | undefined => machine();
+/** Where this page's machine answers: '' (this page's own origin) on a box, its https address on app.gurtos.com. */
+export const base = () => (hosted ? (machine()?.url ?? '') : '');
+// app.gurtos.com with no machine yet: straight to pairing, from the first frame.
+if (hosted && !machine()) box.unpaired = true;
+
+/** Keep the list, and the service worker's copy of it (it can't read localStorage; it answers from notifications). */
+function saveMachines(all: Machine[]) {
+  if (hosted) localStorage.setItem('gurtos.machines', JSON.stringify(all));
+  else if (all[0]) localStorage.setItem('pairing', JSON.stringify({ token: all[0].token, device: all[0].device, box: all[0].box, ...(all[0].pushKey ? { pushKey: all[0].pushKey } : {}) }));
   else localStorage.removeItem('pairing');
-  if (typeof caches !== 'undefined') void caches.open('gurtos-pairing').then((c) => void (p ? c.put('/pairing', new Response(JSON.stringify(p))) : c.delete('/pairing')));
+  // caches exist only on a secure page, which is also the only place a service worker runs.
+  if (typeof caches !== 'undefined')
+    void caches.open('gurtos-pairing').then((c) => void c.put('/machines', new Response(JSON.stringify(all.map((m) => ({ ...m, url: m.url || location.origin }))))));
+}
+/** Add a machine (or renew its pairing) and show it. */
+export function addMachine(m: Machine) {
+  saveMachines([...machines().filter((x) => x.box.id !== m.box.id), m]);
+  localStorage.setItem('gurtos.machine', m.box.id);
+}
+/** Show another machine. Everything on the page is that machine's, so start over. */
+export function switchMachine(id: string) {
+  localStorage.setItem('gurtos.machine', id);
+  location.replace(location.pathname === '/screen' ? '/screen' : '/');
+}
+/** Pair this page's machine again, or forget it (revoked on the box, or "Forget this machine"). */
+export function setPairing(p: Pairing | undefined) {
+  const m = machine();
+  if (p) addMachine({ url: m?.url ?? '', ...m, ...p });
+  else saveMachines(machines().filter((x) => x.box.id !== m?.box.id));
 }
 
 /**
@@ -452,6 +494,9 @@ async function loadOwner() {
 }
 export async function loadSystem() {
   box.system = await api<System>('GET', '/system').catch(() => box.system);
+  // The switcher shows each machine's name and edition as it last saw them.
+  const m = machine(), s = box.system;
+  if (hosted && m && s && (m.edition !== s.edition || m.box.name !== s.boxName)) addMachine({ ...m, edition: s.edition, box: { ...m.box, name: s.boxName } });
   changed();
 }
 /** Change settings. Only the owner may; anyone else gets the box's own error, which names why. */
@@ -462,6 +507,7 @@ export async function patchSettings(patch: Partial<Settings> | Record<string, un
 }
 
 export async function start() {
+  if (hosted && !machine()) return; // nothing to ask yet: the page is on pairing (box.unpaired)
   heartbeat();
   await Promise.all([refresh(), loadHealth(), loadApps(), loadSettings(), loadSetup(), loadSystem()]).catch(() => {
     if (box.unpaired) return;

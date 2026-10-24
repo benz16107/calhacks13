@@ -27,7 +27,7 @@ addEventListener('appinstalled', () => ((prompt = null), changed()));
 const code = (c: string) => c.toUpperCase().match(/.{1,4}/g)?.join('-') ?? c;
 
 /** iPhone Safari opened a pairing link: add the app to the Home Screen first, then type the code there. */
-export function AddToHomeScreen({ pairCode, onSafari }: { pairCode: string; onSafari: () => void }) {
+export function AddToHomeScreen({ pairCode, box, onSafari }: { pairCode: string; box?: string; onSafari: () => void }) {
   return (
     <div class="gos-setup-layer">
       <section class="g-window gos-pair-first" aria-labelledby="a2hs-title">
@@ -57,7 +57,7 @@ export function AddToHomeScreen({ pairCode, onSafari }: { pairCode: string; onSa
             <li>
               <span class="gos-a2hs-n">3</span>
               <span>
-                Open <b>{PRODUCT}</b> from your Home Screen and type this code:
+                Open <b>{PRODUCT}</b> from your Home Screen and type {box ? <>the box address <b>{box}</b> and </> : ''}this code:
               </span>
             </li>
           </ol>
