@@ -112,6 +112,9 @@ try {
       if (u) {
         const tokens = { input: u.inputTokens, output: u.outputTokens, cacheWrite: u.cacheCreationTokens, cacheRead: u.cacheReadTokens };
         await call(sock, 'POST', '/usage', { model: session.settings.modelId, what: 'model', tokens });
+        // Factory's own count for this turn, for the Factory app's usage view.
+        const credits = u.factoryCredits;
+        if (credits) await step(`Factory usage: ${credits.toLocaleString('en-US')} credits`, { factoryCredits: credits });
       }
       if (!msg.success) throw new Error(msg.error?.message ?? `Droid stopped: ${msg.subtype}`);
     }
