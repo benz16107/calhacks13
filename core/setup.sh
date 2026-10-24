@@ -1,7 +1,27 @@
 #!/usr/bin/env bash
 # Prepare a test box (Ubuntu 24.04, ARM64 or x86) for the box service. Safe to run again. Needs root.
+#   core/setup.sh          everything      BOX_NO_DROID=1 core/setup.sh   everything but Droid
+#   core/setup.sh droid    only the Droid CLI (an image's first boot)
 set -euo pipefail
 NODE_MAJOR=24
+
+# The Droid CLI, for every task user. Not Factory's install script: it kills every running droid.
+# Its license does not allow shipping it inside our images, so an image sets BOX_NO_DROID=1 here and runs
+# `core/setup.sh droid` at first boot instead.
+install_droid() {
+  DROID_VERSION=0.248.0
+  if ! /usr/local/bin/droid --version 2>/dev/null | grep -q "$DROID_VERSION"; then
+    arch=$(uname -m); case $arch in aarch64) arch=arm64;; x86_64) arch=x64; grep -qi avx2 /proc/cpuinfo || arch=x64-baseline;; esac
+    url=https://downloads.factory.ai/factory-cli/releases/$DROID_VERSION/linux/$arch/droid
+    tmp=$(mktemp)
+    curl -fsSL "$url" -o "$tmp"
+    [ "$(sha256sum "$tmp" | cut -d' ' -f1)" = "$(curl -fsSL "$url.sha256")" ] || { rm -f "$tmp"; echo "droid checksum mismatch" >&2; exit 1; }
+    install -m 0755 "$tmp" /usr/local/bin/droid.new && mv /usr/local/bin/droid.new /usr/local/bin/droid # never a half-written droid
+    rm -f "$tmp"
+  fi
+  droid --version
+}
+if [ "${1:-}" = droid ]; then install_droid; exit 0; fi
 
 # nftables limits task networks; ripgrep is for Droid (it would try to download one otherwise).
 missing=$(for p in nftables ripgrep; do dpkg -s $p >/dev/null 2>&1 || echo $p; done)
@@ -21,18 +41,8 @@ if ! have_node; then
 fi
 node -v
 
-# The Droid CLI, for every task user. Not Factory's install script: it kills every running droid.
-DROID_VERSION=0.248.0
-if ! /usr/local/bin/droid --version 2>/dev/null | grep -q "$DROID_VERSION"; then
-  arch=$(uname -m); case $arch in aarch64) arch=arm64;; x86_64) arch=x64; grep -qi avx2 /proc/cpuinfo || arch=x64-baseline;; esac
-  url=https://downloads.factory.ai/factory-cli/releases/$DROID_VERSION/linux/$arch/droid
-  tmp=$(mktemp)
-  curl -fsSL "$url" -o "$tmp"
-  [ "$(sha256sum "$tmp" | cut -d' ' -f1)" = "$(curl -fsSL "$url.sha256")" ] || { echo "droid checksum mismatch" >&2; exit 1; }
-  install -m 0755 "$tmp" /usr/local/bin/droid
-  rm -f "$tmp"
-fi
-droid --version
+[ "${BOX_NO_DROID:-}" = 1 ] || install_droid
+
 
 # SpacetimeDB: live task status and approvals for the portal and phone. The box publishes its module at boot.
 if ! command -v spacetime >/dev/null; then

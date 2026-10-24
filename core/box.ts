@@ -221,6 +221,8 @@ class Core {
       let byok: string | undefined; // the model id, when the task runs on the owner's own Anthropic key
       if (t.worker === 'droid') {
         if (!this.modelVia()) this.vault = loadVault(); // a key added to the file by hand since boot
+        // An image downloads Droid at first boot (its license forbids shipping it in the image).
+        if (!fs.existsSync('/usr/local/bin/droid')) throw new Error('Droid is still downloading; it arrives a minute after the first start with a network connection');
         const via = this.modelVia();
         if (!via) throw new Error('the vault has no model key: add ANTHROPIC_API_KEY or FACTORY_API_KEY in Setup');
         // The task holds placeholders. The proxy swaps in the real key on the way to Factory or Anthropic.
