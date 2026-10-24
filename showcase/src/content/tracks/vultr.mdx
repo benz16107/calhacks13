@@ -3,7 +3,7 @@ order: 17
 sponsor: Vultr
 prize: 'MLH: Best use of Vultr'
 editions: 'GurtOS Server'
-pitch: 'GurtOS Server runs wherever a VM does. On Vultr it is the public, always-on box: Jira and Mana reach it, and the rest of its API stays closed.'
+pitch: 'GurtOS Server runs wherever a VM does. On Vultr it is the public, always-on box: Jira and Mana reach it, and the rest of its API stays closed. The real release disc also installs and boots on a 1 vCPU, 1 GB Vultr instance, its state backs up encrypted to Vultr Object Storage, and Vultr''s firewall is set from code.'
 title: The always-on box, the build machine and the public door
 summary: 'A Vultr Cloud Compute VM in San Jose is the GurtOS box the rest of the world can reach: Jira''s Forge app approves and rolls back tasks on it, and a public Mana app reads its status live. The same VM builds the bootable GurtOS discs and runs the full merge gate. A second Vultr VM runs GurtOS Personal on a GNOME desktop for the desktop layer''s tests.'
 proof: '<code>./demo vultr</code> on Oct 24: all 22 sections, 175 checks, 0 failed in 105 seconds on the Vultr VM, including a real Droid task running Claude and a hard power cut the box came back from. The GurtOS Server and Personal install discs were built on the same VM that night.'
@@ -11,10 +11,18 @@ criteriaSource: "From MLH's Vultr prize, as copied into the project's track plan
 criteria:
   - ask: 'Best use of Vultr cloud.'
     how: 'Vultr does four jobs no other machine does: the <strong>always-on public box</strong> (the only GurtOS box with a public HTTPS address), the <strong>build machine</strong> for the bootable discs, a <strong>test machine</strong> for the merge gate on x86, and the <strong>GNOME desktop</strong> where GurtOS Personal is tested. Agents on the public box run with every safety part on, and its whole API stays closed to the internet except two paths.'
+  - ask: 'Use Vultr cloud well: boot the real OS on it.'
+    how: 'The real GurtOS Server release disc was installed on a Vultr Cloud Compute instance (1 vCPU, 1 GB of RAM) and ran from its own disk, state is backed up to private Vultr Object Storage encrypted so Vultr cannot read it, and Vultr''s cloud firewall is set from code. Each was run live on Oct 24 for under $0.20 in all, and the test resources were destroyed.'
   - ask: 'Use Vultr in the project.'
     how: 'The Jira issues BOX-1 to BOX-5 are tasks that ran on the Vultr box. The Mana app at the link below reads the Vultr box every 5 seconds. <code>./demo vultr</code>, <code>./deploy vultr</code> and <code>image/build</code> all target it.'
 video: main
 shots:
+  - src: ../../assets/track/vultr/disc-installing.png
+    alt: 'The Vultr console showing the GurtOS Server installer: "Installing GurtOS Server on /dev/vda (25G)", "Copying the system to slot A", and a progress bar at 50%.'
+    caption: 'The real GurtOS Server release disc installing on a Vultr Cloud Compute instance (1 vCPU, 1 GB of RAM, 25 GB), seen on Vultr''s console, about 3 minutes after the instance was created.'
+  - src: ../../assets/track/vultr/disc-booted.png
+    alt: 'The GurtOS home screen on the Vultr console after the disc was detached: nothing needs your OK, nothing is running, spent today $0.00, with the box named gurt-b5c01e.'
+    caption: 'The same instance after the disc was detached: the box came back from its own disk with the same name. This is the release disc''s own screen, so its store app still shows an older name.'
   - src: ../../assets/track/vultr/mana-live.png
     alt: 'The public GurtOS status app in Mana, reading the Vultr box live: 0 running, 0 waiting, 3.27 dollars total, and six recently finished tasks.'
     caption: 'The public Mana app reading the Vultr box live, signed out, on Oct 24. The six tasks are the ones behind the Jira issues BOX-1 to BOX-5 and a photo description for /find.'
@@ -69,14 +77,31 @@ status:
     state: test
     note: 'Tasks behind the Jira issues spend through the example tool, which moves no money.'
   - part: Booting a GurtOS disc on a Vultr instance
+    state: live
+    note: 'Installed the real release disc (1.5 GB) on a Vultr vc2-1c-1gb (1 vCPU, 1 GB RAM, 25 GB disk, about $0.007 an hour): the instance was running in 12 s, the installer finished and the box''s screen was up about 5 minutes after creation, and after the disc was detached it came back from its own disk with the same name. The first-boot wizard was shown, not clicked through. The test instance was destroyed.'
+  - part: Encrypted backups to Vultr Object Storage
+    state: live
+    note: 'The box tars its state, encrypts it with age to the owner''s public key and uploads it to a private bucket, so Vultr holds only ciphertext and the owner keeps the private key. Restored onto a fresh Vultr instance in 2.8 s, a task that was waiting for an OK came back waiting and finished after approval, and a finished task stayed finished. The restore ran on the Server debug build of the same image, because the release disc has no shell, and the image does not ship the age program yet. The box''s own daily backup trigger was tested against stand-ins and from a test VM, not on a Vultr instance running this track.'
+  - part: Vultr cloud firewall set from code
+    state: live
+    note: 'A firewall group was created, attached to an instance and changed, and Vultr enforced it: ssh from a non-allowed address timed out within 15 s and worked again once the right address was restored. Adding a rule can take up to about 3 minutes to take effect. It can never open ports 7700 or 3000. The box''s own PUT route for it was tested against stand-ins, not on a Vultr instance running this track.'
+  - part: Vultr Serverless Inference
     state: not-built
-    note: 'The disc is built on Vultr and the steps are written, but no Vultr instance has booted it yet. It was tested in QEMU with BIOS firmware, which is what Vultr uses.'
+    note: 'A paid subscription the account does not have. Nothing here uses it.'
   - part: Switching to the Vultr box from another box's portal
     state: not-built
     note: 'The portal''s box switcher lists the Vultr box, but the installed boxes do not have each other''s addresses, so it shows "no address yet".'
 ---
 
 ## Evidence
+
+**Booting the real disc on Vultr, Oct 24.** `tracks/vultr/up.ts` added the release disc (`gurtos-server-x86_64`, 1.5 GB) from a URL and created a `vc2-1c-1gb` instance that booted it. Times from creating the instance: running with an address 12 s, the installer copying the system at 50% after about 3 minutes, the installer finished and the GurtOS home screen up after about 5 minutes, and about a minute more for the box to come back from its own disk after the disc was detached, with the same name. The first attempt detached the disc after 300 s and cut the installer off, so the script now waits 480 s by default on one vCPU.
+
+**Encrypted backups.** The box writes its state as a tar, pipes it through `age` to the owner's public key, and uploads it to a private Vultr Object Storage bucket; the owner makes the key pair on their own computer and keeps the private half, so Vultr holds only ciphertext and so does a thief of the bucket. Restoring onto a fresh Vultr instance took 2.8 s to download, decrypt and start the box on the restored folder. The finished task was listed as done, the waiting task as waiting, and after an OK on the restored box it finished and wrote its file. Not backed up: the vault, the relay identity and the box's CA key, which a restored box makes again.
+
+**Firewall.** `PUT /t/vultr/firewall` makes a Vultr firewall group hold exactly the listed rules and puts the instance in it. It refuses a config with no ssh source or one wider than a /8, and it can never open 7700 or 3000. On a live instance, with ssh allowed only from a wrong address, ssh from outside timed out although the box's own firewall accepts port 22; putting the right address back let it in again.
+
+The merge gate below, run on a separate Vultr VM, is the earlier evidence.
 
 The full merge gate, run on the Vultr VM on Oct 24. It ships the checkout to the VM and runs the four demo moments,
 then every track's step, on a fresh box that cleans up after itself. The summary, and two of the moments:
@@ -151,7 +176,7 @@ The other Vultr jobs use the same VM over ssh from the build scripts:
 2. Run the merge gate on it from a checkout of the repo: `BOX_SHELL='ssh root@<your instance>' ./demo`.
 3. Install the box for real: copy the repo over and run `sudo core/install.sh`.
 4. Build the discs on it: `BUILD_SHELL='ssh root@<your instance>' image/build`, then `image/build personal`.
-5. To boot GurtOS itself on Vultr, follow
+5. To boot GurtOS itself on Vultr, run `tracks/vultr/up.ts --iso-url <the disc's https address>` (it adds the disc, creates the instance, waits for the installer and detaches the disc), or follow
    [Install on a cloud instance](https://gurtos.com/get-started/install-server/#install-on-a-cloud-instance):
    serve the ISO, add it under Orchestration, ISOs, and deploy an instance from it.
 
@@ -162,5 +187,7 @@ The other Vultr jobs use the same VM over ssh from the build scripts:
 - One shared secret guards the Jira routes on the public box. Forge Remote's signed invocation tokens would let
   the box check each call came from the Forge app and that user.
 - The Vultr box has no GPU, so /find describes photos with Claude in a sandboxed task instead of a local model.
-- No Vultr instance has booted the GurtOS disc yet; it is tested in QEMU only.
+- The first-boot wizard was shown on Vultr but not clicked through. The three live Vultr tests (disc, backup and restore, firewall) cost under $0.20 and their instances, disc and objects were destroyed afterwards.
+- The release disc has no shell and does not ship the `age` program yet, so a restore on Vultr was run from the Server debug build of the same image.
+- Vultr applies a firewall change on its own schedule: a removed rule took effect within 15 s, an added one took up to about 3 minutes.
 - The update key lives on the build VM. There is one key, with no rotation.

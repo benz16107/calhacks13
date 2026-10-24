@@ -574,13 +574,14 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 
 **Best shown in:** GurtOS Server
 
-**Pitch:** GurtOS Server runs wherever a VM does. On Vultr it is the public, always-on box: Jira and Mana reach it, and the rest of its API stays closed.
+**Pitch:** GurtOS Server runs wherever a VM does. On Vultr it is the public, always-on box: Jira and Mana reach it, and the rest of its API stays closed. The real release disc also installs and boots on a 1 vCPU, 1 GB Vultr instance, its state backs up encrypted to Vultr Object Storage, and Vultr's firewall is set from code.
 
 **The problem:** Draft: an agent box should be reachable around the clock without exposing everything on it to the internet.
 
 **Features, by the sponsor's criteria** (no OS-vs-track table yet; to write when reviewed):
 
 - *Best use of Vultr cloud.* (met): Vultr does four jobs no other machine does: the always-on public box (the only GurtOS box with a public HTTPS address), the build machine for the bootable discs, a test machine for the merge gate on x86, and the GNOME desktop where GurtOS Personal is tested. Agents on the public box run with every safety part on, and its whole API stays closed to the internet except two paths.
+- *Use Vultr cloud well: boot the real OS on it.* (met): The real GurtOS Server release disc was installed on a Vultr Cloud Compute instance (1 vCPU, 1 GB of RAM) and ran from its own disk, state is backed up to private Vultr Object Storage encrypted so Vultr cannot read it, and Vultr's cloud firewall is set from code. Each was run live on Oct 24 for under $0.20 in all, and the test resources were destroyed.
 - *Use Vultr in the project.* (met): The Jira issues BOX-1 to BOX-5 are tasks that ran on the Vultr box. The Mana app at the link below reads the Vultr box every 5 seconds. ./demo vultr, ./deploy vultr and image/build all target it.
 
 **Demo moment and proof:** ./demo vultr on Oct 24: all 22 sections, 175 checks, 0 failed in 105 seconds on the Vultr VM, including a real Droid task running Claude and a hard power cut the box came back from. The GurtOS Server and Personal install discs were built on the same VM that night.
@@ -588,7 +589,7 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 **Still to do:**
 
 - Review the story with Ben: problem, features with their why, OS vs track
-- Booting a GurtOS disc on a Vultr instance (not built)
+- Vultr Serverless Inference (not built)
 - Switching to the Vultr box from another box's portal (not built)
 
 ## Figma: Best Workflow, Stage Log, Best Design and Most Creative
