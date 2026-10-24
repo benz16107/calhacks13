@@ -160,6 +160,20 @@ const HARDENING = [
   'MemoryMax=2G',
   'MemorySwapMax=0', // a hard 2 GB everywhere: with swap allowed, a memory hog thrashes instead of being stopped
   'TasksMax=512',
+  'CPUQuota=200%', // at most two cores, so one task can't starve the box or the others
+  // System calls a task never needs (mounts, kernel modules, ptrace and perf, raw I/O, reboot, swap, clock, keyrings,
+  // bpf) fail with EPERM; only the machine's own architecture is allowed.
+  'SystemCallArchitectures=native',
+  'SystemCallFilter=~@mount @module @debug @raw-io @reboot @swap @obsolete @cpu-emulation @clock keyctl add_key request_key bpf userfaultfd',
+  'SystemCallErrorNumber=EPERM',
+  'ProtectKernelModules=yes',
+  'ProtectKernelTunables=yes',
+  'ProtectKernelLogs=yes',
+  'ProtectControlGroups=yes',
+  'ProtectClock=yes',
+  'ProtectHostname=yes',
+  'LockPersonality=yes',
+  'RestrictRealtime=yes',
 ];
 
 /** Start the task's worker as a hardened systemd unit, as the task's user, inside its copy. No secrets in its environment. */

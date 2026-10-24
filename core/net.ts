@@ -170,6 +170,8 @@ export async function destination(hosts: string[], host: string, port: string): 
 export interface ProxyHooks {
   taskOf(uid: number): Task | undefined;
   blocked(task: Task, host: string): void;
+  /** True when the task's decoy key is in this request (the box then stops the task): the request is refused. */
+  leaked(task: Task, text: string): boolean;
   factoryKey(): string | undefined;
   anthropicKey(): string | undefined;
 }
@@ -231,6 +233,7 @@ export async function startProxy(hooks: ProxyHooks, cert: { key: Buffer; cert: B
       return fail(res, 400, 'bad url');
     }
     const port = url.port || '80';
+    if (hooks.leaked(t, url.href + JSON.stringify(req.headers))) return fail(res, 403, 'blocked by the box');
     void destination(t.hosts, url.hostname, port).then((address) => {
       if (!address) {
         hooks.blocked(t, `${url.hostname}:${port}`);
@@ -255,6 +258,7 @@ export async function startProxy(hooks: ProxyHooks, cert: { key: Buffer; cert: B
       return void relay.emit('connection', secure);
     }
     if (!t) return void client.end('HTTP/1.1 403 Forbidden\r\n\r\n');
+    if (hooks.leaked(t, host)) return void client.end('HTTP/1.1 403 Forbidden\r\n\r\n'); // a key spelled into a host name
     void destination(t.hosts, host, port).then((address) => {
       if (!address) {
         hooks.blocked(t, `${host}:${port}`);
