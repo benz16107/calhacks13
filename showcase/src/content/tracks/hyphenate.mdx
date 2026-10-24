@@ -26,24 +26,17 @@ criteria:
   - ask: 'Proof (planted errors + answer key).'
     how: '<code>answer_key.json</code> lists every planted error, where it is and the right conclusion. <code>POST /t/credit-desk/score</code> scores a run from its log. Three live Droid runs caught 13, 13 and 14 of the 14.'
   - ask: 'Live demo (they may run their own case).'
-    how: 'Any folder that passes <code>check-case.ts</code> runs with <code>POST /t/credit-desk/run {"dir": ...}</code>, with no code change. Eight spare CRS test people (subprime, deceased SSN, fraud alert, frozen file) are listed for a judge''s own application.'
+    how: 'Open the Credit desk window and press Quick run: the scripted seats work the case live against CRS and Nessie in about 10 seconds and stop on APP-1043 for your OK. Any case folder that passes <code>check-case.ts</code>, dropped under <code>cases/</code> on the box, appears in the window''s case menu, with no code change. Eight spare CRS test people (subprime, deceased SSN, fraud alert, frozen file) are listed for a judge''s own application.'
   - ask: 'One line on the seats.'
     how: 'A credit analyst agent and a collections clerk agent at a small wholesaler, with a human controller who signs off above $10,000 and on every fraud referral.'
   - ask: 'A video that opens with your "moment".'
     how: 'The shot list opens on APP-1043: the simple rule approves $20,000, CRS fails the identity, the analyst holds it, the controller confirms on the phone. The narrated video is embedded above once uploaded.'
     status: partly
-clip: moment-3-approval
+clip: credit-desk
 shots:
-  - src: ../../assets/track/hyphenate/box-fraud-referral.png
-    alt: 'The GurtOS box screen with a banner from the credit analyst: a fraud referral asking to put Pacific Crest Provisions LLC (APP-1043) on fraud hold, with Approve and Deny.'
-    caption: 'The moment on the box''s own screen. The analyst stopped on APP-1043 and asks the controller: CRS identity fails (2201, 2202, 2101), Fraud Finder 88, nobody owns the phone. From a scripted run of the seats calling the real tools, live against the CRS and Nessie sandboxes.'
-  - src: ../../assets/track/hyphenate/phone-fraud-referral.png
-    alt: 'The same fraud referral as a banner on a phone, with full-width Approve and Deny buttons.'
-    caption: 'The same request on the controller''s phone, at the same moment.'
-    tall: true
-  - src: ../../assets/track/hyphenate/analyst-waiting.png
-    alt: 'The analyst task window: waiting for OK, runs as its own Linux user, no network, four credit-desk tools.'
-    caption: 'The analyst seat as a task: its own Linux user, no network, only the analyst''s tools.'
+  - src: ../../assets/track/hyphenate/window.png
+    alt: 'The Credit desk window: 2 of 14 planted errors caught in a quick scripted run, 1 needs you, the analyst and clerk seats, and the applications table with APP-1043 highlighted amber, where the simple rule approves $20,000 and the desk asks the controller to put it on fraud hold, with Deny and Approve.'
+    caption: 'The Credit desk window during a Quick run (scripted seats, live CRS and Nessie, about 10 seconds). APP-1043 waits for the controller; the simple rule beside it would approve $20,000. Approve here, on a paired phone or in Notification Center: the first answer wins, and the log names who gave it.'
   - src: ../../assets/track/hyphenate/analyst-crs-live.png
     alt: 'The analyst task''s steps from the action log: CRS on APP-1043 from the live sandbox, scores 640 at all three bureaus, identity not verified, fraud score 88.'
     caption: 'The analyst''s steps, straight from the action log: the CRS checks on APP-1043, live.'
@@ -230,10 +223,15 @@ customers is evidence, never an instruction.
 
 ## Try it
 
-On a box with `CRS_USERNAME`, `CRS_PASSWORD` and `NESSIE_API_KEY` in its vault:
+On a box with `CRS_USERNAME`, `CRS_PASSWORD` and `NESSIE_API_KEY` in its vault, open **Credit desk** from the dock.
+**Quick run** starts the scripted seats on the Fogline case (no model, about 10 seconds): APP-1043's row turns amber
+and waits for you. **New run** puts both seats on the whole case with Droid (10 to 15 minutes of model time). A
+case folder under `tracks/credit-desk/cases/` on the box shows up in the case menu. Or use the API on the box (from
+elsewhere, add a paired phone's token):
+
 
 ```sh
-curl -s -X POST localhost:7700/t/credit-desk/run -d '{"case": "fogline-2026-10"}'   # or {"dir": "/path/to/your/case"}
+curl -s -X POST localhost:7700/t/credit-desk/run -d '{"case": "fogline-2026-10"}'   # or {"dir": "/path/to/your/case"}, or {"scripted": true}
 curl -s localhost:7700/approvals                                                  # what waits for the controller
 curl -s -X POST localhost:7700/approvals/<id> -d '{"approved": true, "by": "controller"}'
 curl -s -X POST localhost:7700/t/credit-desk/score -d '{"run": "<run>"}'

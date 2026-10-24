@@ -20,19 +20,19 @@ criteria:
 video: main
 clip: moment-2-blocked
 shots:
-  - src: ../../assets/shots/box-home.png
-    alt: 'The GurtOS box screen: a greeting, widgets showing two tasks waiting for an OK and two running, and an approval banner asking to spend 15 dollars of test money.'
-    caption: 'The box screen. A task asks to spend over its budget; two others keep running. The amounts are test money.'
-  - src: ../../assets/shots/box-blocked.png
-    alt: 'A task window showing a red notice that the task tried to reach attacker.example and was blocked, its steps from the action log, and the files it changed.'
-    caption: 'A task that read a booby-trapped page. The box refused its connection to attacker.example and wrote it in the log; Undo removes its files.'
-  - src: ../../assets/shots/phone-approval.png
-    alt: 'The same approval on a phone, with Approve 15 dollars and Deny buttons.'
-    caption: 'The same request on a phone, at the same moment.'
+  - src: ../../assets/repo/portal/notification-center.png
+    alt: 'The GurtOS desktop with Notification Center open: two requests waiting for an OK, each with Deny and Approve, and earlier notices below, including a blocked attempt.'
+    caption: 'The box''s screen. Two tasks wait for an OK in Notification Center while three others keep running. The amounts are test money.'
+  - src: ../../assets/repo/portal/task.png
+    alt: 'A task window: a red notice that the task tried to reach attacker.example and may only reach example.com, its steps from the action log with the blocked step in red, the files it changed, and what it was allowed.'
+    caption: 'The task that read a booby-trapped page. The box refused its connection to attacker.example and wrote it in the log; Undo task removes its files.'
+  - src: ../../assets/repo/portal/phone-home.png
+    alt: 'GurtOS on a phone: a Needs you list with two requests, each with Deny and Approve, three running tasks, and an Ask the box button.'
+    caption: 'The phone: what needs you comes first, with Approve and Deny on each request.'
     tall: true
-  - src: ../../assets/shots/box-after-power-cut.png
-    alt: 'The box screen after a restart, saying welcome back and listing the tasks it resumed.'
-    caption: 'After a power cut, the box resumes every task from its log.'
+  - src: ../../assets/repo/portal/restored.png
+    alt: 'The desktop after a restart: Welcome back, 5 tasks resumed, 2 still need you, and 0 paid twice.'
+    caption: 'After a hard power cut: every task resumed from the log, and nothing was paid twice.'
     tall: true
 links:
   - label: 'Docs: what GurtOS is'
@@ -154,8 +154,9 @@ These are the places the box can still go wrong. The full list is the
 
 - **A shared kernel.** Tasks are separated by Linux users, systemd and overlayfs, not virtual machines. A kernel
   exploit inside a task escapes all of them.
-- **The local API has no login.** Anyone who can reach port 7700 or SpacetimeDB's port 3000 can answer approvals.
-  The API listens on `127.0.0.1` by default; keep the box on a network you trust.
+- **Only the box's own screen gets in without a token.** From anywhere else, every API call needs a paired phone's
+  token, and SpacetimeDB listens on loopback and takes answers only from connections the box vouched for. Anyone
+  with a shell on the box itself, or a stolen phone token, can still answer approvals; revoke the phone in Settings.
 - **The model provider sees what the agent sees.** Prompts, files and tool results go to the model through Factory.
 - **An allowed host gets whatever the task sends it.** Allow narrow hosts.
 - **Undo cannot recall what already left**, such as a payment or a request to an allowed host.

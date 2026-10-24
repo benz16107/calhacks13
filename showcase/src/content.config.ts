@@ -41,7 +41,7 @@ const tracks = defineCollection({
         )
         .default([]),
       status: z
-        .array(z.object({ part: z.string(), state: z.enum(['live', 'test', 'simulated', 'not-built']), note: z.string() }))
+        .array(z.object({ part: z.string(), state: z.enum(['live', 'test', 'test-data', 'simulated', 'not-built']), note: z.string() }))
         .default([]),
     }),
 });

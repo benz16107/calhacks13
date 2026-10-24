@@ -22,16 +22,16 @@ criteria:
 video: main
 clip: moment-1-undo
 shots:
-  - src: ../../assets/shots/box-blocked.png
-    alt: 'A task window in the GurtOS portal with its steps from the action log, the files it changed and the diff, and an Undo button.'
-    caption: 'One task in the portal: its steps from the action log, the files it changed and the diff. This one is a scripted task that read a booby-trapped page; Droid tasks show the same way.'
+  - src: ../../assets/repo/portal/task.png
+    alt: 'A task window: a red notice that the task tried to reach attacker.example and may only reach example.com, its steps from the action log with the blocked step in red, the files it changed, and what it was allowed.'
+    caption: 'The task that read a booby-trapped page. The box refused its connection to attacker.example and wrote it in the log; Undo task removes its files.'
   - src: ../../assets/repo/jira/panel-approved.png
     alt: 'The Box agent task panel in Jira for a Droid task, with its reasoning, an audit trail and the diff of the receipt it wrote.'
     caption: 'A Droid task (Claude Sonnet 4.6) in Jira: it asked to spend $3.00 of test money on a $1.00 budget, was approved, paid, wrote the receipt and finished. Every Droid tool call is a row in the audit trail.'
     tall: true
-  - src: ../../assets/repo/personal/8-review.png
-    alt: 'The GurtOS Personal review window showing the diff a Droid task made to a thesis folder, with Undo and Keep buttons.'
-    caption: 'GurtOS Personal: a Droid task fixed the spelling in a thesis chapter for 3 cents. The folder is unchanged until the owner presses Keep.'
+  - src: ../../assets/repo/personal/14-review.png
+    alt: 'The GurtOS Personal review window: a Droid task changed one file and added one across two folders, the diff, and Keep changes or Undo.'
+    caption: 'GurtOS Personal: a Droid task (Claude) worked on copies of two folders. Nothing in the real folders changed until the owner presses Keep.'
     tall: true
 links:
   - label: The Droid worker, core/workers/droid.ts

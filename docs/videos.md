@@ -162,8 +162,8 @@ commerce impact and trust: hit each one.
 | Time | On screen | Say |
 |---|---|---|
 | 0:00 | The Shopper app. Type "Get me the Hario V60 02 filters when they're under $7, two packs" | "Shopping as a standing instruction. I say it once." |
-| 0:15 | The watch appears at the Box Test Store: $8.99 now, $7.00 limit. Beside it, a live Best Buy watch on Chemex filters with the price Apify read | "Claude turns it into a watch. The box checks on a schedule, and for real stores it reads live prices through Apify, here Best Buy." |
-| 0:35 | The Box Test Store's demo controls: drop the Hario filters to $6.50 | "When the price drops under my limit..." |
+| 0:15 | The watch appears at the GurtOS Test Store: $8.99 now, $7.00 limit. Beside it, a live Best Buy watch on Chemex filters with the price Apify read | "Claude turns it into a watch. The box checks on a schedule, and for real stores it reads live prices through Apify, here Best Buy." |
+| 0:35 | The GurtOS Test Store's demo controls: drop the Hario filters to $6.50 | "When the price drops under my limit..." |
 | 0:45 | The phone: "Buy 2 × Hario V60 02 paper filters for $13.00? TEST PAYMENT", Approve | "...my phone asks once. I tap Approve." |
 | 1:00 | The store's order page: TAP signature verified, Stripe test mode charge with the Visa test card | "The box signs the order with Visa's Trusted Agent Protocol, and the store checks it before charging. This is a test payment." |
 | 1:20 | The store refusing: unsigned order, changed order, replayed signature | "An agent without the box's key can't buy. A changed order fails. A replayed signature fails." |

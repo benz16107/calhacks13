@@ -1,10 +1,10 @@
 ---
 // What is live, what is test money, what is simulated, and what is not built. Labelled honestly.
 interface Props {
-  rows: { part: string; state: 'live' | 'test' | 'simulated' | 'not-built'; note: string }[];
+  rows: { part: string; state: 'live' | 'test' | 'test-data' | 'simulated' | 'not-built'; note: string }[];
 }
 const { rows } = Astro.props;
-const word = { live: 'Live', test: 'Test money', simulated: 'Simulated', 'not-built': 'Not built' };
+const word = { live: 'Live', test: 'Test money', 'test-data': 'Test data', simulated: 'Simulated', 'not-built': 'Not built' };
 ---
 
 {
@@ -63,6 +63,10 @@ const word = { live: 'Live', test: 'Test money', simulated: 'Simulated', 'not-bu
     color: var(--color-state-done-fg);
   }
   .test {
+    background: var(--color-state-waiting-bg);
+    color: var(--color-state-waiting-fg);
+  }
+  .test-data {
     background: var(--color-state-waiting-bg);
     color: var(--color-state-waiting-fg);
   }

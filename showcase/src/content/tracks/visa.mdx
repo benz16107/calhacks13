@@ -24,16 +24,16 @@ shots:
     alt: 'The Shopper app running on the box screen: a TEST PAYMENTS ONLY notice, which secrets the vault holds, and a form to watch a product in words or by store, product, price and quantity.'
     caption: 'The Shopper app on the box, running: say what you want in words, or fill in the store, product, price limit and quantity. Claude can set a watch but cannot buy.'
   - src: ../../assets/shots/app-store.png
-    alt: 'The Box Test Store: a TEST STORE notice, the rule that checkout takes only orders signed with Visa Trusted Agent Protocol, and a product table with prices and stock.'
-    caption: 'The Box Test Store, the stand-in merchant. Checkout takes only orders signed with Visa''s Trusted Agent Protocol and charges Stripe test mode.'
-  - src: ../../assets/shots/phone-approval.png
-    alt: 'A phone running the GurtOS portal: an approval banner with Approve and Deny buttons, two running tasks, and the app grid with Shopper and Box Test Store.'
-    caption: 'The real portal on a phone. Approvals, including Shopper''s purchases, arrive as a banner with the amount on the Approve button. This one is a scripted test spend.'
+    alt: 'The GurtOS Test Store: a TEST STORE notice, the rule that checkout takes only orders signed with Visa Trusted Agent Protocol, and a product table with prices and stock.'
+    caption: 'The GurtOS Test Store, the stand-in merchant. Checkout takes only orders signed with Visa''s Trusted Agent Protocol and charges Stripe test mode.'
+  - src: ../../assets/repo/portal/phone-home.png
+    alt: 'GurtOS on a phone: a Needs you list with two requests, each with Deny and Approve, three running tasks, and an Ask the box button.'
+    caption: 'The phone: what needs you comes first, with Approve and Deny on each request.'
     tall: true
 links:
   - label: The Shopper track's code and README
     href: https://github.com/benz16107/calhacks13/tree/main/tracks/shopper
-    note: 'The TAP signer is <code>tap.ts</code>, the Box Test Store is <code>store.ts</code>, the demo mailbox is <code>inbox.ts</code>.'
+    note: 'The TAP signer is <code>tap.ts</code>, the GurtOS Test Store is <code>store.ts</code>, the demo mailbox is <code>inbox.ts</code>.'
   - label: 'The x402 supply payment from the live run, on Solana Explorer'
     href: https://explorer.solana.com/tx/5PCwxRVPZ7hzjHaXPLtpbYH2k3nEdkzwjUxZXaVYcm46TsnGqkvGYtbCctcgWdpnAMzgRQu76MKW2HfByAzkcFvB?cluster=devnet
     note: 'Public, no sign-in. An agent paid $0.03 of devnet USDC (test money) for a report it needed.'
@@ -60,7 +60,7 @@ flow:
     detail: 'Reads the card and the signing key from the vault, signs the order with TAP (RFC 9421, Ed25519, with a content digest), checks out with an idempotency key.'
   - zone: outside
     label: The store verifies, then charges
-    detail: 'The Box Test Store checks the signature, the price and the stock, then charges Stripe test mode with a Visa test card.'
+    detail: 'The GurtOS Test Store checks the signature, the price and the stock, then charges Stripe test mode with a Visa test card.'
 status:
   - part: Best Buy Canada prices and stock
     state: live
@@ -74,7 +74,7 @@ status:
   - part: Payments
     state: test
     note: 'Stripe test mode with the Visa test card 4242 once a Stripe test key is in the vault; simulated, and labelled so, before that and in offline merge-gate runs. Never real money.'
-  - part: The Box Test Store
+  - part: The GurtOS Test Store
     state: simulated
     note: 'Ours. It stands in for the merchant, because no real store takes a test card. A Best Buy deal is bought here at Best Buy''s live price.'
   - part: The household mailbox
@@ -178,7 +178,7 @@ Content-Digest:  sha-256=:…:
    `APIFY_TOKEN` for live Best Buy prices.
 3. Open the Shopper app at `/t/shopper/` from the portal's app grid. Say "Get me the Hario V60 filters when they're
    under $7", or fill the four fields.
-4. Open the Box Test Store at `/t/shopper/store` and drop the price. The next check asks on your phone; approve it.
+4. Open the GurtOS Test Store at `/t/shopper/store` and drop the price. The next check asks on your phone; approve it.
 5. Undo the purchase task from the portal and watch the store refund the order.
 
 Or run the whole flow: `./demo` (offline, simulated payments) or `DEMO_LIVE=shopper ./demo` (Stripe test mode,

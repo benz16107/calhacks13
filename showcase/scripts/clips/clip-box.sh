@@ -48,6 +48,8 @@ mkdir -p $home/workspaces/home $home/workspaces/notes
 printf 'Groceries: 42.10\nPower: 61.00\n' > $home/workspaces/home/budget.csv
 printf '# Notes\n\nNothing yet.\n' > $home/workspaces/notes/notes.md
 chmod -R a+rwX $home/workspaces
+# Past the first-run wizard: the clips show a box in use, not setup.
+echo '{"done":true,"steps":{}}' > $home/setup.json
 # Test keys only; nothing that ships this box's log off the machine (Elastic, Jira, Moss, Agentverse), and no
 # Factory key, so no real Droid task (/find's photo backup) runs: every clip uses the scripted worker.
 grep -Ev '^(ELASTIC|KIBANA|ATLASSIAN|FORGE|JIRA|MOSS|AGENTVERSE|ASI_ONE|FACTORY)_' /etc/box/vault.env > $home/vault.env

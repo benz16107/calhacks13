@@ -4,7 +4,7 @@ sponsor: Solana
 prize: 'MLH: Best use of Solana'
 title: Agents pay in USDC on Solana devnet, without ever holding the key
 summary: 'GurtOS gives every box an agent wallet on Solana. When an agent needs a paid API, the box signs an SPL token transfer of devnet USDC from a wallet in its root-only vault, a facilitator pays the network fee and submits it, and the box checks the transaction is confirmed on chain before it records the receipt. Agents only ever see results. All of it is devnet USDC, which has no value.'
-proof: 'The wallet''s whole history is public on Solana Explorer: one 20 USDC faucet deposit, then 29 x402 payments of $0.01 or $0.03 made by agents on the box, 0.59 USDC in all, every one a finalized SPL TransferChecked whose fee was paid by the facilitator, never by the wallet.'
+proof: 'The wallet''s whole history is public on Solana Explorer: one 20 USDC faucet deposit, then 36 x402 payments of $0.01 or $0.03 made by agents on the box, 0.76 USDC in all, every one a finalized SPL TransferChecked whose fee was paid by the facilitator, never by the wallet.'
 criteriaSource: "MLH's Solana prize asks only that the project uses Solana. Quoted from the project's track plan."
 criteria:
   - ask: 'Use Solana in the project.'
@@ -18,8 +18,8 @@ shots:
     alt: 'Solana Explorer showing a finalized devnet transaction: status Success, the facilitator as fee payer, and the token section with 0.03 USDC leaving the box wallet and 0.03 arriving at the payee.'
     caption: 'One agent payment on Solana Explorer: finalized, the facilitator paid the 0.000010001 SOL fee, and 0.03 devnet USDC moved from the box''s wallet (6Pyi...) to the test API''s payee (39w7...).'
   - src: ../../assets/shots/app-wallet.png
-    alt: 'The Agent wallet app on the box screen, in plain text: the public devnet address, a balance of 19.41 USDC on Solana devnet marked test money, and a Solana Explorer link.'
-    caption: 'The Agent wallet app on the box, running on Oct 24: the public devnet address, 19.41 USDC of test money, and a link to its history on Solana Explorer. The box holds the key; no task does.'
+    alt: 'The Agent wallet app on the box screen, in plain text: the public devnet address, its USDC balance on Solana devnet marked test money, and a Solana Explorer link.'
+    caption: 'The Agent wallet app on the box, running: the public devnet address, its devnet USDC balance (test money), and a link to its history on Solana Explorer. The box holds the key; no task does.'
 links:
   - label: "The box's agent wallet on Solana Explorer"
     href: https://explorer.solana.com/address/6PyiR71c9aw3e8bgnxmcLvJECL5zHE5jMSWqJoVjPTxU/tokens?cluster=devnet
@@ -79,9 +79,9 @@ status:
 | What | Count | Detail |
 |---|---|---|
 | Faucet deposit | 1 | 20 USDC from Circle's faucet, Oct 23, 6:58 PM PT |
-| Agent payments | 29 | $0.01 or $0.03 each to the test API's payee, 0.59 USDC in all, every one finalized |
+| Agent payments | 36 | $0.01 or $0.03 each to the test API's payee, 0.76 USDC in all, every one finalized |
 | Fee paid by the wallet | 0 | Every payment's fee payer is a facilitator account |
-| Balance | 19.41 USDC | Devnet USDC, test money |
+| Balance | 19.24 USDC on Oct 24, 12:18 AM PT | Devnet USDC, test money |
 
 A few of them:
 

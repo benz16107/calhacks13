@@ -6,11 +6,11 @@ interface Props {
   title?: string;
 }
 const { steps, title = 'How it works, step by step' } = Astro.props;
-const zone = { you: 'You', outside: 'Outside', core: 'Box core', task: 'Task' };
+const zone = { you: 'You', outside: 'Outside', core: 'GurtOS core', task: 'Task' };
 const meaning = {
   you: 'a person, on the portal, a phone, Jira or a chat',
   outside: 'a service outside the box',
-  core: 'the box service, root, the only part that reads the vault',
+  core: 'the GurtOS service on the box, root, the only part that reads the vault',
   task: 'its own Linux user, its own copy of the files, no keys',
 };
 const used = (['task', 'core', 'outside', 'you'] as const).filter((z) => steps.some((s) => s.zone === z));

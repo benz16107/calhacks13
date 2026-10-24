@@ -6,6 +6,7 @@ title: CRS is how the credit analyst decides, and how it stops a synthetic ident
 summary: 'The credit desk''s analyst agent runs seven CRS checks on every applicant''s guarantor before it may set terms: TransUnion, Equifax and Experian reports, TransUnion identity verification, Fraud Finder, PitchPoint public records and a reverse phone lookup. The box enforces it: the decision tool refuses to record anything until those checks have run in the same task, and every decision carries their request ids. The agent never holds the CRS login.'
 proof: 'APP-1043 has clean-looking numbers and a 640 score, and the simple rule approves it for $20,000. CRS, live: identity fails with codes <strong>2201, 2202 and 2101</strong>, Fraud Finder scores it <strong>88</strong>, nobody owns its phone, and 9 credit inquiries landed between Aug 19 and Sep 12. The analyst put it on fraud hold and the controller confirmed it. Every merge-gate run repeats this live.'
 criteriaSource: "From CRS's track description, as copied into the project's track plan (docs/tracks.md). CRS judges four prizes: Overall, Financial AI Agent, Identity/Fraud, and Unexpected."
+clip: credit-desk
 video: hyphenate
 criteria:
   - ask: 'CRS central, not bolted on.'
@@ -28,16 +29,12 @@ shots:
   - src: ../../assets/track/hyphenate/analyst-crs-live.png
     alt: 'The analyst task''s steps: CRS on APP-1043 from the live sandbox, scores 640 at TransUnion, Equifax and Experian, identity not verified, fraud score 88.'
     caption: 'The analyst''s action log: the CRS checks on APP-1043, from the live sandbox, summarized and logged with their request ids. From a scripted run of the seats calling the real tools.'
-  - src: ../../assets/track/hyphenate/box-fraud-referral.png
-    alt: 'The GurtOS box screen with the analyst''s fraud referral for APP-1043.'
-    caption: 'The referral reaches the controller with the CRS findings in it.'
+  - src: ../../assets/track/hyphenate/window.png
+    alt: 'The Credit desk window: 2 of 14 planted errors caught in a quick scripted run, 1 needs you, the analyst and clerk seats, and the applications table with APP-1043 highlighted amber, where the simple rule approves $20,000 and the desk asks the controller to put it on fraud hold, with Deny and Approve.'
+    caption: 'The Credit desk window during a Quick run (scripted seats, live CRS and Nessie, about 10 seconds). APP-1043 waits for the controller; the simple rule beside it would approve $20,000. Approve here, on a paired phone or in Notification Center: the first answer wins, and the log names who gave it.'
   - src: ../../assets/track/hyphenate/analyst-decision.png
     alt: 'The recorded fraud hold decision with rules FRD-1 and FRD-2 and seven CRS request ids.'
     caption: 'After the controller''s yes, the decision is recorded with the request ids of all seven CRS checks (rule CHK-3).'
-  - src: ../../assets/track/hyphenate/phone-fraud-referral.png
-    alt: 'The fraud referral on the controller''s phone.'
-    caption: 'The controller confirms on the phone.'
-    tall: true
 links:
   - label: The CRS client and the seven checks
     href: https://github.com/benz16107/calhacks13/blob/main/tracks/credit-desk/crs.ts
@@ -79,7 +76,7 @@ status:
     state: live
     note: 'The CRS sandbox, five products, called live in every <code>./demo</code> run.'
   - part: Identities
-    state: test
+    state: test-data
     note: 'CRS''s own sandbox personas only. No real person is pulled.'
   - part: Business credit
     state: simulated

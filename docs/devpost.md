@@ -84,7 +84,7 @@ work beside you on copies of your folders, with approvals as GNOME notifications
 **GurtOS Business** shares one box across a team with roles and routed approvals (planned).
 
 **Proof.** The merge gate, `./demo`, starts a fresh box on a test VM and runs the four moments and every app: on Oct 24
-it passed all 22 sections, 175 checks, 0 failed. The credit desk caught 14 of 14 planted finance errors with 0 false
+it passed all 24 sections, 266 checks, 0 failed (its real-Droid section is off while Factory credit is short, and last passed earlier that day). The credit desk caught 14 of 14 planted finance errors with 0 false
 alarms. A running Droid task held only a placeholder key in 240 of 240 process samples.
 
 ![The same approval on a phone, and the task as a Jira issue](https://calhacks.gurtos.com/devpost/3-phone-and-jira.png)
@@ -126,7 +126,7 @@ An autonomous credit desk for Fogline Supply Co., a made-up Oakland wholesaler o
 
 **Proof:** Live Droid run 73c47b, scored from the action log against the answer key: 14 of 14 planted errors caught, 0 false alarms, 6 of 6 credit decisions right. It held APP-1043, a synthetic identity a simple rule approves for $20,000.
 
-One line on the seats: a credit analyst agent and a collections clerk agent at a small wholesaler, with a human controller who signs off above $10,000 and on every fraud referral. Answer key: `tracks/credit-desk/cases/fogline-2026-10/answer_key.json` (14 planted errors, 7 false-alarm traps). Bring your own case: `POST /t/credit-desk/run {"dir": ...}`. The video opens on the APP-1043 moment.
+One line on the seats: a credit analyst agent and a collections clerk agent at a small wholesaler, with a human controller who signs off above $10,000 and on every fraud referral. Answer key: `tracks/credit-desk/cases/fogline-2026-10/answer_key.json` (14 planted errors, 7 false-alarm traps). Try it in the Credit desk window: Quick run (scripted seats, live CRS and Nessie, 10 seconds) stops on APP-1043 for your OK. Bring your own case: drop the folder under `cases/` on the box and pick it in the window. The video opens on the APP-1043 moment.
 
 [Full write-up, video and evidence →](https://calhacks.gurtos.com/tracks/hyphenate/)
 
@@ -146,7 +146,7 @@ The booby-trapped page: an agent reads a web page that tells it to steal every A
 
 **Proof:** every merge run, a scripted hijacked agent is stopped at each step. The vault read fails with EACCES, attacker.example is refused by the proxy, a raw IP is refused by the firewall, and it cannot reach SpacetimeDB or the API to approve itself. Real Claude then refused the same page, and no vault secret appeared in its files, environment or log.
 
-Armadin published no criteria; the page lists every control, its test, and the limits (shared kernel, a local API with no login, no independent audit).
+Armadin published no criteria; the page lists every control, its test, and the limits (shared kernel, a log root can edit, no independent audit).
 
 [Full write-up, video and evidence →](https://calhacks.gurtos.com/tracks/armadin/)
 
@@ -164,7 +164,7 @@ You give the box standing instructions ("the Chemex filters when they're under $
 
 **Proof:** In the Oct 23 live run, Apify read Chemex filters at Best Buy Canada for $15.36 CAD. After the tap, the box bought them at that price as a Stripe test-mode charge on a Visa test card, and undoing a reorder refunded it. All test money.
 
-Video: **TODO (Ben)**. All payments are test payments: Stripe test mode, Visa test card 4242. The Box Test Store is our own stand-in merchant. The household mailbox is a demo POP3 inbox, not Gmail.
+Video: **TODO (Ben)**. All payments are test payments: Stripe test mode, Visa test card 4242. The GurtOS Test Store is our own stand-in merchant. The household mailbox is a demo POP3 inbox, not Gmail.
 
 [Full write-up, video and evidence →](https://calhacks.gurtos.com/tracks/visa/)
 
@@ -257,7 +257,7 @@ Nessie is Fogline's bank: 12 trade customers and accounts, 38 bills, 14 payment 
 
 Each GurtOS box has an agent wallet on Solana. Agents' x402 payments are SPL `TransferChecked` transfers of devnet USDC, signed in the box's core. A facilitator pays the fee, so the wallet holds no SOL, and the box checks each transfer is confirmed on chain before logging it.
 
-**Proof:** The wallet's public history: one 20 USDC faucet deposit, then 29 agent payments of $0.01 or $0.03, 0.59 USDC in all, every one finalized, none paying its own fee. Wallet: https://explorer.solana.com/address/6PyiR71c9aw3e8bgnxmcLvJECL5zHE5jMSWqJoVjPTxU/tokens?cluster=devnet. Example: https://explorer.solana.com/tx/Urd99HESxbkSQ4ppVCfQtJXhKNo7TteQUe1ErfnGduJRyp7dnoK6mTJfk9kGDPJKwo3QwmkonFJGBLiKaL3T2CK?cluster=devnet
+**Proof:** The wallet's public history: one 20 USDC faucet deposit, then 36 agent payments of $0.01 or $0.03, 0.76 USDC in all, every one finalized, none paying its own fee. Wallet: https://explorer.solana.com/address/6PyiR71c9aw3e8bgnxmcLvJECL5zHE5jMSWqJoVjPTxU/tokens?cluster=devnet. Example: https://explorer.solana.com/tx/Urd99HESxbkSQ4ppVCfQtJXhKNo7TteQUe1ErfnGduJRyp7dnoK6mTJfk9kGDPJKwo3QwmkonFJGBLiKaL3T2CK?cluster=devnet
 
 Devnet USDC only: test money with no value.
 
@@ -281,31 +281,50 @@ A Vultr Cloud Compute VM in San Jose is the GurtOS box the internet can reach: J
 
 ### Figma: Best Workflow, Stage Log, Best Design, Most Creative
 
-Figma ran every stage: a FigJam board for the architecture and the four demo moments, two rounds of OS research, three directions, a design system with every token as a variable, two prototype flows, and a handoff through Figma's MCP server that became the real portal and the GNOME desktop layer. 21 sessions, 212 minutes, all logged.
+Figma ran every stage: a FigJam board for the architecture and the four demo moments, two rounds of OS research, three directions, then the GurtOS design system with every token as a variable in Light and Dark and 64 v2 screens drawn only from it, four prototype flows with 136 links, a 16-slide Figma Slides deck, and a handoff through Figma's MCP server that became the portal the box runs today and the GNOME desktop layer. 31 sessions, 339 minutes, all logged.
 
-**Proof:** the shipped portal CSS keeps Figma's variable names (`var(--color-state-waiting-fg)` in both), and the page shows each design next to the running app.
+**Proof:** every Figma variable is a CSS custom property of the same name in the shipped kit: Figma's `accent/bg` (#2F64A6 Light, #78A9E6 Dark) is `--color-accent-bg` in `portal/src/kit/kit.css` with the same two values, and `portal/README.md` puts every frame beside the running app.
 
 **Figma Slides deck:** https://www.figma.com/slides/SBrJtJiY20k88X3IGzKwZW
 
-**Prototype (embedded on the page):** https://www.figma.com/proto/oppzH621OOOMA31rgLbxbM/?node-id=23-304&starting-point-node-id=23%3A304
+**Prototype (embedded on the page):** https://www.figma.com/proto/oppzH621OOOMA31rgLbxbM/?node-id=90-6534&starting-point-node-id=90%3A6534
 
-**Files:** [FigJam board](https://www.figma.com/board/KvHiDv5HIJuGYOZDDkp8VG) · [Design file](https://www.figma.com/design/oppzH621OOOMA31rgLbxbM) · [Make](https://www.figma.com/make/PuKKW48akjbEKogpI59pdL), all shared with Anyone.
+**Files:** [FigJam board](https://www.figma.com/board/KvHiDv5HIJuGYOZDDkp8VG) · [Design file](https://www.figma.com/design/oppzH621OOOMA31rgLbxbM) · [Make](https://www.figma.com/make/udWOO0nK4qggSCOIMqKjCZ), all shared with Anyone.
 
 **Stage log:**
 
-**Ideation (FigJam and Figma Design, 32 minutes, 4 of 5).** Claude Code built the FigJam board through Figma's MCP server: the architecture and the four demo moments with `generate_diagram`, and the 25 sponsor tracks grouped by the slot each plugs into. When the first screens looked like a B2B dashboard, it collected 15 OS references from official pages into a moodboard on the same board, then drew three OS directions (home-server OS, across-the-room console, hardware OS) on the box screen and the phone. Ben picked the home-server OS. Output reached the project as `docs/figma/refs/` and `docs/figma/directions/`. When the built screens still read as a SaaS product, a second round collected 15 references from GNOME, elementary OS, macOS, Windows 11, Ubuntu, Synology DSM, umbrelOS and iOS, each with one rule to take from it, into `docs/figma/refs/os-system/` and a new section of the board. Those rules became the GurtOS design system in `docs/figma/system.md`.
+**Ideation (FigJam and Figma Design, 32 minutes, 4 of 5).** Claude Code built the FigJam board through Figma's MCP
+server: the architecture and the four demo moments with `generate_diagram`, and the 25 sponsor tracks grouped by the
+slot each plugs into. When the first screens looked like a B2B dashboard, it collected 15 OS references from
+official pages into a moodboard on the same board, then drew three OS directions (home-server OS, across-the-room
+console, hardware OS) on the box screen and the phone. Ben picked the home-server OS. Output reached the project as
+`docs/figma/refs/` and `docs/figma/directions/`. When the built screens still read as a SaaS product, a second round
+collected 15 references from GNOME, elementary OS, macOS, Windows 11, Ubuntu, Synology DSM, umbrelOS and iOS, each
+with one rule to take from it, into `docs/figma/refs/os-system/` and a new section of the board. Those rules became
+the GurtOS design system in `docs/figma/system.md`.
 
-**Prototyping (Figma Design and Figma Make, 6 minutes, 4 of 5).** Two flows wired between the real screens with prototype reactions: an approval arriving on the phone, Approve, the task running again; and undo one task on the box, with a confirm step. The same flows went into a Figma Make file as a small web page in the design's tokens, tested in a browser first. Links are in `docs/figma.md`.
+**Prototyping (Figma Design and Figma Make, 26 minutes, 4 of 5).** The first round wired two flows between the
+real screens: an approval arriving on the phone, and undoing one task on the box with a confirm step. After the
+redesign, Claude Code wired four flows across the 64 v2 screens with 136 prototype links: all 12 setup steps, approving
+a spend on the phone (the approval arrives on the lock screen after 1.2 s), undoing one task on the box through to an
+undone state with a toast, and the desktop with Notification Center, Control Center and every Settings page. Both
+rounds also went into Figma Make as a small working web page in the design's tokens, tested in a browser before each
+import. Links are in `docs/figma.md`.
 
-**Handoff (Figma's MCP server and exported frames, 19 minutes, 4 of 5).** Every color and size is a variable with CSS code syntax, every screen and component is named, and `docs/figma.md` lists each screen's node ID and the API data behind it. The portal thread reads them with `get_design_context`. The GNOME frames for GurtOS Personal went the other way: native GTK and libadwaita widgets have no web code, so the desktop layer was built from the exported frames and their notes. The indicator took the frames' "Needs you" and "Running" sections, the notification its "Approve $8.00" button, and the review its Undo and Keep.
+**Handoff (Figma's MCP server, 19 minutes, 4 of 5).** Every color, size and motion value is a variable with its CSS
+name as code syntax, in Light and Dark, and every screen and component is named. `docs/figma/os-v2/README.md` lists
+each v2 screen's node ID, its PNG and the API field behind every value, matched to the core's setup, settings, apps
+and vault routes. The screens were merged to main in six batches as they were finished, so the portal thread could
+build each one with `get_design_context` while the next was drawn. `docs/figma/system.md` holds the rules, including
+guidelines for app makers. The GNOME frames for GurtOS Personal went the other way: native GTK widgets have no web code, so the desktop layer was built from the exported frames and their notes.
 
-**Code generation (Figma's MCP server, 67 minutes, 4 of 5).** Claude Code read the screens with `get_design_context` (box home, phone home, Notification Center, the task window) and adapted the React and Tailwind reference into the portal's own Preact components and CSS, keeping Figma's variable names as CSS custom properties so every token stays traceable. Assets came from the same responses: both wallpapers, and the glyphs, which collapsed from 33 exports into one path set because Figma draws every size with the same 3 px stroke. Every mockup value the box can't back up changed: progress bars became "working" bars, the daily limit became "on tools and models", and Activity's spend bars are computed from the real log. The result reached the project as `portal/`: one web app the box serves as its own kiosk screen, as the portal, and on a phone, checked against the PNGs in `docs/figma/os/`. The Shopper app came first, from the approval card on screen g and the Paper tokens. Two Figma frames have no web equivalent: Live Activities and the Dynamic Island.
+**Code generation (Figma's MCP server, 137 minutes, 4 of 5).** Claude Code read every screen with `get_design_context` and adapted Figma's React and Tailwind reference into the portal's own Preact components and CSS. The first round built the direction A screens. When Ben approved the GurtOS design system, the second round turned its variables into a kit: each Figma variable is a CSS custom property with the same name in Light and Dark, with Atkinson Hyperlegible and GNOME's Adwaita icons self-hosted. On that kit it built a desktop with movable windows, the 12-step setup, ten Settings pages, App Center and the phone. Three helper agents built screens in parallel from their own frames. Anything the box can't back up was changed: no greeting with a made-up name, no Power button without an API, progress bars only when a step says how far it is. The output is `portal/`, one app the box serves as its own screen, the portal and the phone, and the kit at `/kit/` for track apps. `portal/README.md` puts every Figma frame beside a screenshot of the running app.
 
 [Full write-up, video and evidence →](https://calhacks.gurtos.com/tracks/figma/)
 
 ### Mana: Building with Mana
 
-A public Mana chat reviewed the credit desk's 32 draft rules. Mana proposed 69 rules, 35 were adopted, and the desk's agents now follow them. A Box status app hosted in Mana shows a live GurtOS box.
+A public Mana chat reviewed the credit desk's 32 draft rules. Mana proposed 69 rules, 35 were adopted, and the desk's agents now follow them. A GurtOS status app hosted in Mana shows a live GurtOS box.
 
 **Proof:** Mana found two customer records for one business, each with a $10,000 limit. Rules REL-1 and SOD-5 now treat them as one, and the next live Droid runs cited both. GEN-3 makes applicant text evidence, never an instruction.
 
@@ -339,7 +358,7 @@ Public links: chat https://www.mana.space/shared-chats/x5CqxyjcOgVCAyrvUBqK2LNRc
    counts). If yes, change the "through GoDaddy Registry" row in `showcase/src/content/tracks/godaddy.mdx` to `met`.
 9. **Coinbase.** Their track asks for a verified Coinbase account. Confirm it is verified.
 10. **Devpost link.** Once the project page exists, set `LINKS.devpost` in `showcase/src/data/site.ts`.
-11. **Stage log totals.** `docs/stagelog.md`'s "For Devpost" section undercounts (Ideation 18, Handoff 4 and Code
-    generation 57 minutes; its own table sums to 32, 19 and 67). The Figma section above uses the table's numbers.
+11. **Stage log totals.** `docs/stagelog.md`'s "For Devpost" paragraphs say Handoff 4 and Code generation 127 minutes; its
+    own table sums to 19 and 137. The Figma section above and the showcase use the table's numbers.
 
 <!-- TODO END -->

@@ -22,7 +22,7 @@ criteria:
   - ask: 'Ease of reuse.'
     how: 'The wallet is two box tools, so any agent on any box uses it. <code>skill/x402-wallet/SKILL.md</code> teaches an agent to pay (quote, pay the exact price, wait when over budget, never look for a key); copy it into Droid or Claude Code''s skills folder.'
   - ask: 'Verified Coinbase account.'
-    how: "Ben's CDP account issued the Secret API Key the box settles with. Ben confirms the account's verification on Devpost."
+    how: "A CDP account issued the Secret API Key the box settles with, and the facilitator accepts its signed calls."
     status: partly
 clip: moment-3-approval
 video: main
@@ -31,8 +31,8 @@ shots:
     alt: 'Solana Explorer showing a finalized devnet transaction: the fee payer is the facilitator, and the token section shows 0.03 USDC leaving the box wallet and arriving at the payee.'
     caption: "One of the live run's payments on Solana Explorer: $0.03 of devnet USDC from the box's wallet to the test API, settled by Coinbase's CDP facilitator, which paid the network fee. The wallet holds no SOL."
   - src: ../../assets/shots/app-wallet.png
-    alt: 'The Agent wallet app on the box screen, in plain text: the public devnet address, a balance of 19.41 USDC on Solana devnet marked test money, and a Solana Explorer link.'
-    caption: 'The Agent wallet app on the box, running on Oct 24: the public devnet address, 19.41 USDC of test money, and a link to its history on Solana Explorer. The box holds the key; no task does.'
+    alt: 'The Agent wallet app on the box screen, in plain text: the public devnet address, its USDC balance on Solana devnet marked test money, and a Solana Explorer link.'
+    caption: 'The Agent wallet app on the box, running: the public devnet address, its devnet USDC balance (test money), and a link to its history on Solana Explorer. The box holds the key; no task does.'
 links:
   - label: 'The live run''s $0.03 payment, settled by the CDP facilitator'
     href: https://explorer.solana.com/tx/Urd99HESxbkSQ4ppVCfQtJXhKNo7TteQUe1ErfnGduJRyp7dnoK6mTJfk9kGDPJKwo3QwmkonFJGBLiKaL3T2CK?cluster=devnet
@@ -146,8 +146,8 @@ paid it once approved, and wrote the file. The task cost 6 cents: 4 for the two 
 checks it in every run (Oct 24, x86 test VM, 175 checks, 0 failed):
 `only one of the two parallel $0.60 payments went through: $0.60 spent, not $1.20 (atomic budget)`.
 
-**On chain.** The wallet's whole history is public: one faucet deposit of 20 USDC, then 29 payments of $0.01 or $0.03
-to the test API, 0.59 USDC in all. It held 19.41 devnet USDC on Oct 23 at 10:40 PM PT.
+**On chain.** The wallet's whole history is public: one faucet deposit of 20 USDC, then 36 payments of $0.01 or $0.03
+to the test API, 0.76 USDC in all. It held 19.24 devnet USDC on Oct 24 at 12:18 AM PT, after 37 transactions.
 
 ## How it works
 

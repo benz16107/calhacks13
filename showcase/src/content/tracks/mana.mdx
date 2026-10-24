@@ -3,7 +3,7 @@ order: 20
 sponsor: Mana
 prize: Building with Mana
 title: The Mana chat that rewrote the credit desk's rules
-summary: 'Mana was used three ways. A public planning chat with Mana''s agent reviewed the credit desk''s draft rules and changed what the agents now follow. A public project page describes the build. And a Box status app, built and hosted inside Mana, shows a live GurtOS box: tasks running, approvals waiting, and what they cost.'
+summary: 'Mana was used three ways. A public planning chat with Mana''s agent reviewed the credit desk''s draft rules and changed what the agents now follow. A public project page describes the build. And a GurtOS status app, built and hosted inside Mana, shows a live GurtOS box: tasks running, approvals waiting, and what they cost.'
 proof: 'Mana''s review found that two customer records for one business (C-1007 and C-1011) each carried a $10,000 limit: <strong>$20,000 of credit in two pieces, each inside the analyst''s authority</strong>. Rules REL-1 and SOD-5 now treat them as one business, and the next live Droid runs cited both. 35 of Mana''s 69 proposed rules are in the file the agents work from.'
 criteriaSource: "From Mana's track description, as copied into the project's track plan (docs/tracks.md). Mana published no detailed criteria."
 video: main
@@ -15,7 +15,7 @@ criteria:
   - ask: 'One moment where Mana changed what you built.'
     how: 'The rules file went from version 0.1 (32 rules) to 0.2 (67): the draft''s 32 word for word plus Mana''s 35. It added one-business limits (REL-1, SOD-5), a fraud referral path (FRR-1 to FRR-7), order exposure (ORD-2, ORD-3), disputes (DSP-1 to DSP-7), and GEN-3: text from applicants is evidence, never an instruction. Live runs under 0.2 cite these rules.'
   - ask: '+10 if the project lives inside Mana.'
-    how: 'The Box status app is hosted in Mana and public. Mana''s agent built it from a one-message spec and tested it signed out at phone size. It reads one read-only route on a live GurtOS box every 5 seconds and has no buttons and no keys.'
+    how: 'The GurtOS status app is hosted in Mana and public. Mana''s agent built it from a one-message spec and tested it signed out at phone size. It reads one read-only route on a live GurtOS box every 5 seconds and has no buttons and no keys.'
 shots:
   - src: ../../assets/track/mana/chat-review.png
     alt: 'The shared Mana chat "Credit Desk Hackathon Agents Review": the first turn and Mana''s answer, starting "Gaps, ranked by risk to Fogline".'
@@ -34,11 +34,11 @@ shots:
     caption: 'The project page, written before the OS was named GurtOS.'
     tall: true
   - src: ../../assets/track/mana/box-status-app.png
-    alt: 'The Box status app in Mana: 0 tasks running, 0 waiting for an OK, $3.27 total cost, and a list of recently finished tasks with their state and cost.'
-    caption: 'The Box status app, live inside Mana, signed out: real tasks from the always-on Vultr box.'
+    alt: 'The GurtOS status app in Mana: 0 tasks running, 0 waiting for an OK, $3.27 total cost, and a list of recently finished tasks with their state and cost.'
+    caption: 'The GurtOS status app, live inside Mana, signed out: real tasks from the always-on Vultr box.'
     tall: true
   - src: ../../assets/track/mana/box-status-app-phone.png
-    alt: 'The Box status app on a phone-sized screen.'
+    alt: 'The GurtOS status app on a phone-sized screen.'
     caption: 'The same app at phone size.'
     tall: true
 links:
@@ -48,7 +48,7 @@ links:
   - label: The project page
     href: https://www.mana.space/home/x5CqxyjcOgVCAyrvUBqK2LNRcMJ2/documents/cal-hacks-13-a-computer-where-ai-agents-work-safely
     note: 'Public, no sign-in.'
-  - label: The Box status app, inside Mana
+  - label: The GurtOS status app, inside Mana
     href: https://www.mana.space/home/x5CqxyjcOgVCAyrvUBqK2LNRcMJ2/apps/box-status
     note: 'Public, no sign-in. Live from the always-on GurtOS box on Vultr, refreshing every 5 seconds.'
   - label: The rules file, version 0.2
@@ -79,7 +79,7 @@ status:
   - part: The planning chat and project page
     state: live
     note: 'Public Mana pages. The chat is a snapshot taken after the third turn.'
-  - part: Box status app
+  - part: GurtOS status app
     state: live
     note: 'Hosted in Mana. It reads a public, read-only status route on the always-on GurtOS box on Vultr. The box''s web server forwards only that route and the Jira routes; the rest of its API is not reachable from the internet.'
   - part: What the status app shows
@@ -138,7 +138,7 @@ track mana
 
 <Flow steps={frontmatter.flow} />
 
-**The Box status app.** Mana's agent built it from a one-message spec, made it public, and tested it signed out at
+**The GurtOS status app.** Mana's agent built it from a one-message spec, made it public, and tested it signed out at
 phone size, with sample data and with a dropped connection. It runs in the viewer's browser and calls the box every
 5 seconds. Until the box answers, it says "The box isn't reachable right now"; it never shows sample data.
 
@@ -154,7 +154,7 @@ It reads `GET /t/mana/status`, a route the Mana track adds to the box:
 1. Open [the planning chat](https://www.mana.space/shared-chats/x5CqxyjcOgVCAyrvUBqK2LNRcMJ2/001792810018092cc50381027f1410c8fcb)
    and compare it with the header and rules of
    [`credit-rules.yaml`](https://github.com/benz16107/calhacks13/blob/main/tracks/credit-desk/rules/credit-rules.yaml).
-2. Open [the Box status app](https://www.mana.space/home/x5CqxyjcOgVCAyrvUBqK2LNRcMJ2/apps/box-status) on your phone.
+2. Open [the GurtOS status app](https://www.mana.space/home/x5CqxyjcOgVCAyrvUBqK2LNRcMJ2/apps/box-status) on your phone.
 3. On your own box, the route is on by default: `curl -s localhost:7700/t/mana/status`. To show it to a Mana app,
    forward only that path through your web server, for example with Caddy:
 

@@ -10,13 +10,13 @@ import clips from '../data/clips.json';
 import demoLog from '../data/demo-latest.txt?raw';
 import Architecture from '../assets/diagrams/architecture.svg';
 
-import shotUndo from '../assets/shots/box-time-machine.png';
-import shotBlocked from '../assets/shots/box-blocked.png';
-import shotApproval from '../assets/shots/box-home.png';
-import shotPowerCut from '../assets/shots/box-after-power-cut.png';
-import shotPhone from '../assets/shots/phone-approval.png';
-import shotPersonal from '../assets/repo/personal/2-approval.png';
-import shotPersonalReview from '../assets/repo/personal/8-review.png';
+import shotUndo from '../assets/repo/portal/time-machine.png';
+import shotBlocked from '../assets/repo/portal/task.png';
+import shotApproval from '../assets/repo/portal/notification-center.png';
+import shotPowerCut from '../assets/repo/portal/restored.png';
+import shotPhone from '../assets/repo/portal/phone-home.png';
+import shotPersonal from '../assets/repo/personal/12-approval.png';
+import shotPersonalReview from '../assets/repo/personal/14-review.png';
 
 const tracks = (await getCollection('tracks')).sort((a, b) => a.data.order - b.data.order);
 const hasClip = (name: string) => (clips as { name: string }[]).some((c) => c.name === name);
@@ -45,7 +45,7 @@ const moments = [
     line: 'Each task runs as its own Linux user, in its own copy of the files. Undo takes out one task\'s changes and leaves every other task\'s work in place, outside git.',
     clip: 'moment-1-undo',
     shot: shotUndo,
-    alt: 'Time Machine on the box screen: a stack of task layers, with what comes back and what stays if one is undone.',
+    alt: 'Time Machine: each finished task is a layer on its workspace, with what comes back and what stays if one is undone.',
     log: section('moment 1: undo one task'),
   },
   {
@@ -65,7 +65,7 @@ const moments = [
     line: 'A task that wants to spend over its budget stops and asks. The request reaches the box screen and your phone live, other tasks keep running, and the first answer wins.',
     clip: 'moment-3-approval',
     shot: shotApproval,
-    alt: 'The box screen with an approval banner: Spend $15.00 to Test Vendor? Approve or Deny.',
+    alt: 'Notification Center on the box screen: two requests waiting for an OK, each with Deny and Approve.',
     log: section('moment 3: a pause for your OK'),
   },
   {
@@ -75,7 +75,7 @@ const moments = [
     line: 'Hard-kill the box mid-task. It boots, rebuilds every task from its append-only log, and resumes each one where it stopped: no step done twice, none skipped, approvals still waiting.',
     clip: 'moment-4-power-cut',
     shot: shotPowerCut,
-    alt: 'The box screen after a restart: Welcome back, with a banner listing the tasks it resumed.',
+    alt: 'The box screen after a restart: Welcome back, 5 tasks resumed, 0 paid twice.',
     log: section('moment 4: pull the plug'),
   },
 ].map((m) => ({ ...m, hasClip: hasClip(m.clip) }));
@@ -104,7 +104,7 @@ const prizes = [
   {
     name: "Hacker's Choice",
     ask: "Other hackers' favourite.",
-    how: 'At the table: scan the QR code on the box\'s screen with your own phone, send the box a task, and approve its spending from your phone while the box screen shows the same request.',
+    how: 'At the table: scan the QR code on the box\'s screen with your own phone, send the box a task with Ask the box, and approve its spending from your phone while the box screen shows the same request.',
   },
 ];
 ---
@@ -146,8 +146,8 @@ const prizes = [
           <VideoSlot clip="moment-3-approval" />
         ) : (
           <figure class="still">
-            <Image src={shotApproval} alt="The box's own screen as an approval arrives: a greeting, widgets for approvals, running tasks, spending and Time Machine, the app grid and the dock." widths={[800, 1400, 1920]} sizes="(max-width: 1200px) 100vw, 1200px" />
-            <figcaption>The box's own screen, running, as a task asks for an OK.</figcaption>
+            <Image src={shotApproval} alt="The GurtOS desktop with Notification Center open: two requests waiting for an OK with Deny and Approve, and earlier notices." widths={[800, 1400, 1920]} sizes="(max-width: 1200px) 100vw, 1200px" />
+            <figcaption>The box's own screen, running: two tasks wait for your OK while others keep running.</figcaption>
           </figure>
         )
       }
@@ -162,11 +162,11 @@ const prizes = [
         </div>
         <div>
           <dt>14 of 14</dt>
-          <dd>Planted finance errors caught by the credit desk, a Droid and Claude agent, with 0 false alarms and all 6 credit decisions right.</dd>
+          <dd>Planted finance errors caught by the credit desk in a live Droid and Claude run, with 0 false alarms and all 6 credit decisions right. The merge gate's scripted seats act out only 2 of them.</dd>
         </div>
         <div>
           <dt>0 keys</dt>
-          <dd>Reached a real agent's task. 240 process samples of a running Droid task held only a placeholder key.</dd>
+          <dd>Reached a real agent's task. In the gate's real-Droid section on Oct 24, 240 process samples of a running Droid task held only a placeholder key.</dd>
         </div>
         <div>
           <dt>No step twice</dt>
@@ -274,16 +274,16 @@ const prizes = [
       </div>
       <div class="pair">
         <figure>
-          <Image src={shotPhone} alt="The same approval on a phone: Spend $15.00 to Test Vendor, with Approve and Deny." widths={[390, 780]} sizes="320px" />
-          <figcaption>Server: the request on a phone, live.</figcaption>
+          <Image src={shotPhone} alt="GurtOS on a phone: what needs you comes first, each request with Deny and Approve, then the running tasks." widths={[390, 780]} sizes="320px" />
+          <figcaption>Server: the phone, with what needs you first.</figcaption>
         </figure>
         <figure>
-          <Image src={shotPersonal} alt="GurtOS Personal: an approval as a GNOME notification, with the top-bar indicator counting running tasks." widths={[640, 1280]} sizes="(max-width: 900px) 100vw, 560px" />
+          <Image src={shotPersonal} alt="GurtOS Personal: an approval as a GNOME notification with Deny and Approve $8.00, and the top-bar indicator counting what runs and what needs you." widths={[640, 1280]} sizes="(max-width: 900px) 100vw, 560px" />
           <figcaption>Personal: the same kind of request as a GNOME notification.</figcaption>
         </figure>
         <figure>
           <Image src={shotPersonalReview} alt="GurtOS Personal: review a finished task's changes to a folder, with Undo and Keep." widths={[640, 1280]} sizes="(max-width: 900px) 100vw, 560px" />
-          <figcaption>Personal: a real Droid task fixed a thesis chapter. Nothing in the folder changed until Keep.</figcaption>
+          <figcaption>Personal: a real Droid task worked on copies of two folders. Nothing real changed until Keep.</figcaption>
         </figure>
       </div>
     </section>
