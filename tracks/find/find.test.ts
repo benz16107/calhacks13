@@ -40,6 +40,17 @@ test('only photos inside the workspaces go to a model', async () => {
   await assert.rejects(describe('/etc/hostname', { model: 'x', base: 'http://127.0.0.1:1/v1' }), /not a photo/);
 });
 
+test('with no model key set, describing calls no model', async () => {
+  const ws = path.join(home, 'workspaces', 'keys');
+  fs.mkdirSync(ws, { recursive: true });
+  fs.copyFileSync(photo, path.join(ws, 'p.jpg'));
+  const asked: string[] = [];
+  const none = (n: string) => (asked.push(n), (() => { throw new Error(`the vault has no ${n}`); })());
+  await assert.rejects(describeAny(path.join(ws, 'p.jpg'), none), /FIND_OLLAMA_URL is not set.*VULTR_INFERENCE_KEY is not set/);
+  assert.deepEqual(asked, ['FIND_OLLAMA_URL', 'VULTR_INFERENCE_KEY']);
+  fs.rmSync(ws, { recursive: true });
+});
+
 test('the word index ranks by shared words and filters by kind', async () => {
   const i = wordIndex();
   await i.add([
@@ -119,7 +130,7 @@ test('the cloud copy: only when the index changed, at most every 10 minutes, and
   assert.match(cloudStatus(), /cloud copy on/);
 });
 
-test('the Claude backup waits for a Factory key and never repeats a photo it already handed out', async () => {
+test('the Claude describe task needs a Factory key and never repeats a photo it already handed out', async () => {
   const { askClaude } = await import('./track.ts');
   const started: any[] = [];
   const hourAgo = (h: number) => new Date(Date.now() - h * 3600_000).toISOString();
@@ -135,7 +146,7 @@ test('the Claude backup waits for a Factory key and never repeats a photo it alr
     }) as any;
   const photos = (...names: string[]) => names.map((path) => ({ workspace: 'photos', path }));
 
-  askClaude(box(false), photos('a.jpg', 'b.jpg'));
+  assert.throws(() => askClaude(box(false), photos('a.jpg', 'b.jpg')), /needs a Factory key/);
   assert.equal(started.length, 0, 'no Factory key in the vault: no task, so a fresh box shows no failed task');
   askClaude(box(true), photos('a.jpg', 'b.jpg'));
   assert.equal(started.length, 1);

@@ -10,7 +10,7 @@ const DIR = path.join(HOME, 'find');
 const DEMO = HOME.startsWith('/var/lib/box-demo/');
 /** The merge gate makes no Moss or model calls unless DEMO_LIVE names this track. */
 export const OFFLINE = DEMO && !(process.env.DEMO_LIVE ?? '').split(/[\s,]+/).includes('find');
-/** One Moss index per box, so the laptop and the Vultr box keep their own. */
+/** One Moss index per box, so boxes sharing a Moss project keep their own. */
 export const INDEX = `${DEMO ? 'find-demo' : 'find'}-${os.hostname().toLowerCase().replace(/[^a-z0-9-]/g, '-')}`;
 
 export type Doc = { id: string; text: string; metadata: Record<string, string> };
@@ -23,14 +23,24 @@ type Entry = Doc & { sig?: string };
 /** A vision model behind an OpenAI-compatible chat API. `key` names a vault secret. */
 export type Model = { model: string; base: string; key?: string };
 
-/** Tried in order; the first that answers describes the photo. */
-export const MODELS: Model[] = [
-  // Ollama on Ben's Mac, which the laptop box reaches through Lima. The photo never leaves the laptop.
-  { model: 'gemma4', base: 'http://host.lima.internal:11434/v1' },
-  // Vultr's hosted model, for the Vultr box (no GPU). Needs a Serverless Inference key in its vault.
-  { model: 'qwen3.8-27b', base: 'https://api.vultrinference.com/v1', key: 'VULTR_INFERENCE_KEY' },
+/**
+ * Tried in order; the first that answers describes the photo. Each is used only when its vault key is set, so a
+ * fresh box calls no model at all. FIND_OLLAMA_URL is the address of a machine running Ollama with gemma4, for
+ * example http://host.lima.internal:11434/v1 from a Lima VM: the photo stays on your own machines.
+ */
+export const MODELS: (Model & { needs: string })[] = [
+  { model: 'gemma4', base: '', needs: 'FIND_OLLAMA_URL' },
+  // Vultr's hosted model, for a box with no GPU. Needs a Serverless Inference key.
+  { model: 'qwen3.8-27b', base: 'https://api.vultrinference.com/v1', key: 'VULTR_INFERENCE_KEY', needs: 'VULTR_INFERENCE_KEY' },
 ];
-// Claude is the backup when none answers: a Droid task looks at the photos (track.ts).
+// Claude, through a Droid task, describes the rest only when the person asks for it on the Find page (track.ts).
+const has = (secret: (name: string) => string, name: string) => {
+  try {
+    return secret(name);
+  } catch {
+    return undefined;
+  }
+};
 
 export const PROMPT =
   'Describe this photo for a search index in two sentences. Start with what kind of thing it is (for example a ' +
@@ -83,12 +93,17 @@ export async function describeAny(file: string, secret: (name: string) => string
   }
   const errors: string[] = [];
   for (const m of MODELS) {
+    const set = has(secret, m.needs);
+    if (!set) {
+      errors.push(`${m.model}: ${m.needs} is not set`);
+      continue;
+    }
     if ((down.get(m.model) ?? 0) > Date.now()) {
       errors.push(`${m.model}: failed in the last 5 minutes`);
       continue;
     }
     try {
-      return await describe(real, m, m.key ? secret(m.key) : undefined);
+      return await describe(real, { ...m, base: m.base || set.replace(/\/+$/, '') }, m.key ? set : undefined);
     } catch (e) {
       errors.push((e as Error).message);
       down.set(m.model, Date.now() + 5 * 60_000);
@@ -112,7 +127,7 @@ export const isUsageLimit = (e: unknown) => /usage limit/i.test((e as Error)?.me
 // ---------- Moss bills an open session by the minute ("session minutes", $0.05 each past the free credit) ----------
 // So the box holds no session while idle. Indexing only updates docs.json. A search opens a session, restores the
 // last one from disk, embeds only the docs that changed since (embedding is the slow part: 100 docs took 15 s on
-// the laptop VM, the snapshot 5 ms), answers, and the session saves itself and closes after 2 quiet minutes.
+// an ARM64 test VM, the snapshot 5 ms), answers, and the session saves itself and closes after 2 quiet minutes.
 // Queries on an open session are local and take a few ms.
 
 const IDLE_MS = 2 * 60_000;

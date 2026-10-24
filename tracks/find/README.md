@@ -5,14 +5,14 @@ about a whiteboard. It knows because a vision model looked at the photo when it 
 in it. Every photo, text file and finished task on the box goes into one index, and Moss searches it.
 
 Agents use it too. A task asks `find.search` through the broker, with no network and no keys of its own, and
-gets the same answers Ben gets in the portal. That is the box's memory: what an agent did last week, the
+gets the same answers you get on the Find page. That is the box's memory: what an agent did last week, the
 receipt it filed, the note it wrote, all findable by meaning.
 
 ## Moss's track
 
 Moss asks for one of three things: a voice agent, a personal agent that remembers you, works across your apps
 and handles everyday tasks on its own, or a social post. **This is the second.** The box is a personal agent
-computer: agents do everyday work there (shopping, paperwork, code), and through Moss they remember. Ben finds
+computer: agents do everyday work there (shopping, paperwork, code), and through Moss they remember. You find
 things by asking, and so does every agent, across every app's files and every task's history.
 
 How the box uses Moss:
@@ -28,7 +28,7 @@ How the box uses Moss:
 - **Moss's cloud can keep a copy, on one box only.** Search never needs the cloud. A box with
   `FIND_CLOUD_SYNC=1` in its environment pushes its index to the cloud index `find-<hostname>` when a session
   closes, at most every 10 minutes and only when the index changed (a hash of its contents, kept across
-  restarts). It never opens a session just to push. Only the linuxbox demo box has it on (a systemd drop-in,
+  restarts). It never opens a session just to push. Turn it on for one box per Moss project (a systemd drop-in,
   below). Only text goes there: descriptions, file text and task summaries, never a photo.
 - **If Moss cannot answer** (no network, or the project is over its usage limit), the search is answered by
   matching words, and the result's `index` says so. After a usage-limit error the box does not call Moss for an
@@ -40,21 +40,22 @@ How the box uses Moss:
 
 ## Latency
 
-Measured on the test VMs on Oct 23 with `DEMO_LIVE=find ./demo laptop` and `./demo linuxbox`, plus a direct test of the SDK.
+Measured on Oct 23 and 24 on two test VMs (an ARM64 Lima VM on a MacBook and an x86 VM with 6 cores), with
+`DEMO_LIVE=find ./demo` and a direct test of the SDK.
 
 | Step | Where | Time |
 |---|---|---|
-| A search through the box (`/t/find/search`), the demo box's whole index | laptop VM (ARM64) and linuxbox VM (x86) | median 3.1 ms wall time; under 1 ms inside Moss (it reports 0 ms) |
-| The first search after 2 quiet minutes (opens a session, restores it from disk, embeds 1 changed doc) | linuxbox VM | 0.7 s |
-| The very first search on a box (no saved session yet: embeds every doc) | linuxbox VM; laptop VM | 9.7 s for 61 docs; 14.6 s for 100 docs |
-| A Moss query, SDK alone, 5 docs | linuxbox VM | 2 to 4 ms wall time |
-| Add a document to the index | linuxbox VM | 6 ms for one, 28 ms for four |
-| Open a Moss session, first time on a machine (downloads the embedding model) | linuxbox VM | 3.8 s, once |
-| Push the index to Moss's cloud (opt-in box only) | linuxbox VM | 1.6 s, as a session closes, at most every 10 minutes |
-| Describe a photo: gemma4 in Ollama on Ben's Mac | laptop VM | 1.1 to 2.8 s with the model loaded; 6 to 7 s for the first photo after Ollama loads it |
-| Describe photos: Claude (`claude-sonnet-4-6`) through one Droid task | linuxbox VM | 34 to 36 s for all four, about 9 s a photo |
+| A search through the box (`/t/find/search`), the demo box's whole index | ARM64 and x86 test VMs | median 3.1 ms wall time; under 1 ms inside Moss (it reports 0 ms) |
+| The first search after 2 quiet minutes (opens a session, restores it from disk, embeds 1 changed doc) | x86 test VM | 0.7 s |
+| The very first search on a box (no saved session yet: embeds every doc) | x86 VM; ARM64 VM | 9.7 s for 61 docs; 14.6 s for 100 docs |
+| A Moss query, SDK alone, 5 docs | x86 test VM | 2 to 4 ms wall time |
+| Add a document to the index | x86 test VM | 6 ms for one, 28 ms for four |
+| Open a Moss session, first time on a machine (downloads the embedding model) | x86 test VM | 3.8 s, once |
+| Push the index to Moss's cloud (opt-in box only) | x86 test VM | 1.6 s, as a session closes, at most every 10 minutes |
+| Describe a photo: gemma4 in Ollama on the Mac hosting the VM | ARM64 test VM | 1.1 to 2.8 s with the model loaded; 6 to 7 s for the first photo after Ollama loads it |
+| Describe photos: Claude (`claude-sonnet-4-6`) through one Droid task | x86 test VM | 34 to 36 s for all four, about 9 s a photo |
 
-Describing is the slow part, and it happens once per photo, when the photo arrives. Searching is fast.
+Describing is the slow part, and it happens once per photo. Searching is fast.
 
 ## Which model describes the photos
 
@@ -63,18 +64,22 @@ model name pick the model. The box tries them in order, and the first that answe
 skipped for 5 minutes, so a dead one costs one timeout, not one per photo. Each photo's entry
 records which model described it and how long it took, and the action log gets a `note` for each one.
 
-| Box | Model | Where the photo goes |
-|---|---|---|
-| The laptop (demo box on Sunday) | `gemma4` in Ollama on Ben's Mac, at `host.lima.internal:11434` | Nowhere: the Mac's GPU, on the same laptop |
-| Vultr (no GPU) | `qwen3.8-27b` on Vultr Serverless Inference | Vultr's API. Needs `VULTR_INFERENCE_KEY` in the vault (see Limits) |
-| Either, as the backup | Claude, through a Droid task | Factory, inside a sandboxed task |
+**A fresh box calls no model.** Each model is used only when its key is set in the vault (Settings, or App
+Center). Until then photos wait, and the Find page says how many are not described yet.
 
-**The Claude backup is a box task.** When no model answers for a photo, the box starts one Droid task in that
-photo's workspace: "open each photo with your Read tool and describe it", writing `.find/descriptions.json` in
-its own copy of the files. The task has no network beyond Factory, no tools and no keys. A photo with hidden
-instructions in it can, at worst, spoil its own description. The next scan reads the file. Factory blocks plain
-API calls to its model endpoint from outside Droid, so a task is also the only sanctioned way to reach Claude
-on these boxes.
+| Vault key | Model | Where the photo goes |
+|---|---|---|
+| `FIND_OLLAMA_URL` | `gemma4` in Ollama, at the address you give, such as `http://192.168.1.20:11434/v1` or, from a Lima VM, `http://host.lima.internal:11434/v1` | Your own machine running Ollama. Nothing leaves your network |
+| `VULTR_INFERENCE_KEY` | `qwen3.8-27b` on Vultr Serverless Inference | Vultr's API |
+| `FACTORY_API_KEY`, on request | Claude, through a Droid task | Factory, from inside a sandboxed task |
+
+**Claude describes photos only when you ask.** It spends model money, so nothing starts it at boot or on a
+schedule. The Find page shows "N photos are not described yet" with a **Describe with Claude** button
+(`POST /t/find/describe`). That starts one Droid task per workspace: "open each photo with your Read tool and
+describe it", writing `.find/descriptions.json` in its own copy of the files. The task has no network beyond
+Factory, no tools and no keys. A photo with hidden instructions in it can, at worst, spoil its own description.
+The next scan reads the file. A photo handed to a task is not handed out again, even after a restart, unless that
+task failed over an hour ago. These describe tasks are housekeeping: they are kept out of the search index.
 
 The prompt asks the model to start with what kind of thing the photo shows (a whiteboard, a receipt, a product),
 then the details and any readable text, then 8 keywords. Without that, gemma4 called the whiteboard "a
@@ -108,26 +113,30 @@ best first. `index` is `moss`, or `words` on an offline run or a box with no Mos
 
 A task lists `find.search` in its tools. It holds no Moss key: the tool runs in the core.
 
-## For Ben and the portal (under `/t/find/`)
+## The Find app (under `/t/find/`)
+
+`/t/find/` is the Find window in the app grid: a search box, results grouped as tasks, files and photos, and which
+index answered. It uses the GurtOS kit, so off the box's own screen its calls carry the paired device's token.
 
 | Route | Does |
 |---|---|
 | `GET /search?q=<words>&kind=photo\|file\|task&k=5` | The same as `find.search` |
 | `GET /file?workspace=photos&path=IMG_2041.jpg` | The file a result points at, to show it. Only inside a workspace; symlinks are refused |
-| `GET /status` | How many photos, files and tasks are indexed, the models in order, and the cloud copy's state (`cloud`) |
+| `GET /status` | How many photos, files and tasks are indexed, how many photos wait for a description (`undescribed`), each model and whether its key is set, and the cloud copy's state (`cloud`) |
+| `POST /describe` | Ask Claude to describe the photos no other model could (needs `FACTORY_API_KEY`) |
 
 Other tracks can describe a photo with `box.job('find.describe', { file })`.
 
 ## Setup
 
-- **Moss:** `MOSS_PROJECT_ID` and `MOSS_PROJECT_KEY` in `/etc/box/vault.env`. All three test VMs have them.
-- **Moss cloud copy:** off unless the box's environment has `FIND_CLOUD_SYNC=1`. On the linuxbox VM it is a
-  drop-in that `./deploy` leaves alone: `/etc/systemd/system/box.service.d/find.conf` with
-  `[Service]` and `Environment=FIND_CLOUD_SYNC=1`. Turn it on for one box only: they share one Moss project.
-- **Ollama:** nothing on the box. The laptop's Ollama listens on the Mac's localhost and Lima forwards
-  `host.lima.internal` to it (spike 6). The Mac must be awake.
-- **Vultr:** `VULTR_INFERENCE_KEY`, a Serverless Inference key. Not set anywhere yet.
-- **Claude:** `FACTORY_API_KEY`, which the box already has for Droid.
+All optional. With none of them, search matches words and photos are found by their file names.
+
+- **Moss:** `MOSS_PROJECT_ID` and `MOSS_PROJECT_KEY` in the vault. Without them, search matches words.
+- **A photo model:** `FIND_OLLAMA_URL` or `VULTR_INFERENCE_KEY` (table above), or `FACTORY_API_KEY` to use the
+  Describe with Claude button.
+- **Moss cloud copy:** off unless the box's environment has `FIND_CLOUD_SYNC=1`, for example a drop-in that an
+  update leaves alone: `/etc/systemd/system/box.service.d/find.conf` with `[Service]` and
+  `Environment=FIND_CLOUD_SYNC=1`. Turn it on for one box only if several share a Moss project.
 
 ## The demo step
 
@@ -135,7 +144,7 @@ Other tracks can describe a photo with `box.job('find.describe', { file })`.
 earlier (`recorded.json`, made by `record.ts`) and a word-match index stands in for Moss, so the merge gate needs
 no network and costs nothing. It shows:
 
-1. The four test photos described, and "find the whiteboard photo" returning `photos/IMG_2041.jpg`, with the
+1. With no model set, the box starts no describe task on its own. The four test photos described, and "find the whiteboard photo" returning `photos/IMG_2041.jpg`, with the
    model that described it.
 2. The portal fetching that photo through `/t/find/file`.
 3. An agent with no network asking `find.search` through the broker and getting the same photo.
@@ -143,20 +152,17 @@ no network and costs nothing. It shows:
 5. A symlink to the vault, planted in a workspace, is neither indexed nor served.
 6. Undo the task: its file leaves the index, the photos stay.
 
-`DEMO_LIVE=find ./demo laptop` describes the photos live with gemma4 and searches with Moss.
-`DEMO_LIVE=find,droid ./demo linuxbox` does the same with the Claude backup, since that VM has no Ollama
-(a demo box refuses Droid tasks unless the run names `droid`; they spend Factory credit). Both print
-each photo's model and time and Moss's query times.
+`DEMO_LIVE=find ./demo` describes the photos live with the models whose keys the test machine's vault has, and
+searches with Moss. With no photo model set there, add `droid` (`DEMO_LIVE=find,droid`): the demo presses Describe
+with Claude for you (a demo box refuses Droid tasks unless the run names `droid`; they spend Factory credit). It
+prints each photo's model and time and Moss's query times.
 
 ## Limits
 
-- **Vultr's vision model is untested.** The `VULTR_API_KEY` we have is an account key; the account has no
-  Serverless Inference subscription, and inference calls return "Invalid API key". Starting a subscription is a
-  paid signup, so it waits for Ben. Until then the Vultr box describes photos with the Claude backup.
+- **Vultr's vision model is untested.** It needs a Serverless Inference subscription, which we did not have.
 - Photos go to the model at full size. A 3 MB phone photo spent 2.5 s on the prompt in spike 6; resize to about
   1024 px if real photos are slow.
 - Only the first 2000 characters of a text file are indexed. Long files need chunking.
-- A failed Claude task is not retried until the box restarts, so a broken backup cannot start tasks in a loop.
 - Only photos inside a workspace go to a model; `find.describe` refuses any other path.
 - Any task given `find.search` can search every workspace, not only its own. Search results are data: a
   description of a photo with text in it can carry that text into an agent's context.

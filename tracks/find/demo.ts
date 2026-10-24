@@ -1,7 +1,7 @@
 // The /find demo step: "find the whiteboard photo", from the portal and from an agent, plus a file and a task
 // found by meaning, and undo taking a file back out of the index.
 // Offline by default: the photos' descriptions are ones gemma4 wrote earlier (recorded.json) and the index matches
-// words. DEMO_LIVE=find ./demo describes them live (Ollama on the laptop box, else Claude through a Droid task)
+// words. DEMO_LIVE=find ./demo describes them live (with the models whose keys the vault has; add droid to press Describe with Claude)
 // and searches with Moss, and prints the latency numbers.
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
@@ -19,10 +19,21 @@ export default async function (d: DemoKit) {
   d.check(tests.status === 0, `the unit tests pass against a stub vision model${tests.status ? `:\n${tests.stdout}${tests.stderr}` : ''}`);
 
   const search = (q: string, kind = '', k = 5) => d.api<Search>('GET', `/t/find/search?q=${encodeURIComponent(q)}&kind=${kind}&k=${k}`);
+  type Status = { docs: Record<string, number>; cloud: string; undescribed: number };
+  const first = await d.waitFor('the first scan', async () => {
+    const s = await d.api<Status>('GET', '/t/find/status');
+    return (s.docs.photo ?? 0) + s.undescribed >= 4 ? s : undefined;
+  });
+  if (first.undescribed) {
+    // No model key on this box describes them: nothing starts until a person asks. Live, ask, as the Find page's button does.
+    const tasks = await d.api<Task[]>('GET', '/tasks');
+    d.check(!tasks.some((t) => t.source === 'find'), 'with no model set, the box starts no describe task on its own');
+    if (live) await d.api('POST', '/t/find/describe');
+  }
   const status = await d.waitFor(
     'the four test photos to be described',
     async () => {
-      const s = await d.api<{ docs: Record<string, number>; cloud: string }>('GET', '/t/find/status');
+      const s = await d.api<Status>('GET', '/t/find/status');
       return (s.docs.photo ?? 0) >= 4 ? s : undefined;
     },
     live ? 300_000 : 20_000, // live, Claude through a Droid task can take a few minutes
@@ -30,7 +41,7 @@ export default async function (d: DemoKit) {
   d.check(status, 'the box described the four test photos in the photos workspace');
   d.check(status.cloud.startsWith('cloud copy off'), 'a demo box never pushes to Moss\'s cloud: search stays local');
 
-  // Ben, from the portal.
+  // A person, from the Find page.
   const r = await search('find the whiteboard photo', 'photo');
   const top = r.results[0];
   d.check(

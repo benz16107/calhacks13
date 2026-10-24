@@ -1,6 +1,7 @@
 // Saves what a live model says about each test photo to recorded.json, so offline demo runs need no model.
 //   node --experimental-strip-types tracks/find/record.ts [base] [model]
-// Default: Ollama on this machine with gemma4. From linuxbox, first: ssh -NfL 11434:localhost:11434 benmac
+// Default: Ollama on this machine with gemma4. For Ollama on another machine, pass its address, or forward its
+// port first: ssh -NfL 11434:localhost:11434 <machine running Ollama>
 import fs from 'node:fs';
 import { describe, sha256 } from './find.ts';
 

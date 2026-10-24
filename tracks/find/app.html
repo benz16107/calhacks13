@@ -24,6 +24,7 @@
     <label class="g-sr" for="q">Search this box</label>
     <input id="q" class="g-field" type="search" placeholder="Find the whiteboard photo" autocomplete="off" autofocus>
   </form>
+  <div id="describe" class="g-banner" hidden><g-icon name="dialog-information"></g-icon><div><span id="describe-text"></span> <button class="g-btn" id="describe-btn" type="button">Describe with Claude</button></div></div>
   <div id="results" aria-live="polite"></div>
   <footer id="foot" class="t-caption t-secondary">Searches tasks, files and photo descriptions on this box. Photos never leave it.</footer>
 </main>
@@ -108,6 +109,18 @@
   $('form').addEventListener('submit', (e) => (e.preventDefault(), search()));
   $('q').addEventListener('input', () => (clearTimeout(timer), (timer = setTimeout(search, 250))));
   status('Search this box', 'Photos by what is in them, text files, and past tasks.');
+  // Photos no model on this box could describe. Claude describes them only when you ask: it uses your model key.
+  fetch('/t/find/status').then((r) => r.json()).then((s) => {
+    if (!s.undescribed) return;
+    $('describe-text').textContent = `${s.undescribed} photo${s.undescribed > 1 ? 's are' : ' is'} not described yet, so search cannot find ${s.undescribed > 1 ? 'them' : 'it'} by what is in ${s.undescribed > 1 ? 'them' : 'it'}.`;
+    $('describe').hidden = false;
+  }).catch(() => {});
+  $('describe-btn').addEventListener('click', async () => {
+    const r = await fetch('/t/find/describe', { method: 'POST' });
+    const d = await r.json().catch(() => ({}));
+    $('describe-text').textContent = r.ok ? 'Claude is describing them in a task. Watch it in Tasks; search finds them when it is done.' : d.error || `HTTP ${r.status}`;
+    $('describe-btn').hidden = true;
+  });
   const start = new URLSearchParams(location.search).get('q');
   if (start) ($('q').value = start), search();
 </script>

@@ -1,4 +1,4 @@
-// /find: search the box's photos, files and task history by meaning, for agents (find.search) and for Ben
+// /find: search the box's photos, files and task history by meaning, for agents (find.search) and for people
 // (GET /t/find/search). Moss is the index. See README.md.
 import fs from 'node:fs';
 import path from 'node:path';
@@ -95,10 +95,11 @@ function fromClaude(box: Box, ws: string, rel: string) {
   }
 }
 
+/** Start Claude describe tasks for these photos. Only when the person asks on the Find page: it spends model money. */
 export function askClaude(box: Box, failed: { workspace: string; path: string }[]) {
-  // Droid needs the vault's Factory key. Without it, start nothing; a later scan tries again once the key is set.
-  if (!maybe(box.secret, 'FACTORY_API_KEY')) return;
+  if (!maybe(box.secret, 'FACTORY_API_KEY')) throw new Error('Describing with Claude needs a Factory key. Add it in Settings.');
   const fresh = failed.filter((f) => !handed.has(`${f.workspace}/${f.path}`) && !covered(box, f.workspace, f.path));
+  if (!fresh.length) return [];
   for (const workspace of new Set(fresh.map((f) => f.workspace))) {
     const list = fresh.filter((f) => f.workspace === workspace);
     list.forEach((f) => handed.add(`${f.workspace}/${f.path}`));
@@ -111,7 +112,10 @@ export function askClaude(box: Box, failed: { workspace: string; path: string }[
       .createTask({ title: `Describe ${list.length} photo${list.length > 1 ? 's' : ''} for /find`, workspace, worker: 'droid', prompt })
       .catch((e) => console.error(`find: could not start the Claude task: ${e.message}`));
   }
+  return fresh;
 }
+
+let undescribed: { workspace: string; path: string }[] = []; // from the last scan: photos no model could describe
 
 // ---------- indexing, one pass at a time ----------
 
@@ -137,7 +141,7 @@ function indexNow(box: Box) {
         (doc) => box.note({ described: `${doc.metadata.workspace}/${doc.metadata.path}`, model: doc.metadata.model, ms: Number(doc.metadata.ms) }),
       );
     } while (again);
-    if (failed.length && !OFFLINE) askClaude(box, failed);
+    undescribed = failed;
     return { docs: docs.size, failed };
   })().finally(() => (busy = undefined));
   return busy;
@@ -148,7 +152,7 @@ const summaries = new Map<string, string>(); // task id -> Droid's final message
 export default {
   name: 'find',
   // FACTORY_API_KEY: only checked for presence before starting a Claude describe task; its value is never read here.
-  secrets: [...MOSS, 'VULTR_INFERENCE_KEY', 'FACTORY_API_KEY'],
+  secrets: [...MOSS, 'FIND_OLLAMA_URL', 'VULTR_INFERENCE_KEY', 'FACTORY_API_KEY'],
 
   triggers: [
     {
@@ -191,7 +195,7 @@ export default {
 
   modelJobs: [
     /** Describe one photo, for any track: { file } -> { text, model, ms }. */
-    { name: 'find.describe', secrets: ['VULTR_INFERENCE_KEY'], run: (input: { file: string }, ctx) => describeAny(input.file, ctx.secret) },
+    { name: 'find.describe', secrets: ['FIND_OLLAMA_URL', 'VULTR_INFERENCE_KEY'], run: (input: { file: string }, ctx) => describeAny(input.file, ctx.secret) },
   ],
 
   tools: [
@@ -242,10 +246,27 @@ export default {
       if (!file.startsWith(dir + path.sep) || !fs.statSync(file).isFile()) return new Response('not found', { status: 404 });
       return new Response(fs.readFileSync(file), { headers: { 'content-type': photoType(file) ?? 'text/plain; charset=utf-8' } });
     },
-    'GET /status': () => {
+    // The Find page's button: the person asks Claude to describe the photos no other model could.
+    'POST /describe': (_req, box) => {
+      try {
+        const started = askClaude(box, undescribed);
+        return Response.json({ started: started.length });
+      } catch (e) {
+        return Response.json({ error: (e as Error).message }, { status: 400 });
+      }
+    },
+    'GET /status': (_req, box) => {
       const count: Record<string, number> = {};
       for (const d of docs.values()) count[d.metadata.kind] = (count[d.metadata.kind] ?? 0) + 1;
-      return Response.json({ offline: OFFLINE, cloud: cloudStatus(), docs: count, models: MODELS.map((m) => `${m.model} at ${m.base}`).concat('Claude via a Droid task') });
+      return Response.json({
+        offline: OFFLINE,
+        cloud: cloudStatus(),
+        docs: count,
+        undescribed: undescribed.length,
+        models: MODELS.map((m) => `${m.model}: ${maybe(box.secret, m.needs) ? 'on' : `off until ${m.needs} is set`}`).concat(
+          `Claude via a Droid task: ${maybe(box.secret, 'FACTORY_API_KEY') ? 'on request' : 'needs FACTORY_API_KEY'}`,
+        ),
+      });
     },
   },
 } satisfies Track;
