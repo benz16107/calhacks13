@@ -460,6 +460,7 @@ class SettingsWindow(SetupWindow):
         w.add_credit_section('Built on', ['Ubuntu, by Canonical and the Ubuntu community', 'GNOME, by the GNOME Project'])
         w.add_legal_section('Papirus icon theme', 'By the Papirus Development Team. GurtOS recolours its folders.', Gtk.License.GPL_3_0, None)
         w.add_legal_section('Bibata cursor', 'By Abdulkaiz Khatri.', Gtk.License.GPL_3_0, None)
-        w.add_legal_section('Atkinson Hyperlegible Next and Mono', 'By the Braille Institute.', Gtk.License.CUSTOM, 'SIL Open Font License 1.1')
+        w.add_legal_section('Atkinson Hyperlegible Next and Mono', 'By the Braille Institute. GurtOS redraws the zero of Next without its slash.',
+                            Gtk.License.CUSTOM, 'SIL Open Font License 1.1')
         w.present()
         return False

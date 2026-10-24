@@ -323,5 +323,6 @@ screens (people, rules, routed approvals, the audit trail) in the browser for no
 - Personal's spending defaults: ask over $5.00, budget $1.00, set by Setup the first time and used by New task.
 - Setup's Apps step lists apps for one person (Find, Shopper, Wallet, Factory, ASI:One, Mana, Apify), turns all but
   Find off the first time, with "Needs a key" and "Uses the internet" chips. Settings' Keys page groups keys by app.
-- Not changed: Atkinson Hyperlegible draws its zero with a slash on purpose and has no plain-zero alternate, so
-  money and clocks keep it (P-29) until a second typeface for numbers is chosen.
+- Plain zeros (P-29, Ben's call): Atkinson Hyperlegible Next draws 0 with a slash and has no plain alternate, so
+  `fonts/plain_zero.py` redraws it: the two half-counters become one oval counter at every weight, and the tabular
+  zero follows. The font is OFL with no reserved name, so it keeps its name; Mono, used for code, keeps the slash.

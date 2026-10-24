@@ -31,7 +31,7 @@
 @define-color gurt_add #2E6B3A;
 @define-color gurt_del #A3322A;
 
-/* Type: Atkinson Hyperlegible Next, drawn so I, l and 1 differ and zero is slashed. */
+/* Type: Atkinson Hyperlegible Next, drawn so I, l and 1 differ; its zero is plain (fonts/plain_zero.py). Code in Mono keeps the slashed zero. */
 window, dialog, popover { font-family: "Atkinson Hyperlegible Next", "Ubuntu Sans", sans-serif; font-size: 15px; }
 .monospace, .gurt-mono { font-family: "Atkinson Hyperlegible Mono", monospace; font-size: 14px; }
 .gurt-display { font-size: 34px; font-weight: 700; }
