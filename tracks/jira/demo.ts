@@ -174,9 +174,11 @@ export default async function (d: DemoKit) {
     const D = await start('Paused job', 'write paused.txt later');
     await new Promise((r) => setTimeout(r, 1500));
     const waited = (await d.api('GET', `/tasks/${D.id}`)).task.state === 'queued' && (await call('GET', '/activity')).paused;
-    await call('POST', '/pause', { paused: false, ...acting });
+    const resumeFromJira = await call('POST', '/pause', { paused: false, ...acting }).then(() => 200, (e: Error) => Number(e.message.match(/: (\d{3}) /)?.[1]));
+    await d.api('PATCH', '/settings', { paused: false }); // the box's own screen resumes
     await d.settled([D.id]);
-    d.check(waited && d.view('jira', 'paused.txt') === 'later', 'pause all from Jira held a new task in the queue; resume ran it');
+    d.check(waited && d.view('jira', 'paused.txt') === 'later', 'pause all from Jira held a new task in the queue; the box\'s screen resumed it and it ran');
+    d.check(resumeFromJira === 403, 'resuming from Jira is refused on a Server box (403): it stays with the screen and the owner\'s phone');
 
     // Bulk roll back from a JQL list: A's fix and the hotfix, picked by issue key. Each says what came back.
     const cIssue = (await issue(C.id, () => true)).key;
@@ -206,7 +208,8 @@ async function business(d: DemoKit, stub: Stub, call: (m: string, p: string, b?:
   try {
     await d.api('POST', '/people', { id: 'jira-dana', name: 'Dana Whitfield', role: 'approver', title: 'Controller', limitCents: 5_000_000, approvesFor: ['Controller'] });
     await d.api('POST', '/people', { id: 'jira-lee', name: 'Lee Park', role: 'requester' });
-    fs.writeFileSync(path.join(d.home, 'jira', 'people.json'), JSON.stringify({ 'acct-dana': 'jira-dana', 'acct-lee': 'jira-lee' }));
+    await d.api('POST', '/people', { id: 'jira-ada', name: 'Ada Brennan', role: 'admin', title: 'IT' });
+    fs.writeFileSync(path.join(d.home, 'jira', 'people.json'), JSON.stringify({ 'acct-dana': 'jira-dana', 'acct-lee': 'jira-lee', 'acct-ada': 'jira-ada' }));
     const waitAsk = (t: Task) => d.waitFor(`${t.title} to ask`, async () => (await d.api('GET', `/tasks/${t.id}`)).approvals.find((a: { state: string }) => a.state === 'pending'), 20000);
     const answer = (t: Task, approval: string, account: string) => call('POST', '/answer', { task: t.id, approval, approved: true, account }).then(() => 200, (e: Error) => Number(e.message.match(/: (\d{3}) /)?.[1]));
 
@@ -216,6 +219,13 @@ async function business(d: DemoKit, stub: Stub, call: (m: string, p: string, b?:
     d.check(await answer(big, bigAsk.id, 'acct-lee') === 403, 'Business: Lee, a requester, cannot approve from Jira (403)');
     d.check(await answer(big, bigAsk.id, 'acct-dana') === 403, 'Business: $60,000 is over Dana\'s $50,000 limit, so her approval from Jira is refused (403)');
     await d.api('POST', `/tasks/${big.id}/undo`);
+
+    // Pause from Jira is anyone's; resume only a linked admin's.
+    const code = (p: Promise<unknown>) => p.then(() => 200, (e: Error) => Number(e.message.match(/: (\d{3}) /)?.[1]));
+    await call('POST', '/pause', { paused: true, account: 'acct-lee' });
+    const leeResume = await code(call('POST', '/pause', { paused: false, account: 'acct-lee' }));
+    const adaResume = await code(call('POST', '/pause', { paused: false, account: 'acct-ada' }));
+    d.check(leeResume === 403 && adaResume === 200 && !(await call('GET', '/activity')).paused, `Business: Lee could pause from Jira but not resume (${leeResume}); Ada, an admin, resumed (${adaResume})`);
 
     const inv = await start('Pay the invoice', 'ask Pay the $20,000 invoice?\nwrite paid.txt yes');
     const invAsk = await waitAsk(inv);
@@ -237,7 +247,8 @@ async function business(d: DemoKit, stub: Stub, call: (m: string, p: string, b?:
       `Business: Dana started the task from Jira, so her approval in ${req} was refused ("${refused.data.why}") and it still waits`);
     await d.api('POST', `/tasks/${own.task.id}/undo`);
   } finally {
-    for (const id of ['jira-dana', 'jira-lee']) await d.api('DELETE', `/people/${id}`).catch(() => {});
+    await d.api('PATCH', '/settings', { paused: false }).catch(() => {});
+    for (const id of ['jira-dana', 'jira-lee', 'jira-ada']) await d.api('DELETE', `/people/${id}`).catch(() => {});
     await d.api('PUT', '/business', { on: false });
     fs.rmSync(path.join(d.home, 'jira', 'people.json'), { force: true });
   }
@@ -280,7 +291,7 @@ async function stubJira() {
     if (req.method === 'GET' && p === '/rest/api/3/myself') return send(200, { accountId: 'acct-approver' });
     if (req.method === 'GET' && p === '/rest/api/3/user') {
       const id = new URL(req.url!, 'http://x').searchParams.get('accountId');
-      const known: Record<string, string> = { 'acct-user': 'Jira user', 'acct-approver': 'Approver', 'acct-dana': 'Dana Whitfield', 'acct-lee': 'Lee Park', 'acct-nobody': 'Nobody Linked' };
+      const known: Record<string, string> = { 'acct-user': 'Jira user', 'acct-approver': 'Approver', 'acct-dana': 'Dana Whitfield', 'acct-lee': 'Lee Park', 'acct-ada': 'Ada Brennan', 'acct-nobody': 'Nobody Linked' };
       return id && known[id] ? send(200, { accountId: id, displayName: known[id] }) : send(404, {});
     }
     const sd = p.match(/^\/rest\/servicedeskapi\/request\/([\w-]+)\/(approval|comment)$/);

@@ -141,7 +141,7 @@ modules:
       name: Pause or resume all GurtOS agents
       function: pause
       actionVerb: UPDATE
-      description: Pauses every agent on the GurtOS box (paused true) or lets them carry on (paused false). Jira admins only.
+      description: Pauses every agent on the GurtOS box (paused true). Jira admins only. Resuming (paused false) works only for a linked GurtOS Business admin; otherwise the box says to resume from its own screen or the owner's phone.
       inputs:
         paused:
           title: Paused

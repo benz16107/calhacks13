@@ -141,7 +141,9 @@ shared secret. It never trusts the browser or the model for who is acting or whi
 1. Who: the Atlassian `accountId` from Forge's own context (for a product event, the event's user).
 2. Which task: the issue's `box.task` property, read as the signed-in user, so they must be able to see it.
 3. May they: Jira's `mypermissions` (edit the issue for approve and roll back, Jira admin for pause). In bulk,
-   issues the user can't edit are skipped and reported.
+   issues the user can't edit are skipped and reported. Pausing every agent works from Jira; resuming does not,
+   unless the box runs GurtOS Business and the user is linked to a Business admin. A stolen secret can at worst
+   stop the box, and held work carries on only from the box's screen, the owner's phone or an admin.
 4. Then it calls the box with the secret. The box checks it in constant time, checks the approval belongs to
    the task, and runs the same answer, undo and pause the portal and phone use (`box.answer`, `box.undo`,
    `box.createTask`; one path each). Its log records `jira:<name>`, where the box asked Atlassian for the name

@@ -690,13 +690,18 @@ export default {
     }),
     'GET /activity': guarded(async (req, box) => activity(box, new URL(req.url).searchParams)),
     // Every agent on the box stops starting new work; running tasks hold where they are. Logged with who did it.
+    // Pausing only stops agents, so anyone the Forge app vouches for may do it. Resuming lets held work carry on, so
+    // from Jira only a linked Business admin or owner may; otherwise it stays with the box's screen and the owner's phone.
     'POST /pause': guarded(async (req, box) => {
       const body = await req.json();
       const a = await actor(box, body.account);
       const paused = body.paused === true;
-      box.note({ action: paused ? 'pause' : 'resume', by: a.by });
-      const out = await boxCall<{ paused?: boolean }>('PATCH', '/api/settings', { paused }, a.person ? asPerson(a) : {});
-      return { paused: out.paused === true };
+      if (!paused && !a.person) throw refuse(403, 'Resuming agents is for the box\'s own screen, the owner\'s phone, or a GurtOS Business admin. Pausing works from Jira.');
+      // Core's kill switch. A pause goes as the box's screen (allowed to anyone the Forge app vouches for); a resume
+      // goes as the linked person, and core lets only an admin or the owner do it.
+      await boxCall('POST', paused ? '/api/pause' : '/api/resume', {}, paused ? {} : asPerson(a));
+      box.note({ action: paused ? 'pause' : 'resume', by: a.by }); // who, from Jira, once the box has done it
+      return { paused: (await boxApi<{ paused?: boolean }>('/api/settings')).paused === true };
     }),
     // Write today's "What our agents did" page now, instead of at the next quarter hour.
     'POST /report': guarded(async (_req, box) => {
