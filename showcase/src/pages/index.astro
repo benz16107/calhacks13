@@ -126,8 +126,10 @@ const prizes = [
       <h1 class="mark"><span class="g">Gurt</span><span class="o">OS</span></h1>
       <p class="tag">An operating system where AI agents work safely: real access, never your keys.</p>
       <p class="sub">
-        Every task runs as its own Linux user, in its own copy of your files, and reaches only the hosts it needs.
-        You can undo any one task, approve its spending from your phone, and pull the plug without losing work.
+        Today's operating systems were built for one person at a keyboard, not for agents. GurtOS is a lightweight OS,
+        and a suite around it, built for agents: every task runs as its own Linux user, in its own copy-on-write copy
+        of your files, and reaches only the hosts it needs. You can undo any one task, approve its spending from your
+        phone, and pull the plug without losing work.
       </p>
       <p class="actions">
         <a href="#video">Watch it</a>
@@ -158,6 +160,53 @@ const prizes = [
           </figure>
         )
       }
+    </section>
+
+    <section class="frame" aria-labelledby="frame">
+      <h2 id="frame">Why agents need a new operating system</h2>
+      <div class="frame-grid">
+        <div>
+          <h3>Existing systems are outdated for agents</h3>
+          <ul>
+            <li>Built for one human at a keyboard.</li>
+            <li>Permissions are per user, not per task, so every agent can touch everything you can.</li>
+            <li>Secrets sit in environment variables and files any process can read.</li>
+            <li>The network is all or nothing.</li>
+            <li>No notion of approval, budget or spending limit.</li>
+            <li>No trustworthy record, and no rollback of what an agent did.</li>
+            <li>For companies: no separation of duties, no routed approvals, no fleet-wide audit.</li>
+          </ul>
+        </div>
+        <div>
+          <h3>A better filesystem for agents</h3>
+          <p>
+            Each task gets an instant copy-on-write copy of its files: an overlay layer on top of the workspace. Agents
+            work in parallel without colliding, nothing is duplicated (a layer holds only what that task changed), and
+            undo is exact: take one layer out and every other task's work stays.
+          </p>
+          <p>
+            That makes agent work faster, not just safer: no copying a folder before a task, no locks between tasks, no
+            merge step, and a bad task costs one click.
+          </p>
+          <h3>Light, and secure where others can't be</h3>
+          <p>
+            One Node service on Ubuntu 24.04, no GPU. GurtOS Server runs in 4 GB of memory and 17 GB of disk on any
+            x86_64 or arm64 machine, so a spare computer you own is enough. Keys stay in a root-only vault the agent
+            never reaches, and each task's network reaches only its allowed hosts.
+          </p>
+        </div>
+        <div>
+          <h3>A suite, not one system</h3>
+          <ul>
+            <li><strong>The OS</strong> in three editions: Server, Personal and Business (preview).</li>
+            <li><strong>The portal and phone app</strong> at <a href="https://app.gurtos.com">app.gurtos.com</a>: every agent live, with approve, undo and pause.</li>
+            <li><strong>Remote access:</strong> each box can have its own HTTPS address and push approvals to your phone.</li>
+            <li><strong>The app platform</strong> every integration on this site plugs into: tools, triggers, routes and apps, with keys in the vault.</li>
+            <li><strong>The docs</strong> at <a href={LINKS.docs}>gurtos.com</a>.</li>
+            <li><strong>The code,</strong> open source under Apache-2.0: <a href={LINKS.repo}>run it, customise it, reuse it</a>.</li>
+          </ul>
+        </div>
+      </div>
     </section>
 
     <section class="proofs" aria-labelledby="proofs">
@@ -505,6 +554,33 @@ const prizes = [
   }
   section > h2 {
     margin-bottom: var(--space-4);
+  }
+  .frame {
+    margin-top: var(--space-7);
+  }
+  .frame-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+    gap: var(--space-5) var(--space-6);
+    border-top: 1px solid var(--color-border-strong);
+    padding-top: var(--space-5);
+  }
+  .frame h3 {
+    font-size: 1.1rem;
+    margin: 0 0 var(--space-3);
+  }
+  .frame h3:not(:first-child) {
+    margin-top: var(--space-5);
+  }
+  .frame ul {
+    padding-left: 1.2em;
+    margin: 0;
+  }
+  .frame li {
+    margin-bottom: var(--space-2);
+  }
+  .frame p {
+    margin: 0 0 var(--space-3);
   }
   .proofs {
     margin-top: var(--space-6);

@@ -60,9 +60,21 @@ stars (GitHub API, Oct 23, 2026). It also had 21,639 instances anyone on the int
 341 malicious skills out of 2,857 on ClawHub (Koi Security), and a one-click token theft (CVE-2026-25253). The agent
 runs as you, with your keys and your files. GurtOS is the computer built for that work instead.
 
-Every task runs as its own Linux user, in its own copy of your files, and its network reaches only the hosts it
-needs. Tools that need a key run inside the core, so a task never holds one. One append-only log records everything
-every agent did and what each task cost. Factory's Droid running Claude does the work.
+**Existing operating systems are outdated for agents.** They were built for one human at a keyboard: permissions are
+per user, not per task; secrets sit in environment variables and files any process can read; the network is all or
+nothing; there is no approval, budget or spending limit; and there is no trustworthy record and no rollback of what an
+agent did. Companies also get no separation of duties, no routed approvals and no fleet-wide audit.
+
+**GurtOS is a lightweight OS built for agents.** Every task runs as its own Linux user, in its own copy-on-write copy
+of your files (an overlay layer), and its network reaches only the hosts it needs. That filesystem makes agent work
+faster as well as safer: agents work in parallel without colliding, nothing is duplicated, and undo is exact. Tools
+that need a key run inside the core, so a task never holds one. One append-only log records everything every agent
+did and what each task cost. Factory's Droid running Claude does the work. It is one Node service on Ubuntu with no
+GPU: GurtOS Server runs in 4 GB of memory and 17 GB of disk on a computer you own.
+
+**A suite, not one system:** the OS in three editions, the portal and phone app (app.gurtos.com), remote access with
+push approvals, the app platform every integration below plugs into, the docs (gurtos.com), and the code, open source
+under Apache-2.0.
 
 ![The box's own screen as a task asks for an OK](https://calhacks.gurtos.com/devpost/1-box-screen.png)
 
@@ -81,7 +93,7 @@ every agent did and what each task cost. Factory's Droid running Claude does the
 **Three editions.** **GurtOS Server** is an always-on box with its own screen, no human login, and a bootable ISO
 that updates as a whole and rolls back by itself (built). **GurtOS Personal** is your own Ubuntu laptop, where agents
 work beside you on copies of your folders, with approvals as GNOME notifications and Keep or Undo (built).
-**GurtOS Business** shares one box across a team with roles and routed approvals (planned).
+**GurtOS Business** shares one box across a team with roles and routed approvals (preview, being built).
 
 **Proof.** The merge gate, `./demo`, starts a fresh box on a test VM and runs the four moments and every app: on Oct 24
 it passed all 24 sections, 266 checks, 0 failed (its real-Droid section is off while Factory credit is short, and last passed earlier that day). The credit desk caught 14 of 14 planted finance errors with 0 false
@@ -133,7 +145,7 @@ Forge app: `jira:issuePanel` (UI Kit), a resolver that reads the task as the sig
 
 **The problem.** Companies want AI employees, but today's computers and clouds were not built for them. An agent runs as you, with your keys, on one shared filesystem, with no separation of duties, no record you can trust and no undo, so nobody lets one do real finance work.
 
-**So we built GurtOS, an environment for AI employees.** Each one works in its own space (its own Linux user and its own copy of the files), never sees a password, and cannot approve its own work. Everything it does is visible to the company on the portal and the phone, and anything above its authority waits for the right person's OK. Seats work in parallel without collisions, and a crash mid-run resumes where it was.
+**So we built GurtOS, an environment for AI employees.** Each one works in its own space (its own Linux user and its own copy of the files), never sees a password, and cannot approve its own work. Everything it does is visible to the company on the portal and the phone, and anything above its authority waits for the right person's OK. Seats work in parallel on copy-on-write copies of the files, so they never collide, nothing is duplicated, and undo is exact; a crash mid-run resumes where it was.
 
 **The demo: a credit desk for Fogline Supply Co.**, a made-up Oakland wholesaler. One line on the seats: a credit analyst agent and a collections clerk agent, with a human controller who signs off above $10,000 and on every fraud referral. The analyst checks new customers through CRS; the clerk works the ledger against the bank (Capital One's Nessie).
 
@@ -191,7 +203,7 @@ A production-minded finance agent: two agent seats run a small wholesaler's cred
 
 **The problem.** Shopping agents today need your card or your password, stores can't tell a good agent from a bot, you can't see or stop what they do, and cloud agents run on computers you don't control.
 
-**GurtOS runs your shopping agent on a computer you own.** You give it standing instructions ("the Chemex filters when they're under $16", "keep the house stocked"); it checks real stores and your receipts, and buys only after one tap on your phone. The agent never holds the card or a buy tool (trust), every checkout is signed with Visa's Trusted Agent Protocol so the store can verify it (commerce impact, technical), undo refunds the order (UX), and the portal and phone show live what every agent is doing (UX, trust).
+**GurtOS runs your shopping agent on a computer you own.** You give it standing instructions ("the Chemex filters when they're under $16", "keep the house stocked"); it checks real stores and your receipts, and buys only after one tap on your phone. The agent never holds the card or a buy tool (trust), every checkout is signed with Visa's Trusted Agent Protocol so the store can verify it (commerce impact, technical), undo refunds the order, and each agent's work sits in its own copy-on-write layer, so undo is exact (UX), and the portal and phone show live what every agent is doing (UX, trust).
 
 **Proof:** In the Oct 23 live run, Apify read Chemex filters at Best Buy Canada for $15.36 CAD. After the tap, the box bought them at that price as a Stripe test-mode charge on a Visa test card, and undoing a reorder refunded it. All test money.
 
@@ -229,7 +241,7 @@ Agents on a GurtOS box pay for 402-gated APIs with the x402 SDK. Payments settle
 
 **The problem.** A chat agent can only act if it runs somewhere: a cloud you can't see into, or your own computer with full access. And an agent that talks to other agents can be fed hidden instructions.
 
-**GurtOS gives ASI:One a safe body on a computer you own.** Every GurtOS box is an agent on Agentverse. From an ASI:One chat you give it real work, such as "fix the failing test in my project". Each request runs as its own sandboxed task (its own Linux user, its own copy of the files, no keys), asks with an Interactive Card before it spends, and comes back with its diff and Keep or Undo. The portal and phone show it live. A Server box is always reachable through its Agentverse mailbox with no open port.
+**GurtOS gives ASI:One a safe body on a computer you own.** Every GurtOS box is an agent on Agentverse. From an ASI:One chat you give it real work, such as "fix the failing test in my project". Each request runs as its own sandboxed task (its own Linux user, its own instant copy-on-write copy of the files, no keys), asks with an Interactive Card before it spends, and comes back with its diff and Keep or Undo. The portal and phone show it live. A Server box is always reachable through its Agentverse mailbox with no open port.
 
 **Proof:** In a live ASI:One run, a Droid task fixed the failing test for $0.05 and returned the diff with Undo. A stock check paused at a $0.50 Apify search over its $0.25 budget, sent an Approve/Deny card, and after Approve reported the filters in stock at $10.25.
 
