@@ -3,7 +3,7 @@ order: 12
 sponsor: Moss
 prize: A personal agent that remembers you
 editions: 'GurtOS Personal'
-pitch: 'A personal agent is only useful if it remembers you, and today that means uploading your life to someone''s cloud. On GurtOS the index lives in your own computer''s memory, agents search it with no network and no keys, and undoing a task takes its files out. Only text goes to Moss''s cloud copy, including what a vision model wrote about your photos. Talking to your computer is built in GurtOS Personal. Next (being built): memory that cannot be poisoned, one preference honoured across apps, photos described by a local model only, and a forget button.'
+pitch: 'A personal agent is only useful if it remembers you, and today that means uploading your life to someone''s cloud. On GurtOS the index lives in your own computer''s memory, agents search it with no network and no keys, and undoing a task takes its files out. A fresh box calls no model: a photo is described by a model you point it at, such as one in Ollama on your own machine, and Claude describes photos only when the owner presses a button. Only text goes to Moss''s cloud copy, including what a vision model wrote about your photos. Talking to your computer is built in GurtOS Personal. Next (being built): memory that cannot be poisoned, one preference honoured across apps and a forget button.'
 title: The box remembers what is in your photos, files and past tasks
 summary: A personal agent is only useful if it remembers you, but today that means uploading your life to someone's cloud, and any web page an agent reads can plant false memories. On GurtOS the memory sits on a computer you own. Say "find the whiteboard photo" and the box answers photos/IMG_2041.jpg, a file whose name says nothing about a whiteboard. A vision model described the photo when it arrived, and Moss indexes that description together with every text file and finished task on the box. Agents search the same index through a box tool, with no network and no keys of their own.
 proof: 'A search through the box takes a median of 3.1 ms on both test VMs (ARM64 and x86), under 1 ms of it inside Moss, because Moss runs in the box''s own memory. In every merge-gate run, an agent with no network asks find.search through the broker and gets the same whiteboard photo; undo a task and its files leave the index while the photos stay.'
@@ -35,7 +35,7 @@ flow:
     detail: In any workspace, or written by a task. Rescans run at boot, after every task, and every minute.
   - zone: outside
     label: A vision model describes it
-    detail: gemma4 in Ollama on the same laptop's GPU, or, as the backup, Claude in a sandboxed Droid task, which sends the photo to Anthropic.
+    detail: Only a model whose key is set in the vault: for example gemma4 in Ollama on your own machine, where nothing leaves your network. Claude, through a sandboxed Droid task, only when the owner presses Describe with Claude, which sends the photos to Factory. A fresh box calls no model, and photos wait until one is set.
   - zone: core
     label: Moss indexes it on the box
     detail: A session index with <code>moss-minilm</code>, in the box's memory. Metadata says photo, file or task.
@@ -54,7 +54,7 @@ status:
     note: '<code>@moss-js/moss</code> 1.21, session index on the box, pushed to the project''s cloud index. <code>DEMO_LIVE=find ./demo</code> runs it.'
   - part: Photo descriptions
     state: live
-    note: 'gemma4 in Ollama on the laptop VM; Claude (<code>claude-sonnet-4-6</code>) through a Droid task on the x86 VM.'
+    note: 'Only with a model set in the vault. Measured with gemma4 in Ollama on the Mac that hosts the ARM64 test VM, and with Claude (<code>claude-sonnet-4-6</code>) through one Droid task on the x86 test VM, started by the owner''s button. A fresh box describes nothing until one of those is set.'
   - part: Offline merge gate
     state: simulated
     note: 'Plain <code>./demo</code> uses descriptions gemma4 wrote earlier and a word-match index in place of Moss, so every merge runs without network.'
@@ -67,7 +67,7 @@ status:
 
 **The problem.** A personal agent is only useful if it remembers you. Today that means uploading your life to someone's cloud, and any web page or photo an agent reads can try to plant false memories in it.
 
-**GurtOS keeps the memory on a computer you own.** The index is in the box's own memory, each agent searches it through the box with no network and no keys, undoing a task takes its files out of the index, and the portal and phone show what every agent is doing. It runs on GurtOS Personal on your own laptop, even an old one (one Node service, no GPU needed for search), and is open source under Apache-2.0. What leaves the box today: a text copy in Moss's cloud index, which includes the descriptions a vision model wrote about your photos, and, when the Claude backup describes a photo, the photo itself goes to Anthropic. The local model is the default where Ollama runs; making Claude opt-in is being built.
+**GurtOS keeps the memory on a computer you own.** The index is in the box's own memory, each agent searches it through the box with no network and no keys, undoing a task takes its files out of the index, and the portal and phone show what every agent is doing. It runs on GurtOS Personal on your own laptop, even an old one (one Node service, no GPU needed for search), and is open source under Apache-2.0. What leaves the box: a text copy in Moss's cloud index, which includes the descriptions a vision model wrote about your photos. A fresh box calls no model; a photo is described only by a model you point the box at (such as gemma4 in Ollama on your own machine) or, when you press Describe with Claude, by Claude through Factory, which does send those photos off your computer.
 
 | Feature | Why it is there | Moss criterion | From | Today |
 |---|---|---|---|---|
@@ -75,11 +75,11 @@ status:
 | An agent searches through the broker with no network and no Moss key | An agent that reads a hostile page cannot send your memory anywhere | Works across your apps | GurtOS (the broker, the network rule) | Shipped. The merge gate checks it every run |
 | Undo a task and its files leave the index while the photos stay | Remembering must not be permanent against your wishes | A personal agent that remembers you | GurtOS (undo of one task) | Shipped |
 | A symlink to the vault is neither indexed nor served, and no path leaves the workspaces | The index cannot become a way to read your secrets | A personal agent that remembers you | GurtOS (the vault) and the Find app | Shipped |
-| Photos described by a vision model when they arrive: gemma4 in Ollama on the laptop, or Claude in a Droid task as the backup | A photo's name says nothing, its description does | A personal agent that remembers you | The Find app | Shipped. The Claude backup sends the photo to Anthropic |
+| Photos described by a vision model, so a search finds a photo by what is in it: a model you point the box at, such as gemma4 in Ollama on your own machine | A photo's name says nothing, its description does | A personal agent that remembers you | The Find app | Shipped. A fresh box calls no model, each model is used only when its key is set in the vault, and photos wait until one is |
 | Talk to your computer: press Super+Alt+Space, ask out loud, and hear the answer as a notification and a local voice; a spoken yes approves only a request that spends nothing, signed as the voice of the owner, and the audio is deleted after it is read | Asking out loud is how people expect to use memory, and a voice must not be able to spend money | A voice agent | GurtOS Personal and the Find app | Shipped in GurtOS Personal. The self-test checks the safety rule, and speech to text took 1.1 s on a CPU. Nobody has tried it through a real microphone yet, and the speech model (about 600 MB) is downloaded at first boot, so with no network the feature stays off |
 | Agent memory that cannot be poisoned: what an agent reads from a web page or photo is labelled untrusted and cannot overwrite what you told it | A planted false memory would steer every later task | A personal agent that remembers you | GurtOS (per-task scope, untrusted data) and the Find app | Being built; not on main yet |
 | One preference honoured across apps: say it once and every app's agent follows it | Works across your apps | Works across your apps | The Find app and GurtOS (the shared index) | Being built; not on main yet |
-| Photos described by a local model only, with Claude used only if the owner opts in | Your photos stay on your computer unless you decide otherwise | A personal agent that remembers you | The Find app and GurtOS (the network rule) | Being built; not on main yet |
+| Photos stay home unless the owner opts in: nothing describes a photo at boot or on a schedule, and Claude describes photos only when the owner presses Describe with Claude, in one Droid task with no network beyond Factory, no tools and no keys | Your photos stay on your computer unless you decide otherwise | A personal agent that remembers you | The Find app and GurtOS (the network rule, the vault) | Shipped. Pressing the button does send the photos to Factory, which runs Claude, so they leave your computer at that moment. A small local vision model on CPU is still being measured |
 | A forget button: remove one memory, or everything, from the index and the cloud copy | You decide what is remembered | A personal agent that remembers you | The Find app and GurtOS | Being built; not on main yet |
 
 ## Evidence
@@ -146,8 +146,8 @@ a workspace.
 ## Try it
 
 1. Put `MOSS_PROJECT_ID` and `MOSS_PROJECT_KEY` in the box's vault, `/etc/box/vault.env`. Photos are described by
-   the first model in `MODELS` (`tracks/find/find.ts`) that answers: gemma4 in Ollama, then
-   Claude through Droid with the box's Factory key. Edit that list to keep photos on your own GPU.
+   the first model whose key is set in the vault and that answers: gemma4 in Ollama at the address you give. Claude
+   describes photos only when you press Describe with Claude on the Find page, and needs the box's Factory key.
 2. Copy photos into any workspace. The track makes a `photos` workspace with the four test photos on first boot.
 3. Search: `curl -s '127.0.0.1:7700/t/find/search?q=find+the+whiteboard+photo&kind=photo'`.
 4. Or give a task the tool: `"tools": ["find.search"]`, and ask it to find something.
@@ -156,10 +156,10 @@ a workspace.
 
 ## Limits
 
-- **Photos can leave the box.** When the local model is not available, Claude describes the photo in a Droid task, which sends it to Anthropic. Only text goes to Moss's cloud copy, and that text includes the descriptions. An opt-in for Claude is being built.
+- **Photos leave the box only when you press Describe with Claude**, which sends them to Factory (Claude runs there), or if you point the box at a model on another machine. Only text goes to Moss's cloud copy, and that text includes the descriptions.
 - **Any task given `find.search` can search every workspace**, not only its own. A photo with text in it can carry
   that text into an agent's context as data.
 - **Only the first 2,000 characters** of a text file are indexed. Long files need chunking.
 - **Photos go to the model at full size.** Large phone photos are slower to describe.
-- **A failed Claude description is not retried** until the box restarts, so a broken backup cannot start tasks in a
-  loop.
+- **A failed Claude description is not retried** until the box restarts, so a failed button press cannot start tasks in
+  a loop.
