@@ -385,7 +385,7 @@ const prizes = [
         DOWNLOADS.length > 0 && (
           <>
             <p class="measure">
-              <strong>Check a download.</strong> The release is signed with an SSH key whose fingerprint is <code>SHA256:FWKFb1eAvEBmMhVJwMwTnLnhrmZ5yQZ5947pDvFKcpY</code>. From the folder with <code>SHA256SUMS</code>, <code>SHA256SUMS.sig</code> and <code>allowed_signers</code> (all in the <a href="https://sjc1.vultrobjects.com/gurtos/v0.1.0-preview/">mirror folder</a>), run <code>ssh-keygen -Y verify -f allowed_signers -I gurtos -n gurtos-release -s SHA256SUMS.sig &lt; SHA256SUMS</code>, then <code>sha256sum -c SHA256SUMS --ignore-missing</code>. The signed <code>SHA256SUMS</code> lists all four discs. The GitHub release files were still finishing uploading when this was written, so use the mirror link if one returns a 404.
+              <strong>Check a download.</strong> The release is signed with an SSH key whose fingerprint is <code>SHA256:FWKFb1eAvEBmMhVJwMwTnLnhrmZ5yQZ5947pDvFKcpY</code>. From the folder with <code>SHA256SUMS</code>, <code>SHA256SUMS.sig</code> and <code>allowed_signers</code> (all in the <a href="https://sjc1.vultrobjects.com/gurtos/v0.1.0-preview/">mirror folder</a>), run <code>ssh-keygen -Y verify -f allowed_signers -I gurtos -n gurtos-release -s SHA256SUMS.sig &lt; SHA256SUMS</code>, then <code>sha256sum -c SHA256SUMS --ignore-missing</code>. The signed <code>SHA256SUMS</code> lists all four discs.
             </p>
             <ul class="measure">
               <li>First-boot setup shows the clock in UTC until you reach the time zone step.</li>
