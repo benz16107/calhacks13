@@ -14,7 +14,7 @@ Devpost text, and Ben's approved list.
 **Demo step** names the check in `./demo` (`core/demo.ts` moments, or `tracks/<name>/demo.ts`). "none" means no
 automated check yet.
 
-Checked against main `8d25e1f`, Sat Oct 24 03:25 PT. `./demo` on that commit: 25 passed, 0 failed, 1 pending (real Droid, off by default).
+Checked against main `cee2d5e`, Sat Oct 24 03:27 PT. `./demo` on that tree: 26 passed, 0 failed, 1 pending (real Droid, off by default).
 
 ## Freeze plan
 
@@ -22,7 +22,7 @@ Checked against main `8d25e1f`, Sat Oct 24 03:25 PT. `./demo` on that commit: 25
   from the release and from the Devpost and showcase text, not half-merged.
 - **Overnight:** QA installs the final ISOs fresh and walks every row of this ledger.
 - **Sun 6:00 AM PT:** the final release. **Sun 9:00 AM PT:** Devpost closes.
-- **GurtOS Business:** on the `business` branch, not merged at 03:05 Sat; the Business thread expects to merge within the hour. Off on a new box: turn it on with `PUT /api/business {on: true, company}` from the box screen. If it isn't merged and verified by
+- **GurtOS Business:** merged (276bb32) and verified Oct 24 03:27 on the QA box. No clean cut needed. Open: the P2 below.
   the freeze, QA flags it for a clean cut: no Business rows on the showcase or Devpost, and no Business code on main.
 
 ## Summary
@@ -30,14 +30,14 @@ Checked against main `8d25e1f`, Sat Oct 24 03:25 PT. `./demo` on that commit: 25
 | Status | Count |
 |---|---|
 | verified (ISO) | 3 |
-| verified | 31 |
-| merged | 28 |
-| building | 24 |
-| planned | 38 |
-| **Total** | **124** |
+| verified | 39 |
+| merged | 29 |
+| building | 16 |
+| planned | 41 |
+| **Total** | **128** |
 
-**Collisions** (detail below): none open at 02:40. The three found at 02:25 were resolved on the `business` branch
-(rebased, kill switch on core's `settings.paused`). Still watched: portal/dist rebuilt from merged sources (C-4).
+**Collisions** (detail below): none open at 03:27. The three found at 02:25 are resolved and Business is on main. Still
+watched: portal/dist rebuilt from merged sources (C-4).
 
 ## The four moments
 
@@ -103,16 +103,24 @@ Checked against main `8d25e1f`, Sat Oct 24 03:25 PT. `./demo` on that commit: 25
 
 ## GurtOS Business (preview)
 
+On main since 276bb32. Off on a new box: turn it on with `PUT /api/business {on: true, company}`. The box's own screen
+answers nothing until a person is picked from the top bar.
+
 | Feature | Owner | Status | Commit | Demo step | Tracks |
 |---|---|---|---|---|---|
-| People and roles | business | building (`business` 9886d27, rebased on main, merges clean) | 9886d27 | core/business-demo.ts on branch | Hyphenate, Microsoft, Atlassian |
-| Plain-sentence rules, with a rule tester ("Who would approve this?", GET /api/business/route) | business | building (tester added after 9886d27; merge expected within the hour of 03:05 PT) | | business-demo on branch | Hyphenate, Microsoft |
-| Routed approvals | business | building | | business-demo on branch | Hyphenate, Microsoft |
-| No self-approval, no agent approving an agent | business | building | | business-demo on branch | Hyphenate, Armadin |
-| Waiting for me | business | building | | | Hyphenate |
-| My requests | business | building | | | Hyphenate |
-| Audit with CSV export | business | building | | | Hyphenate, Microsoft |
-| Kill switch | business | building (9886d27 now sets core's `settings.paused`) | 9886d27 | business-demo on branch | Hyphenate |
+| People and roles (owner, admin, approver with a limit, requester, auditor); a person signs in by pairing a phone | business | verified Oct 24 03:20 (four people, pairing codes, `/api/me` per person) | 276bb32 | business edition | Hyphenate, Microsoft, Atlassian |
+| Plain-sentence rules that route approvals; a bad line is refused and named | business | verified Oct 24 03:20 | 276bb32 | business edition | Hyphenate, Microsoft |
+| Rule tester ("Who would approve this?", GET /api/business/route) | business | verified Oct 24 03:20 (API; the Settings > Rules screen not opened) | 276bb32 | business edition | Hyphenate, Microsoft |
+| Routed approvals (rule, who, people who could approve, why) | business | verified Oct 24 03:22 ($12,000 went to the Controller; Rosa saw it, Sam did not) | 276bb32 | business edition | Hyphenate, Microsoft |
+| No self-approval; approver limit; only a person answers (agents, tools and an unsigned box screen get 403) | business | verified Oct 24 03:23 (Sam on his own request 403, auditor 403, $60,000 over Rosa's $50,000 limit 403, unsigned box screen 403, a body name ignored) | 276bb32 | business edition | Hyphenate, Armadin |
+| Waiting for me (phone and desktop) | business | verified Oct 24 03:27 (Business phone home with Waiting, Tasks, Audit, Settings; see P2 below) | 276bb32 | business edition | Hyphenate |
+| My requests | business | merged (API `/api/approvals?for=me`; the screen not walked) | 276bb32 | business edition | Hyphenate |
+| Audit with CSV export (who asked, approver, seat) | business | verified Oct 24 03:24 (API and CSV as the auditor; a requester gets 403; the Audit app screen not opened) | 276bb32 | business edition | Hyphenate, Microsoft |
+| Kill switch: one switch, core's `settings.paused` | business, core | verified Oct 24 03:25 (`/api/pause` and Settings PATCH read and write one state; a running task freezes, a new one queues, release runs it; a requester and an approver get 403) | 276bb32 | business edition, moment 3 | Hyphenate |
+| Kill switch card and the paused desktop for every edition | business, portal | planned | | | Hyphenate |
+| Mana policy proposal hook | business, mana | planned | | | Mana, Hyphenate |
+| Microsoft items: shadow mode and a pilot plan, Entra ID sign-in, a measured incident drill | business | planned | | | Microsoft |
+| Jira-to-GurtOS people mapping | jira, business | planned | | | Atlassian, Hyphenate |
 
 ## Hyphenate (credit desk)
 
@@ -192,7 +200,6 @@ Owner: the Jira thread.
 | JSM approvals for risky actions | jira | planned | | | Atlassian Track 2 |
 | Confluence daily and incident reports | jira | building (uncommitted: confluence.ts, confluence.test.ts) | | confluence.test.ts in worktree | Atlassian Track 1 and 2 |
 | Jira dashboard gadget | jira | building (uncommitted in the Jira worktree) | | | Atlassian Track 2 |
-| Jira-to-GurtOS people mapping in Business | jira, business | planned | | | Atlassian, Hyphenate |
 
 ## Mana
 
@@ -202,7 +209,7 @@ Owner: the Mana thread.
 |---|---|---|---|---|---|
 | Rules planning chat, project page, the GurtOS status app | mana | verified Oct 23 23:37 (app live, signed out) | 525f630, 4631f73 | tracks/mana/demo.ts | Mana, Hyphenate |
 | Guest requests to GurtOS from inside the Mana app, with the owner's approval (same guest path as Fetch's) | mana, fetch | planned | | | Mana, Fetch.ai |
-| Mana-drafted Business rules synced into the box's policy | mana, business | planned (needs the Business policy, `business` branch) | | | Mana, Hyphenate |
+| Mana-drafted Business rules synced into the box's policy | mana, business | planned (Business policy is on main; Mana's proposal hook not built) | | | Mana, Hyphenate |
 | Public Mana planning chats for Visa mandates and the Fetch agent team | mana | planned | | | Mana, Visa, Fetch.ai |
 | A GurtOS guide agent in Mana | mana | planned | | | Mana |
 | A public Mana home page for the entry | mana | planned | | | Mana |
@@ -247,10 +254,10 @@ Found by trial merges and by comparing what each branch edits. Each is sent to e
 
 | # | What | Threads | Found | State |
 |---|---|---|---|---|
-| C-1 | Two "stop every agent" switches: core's `settings.paused` (main 197ebc2, used by Personal's Quick Settings tile) and Business's `paused.json` with `POST /api/pause` (`business` branch). Merged as is, they hold different states. | core, business, personal | Oct 24 02:25 | Resolved on the branch (9886d27: /api/pause sets `settings.paused`). Re-check both switches after it merges |
-| C-2 | `business` (forked at 89f59d3) conflicts with main in core/box.ts, portal/src/shell.tsx, shell.css, dev-box.sh and the built portal/dist | business, portal, core | Oct 24 02:25 | Resolved: rebased on 6cdeb9a, trial merge clean at 02:40 |
-| C-3 | core/box.ts edited at once by core (uncommitted in the main checkout), `business` and `remote-access`. Business and remote access both add fields to `interface Device` at the same lines | core, business, remote access | Oct 24 02:25 | Remote access merged (6cdeb9a); Business rebased on it, clean |
-| C-4 | portal/dist is a built file that both `business` and `portal` commit. A merge can keep one side's bundle and silently drop the other's screens | business, portal | Oct 24 02:25 | Watch: QA checks dist/source.txt against sources after each merge |
+| C-1 | Two "stop every agent" switches: core's `settings.paused` (main 197ebc2, used by Personal's Quick Settings tile) and Business's `paused.json` with `POST /api/pause` (`business` branch). Merged as is, they hold different states. | core, business, personal | Oct 24 02:25 | Resolved and verified Oct 24 03:25 on 276bb32: one state, both entry points |
+| C-2 | `business` (forked at 89f59d3) conflicts with main in core/box.ts, portal/src/shell.tsx, shell.css, dev-box.sh and the built portal/dist | business, portal, core | Oct 24 02:25 | Resolved: Business merged as 276bb32; gate 26 passed, 0 failed |
+| C-3 | core/box.ts edited at once by core (uncommitted in the main checkout), `business` and `remote-access`. Business and remote access both add fields to `interface Device` at the same lines | core, business, remote access | Oct 24 02:25 | Resolved: remote access (6cdeb9a) and Business (276bb32) are both on main; both gate sections pass |
+| C-4 | portal/dist is a built file that both `business` and `portal` commit. A merge can keep one side's bundle and silently drop the other's screens | business, portal | Oct 24 02:25 | Watch: after 276bb32 the QA box serves the Business phone home and the Server home from one bundle; QA checks dist/source.txt after each merge |
 
 ## Fresh-install checks
 

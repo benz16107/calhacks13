@@ -292,6 +292,21 @@ in test.
 **P2-20. Normal tasks log `net.blocked 127.0.0.53:53`.** Owner: core. Droid's own process tries the resolver stub,
 about eight times in one lookup, and the portal shows them as blocked attempts. Filed with core.
 
+**P2-21. A Business approver's phone shows the ordinary Server home for the first few seconds after pairing.** Owner:
+portal. Rosa (approver, $50,000 limit) paired and for about 2 to 5 s saw "Needs you" with Approve buttons for every
+pending request, including "Approve $60,000" for one above her limit (the box refuses it with 403). It then
+switches to "Waiting for me" with only her request. A requester or auditor should never see that flash either.
+Found on 276bb32 at 03:27 PT (shot 90).
+
+**P2-22. The policy accepts a person's name that nobody approves for.** Owner: business. "Over $10,000 goes to Rosa
+Alvarez." saved without a warning; the rule tester then said "nobody approves for Rosa Alvarez" and the request would
+go to the owner. Rules name a duty ("the Controller", set per person as `approvesFor`). Saving a line whose
+target is no person's duty and no role could warn, as the tester does.
+
+**P2-23. A request above every approver's limit has nobody to answer it.** Owner: business. The $60,000 request went
+to the Controller, whose limit is $50,000: it left Rosa's "Waiting for me" and only the owner could answer it. Say in
+the request that it is above everyone's limit, and who can still answer.
+
 ## Docs site (gurtos.com)
 
 **D-1 to D-4 and D-7 fixed in 199dce5 and live, spot-checked 00:00 PT:** real ISO names, `gurt-<id>`, the Personal ISO
