@@ -17,7 +17,7 @@ Run a script: `tar c spikes/NN-*.sh | ssh benmac 'limactl shell box -- bash -c "
 | 2 | Tasks as separate users | Works |
 | 3 | Per-task network limits | Works, matched by uid. Cgroup matching fails open |
 | 4 | SpacetimeDB on ARM | Works (2.13.0, aarch64) |
-| 5 | Droid as its own user | pending |
+| 5 | Droid as its own user | Works up to auth. Blocked on `FACTORY_API_KEY` |
 | 6 | Vision model for /find | Works, Mac Ollama `gemma4`, 1.4 to 4 s a photo |
 
 ## 1. Per-task file copies
@@ -197,6 +197,64 @@ a Node client that subscribes (`04-spacetime/watch.ts`). Node is 24.22.1 from No
 **For the core thread:** SpacetimeDB 2.13 runs self-hosted on the ARM laptop VM with no workarounds. Use it for
 live task status and approvals, keep the action log on disk as planned, and block tasks from port 3000.
 
+## 5. Droid as its own user
+
+**Status: everything works up to the API key, which the VM does not have.** No real Droid task has run yet.
+
+**To finish it,** on the laptop VM, add the key to core's vault, then rerun:
+
+```
+ssh -t benmac 'limactl shell box -- sudo bash -c "mkdir -p /etc/box; umask 077; read -rsp \"Factory key: \" k; echo; echo FACTORY_API_KEY=\$k >> /etc/box/vault.env"'
+tar c spikes/05-droid | ssh benmac 'limactl shell box -- bash -c "tar x -C ~/spikes --strip-components=1 && sudo LIST_MODELS=1 bash ~/spikes/05-droid/run.sh"'
+```
+
+It prompts for the key, so the key stays out of shell history. Get one at
+https://app.factory.ai/settings/api-keys. Success looks like `"success":true`, `hello.txt` and `README.md` in the task's upper dir, and broker log
+lines with status 200.
+
+**Ran:** `sudo bash 05-droid/run.sh`. The Droid CLI 0.248.0 (linux-arm64, a Bun binary) is at
+`/usr/local/bin/droid`, the same path and version `core/setup.sh` installs. `@factory/droid-sdk` 0.10.0 is
+in `/opt/spike5`. The task user `task-d` (uid 30004) gets an overlay copy as in spike 2, the spike 2 systemd
+hardening and its own `HOME`. It runs `05-droid/task.mjs`, which calls
+`run(prompt, { cwd, modelId: 'claude-opus-5-5', autonomyLevel: 'low' })`.
+
+**The key never reaches the task.** `droid` reads `FACTORY_API_BASE_URL` and sends all of its Factory traffic
+there over plain HTTP, model calls included, each with `Authorization: Bearer <FACTORY_API_KEY>`. So the task
+gets `FACTORY_API_KEY=fk-task-placeholder` and `FACTORY_API_BASE_URL=http://127.0.0.1:7799`.
+`05-droid/broker.mjs` (30 lines) runs outside the task. It checks the caller's uid from `/proc/net/tcp`,
+replaces the header with the real key, and forwards to `https://api.factory.ai`. The nftables rule lets task
+uids reach only port 7799. What `droid` sent, in order:
+
+```
+GET  /api/cli/whoami                  GET  /api/feature-flags          GET /api/organization/managed-settings
+POST /api/connectors/tools/list       GET  /api/billing/limits         POST /api/llm/a/v1/messages   (Anthropic format)
+```
+
+The broker reached the real Factory API from inside the limited task: `/api/feature-flags` returned 200 and the
+rest returned 401 "Missing authorization token". The kernel logged no blocked packets, so `droid` tried no
+other host directly, at least before it stopped at auth.
+
+**Gotchas:**
+- With no key, the SDK throws at once ("No Factory API key found") and the CLI exits 1 ("Authentication
+  failed"). Neither hangs on a browser login. A placeholder key gets through to the network.
+- The SDK needs `FACTORY_API_KEY` set in the task's environment even when the base URL points at the broker.
+  Use a placeholder.
+- The broker must be TCP on localhost, because `FACTORY_API_BASE_URL` is a URL. A Unix socket like core's
+  per-task broker socket will not do for `droid`'s own calls. Identify the task by the socket's uid, as here.
+- `droid` writes `~/.factory`, so the task's `HOME` must be writable (`ReadWritePaths`).
+- Set `FACTORY_RIPGREP_PATH=/usr/bin/rg` (apt `ripgrep`). Otherwise `droid` may try to download ripgrep, which
+  the network rules block.
+- The binary also reads `HTTPS_PROXY`, `NO_PROXY` and `FACTORY_EXTRA_CA_CERTS`, so it can go through the
+  spike 3 proxy if a task needs other hosts.
+- `listModels()` (run with `LIST_MODELS=1`) prints the model ids the account allows. `claude-opus-5-5` comes
+  from Factory's docs and has not been checked against the account.
+- Not checked until a key exists: whether `droid` also calls `telemetry.factory.ai` directly during a real
+  run. If it does, the network rules block it. Check that it carries on anyway.
+
+**For the core thread:** start Droid with a placeholder key and `FACTORY_API_BASE_URL` pointing at a localhost
+broker that swaps in the vault's key and checks the caller's uid. Then the agent can be fully hijacked and
+still has no key to steal.
+
 ## 6. Vision model for /find
 
 **Ran:** `bash 06-vision.sh [photo]` as the normal VM user. It sends the photo as base64 to Ollama's
@@ -232,6 +290,27 @@ Bridge, San Francisco, suspension bridge". It ran 100% on the Mac's GPU.
 **For the core thread:** call `http://host.lima.internal:11434/api/generate` with `model: "gemma4"`,
 `think: false` and photos resized to about 1024 px. Expect about 1.5 s a photo while warm. The photo stays on
 the laptop.
+
+## Checked against core (main at b53e1c7)
+
+The spike thread does not change `core/`. These are for the core thread.
+
+1. **A later task can rewrite a finished task's layer.** `seal()` runs `chmod -R a+rwX` on `tasks/<id>/upper`
+   and leaves `tasks/<id>` at 0711. Shown in the VM: task-b ran `echo tampered >> tasks/A/upper/a.txt` and
+   it worked. That change reaches every later copy and every view, and undoing B does not remove it.
+   **Fix:** `chmod 700 tasks/<id>` in `seal()`. Then the direct write is denied, and task-b can still edit
+   `a.txt` through its own overlay copy, because overlayfs reads lower layers with root's rights.
+2. **Workers start with plain `spawn` (uid and gid only).** Tasks then see each other's processes and command
+   lines in `ps`, share `/tmp`, can write any folder they own, and can reach the system D-Bus. Spike 2 fixes
+   the first three with systemd unit options (`systemd-run --uid` or `-p User=` with `ProtectProc=invisible
+   PrivateTmp=yes ProtectSystem=strict ReadWritePaths=...`). Core's broker is a Unix socket, so
+   `RestrictAddressFamilies` must include `AF_UNIX`, which leaves D-Bus open. Hiding `/run/dbus` with
+   `InaccessiblePaths=` may close it. That idea is untested.
+3. **No firewall rule yet.** Spike 3's `meta skuid 30000-39999` rules fit core's uid range as they are. Allow
+   only the ports tasks need, for example the Droid broker, and block SpacetimeDB's `0.0.0.0:3000`.
+4. **Droid needs a TCP broker** for its own model calls (spike 5), next to the per-task Unix socket for tools.
+5. If `seal()` or cleanup ever deletes task folders, unmount first and use `rm -rf --one-file-system`
+   (spike 2).
 
 ## Not tested yet
 
