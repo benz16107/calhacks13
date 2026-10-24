@@ -154,6 +154,17 @@ export default async function (d: DemoKit) {
       d.check(shop.text.includes(addresses.shopper.slice(0, 12)) && /Hario V60/.test(shop.text) && /in stock|not in stock/.test(shop.text),
         `GurtOS routed a price question to its Shopper agent (${addresses.shopper.slice(0, 14)}...), which checked the store and answered: "${shop.text.split('\n').find((l) => l.startsWith('> -'))?.replace(/^> /, '').trim()}"`);
     }
+    // ---------- a team of box agents coordinating through SpacetimeDB ----------
+    if ((await d.api<{ tools: string[] }>('GET', '/health')).tools.includes('spacetime.claim')) {
+      say(owner, 'Check the prices of these: hario v60 filters, chemex filters and airpods pro');
+      const posted = await expect(owner, 'about the queue', (m) => m.text.includes('SpacetimeDB queue'), 30_000);
+      const queue = posted.text.match(/\((fetch:[0-9a-f]+)\)/)?.[1] ?? '';
+      const summary = await expect(owner, 'with the team summary', (m) => m.text.startsWith('The team is done'), 60_000);
+      const team = (await d.api<Task[]>('GET', '/tasks')).filter((t) => t.title.startsWith('Price checker') && t.prompt.includes(queue));
+      const got = await Promise.all(team.map(async (t) => (await d.api<{ events: any[] }>('GET', `/tasks/${t.id}`)).events.find((e) => e.type === 'tool.result' && e.ok)?.output?.job?.id));
+      d.check(queue && team.length === 3 && got.every(Boolean) && new Set(got.map(String)).size === 3 && summary.text.includes('chemex filters'),
+        `a list of 3 became 3 jobs on SpacetimeDB queue ${queue}; 3 agents on the box claimed at once and SpacetimeDB gave each a different job (${got.join(', ')}); the chat got one summary (the scripted agents only claim; real Droid also checks and finishes each)`);
+    }
     if (addresses['credit-desk']) {
       say(owner, 'Run the credit desk on the Fogline case');
       const fraud = await expect(owner, 'with the credit desk controller card', (m) => m.card?.kind === 'review', 60_000);
@@ -196,7 +207,7 @@ export default async function (d: DemoKit) {
     const bought = await expect(owner, 'with the paid price check', (m) => m.text.includes('GurtOS Shopper answered'), 30_000);
     const received = await notes('asi1.payment.received');
     d.check(received.length === 1 && received[0].data.amount === '0.05' && /Hario V60/.test(bought.text),
-      'another agent paid the box: the test buyer paid GurtOS Shopper 0.05 test FET, the box checked it on its ledger, then ran the price check');
+      'another agent paid the box: the test buyer (a test stranger, paying from its own wallet, not the box\'s) paid GurtOS Shopper 0.05 test FET, the box checked it on its ledger, then ran the price check');
     }
 
     // ---------- another machine of the owner's ----------
@@ -306,11 +317,18 @@ async function live(d: DemoKit) {
     await planner(asiKey!, agent.address, ['Send the agent this exact message: Ask the test buyer to buy a price check for hario v60 filters']);
     const got = await d.waitFor('the Shopper to be paid', () => noteOf('asi1.payment.received', since), 240_000);
     d.check(got && !got.data.simulated && got.data.amount === '0.05',
-      `the test buyer paid GurtOS Shopper 0.05 test FET on chain (${String(got?.data.tx).slice(0, 16)}...); the box checked it and ran the price check`);
+      `the test buyer (a test stranger with its own faucet wallet) paid GurtOS Shopper 0.05 test FET on chain (${String(got?.data.tx).slice(0, 16)}...); the box checked it and ran the price check`);
 
     if (!/\bdroid\b/.test(process.env.DEMO_LIVE ?? '')) {
       console.log('  skip  the chat that runs a real Droid task: DEMO_LIVE=fetch,droid ./demo runs it');
       return;
+    }
+    // A team of real Droid agents coordinating through SpacetimeDB: each claims, checks and finishes items.
+    if ((await d.api<{ tools: string[] }>('GET', '/health')).tools.includes('spacetime.claim')) {
+      const at = (await d.api<any[]>('GET', '/log')).length;
+      await planner(asiKey!, agent.address, ['Send the agent this exact message: Check the prices of these: airpods pro, hario v60 filters and chemex filters']);
+      const done = await d.waitFor('the team to finish', () => noteOf('asi1.team.done', at), 600_000);
+      d.check(done.data.finished === 3, `3 Droid agents shared SpacetimeDB queue ${done.data.queue}: each job claimed by exactly one, and ${done.data.finished} of 3 finished with a price`);
     }
     // The planner waits for the box's reply, and usually checks back until the task is done.
     const fix = await planner(asiKey!, agent.address, ['Ask the agent to fix the failing test in my project.']);

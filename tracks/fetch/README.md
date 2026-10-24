@@ -187,6 +187,20 @@ GurtOS has one guest path (`core/README.md`, "One path each"). The ASI:One agent
 the Mana app's guest route (`tracks/mana/guest.ts`), so the box keeps one set of rules and limits. The ASI:One
 agent only carries the chat to that route and back. When the Mana app is off, the box takes no guest requests.
 
+### 8. A team of box agents, coordinating through SpacetimeDB (multi-agent bonus) [GurtOS]
+
+Ask for several things at once: "check the prices of these: AirPods Pro, Hario V60 filters and Chemex filters".
+GurtOS puts one job per item on a SpacetimeDB queue (`tracks/spacetime`), then starts up to three agents on the box,
+each a Droid task. Each one claims the next open job, checks the price, and finishes the job with its result.
+SpacetimeDB gives every job to exactly one agent, even when they claim at the same instant. A job an agent still
+holds when it stops goes back on the queue. The chat gets the queue's progress once, then one summary with every
+item's result. The box's Live window shows the board as it happens.
+
+*Why:* the Agentverse agents are the front door, and the box's own agents are the team behind it. Tasks never reach
+SpacetimeDB or Agentverse themselves: they claim through tools the box runs, like everything else they do. The
+offline demo shows the claiming (three agents at once, three different jobs). The scripted worker cannot act on a
+job, so the finished prices come from the live run with real Droid (`DEMO_LIVE=fetch,droid`).
+
 ## How it works
 
 ```
@@ -324,7 +338,7 @@ Shopper on chain. `DEMO_LIVE=fetch,droid` adds a Droid task that fixes the faili
 | Public repo with run steps | "Run it", above |
 | README with agent names, addresses and badges | this file, and each profile in `profiles/` |
 | 3 to 5 minute video | `docs/videos.md`, section 2 |
-| Multi-agent (bonus) | 1, 2 and 6 |
+| Multi-agent (bonus) | 1, 2, 6 and 8 |
 | Payment Protocol (bonus) | 3 |
 | ASI Interactive Cards (bonus) | 4 |
 | Reliability (bonus) | 5 |
