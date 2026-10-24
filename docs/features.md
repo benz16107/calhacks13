@@ -14,7 +14,7 @@ Devpost text, and Ben's approved list.
 **Demo step** names the check in `./demo` (`core/demo.ts` moments, or `tracks/<name>/demo.ts`). "none" means no
 automated check yet.
 
-Checked against main `c359ed6`, Sat Oct 24 02:40 PT. `./demo` on that commit: 25 passed, 0 failed, 1 pending (real Droid, off by default).
+Checked against main `91bf768`, Sat Oct 24 02:50 PT. `./demo` on that commit: 25 passed, 0 failed, 1 pending (real Droid, off by default).
 
 ## Summary
 
@@ -23,9 +23,9 @@ Checked against main `c359ed6`, Sat Oct 24 02:40 PT. `./demo` on that commit: 25
 | verified (ISO) | 3 |
 | verified | 27 |
 | merged | 28 |
-| building | 18 |
-| planned | 21 |
-| **Total** | **97** |
+| building | 23 |
+| planned | 23 |
+| **Total** | **104** |
 
 **Collisions** (detail below): none open at 02:40. The three found at 02:25 were resolved on the `business` branch
 (rebased, kill switch on core's `settings.paused`). Still watched: portal/dist rebuilt from merged sources (C-4).
@@ -166,11 +166,25 @@ Checked against main `c359ed6`, Sat Oct 24 02:40 PT. `./demo` on that commit: 25
 | Box-to-box payments | wallet | planned | | | Solana, Coinbase |
 | One shared budget and approval layer with Fetch | wallet, fetch | planned | | | Coinbase, Fetch.ai |
 
+## Atlassian (Jira, both tracks)
+
+Owner: the Jira thread.
+
+| Feature | Owner | Status | Commit | Demo step | Tracks |
+|---|---|---|---|---|---|
+| Every task a Jira issue, Forge panel with Approve and Roll back, JQL fields | jira | merged (QA checked the public routes Oct 24 00:45; panel tested by the Jira thread) | c24a516, c82fcdb | tracks/jira/demo.ts | Atlassian Track 2 |
+| A Rovo agent with actions | jira | building (uncommitted in the Jira worktree, forge and track.ts) | | | Atlassian Track 1 and 2 |
+| Bulk roll back | jira | building (uncommitted in the Jira worktree) | | | Atlassian Track 2 |
+| Start agents from a Jira assignment or an Automation action | jira | building (uncommitted in the Jira worktree) | | | Atlassian Track 1 |
+| JSM approvals for risky actions | jira | planned | | | Atlassian Track 2 |
+| Confluence daily and incident reports | jira | building (uncommitted: confluence.ts, confluence.test.ts) | | confluence.test.ts in worktree | Atlassian Track 1 and 2 |
+| Jira dashboard gadget | jira | building (uncommitted in the Jira worktree) | | | Atlassian Track 2 |
+| Jira-to-GurtOS people mapping in Business | jira, business | planned | | | Atlassian, Hyphenate |
+
 ## Other tracks, as they exist
 
 | Feature | Owner | Status | Commit | Demo step | Tracks |
 |---|---|---|---|---|---|
-| Jira: every task an issue, Forge panel with Approve and Roll back, JQL | jira | merged (QA checked the public routes Oct 24 00:45; panel tested by the Jira thread) | c24a516, c82fcdb | tracks/jira/demo.ts | Atlassian |
 | Elastic: log in Serverless, GurtOS log agent | elastic | verified Oct 24 00:48 (index and agent via API) | 70f3673, ca03219 | tracks/elastic/demo.ts | Elastic |
 | Mana: rules chat, project page, GurtOS status app | mana | verified Oct 23 23:37 (app live, signed out) | 525f630, 4631f73 | tracks/mana/demo.ts | Mana |
 | /find: search page, photos described on request, Moss local index | find | verified Oct 24 00:33 (search on a phone) | a0d6dbd, 4351905 | tracks/find/demo.ts | Moss |
