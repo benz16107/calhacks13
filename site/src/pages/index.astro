@@ -1,6 +1,8 @@
 ---
 import { Image } from 'astro:assets';
 import Landing from '../layouts/Landing.astro';
+import HeroHills from '../components/HeroHills.astro';
+import HeroLayers from '../components/HeroLayers.astro';
 import { NAME, REPO, LICENSE_NAME } from '../product.ts';
 import server from '../assets/home/server-screen.png';
 import personal from '../assets/home/personal-everyday.png';
@@ -21,22 +23,20 @@ const core = [
 ---
 
 <Landing title={NAME} description={`${NAME} is an operating system where AI agents do real work with real access and never hold your keys. Download GurtOS Server or GurtOS Personal.`}>
-  <div class="wrap">
-    <section class="intro" aria-labelledby="home-h">
-      <h1 id="home-h">An operating system where AI agents work safely</h1>
-      <p class="lead">Agents never hold your keys. Each task runs on its own copy of your files.</p>
-      <p class="actions">
-        <a class="btn primary" href="/download/">Download {NAME}</a>
-        <a class="btn" href="/docs/">Docs</a>
-      </p>
-    </section>
-  </div>
-
-  <svg class="hills" viewBox="0 0 1920 260" preserveAspectRatio="none" aria-hidden="true">
-    <path d="M0 80C300 0 520 40 760 10C1000 -20 1250 -40 1500 20C1750 80 1800 0 1920 30V260H0Z" fill="var(--gw-hill-1)" />
-    <path d="M0 160C260 90 520 140 820 100C1120 60 1300 130 1560 80C1820 30 1820 120 1920 100V260H0Z" fill="var(--gw-hill-2)" />
-    <path d="M0 230C300 170 640 210 960 180C1280 150 1500 210 1920 160V260H0Z" fill="var(--gw-hill-3)" />
-  </svg>
+  <section class="hero" id="hero" data-phase="day" aria-labelledby="home-h">
+    <HeroHills />
+    <div class="wrap hero-grid">
+      <div class="intro">
+        <h1 id="home-h">An operating system where AI agents work safely</h1>
+        <p class="lead">Agents never hold your keys. Each task runs on its own copy of your files.</p>
+        <p class="actions">
+          <a class="btn primary" href="/download/">Download {NAME}</a>
+          <a class="btn" href="/docs/">Docs</a>
+        </p>
+      </div>
+      <HeroLayers />
+    </div>
+  </section>
 
   <div class="wrap">
     <section id="editions" aria-labelledby="editions-h">
@@ -105,12 +105,20 @@ const core = [
 </script>
 
 <style>
-  .intro { padding: 4rem 0 3rem; max-width: 52rem; }
-  .intro h1 { margin-bottom: 1rem; }
-  .lead { font-size: var(--gw-text-lg); color: var(--gw-ink-2); }
+  .hero { position: relative; overflow: hidden; isolation: isolate; margin-bottom: 1rem; }
+  .hero-grid { position: relative; z-index: 1; display: grid; gap: 2rem; padding: 3.5rem 0 4.5rem; align-items: center; }
+  .intro h1 { margin-bottom: 1rem; max-width: 20ch; }
+  .lead { font-size: var(--gw-text-lg); color: var(--gw-ink-2); max-width: 34rem; }
   .actions { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 1.5rem; }
   .btn.primary { font-size: 1.1rem; padding: 0.8rem 1.4rem; }
-  .hills { display: block; width: 100%; height: clamp(70px, 11vw, 170px); }
+  /* The time of day tints the backdrop hills. Light page and dark page each get their own night. */
+  .hero[data-phase='dawn'] { --tint: #e0907a; --tint-amt: 26%; }
+  .hero[data-phase='dusk'] { --tint: #cc7a6a; --tint-amt: 30%; }
+  .hero[data-phase='night'] { --tint: #27313f; --tint-amt: 45%; }
+  :global([data-theme='dark']) .hero[data-phase='night'] { --tint: #0b1015; --tint-amt: 30%; }
+  /* HeroHills pauses the whole hero by adding .paused. */
+  :global(.hero.paused *) { animation-play-state: paused !important; }
+  @media (min-width: 900px) { .hero-grid { grid-template-columns: 5fr 7fr; } }
   .section-h { font-size: var(--gw-h2); }
   .edition { display: grid; gap: 1.5rem 3rem; padding: 2rem 0; border-top: 1px solid var(--gw-rule); align-items: center; }
   .media { margin: 0; }
