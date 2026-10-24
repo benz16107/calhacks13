@@ -1,0 +1,254 @@
+# GurtOS for Apple devices: one Xcode project, generated with XcodeGen. Edit this file, never the .xcodeproj.
+#   xcodegen generate     (scripts/build.sh does it for you)
+# Every target shares GurtKit (the box API, pairing, push decryption) and Shared/ (the look and the answers).
+name: GurtOS
+options:
+  bundleIdPrefix: com.benzhou
+  createIntermediateGroups: true
+  deploymentTarget:
+    iOS: "26.0"
+    watchOS: "26.0"
+    macOS: "26.0"
+
+packages:
+  GurtKit:
+    path: GurtKit
+
+settings:
+  base:
+    DEVELOPMENT_TEAM: 744282DWSN
+    CODE_SIGN_STYLE: Automatic
+    SWIFT_VERSION: "5.0"
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: 1
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+
+targets:
+  GurtOS:
+    type: application
+    platform: iOS
+    sources:
+      - iOS
+      - Shared
+      - path: Resources
+        buildPhase: resources
+    dependencies:
+      - package: GurtKit
+      - target: GurtOSNotify
+      - target: GurtOSWidgets
+      - target: GurtOSWatch
+    entitlements:
+      path: iOS/GurtOS.entitlements
+      properties:
+        aps-environment: development
+        keychain-access-groups: [$(AppIdentifierPrefix)com.benzhou.gurtos.shared]
+        com.apple.developer.usernotifications.time-sensitive: true
+        # Scanning a machine's QR code with the Camera opens the app (app.gurtos.com serves the association).
+        com.apple.developer.associated-domains: [applinks:app.gurtos.com]
+    info:
+      path: iOS/Info.plist
+      properties:
+        CFBundleDisplayName: GurtOS
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        UILaunchScreen: {}
+        UIAppFonts: [AtkinsonHyperlegibleNext-VariableFont_wght.ttf]
+        ITSAppUsesNonExemptEncryption: false
+        LSApplicationCategoryType: public.app-category.productivity
+        NSCameraUsageDescription: GurtOS uses the camera to scan the pairing QR code on your machine's screen.
+        NSFaceIDUsageDescription: GurtOS asks for Face ID before it approves anything that spends money.
+        NSLocalNetworkUsageDescription: GurtOS talks to your GurtOS machine on your home network.
+        NSAppTransportSecurity:
+          # A box on the home network answers on plain HTTP at its own address; everything else is HTTPS.
+          NSAllowsLocalNetworking: true
+        CFBundleURLTypes:
+          - CFBundleURLName: com.benzhou.gurtos
+            CFBundleURLSchemes: [gurtos]
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
+        UIBackgroundModes: [remote-notification]
+    scheme:
+      testTargets: [GurtOSUITests]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.benzhou.gurtos
+        TARGETED_DEVICE_FAMILY: "1"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+
+  GurtOSUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources: [UITests]
+    dependencies:
+      - target: GurtOS
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.benzhou.gurtos.uitests
+        TEST_TARGET_NAME: GurtOS
+        GENERATE_INFOPLIST_FILE: YES
+
+  GurtOSNotify:
+    type: app-extension
+    platform: iOS
+    sources: [Notify, Shared/NotificationCategories.swift, Shared/PushContent.swift]
+    dependencies:
+      - package: GurtKit
+    entitlements:
+      path: Notify/GurtOSNotify.entitlements
+      properties:
+        keychain-access-groups: [$(AppIdentifierPrefix)com.benzhou.gurtos.shared]
+    info:
+      path: Notify/Info.plist
+      properties:
+        CFBundleDisplayName: GurtOS Notifications
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.usernotifications.service
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).NotificationService
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.benzhou.gurtos.notify
+
+  GurtOSWidgets:
+    type: app-extension
+    platform: iOS
+    sources:
+      - Widgets
+      - Shared/Theme.swift
+      - path: Resources/Fonts
+        buildPhase: resources
+    dependencies:
+      - package: GurtKit
+    entitlements:
+      path: Widgets/GurtOSWidgets.entitlements
+      properties:
+        keychain-access-groups: [$(AppIdentifierPrefix)com.benzhou.gurtos.shared]
+    info:
+      path: Widgets/Info.plist
+      properties:
+        CFBundleDisplayName: GurtOS
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        UIAppFonts: [AtkinsonHyperlegibleNext-VariableFont_wght.ttf]
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.benzhou.gurtos.widgets
+
+  GurtOSWatch:
+    type: application
+    platform: watchOS
+    sources:
+      - Watch
+      - Shared/Theme.swift
+      - Widgets/GlanceWidget.swift
+      - path: Resources/Assets.xcassets
+        buildPhase: resources
+    dependencies:
+      - package: GurtKit
+      - target: GurtOSWatchWidgets
+    entitlements:
+      path: Watch/GurtOSWatch.entitlements
+      properties:
+        keychain-access-groups: [$(AppIdentifierPrefix)com.benzhou.gurtos.shared]
+    info:
+      path: Watch/Info.plist
+      properties:
+        CFBundleDisplayName: GurtOS
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        WKApplication: true
+        WKCompanionAppBundleIdentifier: com.benzhou.gurtos
+        ITSAppUsesNonExemptEncryption: false
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.benzhou.gurtos.watchkitapp
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+
+  GurtOSWatchWidgets:
+    type: app-extension
+    platform: watchOS
+    sources: [Widgets/GlanceWidget.swift, Widgets/Bundle.swift, Shared/Theme.swift]
+    dependencies:
+      - package: GurtKit
+    entitlements:
+      path: WatchWidgets/GurtOSWatchWidgets.entitlements
+      properties:
+        keychain-access-groups: [$(AppIdentifierPrefix)com.benzhou.gurtos.shared]
+    info:
+      path: WatchWidgets/Info.plist
+      properties:
+        CFBundleDisplayName: GurtOS
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.benzhou.gurtos.watchkitapp.widgets
+
+  GurtOSMac:
+    type: application
+    platform: macOS
+    sources:
+      - Mac
+      - Shared/Theme.swift
+      - Shared/Answer.swift
+      - path: MacResources
+        buildPhase: resources
+    dependencies:
+      - package: GurtKit
+      - target: GurtOSShare
+    entitlements:
+      path: Mac/GurtOSMac.entitlements
+      properties:
+        com.apple.security.app-sandbox: true
+        com.apple.security.network.client: true
+        keychain-access-groups: [$(AppIdentifierPrefix)com.benzhou.gurtos.shared]
+    info:
+      path: Mac/Info.plist
+      properties:
+        CFBundleDisplayName: GurtOS
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        LSUIElement: true
+        LSApplicationCategoryType: public.app-category.productivity
+        ITSAppUsesNonExemptEncryption: false
+        NSHumanReadableCopyright: Apache-2.0
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.benzhou.gurtos.mac
+        PRODUCT_NAME: GurtOS
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ENABLE_HARDENED_RUNTIME: YES
+
+  GurtOSShare:
+    type: app-extension
+    platform: macOS
+    sources: [Share]
+    dependencies:
+      - package: GurtKit
+    entitlements:
+      path: Share/GurtOSShare.entitlements
+      properties:
+        com.apple.security.app-sandbox: true
+        com.apple.security.network.client: true
+        com.apple.security.files.user-selected.read-only: true
+        keychain-access-groups: [$(AppIdentifierPrefix)com.benzhou.gurtos.shared]
+    info:
+      path: Share/Info.plist
+      properties:
+        CFBundleDisplayName: Send to GurtOS
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.share-services
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).ShareViewController
+          NSExtensionAttributes:
+            NSExtensionActivationRule:
+              NSExtensionActivationSupportsFileWithMaxCount: 8
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.benzhou.gurtos.mac.share
+        ENABLE_HARDENED_RUNTIME: YES
