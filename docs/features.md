@@ -31,10 +31,10 @@ Checked against main `8a4cbf4`, Sat Oct 24 05:30 PT. `./demo` from a clean workt
 | Status | Count |
 |---|---|
 | verified (ISO) | 3 |
-| verified | 52 |
+| verified | 53 |
 | merged | 56 |
 | building | 34 |
-| planned | 24 |
+| planned | 23 |
 | not pursued | 3 |
 | **Total** | **172** |
 
@@ -124,7 +124,7 @@ answers nothing until a person is picked from the top bar.
 | Mana policy proposal hook (`box.policy`, `box.setPolicy`; only an owner or admin approving applies it) | business, mana | merged (not walked by QA) | aa91999, bc717b4 | tracks/mana/demo.ts | Mana, Hyphenate |
 | Incident drill (`core/drill.ts`, `docs/drill.md`, `POST /api/drill` for an owner or admin; numbers kept in the log): on the Business thread's live run, 10 agents including 3 live Droid seats, pause returned in 137 ms, every unit frozen within 271 ms, 0 agent events in 10 s paused, the bad batch undone in 48 ms, the first step 48.8 s after resume | business | merged (QA ran the route on an idle box: it answers and writes a `kill-switch` note; the measured numbers are the Business thread's) | 827f144, 0c65072 | business edition ("stop mid-task in 193 ms") | Microsoft |
 | Work-account sign-in (Entra and Google were not reached; see its README) | business | merged (partly: provider flows not reached) | 1389b9f | none | Microsoft |
-| Shadow mode and a pilot plan | business | planned | | | Microsoft |
+| Shadow mode and a one-week pilot plan: a seat in shadow turns its decisions into ordinary approvals a person decides; a go-live threshold in the policy text; going live is one setting; `docs/pilot.md` | business | verified Oct 24 06:10 (seats defined with `PUT /api/business {seats}`; the Collections clerk's "release order" became an approval routed to any approver; the unsigned box screen was refused; Rosa's no was recorded as a disagreement, 0 percent, not ready; a requester cannot change the setting; the scripted clerk fails on a no, the real agent moves on) | 20dfcd5 | business edition | Microsoft |
 
 ## Hyphenate (credit desk)
 

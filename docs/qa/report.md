@@ -337,6 +337,11 @@ catch-all would send them to the owner. Match the words ignoring a plural s.
 application id all work; a short name returns no decisions. The window's example question is "Why did we give Bright
 Harbor $40,000?"; check it maps to the full name.
 
+**P2-28. Shadow mode needs seats defined first, and the error doesn't say how.** Owner: business. On a box where
+nobody had set `seats`, `PUT /api/business {shadow:["Collections clerk"]}` said "no seat named Collections clerk (seats:
+none yet)" although the credit desk's seats had run. Seats are the company's list (`PUT /api/business {seats}`). The
+message could name that call, or the credit desk could register its seats when Business is on.
+
 ## Docs site (gurtos.com)
 
 **D-1 to D-4 and D-7 fixed in 199dce5 and live, spot-checked 00:00 PT:** real ISO names, `gurt-<id>`, the Personal ISO
