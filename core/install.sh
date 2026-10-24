@@ -32,6 +32,8 @@ RestartSec=1
 [Install]
 WantedBy=multi-user.target
 UNIT
+# In an image build's chroot there is no running systemd: enable the unit for first boot and stop there.
+if [ ! -d /run/systemd/system ]; then systemctl enable box.service >/dev/null 2>&1 || ln -sf /etc/systemd/system/box.service /etc/systemd/system/multi-user.target.wants/box.service; exit 0; fi
 systemctl daemon-reload
 systemctl enable box.service >/dev/null 2>&1
 systemctl restart box.service

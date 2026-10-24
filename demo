@@ -53,7 +53,7 @@ echo "demo: $BOX_SHELL, in $dest"
   echo "find $dest -mindepth 1 -maxdepth 1 ! -name node_modules -exec rm -rf {} +"
   echo "base64 -d <<'EOF' | tar -xzf - -C $dest"
   git ls-files -co --exclude-standard | while IFS= read -r f; do [[ -e $f ]] && printf '%s\n' "$f"; done |
-    tar -czf - -T - | base64
+    tar --mode=go+rX,go-w -czf - -T - | base64
   echo EOF
   echo "DEMO_SKIP_DROID=$skip DEMO_LIVE=$(printf %q "${DEMO_LIVE:-}") exec $dest/demo --here"
 } | $BOX_SHELL sudo bash -s || { code=$?; [[ $code == 255 ]] && echo "demo: could not reach the test machine ($BOX_SHELL)" >&2; exit $code; }
