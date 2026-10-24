@@ -20,8 +20,10 @@ Made-up company for the credit desk demo. Every person, business and number here
 |---|---|---|
 | Credit analyst | agent | Checks new business customers, proposes risk band, terms and limit, approves limits up to $10,000, declines |
 | Collections clerk | agent | Issues and corrects invoices, applies payments, sends reminders, places holds, releases orders for current customers |
-| Controller | Rosa Delgado (human) | Approves limits above $10,000 and any terms with public records, decides fraud referrals, releases credit holds, writes off |
-| Sales | M. Chen, J. Park | Bring in customers and enter orders. No credit decisions. |
+| Controller | Rosa Delgado (human) | Approves limits above $10,000, up to $50,000, and any terms with public records. The only one who clears a fraud referral. Releases credit holds, writes off |
+| Sales | Sam Ortiz, M. Chen, J. Park | Bring in customers and enter orders, and may ask for an exception. No credit decisions. |
+| IT admin | Dana Brooks | Runs the box: people, keys and apps. No credit decisions. |
+| Auditor | Lee Morgan | Reads the action log and every decision. Changes nothing. |
 | Owner | Martin Hale | Not in the credit process |
 
 The two agent seats never approve their own proposals. Anything above the analyst's authority, and every fraud
