@@ -457,7 +457,8 @@ export function RulesPage() {
   const at = ruleLines(all);
   const save = async (next: string[]) => {
     try {
-      await api('PUT', '/business', { policy: next.join('\n') });
+      const saved = await api<{ warnings?: string[] }>('PUT', '/business', { policy: next.join('\n') });
+      if (saved.warnings?.length) win?.toast(saved.warnings[0]);
     } catch (e) {
       win?.toast((e as Error).message);
     }

@@ -57,14 +57,16 @@ function AskBadge({ a, mine }: { a: Approval; mine?: boolean }) {
   return i.fraud ? <Badge kind="destructive">Fraud flag</Badge> : i.amount ? <Badge>{money(i.amount)}</Badge> : <Badge>Needs you</Badge>;
 }
 
-function AskRow({ a, mine, selected, onPick }: { a: Approval; mine?: boolean; selected?: boolean; onPick: () => void }) {
+function AskRow({ a, mine, stuck, selected, onPick }: { a: Approval; mine?: boolean; stuck?: boolean; selected?: boolean; onPick: () => void }) {
   const i = askInfo(a);
   const only = a.route?.people.length === 1 && a.route.people[0].id === box.business.me?.person?.id;
   const sub = mine
     ? a.state === 'pending'
       ? `Waiting for ${a.route?.people.map((p) => p.name).join(' or ') || 'an approver'}`
       : `${a.state === 'approved' ? 'Approved' : 'Denied'} by ${a.by ?? 'someone'}`
-    : i.fraud
+    : stuck
+      ? (a.route?.why.replace(/^.*?Nobody can approve it (yet|here)[:.]?\s*/, '') || 'Nobody can approve it')
+      : i.fraud
       ? `Flagged by ${i.seat ?? 'an'} agent${only ? ' · only you can clear it' : ''}`
       : byLine(a);
   return (
@@ -135,6 +137,19 @@ export function WaitingList({ selected, onPick }: { selected?: string; onPick?: 
           </div>
         </div>
       )}
+      {(me.stuck?.length ?? 0) > 0 && (
+        <section class="g-group" aria-label="Nobody can approve these">
+          <div class="g-group-head">
+            <h2 class="g-group-title">Nobody can approve these</h2>
+          </div>
+          <div class="g-list">
+            {me.stuck!.map((a) => (
+              <AskRow a={a} stuck selected={a.id === selected} onPick={() => pick(a)} key={a.id} />
+            ))}
+          </div>
+          <p class="t-caption t-secondary biz-why">They are above every approver's limit, or past a ceiling. You can deny them; an admin can raise a limit or change a rule.</p>
+        </section>
+      )}
       {me.requests.length > 0 && (
         <section class="g-group" aria-label="My requests">
           <div class="g-group-head">
@@ -169,6 +184,7 @@ export function RequestDetail({ id }: { id: string }) {
   const me = b.business.me?.person;
   const mine = !!me && i.askedBy === me.id;
   const canAnswer = !!b.business.me?.waiting.some((w) => w.id === id);
+  const canDeny = !canAnswer && !!b.business.me?.stuck?.some((w) => w.id === id);
   const askedEvent = b.events.find((e) => e.type === 'approval.asked' && e.approval.id === id);
   const answeredEvent = b.events.find((e) => e.type === 'approval.answered' && e.id === id);
   const created = b.events.find((e) => e.type === 'task.created' && e.task === full.task);
@@ -265,7 +281,18 @@ export function RequestDetail({ id }: { id: string }) {
           You can't approve this: you asked for it. {waitingOn ? `You'll see here when ${firstName(waitingOn.split(' or ')[0])} answers.` : 'An admin can raise a limit or change a rule.'}
         </p>
       )}
-      {!mine && full.state === 'pending' && !canAnswer && (
+      {canDeny && (
+        <p class="biz-lock t-caption">
+          <Icon name="system-lock-screen" />
+          Nobody can approve this: {route?.why.replace(/^.*?Nobody can approve it (yet|here)[:.]?\s*/, '') || route?.rule}. You can deny it, or an admin can raise a limit or change a rule.
+        </p>
+      )}
+      {canDeny && (
+        <div class="biz-answer">
+          <AnswerButtons a={full} large denyOnly />
+        </div>
+      )}
+      {!mine && full.state === 'pending' && !canAnswer && !canDeny && (
         <p class="biz-lock t-caption">
           <Icon name="system-lock-screen" />
           {me ? `This doesn't wait for you. ${waitingOn ? `It waits for ${waitingOn}.` : ''}` : 'Sign in as a person to answer.'}

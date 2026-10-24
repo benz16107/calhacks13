@@ -590,7 +590,9 @@ class Core {
       approvers: r.blocked ? [] : this.business.people.filter((p) => p.role !== 'requester' && p.role !== 'auditor' && holds(p, r.to)).map((p) => p.name),
       changed: this.business.policyMeta[r.line] ?? null,
     }));
-    return { on: this.business.on, company: this.business.company, policy: this.business.policy, rules, seats: this.business.seats, sso: this.business.sso ?? null, paused: this.paused };
+    // A rule that sends requests to a name nobody approves for routes them to the owner, or nowhere: say so.
+    const warnings = rules.filter((r) => !r.blocked && !r.approvers.length).map((r) => `Nobody approves for ${r.to.replace(/^(the|any|an|a)\s+/i, '')} yet: "${r.line}" sends requests to the owner, or they wait.`);
+    return { on: this.business.on, company: this.business.company, policy: this.business.policy, rules, warnings, seats: this.business.seats, sso: this.business.sso ?? null, paused: this.paused };
   }
 
   /**
@@ -665,9 +667,23 @@ class Core {
       // Names, titles and limits, so any screen (an auditor's too) can say who asked and who may approve. Phones stay with admins.
       directory: this.business.people.map(({ id, name, title, role, limitCents, approvesFor }) => ({ id, name, title, role, limitCents, approvesFor })),
       waiting: p ? this.waitingFor(p).map(withRoute) : [],
+      // Nobody can approve these (above every limit, a ceiling, or only the asker approves for the name); this person
+      // can still deny them, and an admin can raise a limit or change a rule.
+      stuck: p ? this.stuckFor(p).map(withRoute) : [],
       // Their own requests, newest first: waiting ones say who they wait for, answered ones who answered.
       requests: p ? [...this.state.approvals.values()].filter((a) => (a.askedBy ?? this.state.tasks.get(a.task)?.requestedBy) === p.id).reverse().slice(0, 50).map(withRoute) : [],
     };
+  }
+
+  /** Pending requests nobody can approve now that this person may still deny. */
+  stuckFor(p: Person): Approval[] {
+    return [...this.state.approvals.values()].filter((a) => {
+      if (a.state !== 'pending') return false;
+      const t = this.must(a.task);
+      const r = a.route ?? this.routeOf(a, t);
+      const req = { to: r.to, amountCents: r.amountCents, askedBy: a.askedBy ?? t.requestedBy, rule: r.rule };
+      return !approversFor(req, this.business.people).length && !refusal(p, req, false);
+    });
   }
 
   /** The pending requests this person may approve now. */

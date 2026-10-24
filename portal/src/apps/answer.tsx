@@ -10,7 +10,7 @@ let lastAnswer = 0;
 const amountOf = (a: Approval) => a.costCents || (a.route && !/fraud/i.test(a.route.rule) ? a.route.amountCents : 0);
 const whole = (cents: number) => `$${Math.round(cents / 100).toLocaleString('en-US')}`;
 
-export function AnswerButtons({ a, after, large }: { a: Approval; after?: () => void; large?: boolean }) {
+export function AnswerButtons({ a, after, large, denyOnly }: { a: Approval; after?: () => void; large?: boolean; denyOnly?: boolean }) {
   useBox();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -46,9 +46,11 @@ export function AnswerButtons({ a, after, large }: { a: Approval; after?: () => 
       <Button large={large} onClick={() => go(false)} disabled={busy || box.down}>
         Deny
       </Button>
-      <Button large={large} kind="suggested" onClick={() => go(true)} disabled={busy || box.down}>
-        {amountOf(live) > 0 ? `Approve ${live.costCents > 0 ? dollars(live.costCents) : whole(amountOf(live))}` : 'Approve'}
-      </Button>
+      {!denyOnly && (
+        <Button large={large} kind="suggested" onClick={() => go(true)} disabled={busy || box.down}>
+          {amountOf(live) > 0 ? `Approve ${live.costCents > 0 ? dollars(live.costCents) : whole(amountOf(live))}` : 'Approve'}
+        </Button>
+      )}
       {error && (
         <p class="gos-error" role="alert">
           {error}

@@ -112,6 +112,10 @@ async function steps(d: DemoKit, send: (h: Record<string, string>, m: string, p:
     "Waiting for me, on Rosa's phone: the $40,000 approval, the fraud referral and the $2,400 write-off, and not the $75,000 one or her own");
   d.check(mSam.waiting.length === 0 && mSam.requests.length === 4 && mSam.requests.every((a: Approval) => a.route?.why), "Sam is sent no approvals; he sees his own four requests and who each waits for");
   d.check(mPriya.waiting.length === 0, 'Priya (IT admin) is sent none of them');
+  d.check(mRosa.stuck?.some((a: Approval) => a.id === aHuge.id) && !mSam.stuck?.length, "the $75,000 one nobody can approve is on Rosa's list under \"Nobody can approve these\", for her to deny");
+  const warned = ok(await priya('PUT', '/api/business', { policy: `${POLICY}\nRefunds go to Treasury.` }), 'warn');
+  ok(await priya('PUT', '/api/business', { policy: POLICY }), 'restore');
+  d.check(warned.warnings?.some((w: string) => w.startsWith('Nobody approves for Treasury')), `a rule to a name nobody approves for saves with a warning: "${warned.warnings?.[0]}"`);
 
   // ---------- the rules ----------
   const answer = (who: Caller, a: Approval, approved = true) => who('POST', `/api/approvals/${encodeURIComponent(a.id)}`, { approved, by: 'phone' });

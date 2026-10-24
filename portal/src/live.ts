@@ -44,6 +44,8 @@ export interface Me {
   /** Everyone's name, title, role, limit and what they approve for (no phones). */
   directory: Pick<Person, 'id' | 'name' | 'title' | 'role' | 'limitCents' | 'approvesFor'>[];
   waiting: Approval[];
+  /** Requests nobody can approve now, which this person may still deny. */
+  stuck?: Approval[];
   requests: Approval[];
 }
 /** A person's name from their id, for any screen. */
@@ -163,7 +165,7 @@ export const box = {
   /** Requests that were waiting here and just got an answer, from this screen or another: shown for a moment. */
   resolved: new Map<string, { at: number; approved: boolean; by?: string; mine: boolean }>(),
   /** GurtOS Business: who is signed in here, what waits for them, the rules and the people. Empty on Server and Personal. */
-  business: { on: false, company: '', me: undefined as Me | undefined, view: undefined as BusinessView | undefined, people: undefined as Person[] | undefined },
+  business: { on: localStorage.getItem('gurtos.edition') === 'business', company: '', me: undefined as Me | undefined, view: undefined as BusinessView | undefined, people: undefined as Person[] | undefined },
 };
 
 /**
@@ -194,6 +196,7 @@ export async function loadBusiness() {
   await loadSystem();
   const on = box.system?.edition === 'business';
   box.business.on = on;
+  localStorage.setItem('gurtos.edition', box.system?.edition ?? ''); // so the next load shows the right home from its first frame
   box.business.company = box.system?.company ?? '';
   if (!on) {
     box.business.me = box.business.view = box.business.people = undefined;
