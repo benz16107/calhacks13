@@ -13,12 +13,12 @@ const FILTERS: [Filter, string, string, (a: AppInfo) => boolean][] = [
   ['all', 'All apps', 'view-app-grid', () => true],
   ['on', 'On', 'object-select', (a) => a.status === 'enabled'],
   ['off', 'Off', 'window-close', (a) => a.status !== 'enabled'],
-  ['key', 'Needs a key', 'dialog-password', (a) => a.access.secrets.some((s) => !s.set)],
+  ['key', 'Needs a key', 'dialog-password', (a) => a.access.secrets.some((s) => !s.set && !s.optional)],
 ];
 
 const badge = (a: AppInfo) =>
   a.status === 'error' ? <Badge kind="destructive">Error</Badge> : a.status === 'enabled' ? <Badge kind="success">On</Badge> : <Badge kind="neutral">Off</Badge>;
-const missing = (a: AppInfo) => a.access.secrets.filter((s) => !s.set);
+const missing = (a: AppInfo) => a.access.secrets.filter((s) => !s.set && !s.optional);
 /** "3 hosts · 1 key missing", or the error in red. */
 function meta(a: AppInfo): { text: string; tone?: string } {
   if (a.status === 'error') return { text: a.error ?? 'It did not load', tone: 't-destructive' };
@@ -155,7 +155,7 @@ export function AppCenterApp({ id }: { id: string }) {
       <Group title="Keys it needs" caption={app.access.secrets.length ? 'The box holds them. The app never sees one, and neither do agents.' : undefined}>
         {app.access.secrets.length ? (
           app.access.secrets.map((s) => (
-            <Row title={<span class="gos-set-mono">{s.name}</span>} key={s.name}>
+            <Row title={<span class="gos-set-mono">{s.name}</span>} sub={s.optional ? 'Optional: the app works without it' : undefined} key={s.name}>
               {s.set ? (
                 <span class="gos-set-value t-success">Set</span>
               ) : (

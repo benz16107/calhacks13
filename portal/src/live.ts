@@ -19,7 +19,8 @@ export interface AppInfo {
     tools: { name: string; description: string }[];
     jobs: string[];
     hosts: string[];
-    secrets: { name: string; set: boolean }[];
+    /** optional: the app works without it (core's optionalSecrets), so it never counts as missing. */
+    secrets: { name: string; set: boolean; optional?: true }[];
     triggers: string[];
     routes: string[];
   };

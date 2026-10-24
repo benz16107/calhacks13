@@ -96,7 +96,7 @@ async function setupFlow(d: DemoKit, base: string) {
     put.status < 300 && JSON.stringify(vault.body).includes('PORTAL_DEMO_KEY') && !JSON.stringify([put.body, vault.body, apps.body]).includes(secret),
     'a key set in the Keys step is listed by name, and no answer ever carries its value',
   );
-  d.check(Array.isArray(apps.body) && apps.body.every((a: { access?: { secrets?: unknown[] } }) => (a.access?.secrets ?? []).every((x) => Object.keys(x as object).sort().join() === 'name,set')), 'App Center sees each key an app needs as a name and whether it is set');
+  d.check(Array.isArray(apps.body) && apps.body.every((a: { access?: { secrets?: unknown[] } }) => (a.access?.secrets ?? []).every((x) => ['name,set', 'name,optional,set'].includes(Object.keys(x as object).sort().join()) && (x as { optional?: unknown }).optional !== false)), 'App Center sees each key an app needs as a name, whether it is set, and whether it is optional');
 
   // A phone paired the ordinary way may answer requests, but not change setup, settings or keys.
   const code = (await call('POST', '/pair/start')).body.code;

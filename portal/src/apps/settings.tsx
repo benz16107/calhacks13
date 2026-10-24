@@ -123,7 +123,7 @@ export function KeySheet({ name, onClose, onSaved }: { name?: string; onClose: (
 
 /** The one line under an app: on or off, what is missing, or what broke. */
 export function appStatus(a: AppInfo): { text: string; tone?: 'destructive' } {
-  const missing = a.access.secrets.filter((s) => !s.set).length;
+  const missing = a.access.secrets.filter((s) => !s.set && !s.optional).length;
   if (a.status === 'error') return { text: `Error: ${a.error ?? 'it did not load'}`, tone: 'destructive' };
   if (a.status === 'disabled') return { text: 'Off' };
   return { text: `On${missing ? ` · ${plural(missing, 'key')} missing` : ''}${a.restartNeeded ? ' · restart to stop its triggers' : ''}` };

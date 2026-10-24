@@ -73,7 +73,7 @@ const rank = (a: AppInfo) => (ORDER.includes(a.id) ? ORDER.indexOf(a.id) : ORDER
 // The developer sample app is not something to offer a new owner.
 const offered = () => box.allApps.filter((a) => a.id !== 'example').sort((x, y) => rank(x) - rank(y) || nice(x).localeCompare(nice(y)));
 const enabled = () => offered().filter((a) => a.status === 'enabled');
-const needed = () => enabled().flatMap((a) => a.access.secrets);
+const needed = () => enabled().flatMap((a) => a.access.secrets.filter((s) => !s.optional));
 /** The model key that lets agents think: an Anthropic key or a Factory key. Either one is enough. */
 const MODEL_KEYS = ['ANTHROPIC_API_KEY', 'FACTORY_API_KEY'] as const;
 const modelKey = (w: Wiz) => MODEL_KEYS.find((k) => keySet(w, k));
@@ -807,7 +807,7 @@ function KeysStep({ w }: { w: Wiz }) {
       {apps.map((a) => (
         <Group title={nice(a)} caption={/shopper|wallet/.test(a.id) ? 'Test payments only: no real money moves.' : undefined} key={a.id}>
           {a.access.secrets.map((s) => (
-            <Row title={<span class="t-mono">{s.name}</span>} key={s.name}>
+            <Row title={<span class="t-mono">{s.name}</span>} sub={s.optional ? 'Optional: the app works without it' : undefined} key={s.name}>
               {keySet(w, s.name) ? <span class="t-success">{setText(w, s.name)}</span> : <Button onClick={() => w.setKey(s.name)}>Set key</Button>}
             </Row>
           ))}
