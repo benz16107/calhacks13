@@ -113,7 +113,7 @@ All under `/t/shopper/` on the box's API.
 | `POST /watches/check {id}`, `POST /watches/cancel {id}` | Check now, or stop watching |
 | `POST /ask {text}` | Droid turns your words into a watch |
 | `POST /reorder` | Droid reads the receipts and proposes a reorder |
-| `POST /supplies {url, cents}` | An agent buys a supply from an x402 API within `cents`, through the wallet app |
+| `POST /supplies {url, cents}` | An agent buys a supply from an x402 API through the wallet app: it asks the price first, then pays exactly that, and asks you first when the price is above `cents`. Test money. |
 | `GET /store`, `GET /store/products` | The GurtOS Test Store |
 | `POST /store/checkout` | Checkout. A signature and an idempotency key are required |
 | `POST /store/admin {sku, priceCents?, inStock?}` | Test controls: change a price or the stock |

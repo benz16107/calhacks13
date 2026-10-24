@@ -3,7 +3,7 @@ title: Send the log to Elastic
 description: Stream the box's action log into Elasticsearch Serverless and ask an Agent Builder agent what your agents changed, spent and were blocked from.
 ---
 
-The Elastic app streams every event in the box's action log into an Elasticsearch Serverless index, `box-actions`. It also installs an Elastic Agent Builder agent, **Box log**, that answers questions about that index in plain words. In this guide you connect a box to Elastic, install the agent and ask it a question.
+The Elastic app streams every event in the box's action log into an Elasticsearch Serverless index, `box-actions`. It also installs an Elastic Agent Builder agent, **GurtOS log** (id `gurtos-log`), that answers questions about that index in plain words. In this guide you connect a box to Elastic, install the agent and ask it a question.
 
 ## Before you start
 
@@ -35,13 +35,18 @@ The Elastic app streams every event in the box's action log into an Elasticsearc
 
    This creates or updates the seven tools and the agent through Kibana's Agent Builder API. It is safe to run again: the agent in Kibana always matches the code.
 
-3. **Ask a question.** In Kibana, open **Agents > Box log**. Or from the command line:
+3. **Ask a question.** In Kibana, open **Agents > GurtOS log**, or go straight to
+   `<KIBANA_URL>/app/agent_builder/agents/gurtos-log`. Or from the command line:
 
    ```sh
    node tracks/elastic/agent.ts ask "What got blocked this week, and from where?"
    ```
 
    The answer ends with the tools the agent called.
+
+   By default the tools read only installed boxes, whose events have `box.run` set to `installed`, so test runs never
+   mix into an everyday answer. To ask about a run of the test suite, name it in the question, for example
+   "What did my agents change this week? Look at demo run a18523."
 
 ## Check it worked
 
@@ -54,7 +59,7 @@ The box's test suite checks this app offline. `DEMO_LIVE=elastic ./demo` also sh
 
 1. A log reader gets every event in order, from the start, and resumes after a restart. It turns each event into one flat document and appends it to an outbox file, `/var/lib/box/elastic/outbox.ndjson`, synced to disk.
 2. A flusher sends the outbox to Elastic with `_bulk`, up to 4 MB per request, and remembers how far it got. If Elastic is down, it retries every 5 seconds from where it stopped.
-3. Each document's id is built from the box, the run and the event's line number, so a resend overwrites itself and nothing is counted twice.
+3. Each document's id is built from the machine, the run and the event's line number, so a resend overwrites itself and nothing is counted twice. Only an installed box (`BOX_HOME=/var/lib/box`) and a `DEMO_LIVE=elastic ./demo` run send anything; other test boxes stay out of the index.
 4. Only the `elastic.bulk` model job reads `ELASTIC_URL` and `ELASTIC_API_KEY`, inside the box service. Tasks never see the key. The log reader has no vault access at all.
 
 With no Elastic keys in the vault, the outbox keeps everything until you add them.
@@ -75,7 +80,7 @@ Each document stands on its own, so a question needs no joins.
 | `tool.name`, `tool.ok`, `tool.error` | Tool calls and their results |
 | `approval.question`, `approval.state`, `approval.by` | Requests for an OK and who answered |
 | `net.host` | A connection the box refused |
-| `box.name`, `box.run` | Which box the event came from |
+| `box.name`, `box.machine`, `box.run` | Which box the event came from. Two boxes can share a name, never a machine. `box.run` is `installed` on a real box and the run id on a test-suite run. |
 
 ## The agent's tools
 
@@ -89,7 +94,7 @@ Each document stands on its own, so a question needs no joins.
 | `box.blocked` | Refused hosts by task and app, with counts and allowed hosts |
 | `box.search` | Free text over the log |
 
-The first six are ES|QL tools. Those that take `days` default to 7. `box.search` is an index search tool.
+The first six are ES|QL tools. Those that take `days` default to 7, and those that take `run` default to `installed`. `box.search` is an index search tool.
 
 ## Limits
 
