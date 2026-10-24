@@ -81,6 +81,7 @@ These are known limits of the current release. Some are planned work; see the [r
 - **The model provider sees what the agent sees.** Prompts, files the agent reads and tool results go to the model through Factory. Do not give a task files you would not send to that provider.
 - **Allowed hosts are trusted with whatever the task sends.** If a task may reach a site, it can send that site anything in its copy. Allowing a broad host, such as a code host or a paste site, allows sending data there.
 - **Undo cannot recall what already left.** It removes file changes on the box. A payment made, a message sent or a request to an allowed host is not undone.
+- **Photos leave the box only if you choose.** A fresh box sends no photo anywhere. A photo goes to a hosted vision model only if you add that model's key to the vault, and to Claude through Factory only when you press **Describe with Claude**. With Ollama on your own network, nothing leaves it.
 - **Search reaches every workspace.** A task given `find.search` can search all workspaces, not only its own, and a photo's description can carry text from the photo into the agent's context.
 
 ### Limits of the controls

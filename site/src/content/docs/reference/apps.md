@@ -86,7 +86,7 @@ The chat agent runs as the unprivileged user `nobody` and uses only the box's HT
 
 ## `find`
 
-Indexes every photo, text file and finished task, and searches them by meaning with Moss. A vision model describes each photo once, when it arrives.
+Indexes every photo, text file and finished task, and searches them by meaning with Moss. A vision model you choose describes each photo once. A fresh box calls none until its key is in the vault.
 
 | Slot | What |
 |---|---|
@@ -95,9 +95,9 @@ Indexes every photo, text file and finished task, and searches them by meaning w
 | Triggers | `index`: makes the `photos` workspace with four test photos, then rescans at boot, after every task and every minute |
 | Log readers | Indexes tasks as they finish, fail or are undone |
 | Routes | `GET /t/find/search?q=&kind=&k=`, `GET /t/find/file?workspace=&path=`, `GET /t/find/status` |
-| Vault keys | `MOSS_PROJECT_ID`, `MOSS_PROJECT_KEY`, `VULTR_INFERENCE_KEY` (optional). The Claude fallback uses `FACTORY_API_KEY`. |
+| Vault keys | `MOSS_PROJECT_ID`, `MOSS_PROJECT_KEY`, `VULTR_INFERENCE_KEY` (optional). `FIND_OLLAMA_URL` (optional). **Describe with Claude** uses `FACTORY_API_KEY`. |
 
-The vision models it tries, in order, are listed in `tracks/find/find.ts`. When none answers, a Droid task describes the photos. Any task given `find.search` can search every workspace, not only its own. The Moss session is open only while someone searches. The cloud copy of the index is off unless the box runs with `FIND_CLOUD_SYNC=1`.
+A model runs only when its key is set in the vault. Claude, through a Droid task, runs only when the owner presses **Describe with Claude** on the Find page. Photos stay on the box unless the owner sets a hosted model's key or presses that button. Any task given `find.search` can search every workspace, not only its own. The Moss session is open only while someone searches. The cloud copy of the index is off unless the box runs with `FIND_CLOUD_SYNC=1`.
 
 ## `jira`
 

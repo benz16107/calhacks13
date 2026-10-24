@@ -53,7 +53,7 @@ Anything that can call `box.createTask` from the core can start tasks. The inclu
 
 - The ASI:One app runs a chat agent that starts a task when a paired owner asks for work.
 - The shopping agent runs a check every 20 seconds and starts a purchase task when a watched price drops.
-- /find starts a description task when a photo arrives that no vision model could describe.
+- /find rescans its workspaces at boot, after every task and every minute. It starts a Claude description task only when you press **Describe with Claude** on the Find page.
 
 A trigger runs inside the core, so it may read the vault keys its app lists in `secrets` with `box.secret(name)`. It must never put a secret in a task's prompt.
 
