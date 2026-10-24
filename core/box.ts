@@ -1003,7 +1003,10 @@ class Core {
     // Count spending this task's other in-flight calls have committed, so two payments at once can't both pass.
     const committed = () => t.costCents + (this.reserved.get(t.id) ?? 0);
     const overBudget = committed() + cost > t.budgetCents;
-    const overThreshold = cost > this.settings.approvalThresholdCents; // the owner's rule: a spend this big always asks
+    // The owner's rule: a spend this big always asks, unless the owner already approved this task's question naming at
+    // least this much (Shopper's "Buy 2 filters for $13.00?"). Spends are counted against it, and the budget still caps.
+    const named = [...this.state.approvals.values()].filter((a) => a.task === t.id && a.state === 'approved' && !a.id.includes('.budget.') && a.costCents > 0).reduce((n, a) => n + a.costCents, 0);
+    const overThreshold = cost > this.settings.approvalThresholdCents && committed() + cost > named;
     if (cost > 0 && (overBudget || overThreshold)) {
       const meta = entry.tool.approval?.(input) ?? {};
       const why = overBudget ? `Budget ${dollars(t.budgetCents)}, spent ${dollars(t.costCents)}.` : `Spends above ${dollars(this.settings.approvalThresholdCents)} always ask.`;

@@ -3,6 +3,7 @@
 //   expect <file> <text>    missing <file>           whoami <file>         say <text> (a step in plain words)
 //   call <tool> <json>      ask <question>           fetch <url> <file>      fail <message>
 //   askq <question>         (asks with the question as the key, so the approval id has spaces)
+//   askspend <cents> <question>  (asks for an OK that names an amount: spends up to it don't ask again)
 //   callpar <tool> <json>   (two different calls at once: tests the budget reservation)
 //   callsame <tool> <json>  (the same call twice at once: tests idempotent dedup)
 //   steal <file> <out>      env <out>                connect <host:port> <out>      procs <out>
@@ -81,13 +82,15 @@ for (let n = done + 1; n <= lines.length; n++) {
       break;
     }
     case 'ask':
-    case 'askq': {
-      const question = [arg, text].join(' ');
+    case 'askq':
+    case 'askspend': {
+      const costCents = cmd === 'askspend' ? Number(arg) : 0;
+      const question = cmd === 'askspend' ? text : [arg, text].join(' ');
       // 'askq' keys the approval by the question text itself, so its id contains spaces (like Droid's questions).
       const key = cmd === 'askq' ? question : `line${n}`;
       let r;
       do {
-        r = await call(sock, 'POST', '/ask', { key, question });
+        r = await call(sock, 'POST', '/ask', { key, question, ...(costCents ? { costCents } : {}) });
       } while (r.pending); // wait past the window, as long as it takes
       if (!r.approved) throw new Error(`not approved: ${question}`);
       break;

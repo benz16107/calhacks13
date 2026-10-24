@@ -136,8 +136,9 @@ function start(box: Box, spec: TaskSpec & { source: string }) {
   return box.createTask({ workspace: WS, worker: 'fake', ...spec });
 }
 
-const buyLine = (question: string, currency: string, items: Line[], watch?: string) =>
-  `ask ${oneLine(question, 900)}\ncall shopper.buy ${JSON.stringify({ currency, items, ...(watch && { watch }) })}`;
+// The question names the total, so the box's "spends above $X always ask" rule doesn't ask a second time for it.
+const buyLine = (question: string, currency: string, items: Line[], cents: number, watch?: string) =>
+  `askspend ${cents} ${oneLine(question, 900)}\ncall shopper.buy ${JSON.stringify({ currency, items, ...(watch && { watch }) })}`;
 
 /** The mandate a watch becomes. What the owner approves (describe) and what the box signs come from here. */
 function termsOf(w: Watch, approvedBy: Mandate['approvedBy']): Mandate {
@@ -208,7 +209,7 @@ async function finishRound(box: Box, watchId: string, round: string) {
   const q = `Buy ${w.qty} × ${b.name} from ${label(b.store)} for ${money(b.priceCents * w.qty, w.currency)}? ${money(b.priceCents, w.currency)} each${down}, inside your mandate.${others} ${TEST_NOTE}${elsewhere}`;
   const t = await start(box, {
     title: `Buy ${w.qty} × ${b.name.slice(0, 60)}`, source: `shopper:buy:${w.id}`, tools: ['shopper.buy'],
-    budgetCents: usd(b.priceCents * w.qty, w.currency), prompt: buyLine(q, w.currency, items, w.id),
+    budgetCents: usd(b.priceCents * w.qty, w.currency), prompt: buyLine(q, w.currency, items, usd(b.priceCents * w.qty, w.currency), w.id),
   });
   box.note({ kind: 'watch.hit', id: w.id, best: b, buyTask: t.id }, t.id);
 }
@@ -552,7 +553,7 @@ export default {
         const sum = lines.reduce((s, l) => s + l.priceCents * l.qty, 0);
         const list = lines.map((l) => `${l.qty} × ${l.name}`).join(', ');
         const question = `Reorder for the household: ${list}, ${money(sum)} at the GurtOS Test Store? The agent's reason: ${oneLine(i.reason, 240)} ${TEST_NOTE}`;
-        const t = await start(ctx.box, { title: `Reorder: ${list.slice(0, 70)}`, source, tools: ['shopper.buy'], budgetCents: sum, prompt: buyLine(question, 'USD', lines) });
+        const t = await start(ctx.box, { title: `Reorder: ${list.slice(0, 70)}`, source, tools: ['shopper.buy'], budgetCents: sum, prompt: buyLine(question, 'USD', lines, sum) });
         return { proposal: t.id, totalCents: sum, items: lines, waitingFor: "the owner's OK on the portal or phone" };
       },
     },
