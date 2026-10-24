@@ -376,7 +376,7 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 
 **Best shown in:** All three editions, strongest in GurtOS Business
 
-**Pitch:** The usual stack for live agent state, a database, a websocket server, a cache and auth glue, is heavy and fragile. GurtOS runs one self-hosted SpacetimeDB per box as its live nervous system, with the rules enforced in the database: agents claim shared work atomically, each person is sent only their own requests, and the first answer to a request wins. It is light, open source and part of the GurtOS suite. The Maincloud multi-machine view is written but not running yet.
+**Pitch:** The usual stack for live agent state, a database, a websocket server, a cache and auth glue, is heavy and fragile. GurtOS runs one self-hosted SpacetimeDB per box as its live nervous system, with the rules enforced in the database: agents claim shared work atomically, each person is sent only their own requests, and the first answer to a request wins. It is light, open source and part of the GurtOS suite. The fleet view runs on SpacetimeDB Maincloud, is off by default on a new box, and reports counts only, never a prompt, a file or a key.
 
 **The problem:** Live agent state usually needs a database, a websocket server, a cache and auth glue, which is heavy and fragile, and an ordinary OS has nothing for it.
 
@@ -390,14 +390,13 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 | No double approvals, with who is viewing | Instant sync | Every surface answers into the same row | The first answer wins in the reducer; the later one is refused with "already approved by" and the name; presence per connection | Shipped |
 | Timers in the database | Meaningful use | Phone pushes still come from the core | A scheduled reducer brings a second person into a request still pending | Shipped as the mechanism: the demo brought Priya in after 3 seconds. The Business policy has no reminder line yet |
 | Live meters: running, needs you, done, failed, spend, activity per minute | Instant sync | None | Kept by the reducers as tasks change; no screen adds anything up | Shipped. The demo checks the meter against the box's own task list |
-| One live view across machines on Maincloud, counts only | Meaningful use | Opt-in from the Computers tab | Maincloud and a per-viewer my_machines view | Being built: written, not published, not running. It waits on one sign-in to SpacetimeDB |
+| One live view across machines on Maincloud, counts only | Meaningful use | Opt-in from the Computers tab | Maincloud and a per-viewer my_machines view | Built. Runs on SpacetimeDB Maincloud (database gurtos-fleet), off by default on a new box. Three live checks passed on main: the box reports to Maincloud when the owner turns it on, a viewer the box granted sees it live while a stranger is sent nothing, and turning it off removes the computer and every grant |
 
 **Demo moment and proof:** In every merge-gate run, a task stops over its budget and SpacetimeDB shows the request live with its amount, payee and purpose while another task keeps running. The OK goes through the answer reducer under the name the box vouched for, a stranger's identity is refused, and the task finishes. In the queue check, 3 agents made 15 claims on 12 jobs at once and got 12 distinct jobs, none twice.
 
 **Still to do:**
 
 - Review the story with Ben: problem, features with their why, OS vs track
-- One live view across machines on Maincloud, counts only
 
 ## Elastic: Best use of Elastic Agent Builder on Serverless
 
