@@ -23,6 +23,11 @@ const PROXY_PORTS = '8800-8899';
 export const TASK_UIDS = '30000-39999'; // the range sandbox.ts gives task users
 export const PLACEHOLDER_KEY = 'fk-placeholder-the-box-adds-the-key';
 const FACTORY = /^([a-z0-9-]+\.)*factory\.ai$/;
+export const ANTHROPIC_PLACEHOLDER = 'sk-ant-placeholder-the-box-adds-the-key';
+const ANTHROPIC = 'api.anthropic.com';
+/** Hosts the proxy answers TLS for itself, to put the vault's model key on the way out. Only for Droid tasks. */
+const relayed = (host: string) => FACTORY.test(host) || host === ANTHROPIC;
+const SAN = 'subjectAltName=DNS:factory.ai,DNS:*.factory.ai,DNS:api.anthropic.com\n';
 
 /**
  * Load the firewall: a task user may reach the box's proxy and nothing else. Boxes on one machine share the
@@ -92,16 +97,20 @@ export function stopLoggingBlocked(taskId: string) {
 export function relayCert(home: string) {
   const dir = path.join(home, 'ca');
   const caPem = path.join(home, 'relay-ca.pem');
-  if (!fs.existsSync(path.join(dir, 'leaf.pem'))) {
+  const ssl = (...args: string[]) => execFileSync('openssl', args, { cwd: dir, stdio: 'pipe' });
+  const ec = ['-newkey', 'ec', '-pkeyopt', 'ec_paramgen_curve:prime256v1', '-nodes'];
+  if (!fs.existsSync(path.join(dir, 'ca.pem'))) {
     fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
-    const ssl = (...args: string[]) => execFileSync('openssl', args, { cwd: dir, stdio: 'pipe' });
-    const ec = ['-newkey', 'ec', '-pkeyopt', 'ec_paramgen_curve:prime256v1', '-nodes'];
     ssl('req', '-x509', ...ec, '-keyout', 'ca.key', '-out', 'ca.pem', '-days', '3650', '-subj', '/CN=Box relay CA');
-    ssl('req', ...ec, '-keyout', 'leaf.key', '-out', 'leaf.csr', '-subj', '/CN=factory.ai');
-    fs.writeFileSync(path.join(dir, 'san.ext'), 'subjectAltName=DNS:factory.ai,DNS:*.factory.ai\n');
-    ssl('x509', '-req', '-in', 'leaf.csr', '-CA', 'ca.pem', '-CAkey', 'ca.key', '-CAcreateserial', '-out', 'leaf.pem', '-days', '3650', '-extfile', 'san.ext');
     fs.copyFileSync(path.join(dir, 'ca.pem'), caPem);
     fs.chmodSync(caPem, 0o644);
+  }
+  // A box made before a name was added gets a new leaf from the same CA, so tasks keep trusting it.
+  const sanFile = path.join(dir, 'san.ext');
+  if (!fs.existsSync(path.join(dir, 'leaf.pem')) || (fs.existsSync(sanFile) ? fs.readFileSync(sanFile, 'utf8') : '') !== SAN) {
+    ssl('req', ...ec, '-keyout', 'leaf.key', '-out', 'leaf.csr', '-subj', '/CN=factory.ai');
+    fs.writeFileSync(sanFile, SAN);
+    ssl('x509', '-req', '-in', 'leaf.csr', '-CA', 'ca.pem', '-CAkey', 'ca.key', '-CAcreateserial', '-out', 'leaf.pem', '-days', '3650', '-extfile', 'san.ext');
   }
   return { key: fs.readFileSync(path.join(dir, 'leaf.key')), cert: fs.readFileSync(path.join(dir, 'leaf.pem')), caPem };
 }
@@ -162,6 +171,7 @@ export interface ProxyHooks {
   taskOf(uid: number): Task | undefined;
   blocked(task: Task, host: string): void;
   factoryKey(): string | undefined;
+  anthropicKey(): string | undefined;
 }
 
 /** Start the proxy. Resolves to its port. */
@@ -185,13 +195,15 @@ export async function startProxy(hooks: ProxyHooks, cert: { key: Buffer; cert: B
     req.pipe(up);
   };
 
-  /** A call to Factory from a Droid task: the placeholder key becomes the real one, and only here. */
+  /** A call to Factory or Anthropic from a Droid task: the placeholder key becomes the real one, and only here. */
   const toFactory = (req: http.IncomingMessage, res: http.ServerResponse, host: string) => {
-    const key = hooks.factoryKey();
-    if (!key) return fail(res, 503, 'the vault has no FACTORY_API_KEY');
+    const anthropic = host === ANTHROPIC;
+    const key = anthropic ? hooks.anthropicKey() : hooks.factoryKey();
+    if (!key) return fail(res, 503, `the vault has no ${anthropic ? 'ANTHROPIC_API_KEY' : 'FACTORY_API_KEY'}`);
+    const placeholder = anthropic ? ANTHROPIC_PLACEHOLDER : PLACEHOLDER_KEY;
     const headers: http.OutgoingHttpHeaders = { host };
     for (const [name, value] of Object.entries(req.headers)) {
-      if (value !== undefined && name !== 'host') headers[name] = Array.isArray(value) ? value : value.replaceAll(PLACEHOLDER_KEY, key);
+      if (value !== undefined && name !== 'host') headers[name] = Array.isArray(value) ? value : value.replaceAll(placeholder, key);
     }
     forward(req, res, https.request({ host, path: req.url, method: req.method, headers }));
   };
@@ -199,7 +211,7 @@ export async function startProxy(hooks: ProxyHooks, cert: { key: Buffer; cert: B
   // HTTPS to Factory, after the proxy has answered TLS itself. The task was checked at CONNECT.
   const relay = http.createServer((req, res) => {
     const host = (req.headers.host ?? '').split(':')[0];
-    if (!FACTORY.test(host)) return fail(res, 403, 'not a Factory host');
+    if (!relayed(host)) return fail(res, 403, 'not a model host');
     toFactory(req, res, host);
   });
 
@@ -235,7 +247,7 @@ export async function startProxy(hooks: ProxyHooks, cert: { key: Buffer; cert: B
     client.on('error', () => up?.destroy());
     const t = who(client);
     const [host, port = '443'] = (req.url ?? '').split(':');
-    if (t?.worker === 'droid' && FACTORY.test(host) && port === '443') {
+    if (t?.worker === 'droid' && relayed(host) && port === '443') {
       client.write('HTTP/1.1 200 Connection Established\r\n\r\n');
       if (head.length) client.unshift(head);
       const secure = new tls.TLSSocket(client, { isServer: true, ...cert });

@@ -35,8 +35,16 @@ reach only the hosts in its spec. `example.com` allows any port, `example.com:80
 subdomains. A name that lands on the box itself (like `shop.localhost`) needs the exact `host:port`, and
 never reaches the box's own ports. Every refusal is a `net.blocked` event in the log.
 
-Droid tasks hold a placeholder Factory key. The proxy swaps in the vault's key on the way to Factory, for
-plain calls and, through the box's own TLS certificate, for model calls. So the real key never enters a task.
+Droid tasks hold placeholder keys. The proxy swaps in the vault's key on the way out, for plain calls and,
+through the box's own TLS certificate, for model calls. So the real key never enters a task.
+
+**One model key is enough: Factory's or your own Anthropic key.** With `FACTORY_API_KEY` in the vault, Droid uses
+Factory. With only `ANTHROPIC_API_KEY`, the box writes a bring-your-own-key model into the task user's
+`~/.factory/settings.json` (model `BOX_MODEL`, default `claude-sonnet-4-6`, with a placeholder key) and runs Droid on
+`custom:<model>`; the proxy relays `api.anthropic.com` and puts the real key in the `x-api-key` header. Droid's own
+calls to Factory get a 503 then, and the task carries on. With neither, a Droid task fails with "the vault has no
+model key". `GET /api/setup` and `GET /api/system` report `model: {ready, via: 'factory' | 'anthropic' | null}`.
+The cost numbers are list prices either way; with your own key the spend is on your Anthropic account.
 
 ## The broker and the vault
 
@@ -187,7 +195,7 @@ Turning an app **off** takes its tools, jobs, routes, webhooks, log readers and 
 its triggers; a task that asks for one of its tools is refused. A trigger that returns a stop function from
 `start` stops cleanly (the generic `schedule`, `webhook` and `onFileChange` all do). A trigger that returns
 nothing keeps running until the box restarts, and the app reports `restartNeeded: true`. Turning it **on** loads
-it again with no reinstall. The choice is saved in `apps.json`, so it survives a restart.
+it again with no reinstall. The choice is saved in `apps.json`, so it survives a restart. **A new box** (no `apps.json` and an empty log) starts with only the apps whose keys are all in the vault turned on, and never the example app, so a fresh install runs nothing it has no keys for. Turning one on later shows which keys it needs.
 
 ## Who may reach the API
 
@@ -311,8 +319,8 @@ table pairs this way for the Hacker's Choice demo. A phone sends its token as `A
 when it approves, so the log records which phone said yes; revoke it with `POST /api/pair/devices/<id>/revoke`
 and that token stops working. Set `BOX_URL` (the image sets it from the box's address at first boot) and `POST /api/pair/start` returns an
 absolute `url`, so the QR on the box's screen opens on a phone. `GET /api/boxes` lists this box plus the peers named in the `BOX_PEERS`
-environment variable (JSON array of `{id, name, url, stdb}`), so one portal shows and drives both the linuxbox
-and Vultr boxes. Each entry is `{id, name, url, stdb, self?}`; this box's own `url` comes from `BOX_URL`.
+environment variable (JSON array of `{id, name, url, stdb}`), so one portal shows and drives several boxes.
+Each entry is `{id, name, url, stdb, self?}`; this box's own `url` comes from `BOX_URL`.
 
 **Hosting the portal.** Build it into `portal/dist` (or point `BOX_PORTAL` at a folder) and the box serves it on
 the same address as the API: files as they are, and `index.html` for any other page load, so client-side

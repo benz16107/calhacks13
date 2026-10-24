@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # The merge gate: runs the four demo moments, with no screen, on a test VM. Exit 0 = pass.
-#   ./demo                         the linuxbox VM if it is running, else the laptop VM
-#   ./demo laptop|linuxbox|vultr   that test machine
+#   ./demo                         the machine named default there, or BOX_SHELL
+#   ./demo <name>                  a test machine named in ~/.config/gurtos/machines (name=shell command)
 #   BOX_SHELL='ssh my-vm' ./demo   any test machine with passwordless sudo
 #   ./demo --here                  this machine. Only on a test VM: it needs root.
 #   ./demo --live-droid            also run the real Droid steps. They spend Factory credit, so they are OFF by default
@@ -32,22 +32,16 @@ if [[ ${1:-} == --here ]]; then
   DEMO_SKIP_DROID="${DEMO_SKIP_DROID:-$skip}" exec node --experimental-strip-types --disable-warning=ExperimentalWarning core/demo.ts
 fi
 
-lima=$(command -v limactl || echo /home/linuxbrew/.linuxbrew/bin/limactl)
-on() { [[ $(hostname -s) == "$1"* ]]; }
-laptop="/opt/homebrew/bin/limactl shell --workdir / box --"
-on benmac || laptop="ssh -o ConnectTimeout=10 benmac $laptop"
-linuxbox="/home/linuxbrew/.linuxbrew/bin/limactl shell --workdir / box --"
-on linuxbox || linuxbox="ssh -o ConnectTimeout=10 linuxbox $linuxbox"
-case ${1:-} in
-  laptop) BOX_SHELL=$laptop ;;
-  linuxbox) BOX_SHELL=$linuxbox ;;
-  vultr) BOX_SHELL="ssh -o ConnectTimeout=10 vultrbox" ;;
-  '')
-    if [[ -z ${BOX_SHELL:-} ]]; then
-      if on linuxbox && "$lima" list box 2>/dev/null | grep -q Running; then BOX_SHELL=$linuxbox; else BOX_SHELL=$laptop; fi
-    fi ;;
-  *) echo "usage: ./demo [laptop|linuxbox|vultr|--here]" >&2; exit 2 ;;
-esac
+# Named machines come from an untracked file, one "name=command that runs a root shell there" per line.
+machines=${GURTOS_MACHINES:-$HOME/.config/gurtos/machines}
+machine() { [[ -f $machines ]] && sed -n "s/^$1=//p" "$machines" | head -1; }
+if [[ -n ${1:-} ]]; then
+  BOX_SHELL=$(machine "$1")
+  [[ -n $BOX_SHELL ]] || { echo "demo: no machine named \"$1\" in $machines (lines like: myvm=ssh root@myvm)" >&2; exit 2; }
+elif [[ -z ${BOX_SHELL:-} ]]; then
+  BOX_SHELL=$(machine default)
+  [[ -n $BOX_SHELL ]] || { echo "usage: ./demo <machine> | BOX_SHELL='ssh root@vm' ./demo | ./demo --here (on an Ubuntu 24.04 test VM). Machines live in $machines." >&2; exit 2; }
+fi
 
 # Ship this checkout (tracked and new files, not ignored ones) and run it there. node_modules stays between runs.
 dest=/opt/box-dev/$(basename "$PWD")

@@ -11,7 +11,7 @@ import path from 'node:path';
 import type { App, Approval, Box, FullSpec, Ctx, LogEvent, LogReader, ModelJob, NewEvent, Route, Task, TaskSpec, TaskState, Tool, Track } from './contract.ts';
 import { DB, Live } from './live.ts';
 import { Log, apply, canMove, doneLayers, fold, type State } from './log.ts';
-import { PLACEHOLDER_KEY, firewall, logBlocked, stopLoggingBlocked, uidOf, relayCert, reservePort, startProxy } from './net.ts';
+import { ANTHROPIC_PLACEHOLDER, PLACEHOLDER_KEY, firewall, logBlocked, stopLoggingBlocked, uidOf, relayCert, reservePort, startProxy } from './net.ts';
 import * as sandbox from './sandbox.ts';
 import { HOME, dirs } from './sandbox.ts';
 import { usageCents } from './pricing.ts';
@@ -218,20 +218,31 @@ class Core {
         NO_PROXY: '127.0.0.1',
         NODE_USE_ENV_PROXY: '1',
       };
+      let byok: string | undefined; // the model id, when the task runs on the owner's own Anthropic key
       if (t.worker === 'droid') {
-        if (!this.vault.get('FACTORY_API_KEY')) this.vault = loadVault(); // a key added to the file by hand since boot
-        if (!this.vault.get('FACTORY_API_KEY')) throw new Error('no model key yet: add one in Settings > Model key (FACTORY_API_KEY in the vault)');
-        // The task holds a placeholder. The proxy swaps in the real key on the way to Factory.
+        if (!this.modelVia()) this.vault = loadVault(); // a key added to the file by hand since boot
+        const via = this.modelVia();
+        if (!via) throw new Error('the vault has no model key: add ANTHROPIC_API_KEY or FACTORY_API_KEY in Setup');
+        // The task holds placeholders. The proxy swaps in the real key on the way to Factory or Anthropic.
+        if (via === 'anthropic') byok = process.env.BOX_MODEL?.replace(/^custom:/, '') ?? 'claude-sonnet-4-6';
         Object.assign(env, {
-          FACTORY_API_KEY: PLACEHOLDER_KEY,
+          FACTORY_API_KEY: PLACEHOLDER_KEY, // the SDK wants one even when the model is the owner's own key
           FACTORY_API_BASE_URL: proxy,
           FACTORY_EXTRA_CA_CERTS: this.relay.caPem,
           NODE_EXTRA_CA_CERTS: this.relay.caPem,
           FACTORY_RIPGREP_PATH: '/usr/bin/rg',
-          ...(process.env.BOX_MODEL ? { BOX_MODEL: process.env.BOX_MODEL } : {}),
+          ...(byok ? { BOX_MODEL: `custom:${byok}` } : process.env.BOX_MODEL ? { BOX_MODEL: process.env.BOX_MODEL } : {}),
         });
       }
       const ids = sandbox.prepare(t);
+      if (byok) {
+        // Droid reads its own-key models from the task user's ~/.factory/settings.json; the key there is a placeholder.
+        const dir = path.join(dirs.task(t.id), 'home', '.factory');
+        fs.mkdirSync(dir, { recursive: true });
+        const model = { model: byok, displayName: 'Claude (your Anthropic key)', baseUrl: 'https://api.anthropic.com', apiKey: ANTHROPIC_PLACEHOLDER, provider: 'anthropic', maxOutputTokens: 8192 };
+        fs.writeFileSync(path.join(dir, 'settings.json'), JSON.stringify({ customModels: [model] }));
+        execFileSync('chown', ['-R', `${ids.uid}:${ids.gid}`, dir]);
+      }
       sandbox.snapshotBase(t);
       this.uidTask.set(ids.uid, t.id);
       logBlocked(ids.uid, t.id);
@@ -792,6 +803,16 @@ class Core {
   /** At boot: find every app and turn on the ones that are enabled. */
   async loadTracks() {
     await this.discoverTracks();
+    // A new box (no apps.json, nothing in the log yet) starts with only the apps whose keys are all in the vault,
+    // and never the example app: a stranger's fresh install loads nothing it can't run. A box already in use keeps
+    // what it ran, and demo boxes keep every app on.
+    if (!fs.existsSync(path.join(HOME, 'apps.json')) && !this.log.events.length && !process.env.BOX_DEMO) {
+      for (const name of this.installed.keys()) {
+        const need = this.appEntry(name).access.secrets;
+        if (name === 'example' || need.some((k) => !k.set)) this.disabled.add(name);
+      }
+      saveDisabled(HOME, this.disabled);
+    }
     const loaded: Track[] = [];
     for (const [name, rec] of this.installed) {
       if (!rec.track || this.disabled.has(name)) continue;
@@ -886,14 +907,20 @@ class Core {
       boxId: BOX_ID,
       boxName: BOX_NAME,
       owner: this.owner,
+      model: { ready: !!this.modelVia(), via: this.modelVia() },
       startedAt: this.startedAt,
       uptimeSec: Math.round(process.uptime()),
     };
   }
 
+  /** Which model key the box will use: Factory's if it has one, else the owner's own Anthropic key. */
+  modelVia(): 'factory' | 'anthropic' | null {
+    return this.vault.get('FACTORY_API_KEY') ? 'factory' : this.vault.get('ANTHROPIC_API_KEY') ? 'anthropic' : null;
+  }
+
   /** The setup state with the suggested step order. Until `done`, the box's screen shows the wizard. */
   setupView() {
-    return { modelKey: this.vault.has('FACTORY_API_KEY'), done: this.setup.done, finishedAt: this.setup.finishedAt ?? null, migrated: this.setup.migrated ?? false, steps: this.setup.steps, suggested: SETUP_STEPS };
+    return { model: { ready: !!this.modelVia(), via: this.modelVia() }, modelKey: !!this.modelVia(), done: this.setup.done, finishedAt: this.setup.finishedAt ?? null, migrated: this.setup.migrated ?? false, steps: this.setup.steps, suggested: SETUP_STEPS };
   }
 
   // ---------- pairing a phone, and listing every box ----------
@@ -1297,6 +1324,7 @@ data: ${JSON.stringify(e)}
       },
       blocked: (t, host) => this.write({ type: 'net.blocked', task: t.id, host }),
       factoryKey: () => this.vault.get('FACTORY_API_KEY'),
+      anthropicKey: () => this.vault.get('ANTHROPIC_API_KEY'),
     }, this.relay);
     const tracks = await this.loadTracks();
     for (const [name, real] of Object.entries(this.links)) typeof real === 'string' ? sandbox.linkBase(name, real) : sandbox.linkMulti(name, real);

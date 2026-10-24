@@ -1,19 +1,17 @@
 #!/usr/bin/env bash
 # Install origin/main as the real box service on an always-on machine. The installed boxes run main only.
-#   ./deploy linuxbox | vultr | laptop
+#   ./deploy <name>   a machine named in ~/.config/gurtos/machines (name=command that runs a root shell)
 # Refuses a dirty or unpushed checkout: what you deploy is exactly origin/main. Track threads test with
 # ./demo (throwaway boxes), never here.
 set -euo pipefail
 cd "$(dirname "$0")"
 
+# Named machines come from an untracked file, one "name=command that runs a root shell there" per line.
+machines=${GURTOS_MACHINES:-$HOME/.config/gurtos/machines}
+machine() { [[ -f $machines ]] && sed -n "s/^$1=//p" "$machines" | head -1; }
 target=${1:-}
-case $target in
-  laptop) BOX_SHELL="ssh -o ConnectTimeout=10 benmac /opt/homebrew/bin/limactl shell --workdir / box --" ;;
-  linuxbox) BOX_SHELL="/home/linuxbrew/.linuxbrew/bin/limactl shell --workdir / box --"
-    [[ $(hostname -s) == linuxbox* ]] || BOX_SHELL="ssh -o ConnectTimeout=10 linuxbox $BOX_SHELL" ;;
-  vultr) BOX_SHELL="ssh -o ConnectTimeout=10 vultrbox" ;;
-  *) echo "usage: ./deploy linuxbox|vultr|laptop" >&2; exit 2 ;;
-esac
+BOX_SHELL=${target:+$(machine "$target")}
+[[ -n $BOX_SHELL ]] || { echo "usage: ./deploy <machine>, a name in $machines (lines like: mybox=ssh root@mybox)" >&2; exit 2; }
 
 # Only origin/main goes on an always-on box.
 git fetch -q origin main

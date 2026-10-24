@@ -1,7 +1,7 @@
 // The real worker: Factory's Droid with Claude, inside the task's copy of the workspace.
 // The box already limits what the task can touch (its own user, its own files, its network), so Droid
 // runs with high autonomy. Box tools and box_ask reach it through workers/mcp.ts.
-// Needs FACTORY_API_KEY, which the core passes in; it is the one secret a task holds (see core/README.md).
+// The model key never enters the task: it holds placeholders, and the box's proxy adds the vault's Factory or Anthropic key.
 import { createHash } from 'node:crypto';
 import { AutonomyLevel, DroidMessageType, ToolConfirmationOutcome, createSession, resumeSession } from '@factory/droid-sdk/node';
 import { call } from '../client.ts';
