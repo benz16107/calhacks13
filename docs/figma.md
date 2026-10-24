@@ -1,6 +1,11 @@
 # Figma handoff
 
 Everything the portal thread needs to build the portal, the phone view and the box's own screen from Figma.
+
+**Status, Fri 7:35 PM:** Ben wants the screens to feel like an operating system, not a dashboard. Three OS
+directions are in `docs/figma/directions/` (research in `docs/figma/refs/`). Once he picks one, the full screen set
+below is redone in it and this file is updated. Until then the screens below ("Ledger", v1) are on hold: the data
+mapping and API notes still apply, the look will change.
 Claude Code made these files through Figma's MCP server, in Ben's School team (UofT account). Screenshots of
 every screen are in `docs/figma/`.
 
