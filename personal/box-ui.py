@@ -16,7 +16,7 @@ gi.require_version('Adw', '1')
 from gi.repository import Adw, Gdk, Gio, GLib, Gtk  # noqa: E402
 
 sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
-from boxapi import BOX, api, ask_spec, dollars, kept_tasks, needs_review, tilde  # noqa: E402
+from boxapi import BOX, api, ask_spec, dollars, needs_review, tilde  # noqa: E402
 
 APP = 'dev.box.Box'
 CONFIG = os.path.join(GLib.get_user_config_dir(), 'box')
@@ -186,7 +186,7 @@ class AskWindow(Adw.ApplicationWindow):
                 self.toasts.add_toast(Adw.Toast(title=f'GurtOS did not start it: {err}', timeout=0))
                 return self.validate()
             n = Gio.Notification.new(f'An agent is working on {os.path.basename(self.folder)}')
-            n.set_body(f"{task['title']}. GurtOS tells you when it needs you and when its changes are ready.")
+            n.set_body(f"{task['title'].rstrip('.')}. GurtOS tells you when it needs you and when its changes are ready.")
             self.get_application().send_notification(f"started-{task['id']}", n)
             self.close()
         background(lambda: api('POST', '/api/tasks', spec), done)
@@ -205,15 +205,18 @@ class ReviewWindow(Adw.ApplicationWindow):
         self.undo.connect('clicked', self.confirm_undo)
         self.keep = Gtk.Button(label='Keep', css_classes=['suggested-action'], tooltip_text='Apply the changes to your folder')
         self.keep.connect('clicked', self.do_keep)
+        self.unkeep = Gtk.Button(label='Undo Keep', css_classes=['destructive-action'], tooltip_text='Put your files back as they were before Keep')
+        self.unkeep.connect('clicked', self.confirm_unkeep)
         bar.pack_end(self.keep)
         bar.pack_end(self.undo)
+        bar.pack_end(self.unkeep)
         view.add_bottom_bar(bar)
         self.set_default_widget(self.keep)
         self.load()
         self.present()
 
     def load(self):
-        for b in (self.keep, self.undo):
+        for b in (self.keep, self.undo, self.unkeep):
             b.set_sensitive(False)
         background(lambda: (api('GET', f'/api/tasks/{self.id}'), api('GET', f'/api/tasks/{self.id}/diff')), self.show)
 
@@ -228,23 +231,27 @@ class ReviewWindow(Adw.ApplicationWindow):
             return
         detail, diff = result
         t = detail['task']
-        kept_ids = kept_tasks(detail['events'])
-        kept = self.id in kept_ids
-        review = needs_review(t, kept_ids)  # Keep is for a finished task on one of your folders
-        self.header.set_title_widget(Adw.WindowTitle(title=t['title'], subtitle=tilde(t.get('folder') or t['workspace'])))
-        self.keep.set_visible(review)
-        self.undo.set_visible(t['state'] != 'undone' and not kept)
-        if t['state'] == 'undone':
-            return self.body.append(Adw.StatusPage(icon_name='edit-undo-symbolic', title='Undone', description='Its changes are gone. Your folder is as it was.', vexpand=True))
-        if kept:
-            return self.body.append(Adw.StatusPage(icon_name='emblem-ok-symbolic', title='Kept', description=f"Its changes are in {tilde(t.get('folder', ''))}.", vexpand=True))
+        review = t.get('review')  # the core's: pending, kept, conflict or undone, for a task on one of your folders
+        folder = tilde(t.get('folder') or t['workspace'])
+        self.header.set_title_widget(Adw.WindowTitle(title=t['title'], subtitle=folder))
+        self.keep.set_visible(needs_review(t))
+        self.undo.set_visible(t['state'] != 'undone' and review not in ('kept', 'undone'))
+        self.unkeep.set_visible(review == 'kept')
+        if t['state'] == 'undone' or review == 'undone':
+            return self.body.append(Adw.StatusPage(icon_name='edit-undo-symbolic', title='Undone', description=f'Its changes are gone. {folder} is as it was.', vexpand=True))
+        if review == 'kept':
+            self.unkeep.set_sensitive(True)
+            return self.body.append(Adw.StatusPage(icon_name='emblem-ok-symbolic', title='Kept',
+                                                   description=f'Its changes are in {folder}. Undo Keep puts the files back as they were.', vexpand=True))
 
         changes = diff.get('changes', [])
         counts = {k: sum(c['change'] == k for c in changes) for k in ('modified', 'added', 'deleted')}
         status = {'queued': 'Waiting to start.', 'running': 'Still working. Keep comes when it is done.', 'waiting': 'Waiting for your OK.',
                   'failed': f"It failed: {t.get('error', '')}. Its changes were not applied."}.get(t['state'])
-        if review:
-            status = f"Done. Nothing in {tilde(t['folder'])} has changed yet. Keep applies these changes; Undo throws them away."
+        if review == 'pending':
+            status = f'Done. Nothing in {folder} has changed yet. Keep applies these changes; Undo throws them away.'
+        elif review == 'conflict':
+            status = 'You changed some of the same files while it worked, so nothing was applied. Keep tries again; Undo throws its changes away.'
         facts = ' · '.join([f"{counts['modified']} changed", f"{counts['added']} added", f"{counts['deleted']} deleted",
                             f"cost {dollars(t.get('costCents'))} of {dollars(t.get('budgetCents'))}"])
         top = Adw.PreferencesGroup(title=GLib.markup_escape_text(facts), description=GLib.markup_escape_text(' '.join(x for x in (status, t.get('summary')) if x)),
@@ -313,6 +320,33 @@ class ReviewWindow(Adw.ApplicationWindow):
         d.present()
 
 
+    def confirm_unkeep(self, _button):
+        d = Adw.MessageDialog(transient_for=self, heading='Put Your Files Back?',
+                              body='The files this task changed go back to how they were before Keep, and files it added are removed.')
+        d.add_response('cancel', 'Cancel')
+        d.add_response('unkeep', 'Undo Keep')
+        d.set_response_appearance('unkeep', Adw.ResponseAppearance.DESTRUCTIVE)
+        d.set_default_response('cancel')
+
+        def answered(_d, response):
+            if response != 'unkeep':
+                return
+            self.unkeep.set_sensitive(False)
+
+            def done(out, err):
+                if err:
+                    self.toasts.add_toast(Adw.Toast(title=f'Undo Keep did not work: {err}', timeout=0))
+                elif out.get('conflicts'):
+                    c = Adw.MessageDialog(transient_for=self, heading='You Edited These Files Since',
+                                          body='GurtOS changed nothing, so your edits are safe:\n\n' + '\n'.join(out['conflicts'][:8]))
+                    c.add_response('close', 'Close')
+                    c.present()
+                self.load()
+            background(lambda: api('POST', f'/api/tasks/{self.id}/unkeep', {}), done)
+        d.connect('response', answered)
+        d.present()
+
+
 # ---------- first run ----------
 
 class WelcomeWindow(Adw.ApplicationWindow):
@@ -336,6 +370,11 @@ class WelcomeWindow(Adw.ApplicationWindow):
         buttons = Gtk.Box(spacing=12, halign=Gtk.Align.CENTER)
         pair = Gtk.Button(label='Pair a Phone…', css_classes=['pill'], tooltip_text='Approve from your phone too (optional)')
         pair.connect('clicked', lambda _b: (self.close(), app.open_route('settings')))
+        pair.set_visible(False)  # shown once the box has an address a phone can reach
+
+        def reachable(boxes, err):
+            pair.set_visible(not err and any(b.get('self') and b.get('url') for b in boxes or []))
+        background(lambda: api('GET', '/api/boxes'), reachable)
         start = Gtk.Button(label='Get Started', css_classes=['pill', 'suggested-action'])
         start.connect('clicked', lambda _b: self.close())
         buttons.append(pair)
@@ -344,6 +383,9 @@ class WelcomeWindow(Adw.ApplicationWindow):
         _header, _view, _toasts = headed(self, '', Gtk.ScrolledWindow(child=box, hscrollbar_policy=Gtk.PolicyType.NEVER))
         self.set_default_widget(start)
         self.connect('close-request', self.seen)
+        escape = Gtk.ShortcutController()
+        escape.add_shortcut(Gtk.Shortcut(trigger=Gtk.ShortcutTrigger.parse_string('Escape'), action=Gtk.CallbackAction.new(lambda *_: self.close() or True)))
+        self.add_controller(escape)
         self.present()
 
     def seen(self, _window):

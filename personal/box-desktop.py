@@ -6,12 +6,12 @@
 # It follows the box's action log live (GET /api/log/stream). Events are only a "something changed" signal: it
 # then reads tasks and pending approvals from the API, so a missed or replayed event never leaves it out of date.
 import getpass
-import json
 import os
 import sys
 import threading
 import time
 import urllib.request
+from datetime import datetime, timezone
 
 import gi
 
@@ -20,7 +20,7 @@ gi.require_version('AyatanaAppIndicator3', '0.1')
 from gi.repository import AyatanaAppIndicator3 as AppIndicator, Gio, GLib, Gtk  # noqa: E402
 
 sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
-from boxapi import BOX, api, dollars, kept_tasks, plan, quote, reviews, running, tilde, top_bar, ui  # noqa: E402
+from boxapi import BOX, api, dollars, plan, quote, reviews, running, tilde, top_bar, ui  # noqa: E402
 
 APP = 'dev.box.Box'
 USER = getpass.getuser()
@@ -33,12 +33,14 @@ class Desktop:
         self.bus = Gio.bus_get_sync(Gio.BusType.SESSION)
         self.bus.signal_subscribe(NOTIFY[0], NOTIFY[2], 'ActionInvoked', NOTIFY[1], None, Gio.DBusSignalFlags.NONE, self.on_action)
         self.bus.signal_subscribe(NOTIFY[0], NOTIFY[2], 'NotificationClosed', NOTIFY[1], None, Gio.DBusSignalFlags.NONE, self.on_closed)
-        self.tasks, self.approvals, self.kept = [], {}, set()
+        self.tasks, self.approvals = [], {}
         self.shown = {}  # notification id -> ('approval' | 'review', id)
         self.notified = {}  # 'approval:<id>' or 'review:<id>' -> notification id, so each is posted once
         self.online = None
         self.pending = False
         self.generation = 0  # refreshes run off the main loop; only the newest one is applied
+        self.started = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%S')  # the core's updatedAt format, to the second
+        self.told_failed = set()
         self.indicator = AppIndicator.Indicator.new(APP, f'{APP}-symbolic', AppIndicator.IndicatorCategory.APPLICATION_STATUS)
         self.indicator.set_title('GurtOS')
         self.indicator.set_status(AppIndicator.IndicatorStatus.ACTIVE)
@@ -48,7 +50,7 @@ class Desktop:
     # ---------- following the box ----------
 
     def follow(self):
-        """Read the whole log once (to know which tasks were kept), then follow it live, reconnecting from the last seq."""
+        """Follow the log live, reconnecting from the last seq it saw. The first connection replays it all, as one refresh."""
         after = None
         while True:
             try:
@@ -57,9 +59,7 @@ class Desktop:
                     if owner and owner.get('user') != USER:
                         GLib.idle_add(Gtk.main_quit)  # approvals belong to the owner; other accounts get no indicator
                         return
-                    events = api('GET', '/api/log', timeout=30)
-                    GLib.idle_add(self.saw, events)
-                    after = events[-1]['seq'] if events else 0
+                    after = 0
                 with urllib.request.urlopen(f'{BOX}/api/log/stream?after={after}', timeout=60) as r:  # beats every 25 s
                     GLib.idle_add(self.changed)
                     for raw in r:
@@ -67,14 +67,10 @@ class Desktop:
                         if line.startswith('id: '):
                             after = int(line[4:])
                         elif line.startswith('data: '):
-                            GLib.idle_add(self.saw, [json.loads(line[6:])])
+                            GLib.idle_add(self.changed)
             except Exception:  # noqa: BLE001 (the box restarting, or not up yet)
                 GLib.idle_add(self.set_online, False)
             time.sleep(2)
-
-    def saw(self, events):
-        self.kept |= kept_tasks(events)
-        return self.changed()
 
     def changed(self):
         # A burst (a busy task) becomes one refresh.
@@ -107,7 +103,7 @@ class Desktop:
     def apply(self, tasks, pending):
         self.tasks = tasks
         self.online = True
-        close, post = plan(self.notified, self.tasks, pending.values(), self.kept)
+        close, post = plan(self.notified, self.tasks, pending.values())
         for key in close:
             self.close(self.notified.pop(key))
         tasks = {t['id']: t for t in self.tasks}
@@ -117,13 +113,18 @@ class Desktop:
                 self.notify_approval(pending[ident], tasks.get(pending[ident]['task'], {}).get('title', 'A task'))
             else:
                 self.notify_review(tasks[ident])
+        for t in self.tasks:  # a task that failed since this login, once
+            if t['state'] == 'failed' and t['updatedAt'] >= self.started and t['id'] not in self.told_failed:
+                self.told_failed.add(t['id'])
+                self.notify(f"failed:{t['id']}", f"{t['title']} could not finish", t.get('error') or 'It stopped with an error.',
+                            ['default', 'Open in GurtOS'], 1, track=False)
         self.approvals = pending
         self.render()
         return False
 
     # ---------- notifications ----------
 
-    def notify(self, key, summary, body, actions, urgency):
+    def notify(self, key, summary, body, actions, urgency, track=True):
         hints = {'urgency': GLib.Variant('y', urgency), 'desktop-entry': GLib.Variant('s', APP)}
         args = GLib.Variant('(susssasa{sv}i)', ('GurtOS', 0, APP, summary, GLib.markup_escape_text(body), actions, hints, 0))
         try:
@@ -131,15 +132,18 @@ class Desktop:
         except GLib.Error as e:
             print(f'could not post a notification: {e.message}', file=sys.stderr)
             return
-        if key:  # None: a one-off message with no actions to track
-            self.notified[key] = nid
+        if key:  # None: a one-off message with no actions
             self.shown[nid] = tuple(key.split(':', 1))
+        if key and track:  # withdrawn by plan() once it no longer applies
+            self.notified[key] = nid
 
     def notify_approval(self, a, title):
         # The box's own question already names the amount, who gets paid and the budget.
         approve = f"Approve {dollars(a['costCents'])}" if a.get('costCents') else 'Approve'
         # Critical: the task has stopped until you answer, so the banner stays until you do.
-        self.notify(f"approval:{a['id']}", f'{title} needs your OK', f"{a['question']} Your other tasks keep running.",
+        question = a['question'].strip()
+        question += '' if question[-1:] in '.?!' else '.'
+        self.notify(f"approval:{a['id']}", f'{title} needs your OK', f'{question} Your other tasks keep running.',
                     ['deny', 'Deny', 'approve', approve, 'default', 'Open in GurtOS'], 2)
 
     def notify_review(self, t):
@@ -159,6 +163,8 @@ class Desktop:
             ui('app', f"task/{self.approvals.get(ident, {}).get('task') or ident.split('.')[0]}")
         elif kind == 'review':
             ui('review', ident)
+        elif kind == 'failed':
+            ui('app', f'task/{ident}')
 
     def on_closed(self, _bus, _sender, _path, _iface, _signal, params):
         self.shown.pop(params.unpack()[0], None)
@@ -181,10 +187,10 @@ class Desktop:
 
     def render(self):
         going = running(self.tasks)
-        done = reviews(self.tasks, self.kept)
+        done = reviews(self.tasks)
         titles = {t['id']: t['title'] for t in self.tasks}
         need = len(self.approvals) + len(done)
-        self.indicator.set_label(top_bar(self.tasks, self.approvals, self.kept) if self.online is not False else 'offline', '00 running · 00 need you')
+        self.indicator.set_label(top_bar(self.tasks, self.approvals) if self.online is not False else 'offline', '00 running · 00 need you')
 
         menu = Gtk.Menu()
 

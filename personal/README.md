@@ -5,7 +5,8 @@ sudo. Agents work beside you as their own users without sudo, on copies of your 
 changes until you choose Keep. This folder is the GNOME side of that: five small pieces that talk to the box's API on
 `127.0.0.1:7700`. The box itself (tasks, the vault, the action log, Keep and Undo) is `core/`.
 
-Tested on Ubuntu 24.04 with GNOME 46 on a Vultr VM, driven over ssh with xdotool. Screenshots are from that VM.
+Tested two ways on a Vultr VM: installed onto plain Ubuntu 24.04 with GNOME 46 (Xorg), and as a fresh install of the
+GurtOS Personal ISO walked as a new person on Wayland, Ubuntu's default (below).
 
 ## What it adds
 
@@ -15,8 +16,9 @@ Tested on Ubuntu 24.04 with GNOME 46 on a Vultr VM, driven over ssh with xdotool
 | Top-bar indicator | The GurtOS cube with "2 running · 1 needs you". Its menu lists what needs you (with Approve and Deny), what runs, Ask an Agent, Open GurtOS and Settings | `box-desktop.py` |
 | The GurtOS app | The portal in its own window (WebKitGTK), first in the dock | `box-ui.py app` |
 | Ask an Agent in Files | Right-click a folder. A dialog asks what to do and a budget, and starts a Droid task on a copy of that folder | `files/box-nautilus.py`, `box-ui.py ask` |
-| Keep or Undo | When the task is done, a notification opens a review: every changed file, the diff, the cost. Keep writes the changes into your folder; Undo throws them away | `box-ui.py review` |
-| Welcome | Once per account, after GNOME's own first-login setup: what agents can and cannot do, and an optional phone pairing | `box-ui.py welcome` |
+| Keep or Undo | When the task is done, a notification opens a review: every changed file, the diff, the cost. Keep writes the changes into your folder; Undo throws them away; Undo Keep puts the files back later | `box-ui.py review` |
+| Welcome | Once per account, after GNOME's own first-login setup: what agents can and cannot do, and phone pairing when the box has an address a phone can reach | `box-ui.py welcome` |
+| Failures | A task that cannot finish says why in a notification (for example, a fresh install's vault has no model key yet) | `box-desktop.py` |
 
 ![The welcome after account setup](screenshots/1-welcome.png)
 
@@ -40,6 +42,56 @@ A real Droid task (Claude Sonnet, 3 cents) fixed the spelling in `~/Documents/th
 ![Kept: the changes are in the folder](screenshots/9-kept.png)
 
 ![Undo asks first](screenshots/10-undo-confirm.png)
+
+## A fresh install, as a new person (Oct 24)
+
+The GurtOS Personal ISO (`image/build personal`, debug build `20261024-0542-ada8208`) attached to the Vultr VM as a
+custom ISO, installed on its wiped disk, and walked by hand as a new person, Maya Chen, on Wayland:
+
+| Step | Result |
+|---|---|
+| Install from the ISO and restart | Passed. Booted GurtOS Personal 2026.10.24 from its own disk, box healthy, no owner yet, empty vault |
+| GNOME's first-boot setup (language, keyboard, time zone, About You, password) | Passed. The account `mayachen` is in `sudo`; `box-owner.service` set `BOX_OWNER=mayachen` within a second |
+| First login | Passed. Ubuntu's welcome, then the GurtOS welcome; GurtOS first in the dock, the indicator in the top bar |
+| Ask an Agent on `~/Documents/thesis` in Files | Passed. With the empty vault the task failed at once and the desktop said so ("the vault has no FACTORY_API_KEY"); after the key was added, a real Droid task finished in about a minute for 3 cents |
+| The review notification and the diff | Passed. The folder was untouched until Keep |
+| Keep | Passed. Both files changed, and kept their owner and mode: `chapter1.md` 1000:1000 664, the private `refs.txt` 1000:1000 640 |
+| Undo Keep | Passed. Old content back, same owner and modes |
+| Undo before Keep | Passed. The folder never changed |
+| An approval as a notification, Approve | Passed. The log says `desktop:mayachen` |
+| The GurtOS app from the dock, the indicator menu | Passed |
+| Log out, restart, log in again | Passed. No second welcome; the service and indicator come back |
+
+![GNOME's first-boot setup](screenshots/install/01-setup-welcome.png)
+
+![About You: the first account, which gets sudo](screenshots/install/06-about.png)
+
+![Setup done](screenshots/install/09-setup-done.png)
+
+![The GurtOS welcome at the first login](screenshots/install/12-gurtos-welcome.png)
+
+![Ask an Agent in Files](screenshots/install/15-files-menu.png)
+
+![The Ask an Agent dialog](screenshots/install/16-ask.png)
+
+![The task is done](screenshots/install/19-review-notification.png)
+
+![The review](screenshots/install/20-review.png)
+
+![Kept](screenshots/install/21-kept.png)
+
+![Undo Keep asks first](screenshots/install/22-unkeep-confirm.png)
+
+![An approval as a notification](screenshots/install/24-approval.png)
+
+![Undo before Keep](screenshots/install/29-undo-confirm.png)
+
+![The GurtOS app](screenshots/install/31-app.png)
+
+Found and passed on: apport's Python hook fails on `ID=gurtos`; GNOME's setup renames the computer to the user name;
+apps show Adwaita icons instead of Yaru; setup's first page shows Ubuntu's logo (image thread). A fresh install has
+an empty vault with nothing in the first run to fill it, and Personal has no `BOX_URL`, so phone pairing cannot work
+yet (core thread). The portal greets the owner as "Ben" (portal thread).
 
 ## Install
 
@@ -81,8 +133,8 @@ at first boot). Two things the image must do itself: boot to GDM and the GNOME s
 - **Ask an Agent** sends `POST /api/tasks {title, prompt, folder, budgetCents, source: "files"}`. The core links the
   folder and runs the task as its own user on an overlay copy. Keep is `POST /api/tasks/<id>/keep`, which returns
   `{kept}` or `{conflicts}` (you changed the same file meanwhile; nothing is written). Undo is
-  `POST /api/tasks/<id>/undo`. The core logs a Keep as a `task.step` with `data.keep: "applied"`, which is how the
-  desktop knows a task needs no more review.
+  `POST /api/tasks/<id>/undo`, and Undo Keep is `POST /api/tasks/<id>/unkeep`. The task's `review` field
+  (`pending`, `kept`, `conflict`, `undone`) is how the desktop knows which tasks still need the owner.
 - **Python, not TypeScript.** GNOME's own bindings (PyGObject) ship with Ubuntu's desktop, so the layer needs no
   build step and no npm packages. The box itself stays TypeScript.
 - **WebKitGTK and AppArmor.** Ubuntu 24.04 lets only programs with an AppArmor profile create the user namespace
@@ -95,7 +147,8 @@ at first boot). Two things the image must do itself: boot to GDM and the GNOME s
 the layer's own code: the calls the service, the indicator and the dialogs make, and `plan()`'s choices. It checks
 that a task stopping for an OK becomes a notification and is counted in the top bar, that Approve lets it finish and
 withdraws the notification, that a denial on the phone withdraws it too, and that a folder task leaves the folder
-untouched until Keep, asks for a review, and Keep writes both changes. About 3 seconds, no model, no money.
+untouched until Keep, asks for a review, Keep writes both changes with the owner's uid, gid and mode, and Undo Keep
+puts them back. About 3 seconds, no model, no money.
 
 ```
 BOX_URL=http://127.0.0.1:7700 /usr/bin/python3 personal/selftest.py   # on any box, prints one JSON line per check
@@ -112,24 +165,27 @@ curl -X DELETE -H "Authorization: Bearer $VULTR_API_KEY" https://api.vultr.com/v
 
 (from linuxbox: the key is in `~/.config/calhacks13/env`, and Vultr only accepts linuxbox's address).
 
-It runs Ubuntu 24.04, GNOME, the box and this layer, with a test owner `ana` (sudo; password in `/root/ana-password`)
-logged in by GDM. The session is Xorg so xdotool and screenshots work; nothing in the layer depends on X11.
-`ssh personalbox` from linuxbox reaches it as root. `personal/vm.sh` drives it:
+Since Oct 24 it runs a fresh install of the GurtOS Personal debug ISO, owned by `mayachen` (password in
+`/root/maya-password`), on Wayland. `ssh personalbox` from linuxbox reaches it as root (debug builds have sshd).
+`personal/vm.sh` drives it; `wl.py` gives it a virtual tablet and keyboard through `/dev/uinput`, so it works on
+Wayland and even in GDM's first-boot setup, where xdotool and GNOME's remote-desktop input do not:
 
 ```
-personal/vm.sh setup          # once: the test owner, automatic login, Xorg
-personal/vm.sh install        # ship this checkout and install the box and this layer
-personal/vm.sh as <command>   # run a command in ana's session, e.g. xdotool or box-ui.py
-personal/vm.sh shot <name>    # screenshot into personal/screenshots/<name>.png
+PERSONAL_USER=mayachen personal/vm.sh layer         # replace /opt/box/personal on the installed system, restart the layer
+PERSONAL_USER=mayachen personal/vm.sh wl click X Y  # also: wl type TEXT, wl key Return
+PERSONAL_USER=mayachen personal/vm.sh shot <name>   # screenshot into personal/screenshots/<name>.png
+personal/vm.sh install                              # the older path: the box and this layer onto plain Ubuntu
 ```
+
+To reinstall from a new ISO: serve it from vultrbox, add it with `POST /v2/iso {url}`, wipe the disk
+(`wipefs -af /dev/vda`) and `POST /v2/instances/<id>/iso/attach`. The account allows two custom ISOs. Detach and
+delete it afterwards.
 
 ## Not built yet
 
 - **One folder per task.** The core takes one `folder`, so Files offers Ask an Agent for one folder at a time.
-- **Undo after Keep.** The core saves before-images under `BOX_HOME/timemachine/<id>` but has no route to restore
-  them, so a kept task shows "Kept" without an Undo.
 - **May read, the Internet switch and Pause All Agents** from the Figma frames: the core has no API for them yet.
-- **Pairing from the welcome** opens GurtOS Settings, but on `127.0.0.1` the portal does not know an address a phone
-  can reach, so it shows the code without a QR.
-- **Known core bug, reported:** after Keep, kept files belong to the task's deleted uid and are world-writable
-  (`-rw-rw-rw- 39999`). The core thread has the details; the desktop side needs no change for the fix.
+- **Pairing a phone** on Personal: the box has no address a phone can reach yet, so the welcome hides Pair a Phone
+  until `GET /api/boxes` reports one.
+- **Setup:** the model key and other keys go into the vault by hand today. The GurtOS Setup window is next, on the
+  core's setup APIs, in the new design system.

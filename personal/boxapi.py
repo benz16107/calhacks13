@@ -47,21 +47,17 @@ def dollars(cents):
     return f'${(cents or 0) / 100:,.2f}'
 
 
-def kept_tasks(events):
-    """Ids of tasks whose changes the owner kept. The core logs a Keep as a task.step with data.keep 'applied'."""
-    return {e['task'] for e in events if e.get('type') == 'task.step' and (e.get('data') or {}).get('keep') == 'applied'}
+def needs_review(task):
+    """A finished task on one of the owner's folders that waits for Keep or Undo. After a conflict (the owner
+    edited the same files, so nothing was applied) it still waits for the owner."""
+    return task.get('review') in ('pending', 'conflict')
 
 
-def needs_review(task, kept):
-    """A finished task on one of the owner's real folders, not kept and not undone yet."""
-    return task.get('state') == 'done' and bool(task.get('folder')) and task['id'] not in kept
-
-
-def plan(notified, tasks, pending, kept):
+def plan(notified, tasks, pending):
     """Which notifications to close and which to post, from the box's state now. Keys are 'approval:<id>' for an
     approval still pending and 'review:<task id>' for a finished task waiting for Keep or Undo. A key that is no
     longer wanted was answered elsewhere (the phone, the portal) or reviewed, so its notification goes away."""
-    want = {f"approval:{a['id']}" for a in pending} | {f"review:{t['id']}" for t in reviews(tasks, kept)}
+    want = {f"approval:{a['id']}" for a in pending} | {f"review:{t['id']}" for t in reviews(tasks)}
     return [k for k in notified if k not in want], sorted(k for k in want if k not in notified)
 
 
@@ -70,14 +66,14 @@ def running(tasks):
     return [t for t in tasks if t['state'] in ('queued', 'running')]
 
 
-def reviews(tasks, kept):
-    return [t for t in tasks if needs_review(t, kept)]
+def reviews(tasks):
+    return [t for t in tasks if needs_review(t)]
 
 
-def top_bar(tasks, pending, kept):
+def top_bar(tasks, pending):
     """The indicator's label: how many tasks are going, and how many need the owner. Empty when nothing is."""
     running_now = len(running(tasks))
-    need = len(pending) + len(reviews(tasks, kept))
+    need = len(pending) + len(reviews(tasks))
     parts = [f'{running_now} running'] * bool(running_now) + [f"{need} need{'s' if need == 1 else ''} you"] * bool(need)
     return ' · '.join(parts)
 
