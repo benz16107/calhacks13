@@ -14,7 +14,7 @@ only the results. The call, its result and its cost go into the action log.
 | Tool | What it does | Actor it runs | Cost counted |
 |---|---|---|---|
 | `apify.run` | Runs any Actor from the Apify Store with an input and returns its results | Whatever the agent picks | The spending cap it sets, default $0.50 |
-| `apify.checkPrice` | Live price and stock of a product at Best Buy Canada | [`apify/cheerio-scraper`](https://apify.com/apify/cheerio-scraper) | 1 cent |
+| `apify.checkPrice` | Live price and stock of a product at Best Buy Canada | [`apify/playwright-scraper`](https://apify.com/apify/playwright-scraper) | 1 cent |
 | `apify.findPlaces` | Places on Google Maps near a location | [`compass/crawler-google-places`](https://apify.com/compass/crawler-google-places) | 0.4 cents a place |
 
 Droid, the worker in every task, sees these as MCP tools (`apify__run`, `apify__checkPrice`,
@@ -58,6 +58,11 @@ can tell "not found" from "not checked". If it answered for none, the call fails
 This is the check the Visa shopping agent repeats to watch for a restock or a price drop: it compares `price`
 with what you are willing to pay, and buys within budget after your tap.
 
+**For the Visa shopper:** pass the SKU once you know it (`{ "product": "19451577" }`). That is one product page,
+with no search. Watch `inStock` and `price`. Treat a product listed in `notChecked`, or a failed call, as
+"try again later", not as sold out. Changes to this tool are listed here:
+- 2026-10-23: the Actor behind it changed from Cheerio Scraper to Playwright Scraper. Input and output did not change.
+
 ### `apify.findPlaces`: Google Maps
 
 ```json
@@ -68,19 +73,22 @@ Returns `{ places: [{ name, category, address, rating, reviews, phone, website, 
 
 ## Which Actors, and why
 
-- **Cheerio Scraper** (by Apify) for Best Buy. Best Buy Canada serves its product data as open JSON
-  (`bestbuy.ca/api/v2/json/product/<sku>` has the price and stock in one answer). The Actor fetches it from
-  Apify's servers through Apify Proxy, and a small page function keeps only the useful fields. For a search,
-  the page function queues each hit's product page, because only that page says whether it is in stock. It
-  is plain HTTP with no browser. The Actor bills compute only: about 512 MB for the seconds the run takes,
-  well under the 1 cent the box counts.
+- **Playwright Scraper** (by Apify) for Best Buy. Best Buy Canada serves its product data as open JSON
+  (`bestbuy.ca/api/v2/json/product/<sku>` has the price and stock in one answer). The Actor opens it in a
+  browser on Apify's servers, through Apify Proxy, and a small page function keeps only the useful fields.
+  For a search, the page function queues each hit's product page, because only that page says whether it is
+  in stock. On 2026-10-23 a search plus two products took 12 seconds and cost $0.0016 in compute, well under
+  the 1 cent the box counts. We first used Cheerio Scraper, which is lighter, but it needs full access to the
+  Apify account, so Apify refused it with a 403 until a person approves it. Approving it would let a hijacked
+  agent send it its own page code through `apify.run`. Playwright Scraper also runs page code, but with
+  limited permissions.
 - **Google Maps Scraper** (by Compass) for places. It is the most used Actor in the Apify Store, about
   45,000 users a month, and it charges $0.004 a place on the free plan with no start fee. The tool leaves
   every paid extra off, and asks Apify for only the ten fields it returns.
 - **Any Actor** through `apify.run`, so an agent is not limited to what we wrapped. For other stores,
   [`apify/e-commerce-scraping-tool`](https://apify.com/apify/e-commerce-scraping-tool) covers bestbuy.com,
-  Walmart, Target, Newegg, Costco and about 200 more. Its sample output has prices but no stock field,
-  which is why the restock watcher uses Best Buy's own JSON.
+  Walmart, Target, Newegg, Costco and about 200 more. On a bestbuy.ca product it returned the price in 10
+  seconds for $0.0061, but no stock, which is why the restock watcher reads Best Buy's own JSON.
 
 We left out:
 - **Amazon.** It refuses AI agents, so the box does not shop there.
@@ -98,7 +106,8 @@ Moment 2 shows an agent reading a page with hidden instructions that try to stea
 - **An Actor never gets the token either.** Apify starts each run with its own short-lived token. Actors
   with limited permissions, Apify's default, can reach only that run's own storage. An Actor that wants full
   access to the account fails with a 403 until a person approves it in Apify Console, and the API cannot
-  approve it. So `apify.run` on a hostile Actor cannot read Ben's account.
+  approve it. So `apify.run` on a hostile Actor cannot read Ben's account. Our own tools use only Actors
+  with limited permissions, so the account never needs that approval.
 - **Spending is capped twice.** Apify holds a run to `maxTotalChargeUsd` and a 120-second timeout, and
   the box asks for an OK before any call above the task's budget.
 - **Results are data.** A scraped page may carry instructions, but the agent's task still has no network
@@ -116,17 +125,32 @@ datasets, and set Actor runs to restricted access.
 
 ## The demo step
 
-`./demo` runs `demo.ts` after the four moments:
+`./demo` runs `demo.ts` after the four moments. By default it stays offline, so every thread's merge gate
+stays fast and spends nothing:
 
 - The box loaded the three tools.
-- With a token, it starts two tasks with the fake worker and no network. One checks AirPods Pro at Best
-  Buy, the other finds two coffee shops near Berkeley. Both Actors run live on Apify, in parallel. It checks
-  the results have a real price, a stock answer and real places, that the token is nowhere in either task's
-  log, and that each task's cost was counted.
-- Without a token, it checks the tool refuses with "the vault has no APIFY_TOKEN", then prints `skip` for
-  the live runs.
+- The unit tests pass against a stubbed Apify (`node --test tracks/apify/apify.test.ts` runs them anywhere).
+- With no token in the vault, the tool refuses with "the vault has no APIFY_TOKEN".
 
-A demo run spends about one cent of Apify credit. Offline unit tests: `node --test tracks/apify/apify.test.ts`.
+`DEMO_LIVE=apify ./demo` also makes the live calls. It starts two tasks with the fake worker and no network:
+one checks AirPods Pro at Best Buy, the other finds two coffee shops near Berkeley. Both Actors run on Apify
+at the same time. It checks the results have a real price, a stock answer and real places, that the token
+is nowhere in either task's log, and that each task's cost was counted. A live run spends about one cent
+and adds about 15 seconds. Run it before merging a change to this folder.
+
+On 2026-10-23 the live run passed on the linuxbox VM (x86) and the laptop VM (ARM64): AirPods Pro 3 at $299.99 CAD, in stock, and Cole Coffee
+Café at 6255 College Ave, Oakland.
+
+### Live calls in the merge gate: the convention for every track
+
+A track's demo step must not make paid or slow live calls unless asked, because `./demo` is everyone's
+merge gate. `DEMO_LIVE` is a comma-separated list of track names (`DEMO_LIVE=apify,visa ./demo`), and
+`./demo` passes it to the test machine. In your `demo.ts`:
+
+```ts
+const live = (process.env.DEMO_LIVE ?? '').split(/[\s,]+/).includes('<your track>');
+if (!live) { /* offline checks */ console.log('  skip  live calls: DEMO_LIVE=<your track> ./demo runs them'); return; }
+```
 
 ## Limits
 

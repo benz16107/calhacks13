@@ -83,7 +83,7 @@ test('apify.checkPrice turns a SKU, a link or words into the right Best Buy requ
     calls = [];
     await check.run({ product, max: 2 }, ctx);
     const input = JSON.parse(String(calls[0].init.body));
-    assert.equal(calls[0].url.pathname, '/v2/acts/apify~cheerio-scraper/run-sync-get-dataset-items');
+    assert.equal(calls[0].url.pathname, '/v2/acts/apify~playwright-scraper/run-sync-get-dataset-items');
     return input.startUrls[0].url;
   };
   reply = { status: 201, body: [{ sku: '1', name: 'x', price: 1, inStock: true }] };
@@ -107,7 +107,9 @@ test('apify.checkPrice drops hidden fields and reports a blocked store', async (
 });
 
 test('the page function reads Best Buy JSON (shapes from bestbuy.ca, 2026-10-23)', async () => {
-  const pageFunction = new Function(`return (${PAGE_FUNCTION})`)();
+  const fn = new Function(`return (${PAGE_FUNCTION})`)();
+  // Playwright Scraper hands it a browser page; this one shows the JSON text the way Chromium does.
+  const pageFunction = ({ json, ...rest }: { json: object; [k: string]: unknown }) => fn({ ...rest, page: { evaluate: async () => JSON.stringify(json) } });
   const queued: string[] = [];
   const enqueueRequest = async (r: { url: string }) => void queued.push(r.url);
   const search = { products: [{ sku: '19451577' }, { sku: '17595430' }, { sku: '3' }] };

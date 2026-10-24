@@ -5,6 +5,7 @@
 #   BOX_SHELL='ssh my-vm' ./demo   any test machine with passwordless sudo
 #   ./demo --here                  this machine. Only on a test VM: it needs root.
 #   --skip-droid                   skip the real Droid step, only when Factory itself is down
+#   DEMO_LIVE=apify,visa ./demo    also make these tracks' paid or slow live calls (off by default)
 set -euo pipefail
 cd "$(dirname "$0")"
 skip=; args=()
@@ -12,7 +13,7 @@ for a in "$@"; do if [[ $a == --skip-droid ]]; then skip=1; else args+=("$a"); f
 set -- "${args[@]+"${args[@]}"}"
 
 if [[ ${1:-} == --here ]]; then
-  [[ $(id -u) == 0 ]] || exec sudo DEMO_SKIP_DROID="${DEMO_SKIP_DROID:-$skip}" "$0" --here
+  [[ $(id -u) == 0 ]] || exec sudo DEMO_SKIP_DROID="${DEMO_SKIP_DROID:-$skip}" DEMO_LIVE="${DEMO_LIVE:-}" "$0" --here
   flock /run/lock/box-setup.lock core/setup.sh >/dev/null # runs side by side share one machine setup
   lock=$(sha256sum package-lock.json | cut -c1-16)
   if [[ ! -f node_modules/.lock-$lock ]]; then
@@ -50,5 +51,5 @@ echo "demo: $BOX_SHELL, in $dest"
   git ls-files -co --exclude-standard | while IFS= read -r f; do [[ -e $f ]] && printf '%s\n' "$f"; done |
     tar -czf - -T - | base64
   echo EOF
-  echo "DEMO_SKIP_DROID=$skip exec $dest/demo --here"
+  echo "DEMO_SKIP_DROID=$skip DEMO_LIVE=$(printf %q "${DEMO_LIVE:-}") exec $dest/demo --here"
 } | $BOX_SHELL sudo bash -s || { code=$?; [[ $code == 255 ]] && echo "demo: could not reach the test machine ($BOX_SHELL)" >&2; exit $code; }

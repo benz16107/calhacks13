@@ -56,9 +56,10 @@ export function fit(items: unknown[]) {
   return { count: items.length, items: kept, ...((cut || kept.length < items.length) && { truncated: true }) };
 }
 
-// Runs on Apify inside Cheerio Scraper, once per Best Buy JSON response. A search queues each hit's product
-// page, because only the product endpoint says whether it is in stock.
-export const PAGE_FUNCTION = `async function pageFunction({ json, customData, enqueueRequest }) {
+// Runs on Apify inside Playwright Scraper, once per Best Buy JSON response. A search queues each hit's product
+// page, because only the product endpoint says whether it is in stock. Chromium shows JSON in a <pre>.
+export const PAGE_FUNCTION = `async function pageFunction({ page, customData, enqueueRequest }) {
+  const json = JSON.parse(await page.evaluate(() => (document.querySelector('pre') || document.body).textContent));
   if (Array.isArray(json.products)) {
     for (const p of json.products.slice(0, customData.max)) {
       await enqueueRequest({ url: '${BESTBUY}/product/' + p.sku + '?lang=en-CA' });
@@ -136,7 +137,8 @@ export default {
       },
       secrets: ['APIFY_TOKEN'],
       hosts: ['api.apify.com'],
-      // Cheerio Scraper bills compute only, about $0.001 to $0.003 for a check this small.
+      // Playwright Scraper bills compute only: a search and two products took 12 s and cost $0.0016 on 2026-10-23.
+      // (Cheerio Scraper would be lighter, but it needs full access to the Apify account.)
       cost: () => 1,
       async run(i, ctx) {
         const product = text(i?.product, 'product');
@@ -147,7 +149,7 @@ export default {
         const url = sku ? `${BESTBUY}/product/${sku}?lang=en-CA` : `${BESTBUY}/search?lang=en-CA&pageSize=${max}&query=${encodeURIComponent(product)}`;
         const items = await runActor(
           ctx,
-          'apify/cheerio-scraper',
+          'apify/playwright-scraper',
           {
             startUrls: [{ url }],
             pageFunction: PAGE_FUNCTION,
@@ -156,8 +158,11 @@ export default {
             proxyConfiguration: { useApifyProxy: true },
             maxRequestRetries: 2,
             maxPagesPerCrawl: max + 1,
+            waitUntil: 'domcontentloaded',
+            downloadMedia: false,
+            downloadCss: false,
           },
-          { memory: 512, timeout: 90 }, // not clean: failed requests come back as items marked '#error'
+          { memory: 2048, timeout: 90 }, // not clean: failed requests come back as items marked '#error'
         );
         const products = items.filter((x) => x.sku).map((x) => Object.fromEntries(Object.entries(x).filter(([k]) => !k.startsWith('#'))));
         const failed = items.filter((x) => x['#error']);
