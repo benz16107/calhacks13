@@ -36,6 +36,9 @@ new build (`after/live-remote-address.png`, `after/live-remote-laptop.png`). app
 (portal 0c254e5): "Computer's address", 44 px targets (`after/live-app-gurtos.png`). Roll back with
 `vercel promote gurtos-jp6up1pve-benz16107-1762s-projects.vercel.app` from the laptop's Vercel login.
 
+Next: the final Server and Personal walk-throughs, and E-14, run on the rebuilt arm64 ISOs on benmac (Lima/QEMU, one
+VM at a time, in `~/ux-audit/`; its `box` VM and `~/box-os` stay untouched).
+
 ## Top 10
 
 Ranked by how much each changes a judge's first impression. Each links to its full entry below.
