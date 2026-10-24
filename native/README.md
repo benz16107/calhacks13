@@ -28,7 +28,7 @@ pairing token of their own. The web app stays the option that needs no install.
 - **Homes per edition**: Needs you, Running and the kill switch on Server; Ready for you with Keep changes and Undo
   on Personal; Waiting for me first on Business, with the rule that routed each request and who asked.
 - **Approve and Deny** sit right in each row. Anything that spends money asks for Face ID first, and the answer
-  tells the box how it was checked, which the log keeps as reported by the device ("<phone> (iphone, face-id, reported)"). A Shopper purchase opens the box's own
+  tells the box how it was checked, which the box keeps as reported by the device ("<phone> (Face ID, reported)"). A Shopper purchase opens the box's own
   passkey page, as on the web.
 - **Tasks** show their steps live (the box's log stream), what was blocked, Undo with its confirmation, and Keep.
 - **Activity** is the action log in plain words. **Settings** has the machine, Machines, notifications and Forget.
@@ -60,7 +60,7 @@ closed needs push-to-update through the relay. The widget and the notification c
   Business request or a Shopper purchase. So a Watch can approve any small request outside those two. Anything else
   returns a 403 with `needs: "iphone"`, and the request keeps waiting for Face ID on the phone. Deny always works.
   Revoking the iPhone, or removing its person on Business, revokes its Watch. The wrist check is what the Watch
-  reports, not proof: the box logs it as "Demo Watch (watch, wrist, reported)". The Watch app itself also leaves
+  reports, not proof: the box records it as "Demo Watch (on the wrist, reported)". The Watch app itself also leaves
   fraud referrals to the iPhone; the box has no fraud flag to check.
 - Complications and Smart Stack: circular, corner, rectangular and inline, with counts only, because the Always-On
   display is visible to others. The complication picture above is drawn by the app's debug gallery: the simulator

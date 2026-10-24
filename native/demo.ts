@@ -36,10 +36,9 @@ export default async (d: DemoKit) => {
   const detail = await phone<{ task: { id: string }; approvals: unknown[]; events: unknown[] }>('GET', `/tasks/${t.id}`);
   d.check(detail.status === 200 && detail.json.task.id === t.id && detail.json.approvals.length === 1, 'the request page reads the task, its approvals and its steps');
   const answer = await phone<{ state: string; by: string }>('POST', `/approvals/${encodeURIComponent(ask.id)}`, { approved: true, auth: 'face-id' });
-  const how = (await phone<{ type: string; via?: string }[]>('GET', `/log?task=${t.id}`)).json.find((e) => e.type === 'approval.answered')?.via;
-  d.check(answer.status === 200 && answer.json.state === 'approved' && answer.json.by === 'Demo iPhone' && how === 'Demo iPhone (iphone, face-id, reported)', `Approve from the app: the box names the paired phone, whatever the body says, and keeps its check as reported (${how})`);
+  d.check(answer.status === 200 && answer.json.state === 'approved' && answer.json.by === 'Demo iPhone (Face ID, reported)', `Approve from the app: the box names the paired phone, whatever the body says, and keeps its check as reported ("${answer.json.by}")`);
   const late = await phone<{ state: string }>('POST', `/approvals/${encodeURIComponent(ask.id)}`, { approved: false, auth: 'none' });
-  d.check(late.json?.state === 'approved', 'a second answer does not change the first: the app shows "Already approved on Demo iPhone"');
+  d.check(late.json?.state === 'approved', 'a second answer does not change the first: the app shows "Already approved on Demo iPhone (Face ID, reported)"');
   await d.settled([t.id]);
 
   // Undo one task.
