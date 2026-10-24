@@ -3,94 +3,88 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Find</title>
+<link rel="stylesheet" href="/kit/gurtos.css">
+<script type="module" src="/kit/gurtos.js"></script>
 <style>
-  :root {
-    --bg: #F3F1EA; --surface: #FBFAF6; --sunken: #E6E7E1; --border: #D3D6CF; --strong: #6B726C;
-    --text: #1C201D; --text2: #535A54; --focus: #2D5784;
-    --run-fg: #2D5784; --run-bg: #DDE8F2; --wait-fg: #7F4C00; --wait-bg: #F8EBD0;
-    --done-fg: #2E6338; --done-bg: #DFEDDC; --fail-fg: #9C3326; --fail-bg: #F6E0DA; --neutral-fg: #535A54; --neutral-bg: #E6E7E1;
-    --sans: 'Instrument Sans', system-ui, sans-serif; --mono: 'IBM Plex Mono', ui-monospace, monospace;
-  }
-  * { box-sizing: border-box; }
-  body { margin: 0; background: var(--surface); color: var(--text); font: 16px/24px var(--sans); }
-  form { display: flex; align-items: center; gap: 12px; padding: 16px 24px; border-bottom: 1px solid var(--border); }
-  form svg { flex: none; }
-  input { flex: 1; font: 500 20px/28px var(--sans); border: 0; background: none; color: var(--text); min-height: 44px; }
-  input:focus-visible, a:focus-visible, img:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 4px; }
-  main { padding: 8px 24px 16px; }
-  h2 { font-size: 12px; line-height: 16px; font-weight: 600; letter-spacing: 0.4px; text-transform: uppercase; color: var(--text2); margin: 16px 0 8px; }
-  ul { list-style: none; margin: 0; padding: 0; }
-  li.row { padding: 10px 12px; border-radius: 6px; min-height: 48px; }
-  li.row:hover { background: var(--bg); }
-  .title { font-weight: 500; overflow-wrap: anywhere; }
-  .sub { font-size: 13px; line-height: 18px; color: var(--text2); overflow-wrap: anywhere; }
-  .mono { font-family: var(--mono); font-size: 14px; line-height: 20px; }
-  .pill { font-size: 12px; line-height: 16px; font-weight: 500; padding: 1px 6px; border-radius: 4px; }
-  .done { color: var(--done-fg); background: var(--done-bg); } .failed { color: var(--fail-fg); background: var(--fail-bg); }
-  .undone { color: var(--neutral-fg); background: var(--neutral-bg); }
-  .photos { display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }
-  .photos img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 6px; border: 1px solid var(--border); background: var(--sunken); display: block; }
-  .photos .sub { margin-top: 6px; }
-  .empty { padding: 48px 0; text-align: center; color: var(--text2); }
-  .empty strong { display: block; color: var(--text); font-size: 17px; margin-bottom: 4px; }
-  footer { padding: 12px 24px; border-top: 1px solid var(--border); background: var(--bg); font-size: 13px; line-height: 18px; color: var(--text2); }
-  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  main { max-width: 960px; margin: 0 auto; padding: var(--space-lg); }
+  .g-search { margin-bottom: var(--space-md); }
+  .g-search input { width: 100%; }
+  .g-group { margin-top: var(--space-md); }
+  .photos { display: grid; gap: var(--space-md); grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }
+  .photos img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: var(--radius-sm); display: block; background: var(--color-view-bg); }
+  .photos .g-card { padding: var(--space-sm); }
+  .g-row-title, .g-row-sub, .photos p { overflow-wrap: anywhere; }
+  .photos p { margin: var(--space-xs) 0 0; }
+  footer { margin-top: var(--space-lg); }
 </style>
-<form role="search" id="form">
-  <svg width="24" height="24" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M30 21C30 25.97 25.97 30 21 30C16.03 30 12 25.97 12 21C12 16.03 16.03 12 21 12C25.97 12 30 16.03 30 21Z"/><path d="M28 28L36 36"/></svg>
-  <label class="sr" for="q">Search this box</label>
-  <input id="q" type="search" placeholder="Find the whiteboard photo" autocomplete="off" autofocus>
-</form>
-<main id="results" aria-live="polite">
-  <div class="empty"><strong>Search this box</strong>Photos by what is in them, text files, and past tasks.</div>
+<body class="g-page">
+<main>
+  <form role="search" id="form" class="g-search">
+    <g-icon name="system-search"></g-icon>
+    <label class="g-sr" for="q">Search this box</label>
+    <input id="q" class="g-field" type="search" placeholder="Find the whiteboard photo" autocomplete="off" autofocus>
+  </form>
+  <div id="results" aria-live="polite"></div>
+  <footer id="foot" class="t-caption t-secondary">Searches tasks, files and photo descriptions on this box. Photos never leave it.</footer>
 </main>
-<footer id="foot">Searches tasks, files and photo descriptions on this box. Photos never leave it.</footer>
 <script>
-  // Off the box's own screen the API needs a paired token: from this page's URL, or the portal's pairing (same origin).
-  const token = new URLSearchParams(location.search).get('access_token') || JSON.parse(localStorage.getItem('pairing') || 'null')?.token || '';
-  const authed = (u) => (token ? `${u}${u.includes('?') ? '&' : '?'}access_token=${encodeURIComponent(token)}` : u);
+  // gurtos.js puts the pairing token on this page's fetches. An <img> cannot carry a header, so photos take it in the URL.
+  let token = new URLSearchParams(location.search).get('access_token');
+  try { token ??= JSON.parse(parent.localStorage.getItem('pairing') ?? 'null')?.token ?? null; } catch {}
+  const withToken = (u) => (token ? `${u}&access_token=${encodeURIComponent(token)}` : u);
   const el = (tag, cls, text) => Object.assign(document.createElement(tag), cls ? { className: cls } : {}, text != null ? { textContent: text } : {});
-  const body = (r) => r.text.replace(/^[^:]*: /, ''); // the doc text starts with "<workspace>/<path>: "
+  const body = (r) => r.text.replace(/^[^:]*: /, ''); // a file's doc starts with "<workspace>/<path>: "
+  const BADGE = { done: 'g-badge-success', failed: 'g-badge-destructive', undone: 'g-badge-neutral' };
   const $ = (id) => document.getElementById(id);
 
+  function status(title, text, icon = 'system-search') {
+    const s = el('div', 'g-status');
+    const i = el('g-icon');
+    i.setAttribute('name', icon);
+    i.setAttribute('size', '64');
+    s.append(i, el('div', 'g-status-title', title), el('div', 'g-status-body', text));
+    $('results').replaceChildren(s);
+  }
+
   function row(r) {
-    const li = el('li', 'row');
+    const div = el('div', 'g-row');
+    const text = el('div', 'g-row-text');
     if (r.kind === 'task') {
       const [, title = r.task, state = r.state] = r.text.match(/^Task "(.*)" \((\w+)\)/) || [];
-      li.append(el('div', 'title', r.title || title));
-      const sub = el('div', 'sub');
-      sub.append(el('span', `pill ${state}`, state), ` · ${r.source || 'task'} · `, el('span', 'mono', r.task));
-      li.append(sub);
+      text.append(el('div', 'g-row-title', r.title || title), el('div', 'g-row-sub', `${r.source || 'task'} · task ${r.task}`));
+      const trail = el('span', 'g-row-trail');
+      trail.append(el('span', `g-badge ${BADGE[state] || 'g-badge-neutral'}`, state));
+      div.append(text, trail);
     } else {
-      li.append(el('div', 'title mono', r.path), el('div', 'sub', `${r.workspace} · ${body(r).slice(0, 160)}`));
+      text.append(el('div', 'g-row-title t-mono', `${r.workspace}/${r.path}`), el('div', 'g-row-sub', body(r).slice(0, 160)));
+      div.append(text);
     }
-    return li;
+    return div;
   }
 
   function photo(r) {
-    const li = el('li');
+    const card = el('div', 'g-card');
     const img = el('img');
-    img.src = authed(`/t/find/file?workspace=${encodeURIComponent(r.workspace)}&path=${encodeURIComponent(r.path)}`);
+    img.src = withToken(`/t/find/file?workspace=${encodeURIComponent(r.workspace)}&path=${encodeURIComponent(r.path)}`);
     img.alt = body(r).split('. ')[0];
     img.loading = 'lazy';
-    li.append(img, el('div', 'sub mono', `${r.workspace}/${r.path}`), el('div', 'sub', `Described by ${r.model || 'a model'}`));
-    return li;
+    card.append(img, el('p', 't-caption t-mono', `${r.workspace}/${r.path}`), el('p', 't-caption t-secondary', `Described by ${r.model || 'a model'}`));
+    return card;
   }
 
   function render(d, q) {
-    const main = $('results');
-    main.replaceChildren();
-    if (!d.results.length) {
-      const e = el('div', 'empty');
-      e.append(el('strong', '', 'Nothing found'), `No photo, file or task on this box matches "${q}".`);
-      main.append(e);
-    }
+    if (!d.results.length) status('Nothing found', `No photo, file or task on this box matches "${q}".`);
+    else $('results').replaceChildren();
     for (const [kind, label] of [['task', 'Tasks'], ['file', 'Files'], ['photo', 'Photos']]) {
       const hits = d.results.filter((r) => r.kind === kind);
       if (!hits.length) continue;
-      const list = el('ul', kind === 'photo' ? 'photos' : '');
+      const group = el('section', 'g-group');
+      const head = el('div', 'g-group-head');
+      head.append(el('h2', 'g-group-title', label));
+      const list = el('div', kind === 'photo' ? 'photos' : 'g-list');
       list.append(...hits.map(kind === 'photo' ? photo : row));
-      main.append(el('h2', '', label), list);
+      group.append(head, list);
+      $('results').append(group);
     }
     const by = d.index === 'moss' ? `Moss, in ${d.ms < 1 ? 'under 1' : d.ms} ms (${Math.round(d.wallMs)} ms on the box)` : d.index;
     $('foot').textContent = `Answered by ${by}. ${d.cloud}.`;
@@ -102,20 +96,20 @@
     if (!q) return;
     const mine = ++seq;
     try {
-      const r = await fetch(authed(`/t/find/search?q=${encodeURIComponent(q)}&k=12`));
+      const r = await fetch(`/t/find/search?q=${encodeURIComponent(q)}&k=12`);
       const d = await r.json();
       if (mine !== seq) return; // a newer search is on its way
-      if (!r.ok) throw new Error(r.status === 401 ? 'pair this device with the box first' : d.error || `HTTP ${r.status}`);
+      if (!r.ok) throw new Error(r.status === 401 ? 'Pair this device with the box first.' : d.error || `HTTP ${r.status}`);
       render(d, q);
     } catch (e) {
-      const box = el('div', 'empty');
-      box.append(el('strong', '', 'The box did not answer'), String(e.message));
-      $('results').replaceChildren(box);
+      status('The box did not answer', String(e.message), 'dialog-warning');
     }
   }
   $('form').addEventListener('submit', (e) => (e.preventDefault(), search()));
   $('q').addEventListener('input', () => (clearTimeout(timer), (timer = setTimeout(search, 250))));
+  status('Search this box', 'Photos by what is in them, text files, and past tasks.');
   const start = new URLSearchParams(location.search).get('q');
   if (start) ($('q').value = start), search();
 </script>
+</body>
 </html>
