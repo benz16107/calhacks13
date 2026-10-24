@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ask GurtOS</title>
+<link rel="stylesheet" href="/kit/gurtos.css">
+<script type="module" src="/kit/gurtos.js"></script>
+<style>
+  main { max-width: 760px; margin: 0 auto; padding: var(--space-lg); }
+  .g-search { margin-bottom: var(--space-md); }
+  .g-search input { width: 100%; }
+  .turn { margin-top: var(--space-md); }
+  .q { font-weight: 600; }
+  .a { white-space: pre-wrap; overflow-wrap: anywhere; margin: var(--space-xs) 0 0; }
+  .tools { margin-top: var(--space-xs); }
+  footer { margin-top: var(--space-lg); }
+</style>
+<body class="g-page">
+<main>
+  <form id="form" class="g-search">
+    <label class="g-sr" for="q">Ask about what your agents did</label>
+    <input id="q" class="g-field" type="text" maxlength="1000" placeholder="What did my agents change this week?" autocomplete="off" autofocus>
+  </form>
+  <div id="log" aria-live="polite"></div>
+  <footer class="t-caption t-secondary">Answers come from Elastic, which keeps a copy of this box's log that the box cannot change. You see what your role allows. Asking never changes anything: Elastic can only ask you to undo a task, and you answer that in the usual place.</footer>
+</main>
+<script>
+  const $ = (id) => document.getElementById(id);
+  const el = (tag, cls, text) => Object.assign(document.createElement(tag), cls ? { className: cls } : {}, text != null ? { textContent: text } : {});
+  let conversation;
+  $('form').addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const question = $('q').value.trim();
+    if (!question) return;
+    $('q').value = '';
+    const turn = el('section', 'turn g-card');
+    turn.append(el('div', 'q', question));
+    const answer = el('p', 'a t-secondary', 'Asking Elastic...');
+    turn.append(answer);
+    $('log').prepend(turn);
+    try {
+      const r = await fetch('/t/elastic/ask', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ question, conversation }) });
+      const body = await r.json();
+      if (!r.ok) throw new Error(body.error || `HTTP ${r.status}`);
+      conversation = body.conversation || conversation;
+      answer.className = 'a';
+      answer.textContent = body.answer;
+      if (body.tools?.length) turn.append(el('div', 't-caption t-secondary tools', `Used: ${[...new Set(body.tools)].join(', ')}`));
+    } catch (e) {
+      answer.className = 'a t-secondary';
+      answer.textContent = `Could not ask: ${e.message}`;
+    }
+  });
+</script>

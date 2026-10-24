@@ -10,6 +10,8 @@ import type { Box, LogEvent, Task } from '../../core/contract.ts';
 process.env.BOX_HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'elastic-test-'));
 process.env.DEMO_LIVE = 'elastic';
 const { MAPPING, OUTBOX, toDoc, default: track } = await import('./track.ts');
+const { compareChains, localChain } = await import('./chain.ts');
+const { sha256 } = await import('./docs.ts');
 test.after(() => fs.rmSync(process.env.BOX_HOME!, { recursive: true, force: true }));
 
 const task = {
@@ -30,6 +32,9 @@ const events: LogEvent[] = [
   { seq: 9, at, type: 'task.state', task: 't1', state: 'done' },
   { seq: 10, at, type: 'task.state', task: 't1', state: 'failed', error: 'worker exited with 1' },
   { seq: 11, at, type: 'note', track: 'shopper', data: { kind: 'watch' } },
+  { seq: 12, at, type: 'note', track: 'elastic', data: { kind: 'integrity', ok: false, checked: 11, throughSeq: 11, pending: 0, edited: [4], missing: [], reordered: [], localBreaks: [5] } },
+  { seq: 13, at, prev: 'p', who: { asked: 'sam', seat: 'Credit analyst', approver: 'rosa' }, type: 'approval.asked', task: 't1', approval: { id: 't1.k2', task: 't1', question: 'Spend $200?', costCents: 20000, state: 'pending', askedBy: 'sam', route: { rule: 'r', to: 'the Controller', amountCents: 20000, people: [{ id: 'rosa', name: 'Rosa Delgado' }], why: 'w' } } },
+  { seq: 14, at, who: { asked: 'sam', approver: 'rosa' }, type: 'approval.answered', task: 't1', id: 't1.k2', approved: true, by: 'Rosa Delgado', person: 'rosa', via: 'phone' },
 ];
 const doc = (n: number, extra = {}) => toDoc(events[n - 1], events[n - 1].type === 'note' ? undefined : task, extra);
 
@@ -97,5 +102,53 @@ test('with no Elastic keys, or empty ones, the job sends nothing and does not fa
   const job = track.modelJobs[0];
   const missing = { secret: (n: string) => { throw new Error(`the vault has no ${n}`); } };
   const empty = { secret: () => ' ' };
-  for (const ctx of [missing, empty]) assert.deepEqual(await job.run({ lines: '' }, ctx as any), { skipped: 'the vault has no ELASTIC_URL or ELASTIC_API_KEY' });
+  for (const ctx of [missing, empty]) assert.deepEqual(await job.run({ lines: '' }, ctx as any), { skipped: 'the vault has no ELASTIC_URL or ELASTIC_BOX_KEY' });
+});
+
+test('a document carries the entry hash, the chain link, the people behind it and a sentence to search by meaning', () => {
+  const d = doc(13);
+  assert.equal(d.event.hash, sha256(JSON.stringify(events[12])));
+  assert.equal(d.event.prev, 'p');
+  assert.deepEqual(d.who, { asked: 'sam', seat: 'Credit analyst', approver: 'rosa', trigger: undefined, by: undefined });
+  assert.deepEqual([d.approval.to, d.approval.route_people, d.approval.asked_by], ['the Controller', ['rosa'], 'sam']);
+  assert.match(d.semantic, /paused to ask: Spend \$200\?/);
+  const a = doc(14);
+  assert.deepEqual([a.approval.person, a.approval.via, a.who.approver], ['rosa', 'phone', 'rosa']);
+  assert.equal(doc(7).semantic, undefined, 'a cost line is not searched by meaning');
+  const n = doc(12);
+  assert.deepEqual([n.integrity.ok, n.integrity.edited, n.integrity.local_breaks], [false, 1, 1]);
+  assert.match(n.message, /INTEGRITY ALERT.*first at entry 4/);
+});
+
+test('the chain check names an edited, a missing and a reordered entry, and a clean log passes', () => {
+  const local = ['a', 'b', 'c', 'd', 'e'];
+  const remote = new Map(local.map((h, i) => [i + 1, h] as [number, string]));
+  assert.deepEqual(compareChains(local, remote), { ok: true, checked: 5, pending: 0, throughSeq: 5, edited: [], missing: [], reordered: [], localBreaks: [] });
+  assert.equal(compareChains([...local, 'f'], remote).pending, 1, 'an entry not shipped yet is not a problem');
+  assert.deepEqual(compareChains(['a', 'X', 'c', 'd', 'e'], remote).edited, [2]);
+  assert.deepEqual(compareChains(['a', 'b', 'c'], remote).missing, [4, 5]);
+  const swapped = compareChains(['a', 'c', 'b', 'd', 'e'], remote);
+  assert.deepEqual([swapped.reordered, swapped.edited, swapped.ok], [[2, 3], [], false]);
+  assert.equal(compareChains(local, remote, [3]).ok, false, 'a broken local link alone fails the check');
+  // A rewritten chain: every entry from the edit on has a new hash, so the box's own links agree and Elastic's copy does not.
+  assert.deepEqual(compareChains(['a', 'b', 'C', 'D', 'E'], remote).edited, [3, 4, 5]);
+});
+
+test('the local chain check reads a log file: a clean one passes, an edited line breaks the link after it', () => {
+  const file = path.join(process.env.BOX_HOME!, 'log-check.jsonl');
+  const lines: string[] = [];
+  let prev = '0'.repeat(64);
+  for (let i = 1; i <= 4; i++) {
+    const line = JSON.stringify({ seq: i, at, prev, type: 'note', track: 'x', data: i });
+    lines.push(line);
+    prev = sha256(line);
+  }
+  fs.writeFileSync(file, lines.join('\n') + '\n');
+  assert.deepEqual(localChain(file).breaks, []);
+  lines[1] = lines[1].replace('"data":2', '"data":9');
+  fs.writeFileSync(file, lines.join('\n') + '\n');
+  assert.deepEqual(localChain(file).breaks, [3]);
+  // Stripping prev from every line after the edit does not hide it.
+  fs.writeFileSync(file, lines.map((l, i) => (i < 2 ? l : JSON.stringify({ ...JSON.parse(l), prev: undefined }))).join('\n') + '\n');
+  assert.deepEqual(localChain(file).breaks, [3, 4]);
 });

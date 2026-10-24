@@ -1,173 +1,24 @@
-// The Elastic track: every line of the box's action log becomes one document in Elastic Serverless (index
-// box-actions), and an Elastic Agent Builder agent (agent.ts) answers questions about it in plain words.
-// The log reader turns each event into a document and appends it to an outbox file, fsynced. A flusher sends
-// the outbox to Elastic in _bulk batches and remembers how far it got, so a hard kill or an Elastic outage loses
-// nothing. Only the `elastic.bulk` job reads the Elastic key, inside the core.
+// The Elastic track. Every line of the box's action log becomes one document in Elastic Serverless, written with a
+// key that can only CREATE documents, so what Elastic holds is a copy the box (and anyone with root on it) cannot
+// rewrite. On top of that copy an Elastic Agent Builder agent answers questions (agent.ts), the box checks its own
+// log against it, and Elastic's agent and alert rules can ask the owner to undo a task. They ask; the box's one
+// approval path decides. README.md says which part is the OS and which is Elastic.
 import fs from 'node:fs';
 import http from 'node:http';
-import os from 'node:os';
 import path from 'node:path';
-import type { Box, LogEvent, Task, Track } from '../../core/contract.ts';
+import type { Box, LogEvent, Track } from '../../core/contract.ts';
+import { compareChains, esql, first, hashesFromDocs, localChain, remoteHashes, type Verdict } from './chain.ts';
+import { BOX, DIR, HOME, INDEX, inDemo, live, OUTBOX, REQUESTS, toDoc } from './docs.ts';
+import { client, type Es } from './es.ts';
 
-export const INDEX = 'box-actions';
-const HOME = path.resolve(process.env.BOX_HOME ?? '/var/lib/box');
-const installed = HOME === '/var/lib/box';
-// Two Lima VMs both call themselves lima-box, so the machine id is what keeps their documents apart.
-const machine = (() => {
-  try {
-    return fs.readFileSync('/etc/machine-id', 'utf8').trim().slice(0, 12) || os.hostname();
-  } catch {
-    return os.hostname();
-  }
-})();
-/** Which box and run a document came from. The installed box is run 'installed'; a ./demo run is its run id. */
-export const BOX = { name: process.env.BOX_NAME ?? os.hostname(), machine, run: installed ? 'installed' : path.basename(HOME) };
-export const OUTBOX = path.join(HOME, 'elastic', 'outbox.ndjson');
-const SENT = path.join(HOME, 'elastic', 'sent'); // bytes of the outbox already in Elastic
+export { BOX, INDEX, MAPPING, OUTBOX, toDoc } from './docs.ts';
+export { client } from './es.ts';
 
-// Only the installed box ships, and a ./demo run with DEMO_LIVE=elastic. Dev and test boxes with their own
-// BOX_HOME stay out of the index. A demo (DEMO_LIVE set, maybe empty) keeps its whole outbox for the demo step.
-const inDemo = process.env.DEMO_LIVE !== undefined;
-const live = installed || (process.env.DEMO_LIVE ?? '').split(/[\s,]+/).includes('elastic');
-
-const kw = { type: 'keyword' };
-const text = { type: 'text' };
-export const MAPPING = {
-  dynamic: false, // anything not listed stays in _source only (event.original, for example)
-  properties: {
-    '@timestamp': { type: 'date' },
-    message: text,
-    app: kw,
-    cost_cents: { type: 'double' },
-    error: { type: 'keyword', ignore_above: 1024, fields: { text } },
-    summary: text,
-    event: { properties: { seq: { type: 'long' }, type: kw } },
-    box: { properties: { name: kw, machine: kw, run: kw } },
-    task: {
-      properties: {
-        id: kw, title: { type: 'keyword', fields: { text } }, source: kw, workspace: kw, worker: kw, state: kw,
-        hosts: kw, tools: kw, budget_cents: { type: 'double' }, user: kw, prompt: text,
-      },
-    },
-    step: { properties: { text } },
-    tool: { properties: { name: kw, track: kw, key: kw, ok: { type: 'boolean' }, input: text, output: text, error: { type: 'keyword', ignore_above: 1024 } } },
-    approval: { properties: { id: kw, question: text, cost_cents: { type: 'double' }, state: kw, approved: { type: 'boolean' }, by: kw } },
-    cost: { properties: { what: kw, model: kw, tokens: { properties: { input: { type: 'long' }, output: { type: 'long' }, cache_write: { type: 'long' }, cache_read: { type: 'long' } } } } },
-    net: { properties: { host: kw, domain: kw } },
-    files: { properties: { added: kw, modified: kw, deleted: kw, count: { type: 'integer' } } },
-    note: { properties: { track: kw, kind: kw, data: text } },
-  },
-};
+const SENT = path.join(DIR, 'sent'); // bytes of the outbox already in Elastic
+const SECRETS = ['ELASTIC_URL', 'ELASTIC_BOX_KEY', 'ELASTIC_BOX_LABEL', 'ELASTIC_ASK_KEYS', 'KIBANA_URL'];
+const AGENT_ID = 'gurtos-log';
 
 type Change = { path: string; change: 'added' | 'modified' | 'deleted' };
-const json = (v: unknown, max = 2000) => (v === undefined ? undefined : JSON.stringify(v).slice(0, max));
-const usd = (cents: number) => `$${(cents / 100).toFixed(2)}`;
-
-/**
- * One log event as one flat document. `t` is the task as the box knows it now; only its fixed fields
- * (title, source, workspace, worker, hosts, tools, budget) are copied, so every document says whose it is.
- */
-export function toDoc(e: LogEvent, t?: Task, extra: { tool?: string; changes?: Change[] } = {}) {
-  const title = t ? `"${t.title}"` : 'the box';
-  const d: Record<string, any> = {
-    '@timestamp': e.at,
-    event: { seq: e.seq, type: e.type, original: json(e, 8000) },
-    box: BOX,
-    app: e.type === 'note' ? e.track : t?.source.split(':')[0],
-  };
-  if (t) {
-    d.task = { id: t.id, title: t.title, source: t.source, workspace: t.workspace, worker: t.worker, hosts: t.hosts, tools: t.tools, budget_cents: t.budgetCents };
-  }
-  switch (e.type) {
-    case 'task.created':
-      Object.assign(d.task ?? (d.task = { id: e.task, title: e.spec.title, source: e.spec.source }), { user: e.user, prompt: e.spec.prompt.slice(0, 4000) });
-      d.app ??= e.spec.source.split(':')[0];
-      d.message = `Task ${title} was created by ${e.spec.source}: worker ${e.spec.worker}, hosts ${e.spec.hosts.join(', ') || 'none'}, budget ${usd(e.spec.budgetCents)}`;
-      break;
-    case 'task.state': {
-      d.task = { ...d.task, state: e.state };
-      d.error = e.error;
-      d.summary = e.summary;
-      const c = extra.changes ?? [];
-      const by = (k: Change['change']) => c.filter((x) => x.change === k).map((x) => x.path).slice(0, 200);
-      if (e.state === 'done') d.files = { added: by('added'), modified: by('modified'), deleted: by('deleted'), count: c.length };
-      const changed = c.length ? `, changing ${c.length} file${c.length > 1 ? 's' : ''}: ${c.slice(0, 10).map((x) => `${x.path} (${x.change})`).join(', ')}` : '';
-      const said: Record<string, string> = {
-        queued: 'is queued', running: 'is running', waiting: 'is waiting for an OK', done: 'is done',
-        undone: 'was undone: its file changes were removed', failed: `failed: ${e.error ?? 'no reason given'}; its file changes were not applied`,
-      };
-      d.message = `Task ${title} ${said[e.state]}${changed}${e.summary ? `. Summary: ${e.summary}` : ''}`;
-      break;
-    }
-    case 'task.step':
-      d.step = { text: e.text.slice(0, 4000) };
-      d.message = `${title}: ${e.text.slice(0, 500)}`;
-      break;
-    case 'tool.call':
-      d.tool = { name: e.tool, track: e.tool.split('.')[0], key: e.key, input: json(e.input) };
-      d.message = `${title} called ${e.tool} with ${json(e.input, 300)}`;
-      break;
-    case 'tool.result': {
-      const name = extra.tool;
-      d.tool = { name, track: name?.split('.')[0], key: e.key, ok: e.ok, output: json(e.output), error: e.error };
-      d.cost_cents = e.cents;
-      d.message = `${name ?? 'A tool'} ${e.ok ? 'returned' : `failed (${e.error})`} for ${title}${e.cents ? `, spending ${usd(e.cents)}` : ''}`;
-      break;
-    }
-    case 'approval.asked':
-      d.approval = { id: e.approval.id, question: e.approval.question, cost_cents: e.approval.costCents, state: 'pending' };
-      d.message = `${title} paused to ask: ${e.approval.question}`;
-      break;
-    case 'approval.answered':
-      d.approval = { id: e.id, approved: e.approved, by: e.by, state: e.approved ? 'approved' : 'denied' };
-      d.message = `${e.by} ${e.approved ? 'approved' : 'denied'} the request from ${title} (${e.id})`;
-      break;
-    case 'cost': {
-      const k = e.tokens;
-      d.cost_cents = e.cents;
-      d.cost = { what: e.what, model: e.model, tokens: k && { input: k.input, output: k.output, cache_write: k.cacheWrite, cache_read: k.cacheRead } };
-      d.message = `${title} spent ${usd(e.cents)} on ${e.what}${e.model ? ` (${e.model})` : ''}`;
-      break;
-    }
-    case 'net.blocked':
-      d.net = { host: e.host, domain: e.host.replace(/:\d+$/, '') };
-      d.message = `The box blocked ${title} from reaching ${e.host}; it may reach only ${t?.hosts.join(', ') || 'no hosts'}`;
-      break;
-    case 'note': {
-      const kind = (e.data as { kind?: unknown })?.kind;
-      d.note = { track: e.track, kind: typeof kind === 'string' ? kind : undefined, data: json(e.data, 4000) };
-      d.message = `${e.track} noted ${typeof kind === 'string' ? kind : 'something'}${t ? ` for ${title}` : ''}: ${json(e.data, 300)}`;
-      break;
-    }
-  }
-  return d;
-}
-
-/** A small JSON client for Elasticsearch and Kibana. A string body goes as NDJSON (_bulk). Throws on any status but 2xx. */
-export function client(base: string, apiKey: string) {
-  return async <T = any>(method: string, p: string, body?: unknown): Promise<T> => {
-    const ndjson = typeof body === 'string';
-    const r = await fetch(base.replace(/\/$/, '') + p, {
-      method,
-      headers: { authorization: `ApiKey ${apiKey}`, 'content-type': ndjson ? 'application/x-ndjson' : 'application/json', 'kbn-xsrf': 'true' },
-      body: body === undefined || ndjson ? (body as string | undefined) : JSON.stringify(body),
-    });
-    const reply = await r.text();
-    if (!r.ok) throw Object.assign(new Error(`${method} ${p}: ${r.status} ${reply.slice(0, 500)}`), { status: r.status });
-    return (reply ? JSON.parse(reply) : {}) as T;
-  };
-}
-
-type Es = ReturnType<typeof client>;
-/** Make the index with its mapping, or add new fields to an existing one. Safe to repeat. */
-export async function ensureIndex(es: Es) {
-  try {
-    await es('PUT', `/${INDEX}`, { mappings: MAPPING });
-  } catch (e) {
-    if (!/resource_already_exists/.test((e as Error).message)) throw e;
-    await es('PUT', `/${INDEX}/_mapping`, MAPPING);
-  }
-}
 
 /** What a done task changed, from the box's own API. Connection errors throw so the reader retries. */
 function changes(id: string): Promise<Change[]> {
@@ -192,6 +43,16 @@ function changes(id: string): Promise<Change[]> {
 // between the two loses the name on that one result; the cost and the task are still right.
 const toolOf = new Map<string, string>();
 
+/** The box's own Elasticsearch client, from the vault. Undefined on a box without the Elastic keys. */
+function esFor(box: Box): Es | undefined {
+  try {
+    const [url, key] = [box.secret('ELASTIC_URL').trim(), box.secret('ELASTIC_BOX_KEY').trim()];
+    return url && key ? client(url, key) : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 /** Send the outbox from where Elastic left off, 4 MB at a time. One runs at a time; a failure retries in 5 s. */
 let flushing = false;
 async function flush(box: Box) {
@@ -211,7 +72,7 @@ async function flush(box: Box) {
       const r = (await box.job('elastic.bulk', { lines: buf.subarray(0, end).toString() })) as { skipped?: string };
       if (r.skipped) {
         // No Elastic keys on this box: keep nothing, so the outbox cannot grow. A demo keeps it for its checks.
-        // shortcut: events from before the keys are added are never sent; delete cursors/elastic.docs to backfill.
+        // shortcut: events from before the keys are added are never sent; delete cursors/elastic.chain to resend them.
         if (!inDemo) fs.truncateSync(OUTBOX, 0), fs.writeFileSync(SENT, '0');
         return;
       }
@@ -228,16 +89,111 @@ async function flush(box: Box) {
   }
 }
 
-let ready: Promise<void> | undefined;
+// ---------- the box checks its own log against Elastic's copy ----------
+
+const outboxDocs = () => (fs.existsSync(OUTBOX) ? fs.readFileSync(OUTBOX, 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l)) : []);
+
+/** Compare the log file as it is now with what Elastic holds (in an offline demo, with the outbox standing in for it). */
+export async function verifyNow(box: Box): Promise<Verdict & { source: 'elastic' | 'outbox' }> {
+  const { hashes, breaks } = localChain(path.join(HOME, 'log.jsonl'));
+  const es = live ? esFor(box) : undefined;
+  if (live && !es) throw new Error('this box has no Elastic keys');
+  const remote = es ? await remoteHashes(es, BOX.machine, BOX.run) : hashesFromDocs(outboxDocs(), BOX.machine, BOX.run);
+  return { ...compareChains(hashes, remote, breaks), source: es ? 'elastic' : 'outbox' };
+}
+
+let lastNote = { sig: '', at: 0 };
+/** Check, and write the answer into the log (so it ships to Elastic too) when it changed or an hour has passed. */
+async function checkAndRecord(box: Box) {
+  const v = await verifyNow(box);
+  const sig = JSON.stringify([v.ok, v.edited, v.missing, v.reordered, v.localBreaks]);
+  if (sig !== lastNote.sig || Date.now() - lastNote.at > 3600_000) {
+    box.note({ kind: 'integrity', ok: v.ok, checked: v.checked, throughSeq: v.throughSeq, pending: v.pending, edited: v.edited.slice(0, 200), missing: v.missing.slice(0, 200), reordered: v.reordered.slice(0, 200), localBreaks: v.localBreaks.slice(0, 200) });
+    lastNote = { sig, at: Date.now() };
+  }
+  return v;
+}
+
+// ---------- requests from Elastic: the box asks, the owner answers ----------
+
+interface Request { _id: string; '@timestamp': string; action: string; task?: string; rule?: string; reason?: string }
+const STATE = path.join(DIR, 'requests.json');
+const readState = (): { since: string; done: string[] } => {
+  try {
+    return JSON.parse(fs.readFileSync(STATE, 'utf8'));
+  } catch {
+    return { since: new Date(Date.now() - 60_000).toISOString(), done: [] };
+  }
+};
+const oneLine = (s: unknown, n: number) => String(s ?? '').replace(/\s+/g, ' ').replace(/"/g, "'").slice(0, n);
+
+/**
+ * Turn one request into a task whose only step is to ask. It goes through the box's approval path, so the policy
+ * routes it, the phones get the push, and the answer is logged with who gave it. Nothing happens until someone approves.
+ */
+async function ask(box: Box, r: Request) {
+  const target = r.task ? box.task(r.task) : undefined;
+  const by = r.action === 'alert' ? `Elastic alert "${oneLine(r.rule, 60)}"` : "Elastic's agent";
+  const why = oneLine(r.reason, 200) || 'no reason given';
+  if (r.action === 'undo' || (r.action === 'alert' && target)) {
+    if (!target || target.state === 'undone') return; // nothing to undo
+    const source = `elastic:undo:${target.id}`;
+    if (box.tasks().some((t) => t.source === source && ['queued', 'running', 'waiting'].includes(t.state))) return; // already asking
+    box.workspace('elastic');
+    await box.createTask({ title: `${by} asks to undo "${oneLine(target.title, 80)}"`, prompt: `ask ${by} asks to undo the task "${oneLine(target.title, 80)}". Why: ${why}. Undo it and remove its changes?`, workspace: 'elastic', worker: 'fake', source });
+  } else if (r.action === 'alert') {
+    box.workspace('elastic');
+    await box.createTask({ title: `${by}: ${oneLine(why, 60)}`, prompt: `ask ${by}: ${why}. Acknowledge?`, workspace: 'elastic', worker: 'fake', source: `elastic:alert:${oneLine(r.rule, 40)}` });
+  }
+}
+
+async function poll(box: Box) {
+  const es = esFor(box);
+  if (!es) return;
+  const st = readState();
+  const rows = (await esql(es, `FROM ${REQUESTS} METADATA _id | WHERE box.machine == ?m AND @timestamp > TO_DATETIME(?since) | SORT @timestamp ASC | LIMIT 50`, [{ m: BOX.machine }, { since: st.since }])) as Request[];
+  for (const r of rows) {
+    // One alert request per task: three rules can fire on the same attack, and a denied request is not asked again.
+    const dedupe = r.action === 'alert' && r.task ? `alert:${r.task}` : r._id;
+    if (st.done.includes(r._id) || st.done.includes(dedupe)) continue;
+    // A request is only a question for the owner. A bad one (an unknown action or task) is dropped, not answered.
+    await ask(box, r).catch((e) => console.error(`elastic: request ${r._id} failed: ${(e as Error).message}`));
+    st.done = [...st.done.slice(-498), r._id, dedupe];
+    st.since = new Date(Date.parse(r['@timestamp']) - 1000).toISOString();
+    fs.mkdirSync(DIR, { recursive: true });
+    fs.writeFileSync(STATE, JSON.stringify(st));
+  }
+}
+
+// ---------- the Ask page and route ----------
+
+/** Ask the agent as one person. Their key sees only what their role allows, so the answer cannot say more. */
+async function askAgent(box: Box, person: string, question: string, conversation?: string) {
+  const keys = JSON.parse(box.secret('ELASTIC_ASK_KEYS') || '{}') as Record<string, string>;
+  const key = keys[person];
+  if (!key) throw Object.assign(new Error(`${person === 'owner' ? 'The owner' : person} has no Elastic seat yet`), { status: 403 });
+  const r = await client(box.secret('KIBANA_URL'), key)<{ conversation_id?: string; response: { message: string }; steps?: { tool_id?: string }[] }>('POST', '/api/agent_builder/converse', { agent_id: AGENT_ID, input: question, ...(conversation ? { conversation_id: conversation } : {}) });
+  return { answer: r.response.message, conversation: r.conversation_id, tools: (r.steps ?? []).flatMap((s) => (s.tool_id ? [s.tool_id] : [])) };
+}
+
+let labelled = false;
 
 export default {
   name: 'elastic',
+  description: 'Streams every action to Elastic in a copy the box cannot rewrite, and lets an Elastic agent answer questions about it and ask you to undo a task.',
+  secrets: SECRETS,
 
   logReaders: [
     {
-      name: 'docs', // was 'ship': the new name gets a fresh cursor, so each box sends its whole log once with the new ids
+      name: 'chain', // was 'ship', then 'docs': a new name gives each box a fresh cursor, so it sends its whole log once with hashes
       async read(e: LogEvent, box: Box) {
         if (!live && !inDemo) return; // a dev box: nothing to keep
+        if (!labelled) {
+          labelled = true;
+          try {
+            BOX.name = box.secret('ELASTIC_BOX_LABEL').trim() || BOX.name;
+          } catch {} // no label in the vault: the host name stands
+        }
         const t = e.task ? box.task(e.task) : undefined;
         const key = e.type === 'tool.call' || e.type === 'tool.result' ? `${e.task}.${e.key}` : '';
         if (e.type === 'tool.call') toolOf.set(key, e.tool);
@@ -246,7 +202,7 @@ export default {
           changes: e.type === 'task.state' && e.state === 'done' ? await changes(e.task) : undefined,
         };
         if (e.type === 'tool.result') toolOf.delete(key);
-        // The same event twice gets the same id, so a resend overwrites itself: no duplicates.
+        // The same event twice gets the same id; Elastic refuses the second (create-only), which counts as sent.
         const line = JSON.stringify({ _id: `${BOX.machine}:${BOX.run}:${e.seq}`, ...toDoc(e, t, extra) }) + '\n';
         fs.mkdirSync(path.dirname(OUTBOX), { recursive: true });
         const fd = fs.openSync(OUTBOX, 'a');
@@ -256,41 +212,101 @@ export default {
         if (live) void flush(box);
       },
     },
+    {
+      // The owner's answer to a request from Elastic does the thing. Cursored, so an approval given while the box
+      // was down still acts at the next boot. Undoing an undone task is a no-op.
+      name: 'act',
+      async read(e: LogEvent, box: Box) {
+        if (e.type !== 'approval.answered' || !e.approved) return;
+        const source = box.task(e.task)?.source ?? '';
+        const target = source.match(/^elastic:undo:(.+)$/)?.[1];
+        if (!target || box.task(target)?.state === 'undone' || !box.task(target)) return;
+        await box.undo(target);
+        box.note({ kind: 'elastic.undo', target, answeredBy: e.by }, target);
+      },
+    },
   ],
 
   // A job, not a reader, holds the key: jobs run in the core with vault access, and readers have none.
   modelJobs: [
     {
       name: 'elastic.bulk',
-      secrets: ['ELASTIC_URL', 'ELASTIC_API_KEY'],
+      secrets: ['ELASTIC_URL', 'ELASTIC_BOX_KEY'],
       async run(input: { lines: string }, ctx) {
         let url: string, key: string;
         try {
-          [url, key] = [ctx.secret('ELASTIC_URL'), ctx.secret('ELASTIC_API_KEY')];
+          [url, key] = [ctx.secret('ELASTIC_URL').trim(), ctx.secret('ELASTIC_BOX_KEY').trim()];
         } catch {
           url = key = '';
         }
-        if (!url.trim() || !key.trim()) return { skipped: 'the vault has no ELASTIC_URL or ELASTIC_API_KEY' };
+        if (!url || !key) return { skipped: 'the vault has no ELASTIC_URL or ELASTIC_BOX_KEY' };
         const es = client(url, key);
-        ready ??= ensureIndex(es).catch((e) => ((ready = undefined), Promise.reject(e)));
-        await ready;
-        if (installed && /"event":\{"seq":1,/.test(input.lines)) {
-          // Sending from seq 1 again (a new box, or the upgrade to machine ids): drop this box's documents from the
-          // first version, whose ids had no machine, so nothing is counted twice.
-          const old = [{ term: { 'box.name': os.hostname() } }, { term: { 'box.run': 'installed' } }];
-          await es('POST', `/${INDEX}/_delete_by_query`, { query: { bool: { filter: old, must_not: [{ exists: { field: 'box.machine' } }] } } });
-        }
+        // `create`, never `index`: the key may only add documents, so a repeat is refused with 409, which means "already there".
         const body = input.lines.split('\n').filter(Boolean).flatMap((l) => {
           const { _id, ...doc } = JSON.parse(l);
-          return [JSON.stringify({ index: { _index: INDEX, _id } }), JSON.stringify(doc)];
+          return [JSON.stringify({ create: { _index: INDEX, _id } }), JSON.stringify(doc)];
         });
-        const r = await es<{ errors: boolean; items: { index: { _id: string; status: number; error?: { reason?: string } } }[] }>('POST', '/_bulk', body.join('\n') + '\n');
-        const bad = r.items.filter((i) => i.index.error);
-        if (bad.some((i) => i.index.status === 429 || i.index.status >= 500)) throw new Error(`Elastic is busy: ${bad[0].index.status}`);
-        // A document Elastic refuses for good (a 4xx) would block every one after it, so log it and go on.
-        for (const i of bad) console.error(`elastic: refused ${i.index._id}: ${i.index.error?.reason}`);
+        const r = await es<{ items: { create: { _id: string; status: number; error?: { reason?: string } } }[] }>('POST', '/_bulk', body.join('\n') + '\n');
+        const bad = r.items.filter((i) => i.create.error && i.create.status !== 409);
+        // 400 is a document Elastic will never take: log it and go on. Anything else (no index yet, a busy cluster, a bad key) retries.
+        for (const i of bad.filter((x) => x.create.status === 400)) console.error(`elastic: refused ${i.create._id}: ${i.create.error?.reason}`);
+        if (bad.some((i) => i.create.status !== 400)) throw new Error(`Elastic said ${bad.find((i) => i.create.status !== 400)!.create.status}: ${bad[0].create.error?.reason}`);
         return { indexed: r.items.length - bad.length };
       },
     },
   ],
+
+  triggers: [
+    {
+      name: 'integrity',
+      start(box: Box) {
+        if (!live) return;
+        const every = Number(process.env.ELASTIC_VERIFY_MS) || 600_000;
+        const run = () => void checkAndRecord(box).catch((e) => console.error(`elastic: integrity check failed: ${(e as Error).message}`));
+        const soon = setTimeout(run, 30_000);
+        const timer = setInterval(run, every);
+        return () => (clearTimeout(soon), clearInterval(timer));
+      },
+    },
+    {
+      name: 'requests',
+      start(box: Box) {
+        if (!live) return;
+        const timer = setInterval(() => void poll(box).catch((e) => console.error(`elastic: reading requests failed: ${(e as Error).message}`)), Number(process.env.ELASTIC_REQUESTS_MS) || 5000);
+        return () => clearInterval(timer);
+      },
+    },
+  ],
+
+  apps: [{ name: 'ask', title: 'Ask GurtOS', href: '/' }],
+
+  routes: {
+    'GET /': () => new Response(fs.readFileSync(new URL('./app.html', import.meta.url)), { headers: { 'content-type': 'text/html; charset=utf-8' } }),
+    // Has the box's log changed since Elastic stored its copy? Anyone paired may ask; the answer names only entry numbers.
+    'GET /verify': async (_req, box) => {
+      try {
+        const v = await checkAndRecord(box);
+        const cap = (n: number[]) => n.slice(0, 50);
+        const bad = [...v.edited, ...v.missing, ...v.reordered, ...v.localBreaks].length;
+        return Response.json({
+          ...v, edited: cap(v.edited), missing: cap(v.missing), reordered: cap(v.reordered), localBreaks: cap(v.localBreaks),
+          summary: v.ok ? `All ${v.checked} entries match Elastic's copy${v.pending ? `; ${v.pending} not shipped yet` : ''}.` : `${bad} entries do not match: edited ${first(v.edited) || 'none'}, missing ${first(v.missing) || 'none'}, reordered ${first(v.reordered) || 'none'}, broken links ${first(v.localBreaks) || 'none'}. Trust Elastic's copy.`,
+        });
+      } catch (e) {
+        return Response.json({ error: (e as Error).message }, { status: 503 });
+      }
+    },
+    'POST /ask': async (req, box) => {
+      try {
+        const { question, conversation } = (await req.json()) as { question?: string; conversation?: string };
+        if (!question?.trim() || question.length > 1000) return Response.json({ error: 'ask a question of up to 1000 characters' }, { status: 400 });
+        // The box says who is calling (x-box-caller, and x-box-person on a Business box); the page cannot choose.
+        const person = req.headers.get('x-box-person') || (['screen', 'owner'].includes(req.headers.get('x-box-caller') ?? '') ? 'owner' : '');
+        if (!person) return Response.json({ error: 'the box does not know who is asking' }, { status: 403 });
+        return Response.json(await askAgent(box, person, question.trim(), conversation));
+      } catch (e) {
+        return Response.json({ error: (e as Error).message }, { status: (e as { status?: number }).status ?? 502 });
+      }
+    },
+  },
 } satisfies Track;
