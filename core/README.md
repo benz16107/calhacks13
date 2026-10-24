@@ -403,6 +403,11 @@ only the requests routed to them (the `my_requests` view over the private `reque
 public `approval` table still holds every approval for the box's own screens. They answer with `answerRequest`; the first answer wins in the database, and the box then runs these same
 checks as that person (`answerAs`). If the checks refuse it, the request goes back to pending.
 
+**Outside panels on a Business box** (the Jira panel, JSM, ASI:One through Fetch) answer only as a person: the track
+verifies its own credential, maps it to a person (the Jira track keeps a Jira account id to person id list), and calls
+the API over the box's socket with `x-box-person`. Without a mapped person an outside panel can still read and Undo,
+but its Approve is refused, so turning Business on never lets an unknown outside account approve.
+
 **Waiting for me.** `GET /api/me` returns `{person, company, edition, paused, directory, waiting, requests}`: the
 requests this person may approve now, and their own requests (the last 50, newest first, answered ones too), each with
 its route. `directory` is every person's id, name, title, role, limit and approvesFor (no phones), so any screen,

@@ -195,10 +195,16 @@ except Exception as e: print(e.code, json.loads(e.read())['error'])`;
     `Priya (IT admin) pulls the kill switch: both seats stop mid-task in ${stopMs} ms (no step in 2 s; ${freezer === 'frozen' ? 'frozen by systemd' : 'stopped by signal'}), and a new task waits in the queue`);
   d.check(seen[0].paused && seen[0].by === 'Priya Nair' && seen[1]?.by === 'Priya Nair', 'every screen and phone sees it: GET /api/system and /api/me say "paused by Priya Nair"');
   ok(await priya('POST', '/api/resume'), 'resume');
+  // One switch: Settings' paused and /api/pause are the same state, whichever way it is pulled.
+  ok(await screen('PATCH', '/api/settings', { paused: true }), 'pause from settings');
+  const viaSettings = ok(await screen('GET', '/api/pause'), 'pause state');
+  ok(await screen('POST', '/api/resume'), 'resume');
+  const settingsAfter = ok(await screen('GET', '/api/settings'), 'settings');
+  d.check(viaSettings.paused === true && settingsAfter.paused === false, 'one switch: pausing through Settings shows in /api/pause, and resuming through /api/resume clears Settings');
   await d.settled([k1.id, k2.id, k3.id]);
   const log = ok(await owen('GET', '/api/log'), 'log') as LogEvent[];
   const switches = log.filter((e) => e.type === 'note' && e.track === 'kill-switch' && e.seq > paused.seq0);
-  d.check(switches.length === 2 && switches.every((e) => e.who?.by === 'priya'), 'resumed: all three finish, and the log holds both pulls of the switch, by Priya');
+  d.check(switches.filter((e) => e.who?.by === 'priya').length === 2 && switches.filter((e) => e.who?.by !== 'priya').length === 2, 'resumed: all three finish, and the log holds both pulls of the switch, by Priya');
 
   // ---------- shadow mode: a seat's decisions are suggestions a person decides, until the policy says it may go live ----------
   // The clerk's real tool (credit-desk.collections_action) needs only a rules file in its workspace, so this stays offline.
