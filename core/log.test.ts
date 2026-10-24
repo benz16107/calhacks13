@@ -3,10 +3,10 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
-import type { TaskSpec } from './contract.ts';
+import type { FullSpec } from './contract.ts';
 import { Log, canMove, doneLayers, fold } from './log.ts';
 
-const spec: Required<TaskSpec> = { title: 't', prompt: 'p', workspace: 'w', worker: 'fake', tools: [], hosts: [], budgetCents: 0, source: 'test' };
+const spec: FullSpec = { title: 't', prompt: 'p', workspace: 'w', worker: 'fake', tools: [], hosts: [], budgetCents: 0, source: 'test' };
 
 test('replays the log after a hard kill left half a line', () => {
   const file = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'log-')), 'log.jsonl');

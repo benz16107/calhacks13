@@ -31,9 +31,14 @@ export interface TaskSpec {
   budgetCents?: number;
   /** Who started it, for the log and the portal: 'jira:BOX-12', 'asi1', 'schedule', 'portal'. */
   source?: string;
+  /** Personal: a real folder of the owner's to work on (a copy; Keep applies it). The API links it to a workspace. */
+  folder?: string;
 }
 
-export interface Task extends Required<TaskSpec> {
+/** A TaskSpec with its defaults filled in. */
+export type FullSpec = Required<Omit<TaskSpec, 'folder'>> & { folder?: string };
+
+export interface Task extends FullSpec {
   id: string;
   state: TaskState;
   /** Linux user the task runs as: 'box-<id>'. */
@@ -84,7 +89,7 @@ interface Base {
 type Ev<T extends string, D> = Base & { type: T } & D;
 
 export type LogEvent =
-  | Ev<'task.created', { task: string; spec: Required<TaskSpec>; user: string }>
+  | Ev<'task.created', { task: string; spec: FullSpec; user: string }>
   | Ev<'task.state', { task: string; state: TaskState; layers?: string[]; error?: string; summary?: string }>
   /** Progress the worker reports: plans, steps, diffs. `data` is what the worker needs to resume. */
   | Ev<'task.step', { task: string; text: string; data?: unknown }>

@@ -8,7 +8,7 @@ import fs from 'node:fs';
 import http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
-import type { App, Approval, Box, Ctx, LogEvent, LogReader, ModelJob, NewEvent, Route, Task, TaskSpec, TaskState, Tool, Track } from './contract.ts';
+import type { App, Approval, Box, FullSpec, Ctx, LogEvent, LogReader, ModelJob, NewEvent, Route, Task, TaskSpec, TaskState, Tool, Track } from './contract.ts';
 import { DB, Live } from './live.ts';
 import { Log, apply, canMove, doneLayers, fold, type State } from './log.ts';
 import { PLACEHOLDER_KEY, firewall, relayCert, reservePort, startProxy } from './net.ts';
@@ -136,10 +136,10 @@ class Core {
   // ---------- tasks ----------
 
   async createTask(spec: TaskSpec): Promise<Task> {
-    const known = ['title', 'prompt', 'workspace', 'worker', 'tools', 'hosts', 'budgetCents', 'source'];
+    const known = ['title', 'prompt', 'workspace', 'worker', 'tools', 'hosts', 'budgetCents', 'source', 'folder'];
     const unknown = Object.keys(spec ?? {}).filter((k) => !known.includes(k));
     if (unknown.length) throw new Error(`unknown task field${unknown.length > 1 ? 's' : ''}: ${unknown.join(', ')} (known: ${known.join(', ')})`);
-    const s: Required<TaskSpec> = { workspace: 'home', worker: 'droid', tools: [], hosts: [], budgetCents: 0, source: 'api', ...spec };
+    const s: FullSpec = { workspace: 'home', worker: 'droid', tools: [], hosts: [], budgetCents: 0, source: 'api', ...spec };
     if (!s.title || !s.prompt) throw new Error('a task needs a title and a prompt');
     if (!/^[\w.-]+$/.test(s.workspace) || !fs.existsSync(dirs.workspace(s.workspace))) throw new Error(`no workspace ${s.workspace}`);
     if (!['droid', 'fake'].includes(s.worker)) throw new Error(`no worker ${s.worker}`);
@@ -414,8 +414,14 @@ class Core {
     if (t.state !== 'done') throw new Error(`task ${id} is ${t.state}; only a done task can be kept`);
     if (t.review === 'kept') throw new Error(`task ${id} was already kept`);
     const out = sandbox.keep(t);
-    if (out.conflicts) this.write({ type: 'keep', task: id, result: 'conflict', conflicts: out.conflicts });
-    else this.write({ type: 'keep', task: id, result: 'kept', changes: out.kept });
+    if (out.conflicts) {
+      this.write({ type: 'keep', task: id, result: 'conflict', conflicts: out.conflicts });
+      this.write({ type: 'task.step', task: id, text: `keep found a conflict: you changed ${out.conflicts.join(', ')} too`, data: { keep: 'conflict', conflicts: out.conflicts } });
+    } else {
+      this.write({ type: 'keep', task: id, result: 'kept', changes: out.kept });
+      // The same fact as a step, for readers that follow steps (the desktop layer's first version did).
+      this.write({ type: 'task.step', task: id, text: `kept ${out.kept?.length ?? 0} change(s) to ${this.links[t.workspace]}`, data: { keep: 'applied', changes: out.kept } });
+    }
     return out;
   }
 
@@ -610,7 +616,6 @@ class Core {
               const name = 'owner-' + path.basename(String(body.folder)).replace(/[^\w.-]/g, '-');
               this.linkWorkspace(name, String(body.folder));
               body.workspace = name;
-              delete body.folder;
             }
             return this.createTask(body);
           }
