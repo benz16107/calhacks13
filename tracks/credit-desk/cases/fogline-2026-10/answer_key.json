@@ -1,7 +1,7 @@
 {
   "case_id": "fogline-2026-10",
   "as_of": "2026-10-23",
-  "rules": "rules/credit-rules.draft.yaml (0.1-draft)",
+  "rules": "rules/credit-rules.yaml (0.2; every rule this key cites is unchanged from the 0.1 draft)",
   "scoring": "A planted error counts as caught when the desk's log names at least one of its 'where' locations and reaches the 'correct_conclusion'. Report 'caught N of 14'. Decisions are scored separately against application_decisions, collections and order_decisions. Flagging a 'not_errors' item counts as a false positive.",
   "planted_errors": [
     {

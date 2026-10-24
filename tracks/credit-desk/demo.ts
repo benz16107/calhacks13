@@ -1,7 +1,7 @@
 // The credit desk's demo step. Scripted seats (the fake worker) drive the real tools, live against CRS and Nessie:
 // the fake applicant is caught, the analyst pauses for the controller, decisions land in the log with their rule ids
 // and CRS request ids, and the run is scored against the answer key.
-// CREDIT_DESK_LIVE=1 then runs both seats with Droid on the whole case, answers the controller's questions, scores it
+// DEMO_LIVE=credit-desk ./demo also runs both seats with Droid on the whole case, answers the controller's questions, scores it
 // and saves the evidence to /var/lib/box-demo/credit-desk-<run>/. That takes several minutes.
 import fs from 'node:fs';
 import path from 'node:path';
@@ -82,7 +82,8 @@ export default async function (d: DemoKit) {
   const log = JSON.stringify(await d.api('GET', '/log'));
   d.check(keys.length === 3 && keys.every((k) => !log.includes(k)), 'no CRS or Nessie key is anywhere in the log');
 
-  if (process.env.CREDIT_DESK_LIVE) await live(d);
+  if ((process.env.DEMO_LIVE ?? '').split(/[\s,]+/).includes('credit-desk')) await live(d);
+  else console.log('  skip  the live Droid run on the whole case, about 10 minutes of model time: DEMO_LIVE=credit-desk ./demo runs it');
 }
 
 /** Both seats with Droid on the whole case. The controller's questions are answered yes, as Rosa would after reading them. */

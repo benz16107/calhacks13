@@ -44,9 +44,11 @@ For each application:
    fraud first.
 4. Flag every problem, citing the rule it breaks.
 5. Apply the rules to set the band, limit and terms, and record the decision.
+6. When a rule requires a follow-up (a notice to the applicant, a review, a referral), write it out in full.
 
 Then write analyst-report.md: one section per application with the outcome, band, limit, terms, rule ids, the
-figures used and the problems flagged. Never invent data; if something is missing, say so.`;
+figures used, the problems flagged and each follow-up with the rule that requires it. Never invent data; if
+something is missing, say so.`;
 }
 
 export function clerkPrompt(b: Brief) {
@@ -73,6 +75,7 @@ How to work:
 3. Work out each customer's balance as it really is once those problems are fixed, and its oldest past-due invoice.
 4. Record one dunning action for every customer (${DUNNING.join(', ')}), a correct record action for each record
    you would fix, and hold order or release order for every waiting order.
-5. Write clerk-report.md: the problems, the corrected balances and the actions.
+5. When a rule requires a follow-up (a review, a notice, a referral), flag it with credit-desk.flag citing that rule.
+6. Write clerk-report.md: the problems, the corrected balances, the actions and the follow-ups.
 Never chase an amount you know is wrong. Never invent data.`;
 }

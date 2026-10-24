@@ -1,0 +1,414 @@
+{
+  "run": "73c47b",
+  "case": "fogline-2026-10",
+  "summary": "caught 14 of 14 planted errors; 0 false alarms; 6 of 6 credit decisions, 9 of 11 collection steps and 5 of 6 order decisions match the answer key",
+  "caught": 14,
+  "total": 14,
+  "errors": [
+    {
+      "id": "E01",
+      "title": "Sunset Noodle Bar exists twice",
+      "caught": true,
+      "by": "Duplicate customer records for Sunset Noodle Bar: same EIN, address and phone",
+      "findings": 4
+    },
+    {
+      "id": "E02",
+      "title": "INV-24105 header overstated",
+      "caught": true,
+      "by": "Invoice header total does not match sum of line items",
+      "findings": 2
+    },
+    {
+      "id": "E03",
+      "title": "PMT-8812 posted to INV-24089 instead of INV-24098",
+      "caught": true,
+      "by": "Payment PMT-8812 applied to wrong customer and wrong invoice",
+      "findings": 2
+    },
+    {
+      "id": "E04",
+      "title": "INV-24117 duplicates INV-24116",
+      "caught": true,
+      "by": "Duplicate invoices for C-1008 Fruitvale Food Truck Collective — identical PO, date, amount and line items",
+      "findings": 2
+    },
+    {
+      "id": "E05",
+      "title": "PMT-8823 is a check dated 2026-11-06",
+      "caught": true,
+      "by": "Post-dated check applied before check date — INV-24091 marked paid prematurely",
+      "findings": 2
+    },
+    {
+      "id": "E06",
+      "title": "Rockridge Ramen took 2% after 24 days",
+      "caught": true,
+      "by": "Unearned early-payment discount: C-1009 paid 24 days after invoice, not within the 10-day window",
+      "findings": 3
+    },
+    {
+      "id": "E07",
+      "title": "INV-24111 dated 2025 instead of 2026",
+      "caught": true,
+      "by": "Invoice date stamped 2025 — one year out of sequence",
+      "findings": 2
+    },
+    {
+      "id": "E08",
+      "title": "Harborview's limit has not been reviewed since 2024-05-20",
+      "caught": true,
+      "by": "Credit limit review is severely overdue",
+      "findings": 3
+    },
+    {
+      "id": "E09",
+      "title": "Telegraph Ave Pizza is over its limit with no hold",
+      "caught": true,
+      "by": "C-1005 Telegraph Ave Pizza open balance exceeds credit limit — credit hold required",
+      "findings": 4
+    },
+    {
+      "id": "E10",
+      "title": "Pacific Crest Provisions LLC is a fake applicant",
+      "caught": true,
+      "by": "Fraud Finder risk score 88, VoIP/prepaid phone, no phone owner match, email 8 days old, IP >1,000 miles from address",
+      "findings": 4
+    },
+    {
+      "id": "E11",
+      "title": "Lakeshore Diner claims 1.85M; the bureau says 210K",
+      "caught": true,
+      "by": "Stated revenue $1,850,000 is 781% above the verified figure of $210,000",
+      "findings": 1
+    },
+    {
+      "id": "E12",
+      "title": "Saffron Table says no liens; PitchPoint finds a lien and a judgment",
+      "caught": true,
+      "by": "Application declared no open liens or judgments but CRS found an unsatisfied judgment and an unreleased tax lien",
+      "findings": 1
+    },
+    {
+      "id": "E13",
+      "title": "Castellanos attached her own 18-month-old credit report",
+      "caught": true,
+      "by": "Applicant attached a self-supplied credit report — not used per DOC-1",
+      "findings": 1
+    },
+    {
+      "id": "E14",
+      "title": "Castellanos: the three bureaus disagree",
+      "caught": true,
+      "by": "Equifax returned no file for guarantor — missing bureau, band B at most",
+      "findings": 1
+    }
+  ],
+  "false_alarms": [],
+  "other_findings": [
+    {
+      "problem": "No email address on customer record; reminders cannot be sent",
+      "ids": [
+        "C-1003"
+      ]
+    }
+  ],
+  "decisions": {
+    "applications": [
+      {
+        "application_id": "APP-1041",
+        "match": true,
+        "wrong": [],
+        "want": {
+          "outcome": "approve",
+          "limit": 8000,
+          "terms": "net 30",
+          "band": "A",
+          "controller": false
+        },
+        "got": {
+          "outcome": "approve",
+          "limit": 8000,
+          "terms": "net 30",
+          "band": "A",
+          "controller": false
+        },
+        "decided_by": "credit analyst"
+      },
+      {
+        "application_id": "APP-1042",
+        "match": true,
+        "wrong": [],
+        "want": {
+          "outcome": "approve",
+          "limit": 40000,
+          "terms": "net 30",
+          "band": "A",
+          "controller": true
+        },
+        "got": {
+          "outcome": "approve",
+          "limit": 40000,
+          "terms": "net 30",
+          "band": "A",
+          "controller": true
+        },
+        "decided_by": "controller (controller (scripted for the scored run))"
+      },
+      {
+        "application_id": "APP-1043",
+        "match": true,
+        "wrong": [],
+        "want": {
+          "outcome": "fraud hold",
+          "limit": 0,
+          "terms": "cash in advance",
+          "band": "none",
+          "controller": true
+        },
+        "got": {
+          "outcome": "fraud hold",
+          "limit": 0,
+          "terms": "none",
+          "band": "none",
+          "controller": true
+        },
+        "decided_by": "controller (controller (scripted for the scored run))"
+      },
+      {
+        "application_id": "APP-1044",
+        "match": true,
+        "wrong": [],
+        "want": {
+          "outcome": "approve",
+          "limit": 7500,
+          "terms": "net 15",
+          "band": "C",
+          "controller": true
+        },
+        "got": {
+          "outcome": "approve",
+          "limit": 7500,
+          "terms": "net 15",
+          "band": "C",
+          "controller": true
+        },
+        "decided_by": "controller (controller (scripted for the scored run))"
+      },
+      {
+        "application_id": "APP-1045",
+        "match": true,
+        "wrong": [],
+        "want": {
+          "outcome": "approve",
+          "limit": 15000,
+          "terms": "net 30",
+          "band": "B",
+          "controller": true
+        },
+        "got": {
+          "outcome": "approve",
+          "limit": 15000,
+          "terms": "net 30",
+          "band": "B",
+          "controller": true
+        },
+        "decided_by": "controller (controller (scripted for the scored run))"
+      },
+      {
+        "application_id": "APP-1046",
+        "match": true,
+        "wrong": [],
+        "want": {
+          "outcome": "approve",
+          "limit": 21000,
+          "terms": "net 30",
+          "band": "A",
+          "controller": true
+        },
+        "got": {
+          "outcome": "approve",
+          "limit": 21000,
+          "terms": "net 30",
+          "band": "A",
+          "controller": true
+        },
+        "decided_by": "controller (controller (scripted for the scored run))"
+      }
+    ],
+    "collections": [
+      {
+        "customer_id": "C-1001",
+        "match": true,
+        "want": "no action",
+        "got": [
+          "no action"
+        ]
+      },
+      {
+        "customer_id": "C-1002",
+        "match": true,
+        "want": "phone call",
+        "got": [
+          "phone call"
+        ]
+      },
+      {
+        "customer_id": "C-1003",
+        "match": true,
+        "want": "no action",
+        "got": [
+          "no action"
+        ]
+      },
+      {
+        "customer_id": "C-1004",
+        "match": true,
+        "want": "second notice",
+        "got": [
+          "second notice"
+        ]
+      },
+      {
+        "customer_id": "C-1005",
+        "match": false,
+        "want": "phone call",
+        "got": [
+          "credit hold"
+        ]
+      },
+      {
+        "customer_id": "C-1006",
+        "match": true,
+        "want": "no action",
+        "got": [
+          "no action"
+        ]
+      },
+      {
+        "customer_id": "C-1007",
+        "match": false,
+        "want": "friendly reminder",
+        "got": [
+          "credit hold"
+        ]
+      },
+      {
+        "customer_id": "C-1008",
+        "match": true,
+        "want": "friendly reminder",
+        "got": [
+          "friendly reminder"
+        ]
+      },
+      {
+        "customer_id": "C-1009",
+        "match": true,
+        "want": "second notice",
+        "got": [
+          "second notice"
+        ]
+      },
+      {
+        "customer_id": "C-1010",
+        "match": true,
+        "want": "second notice",
+        "got": [
+          "second notice"
+        ]
+      },
+      {
+        "customer_id": "C-1012",
+        "match": true,
+        "want": "friendly reminder",
+        "got": [
+          "friendly reminder"
+        ]
+      }
+    ],
+    "orders": [
+      {
+        "order_id": "SO-5519",
+        "match": true,
+        "want": "release",
+        "got": "release"
+      },
+      {
+        "order_id": "SO-5521",
+        "match": true,
+        "want": "hold",
+        "got": "hold"
+      },
+      {
+        "order_id": "SO-5524",
+        "match": true,
+        "want": "hold",
+        "got": "hold"
+      },
+      {
+        "order_id": "SO-5527",
+        "match": true,
+        "want": "hold",
+        "got": "hold"
+      },
+      {
+        "order_id": "SO-5528",
+        "match": false,
+        "want": "release",
+        "got": "hold"
+      },
+      {
+        "order_id": "SO-5530",
+        "match": true,
+        "want": "release",
+        "got": "release"
+      }
+    ]
+  },
+  "simple_rule": [
+    {
+      "application_id": "APP-1041",
+      "outcome": "approve",
+      "limit": 8000,
+      "transunion_score": 770
+    },
+    {
+      "application_id": "APP-1042",
+      "outcome": "approve",
+      "limit": 40000,
+      "transunion_score": 790
+    },
+    {
+      "application_id": "APP-1043",
+      "outcome": "approve",
+      "limit": 20000,
+      "transunion_score": 640
+    },
+    {
+      "application_id": "APP-1044",
+      "outcome": "approve",
+      "limit": 15000,
+      "transunion_score": 690
+    },
+    {
+      "application_id": "APP-1045",
+      "outcome": "approve",
+      "limit": 25000,
+      "transunion_score": 760
+    },
+    {
+      "application_id": "APP-1046",
+      "outcome": "approve",
+      "limit": 45000,
+      "transunion_score": 815
+    }
+  ],
+  "moment": [
+    {
+      "application_id": "APP-1043",
+      "simple_rule": "approve $20,000",
+      "desk": "fraud hold",
+      "decided_by": "controller (controller (scripted for the scored run))"
+    }
+  ]
+}

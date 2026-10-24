@@ -7,7 +7,7 @@ import type { LogEvent } from '../../core/contract.ts';
 export const HOME = process.env.BOX_HOME ?? '/var/lib/box';
 export const TRACK_DIR = new URL('.', import.meta.url).pathname;
 export const CASES_DIR = path.join(TRACK_DIR, 'cases');
-export const DEFAULT_RULES = path.join(TRACK_DIR, 'rules', 'credit-rules.draft.yaml');
+export const DEFAULT_RULES = path.join(TRACK_DIR, 'rules', 'credit-rules.yaml');
 
 export const workspaceDir = (ws: string) => path.join(HOME, 'workspaces', ws);
 export const safeId = (id: unknown) => {

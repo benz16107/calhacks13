@@ -59,7 +59,7 @@ The case `cases/fogline-2026-10` holds 12 of the 38 trade accounts (one of them 
 
 ## Credit policy in brief
 
-The full draft is `rules/credit-rules.draft.yaml`. In short:
+The full rules are `rules/credit-rules.yaml` (version 0.2, worked out with Mana). In short:
 
 1. Check the owner's identity and fraud signals before anything else. One failed fraud check stops the application.
 2. Band the applicant on the lowest score any bureau returns. A bad mark at any bureau counts.
