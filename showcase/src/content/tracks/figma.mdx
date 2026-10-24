@@ -4,24 +4,24 @@ order: 19
 sponsor: Figma
 prize: 'Best Workflow, Stage Log, Best Design and Most Creative'
 editions: 'All three editions'
-pitch: 'One design system for every edition: the box screen and phone for Server, the GNOME layer for Personal, and room in the same tokens for Business.'
+pitch: 'One design system for the whole ecosystem: the box screen and portal for Server, the native GNOME layer for Personal, the Business screens from approved frames, and the phone app, all from the same Figma variables, with a check that fails when the code drifts.'
 title: From a FigJam board to the box's own screen
 summary: 'Figma ran every stage of GurtOS: a FigJam board for the architecture and the four demo moments, two rounds of OS research, three directions, the GurtOS design system with every token as a variable in Light and Dark and a Server, Personal and Business Edition collection, 64 v2 screens, four prototype flows with 136 links, a 16-slide Figma Slides deck, 95 Code Connect templates, a drift check and 77 frames compared with the running app. A handoff through Figma''s MCP server became the portal the computer runs today and the GNOME desktop layer. 55 working sessions, 727 minutes, all logged.'
 proof: 'The portal the box runs today was generated from the v2 frames through Figma''s MCP server, and every Figma variable is a CSS custom property of the same name: Figma''s <code>accent/bg</code> (#2F64A6 Light, #78A9E6 Dark) is <code>--color-accent-bg</code> in the shipped kit, with the same two values. The drift check on today''s main finds 0 drifts across 82 Figma tokens.'
 criteriaSource: "From Figma's Cal Hacks brief, as copied into the project's track plan. Figma judges four prizes: Best Workflow, Stage Log, Best Design and Most Creative."
 criteria:
-  - ask: 'Going from idea to demo with Figma.'
-    how: 'Every stage is in Figma and lands in the repo: FigJam for ideation and architecture, Figma Design for tokens, components and screens, prototype reactions and Figma Make for the flows, Figma Slides for the deck, and Figma''s MCP server for the handoff that generated <code>portal/</code>. The path is the flow diagram below.'
-  - ask: 'A stage log (up to 200 words each for ideation, prototyping, handoff, code generation: tool, minutes, 1 to 5 rating).'
-    how: 'In full on this page, under <a href="#stage-log">Stage log</a>: four stages, each with its tools, minutes and rating, each under 200 words. Every session is also a line in <code>docs/stagelog.md</code>, with how its output reached the project.'
+  - ask: 'Going from idea to demo with Figma (Best Workflow).'
+    how: 'Every stage is in Figma and lands in the repo: FigJam for ideation and architecture, Figma Design for tokens, components and screens, prototypes and Figma Make for flows, Figma Slides for the deck, and Figma''s MCP server for the handoff that generated <code>portal/</code>. The path is drawn below.'
+  - ask: 'A stage log: tool, minutes and a 1 to 5 rating for ideation, prototyping, handoff and code generation, up to 200 words each.'
+    how: 'Four stages plus the Business build, each under 200 words, with the totals from 55 logged sessions and 727 minutes. Every session is also one line in <code>docs/stagelog.md</code> with how its output reached the project.'
   - ask: 'Figma Slides (required).'
-    how: 'The pitch deck is a 16-slide Figma Slides file in the GurtOS system, with v2 screens in its 16 image slots, a setup-wizard slide and a design-system slide. It opens signed out.'
-  - ask: 'An embedded Make or prototype.'
-    how: 'The v2 Figma Design prototype is embedded on this page: approve a spend on the phone, and undo one task on the box. Four flows are wired in all (setup, phone, undo, desktop and Settings). A Figma Make file holds two of them as a small working web page in the v2 system.'
-  - ask: "Files shared with 'Anyone'."
-    how: 'The FigJam board, the design file, the deck and both prototype flows open in a signed-out browser (checked Oct 24). The Make file opens too; its preview inside Figma was not verified by the import.'
-  - ask: 'Demo video, 3 minutes at most.'
-    how: 'The narrated video is produced after the build and will go at the top of this page; until then the clip shows the real app.'
+    how: 'A 16-slide pitch deck in the GurtOS system, with v2 screens in its image slots, a setup-wizard slide and a design-system slide. Its slides on the stage log and the Edition modes were updated on Oct 24.'
+  - ask: 'An embedded Make file or prototype.'
+    how: 'Two Figma Design prototype flows are embedded below, and a Figma Make file holds the same two flows as a small working web page. The phone app is a second Make file. The Make files have no published URL yet.'
+  - ask: 'Files shared with Anyone.'
+    how: 'The FigJam board, the design file, the deck, a prototype flow and both Make files opened in a signed-out browser on Oct 24 (HTTP 200, page titles loaded). Whether the Make previews run inside Figma was not checked.'
+  - ask: 'A demo video of 3 minutes at most.'
+    how: 'The narrated video is produced by the team after the build and goes at the top of this page. Until then a silent screen recording of the real app shows below the introduction.'
     status: partly
 clip: moment-3-approval
 video: figma

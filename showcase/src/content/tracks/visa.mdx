@@ -11,15 +11,15 @@ proof: 'In the live run on Oct 23, Apify read Chemex filters at Best Buy Canada 
 criteriaSource: "Visa published weighted criteria for the track; the full brief was not published. Quoted from the project's track plan."
 criteria:
   - ask: 'Innovation in reimagining shopping (25%).'
-    how: 'Shopping becomes standing instructions: "when it''s under $16", "when it''s back", "keep us stocked". The box carries them out around the clock, and you only answer yes or no. Agents can also buy their own supplies (a paid API) within a budget, over x402.'
+    how: 'Shopping becomes standing instructions: "when it''s under $16", "when it''s back", "keep us stocked". The computer carries them out around the clock and you only answer yes or no. Agents can also buy their own supplies, a paid API, within a budget, over x402.'
   - ask: 'User experience (25%).'
-    how: 'Say it in words, or fill four fields. The phone shows one card: what, how many, the price against your limit, TEST PAYMENT, Approve. Undo gives the money back: undoing a purchase task refunds its order.'
+    how: 'Say it in words, or fill four fields. The phone shows one card: what, how many, the price against your limit, TEST PAYMENT, Approve. Undo gives the money back.'
   - ask: 'Technical execution with AI (20%).'
     how: 'Claude, inside Factory''s Droid, turns your words into a watch and reads receipts to decide what runs out. Code does the money: the price rule, the budget, the signature, and idempotent charges that survive a power cut. Apify supplies live prices. Every check, approval and payment is a line in the action log.'
   - ask: 'Commerce impact (15%).'
-    how: 'Merchants get agent orders they can verify with TAP instead of blocking every bot, at the price the buyer named. Households stop running out of the things they buy every week.'
+    how: 'Merchants get agent orders they can verify with Trusted Agent Protocol instead of blocking every bot, at the price the buyer named, with no chargebacks to dispute. Households stop running out of what they buy every week.'
   - ask: 'Trust and responsibility (15%).'
-    how: 'The agent never sees the card or the mailbox login and cannot buy on its own. Every purchase needs your tap and stays within its budget. A signed order cannot be changed in transit or replayed. Test money only, enforced in code: the store refuses a live Stripe key and orders over $500.'
+    how: 'The agent never sees the card or the mailbox login and cannot buy on its own. Every purchase needs your tap, or Face ID once a passkey is set, and stays within its budget. A signed order cannot be changed in transit or replayed. Test money only, enforced in code: the store refuses a live Stripe key and orders over $500.'
 clip: shopper
 video: visa
 shots:

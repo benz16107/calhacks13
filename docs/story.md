@@ -142,7 +142,7 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 
 **Best shown in:** GurtOS Business
 
-**Pitch:** A finance team needs roles, segregation of duties and an audit trail on every agent decision, which is what Business adds: who may approve what, up to how much. GurtOS Business is on main: people and roles, approvals routed by rules written in plain words, refusals for answering your own request or above your limit, a Waiting for me inbox, an audit with CSV export and a kill switch. Sign-in with a work account (Microsoft Entra ID, roles from groups) is Entra-ready and tested with a standards test provider; shadow mode (a seat only suggests, and a person decides) is built. The scored credit desk runs were on GurtOS Server; the Business screens are from a box seeded as the made-up Fogline Supply.
+**Pitch:** A finance team needs roles, segregation of duties and an audit trail on every agent decision, which is what GurtOS Business adds: people with roles, approvals routed by rules in plain words, refusals for answering your own request or going above your limit, an Audit view with CSV export and a kill switch. The scored credit desk runs were on GurtOS Server; the Business screens come from a box seeded as the made-up Fogline Supply, with scripted seats and test data. Sign-in with a work account (Microsoft Entra ID) is Entra-ready and tested with a standards test provider, not a real tenant.
 
 **The problem:** Companies want AI employees, but today's computers and clouds weren't built for them. An agent runs as you, with your keys, on one shared filesystem, with no separation of duties, no record you can trust and no undo, so nobody lets one do real finance work.
 
@@ -240,7 +240,7 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 
 **Best shown in:** GurtOS Business
 
-**Pitch:** Companies want agents on finance work, but an ordinary OS gives an agent its owner's keys, no separation of duties, no record and no undo, so pilots stay pilots. GurtOS Business gives each seat its own user, routes approvals to the right person, keeps a full audit and a kill switch, on a box the company owns. A measured incident drill is done: 10 agents stopped within 271 ms, a bad batch undone in 48 ms. Built since: measured impact per run, a Responsible AI mapping and sourced customer facts.  GurtOS Business is on main: people and roles, approvals routed by rules written in plain words, refusals for answering your own request or above your limit, a Waiting for me inbox, an audit with CSV export and a kill switch. Sign-in with a work account (Microsoft Entra ID, roles from groups) is Entra-ready and tested with a standards test provider; shadow mode (a seat only suggests, and a person decides) is built. The scored credit desk runs were on GurtOS Server; the Business screens are from a box seeded as the made-up Fogline Supply.
+**Pitch:** Companies want agents on finance work, but an ordinary OS gives an agent its owner's keys, no separation of duties, no record and no undo, so pilots stay pilots. GurtOS Business gives each seat its own user, routes approvals to the right person, runs a seat in shadow mode until it has earned trust, keeps an audit and a kill switch, on a computer the company owns. Measured incident drill: 10 agents frozen within 271 ms, a bad batch undone in 48 ms. Business is on main; the scored credit desk runs were on GurtOS Server, and the Business screens come from a box seeded as the made-up Fogline Supply. Sign-in with a work account (Microsoft Entra ID) is Entra-ready and tested with a standards test provider, not a real tenant.
 
 **The problem:** Companies want agents doing finance work, but an ordinary OS gives an agent its owner's keys, no separation of duties, no record and no undo, so pilots never reach production.
 
@@ -309,7 +309,7 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 
 **Best shown in:** GurtOS Server, and GurtOS Business
 
-**Pitch:** GurtOS is the environment that makes an agent wallet safe: the key never reaches the agent, each task has a budget on top of the x402 client's own payment policy, anything over it waits for your tap on the phone, and every payment is on the record. It all runs on top of the OS, on an always-on box you own, and because GurtOS is open source (Apache-2.0), anyone can run it, customise it and reuse the wallet in their own agents.
+**Pitch:** GurtOS is the environment that makes an agent wallet safe: the key never reaches the agent, each task has a budget, anything over it waits for your tap on the phone, and every payment is on the record. Agents pay for APIs with x402, shop for them in the x402 Bazaar and pay metered APIs with a hard cap, and the box earns too: its own paid routes are listed in the Bazaar. GurtOS is open source (Apache-2.0), and one command installs the same wallet for Claude Code or any MCP agent.
 
 **The problem:** Giving an agent money means handing it your card or a private key, on a heavy system or a cloud with no layer built for this: no separation, no safe key handling, no record and no undo.
 
@@ -343,7 +343,7 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 
 **Best shown in:** GurtOS Server (always reachable), and GurtOS Personal too
 
-**Pitch:** GurtOS gives ASI:One a safe body on a computer you own, even an old one: each request runs as its own sandboxed task with no keys, asks before it spends, and can be undone, and the portal and phone show it live. A team of agents on Agentverse fronts the box, strangers' agents' replies are treated as data (a hidden instruction is blocked and logged), and payments run in test FET through the box's one budget path. A Server box answers at 3 AM through its Agentverse mailbox with no open port.
+**Pitch:** GurtOS gives an ASI:One agent a safe body on a computer you own, even an old one: each chat request runs as its own sandboxed task with no keys, asks before it spends, and can be undone, and the portal and phone show it live. A team of agents on Agentverse fronts the box, strangers' agents' replies are treated as data (a hidden instruction is blocked and logged), and payments run in test FET through the box's one budget path. A Server box answers at 3 AM through its Agentverse mailbox with no open port.
 
 **The problem:** A chat agent can only act if it runs somewhere: a cloud you can't see into, or your own computer with full access. Agents that talk to strangers' agents can be fed hidden instructions.
 
@@ -376,7 +376,7 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 
 **Best shown in:** All three editions, strongest in GurtOS Business
 
-**Pitch:** The usual stack for live agent state, a database, a websocket server, a cache and auth glue, is heavy and fragile. GurtOS runs one self-hosted SpacetimeDB per box as its live nervous system, with the security enforced in the database: agents share a work queue, each person is sent only their own requests, and the first answer wins. It is light, open source and part of the GurtOS suite. The Maincloud multi-machine view is written but not running yet.
+**Pitch:** The usual stack for live agent state, a database, a websocket server, a cache and auth glue, is heavy and fragile. GurtOS runs one self-hosted SpacetimeDB per box as its live nervous system, with the rules enforced in the database: agents claim shared work atomically, each person is sent only their own requests, and the first answer to a request wins. It is light, open source and part of the GurtOS suite. The Maincloud multi-machine view is written but not running yet.
 
 **The problem:** Live agent state usually needs a database, a websocket server, a cache and auth glue, which is heavy and fragile, and an ordinary OS has nothing for it.
 
@@ -458,7 +458,7 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 
 **Still to do:**
 
-- Nothing open.
+- A social post. (open)
 
 ## Apify: Best Use of Apify (top 5)
 
@@ -494,7 +494,7 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 
 **Best shown in:** GurtOS Business
 
-**Pitch:** The unexpected part is the OS: we built a whole operating system for agents to do credit and fraud checks safely, where on an ordinary one the agent holds the keys, approves its own work and can pull any report. Each seat is its own user without the CRS login, every pull needs a stated reason, a person approves what the rules send them, and a fraudster who argues with the desk is refused in code. Not built: a payment gate for guests, the controller's clear-the-flag path and an ASI:One chat intent for credit.
+**Pitch:** The unexpected part is the OS: we built a whole operating system for agents to do credit and fraud checks safely, where on an ordinary one the agent holds the keys, approves its own work and can pull any report. Each seat is its own user without the CRS login, every pull needs a stated reason, a person approves what the rules send them, and a fraudster who argues with the desk is refused in code. Business is on main; the scored runs were on GurtOS Server, and the Business screens come from a box seeded as the made-up Fogline Supply. Not built: a payment gate for guests, the controller's clear-the-flag path and an ASI:One chat intent for credit.
 
 **The problem:** Credit bureaus and lenders are what attackers go after, and on an ordinary OS an agent doing identity and fraud checks holds the keys, can approve its own work and can pull any report.
 
@@ -526,7 +526,7 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 
 **Best shown in:** GurtOS Server, and GurtOS Business
 
-**Pitch:** An always-on box you own holds the Solana wallet in its root-only vault, so agents can pay for APIs at any hour without ever seeing the key. Every payment is a devnet transaction anyone can check, recorded in the box's log with the task that made it. GurtOS is open source (Apache-2.0), so the same wallet works in anyone's agents.
+**Pitch:** An always-on box you own holds the Solana wallet where agents cannot read it, so agents pay for APIs at any hour without ever seeing the key. Every payment is a devnet transaction anyone can check, with the task that made it written on chain, and the box writes a fingerprint of its own action log to Solana so anyone can check the log was not changed. GurtOS is open source (Apache-2.0), so the same wallet works in anyone's agents.
 
 **The problem:** Giving an agent money means handing it a private key on a system with no layer built for it.
 
@@ -555,7 +555,7 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 
 **Best shown in:** GurtOS Server
 
-**Pitch:** GurtOS Server runs wherever a VM does. On Vultr it is the public, always-on box: Jira and Mana reach it, and the rest of its API stays closed. The real release disc also installs and boots on a 1 vCPU, 1 GB Vultr instance, its state backs up encrypted to Vultr Object Storage, and Vultr's firewall is set from code.
+**Pitch:** GurtOS Server runs wherever a VM does, and Vultr runs the parts of GurtOS that must be public or big. The cloud box at gurt-cloud.box.gurtos.com answers Jira, Mana and x402 buyers while the rest of its API stays closed. The relay that gives every box its own address runs on a Vultr instance, the release discs are built on Vultr and mirrored on Vultr Object Storage, the real disc installs on a 1 vCPU, 1 GB instance, state backs up encrypted to Object Storage, and the cloud firewall is set from code.
 
 **The problem:** Draft: an agent box should be reachable around the clock without exposing everything on it to the internet.
 
@@ -585,7 +585,7 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 
 **Best shown in:** All three editions
 
-**Pitch:** One design system for every edition: the box screen and phone for Server, the GNOME layer for Personal, and room in the same tokens for Business.
+**Pitch:** One design system for the whole ecosystem: the box screen and portal for Server, the native GNOME layer for Personal, the Business screens from approved frames, and the phone app, all from the same Figma variables, with a check that fails when the code drifts.
 
 **The problem:** Draft: an OS for agents has to feel like an OS people trust, not another dashboard, and the design has to reach the code without drift.
 
@@ -606,7 +606,7 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 **Still to do:**
 
 - Review the story with Ben: problem, features with their why, OS vs track
-- Demo video, 3 minutes at most. (partly)
+- A demo video of 3 minutes at most. (partly)
 - A published Figma Make site (not built)
 - Weave art (not built)
 - A Figma Sites landing page (not built)

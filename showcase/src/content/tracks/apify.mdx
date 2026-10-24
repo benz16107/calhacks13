@@ -11,11 +11,11 @@ proof: 'The live run on Oct 23, on both the x86 and the ARM64 test VMs, started 
 criteriaSource: "Apify asks for meaningful use of Apify and judges overall quality; no detailed criteria were published. Quoted from the project's track plan. We are also entering Apify's Best Actor prize with our own published Actor, Agent-Safe Page Reader."
 criteria:
   - ask: 'A project that uses Apify meaningfully.'
-    how: 'Apify is how every agent on the box reaches the web. Three box tools run Actors: <code>apify.checkPrice</code> (Playwright Scraper on Best Buy Canada), <code>apify.findPlaces</code> (Google Maps Scraper) and <code>apify.run</code> (any Actor from the Store). The Visa shopping agent watches prices with the first, and the ASI:One chat agent searches the web with the third.'
+    how: 'Apify is how every agent on the computer reaches the web. Nine tools run Actors: Playwright Scraper for Best Buy Canada prices, Google Maps Scraper for places, Website Content Crawler for sites, our own page reader, Apify''s MCP server, and any Actor from the Store. The Visa shopping agent watches prices with them, and the Fetch.ai chat agent searches the web with them.'
   - ask: 'Overall quality.'
-    how: 'Each Actor was picked for a reason and tested live (below). Spending is capped twice, by Apify''s <code>maxTotalChargeUsd</code> and by the box''s per-task budget. Results are trimmed for the log, a token in a result is refused, and offline unit tests stub Apify so every merge runs them.'
+    how: 'Each Actor was picked for a reason and tested live. Spending is capped twice, by Apify''s <code>maxTotalChargeUsd</code> and by the task''s budget on the computer, with a request on your phone above it. A result that contains the token is refused. Offline tests stub Apify so every merge runs them.'
   - ask: 'Best Actor: our own published Actor.'
-    how: 'Agent-Safe Page Reader, our own Actor, reads a page and flags hidden instructions in it, with a risk score and the evidence, before an agent sees the text; every page read through the box goes through it. It is built, and its Apify Store page (apify.com/sacrosanct_zing/agent-safe-page-reader) is not public yet: Apify only lets an Actor go public once the account''s public profile is switched on in the Console, which is a setting the API cannot change. We will link it when it is live.'
+    how: 'Agent-Safe Page Reader is built, has run live on Apify, and every page read through the computer goes through it. It is <strong>not public yet</strong>: Apify only lets an Actor go public once the account''s public profile is switched on in the Console, which the API cannot do. Until Ben switches it on, the Store page returns not found and the source in the repo is the evidence.'
     status: partly
 clip: shopper
 video: visa
