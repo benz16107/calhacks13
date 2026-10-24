@@ -32,9 +32,9 @@ Checked against main `cee2d5e`, Sat Oct 24 03:27 PT. `./demo` on that tree: 26 p
 | verified (ISO) | 3 |
 | verified | 39 |
 | merged | 29 |
-| building | 16 |
-| planned | 41 |
-| **Total** | **128** |
+| building | 25 |
+| planned | 38 |
+| **Total** | **134** |
 
 **Collisions** (detail below): none open at 03:27. The three found at 02:25 are resolved and Business is on main. Still
 watched: portal/dist rebuilt from merged sources (C-4).
@@ -130,13 +130,19 @@ answers nothing until a person is picked from the top bar.
 | Credit desk window | credit desk | verified Oct 24 00:10 | 7cdd64e | credit-desk demo | Hyphenate |
 | Score against the answer key | credit desk | verified (2 of 14 with scripted seats, by design) | 525f630 | credit-desk demo | Hyphenate |
 | Bring your own case (folder or POST /run) | credit desk | merged | 7cdd64e | none | Hyphenate |
-| Reopened decisions | credit desk | planned | | | Hyphenate |
-| Defending decisions from the log | credit desk | building (worktree: history.ts, review.ts) | | | Hyphenate |
-| Crash-proof handoff between seats | credit desk | planned | | | Hyphenate |
-| Beancount books | credit desk | building (`credit-desk-data` branch 9c20d6c) | 9c20d6c | books.test.ts on branch | Hyphenate |
-| AP clerk with vendor-fraud catches | credit desk | building (branch data; worktree ap.ts) | 9c20d6c | | Hyphenate |
-| Bring-your-own-scenario upload | credit desk | planned | | | Hyphenate |
+| Reopened decisions: "Quick run January" shows Then (2026-10-23, from the log) beside Now (2027-01-22), 2 returned payments, $37,770 open; the cut to $7,500 waits for Rosa | credit desk | building (pending: the credit desk thread sends the commit tonight) | | credit-desk demo | Hyphenate |
+| Ask why: APP-1042 returns what the desk knew, the rules, who approved it and when, and "Does it still hold? No" after January | credit desk | building (pending: the credit desk thread sends the commit tonight) | | credit-desk demo | Hyphenate |
+| Crash-proof handoff between seats | credit desk, core | building (proven on a dev box, runs/2026-10-24-crash-handoff-853015; not in the gate until core adds a restart to DemoKit) | | none | Hyphenate |
+| Beancount books: the clerk's correction "fixes PMT-8812" is in the Books view; undoing the Collections clerk task removes it and leaves the AP payment | credit desk | building (`credit-desk-data` 9c20d6c, books.test.ts; Books view pending: the credit desk thread sends the commit tonight) | 9c20d6c | books.test.ts | Hyphenate |
+| Three seats: Quick run starts the Credit analyst, the Collections clerk and the AP clerk, all finishing after you approve | credit desk | building (pending: the credit desk thread sends the commit tonight) | | credit-desk demo | Hyphenate |
+| AP limits in code (Payables view): B-3315 refer as suspected fraud and never paid; B-3311 void as a duplicate; B-3304 paid (Nessie test money); B-3316 waits for a second person | credit desk | building (pending: the credit desk thread sends the commit tonight) | | credit-desk demo | Hyphenate |
+| Bring your own: pick a CRS test person (P12), Check it, then "Run it with Droid" (real Droid, about $0.50) | credit desk | building (pending: the credit desk thread sends the commit tonight; the Droid step needs Factory credit) | | none | Hyphenate, CRS |
 | Benchmark slice | credit desk | building (worktree bench/; subagent) | | | Hyphenate |
+| Deny with a reason: a reason box whose text reaches the seat (scripted seats end on a deny, so QA tests the box) | credit desk | building (pending: the credit desk thread sends the commit tonight) | | credit-desk demo | Hyphenate |
+| Letters: APP-1043 says only "We need to verify some information"; APP-1044 lists reasons, bureaus and "within 60 days"; C-1013 in January lists the returned payments | credit desk | building (pending: the credit desk thread sends the commit tonight) | | credit-desk demo | Hyphenate |
+| Impact view: minutes per application, bad credit stopped ($20,000 on a quick run), supplier payments stopped ($25,785), model cost per application, by-hand and simple-rule rows | credit desk | building (pending: the credit desk thread sends the commit tonight) | | credit-desk demo | Hyphenate, Microsoft |
+| On a Business box, signed in as Rosa on the box's screen, Approve and Deny in the desk window answer as her (`x-box-person`) | credit desk, business | building (pending: the credit desk thread sends the commit tonight) | | business edition | Hyphenate, Microsoft |
+| Privacy: an agent's copy of an application has no SSN, date of birth or guarantor name | credit desk | building (pending: the credit desk thread sends the commit tonight; fairness.test.ts) | | fairness.test.ts | Hyphenate, CRS |
 
 ## Visa (Shopper)
 
