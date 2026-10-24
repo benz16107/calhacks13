@@ -14,7 +14,7 @@ Devpost text, and Ben's approved list.
 **Demo step** names the check in `./demo` (`core/demo.ts` moments, or `tracks/<name>/demo.ts`). "none" means no
 automated check yet.
 
-Checked against main `3799b74`, Sat Oct 24 04:35 PT. `./demo` on that tree: 26 passed, 0 failed, 1 pending (real Droid, off by default).
+Checked against main `b418767`, Sat Oct 24 04:45 PT. `./demo` on that tree: 26 passed, 0 failed, 1 pending (real Droid, off by default).
 
 ## Freeze plan
 
@@ -30,11 +30,11 @@ Checked against main `3799b74`, Sat Oct 24 04:35 PT. `./demo` on that tree: 26 p
 | Status | Count |
 |---|---|
 | verified (ISO) | 3 |
-| verified | 40 |
-| merged | 38 |
-| building | 31 |
-| planned | 29 |
-| **Total** | **141** |
+| verified | 41 |
+| merged | 44 |
+| building | 26 |
+| planned | 28 |
+| **Total** | **142** |
 
 **Collisions** (detail below): none open at 03:27. The three found at 02:25 are resolved and Business is on main. Still
 watched: portal/dist rebuilt from merged sources (C-4).
@@ -196,17 +196,21 @@ answers nothing until a person is picked from the top bar.
 
 ## Atlassian (Jira, both tracks)
 
-Owner: the Jira thread.
+Owner: the Jira thread. On main as 21dad13, then c2249ad to 7cf9701; deployed to the Vultr box; Forge app redeployed.
+Gate: 22 Jira checks against offline stand-ins for Jira, JSM and Confluence. Live checks below are the Jira thread's
+(on the real site through Caddy); QA confirmed from outside only that Vultr's public routes still answer correctly
+(Oct 24 04:45: `/t/jira/task` 401 without the secret, `/t/mana/status` 200, everything else 404).
 
 | Feature | Owner | Status | Commit | Demo step | Tracks |
 |---|---|---|---|---|---|
-| Every task a Jira issue, Forge panel with Approve and Roll back, JQL fields | jira | merged (QA checked the public routes Oct 24 00:45; panel tested by the Jira thread) | c24a516, c82fcdb | tracks/jira/demo.ts | Atlassian Track 2 |
-| A Rovo agent with actions | jira | building (uncommitted in the Jira worktree, forge and track.ts) | | | Atlassian Track 1 and 2 |
-| Bulk roll back | jira | building (uncommitted in the Jira worktree) | | | Atlassian Track 2 |
-| Start agents from a Jira assignment or an Automation action | jira | building (uncommitted in the Jira worktree) | | | Atlassian Track 1 |
-| JSM approvals for risky actions | jira | planned | | | Atlassian Track 2 |
-| Confluence daily and incident reports | jira | building (uncommitted: confluence.ts, confluence.test.ts) | | confluence.test.ts in worktree | Atlassian Track 1 and 2 |
-| Jira dashboard gadget | jira | building (uncommitted in the Jira worktree) | | | Atlassian Track 2 |
+| Every task a Jira issue, Forge panel with Approve and Roll back, JQL fields | jira | verified Oct 24 00:45 (public routes) and by the Jira thread through the real panel | c24a516, c82fcdb | tracks/jira/demo.ts | Atlassian Track 2 |
+| A Rovo agent "GurtOS" with actions (asks what got blocked, rolls back by description after a confirmation, pauses) | jira | merged (live by the Jira thread: "what got blocked", "roll back everything the shopper did today" rolled back BOX-17 and BOX-18; the pause action checked by the gate only) | 21dad13, 7cf9701 | tracks/jira/demo.ts | Atlassian Track 1 and 2 |
+| Bulk roll back (Apps > "Roll back with GurtOS" on an issue search; a per-issue report) | jira | merged (live by the Jira thread: BOX-21 and BOX-22) | 21dad13, 7cf9701 | tracks/jira/demo.ts | Atlassian Track 2 |
+| Start agents from a Jira assignment, a label (`gurtos-agent`) or an Automation action | jira | merged (live: the label started a Droid task, with the result and diff as comments; the Automation action "Run in GurtOS" is deployed but not exercised live) | 21dad13, 7cf9701 | tracks/jira/demo.ts | Atlassian Track 1 |
+| JSM approvals for risky actions (SECOPS ticket; the box logs "approved by jira:<user> via JSM") | jira | merged (live: SECOPS-168 approved in JSM) | 21dad13, 7cf9701 | tracks/jira/demo.ts | Atlassian Track 2 |
+| Confluence daily and incident reports (space AGENTS: an incident page per blocked attempt, "What our agents did, <date>") | jira | merged (live by the Jira thread) | 21dad13, 7cf9701 | tracks/jira/demo.ts | Atlassian Track 1 and 2 |
+| Jira dashboard gadget ("GurtOS agents") | jira | merged (live: dashboard 10100) | 21dad13, 7cf9701 | tracks/jira/demo.ts | Atlassian Track 2 |
+| Jira-to-GurtOS people mapping in Business (accountId to a Business person, acting through `x-box-person`) | jira, business | merged (built; the gate skips it; Business is on main since 276bb32, so it can be tested now) | 7cf9701 | skip in tracks/jira/demo.ts | Atlassian, Hyphenate |
 
 ## Mana
 
