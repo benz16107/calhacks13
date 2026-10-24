@@ -14,7 +14,7 @@ Devpost text, and Ben's approved list.
 **Demo step** names the check in `./demo` (`core/demo.ts` moments, or `tracks/<name>/demo.ts`). "none" means no
 automated check yet.
 
-Checked against main `eecfc05`, Sat Oct 24 04:00 PT. `./demo` on that tree: 26 passed, 0 failed, 1 pending (real Droid, off by default).
+Checked against main `e78480c`, Sat Oct 24 04:10 PT. `./demo` on that tree: 26 passed, 0 failed, 1 pending (real Droid, off by default).
 
 ## Freeze plan
 
@@ -31,10 +31,10 @@ Checked against main `eecfc05`, Sat Oct 24 04:00 PT. `./demo` on that tree: 26 p
 |---|---|
 | verified (ISO) | 3 |
 | verified | 39 |
-| merged | 30 |
+| merged | 31 |
 | building | 29 |
 | planned | 39 |
-| **Total** | **140** |
+| **Total** | **141** |
 
 **Collisions** (detail below): none open at 03:27. The three found at 02:25 are resolved and Business is on main. Still
 watched: portal/dist rebuilt from merged sources (C-4).
@@ -100,6 +100,7 @@ watched: portal/dist rebuilt from merged sources (C-4).
 | GurtOS Setup (first boot) | personal | merged | 96ce0cb | none | |
 | Approvals as GNOME notifications, Ask an Agent in Files | personal | merged (owner verified) | 65679b2 | personal/demo.ts | |
 | Reach this computer from anywhere (Settings) | personal, remote access | merged | 1d64435, 6cdeb9a | remote access and push | |
+| Talk to your computer: Super+Alt+Space, answer as a notification and a local voice; voice approves only a request that spends nothing, signed `voice:<user>`; audio deleted after reading | personal | merged (selftest checks the safety rule; speech to text 1.1 s on CPU; QA has not heard it through a real microphone, and the Personal ISO must contain `/opt/box/voice-venv`, about 600 MB, from `voice-setup.sh`) | e78480c | personal/selftest.py | Moss |
 
 ## GurtOS Business (preview)
 
