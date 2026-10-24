@@ -24,6 +24,11 @@
   --sl-color-gray-6: #222c36;
   --sl-color-black: #171e25;
 
+  /* Notes use the accent, not Starlight's default indigo. */
+  --sl-color-blue-low: #203247;
+  --sl-color-blue: #3d6a9c;
+  --sl-color-blue-high: #cfe0f1;
+
   --diagram-ink: #f2efe8;
   --diagram-muted: #b9c0c8;
   --diagram-line: #6b7682;
@@ -51,6 +56,10 @@
   --sl-color-gray-6: #e6e7e1;
   --sl-color-gray-7: #fbfaf6;
   --sl-color-black: #f3f1ea;
+
+  --sl-color-blue-low: #dde8f2;
+  --sl-color-blue: #2d5784;
+  --sl-color-blue-high: #1e3d5e;
 
   --diagram-ink: #1c201d;
   --diagram-muted: #535a54;
