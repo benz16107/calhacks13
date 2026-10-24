@@ -47,7 +47,7 @@
   {
     "name": "credit-desk",
     "title": "Credit desk: the fraud hold waits for the controller",
-    "caption": "A quick run of the credit desk: CRS (sandbox, live) fails APP-1043's identity, the analyst puts it on fraud hold and waits for the controller, who approves on the box screen; the window then shows the decision and its rules. Scripted seats call the real tools with no model, so they catch 2 of 14 planted errors by design; the live Droid run caught 14 of 14. Test identities only.",
+    "caption": "A quick run of the credit desk: CRS (sandbox, live) fails APP-1043's identity, the analyst puts it on fraud hold and waits for the controller, who approves on the box screen; the window then shows the decision and its rules. Scripted seats call the real tools with no model, so they do not look for the planted errors; the live Droid run caught 16 of 17 (run bd5c61). Test identities only.",
     "seconds": 29.7,
     "width": 1600,
     "height": 900,
