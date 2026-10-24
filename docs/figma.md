@@ -20,7 +20,7 @@ notification, running tasks as Live Activities, and the task list. The clickable
 | Ideation board (FigJam) | https://www.figma.com/board/KvHiDv5HIJuGYOZDDkp8VG | Architecture, the four demo moments, the 25 tracks by slot, the moodboard |
 | Prototype (Figma Design) | Phone: https://www.figma.com/proto/oppzH621OOOMA31rgLbxbM/?node-id=23-304&starting-point-node-id=23%3A304 · Box: https://www.figma.com/proto/oppzH621OOOMA31rgLbxbM/?node-id=24-454&starting-point-node-id=24%3A454 | The two flows below, wired between the real screens |
 | Prototype (Figma Make) | https://www.figma.com/make/19hhCgh3CFsgfi1eBienAS | The same two flows as a small working web page, in direction A's tokens |
-| Pitch deck (Figma Slides) | added after the slides stage | |
+| Pitch deck (Figma Slides) | https://www.figma.com/slides/SBrJtJiY20k88X3IGzKwZW | 13 slides: OpenClaw's demand and security record (sourced), doing it by hand, the box, the four moments with their real screens, architecture, tracks, the Figma workflow |
 
 File key for MCP calls: `oppzH621OOOMA31rgLbxbM`. Open a node with
 `https://www.figma.com/design/oppzH621OOOMA31rgLbxbM/?node-id=<id with a dash>`.
