@@ -2,6 +2,8 @@
 import { Image } from 'astro:assets';
 import Landing from '../layouts/Landing.astro';
 import PhoneFrame from '../theme/PhoneFrame.astro';
+import WatchFrame from '../theme/WatchFrame.astro';
+import DisplayFrame from '../theme/DisplayFrame.astro';
 import { NAME, REPO, LICENSE_NAME } from '../product.ts';
 import server from '../assets/home/server-screen.png';
 import personal from '../assets/home/personal-everyday.png';
@@ -50,10 +52,8 @@ const core = [
 
       <article class="edition" id="server">
         <figure class="media rig">
-          <Image class="desk" src={server} alt="The GurtOS Server box screen: what needs you, what is running, what was spent today, and a dock of apps." widths={[720, 1440]} sizes="(max-width: 900px) 100vw, 640px" />
-          <div class="devs">
-            <div class="phone"><PhoneFrame src={homeLight} dark={homeDark} alt="The GurtOS iPhone app: three requests under Needs you, each with Deny and Approve." /></div>
-          </div>
+          <div class="desk"><DisplayFrame src={server} alt="The GurtOS Server box screen: what needs you, what is running, what was spent today, and a dock of apps." /></div>
+          <div class="phone"><PhoneFrame src={homeLight} dark={homeDark} alt="The GurtOS iPhone app: three requests under Needs you, each with Deny and Approve." /></div>
         </figure>
         <div class="text">
           <h3><span class="dot server" aria-hidden="true"></span>{NAME} Server</h3>
@@ -66,13 +66,9 @@ const core = [
 
       <article class="edition" id="personal">
         <figure class="media rig">
-          <Image class="desk" src={personal} alt="GurtOS Personal in everyday use: mail, a browser and Files open, while the GurtOS app and a notification ask to approve a $42.10 grocery order." widths={[720, 1440]} sizes="(max-width: 900px) 100vw, 640px" />
-          <div class="devs">
-            <div class="phone"><PhoneFrame src={approvalLight} dark={approvalDark} alt="A request on the iPhone: Buy a GPU hour, $8, with Deny and Approve $8." /></div>
-            <div class="watch">
-              <Image src={watch} alt="The GurtOS Apple Watch app: Buy a GPU hour, $8, with a red deny and a green approve button." widths={[140, 280]} sizes="(max-width: 900px) 20vw, 100px" />
-            </div>
-          </div>
+          <div class="desk"><DisplayFrame src={personal} alt="GurtOS Personal in everyday use: mail, a browser and Files open, while the GurtOS app and a notification ask to approve a $42.10 grocery order." /></div>
+          <div class="phone"><PhoneFrame src={approvalLight} dark={approvalDark} alt="A request on the iPhone: Buy a GPU hour, $8, with Deny and Approve $8." /></div>
+          <div class="watch"><WatchFrame src={watch} alt="The GurtOS Apple Watch app: Buy a GPU hour, $8, with a red deny and a green approve button." /></div>
         </figure>
         <div class="text">
           <h3><span class="dot personal" aria-hidden="true"></span>{NAME} Personal</h3>
@@ -85,10 +81,8 @@ const core = [
 
       <article class="edition" id="business">
         <figure class="media rig">
-          <Image class="desk" src={businessDesktop} alt="GurtOS Business: a $40,000 credit line Sam asked for waits for Rosa, the Controller, on her desktop." widths={[720, 1440]} sizes="(max-width: 900px) 100vw, 640px" />
-          <div class="devs">
-            <div class="phone"><PhoneFrame src={businessPhone} inset edge="#edebe6" alt="The same $40,000 credit line on Rosa's phone, with Deny and Approve $40,000." /></div>
-          </div>
+          <div class="desk"><DisplayFrame src={businessDesktop} alt="GurtOS Business: a $40,000 credit line Sam asked for waits for Rosa, the Controller, on her desktop." /></div>
+          <div class="phone"><PhoneFrame src={businessPhone} inset edge="#edebe6" alt="The same $40,000 credit line on Rosa's phone, with Deny and Approve $40,000." /></div>
         </figure>
         <div class="text">
           <h3><span class="dot business" aria-hidden="true"></span>{NAME} Business</h3>
@@ -131,19 +125,17 @@ const core = [
   .section-h { font-size: var(--gw-h2); }
   .edition { display: grid; gap: 1.5rem 3rem; padding: 2rem 0; border-top: 1px solid var(--gw-rule); align-items: center; }
   .media { margin: 0; }
-  .media .desk { width: 100%; min-width: 0; border: 1px solid var(--gw-rule); border-radius: 6px; }
-  /* The desktop screenshot and the devices sit side by side, so nothing covers any text. */
-  .rig { display: grid; grid-template-columns: 1fr; gap: 0.9rem; align-items: end; container-type: inline-size; }
-  .devs { display: flex; align-items: flex-end; gap: 3cqw; }
-  .devs .phone { width: 28cqw; }
-  .devs .watch { position: relative; width: 20cqw; }
-  .devs .watch::after { content: ''; position: absolute; right: -2.5%; top: 30%; width: 3.5%; height: 18%; background: #2a2f35; border-radius: 0 3px 3px 0; }
-  .devs .watch img { width: 100%; display: block; border: clamp(3px, 0.5vw, 6px) solid #1d2126; border-radius: clamp(16px, 3.4vw, 38px); box-shadow: 0 0 0 1px #5b6672; background: #000; }
-  @media (min-width: 640px) {
-    .rig { grid-template-columns: 1fr auto; }
-    .devs .phone { width: 15.5cqw; }
-    .devs .watch { width: 11.5cqw; }
-    .devs { gap: 1.6cqw; }
+  /* Devices overlap a little: the phone covers only the display's right bezel and edge, and the watch only the
+     phone's right edge beside an empty part of its screen. Sizes are shares of the figure, so every row is the same. */
+  .rig { position: relative; container-type: inline-size; }
+  .rig .desk { width: 75cqw; margin-bottom: 5cqw; }
+  .rig .phone { position: absolute; left: 72.8cqw; bottom: 0; width: 17cqw; }
+  .rig .watch { position: absolute; left: 88.6cqw; top: 33.4cqw; width: 11cqw; }
+  @media (max-width: 639px) {
+    .rig { display: flex; flex-wrap: wrap; justify-content: center; align-items: flex-start; }
+    .rig .desk { width: 100cqw; margin-bottom: 4cqw; }
+    .rig .phone { position: static; width: 36cqw; }
+    .rig .watch { position: static; width: 24cqw; margin: 35cqw 0 0 -2.5cqw; }
   }
   .more { margin-top: 0.5rem; font-size: var(--gw-text-sm); }
   .core { list-style: none; padding: 0; margin: 0; color: var(--gw-ink-2); }

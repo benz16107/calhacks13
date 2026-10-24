@@ -1,0 +1,38 @@
+---
+// The GurtOS watch frame, shared by the GurtOS sites: an Apple Watch Series 10 shape, with a rounded rectangle case,
+// a thin bezel, the Digital Crown and side button on the right, and short band stubs. Only a real screenshot goes
+// inside, at the watch's own 416 by 496 screen shape. The frame fills the width of its parent, crown included.
+import { Image } from 'astro:assets';
+import type { ImageMetadata } from 'astro';
+
+interface Props {
+  src: ImageMetadata;
+  alt: string;
+  sizes?: string;
+}
+const { src, alt, sizes = '(max-width: 900px) 24vw, 100px' } = Astro.props;
+---
+<div class="gw-watch">
+  <div class="gw-watch-body">
+    <span class="gw-band gw-band-top" aria-hidden="true"></span>
+    <span class="gw-band gw-band-bottom" aria-hidden="true"></span>
+    <span class="gw-crown" aria-hidden="true"></span>
+    <span class="gw-side" aria-hidden="true"></span>
+    <div class="gw-watch-case">
+      <div class="gw-watch-screen"><Image src={src} alt={alt} widths={[160, 320, 416]} sizes={sizes} /></div>
+    </div>
+  </div>
+</div>
+
+<style is:global>
+  .gw-watch { container-type: inline-size; width: 100%; }
+  .gw-watch-body { position: relative; padding: 9cqw 12cqw 9cqw 0; }
+  .gw-watch-case { position: relative; z-index: 1; padding: 3.4cqw; background: #16191d; border-radius: 18cqw; box-shadow: 0 0 0 1px #5b6672; }
+  .gw-watch-screen { aspect-ratio: 416 / 496; border-radius: 14.6cqw; overflow: hidden; background: #000; }
+  .gw-watch-screen img { display: block; width: 100%; height: 100%; object-fit: cover; border: 0; border-radius: 0; }
+  .gw-band { position: absolute; left: 14cqw; width: 60cqw; height: 13cqw; background: #2a2f36; box-shadow: 0 0 0 1px #5b6672; }
+  .gw-band-top { top: 0; border-radius: 3cqw 3cqw 0 0; }
+  .gw-band-bottom { bottom: 0; border-radius: 0 0 3cqw 3cqw; }
+  .gw-crown { position: absolute; left: 85cqw; top: 31cqw; width: 10cqw; height: 20cqw; border-radius: 2.5cqw; background: repeating-linear-gradient(to bottom, #3b4149 0 1.4cqw, #252a30 1.4cqw 2.8cqw); box-shadow: 0 0 0 1px #5b6672; }
+  .gw-side { position: absolute; left: 86cqw; top: 61cqw; width: 5.5cqw; height: 24cqw; border-radius: 2cqw; background: #2a2f36; box-shadow: 0 0 0 1px #5b6672; }
+</style>
