@@ -6,7 +6,7 @@ editions: 'GurtOS Business'
 pitch: 'Companies want agents on finance work, but an ordinary OS gives an agent its owner''s keys, no separation of duties, no record and no undo, so pilots stay pilots. GurtOS Business gives each seat its own user, routes approvals to the right person, keeps a full audit and a kill switch, on a box the company owns. Next (being built): shadow mode, Entra ID sign-in, measured impact, a Responsible AI mapping, sourced facts and an incident drill. GurtOS Business is on main: people and roles, approvals routed by rules written in plain words, refusals for answering your own request or above your limit, a Waiting for me inbox, an audit with CSV export and a kill switch. Sign-in with work accounts and shadow mode are not built. The scored credit desk runs were on GurtOS Server; the Business screens are from a box seeded as the made-up Fogline Supply.'
 title: A finance agent with a path to production
 summary: 'Companies want agents doing finance work, but an ordinary operating system gives an agent its owner''s keys, no separation of duties, no record and no undo, so pilots never reach production. The credit desk is a small wholesaler''s credit analyst agent and collections clerk agent with a human controller, and GurtOS is its path to production: each seat is its own Linux user without keys, every action lands in an append-only log, approvals reach a phone, and the box picks up where it was after a power cut. It runs on a computer the company owns.'
-proof: 'Scored from the action log against an answer key, the latest live run caught <strong>14 of 14 planted errors with 0 false alarms</strong> and decided all 6 credit applications as the key does. A simple rule on the same CRS data approves all six for $153,000, including $20,000 to a fake applicant whose $18,500 rush order would have shipped to a freight forwarder.'
+proof: 'Scored from the action log against an answer key, the latest live run caught <strong>every planted error of the original 14-error case with 0 false alarms</strong> (the answer key has since grown to 19; tonight''s live run on it is being scored) and decided all 6 credit applications as the key does. A simple rule on the same CRS data approves all six for $153,000, including $20,000 to a fake applicant whose $18,500 rush order would have shipped to a freight forwarder.'
 criteriaSource: "From Microsoft's track description and judging criteria, as copied into the project's track plan (docs/tracks.md)."
 video: hyphenate
 clip: credit-desk
@@ -16,7 +16,7 @@ criteria:
   - ask: 'Customer understanding.'
     how: 'A small wholesaler''s credit desk is one or two people doing credit checks and collections by hand, where one fake customer or one misapplied payment costs real money. The case is built from those everyday failures: a synthetic identity, a payment applied to the wrong customer, a post-dated check booked as cash, an invoice billed twice, a limit nobody reviewed in 29 months.'
   - ask: 'Measurable usefulness.'
-    how: 'Every run is scored from its log: planted errors caught out of 14, false alarms, and decisions matched on 6 applications, 11 customers and 6 orders. Three live Droid runs caught 13, 13 and 14 of 14 and decided all six applications right. The simple rule is the baseline on the same data.'
+    how: 'Every run is scored from its log: planted errors caught out of 14, false alarms, and decisions matched on 6 applications, 11 customers and 6 orders. Three live Droid runs on the original 14-error case caught 13, 13 and all 14 and decided all six applications right; the key has since grown and a new run is being scored. The simple rule is the baseline on the same data.'
   - ask: 'Path to production.'
     how: 'It runs on GurtOS: each seat is its own Linux user with its own copy of the files, keys stay in a root-only vault, every action is in an append-only log, approvals reach a phone, the box resumes after a power cut, and the OS updates as a whole and rolls itself back. The rules are a file, so the controller changes policy without code.'
   - ask: 'Responsible design.'
@@ -58,7 +58,7 @@ shots:
 links:
   - label: The credit desk's code and README
     href: https://github.com/benz16107/calhacks13/tree/main/tracks/credit-desk
-  - label: Live run 73c47b (14 of 14)
+  - label: Live run 73c47b (original case)
     href: https://github.com/benz16107/calhacks13/tree/main/tracks/credit-desk/runs/2026-10-24-live-73c47b-rules-0.2
     note: 'The analyst''s and clerk''s reports, the score and the run''s action log.'
   - label: The answer key
@@ -166,7 +166,7 @@ A company that switches an agent on has to ask what an insider or a third-party 
 |---|---|---|---|---|---|---|---|
 | `88d75b` | 0.1 draft | 13 of 14 | 1 | 6 of 6 | 9 of 11 | 6 of 6 | 9 min, about $1.50 |
 | `6f5c0b` | 0.2 (Mana) | 13 of 14 | 1 | 6 of 6 | 9 of 11 | 6 of 6 | 9 min, about $3.54 |
-| **`73c47b`** | 0.2, seats told to record follow-ups | **14 of 14** | **0** | **6 of 6** | 9 of 11 | 5 of 6 | 13 min, about $4.67 |
+| **`73c47b`** | 0.2, seats told to record follow-ups | **every one of the original 14** | **0** | **6 of 6** | 9 of 11 | 5 of 6 | 13 min, about $4.67 |
 
 </div>
 

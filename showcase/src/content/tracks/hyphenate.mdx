@@ -6,7 +6,7 @@ editions: 'GurtOS Business'
 pitch: 'A finance team needs roles, segregation of duties and an audit trail on every agent decision, which is what Business adds: who may approve what, up to how much. GurtOS Business is on main: people and roles, approvals routed by rules written in plain words, refusals for answering your own request or above your limit, a Waiting for me inbox, an audit with CSV export and a kill switch. Sign-in with work accounts and shadow mode are not built. The scored credit desk runs were on GurtOS Server; the Business screens are from a box seeded as the made-up Fogline Supply.'
 title: A credit desk that catches the fake applicant a simple rule would approve
 summary: 'Companies want AI employees, but today''s computers and clouds were not built for them. An agent runs as you, with your keys, on one shared filesystem, with no separation of duties, no record you can trust and no undo, so nobody lets one do real finance work. GurtOS is an environment for AI employees. Here, two of them run the trade-credit desk of Fogline Supply Co., a made-up Oakland wholesaler: a credit analyst checks new customers through CRS, and a collections clerk works the ledger against the bank, Capital One''s Nessie. Each has its own Linux user and its own copy of the files, never sees a password, and cannot approve its own work. A human controller signs off above $10,000 and on every fraud referral.'
-proof: 'Live Droid run <code>73c47b</code>, scored from the action log against the answer key: <strong>14 of 14 planted errors caught, 0 false alarms, 6 of 6 credit decisions right</strong> (outcome, band, limit and terms). It held APP-1043, a synthetic identity that a simple rule approves for $20,000.'
+proof: 'Live Droid run <code>73c47b</code>, scored from the action log against the answer key: <strong>every planted error of the original 14-error case caught, 0 false alarms, 6 of 6 credit decisions right</strong> (the answer key has since grown to 19 planted errors; tonight''s live run on it is being scored) (outcome, band, limit and terms). It held APP-1043, a synthetic identity that a simple rule approves for $20,000.'
 criteriaSource: "From Hyphenate's brief, as copied into the project's track plan (docs/tracks.md)."
 criteria:
   - ask: 'An autonomous system for one corner of a company''s finance team, plus the company around it.'
@@ -45,11 +45,26 @@ shots:
   - src: ../../assets/track/hyphenate/analyst-decision.png
     alt: 'The decision step: fraud hold, 0 dollars, cash in advance, decided by the controller on the phone, rules FRD-1 and FRD-2, with seven CRS request ids.'
     caption: 'After the controller''s yes on the phone: the decision is recorded with its rules, who approved, and the request ids of all seven CRS checks.'
+  - src: ../../assets/track/hyphenate/desk-review-then-vs-now.png
+    alt: 'The Reviews tab, January: the analyst proposes to reduce Bright Harbor Catering from $40,000 to $7,500 on Net 15 for the controller, with October''s decision from the log on the left and the position now on the right, where two returned payments mean the customer really owes $37,770.'
+    caption: 'Reviews: three months later two payments bounce, and the desk reopens October''s $40,000 decision from its own log, beside what is true now. The reduction goes back to Rosa. Scripted seats, a quick run.'
+  - src: ../../assets/track/hyphenate/desk-ask-why.png
+    alt: 'The Ask why tab for APP-1042: what the desk knew when it decided on 2026-10-23, the rules BND-A, LIM-1 and SOD-2, who approved and when, and that it no longer holds as of 2027-01-22.'
+    caption: 'Ask why: "why did we decide this, and does it still hold?" answered from the box''s log alone, with the CRS request ids behind it.'
+  - src: ../../assets/track/hyphenate/desk-payables.png
+    alt: 'The Payables tab: the AP clerk''s steps and the supplier bills, with a bill from a supplier whose bank details changed by email marked refer as suspected fraud, waiting on the controller.'
+    caption: 'Payables: the AP clerk pays a bill, voids a duplicate, and refers B-3315, whose bank details changed from a lookalike email, instead of paying it. Every payment is Nessie sandbox test money.'
+  - src: ../../assets/track/hyphenate/desk-books.png
+    alt: 'The Books tab: balances from the Beancount ledger and the entries each seat posted through the desk, each with its log entry number.'
+    caption: 'Books: a Beancount ledger where entries reach the books only through the desk, each tied to its log entry. A fix is a new entry, and undoing a task takes its entries out.'
+  - src: ../../assets/track/hyphenate/desk-bring-your-own.png
+    alt: 'The Bring your own tab: a form to type a credit application on one of CRS''s 20 test people, or upload case files, and a message that the case is valid.'
+    caption: 'Bring your own: type an application on one of CRS''s 20 test people, or upload case files. The case is checked before anything runs.'
 links:
   - label: The credit desk's code and README
     href: https://github.com/benz16107/calhacks13/tree/main/tracks/credit-desk
     note: 'Tools, seats, scorer, the planted case and the rules.'
-  - label: Live run 73c47b, the 14 of 14 run
+  - label: Live run 73c47b, the original-case run
     href: https://github.com/benz16107/calhacks13/tree/main/tracks/credit-desk/runs/2026-10-24-live-73c47b-rules-0.2
     note: 'Both seats'' reports, <code>score.json</code> and the run''s full action log (440 lines).'
   - label: The answer key
@@ -126,6 +141,13 @@ the same for any agent on the box.
 | A crash mid-run resumes where it was, with nothing paid or recorded twice | GurtOS | Shipped for tasks and approvals (moment 4) |
 | Pause every agent at once | GurtOS (Personal's pause and Business's kill switch are one switch) | Shipped |
 | People, roles, policy-routed approvals, a "Waiting for me" inbox, an Audit view with CSV export | GurtOS Business | Shipped, shown on a Business box seeded as Fogline Supply with scripted seats and sandbox data. The scored runs below were on GurtOS Server |
+| A decision reopened from the log months later: two payments bounce in January, the analyst finds October's $40,000 decision in the log (what the task knew, the rules, who approved) and proposes a cut that goes back to the controller | A decision made in October is not final | GurtOS (the append-only log, approvals) and the desk (rule REV-6) | Shipped. Shown with scripted seats in a quick run |
+| Ask why: "why did we decide this, and does it still hold?" answered from the log alone | An auditor can ask months later and get one answer | GurtOS (the log) and the desk (the why route) | Shipped |
+| A third seat, the AP clerk, pays suppliers with its limits in code: no duplicate payment (AP-3), no paying a bill it entered itself without a second person (AP-1), the controller above 5,000 (AP-2), no payment to bank details changed by email without a confirming call (AP-4) | One more role done with the same depth, and an attack on it: a bank change from a lookalike email | The desk, enforced by tools on GurtOS seats | Shipped. The key plants a duplicate invoice and the lookalike bank change |
+| Real books in Beancount: entries reach them only through the desk's books tool, rebuilt from the log; a fix is a new entry linked to what it corrects; undoing a task takes its entries out | A reversal and a repost, not an edit | GurtOS (the log, undo of one task) and the desk (the books tool) | Shipped. The ledger passes bean-check |
+| A no carries a reason: Deny asks for one, and the seat revises instead of asking again | A system of work handles a rejection | The desk | Shipped |
+| Bring your own: an application on one of CRS's 20 test people, or uploaded case files, checked first | A judge can try a case of their own | The desk | Shipped. The guarantor must be one of CRS's test people |
+| A public benchmark slice: the 10 public DABstep dev questions run through GurtOS tasks, 7 of 10 correct, one attempt each with no network, about $3.22 of model use | Proof beyond our own planted case | The desk (`bench/`) on GurtOS tasks | Shipped. A slice, not a leaderboard entry |
 | Credit rules, the planted case, the scorer, the Credit desk window | The desk | Shipped |
 
 ## Real attacks on financial companies
@@ -150,7 +172,7 @@ answered the controller's questions yes. Each run's reports, score and log are i
 |---|---|---|---|---|---|---|---|
 | `88d75b` | 0.1 draft | 13 of 14 | 1 | 6 of 6 | 9 of 11 | 6 of 6 | 9 min, about $1.50 |
 | `6f5c0b` | 0.2 (Mana) | 13 of 14 | 1 | 6 of 6 | 9 of 11 | 6 of 6 | 9 min, about $3.54 |
-| **`73c47b`** | 0.2, seats told to record follow-ups | **14 of 14** | **0** | **6 of 6** | 9 of 11 | 5 of 6 | 13 min, about $4.67 |
+| **`73c47b`** | 0.2, seats told to record follow-ups | **every one of the original 14** | **0** | **6 of 6** | 9 of 11 | 5 of 6 | 13 min, about $4.67 |
 
 </div>
 

@@ -16,7 +16,7 @@ criteria:
   - ask: 'One thing that works and is usable Monday.'
     how: 'On an Ubuntu 24.04 machine, <code>sudo core/install.sh</code> installs the box service, Droid and SpacetimeDB, and the portal opens at <code>http://&lt;box&gt;:7700/</code>. Add one model key (Anthropic or Factory) and start a task from the portal, a phone, a schedule or a webhook. The bootable image installs on a blank disk in about a minute (tested in QEMU, x86 BIOS and UEFI, and ARM64).'
   - ask: 'Claude doing something that matters.'
-    how: 'Claude does the work in every task: fixes code and runs its tests, reads receipts and proposes a reorder, works a credit desk with live CRS and bank data (14 of 14 planted errors caught in its best run), describes photos for search. Each tool call is a step in the log, and its model cost is priced from real token counts.'
+    how: 'Claude does the work in every task: fixes code and runs its tests, reads receipts and proposes a reorder, works a credit desk with live CRS and bank data (every planted error of the original case caught in its best run; the key has grown and a new run is being scored), describes photos for search. Each tool call is a step in the log, and its model cost is priced from real token counts.'
   - ask: 'Knowing where it could go wrong.'
     how: 'The page names three failures: injected pages, wrong edits and spending. Each has a control the merge gate checks on every run (below). The limits the box does not cover yet, such as a shared kernel and a log that root can edit, are listed at the end of this page.'
 video: main
@@ -131,8 +131,8 @@ The three failures this community worries about, and what the same run checked:
 
 Claude at work on real jobs, from the other tracks' live runs:
 
-- **A finance desk.** Two Claude seats worked a planted case against live CRS and bank data. The best run caught 14
-  of 14 planted errors with no false alarms and decided all 6 applications as the answer key does
+- **A finance desk.** Two Claude seats worked a planted case against live CRS and bank data. The best run caught every
+  planted error of the original 14-error case with no false alarms and decided all 6 applications as the answer key does
   ([Hyphenate page](/tracks/hyphenate/)).
 - **A coding fix from a chat.** "Fix the failing test in my project" from ASI:One: Claude ran the tests, fixed the
   bill-splitting bug and sent back the diff for $0.05 ([Fetch.ai page](/tracks/fetch/)).

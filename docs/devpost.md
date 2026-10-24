@@ -96,7 +96,7 @@ work beside you on copies of your folders, with approvals as GNOME notifications
 **GurtOS Business** shares one box across a team: people with roles, approvals routed by rules in plain words, a Waiting for me inbox, an audit with CSV export and a kill switch (built and on main; sign-in with work accounts and shadow mode are not built).
 
 **Proof.** The merge gate, `./demo`, starts a fresh box on a test VM and runs the four moments and every app: on Oct 24
-it passed all 24 sections, 266 checks, 0 failed (its real-Droid section is off while Factory credit is short, and last passed earlier that day). The credit desk caught 14 of 14 planted finance errors with 0 false
+it passed all 24 sections, 266 checks, 0 failed (its real-Droid section is off while Factory credit is short, and last passed earlier that day). The credit desk caught every planted finance error of the original 14-error case with 0 false
 alarms. A running Droid task held only a placeholder key in 240 of 240 process samples.
 
 ![The same approval on a phone, and the task as a Jira issue](https://calhacks.gurtos.com/devpost/3-phone-and-jira.png)
@@ -167,11 +167,13 @@ Forge app: `jira:issuePanel` (UI Kit), a resolver that reads the task as the sig
 
 **The demo: a credit desk for Fogline Supply Co.**, a made-up Oakland wholesaler. One line on the seats: a credit analyst agent and a collections clerk agent, with a human controller who signs off above $10,000 and on every fraud referral. The analyst checks new customers through CRS; the clerk works the ledger against the bank (Capital One's Nessie).
 
-**Proof:** Live Droid run 73c47b, scored from the action log against the answer key: 14 of 14 planted errors caught, 0 false alarms, 6 of 6 credit decisions right. It held APP-1043, a synthetic identity a simple rule approves for $20,000.
+**Proof:** Live Droid run 73c47b, scored from the action log against the answer key: every planted error of the original 14-error case caught, 0 false alarms, 6 of 6 credit decisions right (the answer key has since grown to 19 planted errors; tonight's live run on it is being scored). It held APP-1043, a synthetic identity a simple rule approves for $20,000.
 
 **From the OS, not the desk:** separate users and file copies per seat, keys in a root-only vault, the approval pause, the append-only log, undo, resume after a crash, and pause-all. **From the desk:** the credit rules, tool-level segregation of duties, the planted case and the scorer.
 
-Answer key: `tracks/credit-desk/cases/fogline-2026-10/answer_key.json` (14 planted errors, 7 false-alarm traps). Try it in the Credit desk window: Quick run (scripted seats, live CRS and Nessie, 10 seconds) stops on APP-1043 for your OK. Bring your own case: drop the folder under `cases/` on the box and pick it in the window. The video opens on the APP-1043 moment.
+**Also on main, shown with scripted seats in the Credit desk window:** Reviews (three months later two of Bright Harbor's payments bounce, and the desk reopens October's $40,000 decision from the box's log, beside what is true now, and sends a cut back to the controller), Ask why ("why did we decide this, and does it still hold?" answered from the log alone), Payables (an AP clerk seat with limits in code that refuses a bank change from a lookalike email), Books (a Beancount ledger that changes only through the desk, each entry tied to its log entry), a Deny that carries a reason, and Bring your own (an application on one of CRS's 20 test people, or uploaded case files). A public benchmark slice, the 10 public DABstep dev questions run through GurtOS tasks, scored 7 of 10 (a slice, not a leaderboard entry). The new live score on the grown answer key is being scored and is not quoted here yet.
+
+Answer key: `tracks/credit-desk/cases/fogline-2026-10/answer_key.json` (the planted errors and the false-alarm traps; the key has grown since the first scored run). Try it in the Credit desk window: Quick run (scripted seats, live CRS and Nessie, 10 seconds) stops on APP-1043 for your OK. Bring your own case: drop the folder under `cases/` on the box and pick it in the window. The video opens on the APP-1043 moment.
 
 GurtOS is open source (Apache-2.0): anyone can run it, customise it and reuse this desk in their own agents.
 
@@ -228,7 +230,7 @@ Being built, not on main yet: shadow mode and a one-week pilot plan, Entra ID si
 
 **Customer Impact Award:** the customer is the controller at a small business. The desk stops the one application that would have cost $20,000 of credit and brings only the decisions that need a person to a phone. Fogline Supply Co. is made up and no money moves.
 
-**Proof:** Three live runs caught 13, 13 and 14 of 14 planted errors and decided all six applications right. A simple rule on the same data approves all six for $153,000, including $20,000 to a fake applicant.
+**Proof:** Three live runs on the original 14-error case caught 13, 13 and all 14 planted errors and decided all six applications right; the key has since grown and a new run is being scored. A simple rule on the same data approves all six for $153,000, including $20,000 to a fake applicant.
 
 [Full write-up, video and evidence →](https://calhacks.gurtos.com/tracks/microsoft/)
 

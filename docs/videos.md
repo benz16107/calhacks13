@@ -148,10 +148,10 @@ the showcase's Hyphenate page).
 | 0:55 | Tasks window: two seats running side by side, each "runs as box-..." | "GurtOS is an environment for AI employees. Each seat is its own Linux user with an instant copy-on-write copy of the files, so both work in parallel without colliding, and nothing is duplicated. That's the OS, not the app." |
 | 1:10 | A seat's task window: "What it was allowed", tools only, no hosts; the log line showing CRS ran in the core | "No seat ever sees a password. The CRS and bank keys stay in the vault; the OS makes the call for it." |
 | 1:25 | A tool refusing: the clerk can't release a credit hold; the analyst can't approve $40,000 alone | "The desk decides who may do what. The OS makes them stop and ask." |
-| 1:40 | The case files and the answer key's 14 planted errors | "The data is messy on purpose: fourteen planted errors and seven traps that look wrong but aren't." |
+| 1:40 | The case files and the answer key's planted errors (the key has grown since the first scored run; take the count from tonight's scored run) | "The data is messy on purpose: planted errors and traps that look wrong but aren't." |
 | 1:55 | Nessie deposits against the ledger: PMT-8812 applied to the wrong invoice | "The collections clerk reconciles the ledger against the bank, Capital One's Nessie." |
 | 2:10 | One decision in the log: rule ids, the 7 CRS request ids, who approved | "Every decision carries its rules, its data and who approved it, in an append-only log from the OS." |
-| 2:25 | Score: 14 of 14, 0 false alarms, 6 of 6 decisions (live Droid run 73c47b) | "A full live run with Claude: fourteen of fourteen, no false alarms." |
+| 2:25 | Score from tonight's live run on the grown key (the older run 73c47b was on the original 14-error case; do not quote 14 of 14 as current) | "A full live run with Claude, scored against the key." |
 | 2:40 | The case menu in the Credit desk window | "Bring your own case: drop a folder on the box and run it." |
 | 2:50 | If GurtOS Business has merged: Waiting for me, the routed approval, Audit and its CSV, the kill switch. If not, skip this shot | "In GurtOS Business, approvals route to the right person by role, and the whole company sees the audit trail." |
 
