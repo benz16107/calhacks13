@@ -32,9 +32,9 @@ Checked against main `7fe6651`, Sat Oct 24 08:09 PT. `./demo` from a clean workt
 |---|---|
 | verified (ISO) | 3 |
 | verified | 56 |
-| merged | 129 |
+| merged | 130 |
 | building | 4 |
-| planned | 1 |
+| planned | 0 |
 | not pursued | 5 |
 | **Total** | **198** |
 
@@ -211,7 +211,7 @@ controller's clear-the-flag path (FRR-5), an ASI:One chat intent for credit.
 | Onramp top-up | wallet | merged (Coinbase Onramp, sandbox only) | adf801a | | Coinbase |
 | Daily Solana log fingerprint | wallet | merged (a daily chained fingerprint of the action log written to Solana devnet, with a verify route) | adf801a, 9482cfd, 36c48d4 | | Solana |
 | Payment memos | wallet | merged (the task id on every payment) | adf801a | | Solana |
-| Box-to-box payments | wallet | planned | | | Solana, Coinbase |
+| Box-to-box payments: box A's agent quotes and pays box B's public /t/wallet/sell/audit route through A's broker (cost, approval, task budget, action log); A's wallet signs, Coinbase's CDP facilitator settles on Solana devnet, B logs the sale. Test network only. Limit: in the demo "the other box" is a second shop in the same run with the test payee's wallet, not a second machine. The real boxes share one wallet key and the facilitator refuses self payment (self_send_not_allowed), so a real machine-to-machine payment needs a different key in one vault; not done before the freeze. A second wallet did buy /sell/audit and /sell/search from the public Vultr box, both settled | wallet | merged | adf801a | box to box: this box's agent paid the other box $0.01 and got its audit proof | Solana, Coinbase |
 | One shared budget and approval layer with Fetch | wallet, fetch | merged (Fetch's payments use the same budget and approval path; "One path each") | b3c548b | | Coinbase, Fetch.ai |
 
 ## Atlassian (Jira, both tracks)
