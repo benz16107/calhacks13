@@ -2,8 +2,9 @@
 // analyst and a collections clerk) do it, and the policy sends what they ask to Rosa, the controller, on her own phone.
 // Offline: the seats are the scripted worker, so no model or sponsor API is called. It proves the rules: nobody
 // approves their own request, nobody approves above their limit, only the controller clears a fraud referral, no
-// agent approves, an auditor only reads, every event names who asked, which seat and who approved, and the kill
-// switch stops every agent. It turns Business on for its own steps and off again, so no other step sees it.
+// agent approves, an auditor only reads, every event names who asked, which seat and who approved, the kill switch
+// stops every agent, and a seat in shadow mode only suggests until the policy says it may go live. It turns Business
+// on for its own steps and off again, so no other step sees it.
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -81,8 +82,8 @@ async function steps(d: DemoKit, send: (h: Record<string, string>, m: string, p:
 
   // ---------- Sam asks; the seats work; the policy routes what they ask ----------
   d.workspace('fogline-business', { 'README.md': 'Fogline Supply Co., credit and collections' });
-  const start = async (who: Caller, seat: string, title: string, prompt: string): Promise<Task> =>
-    ok(await who('POST', '/api/tasks', { title, seat, prompt, worker: 'fake', workspace: 'fogline-business' }), `start ${title}`);
+  const start = async (who: Caller, seat: string, title: string, prompt: string, more: object = {}): Promise<Task> =>
+    ok(await who('POST', '/api/tasks', { title, seat, prompt, worker: 'fake', workspace: 'fogline-business', ...more }), `start ${title}`);
   const big = await start(sam, 'Credit analyst', 'Credit analyst: APP-1042', "say CRS: guarantor credit 790, band A; identity verified; Fraud Finder no reasons\nask Credit desk [APP-1042 approve 40000]: approve Bright Harbor Catering Inc. (APP-1042) for $40,000, Net 30, band A? Proposed by the credit analyst; above the analyst's $10,000 authority. Rules: BND-A, LIM-1.\nwrite APP-1042.txt approved, $40,000 Net 30");
   const fraud = await start(sam, 'Credit analyst', 'Credit analyst: APP-1043', 'ask Credit desk: fraud referral. Put Pacific Crest Provisions LLC (APP-1043) on fraud hold, no credit? Its owner fails identity (2201, 2202) and Fraud Finder scores it 88. A simple rule would approve $20,000.\nwrite APP-1043.txt fraud hold, cash in advance');
   const huge = await start(sam, 'Credit analyst', 'Credit analyst: APP-1047', 'ask Credit desk: approve Bayview Grocers (APP-1047) for $75,000, Net 30?');
@@ -198,6 +199,54 @@ except Exception as e: print(e.code, json.loads(e.read())['error'])`;
   const log = ok(await owen('GET', '/api/log'), 'log') as LogEvent[];
   const switches = log.filter((e) => e.type === 'note' && e.track === 'kill-switch' && e.seq > paused.seq0);
   d.check(switches.length === 2 && switches.every((e) => e.who?.by === 'priya'), 'resumed: all three finish, and the log holds both pulls of the switch, by Priya');
+
+  // ---------- shadow mode: a seat's decisions are suggestions a person decides, until the policy says it may go live ----------
+  // The clerk's real tool (credit-desk.collections_action) needs only a rules file in its workspace, so this stays offline.
+  const GO_LIVE = 'The Collections clerk goes live after 3 suggestions with 60% agreement.';
+  const samShadow = await sam('PUT', '/api/business', { shadow: ['Collections clerk'] });
+  ok(await priya('PUT', '/api/business', { policy: `${POLICY}\n${GO_LIVE}`, shadow: ['Collections clerk'] }), 'shadow on');
+  d.workspace('fogline-shadow', { 'rules.yaml': 'authority_limit: 10000\nrules:\n  - id: COL-1\n' });
+  const remind = (inv: string) =>
+    start(sam, 'Collections clerk', `Collections clerk: ${inv}`, `call credit-desk.collections_action {"subject":"${inv}","action":"friendly reminder","detail":"$1,200 is 12 days past due","rules":["COL-1"]}`, { workspace: 'fogline-shadow', tools: ['credit-desk.collections_action'] });
+  const sh = [await remind('INV-24110'), await remind('INV-24111'), await remind('INV-24112')];
+  const sug = await d.waitFor('three shadow suggestions', async () => {
+    const all = ok(await screen('GET', '/api/approvals?state=pending'), 'approvals') as Approval[];
+    const mine = sh.map((t) => all.find((a) => a.task === t.id));
+    return mine.every(Boolean) ? (mine as Approval[]) : undefined;
+  });
+  const callsOf = async (t: Task) => (ok(await screen('GET', `/api/tasks/${t.id}`), 'task').events as LogEvent[]).filter((e) => e.type === 'tool.call').length;
+  d.check(samShadow.status === 403 && sug.every((a) => a.shadow === 'Collections clerk' && to(a) === 'rosa') && (await callsOf(sh[0])) === 0,
+    `an admin (Priya) puts the Collections clerk in shadow; its decision becomes a suggestion, routed by the policy like any request: "${sug[0].question}" (${sug[0].route?.why})`);
+  const pilotOf = async () => (ok(await screen('GET', '/api/business'), 'business').pilot as { seat: string; shadow: boolean; suggested: number; answered: number; agreed: number; percent: number; ready: boolean; disagreements: { by: string; question: string }[] }[]).find((p) => p.seat === 'Collections clerk')!;
+  const samYes = await answer(sam, sug[0]);
+  ok(await answer(rosa, sug[0]), 'Rosa agrees');
+  ok(await answer(rosa, sug[1], false), 'Rosa decides otherwise');
+  const [yes1] = await d.settled([sh[0].id]);
+  // The scripted clerk stops at a tool error, so its task ends failed; a real agent reads the error and moves on.
+  const no1 = await d.waitFor('the declined suggestion', async () => {
+    const t = ok(await screen('GET', `/api/tasks/${sh[1].id}`), 'task').task as Task;
+    return t.state === 'failed' ? t : undefined;
+  });
+  const yesEvents = ok(await screen('GET', `/api/tasks/${yes1.id}`), 'task').events as LogEvent[];
+  const ran = yesEvents.find((e) => e.type === 'tool.result');
+  d.check(samYes.status === 403 && yes1.state === 'done' && ran?.type === 'tool.result' && ran.ok && ran.who?.approver === 'rosa',
+    "Rosa's yes runs the clerk's tool, and the log says she decided (Sam, who asked, can't answer his own seat's suggestion)");
+  const mid = await pilotOf();
+  d.check(no1.state === 'failed' && /a person decided otherwise/.test(no1.error ?? '') && (await callsOf(no1)) === 0 && mid.disagreements.length === 1 && mid.disagreements[0].by === 'Rosa Delgado',
+    `Rosa's no records a disagreement and the tool never runs; the agent is told "${no1.error?.replace(/^.*?Shadow mode/, 'Shadow mode')}"`);
+  d.check(mid.answered === 2 && mid.agreed === 1 && mid.percent === 50 && !mid.ready, `after two answers: ${mid.agreed} of ${mid.answered} agreed (${mid.percent}%), not ready ("${GO_LIVE}")`);
+  ok(await answer(rosa, sug[2]), 'Rosa agrees again');
+  await d.settled([sh[2].id]);
+  const done3 = await pilotOf();
+  d.check(done3.answered === 3 && done3.agreed === 2 && done3.percent === 67 && done3.ready && done3.shadow, `the threshold turns it ready: ${done3.agreed} of ${done3.answered} agreed (${done3.percent}%), "ready to go live"`);
+  ok(await priya('PUT', '/api/business', { shadow: [] }), 'go live');
+  const live = await remind('INV-24113');
+  const [liveDone] = await d.settled([live.id]);
+  const liveAsked = (ok(await screen('GET', '/api/approvals'), 'approvals') as Approval[]).some((a) => a.task === live.id);
+  const flips = (ok(await owen('GET', '/api/log'), 'log') as LogEvent[]).flatMap((e) => (e.type === 'note' && e.track === 'business' && (e.data as { shadow?: string[] }).shadow ? [e.data as { shadow: string[]; by: string }] : []));
+  const last = flips.at(-1);
+  d.check(liveDone.state === 'done' && !liveAsked && (await pilotOf()).shadow === false && last?.by === 'Priya Nair' && last.shadow.length === 0,
+    'Priya takes it live with one setting (shadow: []), logged with her name: the clerk\'s next decision runs without asking');
 
   // ---------- off again ----------
   ok(await screen('PUT', '/api/business', { on: false }), 'turn Business off');

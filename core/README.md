@@ -88,7 +88,7 @@ closed, so none lingers.
 
 Tools declare `cost(input)` in US cents. The broker counts it when the call succeeds, in the same log line as
 the result, and reserves it before the call runs, so two payments a task fires at once cannot both pass the
-budget check and overspend. A tool's optional `approval(input)` returns `{ payee, purpose }` for the approval. A Droid task's model cost is real: the worker reports its token counts and model, and the core
+budget check and overspend. A tool's optional `approval(input)` returns `{ payee, purpose }` for the approval. On GurtOS Business, a tool that records a decision declares `decides(input)` (see Shadow mode). A Droid task's model cost is real: the worker reports its token counts and model, and the core
 prices them at the model's list rates (`core/pricing.ts`), writing a `cost` event with `model` and a `tokens`
 breakdown. `task.costCents` is tool spending plus model cost. Workers report model
 spending with `POST /cost`. `task.costCents` is the total.
@@ -495,6 +495,36 @@ change is a `business` note with who made it; `GET /api/business` shows the sett
 Any other OpenID Connect provider works the same way, as long as its ID token carries a `groups` claim. Not built:
 signing out at the provider, and sign-in from the hosted app (`app.gurtos.com`); a device signed in this way lasts
 until it is removed, its person is removed, or a later sign-in is refused.
+
+### Shadow mode and a one-week pilot
+
+**Why it is here: the path to production.** A company should not hand an agent its credit desk on day one. Shadow
+mode is how a seat earns it, and it is GurtOS Business's answer to the "path to production" criterion: a one-week
+pilot, a number that says whether the agent decides the way the company's people do, a bar written in the policy, and
+one setting to go live or go back. [docs/pilot.md](../docs/pilot.md) is the plan.
+
+- **The setting.** `PUT /api/business {shadow: ["Credit analyst"]}`, from an admin or the owner, puts seats in shadow;
+  `{shadow: []}` takes them all live. Each change is a `business` note with the new list and who made it. Settings >
+  People has a switch for each seat, and each seat's row says "Shadow · 18 of 20 agreed (90%)", with the
+  disagreements listed below.
+- **A suggestion is an ordinary request.** When a task whose `seat` is in shadow calls a tool that records a decision
+  (`Tool.decides` in the contract), the core asks first with `askFor`: "Shadow: the Collections clerk would record
+  "friendly reminder" for INV-24110 ($1,200 is 12 days past due). Do you decide the same?" The approval carries
+  `shadow: <seat>`. The policy routes it and the usual checks decide who may answer: only a person, never the one who
+  asked, within their limit. A yes runs the tool, so the person decided, and the log says so (`who.approver`). A no
+  is a disagreement: the tool does not run, and the agent gets "Shadow mode: a person decided otherwise, so this was
+  not recorded. Do not ask again; move on." After a yes, a tool that spends still goes through the task's budget.
+- **Going live.** A policy line sets the bar: `The Credit analyst goes live after 20 suggestions with 95% agreement.`
+  From the log, the box counts each seat's suggestions, the ones a person answered and the ones they agreed with.
+  When the bar is met it reports `ready`, and an admin turns shadow off. The box never takes a seat live by itself:
+  going live widens what an agent does alone, and on GurtOS that is a person's call, the same way no agent approves
+  an agent.
+- **What it reports.** `GET /api/business` adds `shadow` (the setting) and `pilot`, one entry per seat: `{seat, shadow,
+  suggested, answered, agreed, percent, goLive, ready, disagreements}`. Each disagreement has its question, who
+  decided otherwise and when. An answer with no person behind it (a task that ended first) does not count.
+- **Which tools decide.** A tool opts in with `decides(input)`, which returns the decision in plain words. The credit
+  desk marks `credit_decision`, `collections_action` and `ap_action`. `pay_bill` is not marked: its input has no
+  amount, so the policy could not route the suggestion by size.
 
 ## The kill switch
 

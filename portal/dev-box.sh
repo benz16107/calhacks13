@@ -59,7 +59,7 @@ printf '# Notes\n\nNothing yet.\n' > $home/workspaces/notes/notes.md
 chmod -R a+rwX $home/workspaces
 grep -v "^ELASTIC_" /etc/box/vault.env > $home/vault.env && echo DEMO_SECRET=portal-dev-test >> $home/vault.env && chmod 600 $home/vault.env
 $start
-if [ "${DEV_SEED:-}" = business ]; then node --experimental-strip-types --disable-warning=ExperimentalWarning portal/dev-business.ts $port; echo "dev box up: http://127.0.0.1:$port (log: $home/box.log)"; exit; fi
+if [ "${DEV_SEED:-}" = business ]; then node --experimental-strip-types --disable-warning=ExperimentalWarning portal/dev-business.ts $port $home; echo "dev box up: http://127.0.0.1:$port (log: $home/box.log)"; exit; fi
 task() { curl -fs 127.0.0.1:$port/api/tasks -H 'content-type: application/json' -d "\$1" | sed 's/.*"id":"\([^"]*\)".*/\1/'; }
 f='"worker":"fake","source":"portal-dev"'
 task '{"title":"Write the weekly notes",'"\$f"',"workspace":"notes","prompt":"write notes.md # Notes\nappend notes.md Groceries came in under budget.\nappend notes.md The deploy went out on Tuesday."}' >/dev/null

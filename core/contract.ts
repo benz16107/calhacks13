@@ -105,6 +105,8 @@ export interface Approval {
   askedBy?: string;
   /** Business: where the policy sent this request, and why. */
   route?: ApprovalRoute;
+  /** Business shadow mode: the seat this is a suggestion from. A yes runs its tool; a no is a disagreement. */
+  shadow?: string;
 }
 
 /** Business: who a request goes to. Set when it is asked; the people who may answer are checked again when they do. */
@@ -281,6 +283,11 @@ export interface Tool {
   cost?(input: any): number;
   /** Structured fields for the budget approval the phone shows: who gets paid and what for. */
   approval?(input: any): { payee?: string; purpose?: string };
+  /**
+   * Business shadow mode: this tool records a decision. Return it in plain words, finishing "the Credit analyst
+   * would ...": 'approve APP-1041 for $8,000, Net 30'. While the task's seat is in shadow, a person decides first.
+   */
+  decides?(input: any): string;
   run(input: any, ctx: Ctx): Promise<unknown>;
 }
 

@@ -107,6 +107,7 @@ export default {
         },
         required: ['application_id', 'outcome', 'limit', 'terms', 'rules', 'why'],
       },
+      decides: (i) => `${i.outcome} ${i.application_id}${i.outcome === 'approve' ? ` for ${money(Number(i.limit) || 0)}, ${i.terms}` : ''}`,
       async run(input, ctx) {
         const app = application(ctx, input.application_id);
         if (!OUTCOMES.includes(input.outcome)) throw new Error(`outcome must be one of: ${OUTCOMES.join(', ')}`);
@@ -166,6 +167,7 @@ export default {
         },
         required: ['subject', 'action', 'detail', 'rules'],
       },
+      decides: (i) => `record "${i.action}" for ${i.subject} (${i.detail})`,
       async run(input, ctx) {
         const subject = safeId(input.subject);
         if (!ACTIONS.includes(input.action)) throw new Error(`action must be one of: ${ACTIONS.join(', ')}`);

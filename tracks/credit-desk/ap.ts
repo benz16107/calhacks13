@@ -127,6 +127,7 @@ export const apTools: Tool[] = [
     name: 'credit-desk.ap_action',
     description: `Record what you do with a bill or supplier: ${AP_ACTIONS.join(', ')}. "refer as suspected fraud" and "bank change confirmed" need the controller and come back "needs controller" with a question for box_ask.`,
     input: { type: 'object', properties: { subject: { type: 'string', description: 'A bill id or supplier id.' }, action: { type: 'string', enum: AP_ACTIONS }, detail: { type: 'string' }, rules: rulesField }, required: ['subject', 'action', 'detail', 'rules'] },
+    decides: (i) => `record "${i.action}" for ${i.subject} (${i.detail})`,
     async run(input, ctx) {
       const subject = safeId(input.subject);
       if (!AP_ACTIONS.includes(input.action)) throw new Error(`action must be one of: ${AP_ACTIONS.join(', ')}`);

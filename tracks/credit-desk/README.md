@@ -72,6 +72,12 @@ approved. Tested on a Business box on 2026-10-24: both fraud referrals and the $
 "Waiting for me" with the right route sentence; the bare screen and Sam were refused; Rosa's answers were recorded as
 "controller (Rosa Delgado)".
 
+**Shadow mode** (GurtOS Business, `core/README.md`). `credit_decision`, `collections_action` and `ap_action` declare
+`decides`, a one-line description of the decision, and that is the desk's only change for it. While a seat is in
+shadow, the core asks a person before each of those calls, and the person's yes or no is the decision. A decision
+that needs the controller still asks the controller afterwards, as above, so in shadow the controller may be
+asked twice about it.
+
 ## Run it
 
 - **The Credit desk window.** Open Credit desk from the box's app grid or dock, on the box's screen or a paired

@@ -35,7 +35,19 @@ export interface RuleView {
   changed: { by: string; at: string } | null;
 }
 export interface Paused { by: string; at: string; via?: string }
-export interface BusinessView { on: boolean; company: string; policy: string; rules: RuleView[]; seats: Seat[]; paused: Paused | null }
+/** A seat's shadow record: its suggestions, how often a person decided the same, and the policy's go-live line. */
+export interface Pilot {
+  seat: string;
+  shadow: boolean;
+  suggested: number;
+  answered: number;
+  agreed: number;
+  percent: number | null;
+  goLive: { seat: string; after: number; percent: number; line: string } | null;
+  ready: boolean;
+  disagreements: { approval: string; task: string; at: string; question: string; by: string }[];
+}
+export interface BusinessView { on: boolean; company: string; policy: string; rules: RuleView[]; seats: Seat[]; shadow: string[]; pilot: Pilot[]; paused: Paused | null }
 export interface Me {
   edition: string;
   company: string;

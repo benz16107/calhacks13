@@ -9,7 +9,7 @@ import http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
 import type { App, Approval, ApprovalRoute, Box, FullSpec, Ctx, LogEvent, LogReader, ModelJob, NewEvent, Route, Task, TaskSpec, TaskState, Tool, Track, Who } from './contract.ts';
-import { DEFAULT_POLICY, amountOf, approversFor, auditRows, checkPerson, checkSeats, holds, parsePolicy, refusal, route, toCsv, whoOf, type Business, type Person } from './business.ts';
+import { DEFAULT_POLICY, amountOf, approversFor, auditRows, checkPerson, checkSeats, checkShadow, goLiveRules, holds, parsePolicy, pilot, refusal, route, toCsv, whoOf, type Business, type Person } from './business.ts';
 import { DB, Live } from './live.ts';
 import { Log, apply, canMove, doneLayers, fold, type State } from './log.ts';
 import { ANTHROPIC_PLACEHOLDER, PLACEHOLDER_KEY, firewall, logBlocked, stopLoggingBlocked, uidOf, relayCert, reservePort, startProxy } from './net.ts';
@@ -143,7 +143,7 @@ class Core {
   resumed: string[] = []; // tasks boot() restarted after a power cut, for the screen's banner
   // GurtOS Business: people, their roles and the policy. Off unless turned on, so Server and Personal are unchanged.
   businessPath = path.join(HOME, 'business.json');
-  business: Business = { on: process.env.BOX_EDITION === 'business', company: '', policy: DEFAULT_POLICY, people: [], seats: [], policyMeta: {}, ...readJson<Partial<Business>>(this.businessPath, {}) };
+  business: Business = { on: process.env.BOX_EDITION === 'business', company: '', policy: DEFAULT_POLICY, people: [], seats: [], shadow: [], policyMeta: {}, ...readJson<Partial<Business>>(this.businessPath, {}) };
   // The kill switch is Settings' `paused`: every agent stops until someone resumes them. Who pulled it is kept beside it.
   pausedPath = path.join(HOME, 'paused.json');
   pausedMeta: { by: string; at: string; via?: string } | null = readJson(this.pausedPath, null);
@@ -445,10 +445,10 @@ class Core {
    * no answer came within the window, so the worker can report "waiting, call again" and poll past a client
    * tool-call timeout (Droid gives up after ~3 minutes). Any copy's answer resolves the one request.
    */
-  async askFor(t: Task, key: string, opts: { question: string; costCents?: number; payee?: string; purpose?: string }): Promise<'approved' | 'denied' | 'pending'> {
+  async askFor(t: Task, key: string, opts: { question: string; costCents?: number; payee?: string; purpose?: string; shadow?: string }): Promise<'approved' | 'denied' | 'pending'> {
     const id = `${t.id}.${key}`;
     if (!this.state.approvals.has(id)) {
-      const approval: Approval = { id, task: t.id, question: opts.question, costCents: opts.costCents ?? 0, payee: opts.payee, purpose: opts.purpose, state: 'pending' };
+      const approval: Approval = { id, task: t.id, question: opts.question, costCents: opts.costCents ?? 0, payee: opts.payee, purpose: opts.purpose, state: 'pending', ...(opts.shadow ? { shadow: opts.shadow } : {}) };
       if (this.business.on) Object.assign(approval, { ...(t.requestedBy ? { askedBy: t.requestedBy } : {}), route: this.routeOf(approval, t) });
       this.write({ type: 'approval.asked', task: t.id, approval });
     }
@@ -562,8 +562,8 @@ class Core {
   setBusiness(body: unknown, req: http.IncomingMessage) {
     if (!body || typeof body !== 'object') throw new Error('send {on, company, policy}');
     const b = body as Record<string, unknown>;
-    const unknown = Object.keys(b).filter((k) => !['on', 'company', 'policy', 'seats', 'sso'].includes(k));
-    if (unknown.length) throw new Error(`unknown field: ${unknown.join(', ')} (known: on, company, policy, seats, sso)`);
+    const unknown = Object.keys(b).filter((k) => !['on', 'company', 'policy', 'seats', 'sso', 'shadow'].includes(k));
+    if (unknown.length) throw new Error(`unknown field: ${unknown.join(', ')} (known: on, company, policy, seats, sso, shadow)`);
     if ('on' in b) {
       if (typeof b.on !== 'boolean') throw new Error('on: true or false');
       if (!this.isOwner(req)) forbid('only the owner turns GurtOS Business on or off');
@@ -577,6 +577,7 @@ class Core {
       const owners = (s?: Sso) => Object.values(s?.groups ?? {}).some((g) => g.role === 'owner');
       if ((owners(b.sso as Sso | undefined) || owners(this.business.sso)) && !this.isOwner(req)) forbid('only the owner can map a group to the owner role');
     }
+    if ('shadow' in b) b.shadow = checkShadow(b.shadow, (b.seats as Business['seats']) ?? this.business.seats);
     const { name, who } = this.actor(req);
     const was = this.business.on;
     if ('policy' in b) {
@@ -588,7 +589,7 @@ class Core {
     }
     Object.assign(this.business, b);
     this.saveBusiness();
-    this.write({ type: 'note', track: 'business', data: { changed: Object.keys(b), on: this.business.on, by: name }, ...(who ? { who } : {}) });
+    this.write({ type: 'note', track: 'business', data: { changed: Object.keys(b), on: this.business.on, by: name, ...('shadow' in b ? { shadow: this.business.shadow } : {}) }, ...(who ? { who } : {}) });
     // Business answers only through the API as a person, so the box stops vouching for SpacetimeDB identities.
     if (was !== this.business.on) for (const [identity, n] of [...this.screens, ...this.devices.filter((d) => d.identity && !d.revoked).map((d) => [d.identity!, d.name] as [string, string])]) this.business.on ? this.live.unregister(identity) : this.live.register(identity, n);
     return this.businessView();
@@ -603,7 +604,9 @@ class Core {
     }));
     // A rule that sends requests to a name nobody approves for routes them to the owner, or nowhere: say so.
     const warnings = rules.filter((r) => !r.blocked && !r.approvers.length).map((r) => `Nobody approves for ${r.to.replace(/^(the|any|an|a)\s+/i, '')} yet: "${r.line}" sends requests to the owner, or they wait.`);
-    return { on: this.business.on, company: this.business.company, policy: this.business.policy, rules, warnings, seats: this.business.seats, sso: this.business.sso ?? null, paused: this.paused };
+    const b = this.business;
+    const record = pilot(this.log.events, b.shadow, goLiveRules(b.policy), b.seats.map((s) => s.name));
+    return { on: b.on, company: b.company, policy: b.policy, rules, warnings, seats: b.seats, sso: b.sso ?? null, shadow: b.shadow, pilot: record, paused: this.paused };
   }
 
   /**
@@ -802,6 +805,14 @@ class Core {
       this.write({ type: 'tool.result', task: t.id, key, ...r });
       return r;
     };
+    // Shadow mode: a seat's decision is a suggestion, asked through the policy like any request. A person's yes runs it.
+    const seat = this.business.on && t.seat && entry.tool.decides && this.business.shadow.some((s) => s.toLowerCase() === t.seat!.toLowerCase()) ? t.seat : undefined;
+    if (seat) {
+      const q = `Shadow: the ${seat} would ${String(entry.tool.decides!(input)).slice(0, 300)}. Do you decide the same?`;
+      const outcome = await this.askFor(t, `shadow.${action}`, { question: q, shadow: seat });
+      if (outcome === 'pending') return { ok: false, pending: true, error: 'Shadow mode: a person decides this. Call this tool again to check.' };
+      if (outcome === 'denied') return result({ ok: false, error: 'Shadow mode: a person decided otherwise, so this was not recorded. Do not ask again; move on.' });
+    }
     const cost = entry.tool.cost?.(input) ?? 0;
     // Count spending this task's other in-flight calls have committed, so two payments at once can't both pass.
     const committed = () => t.costCents + (this.reserved.get(t.id) ?? 0);

@@ -4,7 +4,7 @@
 import './company.css';
 import type { ComponentChildren } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { api, box, loadBusiness, pairing, surface, useBox, type Person, type Role, type RuleView } from '../live.ts';
+import { api, box, loadBusiness, pairing, surface, useBox, type Person, type Pilot, type Role, type RuleView } from '../live.ts';
 import { AddRow, Alert, AppIcon, Badge, Button, ComboRow, Group, Icon, IconButton, LinkRow, Menu, Popover, Row, Sheet, StatusPage, SwitchRow, type MenuItem } from '../kit/ui.tsx';
 import { InWindow, useWin } from '../wm.tsx';
 import { PRODUCT } from '../product.ts';
@@ -103,8 +103,14 @@ function limitText(p: Person) {
   return p.approvesFor.length ? `Approves for ${list(p.approvesFor)}` : 'No spending approvals';
 }
 
+/** A seat in shadow mode: "Shadow · 18 of 20 agreed (90%)", or ready once the policy's go-live line is met. */
+const shadowText = (p: Pilot) => (p.ready ? `Ready to go live · ${p.agreed} of ${p.answered} agreed (${p.percent}%)` : p.answered ? `Shadow · ${p.agreed} of ${p.answered} agreed (${p.percent}%)` : 'Shadow · no answers yet');
+const goLiveText = (p?: Pilot) =>
+  p?.goLive ? `Goes live after ${p.goLive.after} suggestions with ${p.goLive.percent}% agreement` : `No go-live rule yet, like "The ${p?.seat ?? 'Credit analyst'} goes live after 20 suggestions with 95% agreement."`;
+
 export function PeoplePage() {
   const b = useBox();
+  const win = useWin();
   const { people, view } = b.business;
   const [sheet, setSheet] = useState<Person | 'new'>();
   if (!view) return <Loading />;
@@ -115,6 +121,17 @@ export function PeoplePage() {
       </StatusPage>
     );
   const fraud = fraudName(view.rules);
+  const pilot = (name: string) => view.pilot?.find((p) => p.seat === name);
+  const setShadow = async (name: string, on: boolean) => {
+    try {
+      await api('PUT', '/business', { shadow: on ? [...view.shadow, name] : view.shadow.filter((s) => s !== name) });
+      win?.toast(on ? `${name} is in shadow mode` : `${name} is live`);
+    } catch (e) {
+      win?.toast((e as Error).message);
+    }
+    await loadBusiness();
+  };
+  const disagreements = (view.pilot ?? []).flatMap((p) => p.disagreements.map((d) => ({ ...d, seat: p.seat }))).sort((x, y) => y.at.localeCompare(x.at)).slice(0, 10);
   return (
     <>
       <Group title="People" caption="Who can ask, who can approve, and up to how much. Each person approves only from a phone paired to them.">
@@ -136,22 +153,50 @@ export function PeoplePage() {
         <AddRow title="Add a person…" onClick={() => setSheet('new')} />
       </Group>
       <Group title="Agent seats" caption="Agents prepare work. An agent never approves an agent, and never its own proposal.">
-        {view.seats.map((s) => (
-          <Row
-            lead={<AppIcon id="credit-desk" size={36} />}
-            title={
-              <span class="gos-co-name">
-                {s.name}
-                <Badge kind="neutral">Agent</Badge>
-              </span>
-            }
-            sub={<>{`Agent${s.about ? ` · ${s.about}` : ''}`}{s.may && <span class="gos-co-under">{s.may}</span>}</>}
-            key={s.name}
-          >
-            {s.may && <span class="g-row-value gos-co-end">{s.may}</span>}
-          </Row>
-        ))}
+        {view.seats.map((s) => {
+          const p = pilot(s.name);
+          const may = p?.shadow ? shadowText(p) : s.may; // in shadow it decides nothing alone
+          return (
+            <Row
+              lead={<AppIcon id="credit-desk" size={36} />}
+              title={
+                <span class="gos-co-name">
+                  {s.name}
+                  <Badge kind="neutral">Agent</Badge>
+                  {p?.shadow && <Badge kind={p.ready ? 'success' : 'accent'}>{p.ready ? 'Ready to go live' : 'Shadow'}</Badge>}
+                </span>
+              }
+              sub={<>{`Agent${s.about ? ` · ${s.about}` : ''}`}{may && <span class="gos-co-under">{may}</span>}</>}
+              key={s.name}
+            >
+              {may && <span class="g-row-value gos-co-end">{may}</span>}
+            </Row>
+          );
+        })}
       </Group>
+      {view.seats.length > 0 && (
+        <Group title="Shadow mode" caption="A seat in shadow mode only suggests. Each decision goes to a person through the rules, like any request, and the box counts how often they decide the same. Turn it off to take the seat live.">
+          {view.seats.map((s) => {
+            const p = pilot(s.name);
+            return (
+              <SwitchRow
+                title={s.name}
+                sub={p?.answered ? `${p.agreed} of ${p.answered} agreed (${p.percent}%) · ${goLiveText(p)}` : goLiveText(p ?? { seat: s.name } as Pilot)}
+                checked={!!p?.shadow}
+                onChange={(v) => void setShadow(s.name, v)}
+                key={s.name}
+              />
+            );
+          })}
+        </Group>
+      )}
+      {disagreements.length > 0 && (
+        <Group title="Disagreements" caption="Suggestions a person decided otherwise. The agent was told and moved on; nothing was recorded.">
+          {disagreements.map((d) => (
+            <Row title={<span class="gos-co-clamp">{d.question.replace(/^Shadow: t/, 'T').replace(/ Do you decide the same\?$/, '')}</span>} sub={`${d.by} decided otherwise · ${d.seat} · ${when(d.at)}`} key={d.approval} />
+          ))}
+        </Group>
+      )}
       {sheet && <PersonSheet person={sheet === 'new' ? undefined : sheet} onClose={() => setSheet(undefined)} />}
     </>
   );
@@ -364,7 +409,7 @@ function parseLine(line: string): Form | undefined {
 const writeLine = (f: Form) =>
   f.kind === 'over' ? `Requests over ${usd(f.amount)} go to ${f.who} for approval.` : f.kind === 'words' ? `${f.words} go to ${f.who} for approval.` : f.kind === 'blocked' ? `Requests over ${usd(f.amount)} can't be approved in GurtOS.` : `Everything else goes to ${f.who}.`;
 /** Where each rule sits in the policy text: one rule per line, comments and blank lines skipped. */
-const ruleLines = (all: string[]) => all.flatMap((l, i) => (l.trim() && !l.trim().startsWith('#') ? [i] : []));
+const ruleLines = (all: string[]) => all.flatMap((l, i) => (l.trim() && !l.trim().startsWith('#') && !/\bgoes\s+live\b/i.test(l) ? [i] : []));
 
 /** What the tester asks for: the words the rules match on, per kind of request. */
 const KINDS: [id: string, label: string, words: string][] = [

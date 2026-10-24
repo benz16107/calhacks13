@@ -36,6 +36,8 @@ export interface Business {
   policy: string;
   people: Person[];
   seats: Seat[];
+  /** Seats in shadow mode: their decisions are suggestions a person decides. Empty takes every seat live. */
+  shadow: string[];
   /** Who last changed each line of the policy, and when. */
   policyMeta: Record<string, { by: string; at: string }>;
   /** Sign-in with work accounts (OpenID Connect), when an admin set it up. */
@@ -49,6 +51,15 @@ export function checkSeats(v: unknown): Seat[] {
     throw new Error('seats: up to 20 of {name, about?, may?}, like {"name": "Credit analyst", "about": "checks new customers through CRS", "may": "Up to $10,000; above, proposes"}');
   }
   return v.map((s) => ({ name: s.name.trim(), ...(s.about ? { about: s.about } : {}), ...(s.may ? { may: s.may } : {}) }));
+}
+
+/** The shadow setting, checked: names of seats on this box. */
+export function checkShadow(v: unknown, seats: Seat[]): string[] {
+  if (!Array.isArray(v) || v.some((s) => typeof s !== 'string')) throw new Error('shadow: a list of seat names, like ["Credit analyst"], or [] for none');
+  const out = v.map((s) => seats.find((x) => x.name.toLowerCase() === s.trim().toLowerCase())?.name ?? '');
+  const bad = v.filter((_, i) => !out[i]);
+  if (bad.length) throw new Error(`shadow: no seat named ${bad.join(', ')} (seats: ${seats.map((x) => x.name).join(', ') || 'none yet'})`);
+  return [...new Set(out)];
 }
 
 export const DEFAULT_POLICY = `# Who approves what. One rule per line, in plain words. The first rule that matches decides.
@@ -126,10 +137,11 @@ export interface Rule {
  */
 export function parsePolicy(text: string): Rule[] {
   if (typeof text !== 'string' || text.length > 8000) throw new Error('policy: text, at most 8,000 characters');
+  goLiveRules(text); // throws naming a go-live line it can't read
   const rules: Rule[] = [];
   for (const [i, raw] of text.split('\n').entries()) {
     const line = raw.replace(/#.*$/, '').trim();
-    if (!line) continue;
+    if (!line || GOES_LIVE.test(line)) continue;
     const ceiling = /^(.+?)\s+(?:can['’]?t|cannot) be approved(?:\s+in\s+gurtos)?\.?$/i.exec(line);
     const m = ceiling ? [line, ceiling[1], 'nobody'] : /^(.+?)\s+go(?:es)?\s+to\s+(.+?)(?:\s+for approval)?\.?$/i.exec(line);
     if (!m || !key(m[2])) throw new Error(`policy line ${i + 1}: "${line.slice(0, 80)}" needs "goes to", like "Over $10,000 goes to the Controller."`);
@@ -150,6 +162,82 @@ export function parsePolicy(text: string): Rule[] {
   }
   if (!rules.length) throw new Error('policy: at least one rule, like "Everything goes to any approver."');
   return rules;
+}
+
+// ---------- shadow mode and going live ----------
+
+const GOES_LIVE = /\bgoes\s+live\b/i;
+const GO_LIVE = /^(?:the\s+)?(.+?)\s+goes\s+live\s+after\s+(\d+)\s+suggestions?\s+(?:with|at)\s+(\d+(?:\.\d+)?)\s*%\s+agreement\.?$/i;
+
+export interface GoLive {
+  seat: string;
+  /** Answered suggestions needed. */
+  after: number;
+  /** Agreement needed, in percent. */
+  percent: number;
+  line: string;
+}
+
+/** The policy's go-live lines: "The Credit analyst goes live after 20 suggestions with 95% agreement." */
+export function goLiveRules(text: string): GoLive[] {
+  const out: GoLive[] = [];
+  for (const [i, raw] of text.split('\n').entries()) {
+    const line = raw.replace(/#.*$/, '').trim();
+    if (!GOES_LIVE.test(line)) continue;
+    const m = GO_LIVE.exec(line);
+    if (!m || +m[2] < 1 || +m[3] > 100) throw new Error(`policy line ${i + 1}: "${line.slice(0, 80)}" should read like "The Credit analyst goes live after 20 suggestions with 95% agreement."`);
+    out.push({ seat: m[1].trim(), after: +m[2], percent: +m[3], line: line.replace(/\.?$/, '.') });
+  }
+  return out;
+}
+
+export interface Pilot {
+  seat: string;
+  shadow: boolean;
+  suggested: number;
+  /** Suggestions a person answered, and how many of those they decided the same. */
+  answered: number;
+  agreed: number;
+  /** agreed over answered, rounded; null before the first answer. */
+  percent: number | null;
+  goLive: GoLive | null;
+  /** In shadow and the policy's threshold is met: an admin may take it live. */
+  ready: boolean;
+  disagreements: { approval: string; task: string; at: string; question: string; by: string }[];
+}
+
+/**
+ * Each seat's shadow record, from the log: every suggestion (an approval with `shadow`) and how a person answered
+ * it. Answers with no person (a task that ended first) don't count.
+ */
+export function pilot(events: LogEvent[], shadow: string[], goLive: GoLive[], seats: string[]): Pilot[] {
+  const by = new Map<string, Pilot>();
+  const get = (seat: string) => {
+    const k = seat.toLowerCase();
+    if (!by.has(k)) by.set(k, { seat, shadow: false, suggested: 0, answered: 0, agreed: 0, percent: null, goLive: null, ready: false, disagreements: [] });
+    return by.get(k)!;
+  };
+  for (const s of [...seats, ...shadow, ...goLive.map((g) => g.seat)]) get(s);
+  const asked = new Map<string, { seat: string; question: string }>();
+  for (const e of events) {
+    if (e.type === 'approval.asked' && e.approval.shadow) {
+      asked.set(e.approval.id, { seat: e.approval.shadow, question: e.approval.question });
+      get(e.approval.shadow).suggested++;
+    } else if (e.type === 'approval.answered' && e.person && asked.has(e.id)) {
+      const { seat, question } = asked.get(e.id)!;
+      const p = get(seat);
+      p.answered++;
+      if (e.approved) p.agreed++;
+      else p.disagreements.push({ approval: e.id, task: e.task, at: e.at, question, by: e.by });
+    }
+  }
+  for (const p of by.values()) {
+    p.shadow = shadow.some((s) => s.toLowerCase() === p.seat.toLowerCase());
+    p.goLive = goLive.find((g) => g.seat.toLowerCase() === p.seat.toLowerCase()) ?? null;
+    p.percent = p.answered ? Math.round((p.agreed * 100) / p.answered) : null;
+    p.ready = p.shadow && !!p.goLive && p.answered >= p.goLive.after && p.agreed * 100 >= p.goLive.percent * p.answered;
+  }
+  return [...by.values()];
 }
 
 export interface Ask {

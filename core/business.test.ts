@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import type { LogEvent, Task } from './contract.ts';
-import { amountOf, auditRows, checkPerson, parsePolicy, refusal, route, toCsv, type Person } from './business.ts';
+import { amountOf, auditRows, checkPerson, checkShadow, goLiveRules, parsePolicy, pilot, refusal, route, toCsv, type Person } from './business.ts';
 
 const POLICY = `# Fogline Supply
 Fraud referrals go to the Controller.
@@ -108,4 +108,29 @@ test("Mana's review: the largest figure is the amount, and the owner backs up a 
   assert.deepEqual(normal.people.map((p) => p.id), ['rosa'], 'the owner is not sent what the Controller can answer');
   assert.equal(refusal(owner, { to: 'the Controller', amountCents: 4_000_000, askedBy: 'sam' }, true), undefined, 'but may answer it');
   assert.match(route(parsePolicy('Production goes to IT.'), ask('Deploy the new invoice export to production?'), people).to, /IT/);
+});
+
+test('shadow mode: go-live lines, the setting, and the agreement rate counted from the log', () => {
+  const text = `${POLICY}\nThe Credit analyst goes live after 3 suggestions with 60% agreement.`;
+  assert.equal(parsePolicy(text).length, 4, 'a go-live line is not a routing rule');
+  assert.deepEqual(goLiveRules(text), [{ seat: 'Credit analyst', after: 3, percent: 60, line: 'The Credit analyst goes live after 3 suggestions with 60% agreement.' }]);
+  assert.throws(() => parsePolicy(`${POLICY}\nThe Credit analyst goes live after a while.`), /line 6: .* should read like/);
+  const seats = [{ name: 'Credit analyst' }, { name: 'Collections clerk' }];
+  assert.deepEqual(checkShadow(['credit analyst'], seats), ['Credit analyst']);
+  assert.throws(() => checkShadow(['Credit analist'], seats), /no seat named Credit analist/);
+
+  let seq = 0;
+  const ev = (e: object) => ({ seq: ++seq, at: '2026-10-24T12:00:00Z', ...e }) as LogEvent;
+  const suggest = (id: string) => ev({ type: 'approval.asked', task: 't1', approval: { id, task: 't1', question: `Shadow: ${id}?`, costCents: 0, state: 'pending', shadow: 'Credit analyst' } });
+  const answer = (id: string, approved: boolean, person?: string) => ev({ type: 'approval.answered', task: 't1', id, approved, by: person ? 'Rosa Delgado' : 'box', ...(person ? { person } : {}) });
+  const plain = ev({ type: 'approval.asked', task: 't1', approval: { id: 'x', task: 't1', question: 'Spend $5?', costCents: 500, state: 'pending' } });
+  const events = [suggest('a'), answer('a', true, 'rosa'), suggest('b'), answer('b', false, 'rosa'), plain, answer('x', true, 'rosa'), suggest('c'), answer('c', false)];
+  const goLive = goLiveRules(text);
+  const [analyst, clerk] = pilot(events, ['Credit analyst'], goLive, seats.map((s) => s.name));
+  assert.deepEqual([analyst.suggested, analyst.answered, analyst.agreed, analyst.percent, analyst.ready], [3, 2, 1, 50, false], "an answer with no person (a task that ended) doesn't count");
+  assert.deepEqual(analyst.disagreements.map((d) => [d.approval, d.by]), [['b', 'Rosa Delgado']]);
+  assert.deepEqual([clerk.suggested, clerk.shadow, clerk.goLive], [0, false, null]);
+  const more = [...events, suggest('d'), answer('d', true, 'rosa'), suggest('e'), answer('e', true, 'rosa')];
+  assert.deepEqual(pilot(more, ['Credit analyst'], goLive, [])[0].ready, true, '3 of 4 agreed (75%) after 4: ready');
+  assert.equal(pilot(more, [], goLive, [])[0].ready, false, 'a live seat is not "ready"');
 });
