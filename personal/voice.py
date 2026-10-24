@@ -242,7 +242,9 @@ def main(argv):
             return 0
         model = start_model()
         if model is None:
-            notify('', 'Talk to your computer needs its speech model. Run /opt/box/personal/voice-setup.sh once, with a network.')
+            loading = subprocess.run(['systemctl', 'is-active', 'box-voice'], capture_output=True, text=True).stdout.strip() == 'activating'
+            notify('', 'GurtOS is downloading the speech model. Try again in a few minutes.' if loading else
+                   'Talk to your computer needs its speech model. Run /opt/box/personal/voice-setup.sh once, with a network.')
             return 1
         tmp = tempfile.mkdtemp(prefix='gurtos-voice-', dir=os.environ.get('XDG_RUNTIME_DIR'))
         path = wav or os.path.join(tmp, 'speech.wav')

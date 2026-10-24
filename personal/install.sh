@@ -51,9 +51,9 @@ install -Dm644 "$here/files/box-setup.desktop" /etc/xdg/autostart/box-setup.desk
 # The GurtOS typeface (docs/figma/system.md): Atkinson Hyperlegible Next and Mono, SIL OFL, for GurtOS's own windows.
 install -Dm644 -t /usr/share/fonts/truetype/gurtos "$here"/fonts/*.ttf "$here/fonts/OFL.txt"
 fc-cache -f /usr/share/fonts/truetype/gurtos >/dev/null 2>&1 || true
-# Talk to your computer: a local speech model, fetched once. Without a network the rest of the layer still installs,
+# Talk to your computer: a local speech model, fetched once. BOX_NO_VOICE=1 skips it (the image fetches it at first boot). Without a network the rest of the layer still installs,
 # and the mic item says what to run.
-[[ -x /opt/box/voice-venv/bin/python && -d /opt/box/voice-models ]] || "$here/voice-setup.sh" || echo 'personal: speech model not installed (no network?). Run /opt/box/personal/voice-setup.sh later.' >&2
+[[ ${BOX_NO_VOICE:-0} == 1 || (-x /opt/box/voice-venv/bin/python && -d /opt/box/voice-models) ]] || "$here/voice-setup.sh" || echo 'personal: speech model not installed (no network?). Run /opt/box/personal/voice-setup.sh later.' >&2
 # The AppIndicator service and the dock override of earlier versions are gone: the Shell extension and dconf took over.
 systemctl --global disable box-desktop.service >/dev/null 2>&1 || true
 rm -f /etc/systemd/user/box-desktop.service /usr/share/glib-2.0/schemas/90_box-personal.gschema.override
