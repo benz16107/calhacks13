@@ -84,7 +84,8 @@ export default async function (d: DemoKit) {
   }, 120_000);
   d.check(count === log.length, `Elastic Serverless has all ${log.length} events of run ${run}, each once`);
 
-  const answers = await Promise.all(QUESTIONS.map((x) => ask(kb, x.q)));
+  // The agent reads the installed boxes by default; this run's data is a demo run, so the question names it.
+  const answers = await Promise.all(QUESTIONS.map((x) => ask(kb, `${x.q} Look at demo run ${run}.`)));
   QUESTIONS.forEach((x, i) => {
     const { answer, tools } = answers[i];
     console.log(`\n  Q: ${x.q}\n  (tools: ${tools.join(', ')})\n${answer.replace(/^/gm, '  | ')}\n`);

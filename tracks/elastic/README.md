@@ -17,21 +17,23 @@ updates them through Kibana's Agent Builder API, so the agent in Kibana always m
 
 ## The agent answering, in Kibana
 
-All four were asked in Kibana's Agent Builder chat (agent **Box log**, on Kibana's default model, Anthropic Claude Sonnet 5) on
-the data from two real `./demo` runs on Oct 24, 2026. Every number and name in them comes from the log.
+All four were asked in Kibana's Agent Builder chat (agent **GurtOS log**, on Kibana's default model, Anthropic Claude
+Sonnet 5) about one real `./demo` run on Oct 24, 2026 (run `a18523`, 338 events). The tools read the real installed boxes
+unless a question names a demo run, so each question here ends with "Look at demo run a18523." Every number and name
+in the answers comes from the log.
 
 **What did my agents change this week?** It separates changes that stuck from changes that were undone
-(the booby-trapped page task, the Droid note, task A) and from failed tasks whose changes were never applied.
+(the booby-trapped page task, task A, the Tahoe plan) and from failed tasks whose changes were never applied.
 
 ![The agent lists the files each task changed, which were undone, and which tasks failed](screenshots/1-changes.png)
 
 **What did it cost this week, by task and by app?** Totals by app and by task, split into model spending
-(Claude tokens) and tool spending, and it says the tool spending is test money.
+(Claude tokens) and tool spending, and it says the tool spending is test money (Stripe test mode and the example tool).
 
 ![Spending by app and by task, in dollars](screenshots/2-costs.png)
 
-**Why did the job routine fail?** The box only recorded "worker exited with 1". The agent read the task's
-timeline and found the cause: the routine was allowed to reach only `boards.greenhouse.io`, tried
+**Why did the job routine fail?** The agent found the task in `box.failures`, read its timeline and found the
+cause: the routine was allowed to reach only `boards.greenhouse.io`, tried
 `www.linkedin.com`, the box blocked it, and the worker gave up right after.
 
 ![The agent explains the job routine failure from its timeline](screenshots/3-job-routine.png)
@@ -49,7 +51,7 @@ the box's action log ──► log reader (track.ts) ──► outbox file ─�
      (log.jsonl)          one flat document          (fsynced)     elastic.bulk job     (Serverless)
                           per event                                 holds the key            │
                                                                                              ▼
-                                                       Agent Builder agent "Box log" ◄── 6 ES|QL tools
+                                                     Agent Builder agent "GurtOS log" ◄── 6 ES|QL tools
                                                        (Kibana chat, converse API)       + 1 index search
 ```
 
@@ -59,8 +61,11 @@ the box's action log ──► log reader (track.ts) ──► outbox file ─�
 2. **A flusher** sends the outbox to Elastic in `_bulk` batches of up to 4 MB and remembers how far it got.
    Serverless confirms a write only once it is durable, about 0.4 s per request, so one request per event fell
    behind. In batches the reader keeps up with a whole demo run as it happens. If Elastic is down, it retries every 5 s from
-   where it stopped. Each document's id is `<host>:<run>:<seq>`, so a resend overwrites itself and nothing is
-   counted twice.
+   where it stopped. Each document's id is `<machine id>:<run>:<seq>`, so a resend overwrites itself and nothing
+   is counted twice. The machine id comes from `/etc/machine-id`, because two Lima VMs both call themselves
+   `lima-box`.
+   Only two kinds of box send anything: an installed box (`BOX_HOME=/var/lib/box`) and a `DEMO_LIVE=elastic ./demo`
+   run. Dev boxes with their own `BOX_HOME` stay out of the index.
 3. **The `elastic.bulk` model job** is the only code that reads `ELASTIC_URL` and `ELASTIC_API_KEY`. It runs in
    the core with vault access. Tasks never see the key, and log readers have no vault access at all.
 4. **The agent** uses six parameterized ES|QL tools and one index search tool over `box-actions`, plus the
@@ -82,7 +87,7 @@ The documents are built for an agent to read, so each one stands on its own:
 | `tool.name`, `tool.ok`, `tool.error` | Tool calls and their results |
 | `approval.question`, `approval.state`, `approval.by` | Pauses for an OK and who answered |
 | `net.host` | A connection the box refused |
-| `box.name`, `box.run` | Which box. `installed` is the always-on box; anything else is one `./demo` run |
+| `box.name`, `box.machine`, `box.run` | Which box. `box.run` is `installed` on a real box and the run id on a `./demo` run |
 
 The full mapping is `MAPPING` in `track.ts` (`dynamic: false`, explicit types). A unit test checks that every
 field a document can have is in it.
@@ -91,27 +96,28 @@ field a document can have is in it.
 
 | Tool | Type | Answers |
 |---|---|---|
-| `box.changes` | ES\|QL, `days` | Tasks done, undone or failed, with the files each done task changed |
-| `box.costs_by_app` | ES\|QL, `days` | Dollars per app: total, model, tools, number of tasks |
-| `box.costs_by_task` | ES\|QL, `days` | Dollars per task, with the paid tools it used |
-| `box.failures` | ES\|QL, `days` | Failed tasks and the error the box recorded |
+| `box.changes` | ES\|QL, `days`, `run` | Tasks done, undone or failed, with the files each done task changed |
+| `box.costs_by_app` | ES\|QL, `days`, `run` | Dollars per app: total, model, tools, number of tasks |
+| `box.costs_by_task` | ES\|QL, `days`, `run` | Dollars per task, with the paid tools it used |
+| `box.failures` | ES\|QL, `days`, `run` | Failed tasks and the error the box recorded |
 | `box.task_timeline` | ES\|QL, `task_id` | Everything one task did, in order. Used to explain a failure |
-| `box.blocked` | ES\|QL, `days` | Refused hosts, by task and app, with counts, times and allowed hosts |
+| `box.blocked` | ES\|QL, `days`, `run` | Refused hosts, by task and app, with counts, times and allowed hosts |
 | `box.search` | index search | Free text over the log, to find a task by a word |
 
-`days` defaults to 7. The agent's instructions (in `agent.ts`) say which tool answers which question, that
+`days` defaults to 7. `run` defaults to `installed`, the real boxes, so test runs never mix into an everyday
+answer; a question that names a demo run passes its id. The agent's instructions (in `agent.ts`) say which tool answers which question, that
 model spending is real Claude token prices while tool spending is test money, and that a failed task's
 recorded error is often generic, so the cause comes from what happened just before it.
 
 ## Elastic's requirements
 
-- **Agent Builder:** a custom agent (`box-log`) with custom ES|QL and index search tools, created through the
+- **Agent Builder:** a custom agent (`gurtos-log`) with custom ES|QL and index search tools, created through the
   Agent Builder API (`POST/PUT /api/agent_builder/tools` and `/agents`), and asked through Kibana's chat and
   the `converse` API.
 - **Serverless:** an Elasticsearch Serverless project, `calhacks13`, on GCP us-east4. The index, the data and
   the agent all live there.
-- **Real data:** every document comes from the box's own action log during `./demo` runs, including real Droid
-  (Claude) tasks, the credit desk and the four demo moments.
+- **Real data:** every document comes from a box's own action log: the installed GurtOS boxes, and `./demo` runs
+  with real Droid (Claude) tasks, the credit desk and the four demo moments.
 
 The judging criteria were not published when this was built (Oct 23, 8 PM PT).
 
@@ -129,7 +135,7 @@ node tracks/elastic/agent.ts install                       # create or update th
 node tracks/elastic/agent.ts ask "Why did the job routine fail?"
 ```
 
-In Kibana: **Agents > Box log**, or `<KIBANA_URL>/app/agent_builder/agents/box-log`.
+In Kibana: **Agents > GurtOS log**, or `<KIBANA_URL>/app/agent_builder/agents/gurtos-log`.
 
 The demo step seeds one scheduled "Job routine" that pays $0.35 of test money, tries LinkedIn (not one of its
 hosts) and fails. Then it checks:

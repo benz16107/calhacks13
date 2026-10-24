@@ -5,11 +5,12 @@
 // Both read KIBANA_URL and ELASTIC_API_KEY from the environment (on linuxbox: ~/.config/calhacks13/env).
 import { client, ensureIndex, INDEX } from './track.ts';
 
-export const AGENT_ID = 'box-log';
+export const AGENT_ID = 'gurtos-log';
 
 const days = { type: 'integer', description: 'How many days back to look. 7 for "this week", 1 for "today".', optional: true, defaultValue: 7 };
-const recent = `DATE_DIFF("day", @timestamp, NOW()) < ?days`;
-const esql = (id: string, description: string, query: string, params: object = { days }) => ({
+const run = { type: 'string', description: 'Whose log to read: "installed" (the real GurtOS boxes, the default) or a demo run id the user names.', optional: true, defaultValue: 'installed' };
+const recent = `box.run == ?run AND DATE_DIFF("day", @timestamp, NOW()) < ?days`;
+const esql = (id: string, description: string, query: string, params: object = { days, run }) => ({
   id,
   type: 'esql',
   description,
@@ -23,7 +24,7 @@ export const TOOLS = [
     'Tasks that finished (done), were undone, or failed, newest first, with the files each done task added, modified or deleted. Use for "what did my agents change".',
     `FROM ${INDEX}
 | WHERE event.type == "task.state" AND task.state IN ("done", "undone", "failed") AND ${recent}
-| KEEP @timestamp, box.run, app, task.id, task.title, task.state, files.count, files.added, files.modified, files.deleted, error, summary
+| KEEP @timestamp, box.name, box.machine, app, task.id, task.title, task.state, files.count, files.added, files.modified, files.deleted, error, summary
 | SORT @timestamp DESC
 | LIMIT 100`,
   ),
@@ -51,7 +52,7 @@ export const TOOLS = [
     'Tasks that failed, newest first, with the error the box recorded. Find the task the user names here, then read its story with box.task_timeline.',
     `FROM ${INDEX}
 | WHERE task.state == "failed" AND ${recent}
-| KEEP @timestamp, box.run, app, task.id, task.title, error
+| KEEP @timestamp, box.name, box.machine, app, task.id, task.title, error
 | SORT @timestamp DESC
 | LIMIT 50`,
   ),
@@ -83,26 +84,28 @@ export const TOOLS = [
   },
 ];
 
-const INSTRUCTIONS = `You answer questions about an always-on box where AI agents do work. Each piece of work is a task: it runs as its own Linux user, on its own copy of the files, and reaches only the hosts it is allowed. Every action the box takes is one document in the Elasticsearch index ${INDEX}, one per line of the box's action log.
+const INSTRUCTIONS = `You answer questions about GurtOS boxes: always-on machines where AI agents do work. Each piece of work is a task: it runs as its own Linux user, on its own copy of the files, and reaches only the hosts it is allowed. Every action a box takes is one document in the Elasticsearch index ${INDEX}, one per line of the box's action log.
 
-Fields: @timestamp; event.type (task.created, task.state, task.step, tool.call, tool.result, approval.asked, approval.answered, cost, net.blocked, note); message (one plain sentence about the event; read it first); task.id and task.title; app (the app or track that started the task, such as shopper or credit-desk; "demo" is the box's own demo script, "schedule" a scheduled routine); task.state on task.state events (running, waiting, done, failed, undone); files.added, files.modified, files.deleted on done events; cost_cents (US cents this event spent); tool.name; net.host (a host the box refused to connect to); task.hosts (the hosts a task may reach); approval.question and approval.state; box.run ("installed" is the always-on box; anything else is one run of the demo script).
+Fields: @timestamp; event.type (task.created, task.state, task.step, tool.call, tool.result, approval.asked, approval.answered, cost, net.blocked, note); message (one plain sentence about the event; read it first); task.id and task.title; app (the app or track that started the task, such as shopper or credit-desk; "demo" is the box's own demo script, "schedule" a scheduled routine); task.state on task.state events (running, waiting, done, failed, undone); files.added, files.modified, files.deleted on done events; cost_cents (US cents this event spent); tool.name; net.host (a host the box refused to connect to); task.hosts (the hosts a task may reach); approval.question and approval.state; box.name and box.machine (which box; two boxes can share a name, never a machine); box.run ("installed" is a real box; anything else is a test run of the demo script).
 
 How to answer:
 - Use the box.* tools. Most take days: 7 for "this week", 1 for "today", 30 for "this month".
+- The tools read the real boxes (run "installed") unless you pass run. Pass a demo run id only when the user names one. If you use box.search or write ES|QL yourself, keep to box.run == "installed" the same way.
+- When more than one box shows up, say which box each item is from.
 - Changes: box.changes. A task that was undone later had all its file changes removed, and other tasks kept theirs; say so. A failed task's changes were never applied.
-- Costs: box.costs_by_app and box.costs_by_task. Give US dollars with two decimals and split model and tool spending. Model spending is the list price of the Claude tokens a task used. Tool spending on this box is test money (Stripe test mode, Solana devnet, the example tool), never a real payment; say so. Every document whose box.run is not "installed" comes from a demo run, whatever its app.
+- Costs: box.costs_by_app and box.costs_by_task. Give US dollars with two decimals and split model and tool spending. Model spending is the list price of the Claude tokens a task used. Tool spending is test money (Stripe test mode, Solana devnet, the example tool), never a real payment; say so.
 - Why something failed: find the task the user means in box.failures (match the words in its title), then read box.task_timeline for its id. The recorded error is often only "worker exited with 1", so explain the cause from what happened just before: failed tool calls, denied approvals, blocked connections and the last step.
 - Blocked: box.blocked. Say which host, which task and app tried, how many times, and which hosts that task was allowed.
-- Many demo runs look alike. Unless the user asks for all of them, answer from the newest one and say how many earlier runs show the same.
-- Be short and specific: task titles, times in UTC, hosts, amounts. Never invent a fact; if the data does not say, say that.`;
+- Be short and specific: task titles, times in UTC, hosts, amounts. Never invent a fact; if the data does not say, say that.
+- Format: put a blank line before every table and list, or the chat shows raw pipes.`;
 
 export const AGENT = {
   id: AGENT_ID,
-  name: 'Box log',
-  description: "Answers questions about what the box's agents did: what they changed, what it cost, why a task failed, and what the box blocked.",
-  labels: ['box', 'calhacks13'],
+  name: 'GurtOS log',
+  description: 'Answers questions about what the agents on your GurtOS boxes did: what they changed, what it cost, why a task failed, and what the box blocked.',
+  labels: ['gurtos', 'calhacks13'],
   avatar_color: '#2F6B4F',
-  avatar_symbol: 'BX',
+  avatar_symbol: 'GL',
   configuration: {
     instructions: INSTRUCTIONS,
     enable_elastic_capabilities: false,

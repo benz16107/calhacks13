@@ -6,9 +6,9 @@ import path from 'node:path';
 import test from 'node:test';
 import type { Box, LogEvent, Task } from '../../core/contract.ts';
 
-// The track reads BOX_HOME and DEMO_LIVE when it loads: a scratch home, shipping on, as on an installed box.
+// The track reads BOX_HOME and DEMO_LIVE when it loads: a scratch home, shipping on, as in DEMO_LIVE=elastic ./demo.
 process.env.BOX_HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'elastic-test-'));
-delete process.env.DEMO_LIVE;
+process.env.DEMO_LIVE = 'elastic';
 const { MAPPING, OUTBOX, toDoc, default: track } = await import('./track.ts');
 test.after(() => fs.rmSync(process.env.BOX_HOME!, { recursive: true, force: true }));
 
@@ -90,5 +90,5 @@ test('the reader ships every event once, in order, in bulk; a failed send is sen
   for (const e of events.slice(2, 4)) await reader.read(e, box);
   await settle();
   assert.deepEqual(sent.map((l) => JSON.parse(l).event.seq), [2, 3, 4]);
-  assert.equal(fs.statSync(OUTBOX).size, 0, 'everything sent, so the outbox starts over');
+  assert.equal(fs.readFileSync(path.join(path.dirname(OUTBOX), 'sent'), 'utf8'), String(fs.statSync(OUTBOX).size), 'it knows everything was sent');
 });

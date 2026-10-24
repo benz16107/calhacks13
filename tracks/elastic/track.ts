@@ -10,16 +10,25 @@ import path from 'node:path';
 import type { Box, LogEvent, Task, Track } from '../../core/contract.ts';
 
 export const INDEX = 'box-actions';
-const HOME = process.env.BOX_HOME ?? '/var/lib/box';
+const HOME = path.resolve(process.env.BOX_HOME ?? '/var/lib/box');
+const installed = HOME === '/var/lib/box';
+// Two Lima VMs both call themselves lima-box, so the machine id is what keeps their documents apart.
+const machine = (() => {
+  try {
+    return fs.readFileSync('/etc/machine-id', 'utf8').trim().slice(0, 12) || os.hostname();
+  } catch {
+    return os.hostname();
+  }
+})();
 /** Which box and run a document came from. The installed box is run 'installed'; a ./demo run is its run id. */
-export const BOX = { name: os.hostname(), run: HOME === '/var/lib/box' ? 'installed' : path.basename(HOME) };
+export const BOX = { name: process.env.BOX_NAME ?? os.hostname(), machine, run: installed ? 'installed' : path.basename(HOME) };
 export const OUTBOX = path.join(HOME, 'elastic', 'outbox.ndjson');
 const SENT = path.join(HOME, 'elastic', 'sent'); // bytes of the outbox already in Elastic
 
-// In a ./demo run (DEMO_LIVE is set, maybe empty) ship to Elastic only with DEMO_LIVE=elastic, so merge gates stay
-// offline. A demo keeps its whole outbox, so the demo step can check every document.
+// Only the installed box ships, and a ./demo run with DEMO_LIVE=elastic. Dev and test boxes with their own
+// BOX_HOME stay out of the index. A demo (DEMO_LIVE set, maybe empty) keeps its whole outbox for the demo step.
 const inDemo = process.env.DEMO_LIVE !== undefined;
-const live = !inDemo || process.env.DEMO_LIVE!.split(/[\s,]+/).includes('elastic');
+const live = installed || (process.env.DEMO_LIVE ?? '').split(/[\s,]+/).includes('elastic');
 
 const kw = { type: 'keyword' };
 const text = { type: 'text' };
@@ -33,7 +42,7 @@ export const MAPPING = {
     error: { type: 'keyword', ignore_above: 1024, fields: { text } },
     summary: text,
     event: { properties: { seq: { type: 'long' }, type: kw } },
-    box: { properties: { name: kw, run: kw } },
+    box: { properties: { name: kw, machine: kw, run: kw } },
     task: {
       properties: {
         id: kw, title: { type: 'keyword', fields: { text } }, source: kw, workspace: kw, worker: kw, state: kw,
@@ -221,8 +230,9 @@ export default {
 
   logReaders: [
     {
-      name: 'ship',
+      name: 'docs', // was 'ship': the new name gets a fresh cursor, so each box sends its whole log once with the new ids
       async read(e: LogEvent, box: Box) {
+        if (!live && !inDemo) return; // a dev box: nothing to keep
         const t = e.task ? box.task(e.task) : undefined;
         const key = e.type === 'tool.call' || e.type === 'tool.result' ? `${e.task}.${e.key}` : '';
         if (e.type === 'tool.call') toolOf.set(key, e.tool);
@@ -232,7 +242,7 @@ export default {
         };
         if (e.type === 'tool.result') toolOf.delete(key);
         // The same event twice gets the same id, so a resend overwrites itself: no duplicates.
-        const line = JSON.stringify({ _id: `${BOX.name}:${BOX.run}:${e.seq}`, ...toDoc(e, t, extra) }) + '\n';
+        const line = JSON.stringify({ _id: `${BOX.machine}:${BOX.run}:${e.seq}`, ...toDoc(e, t, extra) }) + '\n';
         fs.mkdirSync(path.dirname(OUTBOX), { recursive: true });
         const fd = fs.openSync(OUTBOX, 'a');
         fs.writeSync(fd, line);
@@ -258,6 +268,12 @@ export default {
         const es = client(url, key);
         ready ??= ensureIndex(es).catch((e) => ((ready = undefined), Promise.reject(e)));
         await ready;
+        if (installed && /"event":\{"seq":1,/.test(input.lines)) {
+          // Sending from seq 1 again (a new box, or the upgrade to machine ids): drop this box's documents from the
+          // first version, whose ids had no machine, so nothing is counted twice.
+          const old = [{ term: { 'box.name': os.hostname() } }, { term: { 'box.run': 'installed' } }];
+          await es('POST', `/${INDEX}/_delete_by_query`, { query: { bool: { filter: old, must_not: [{ exists: { field: 'box.machine' } }] } } });
+        }
         const body = input.lines.split('\n').filter(Boolean).flatMap((l) => {
           const { _id, ...doc } = JSON.parse(l);
           return [JSON.stringify({ index: { _index: INDEX, _id } }), JSON.stringify(doc)];
