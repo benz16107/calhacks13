@@ -557,7 +557,7 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 
 **Pitch:** GurtOS Server runs wherever a VM does, and Vultr runs the parts of GurtOS that must be public or big. The cloud box at gurt-cloud.box.gurtos.com answers Jira, Mana and x402 buyers while the rest of its API stays closed. The relay that gives every box its own address runs on a Vultr instance, the release discs are built on Vultr and mirrored on Vultr Object Storage, the real disc installs on a 1 vCPU, 1 GB instance, state backs up encrypted to Object Storage, and the cloud firewall is set from code.
 
-**The problem:** Draft: an agent box should be reachable around the clock without exposing everything on it to the internet.
+**The problem:** An agent computer should be reachable around the clock without exposing everything on it, and an ordinary cloud VM runs every agent as one user that holds every key.
 
 **Features** (from the page's table):
 

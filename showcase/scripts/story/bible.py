@@ -22,7 +22,7 @@ PROBLEM = {
  'elastic': "After a week of agents working, an ordinary OS cannot tell you what they did: its logs are scattered and anyone with root can edit them.",
  'moss': "A personal agent is only useful if it remembers you, and today that means uploading your life to someone's cloud, and any web page an agent reads can plant false memories.",
  'apify': "Web agents today drive your logged-in browser with your accounts, read booby-trapped pages, and you can't see what they spend.",
- 'vultr': "Draft: an agent box should be reachable around the clock without exposing everything on it to the internet.",
+ 'vultr': "An agent computer should be reachable around the clock without exposing everything on it, and an ordinary cloud VM runs every agent as one user that holds every key.",
  'figma': "Draft: an OS for agents has to feel like an OS people trust, not another dashboard, and the design has to reach the code without drift.",
  'mana': "AI workspaces are great for thinking, but there is no safe place for an AI to act on your real computer.",
 }

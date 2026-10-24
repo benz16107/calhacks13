@@ -57,6 +57,18 @@ if __name__ == '__main__':
         if link not in d: continue
         i = d.index(link); h = d.rindex('\n### ', 0, i) + 1; e = d.index('\n', h)
         d = d[:e+1] + f"\n**Best shown in:** {ed}. {md(pitch)}\n" + d[e+1:]
+    # The page's proof is the Devpost proof too (explorer links in the old text are kept, since Devpost readers click them).
+    plain = lambda t: re.sub(r'</?(?:strong|em|b|i|span|br)[^>]*>', '', md(t))
+    for slug, v in fm.items():
+        link = f"(https://calhacks.gurtos.com/tracks/{slug}/)"
+        if link not in d or not v.get('proof'): continue
+        i = d.index(link); h = d.rindex('\n### ', 0, i)
+        m = re.search(r'^\*\*Proof:\*\*(.*)$', d[h:i], re.M)
+        if not m: continue
+        old = m.group(1)
+        keep = [u for u in re.findall(r'https://explorer\.solana\.com/[^\s)]*[^\s).,]', old) if u not in v['proof']]
+        new = '**Proof:** ' + plain(v['proof']).strip() + ''.join(f' {u}' for u in keep)
+        a = h + m.start(); d = d[:a] + new + d[a + len(m.group(0)):]
     d = re.sub(r'\n{3,}', '\n\n', d)
     open(p, 'w').write(d)
     print('ok', len(E))
