@@ -42,6 +42,14 @@ Rosa's Waiting for me on her phone, the Audit timeline for one customer, the kil
 the same $40,000 request in Server and in Business. Nine PNGs, the node IDs and the open questions are in
 [`figma/business/README.md`](figma/business/README.md) (page "GurtOS Business"). Don't code these until Ben approves.
 
+## GurtOS phone app (one app for every machine)
+
+One companion app for Server, Personal and Business, installed from app.gurtos.com to the Home Screen. You switch
+between paired machines the way you switch accounts, and every notification names its machine. The machine switcher,
+Add a machine, a home for each edition, the lock-screen notification and the approval it opens, and the install flow
+(scan, Safari, Add to Home Screen, allow notifications, pair) are in [`figma/phone-app/README.md`](figma/phone-app/README.md)
+(page "GurtOS phone app").
+
 ## Files
 
 | File | Link | What is in it |
