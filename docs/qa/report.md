@@ -12,7 +12,7 @@ quota was used up; /find searched locally and the find thread is fixing the sync
 
 ## Machines
 
-The QA run used three Vultr instances labelled `calhacks13-qa` (the debug ISO, then main's core on top, with test keys
+The QA run used three Vultr instances (the release one was deleted at 04:00 PT Oct 24, when the account ran out of credit) labelled `calhacks13-qa` (the debug ISO, then main's core on top, with test keys
 in its vault and its box ports open only to the QA machine), `calhacks13-qa-release` (the 00:44 PT release ISO) and a first
 release install that was deleted at 22:54 PT. Their IDs and addresses are kept out of this repo, in
 a private notes file outside the repo. **Delete them and their custom ISOs after Sunday Oct 25.**

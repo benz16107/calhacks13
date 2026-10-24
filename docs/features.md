@@ -14,7 +14,7 @@ Devpost text, and Ben's approved list.
 **Demo step** names the check in `./demo` (`core/demo.ts` moments, or `tracks/<name>/demo.ts`). "none" means no
 automated check yet.
 
-Checked against main `cee2d5e`, Sat Oct 24 03:27 PT. `./demo` on that tree: 26 passed, 0 failed, 1 pending (real Droid, off by default).
+Checked against main `eecfc05`, Sat Oct 24 04:00 PT. `./demo` on that tree: 26 passed, 0 failed, 1 pending (real Droid, off by default).
 
 ## Freeze plan
 
@@ -31,10 +31,10 @@ Checked against main `cee2d5e`, Sat Oct 24 03:27 PT. `./demo` on that tree: 26 p
 |---|---|
 | verified (ISO) | 3 |
 | verified | 39 |
-| merged | 29 |
-| building | 25 |
-| planned | 38 |
-| **Total** | **134** |
+| merged | 30 |
+| building | 29 |
+| planned | 39 |
+| **Total** | **140** |
 
 **Collisions** (detail below): none open at 03:27. The three found at 02:25 are resolved and Business is on main. Still
 watched: portal/dist rebuilt from merged sources (C-4).
@@ -253,6 +253,22 @@ Owner: the Figma thread. `docs/figma-products.md` is not on main yet; its items 
 | A Community playbook | figma | planned | | | Figma |
 | App-vs-Figma comparisons (the built screen next to its frame) | figma, portal | planned | | | Figma |
 | A Figma Sites landing page | figma | planned (named on the showcase's Figma page) | | | Figma, GoDaddy |
+
+## Vultr and GoDaddy
+
+Owner: the Vultr/GoDaddy thread, branch `vultr-godaddy-push` (not merged at 04:00 PT). **The Vultr account has $0 credit
+and refuses new instances** ("does not have any additional credit"), and holds its two-ISO maximum. That blocks the
+live runs below; it also blocks QA's overnight fresh installs on new instances, so QA reinstalls the existing debug
+instance through the disc menu instead.
+
+| Feature | Owner | Status | Commit | Demo step | Tracks |
+|---|---|---|---|---|---|
+| Boot the real GurtOS disc on Vultr from a script (`tracks/vultr/up.ts`) | vultr | building (script written, **blocked**: no Vultr credit; QA installed the disc by hand twice, Oct 23 22:29 and Oct 24 00:02) | | none | Vultr |
+| Encrypted backup to Object Storage (age; the owner holds the key) | vultr | building (code, unit test, demo step on the branch; live restore **blocked** by the credit error) | | demo step on branch | Vultr |
+| Vultr firewall managed from the box | vultr | building (group create, add, remove and delete proven against the real API; attaching to an instance **blocked**) | | | Vultr |
+| Vultr Serverless Inference as a hosted model for /find | vultr, find | planned (no subscription; a paid one is the conductor's call) | | | Vultr, Moss |
+| gurtos.co short pairing links (the code stays in the URL fragment) | vultr | building (redirect rules, test, go-live script; domain **not registered**, the conductor registers it) | | test on branch | GoDaddy |
+| Domain story text for the showcase | vultr, submission | merged into the submission's text | | none | GoDaddy |
 
 ## Not pursued
 
