@@ -10,7 +10,7 @@ host a live status app for the box.
 |---|---|
 | The planning chat (the moment Mana changed what we built) | https://www.mana.space/shared-chats/x5CqxyjcOgVCAyrvUBqK2LNRcMJ2/001792810018092cc50381027f1410c8fcb |
 | Project page | https://www.mana.space/home/x5CqxyjcOgVCAyrvUBqK2LNRcMJ2/documents/cal-hacks-13-a-computer-where-ai-agents-work-safely |
-| Box status app, inside Mana | https://www.mana.space/home/x5CqxyjcOgVCAyrvUBqK2LNRcMJ2/apps/box-status |
+| GurtOS status app, inside Mana | https://www.mana.space/home/x5CqxyjcOgVCAyrvUBqK2LNRcMJ2/apps/box-status |
 
 All three open without signing in. The rest of the Mana account stays private.
 
@@ -55,14 +55,14 @@ None of the 35 changes a decision in the answer key: Mana checked the 12 outcome
 checked again here (all 67 ids load with the desk's own loader, the draft's 32 texts are unchanged, and every rule id
 mentioned inside a rule exists).
 
-## The Box status app
+## The GurtOS status app
 
-Mana's agent built it from a one-message spec, made it public, and tested it signed out at phone size, with sample
-data and with a dropped connection. It runs in the viewer's browser and calls the box every 5 seconds. It shows tasks
-running, approvals waiting with their questions, the total cost, and recently finished tasks. It has no buttons and
-holds no keys.
+Mana's agent built it from a one-message spec (as "Box status", renamed in place on 2026-10-24), made it public, and
+tested it signed out at phone size, with sample data and with a dropped connection. It runs in the viewer's browser
+and calls the box every 5 seconds. It shows tasks running, approvals waiting with their questions, the total cost, and
+recently finished tasks. It has no buttons and holds no keys.
 
-![The Box status app, with test data injected in a test browser](box-status-test-data.png)
+![The GurtOS status app, with test data injected in a test browser](box-status-test-data.png)
 
 The screenshot uses **test data**, fed to a test browser only. The live page never shows sample data: until the box
 answers, it says "The box isn't reachable right now."
@@ -73,12 +73,14 @@ It reads `GET /t/mana/status`, a route this track adds to the box (`track.ts`):
   source and time; the question and amount of each approval that is waiting; counts by state; the total cost. No
   prompts, tool calls, log lines or secrets.
 - **Read-only.** One GET route. Approving still needs the portal or the phone.
+- **Open to the public address.** The track lists it in `openRoutes`, so it needs no paired phone's token. Every
+  other track route still does.
 - **CORS open** (`Access-Control-Allow-Origin: *`), so the Mana page can fetch it.
 
 `demo.ts` is the track's step in `./demo`: a task asks for an OK, the status lists it as waiting with its question and
 no prompt, and after the OK it shows the task done.
 
-**To make the app live,** the Vultr box needs this track installed and one more Caddy block beside the Jira one:
+**Live now.** The Vultr box's Caddy forwards this one path, beside the Jira routes:
 
 ```
 handle /t/mana/status {
@@ -93,4 +95,4 @@ handle /t/mana/status {
 | Use Mana meaningfully while building | The rules review: three turns, 69 proposals checked against the test case, 35 adopted into the file the agents work from |
 | Link one or two public Mana pages or chats | The chat and the project page above |
 | One moment where Mana changed what you built | The rules file, version 0.2, and the table above |
-| +10: the project lives inside Mana as an app a judge can open and use | The Box status app, live once the route is exposed on the Vultr box |
+| +10: the project lives inside Mana as an app a judge can open and use | The GurtOS status app, live from the Vultr box |
