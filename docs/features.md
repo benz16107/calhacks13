@@ -14,7 +14,7 @@ Devpost text, and Ben's approved list.
 **Demo step** names the check in `./demo` (`core/demo.ts` moments, or `tracks/<name>/demo.ts`). "none" means no
 automated check yet.
 
-Checked against main `6c85f6c`, Sat Oct 24 04:55 PT. `./demo` on that tree: 26 passed, 0 failed, 1 pending (real Droid, off by default).
+Checked against main `8a4cbf4`, Sat Oct 24 05:00 PT. `./demo` on that tree: 26 passed, 0 failed, 1 pending (real Droid, off by default).
 
 ## Freeze plan
 
@@ -30,11 +30,11 @@ Checked against main `6c85f6c`, Sat Oct 24 04:55 PT. `./demo` on that tree: 26 p
 | Status | Count |
 |---|---|
 | verified (ISO) | 3 |
-| verified | 41 |
-| merged | 48 |
+| verified | 42 |
+| merged | 55 |
 | building | 26 |
 | planned | 26 |
-| **Total** | **144** |
+| **Total** | **152** |
 
 **Collisions** (detail below): none open at 03:27. The three found at 02:25 are resolved and Business is on main. Still
 watched: portal/dist rebuilt from merged sources (C-4).
@@ -276,6 +276,22 @@ instance through the disc menu instead.
 | Vultr Serverless Inference as a hosted model for /find | vultr, find | planned (no subscription; a paid one is the conductor's call) | | | Vultr, Moss |
 | gurtos.co short pairing links (the code stays in the URL fragment) | vultr | building (redirect rules, test, go-live script; domain **not registered**, the conductor registers it) | | test on branch | GoDaddy |
 | Domain story text for the showcase | vultr, submission | merged into the submission's text | | none | GoDaddy |
+
+## Factory (Droid SDK)
+
+Owner: the Factory thread. All seven on main as da08615 (gate 28 of 28, 1 pending; a live `DEMO_LIVE=droid,github` run on
+the Vultr test box passed every Factory check). QA has not walked them by hand yet.
+
+| Feature | Owner | Status | Commit | Demo step | Tracks |
+|---|---|---|---|---|---|
+| Droid as the worker in every task with Claude, scheduled, webhook and file triggers, plan and diff visible | core, factory | verified Oct 24 00:10 (real Droid started from a phone; moment 2 with real Droid at 23:37) | b53e1c7 | moment 1 with Droid (live) | Factory |
+| Plan first, then approve: Droid's spec-mode plan becomes an approval; work starts only after Approve, Deny fails the task with nothing changed | factory, core | merged | da08615 | "Droid planned first in spec mode, and the plan became an approval" (live) | Factory |
+| A team of custom droids: coder, reviewer (read-only), credit-analyst, shopper in tracks/factory/droids; the reviewer checks the coder's diff before Keep or the PR | factory | merged | da08615 | "the coder droid made the change and the reviewer droid checked it" (live); "the reviewer can only read" | Factory |
+| Autonomy levels the OS enforces (`TaskSpec.droid.autonomy`): low = no network and every spend asks; medium = budget at most $1; Droid's permission requests become approvals | core, factory | merged | da08615 | "low autonomy: ..." and "medium autonomy: ..." | Factory |
+| Droid hooks report to GurtOS: PostToolUse logs each tool result; PreToolUse pauses risky commands (rm -rf, git push, sudo, npm publish, curl or sh) for an OK | core | merged | da08615 | "Droid's hooks logged each tool call's result" (live); core/hook.test.ts | Factory |
+| Droid on GitHub: the box watches `FACTORY_GITHUB_REPO` for issues labelled droid; each becomes a plan-first task on its own clone; `factory.openPullRequest` pushes with the vault's `GITHUB_TOKEN`, never in the task | factory | merged (a real PR exists; not set up on the QA box: no GITHUB_TOKEN in its vault) | da08615 | "Droid opened a pull request through the vault's token" (DEMO_LIVE=droid,github) | Factory |
+| `gurtos-exec`: a safe runner for `droid exec`; submit a job to a box, get back steps, the diff, the cost and credits (text or `-o json`) | factory | merged | da08615 | "gurtos-exec ran a job on the box and got back its diff and cost" | Factory |
+| Factory usage in the portal: per-task Factory credits, and the plan's 5-hour and weekly use through the vault key, which is never shown | factory, core | merged | da08615 | "usage reads Factory's limits without showing the key" | Factory |
 
 ## Not pursued
 
