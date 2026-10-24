@@ -19,7 +19,7 @@ release install that was deleted at 22:54 PT. Their IDs and addresses are kept o
 
 ## Summary
 
-Status at 00:20 PT Saturday. **7 P0 found, all 7 fixed and verified.** 20 P1 and 18 P2 found in the product, plus 7 in
+Status at 00:30 PT Saturday. **8 P0 found: 7 fixed and verified, P0-8 open.** 20 P1 and 18 P2 found in the product, plus 7 in
 the docs site and 9 in the showcase. The four moments, Shopper, the wallet, the credit desk and a phone paired over the
 network all work on main as of 717bc3f.
 
@@ -32,6 +32,7 @@ network all work on main as of 717bc3f.
 | P0-5 paired phone loses live updates and apps | Fixed, verified 23:42 | portal 3ae539b |
 | P0-6 Caddy-relayed track routes get 401 | Fixed, verified 23:47 | core 6879fb9 |
 | P0-7 one task reads another task's folder copy | Fixed, verified 00:12 (copy is 0600 and owned by its task) | core bb0ccde |
+| **P0-8 scanning the pairing QR doesn't pair** | **Open**, found 00:27: the QR address `/pair#<code>` opens "Pair this phone first" with the code field empty and Pair disabled; typing the code works (shot 75) | portal |
 | P1-1 undo leaves files on disk | Fixed, verified | core c6f747e |
 | P1-2 direct connections not logged | Fixed, verified 00:12 (1.1.1.1 and 169.254.169.254 logged) | core bb0ccde |
 | P1-4 stale release ISO, no firewall | Fixed, verified 00:02: GurtOS, Pacific time, 3000 and 7700 closed to the internet | image 881318a |
@@ -41,13 +42,15 @@ network all work on main as of 717bc3f.
 | P1-9 notices hide a waiting request | Fixed, verified: the phone home lists every waiting request first | portal 3b802b9 |
 | P1-10 credit desk and /find have no page | Credit desk fixed, verified: quick run on a phone, fraud hold approved as "controller (Judge's iPhone)". /find still has none | credit desk 7cdd64e |
 | P1-11 supplies form pays the budget | Fixed, verified: pauses at "$0.03 on a $0.02 budget", then pays | shopper b842425 |
+| P2-1 the losing phone gets no word | Fixed, verified 00:29: "Already approved on Judge's iPhone" (shot 76) | portal |
+| Unpaired phone sees everything | Fixed, verified: "Pair this phone first", no tasks shown | portal |
 | P2-9 undo doesn't say it refunds | Fixed, verified: "Undo and refund (test)" | portal 717bc3f, shopper |
 | P2-14 "Box" names | Store, Mana app, Jira panel renamed; Elastic open | tracks |
 | D-1 to D-4, D-7 docs | Fixed, live | docs 199dce5 |
 | P1-7 live banner names the wrong hosts | **Still open** at 00:21 on a phone: "tm2diipf4e2 tried to reach attacker.example. It may not reach any host." (id instead of title, and its host is shop.localhost:8123) | portal |
 | Open P1s | P1-3 /find starts a Droid task at boot; P1-12 ASI:One not paired; P1-13 real agent probes the proxy in moment 2; P1-14 budget and hosts not validated; D-5, D-6; showcase S-1 to S-6 | |
 
-**Not re-tested yet:** P2-1, P2-6, P2-7, P2-8, P2-10 (portal says fixed), and the installed boxes. **At 00:22 none
+**Not re-tested yet:** P2-6, P2-7, P2-8, P2-10 (portal says fixed), and the installed boxes. **At 00:22 none
 runs current main:** linuxbox and Vultr are at 3a4e4ca (no P0-7 fix), and the laptop, Sunday's demo box, still runs
 code from before c6f747e. Core was asked to deploy all three.
 
@@ -119,6 +122,11 @@ thread, reproduced by QA at 00:05 PT on main 4540913. With Settings agentFolders
 runs and while it waits for review (on Personal, until Keep or Undo); Undo removes it. Task ids aren't secret
 (find.search returns them). Expected: base keeps the real file's mode and belongs to A's user, and other tasks can't
 walk into tasks/<A>.
+
+**P0-8. Scanning the box's pairing QR doesn't pair a phone.** Owner: portal. Found 00:27 PT on main 717bc3f. The QR
+holds `http://<box>:7700/pair#<code>`. On a fresh phone that opens "Pair this phone first" with "Code from the box's
+screen" empty and Pair disabled (shot 75); `/#pair/<code>` doesn't fill it either. Typing the code by hand pairs. The
+Hacker's Choice demo starts with a judge scanning that QR.
 
 ### P1
 
