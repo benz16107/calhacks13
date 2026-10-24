@@ -44,6 +44,12 @@ export default async function (d: DemoKit) {
   const img = await get('workspace=photos&path=IMG_2041.jpg');
   const same = Buffer.from(await img.arrayBuffer()).equals(fs.readFileSync(path.join(import.meta.dirname, 'photos', 'IMG_2041.jpg')));
   d.check(img.headers.get('content-type') === 'image/jpeg' && same, 'the portal can show the photo it found (GET /t/find/file)');
+  const page = await fetch(`http://127.0.0.1:${port}/t/find/`);
+  const apps = await d.api<{ track: string; name: string }[]>('GET', '/apps');
+  d.check(
+    page.ok && (page.headers.get('content-type') ?? '').startsWith('text/html') && (await page.text()).includes('role="search"') && apps.some((a) => a.track === 'find'),
+    'Find is an app on the box: a search page at /t/find/ in the app grid',
+  );
 
   // An agent, through the broker: a task with no network and no secrets uses find.search.
   const a = await d.api<Task>('POST', '/tasks', {
@@ -58,6 +64,10 @@ export default async function (d: DemoKit) {
   const events = (await d.api<{ events: LogEvent[] }>('GET', `/tasks/${a.id}`)).events;
   const out = (events.find((e) => e.type === 'tool.result') as Extract<LogEvent, { type: 'tool.result' }>)?.output as Search | undefined;
   d.check(out?.results[0]?.path === 'IMG_2041.jpg', 'an agent asked find.search and got the same photo, through the broker');
+
+  // The box's own describe tasks are housekeeping: never in the index.
+  const own = await d.api<Task>('POST', '/tasks', { title: 'Describe 1 photo for /find', workspace: 'home', worker: 'fake', source: 'find', prompt: 'write described.txt yes' });
+  await d.settled([own.id]);
 
   // A file and the task that wrote it, found by meaning. Undo the task and the file leaves the index.
   d.workspace('find-notes', {});
@@ -79,6 +89,8 @@ export default async function (d: DemoKit) {
   d.check(file, `"${pack}" -> find-notes/tahoe.md, the file a task just wrote`);
   const task = (await search('Tahoe weekend', 'task')).results.find((x) => x.task === w.id);
   d.check(task?.state === 'done', `"Tahoe weekend" -> task ${w.id}, "${task?.text.slice(0, 50)}...": task history is searchable`);
+  const describe = await search('Describe 1 photo for /find', 'task', 20);
+  d.check(!describe.results.some((x) => x.task === own.id), 'the box\'s own describe task is not in the index');
   const secret = fs.readFileSync(vault, 'utf8').split('\n').map((l) => l.split('=').slice(1).join('=')).filter((v) => v.length > 8);
   const all = JSON.stringify(await search('key token secret password', '', 20));
   d.check(

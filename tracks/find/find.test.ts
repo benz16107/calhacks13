@@ -118,3 +118,32 @@ test('the cloud copy: only when the index changed, at most every 10 minutes, and
   assert.equal(pushes, 4);
   assert.match(cloudStatus(), /cloud copy on/);
 });
+
+test('the Claude backup waits for a Factory key and never repeats a photo it already handed out', async () => {
+  const { askClaude } = await import('./track.ts');
+  const started: any[] = [];
+  const hourAgo = (h: number) => new Date(Date.now() - h * 3600_000).toISOString();
+  const old = [
+    { source: 'find', workspace: 'photos', prompt: 'Open each photo...\n\nrecent.jpg', state: 'failed', updatedAt: hourAgo(0.2) },
+    { source: 'find', workspace: 'photos', prompt: 'Open each photo...\n\nstale.jpg', state: 'failed', updatedAt: hourAgo(2) },
+  ];
+  const box = (key: boolean) =>
+    ({
+      secret: (n: string) => (key && n === 'FACTORY_API_KEY' ? 'fk' : (() => { throw new Error(`the vault has no ${n}`); })()),
+      tasks: () => old,
+      createTask: async (spec: any) => (started.push(spec), spec),
+    }) as any;
+  const photos = (...names: string[]) => names.map((path) => ({ workspace: 'photos', path }));
+
+  askClaude(box(false), photos('a.jpg', 'b.jpg'));
+  assert.equal(started.length, 0, 'no Factory key in the vault: no task, so a fresh box shows no failed task');
+  askClaude(box(true), photos('a.jpg', 'b.jpg'));
+  assert.equal(started.length, 1);
+  assert.equal(started[0].worker, 'droid');
+  assert.deepEqual(started[0].prompt.split('\n').slice(-2), ['a.jpg', 'b.jpg']);
+  askClaude(box(true), photos('a.jpg', 'b.jpg'));
+  assert.equal(started.length, 1, 'the same photos are not handed out twice');
+  askClaude(box(true), photos('recent.jpg', 'stale.jpg'));
+  assert.equal(started.length, 2);
+  assert.deepEqual(started[1].prompt.split('\n').slice(-1), ['stale.jpg'], 'a task that failed under an hour ago is not started again at boot');
+});

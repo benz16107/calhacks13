@@ -269,7 +269,8 @@ export async function put(doc: Entry, persist = true) {
   await index?.add([plain(doc)]);
 }
 
-async function drop(ids: string[]) {
+export async function drop(ids: string[]) {
+  if (!ids.length) return;
   ids.forEach((id) => docs.delete(id));
   save();
   await index?.remove(ids);

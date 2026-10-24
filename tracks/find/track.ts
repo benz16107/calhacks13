@@ -3,7 +3,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import type { Box, Track } from '../../core/contract.ts';
-import { HOME, MODELS, OFFLINE, PROMPT, cloudStatus, describeAny, docs, isUsageLimit, mossIndex, photoType, put, root, scan, use, wordIndex, type Index } from './find.ts';
+import { HOME, MODELS, OFFLINE, PROMPT, cloudStatus, describeAny, docs, drop, isUsageLimit, mossIndex, photoType, put, root, scan, use, wordIndex, type Index } from './find.ts';
 
 const MOSS = ['MOSS_PROJECT_ID', 'MOSS_PROJECT_KEY'];
 const KINDS = ['photo', 'file', 'task'];
@@ -70,7 +70,12 @@ async function search(secret: Secret, input: { query?: unknown; kind?: unknown; 
 // ---------- Claude as the backup describer: a Droid task in the photos' workspace ----------
 // No network, no tools, no secrets. It writes .find/descriptions.json in its own copy; the next scan reads it.
 
-const handed = new Set<string>(); // photos given to a Droid task already, so a failing task is not repeated until restart
+const handed = new Set<string>(); // photos given to a Droid task since boot
+/** A describe task already has this photo, unless it failed over an hour ago: a restart does not start it again. */
+const covered = (box: Box, ws: string, file: string) =>
+  box.tasks().some(
+    (t) => t.source === 'find' && t.workspace === ws && t.prompt.split('\n').includes(file) && (t.state !== 'failed' || Date.now() - Date.parse(t.updatedAt) < 3600_000),
+  );
 const droidModel = new Map<string, string>(); // task id -> the model Droid reported in its cost events
 
 /** Claude's description of a photo, if a finished Droid task wrote one into the workspace after the photo changed. */
@@ -90,8 +95,10 @@ function fromClaude(box: Box, ws: string, rel: string) {
   }
 }
 
-function askClaude(box: Box, failed: { workspace: string; path: string }[]) {
-  const fresh = failed.filter((f) => !handed.has(`${f.workspace}/${f.path}`));
+export function askClaude(box: Box, failed: { workspace: string; path: string }[]) {
+  // Droid needs the vault's Factory key. Without it, start nothing; a later scan tries again once the key is set.
+  if (!maybe(box.secret, 'FACTORY_API_KEY')) return;
+  const fresh = failed.filter((f) => !handed.has(`${f.workspace}/${f.path}`) && !covered(box, f.workspace, f.path));
   for (const workspace of new Set(fresh.map((f) => f.workspace))) {
     const list = fresh.filter((f) => f.workspace === workspace);
     list.forEach((f) => handed.add(`${f.workspace}/${f.path}`));
@@ -140,13 +147,16 @@ const summaries = new Map<string, string>(); // task id -> Droid's final message
 
 export default {
   name: 'find',
-  secrets: [...MOSS, 'VULTR_INFERENCE_KEY'],
+  // FACTORY_API_KEY: only checked for presence before starting a Claude describe task; its value is never read here.
+  secrets: [...MOSS, 'VULTR_INFERENCE_KEY', 'FACTORY_API_KEY'],
 
   triggers: [
     {
       name: 'index',
       start(box) {
         box.workspace('photos', new URL('./photos/', import.meta.url).pathname); // the test photos, the first time only
+        // Earlier versions indexed the box's own describe tasks; they are housekeeping, not history.
+        void drop([...docs.values()].filter((d) => d.metadata.kind === 'task' && d.metadata.source === 'find').map((d) => d.id));
         const tick = () => indexNow(box).catch((e) => console.error(`find: indexing failed: ${e.message}`));
         void tick();
         setInterval(tick, 60_000).unref(); // also catches files copied straight into a workspace
@@ -166,11 +176,14 @@ export default {
         if (!t) return;
         const what = summaries.get(t.id) ?? t.summary ?? e.error ?? t.prompt;
         summaries.delete(t.id);
-        await put({
-          id: `task:${t.id}`,
-          text: `Task "${t.title}" (${e.state}): ${what.slice(0, 1500)}`,
-          metadata: { kind: 'task', task: t.id, workspace: t.workspace, state: e.state, source: t.source },
-        });
+        // The box's own describe tasks are housekeeping, not history: their result shows up as photo descriptions.
+        if (t.source !== 'find') {
+          await put({
+            id: `task:${t.id}`,
+            text: `Task "${t.title}" (${e.state}): ${what.slice(0, 1500)}`,
+            metadata: { kind: 'task', task: t.id, title: t.title, workspace: t.workspace, state: e.state, source: t.source },
+          });
+        }
         if (e.state !== 'failed') void indexNow(box).catch(() => {}); // a failed task's files are not applied
       },
     },
@@ -201,7 +214,10 @@ export default {
     },
   ],
 
+  apps: [{ name: 'find', title: 'Find', href: '/' }],
+
   routes: {
+    'GET /': () => new Response(fs.readFileSync(new URL('./app.html', import.meta.url)), { headers: { 'content-type': 'text/html; charset=utf-8' } }),
     // GET /t/find/search?q=whiteboard%20photo&kind=photo&k=5
     'GET /search': async (req, box) => {
       const u = new URL(req.url);
