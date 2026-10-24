@@ -14,7 +14,7 @@ Devpost text, and Ben's approved list.
 **Demo step** names the check in `./demo` (`core/demo.ts` moments, or `tracks/<name>/demo.ts`). "none" means no
 automated check yet.
 
-Checked against main `e78480c`, Sat Oct 24 04:10 PT. `./demo` on that tree: 26 passed, 0 failed, 1 pending (real Droid, off by default).
+Checked against main `60f5184`, Sat Oct 24 04:20 PT. `./demo` on that tree: 26 passed, 0 failed, 1 pending (real Droid, off by default).
 
 ## Freeze plan
 
@@ -31,9 +31,9 @@ Checked against main `e78480c`, Sat Oct 24 04:10 PT. `./demo` on that tree: 26 p
 |---|---|
 | verified (ISO) | 3 |
 | verified | 39 |
-| merged | 31 |
-| building | 29 |
-| planned | 39 |
+| merged | 37 |
+| building | 28 |
+| planned | 34 |
 | **Total** | **141** |
 
 **Collisions** (detail below): none open at 03:27. The three found at 02:25 are resolved and Business is on main. Still
@@ -223,17 +223,17 @@ Owner: the Mana thread.
 
 ## Apify (GurtOS Personal and Server)
 
-Owner: the Apify thread. Ben approved the Apify push; same freeze as everything else.
+Owner: the Apify thread. All six merged as 60f5184 (default `./demo` 26 passed; `DEMO_LIVE=apify ./demo` for the live steps).
 
 | Feature | Owner | Status | Commit | Demo step | Tracks |
 |---|---|---|---|---|---|
-| Run any Actor, Best Buy price check, places, through the broker with no token in the task | apify | verified Oct 23 23:40 (live Best Buy price) | 97694e0 | tracks/apify/demo.ts | Apify |
-| Our own published Actor "Agent-Safe Page Reader" (flags or strips hidden instructions aimed at agents; re-enters Best Actor) | apify | building (uncommitted in the Apify worktree: actor/, detect.test.ts; not yet published) | | detect.test.ts in worktree | Apify |
-| Apify's MCP server as the agents' web toolkit, through the broker and within budgets | apify, core | planned | | | Apify |
-| An Apify schedule or webhook starts a GurtOS task through core's webhook trigger | apify, core | planned | | | Apify |
-| The Website Content Crawler feeds /find | apify, find | planned | | | Apify, Moss |
-| A web source (a site, reviews) for the credit desk | apify, credit desk | planned | | | Apify, Hyphenate |
-| Apify run cost counts in task budgets and shows in the portal | apify, core, portal | planned (run cost already counts as the tool's cost; portal display not checked) | | | Apify |
+| Run any Actor, Best Buy price check, places, through the broker with no token in the task; default cap now $0.10 | apify | verified Oct 23 23:40 (live Best Buy price) | 97694e0, 60f5184 | tracks/apify/demo.ts | Apify |
+| Our own Actor "Agent-Safe Page Reader" (trap page: risk 100, withheld; example.com: none), build 1.0.2 in Ben's account | apify | merged; **not public**: Ben must switch the account's public profile on in the Apify Console (Settings, Account), then one curl in tracks/apify/README.md "Publishing the Actor" | 60f5184 | DEMO_LIVE=apify | Apify |
+| Apify's MCP server as the agents' web toolkit, through the broker (`apify.mcp`) | apify | merged (live) | 60f5184 | apify demo | Apify |
+| An Apify schedule or webhook starts a GurtOS task (`apify.watch`, `POST /t/apify/watch`) | apify | merged (set-up and teardown live; delivery tested only with Apify's payload shape: needs the box reachable and APIFY_WEBHOOK_URL and APIFY_WEBHOOK_SECRET in the vault) | 60f5184 | apify demo | Apify |
+| The Website Content Crawler feeds /find (`apify.indexSite`) | apify, find | merged (live: file written; the /find answer step is in DEMO_LIVE=apify) | 60f5184 | DEMO_LIVE=apify | Apify, Moss |
+| A web source for the credit desk (`apify.webSource`, finds disagreements) | apify, credit desk | merged; the credit desk must add the tool to its analyst's list | 60f5184 | apify demo | Apify, Hyphenate |
+| Apify run cost in task budgets; approvals say "to Apify (run X)"; an "Apify spend" app lists counted cents and Apify's usage per task | apify, core, portal | merged | 60f5184 | apify demo | Apify |
 
 ## Other tracks, as they exist
 
