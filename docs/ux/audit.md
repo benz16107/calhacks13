@@ -18,13 +18,14 @@ How it was walked:
 
 ## Status
 
-**Fixed 4, open 64** (68 findings: 15 web, 21 Server, 32 Personal; parity findings join when measured). Each fixed
+**Fixed 29, open 42** (71 findings: 15 web, 21 Server, 35 Personal; parity findings join when measured). Each fixed
 finding gets a **Fixed** line with the commit and an after-screenshot in `after/`.
 
 | Owner | Open |
 |---|---|
 | portal | W4 to W12, W14, W15, S1, S5 to S7, S11, S14, S17 to S23, S25, S26 |
-| personal | P-2 to P-13, P-15, P-18 to P-27, P-29 to P-32 |
+| personal | P-33, P-34; P-29 waits for Ben |
+| find track | P-35 |
 | image | S2, S15, S16, S24, P-4, P-17, P-28, then P-1 with release |
 
 Release (P-1): one rebuild of all four ISOs from one main commit, about 75 minutes to a verified release plus 20 for
@@ -462,6 +463,34 @@ start.", the Done note only when no key exists, keep the ticks. Owner: personal.
 Fine: Deny and Approve from the banner and popover; Unlock to approve; Keep writes files with the right owner; Undo
 before Keep leaves the folder untouched; the Undone page; the Quick Settings tile; Settings in dark style; the
 native app in light and dark.
+
+### Personal batch 1 (61180f4, 6b9942d, a389748): fixed on main
+
+Checked by the Personal thread on its test VM (main's `personal/` on an older core); the UX thread reviewed the
+screenshots. The full re-walk happens on the rebuilt ISO.
+
+**Fixed:** P-2 (Personal's part: the key is checked against Anthropic before saving; "Skip for now"; a sentence
+banner with Open Settings), P-3, P-5, P-6, P-7, P-8, P-9, P-10, P-11, P-12, P-13 (Setup sets $5 and $1; core's own
+default is still $100), P-15, P-18, P-19, P-20 (no per-row pause: core has no per-task pause), P-22, P-23 (no emblem
+tooltip: Files can't show one), P-24, P-26, P-27, P-30, P-31, P-32. P-21 and P-25 are fixed where GurtOS draws the
+screen; GNOME's lock-screen blur and the folder chooser's "Open directories read-only" stay.
+
+![](after/personal-popover-many.png) ![](after/personal-offline-popover.png)
+![](after/personal-setup-models-rejected.png) ![](after/personal-settings-keys.png)
+![](after/personal-offline-app.png) ![](after/personal-panel-dark.png)
+
+**P-29 is Ben's call.** The slashed zero is Atkinson Hyperlegible's own 0, part of what makes it legible; there is no
+plain-zero alternate, so the only fix is a second typeface for numbers. Recommendation: keep it.
+
+**Found in the after-shots:**
+- **P-33. P1.** The app's sidebar lists the developer app "Example", and every app has the same puzzle-piece icon
+  (`after/personal-offline-app.png`). Fix: hide `example` (as setup does) and use the app tiles from `apptiles.py`.
+  Owner: personal.
+- **P-34. P2.** Key names made from variable names: "ASI one API key", "Wallet solana key". Fix: "ASI:One API key",
+  "Solana wallet key". Owner: personal.
+- **P-35. P2.** The Find panel shows `FIND_CLOUD_SYNC=1` and "Described by claude-sonnet-4-6 via Droid task
+  tzw81bc1dd" (`after/personal-panel-dark.png`). Fix: "Search runs on this computer." and "Described by Claude".
+  Owner: find track.
 
 ## Everyday use against stock Ubuntu
 
