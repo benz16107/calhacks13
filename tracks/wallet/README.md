@@ -34,7 +34,7 @@ three refusals. A task cannot point the wallet at the box's own API. When the ow
 payment, the wallet never runs. And a call that names no amount, for a URL nobody quoted, pays nothing.
 
 `DEMO_LIVE=wallet ./demo` adds the real flow on Solana devnet, with a scripted agent so it gives the same
-result each time. Run it before merging a change to this folder. On 2026-10-24 on the linuxbox VM:
+result each time. Run it before merging a change to this folder. On 2026-10-24 on the test VM:
 
 ```
 track wallet
