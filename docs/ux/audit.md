@@ -18,14 +18,14 @@ How it was walked:
 
 ## Status
 
-**Fixed 68, closed 1, open 23** (92 findings: 19 web, 22 Server, 36 Personal, 15 parity). Each fixed
+**Fixed 86, closed 1, open 5** (92 findings: 19 web, 22 Server, 36 Personal, 15 parity). Each fixed
 finding gets a **Fixed** line with the commit and an after-screenshot in `after/`.
 
 | Owner | Open |
 |---|---|
-| personal | P-29 waits for Ben |
-| image | S2, S15, S16, S24, P-4, P-17, P-28, E-1 to E-11, E-13 (About logo), E-15, then P-1 with release |
-| personal (parity) | E-14 (not reproduced; dock settings ruled out; measured once on the rebuilt ISO, quiet host) |
+| image | P-4 (GNOME first-run colours), then P-1 with release |
+| personal | P-29 (plain zeros on the GNOME desktop), E-14 (measured once on the rebuilt ISO) |
+| Ben | E-6 (firewall: image built the switch, the policy is unchanged) |
 
 Release (P-1): one rebuild of all four ISOs from one main commit, about 75 minutes to a verified release plus 20 for
 the download pages. The UX thread sends the commit once the Personal, image and core P0 and P1 fixes are in. Target
@@ -247,6 +247,8 @@ top left before setup paints (07, 08, 09). On Sunday this is what judges watch a
 Plymouth theme for Server (the moon on the wallpaper colour, "GurtOS"); give the kiosk window the wallpaper colour
 as its background so the first paint isn't white; hide the cursor until first paint. Owner: image.
 
+
+**Fixed in 0b9bfcc** (image; confirm on the rebuilt ISO): a Plymouth splash with the moon and "GurtOS" on the wallpaper colour; the kiosk opens on that colour with the cursor hidden.
 ### S3. P0. Setup's Apps step is a wall of variable names
 ![](shots/server/23-apps.png)
 Fifteen apps, Shopper alone with 22 chips like `VISA_MLE_PRIVATE_KEY` and `CYBERSOURCE_SECRET_KEY`, and access
@@ -298,6 +300,8 @@ id: "GurtOS Server 0.1.0-preview, build 20261024-1439". Owner: core.
 `nuke: can't remove '/dev/disk': Directory not empty` above `unsquashfs` output ("created 61949 files"). Fix: send
 tool output to the log; show "Installing GurtOS Server. 37%". Owner: image.
 
+
+**Fixed in 0b9bfcc** (image; confirm on the rebuilt ISO): one screen, "Installing GurtOS Server. 37%", a full-width bar.
 ### S16. P1. Two GRUB menus on every start
 ![](shots/server/06-grub-system-a-b.png)
 "Restarting... you can remove the install disc" reboots at once, so a VM or USB stick lands on the disc's 30 s
@@ -305,6 +309,8 @@ tool output to the log; show "Installing GurtOS Server. 37%". Owner: image.
 eject before rebooting or wait for a key; hide the A/B menu unless Shift is held (`GRUB_TIMEOUT_STYLE=hidden`,
 timeout 0). Owner: image.
 
+
+**Fixed in 0b9bfcc** (image; confirm on the rebuilt ISO): the disc ejects before the restart; the A/B menu hides unless Shift is held.
 ### S17. P1. The lock screen has no lock
 ![](shots/server/46-lock-screen.png)
 "Click or press Enter to unlock", and space also unlocks. Fix: call it what it is, "Press any key to wake", or ask
@@ -393,7 +399,7 @@ reader row (10). Owner: portal (and image for Orca in the kiosk, if it can run t
 - **S23** (fixed in d99d860 and baeabc5) Permissions is titled "Safety defaults" and says "Listed hosts", "A task that names no hosts gets these";
   the spend default is $100 (22). Fix: "What agents may reach and spend", "Sites any task may reach", ask over $5.
   Owner: portal (same as P-13).
-- **S24** GRUB is stock "GNU GRUB version 2.12" text (01). Fix: gfxterm with the wallpaper colour and "GurtOS".
+- **S24** (fixed in 0b9bfcc) GRUB is stock "GNU GRUB version 2.12" text (01). Fix: gfxterm with the wallpaper colour and "GurtOS".
   Owner: image.
 - **S25** (fixed in d99d860) The QR status "Waiting for your phone. The code changes in 4:38." is link blue and looks clickable (10).
   Owner: portal.
@@ -437,6 +443,9 @@ Aubergine wallpaper, orange buttons, a blank row in the language list, then "All
 followed by a 7-step GurtOS Setup (05, 10, 13). Fix: the rebuild brings `1419746`; final page "Your account is
 ready. One more step: set up GurtOS." with Continue. Owner: image.
 
+
+**Partly fixed in 0b9bfcc** (image): the last page says "Your account is ready. One more step: set up GurtOS." The
+orange buttons and aubergine backdrop on GNOME's own first-run pages remain.
 ### P-5. P1. "Needs you" counts disagree everywhere
 ![](shots/personal/76-many-tasks-popover.png)
 The pill, popover header and app badge add tasks to review to approvals; the sections count approvals only: "2
@@ -520,6 +529,8 @@ Flat #222 background with no Hills or moon, an orange focus ring on the password
 splash (78, 80, 81). Fix: Hills comes with the rebuild; GDM accent `#2F64A6`; "GurtOS Personal" under the Plymouth
 logo. Owner: image.
 
+
+**Fixed in 0b9bfcc** (image; confirm on the rebuilt ISO): accent #2F64A6 on the login screen; "GurtOS Personal" under the boot logo.
 ### P-18. P1. App panels are white web pages inside the dark app
 ![](shots/personal/95-native-app-panel-factory-dark.png)
 Factory uses another font, browser-default form controls and "Droid works here as a team of custom droids..." (95,
@@ -547,7 +558,7 @@ start.", the Done note only when no key exists, keep the ticks. Owner: personal.
 - **P-26** Dock and Files icons change icon set between light and dark (69 to 71). Owner: personal.
 - **P-27** Voice ends silently after "Listening..." (65, 66). Fix: "I didn't hear anything. Press Super+Alt+Space
   and try again." Owner: personal.
-- **P-28** Installer line wraps and repeats; stock 720x400 GRUB with no countdown, and any key press stops the
+- **P-28** (fixed in 0b9bfcc) Installer line wraps and repeats; stock 720x400 GRUB with no countdown, and any key press stops the
   timer for good (02, 77). Fix: "Installing GurtOS Personal. This takes about 2 minutes. Don't turn the computer
   off.", a full-width bar, `GRUB_TIMEOUT_STYLE=countdown`. Owner: image.
 - **P-29** The slashed zero reads "$1Ø0.ØØ" in money and clocks; Welcome leaves about 330 px empty (14, 21). Fix:
@@ -577,7 +588,8 @@ screen; GNOME's lock-screen blur and the folder chooser's "Open directories read
 ![](after/personal-setup-models-rejected.png) ![](after/personal-settings-keys.png)
 ![](after/personal-offline-app.png) ![](after/personal-panel-dark.png)
 
-**P-29 is Ben's call.** The slashed zero is Atkinson Hyperlegible's own 0, part of what makes it legible; there is no
+**P-29: Ben chose plain zeros.** The portal, phone app, box screen and track pages have them (e894ac2, f5fe049:
+a zero-only face loaded first). Personal's GNOME desktop still shows the slashed zero. Earlier note: The slashed zero is Atkinson Hyperlegible's own 0, part of what makes it legible; there is no
 plain-zero alternate, so the only fix is a second typeface for numbers. Recommendation: keep it.
 
 **Found in the after-shots:**
@@ -628,7 +640,11 @@ released ISO, both in QEMU with KVM, 4 GB, 4 vCPUs, 1080p, two clean boots each.
 | Disk after install | 10.2 GB | 5.3 GB | half |
 | Warm app launch (Files, Settings, Terminal, Editor) | 0.39 to 0.45 s | 0.55 to 0.72 s | **slower (E-14)** |
 
-**Worse than stock Ubuntu, so P0** (all image, unless noted):
+**Worse than stock Ubuntu, so P0** (all image, unless noted). **Image fixed E-1 to E-5 and E-7 to E-11 in 0b9bfcc**
+(printing with its folders on `/data`, GNOME Software with Flathub per user, the Ubuntu updater hidden, accounts,
+sharing, zram and oomd, Orca and ibus, the laptop packages, codecs with restricted and multiverse, the HWE 7.0
+kernel), plus E-13's About logo and E-15's "erases the disk". Personal ISO with all of it: 1.87 GiB, under GitHub's
+2 GiB. Confirm each on the rebuilt ISO.
 - **E-1** no printing: no CUPS; Settings says "No Print Service".
 - **E-2** no app store, and what `apt` installs is lost at the next system update. Fix: Flatpak with GNOME Software
   and Flathub as a per-user install (on `/data`).
