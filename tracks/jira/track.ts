@@ -276,7 +276,9 @@ export default {
   // Jira's address and API token for the reader; the shared secret the Forge app sends to the routes.
   secrets: ['ATLASSIAN_SITE', 'ATLASSIAN_EMAIL', 'ATLASSIAN_API_TOKEN', 'JIRA_BOX_SECRET'],
 
-  // Served at /t/jira/... The box's public HTTPS address (Caddy on the Vultr box) forwards only these.
+  // Served at /t/jira/... The box's public HTTPS address (Caddy on the Vultr box) forwards only these. Each one
+  // checks the shared secret itself (allowed()), so they are open to the paired-phone rule.
+  openRoutes: ['GET /task', 'POST /answer', 'POST /undo'],
   routes: {
     'GET /task': async (req, box) => {
       if (!allowed(req, box)) return deny();

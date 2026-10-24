@@ -197,7 +197,10 @@ function spacetime(h: Health) {
   DbConnection.builder()
     .withUri(`${scheme}://${location.hostname}:${h.spacetime.port}`)
     .withDatabaseName(h.spacetime.database)
-    .onConnect((c) => {
+    .onConnect((c, identity) => {
+      // The box only accepts approvals from a connection it has vouched for: this screen says who it is
+      // (accepted from the box's own screen or a paired phone), so a stranger who reached the port can't answer.
+      void api('POST', '/pair/identity', { identity: identity.toHexString() }).catch(() => {});
       c.db.task.onInsert((_ctx, r) => taskRow(r as TaskRow));
       c.db.task.onUpdate((_ctx, _old, r) => taskRow(r as TaskRow));
       c.db.approval.onInsert((_ctx, r) => approvalRow(r as ApprovalRow));

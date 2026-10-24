@@ -30,6 +30,8 @@ const approvalCols = {
 
 const spacetimedb = schema({
   owner: table({}, { identity: t.identity().primaryKey() }),
+  // Identities the box has vouched for: a paired phone, or the box's own screen. Private: not readable by clients.
+  device: table({}, { identity: t.identity().primaryKey(), name: t.string(), at: t.string() }),
   task: table({ public: true }, { ...taskCols, id: t.string().primaryKey() }),
   approval: table({ public: true }, { ...approvalCols, id: t.string().primaryKey() }),
 });
@@ -57,10 +59,30 @@ export const putApproval = spacetimedb.reducer(approvalCols, (ctx, row) => {
   else if (old.state === 'pending' || row.state !== 'pending') ctx.db.approval.id.update(row); // an answer is never undone
 });
 
-/** Anyone with the portal or the phone answers here. The first answer wins; the box picks it up live. */
-export const answer = spacetimedb.reducer({ id: t.string(), approved: t.bool(), by: t.string() }, (ctx, { id, approved, by }) => {
+/** The box vouches for a connection: it may now answer approvals, under this name. Only the box may call it. */
+export const registerDevice = spacetimedb.reducer({ identity: t.identity(), name: t.string(), at: t.string() }, (ctx, row) => {
+  mustBeBox(ctx);
+  if (ctx.db.device.identity.find(row.identity)) ctx.db.device.identity.update(row);
+  else ctx.db.device.insert(row);
+  // A screen reconnects with a new identity each time; keep the table small by dropping the oldest beyond 200.
+  const all = [...ctx.db.device.iter()].sort((a, b) => a.at.localeCompare(b.at));
+  for (const old of all.slice(0, Math.max(0, all.length - 200))) ctx.db.device.identity.delete(old.identity);
+});
+
+export const removeDevice = spacetimedb.reducer({ identity: t.identity() }, (ctx, { identity }) => {
+  mustBeBox(ctx);
+  ctx.db.device.identity.delete(identity);
+});
+
+/**
+ * Answer an approval. Only a connection the box has vouched for may (see registerDevice), and the answer is
+ * recorded under that connection's registered name: whatever `by` the caller sends is ignored. The first answer wins.
+ */
+export const answer = spacetimedb.reducer({ id: t.string(), approved: t.bool(), by: t.string() }, (ctx, { id, approved }) => {
+  const who = ctx.db.device.identity.find(ctx.sender);
+  if (!who) throw new SenderError('this connection is not a paired phone or the box\'s own screen');
   const a = ctx.db.approval.id.find(id);
   if (!a) throw new SenderError(`no approval ${id}`);
   if (a.state !== 'pending') return;
-  ctx.db.approval.id.update({ ...a, state: approved ? 'approved' : 'denied', by: by.slice(0, 40) || 'someone' });
+  ctx.db.approval.id.update({ ...a, state: approved ? 'approved' : 'denied', by: who.name });
 });

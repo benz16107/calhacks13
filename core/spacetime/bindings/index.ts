@@ -37,6 +37,8 @@ import {
 import AnswerReducer from "./answer_reducer.ts";
 import PutApprovalReducer from "./put_approval_reducer.ts";
 import PutTaskReducer from "./put_task_reducer.ts";
+import RegisterDeviceReducer from "./register_device_reducer.ts";
+import RemoveDeviceReducer from "./remove_device_reducer.ts";
 
 // Import all procedure arg schemas
 
@@ -77,6 +79,8 @@ const reducersSchema = __reducers(
   __reducerSchema("answer", AnswerReducer),
   __reducerSchema("put_approval", PutApprovalReducer),
   __reducerSchema("put_task", PutTaskReducer),
+  __reducerSchema("register_device", RegisterDeviceReducer),
+  __reducerSchema("remove_device", RemoveDeviceReducer),
 );
 
 /** The schema information for all procedures in this module. This is defined the same way as the procedures would have been defined in the server. */

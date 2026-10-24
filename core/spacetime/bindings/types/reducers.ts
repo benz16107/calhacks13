@@ -9,8 +9,12 @@ import { type Infer as __Infer } from "spacetimedb";
 import AnswerReducer from "../answer_reducer.ts";
 import PutApprovalReducer from "../put_approval_reducer.ts";
 import PutTaskReducer from "../put_task_reducer.ts";
+import RegisterDeviceReducer from "../register_device_reducer.ts";
+import RemoveDeviceReducer from "../remove_device_reducer.ts";
 
 export type AnswerParams = __Infer<typeof AnswerReducer>;
 export type PutApprovalParams = __Infer<typeof PutApprovalReducer>;
 export type PutTaskParams = __Infer<typeof PutTaskReducer>;
+export type RegisterDeviceParams = __Infer<typeof RegisterDeviceReducer>;
+export type RemoveDeviceParams = __Infer<typeof RemoveDeviceReducer>;
 

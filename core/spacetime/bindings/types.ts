@@ -22,6 +22,13 @@ export const Approval = __t.object("Approval", {
 });
 export type Approval = __Infer<typeof Approval>;
 
+export const Device = __t.object("Device", {
+  identity: __t.identity(),
+  name: __t.string(),
+  at: __t.string(),
+});
+export type Device = __Infer<typeof Device>;
+
 export const Owner = __t.object("Owner", {
   identity: __t.identity(),
 });

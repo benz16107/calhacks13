@@ -65,6 +65,8 @@ interface Device {
   revoked?: boolean;
   /** Paired from the box's own screen as the owner: may use setup, settings, apps and the vault. */
   owner?: boolean;
+  /** The phone's SpacetimeDB identity, if it gave one: the box vouches for it so its answers there are accepted. */
+  identity?: string;
 }
 
 class Core {
@@ -73,7 +75,7 @@ class Core {
   vault = loadVault();
   tools = new Map<string, { tool: Tool; track: string }>();
   jobs = new Map<string, { job: ModelJob; track: string }>();
-  routes = new Map<string, { route: Route; track: string }>();
+  routes = new Map<string, { route: Route; track: string; open: boolean }>();
   apps: (App & { track: string })[] = [];
   readers: (() => void)[] = [];
   listeners = new Set<(e: LogEvent) => void>();
@@ -86,6 +88,7 @@ class Core {
   trackSecrets = new Map<string, Set<string>>(); // vault keys each track's routes and triggers may read
   devicesPath = path.join(HOME, 'devices.json');
   devices: Device[] = fs.existsSync(this.devicesPath) ? JSON.parse(fs.readFileSync(this.devicesPath, 'utf8')) : [];
+  screens = new Map<string, string>(); // SpacetimeDB identity -> name, for the box's own screen(s); lost on restart, re-sent on the next page load
   pairCodes = new Map<string, { expiry: number; owner: boolean }>(); // one-time code -> expiry (ms), and whether it pairs an owner device
   ownerPath = path.join(HOME, 'owner.json');
   // The human with sudo on a Personal box: set at runtime (the image does it after the desktop's own setup
@@ -112,6 +115,7 @@ class Core {
     tasks: () => [...this.state.tasks.values()],
     approvals: () => [...this.state.approvals.values()],
     answer: (id, approved, by) => this.answer(id, approved, by),
+    identities: () => this.identities(),
   });
 
   write(e: NewEvent): LogEvent {
@@ -604,7 +608,7 @@ class Core {
     for (const job of track.modelJobs ?? []) this.jobs.set(job.name, { job, track: name });
     for (const [key, route] of Object.entries(track.routes ?? {})) {
       const [method, p] = key.split(' ');
-      this.routes.set(`${method} /t/${name}${p}`, { route, track: name });
+      this.routes.set(`${method} /t/${name}${p}`, { route, track: name, open: (track.openRoutes ?? []).includes(key) });
     }
     for (const app of track.apps ?? []) this.apps.push({ ...app, track: name });
     this.trackPumps.set(name, (track.logReaders ?? []).map((r) => this.addReader(name, r)));
@@ -743,6 +747,25 @@ class Core {
     return loaded;
   }
 
+  /** Every SpacetimeDB identity the box vouches for: the screens that said so, and the paired phones that gave theirs. */
+  identities(): [string, string][] {
+    return [...this.screens, ...this.devices.filter((d) => d.identity && !d.revoked).map((d) => [d.identity!, d.name] as [string, string])];
+  }
+
+  /** The caller says which SpacetimeDB identity it holds; the box vouches for it under the caller's name. */
+  vouch(req: http.IncomingMessage, identity: unknown) {
+    if (typeof identity !== 'string' || !/^[0-9a-f]{64}$/i.test(identity)) throw new Error('identity: the 64 hex characters of your SpacetimeDB identity');
+    const device = this.deviceOf(req);
+    if (!device && !this.isLocal(req)) throw Object.assign(new Error('pair this phone with the box first'), { status: 401 });
+    const name = device ? device.name : 'box screen';
+    const id = identity.toLowerCase();
+    if (device) device.identity = id;
+    else this.screens.set(id, name);
+    if (device) this.saveDevices();
+    this.live.register(id, name);
+    return { identity: id, name };
+  }
+
   /** The owner, with the account's id and home folder when it is a real account. */
   ownerInfo() {
     if (!this.owner) return null;
@@ -840,13 +863,14 @@ class Core {
   }
 
   /** A phone redeems the code for a durable device token. */
-  pair(body: { code?: string; name?: string }) {
+  pair(body: { code?: string; name?: string; identity?: string }) {
     const entry = body.code ? this.pairCodes.get(body.code) : undefined;
     if (!entry || entry.expiry < Date.now()) throw Object.assign(new Error('bad or expired pairing code'), { status: 400 });
     this.pairCodes.delete(String(body.code)); // one-time
-    const device: Device = { id: 'd' + randomBytes(5).toString('hex'), name: String(body.name || 'phone').slice(0, 40), token: randomBytes(24).toString('hex'), pairedAt: new Date().toISOString(), ...(entry.owner ? { owner: true } : {}) };
+    const device: Device = { id: 'd' + randomBytes(5).toString('hex'), name: String(body.name || 'phone').slice(0, 40), token: randomBytes(24).toString('hex'), pairedAt: new Date().toISOString(), ...(entry.owner ? { owner: true } : {}), ...(typeof body.identity === 'string' && /^[0-9a-f]{64}$/i.test(body.identity) ? { identity: body.identity.toLowerCase() } : {}) };
     this.devices.push(device);
     this.saveDevices();
+    if (device.identity) this.live.register(device.identity, device.name);
     return { token: device.token, device: { id: device.id, name: device.name }, box: { id: BOX_ID, name: BOX_NAME } };
   }
 
@@ -855,6 +879,7 @@ class Core {
     if (!d) throw Object.assign(new Error(`no device ${id}`), { status: 404 });
     d.revoked = true;
     this.saveDevices();
+    if (d.identity) this.live.unregister(d.identity);
     return { id, revoked: true };
   }
 
@@ -1001,6 +1026,9 @@ class Core {
           case 'POST /apps/:id/disable':
             this.requireOwner(req);
             return this.disableApp(id);
+          case 'POST /pair/:id':
+            if (id !== 'identity') return undefined;
+            return this.vouch(req, body?.identity);
           case 'GET /system':
             return this.systemFacts();
           case 'GET /setup':
@@ -1173,6 +1201,9 @@ data: ${JSON.stringify(e)}
     const m = req.method ?? 'GET';
     const p = new URL(req.url ?? '/', 'http://box').pathname.replace(/^\/api(?=\/)/, '');
     if (m === 'OPTIONS' || (m === 'GET' && p === '/health') || (m === 'POST' && p === '/pair') || this.portalTarget(req)) return false;
+    // A track route that is public on purpose, or checks its own secret, is reachable through a proxy.
+    if (this.routes.get(`${m} ${new URL(req.url ?? '/', 'http://box').pathname}`)?.open) return false;
+    if (this.routes.get(`${m} ${new URL(req.url ?? '/', 'http://box').pathname}`)?.open) return false; // a track route that is public or checks its own secret
     if (this.deviceOf(req)) return false;
     res.writeHead(401, { 'content-type': 'application/json' }).end(JSON.stringify({ error: 'pair this phone with the box first' }));
     return true;

@@ -178,6 +178,13 @@ export interface Track {
   apps?: App[];
   /** HTTP routes, keyed 'METHOD /path', served at /t/<track>/path on the box's API. */
   routes?: Record<string, Route>;
+  /**
+   * Route keys (as in `routes`) that anyone may call without a paired phone's token, for a request that is not
+   * from the box's own screen (for example one arriving through a public reverse proxy). Use it for a route that
+   * is public on purpose, or that checks its own credential (a shared secret). Every other route needs a paired
+   * phone. The core cannot help an open route: it must never return anything private unless its own check passes.
+   */
+  openRoutes?: string[];
 }
 
 /**

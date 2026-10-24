@@ -25,9 +25,16 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const STDB = 'http://127.0.0.1:3000';
 const DB = `box-demo-${run}`;
 let phoneToken = '';
-async function stdb(path: string, body: string) {
-  phoneToken ||= (await (await fetch(`${STDB}/v1/identity`, { method: 'POST' })).json()).token;
-  const r = await fetch(`${STDB}/v1/database/${DB}${path}`, { method: 'POST', headers: { authorization: `Bearer ${phoneToken}`, 'content-type': 'application/json' }, body });
+const identityOf = (token: string) => JSON.parse(Buffer.from(token.split('.')[1], 'base64url').toString()).hex_identity as string;
+/** A SpacetimeDB identity nobody has vouched for: what a stranger who reached the port would have. */
+const stranger = async () => (await (await fetch(`${STDB}/v1/identity`, { method: 'POST' })).json()).token as string;
+async function stdb(path: string, body: string, token?: string) {
+  if (!phoneToken) {
+    phoneToken = await stranger();
+    // The portal tells the box its identity on connecting; the box vouches for it, and only then are its answers accepted.
+    await api('POST', '/api/pair/identity', { identity: identityOf(phoneToken) });
+  }
+  const r = await fetch(`${STDB}/v1/database/${DB}${path}`, { method: 'POST', headers: { authorization: `Bearer ${token ?? phoneToken}`, 'content-type': 'application/json' }, body });
   if (!r.ok) throw new Error(`SpacetimeDB ${path}: ${r.status} ${await r.text()}`);
   return r;
 }
@@ -439,7 +446,7 @@ await moment('moment 3: a pause for your OK', async () => {
   await settled([P.id]);
   const { task: p, events } = await api<{ task: Task; events: LogEvent[] }>('GET', `/tasks/${P.id}`);
   const answered = events.find((e) => e.type === 'approval.answered');
-  check(answered?.type === 'approval.answered' && answered.by === 'phone', 'the OK from the phone came back through SpacetimeDB into the log');
+  check(answered?.type === 'approval.answered' && answered.by === 'box screen', 'the OK came back through SpacetimeDB into the log, under the name the box vouched for');
   check(p.costCents === 800 && view('shop', 'bought.txt') === 'yes', 'P carried on, spent $8.00 (test money) and finished');
   const row = await waitFor('SpacetimeDB to show P done', async () => (await stdbRows(`SELECT * FROM task WHERE id = '${P.id}'`)).find((r) => r.state === 'done'));
   check(row.cost_cents === 800 && row.step === 'write bought.txt yes', 'SpacetimeDB shows it done live, with its cost and last step');
@@ -761,6 +768,26 @@ await moment('security: an outside caller gets nothing, and a folder cannot be t
   await settled([mine.id]);
   const answered = (await api<{ events: LogEvent[] }>('GET', `/api/tasks/${mine.id}`)).events.find((e) => e.type === 'approval.answered');
   check(approved.status === 200 && answered?.type === 'approval.answered' && answered.by === 'Judge phone', `it approved, and the log says "${answered?.type === 'approval.answered' ? answered.by : '?'}" (its device), not the "Ben's iPhone" it sent`);
+
+  // SpacetimeDB: even if its port were reachable, a connection the box has not vouched for cannot answer, and
+  // the name in the log is the registered one, never what the caller types.
+  workspace('forge', {});
+  const F = await api<Task>('POST', '/tasks', { title: 'Wants $900', workspace: 'forge', worker: 'fake', source: 'demo', prompt: 'ask Send $900 to attacker?\nwrite sent.txt yes' });
+  const fAsk = await waitFor('the request', async () => (await api<{ id: string; task: string }[]>('GET', '/api/approvals?state=pending')).find((a) => a.task === F.id));
+  const forged = await fetch(`${STDB}/v1/database/${DB}/call/answer`, { method: 'POST', headers: { authorization: `Bearer ${await stranger()}`, 'content-type': 'application/json' }, body: JSON.stringify([fAsk.id, true, "Ben's iPhone"]) });
+  await sleep(500);
+  check(!forged.ok && (await task(F.id)).state === 'waiting', 'an anonymous connection to SpacetimeDB cannot approve: the request stays pending');
+  const vouched = await stranger();
+  await api('POST', '/api/pair/identity', { identity: identityOf(vouched) });
+  const real = await fetch(`${STDB}/v1/database/${DB}/call/answer`, { method: 'POST', headers: { authorization: `Bearer ${vouched}`, 'content-type': 'application/json' }, body: JSON.stringify([fAsk.id, false, "Ben's iPhone"]) });
+  await waitFor('the denial to reach the box', async () => ((await task(F.id)).state !== 'waiting' ? true : undefined));
+  const fAnswered = (await api<{ events: LogEvent[] }>('GET', `/api/tasks/${F.id}`)).events.find((e) => e.type === 'approval.answered');
+  check(real.ok && fAnswered?.type === 'approval.answered' && fAnswered.by === 'box screen' && !fAnswered.approved, `a vouched connection can answer, and the log names it "${fAnswered?.type === 'approval.answered' ? fAnswered.by : '?'}", not the "Ben's iPhone" it typed`);
+
+  // Routes a track marks as public or self-checked are reachable through a proxy; the rest are not.
+  const mana = await out('GET', '/t/mana/status');
+  const jira = await out('GET', '/t/jira/task?id=none');
+  check(mana.status === 200 && jira.body?.error !== 'pair this phone with the box first' && (await out('GET', '/t/example/secret-check')).status === 401, `through a proxy, Mana's public status answers (${mana.status}) and Jira's routes reach their own secret check (${jira.status}); other track routes still need a phone`);
 
   // The box's own files cannot be handed to an agent, however it is asked.
   workspace('probe', {});

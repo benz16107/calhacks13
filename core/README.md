@@ -98,6 +98,7 @@ Make `tracks/<name>/track.ts` and default-export a `Track` with any of these slo
 | `apps` | The portal lists them. Their pages are your routes. |
 | `routes` | `'POST /hook': (req, box) => Response`, served at `/t/<name>/hook` on the box's API. Webhooks go here. |
 | `secrets` | Vault keys this track's routes and triggers may read with `box.secret(name)`. Tools and jobs declare their own. |
+| `openRoutes` | Route keys (like `'GET /status'`) that need no paired-phone token, even for a request that arrives through a public proxy. For a route that is public on purpose, or checks its own secret (the Jira panel's routes). Every other route needs a phone. An open route must return nothing private unless its own check passes. |
 
 Rules:
 - Import only types from `core/contract.ts`. Never import other core files or another track.
@@ -202,7 +203,7 @@ anyone not on the box's own screen, `by` in the request body is ignored. Minting
 removing devices, setup, settings, the vault, apps, the owner, Keep and Undo-Keep are the **owner's** (the box's own
 screen, or a phone paired as the owner).
 
-**SpacetimeDB listens on loopback only** (`127.0.0.1:3000`). It has no login, so a reachable port would let anyone
+**SpacetimeDB listens on loopback only** (`127.0.0.1:3000`, set by `core/setup.sh`, which the image runs, so an image built from current main has it; the unit file must not be overridden to `0.0.0.0`). It has no login, so a reachable port would let anyone
 read every task and forge an approval. The box's own screen subscribes to it locally; a phone follows the box's
 authed API and `GET /api/log/stream` instead. To expose it deliberately (a tailnet address), put
 `STDB_LISTEN=<address>` in `/etc/box/stdb.env` and restart `spacetimedb`; anyone who can reach it then can read it
@@ -330,8 +331,13 @@ on another origin needs `BOX_ORIGINS=http://localhost:5173` (comma separated, or
 The `approval` table carries `costCents`, `payee` (who gets paid, or the host) and `purpose`, so the phone can
 fill its amount and "to" rows. A tool supplies them with an optional `approval(input)` returning `{ payee, purpose }`.
 
-Reducers anyone may call: `answer({id, approved, by})`. The first answer wins, and the box writes it to the log
-within milliseconds. `putTask` and `putApproval` are for the box only and refuse anyone else.
+`answer({id, approved, by})` only works from a connection the box has **vouched for**: the box's own screen or a
+paired phone, after it tells the box its SpacetimeDB identity with `POST /api/pair/identity {identity}` (64 hex
+characters, `identity.toHexString()` after connecting; accepted from the box's own screen, or from a phone with its
+token). The answer is recorded under the vouched name (`box screen`, or the phone's device name); the `by` the
+caller sends is ignored, and any other connection is refused. The first answer wins, and the box writes it to the
+log within milliseconds. `putTask`, `putApproval`, `registerDevice` and `removeDevice` are for the box only.
+This is a second lock: SpacetimeDB also listens on loopback only (see *Who may reach the API*).
 
 TypeScript client (`npm i spacetimedb@2.13.0`). Import the generated bindings from `core/spacetime/bindings/`,
 or regenerate them for your app with `spacetime generate --lang typescript --module-path core/spacetime`:

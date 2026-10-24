@@ -9,6 +9,8 @@ const newest = (ts: Task[]) => ts.sort((a, b) => b.updatedAt.localeCompare(a.upd
 
 export default {
   name: 'mana',
+  // The public Mana app reads this through the box's public address; it carries no prompt or key.
+  openRoutes: ['GET /status'],
   routes: {
     'GET /status': (_req, box) => {
       const tasks = box.tasks();

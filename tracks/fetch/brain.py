@@ -62,17 +62,9 @@ def call(method, path, body=None):
 
 
 def answer(approval_id, approved):
-    if quote(approval_id, safe='.-_~') == approval_id:
-        return call('POST', f'/approvals/{approval_id}', {'approved': approved, 'by': BY})
-    # shortcut: the box's API does not decode ids in its paths, so an id with spaces (from Droid's own questions)
-    # goes through SpacetimeDB's answer reducer, the way the phone does. Drop this once the core decodes them.
-    db = call('GET', '/health')['spacetime']
-    base = f"http://127.0.0.1:{db['port']}"
-    token = json.loads(_open(urllib.request.Request(base + '/v1/identity', method='POST'), timeout=10).read())['token']
-    req = urllib.request.Request(f"{base}/v1/database/{db['database']}/call/answer", method='POST',
-                                 data=json.dumps([approval_id, approved, BY]).encode(),
-                                 headers={'authorization': f'Bearer {token}', 'content-type': 'application/json'})
-    _open(req, timeout=10).read()
+    # The box decodes the id in the path, so an id with spaces (from Droid's own questions) works here too.
+    # This is a call from the box's own machine, so the box takes the name in `by` as given.
+    return call('POST', f'/approvals/{quote(approval_id, safe="")}', {'approved': approved, 'by': BY})
 
 
 def new_code():

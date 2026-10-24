@@ -7,6 +7,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import type { Approval, Task } from './contract.ts';
+import { Identity } from 'spacetimedb';
 import { DbConnection } from './spacetime/bindings/index.ts';
 
 const URI = process.env.BOX_STDB_URL ?? 'ws://127.0.0.1:3000';
@@ -59,7 +60,7 @@ const approvalRow = (a: Approval) => ({ ...a, costCents: Math.round(a.costCents)
 export class Live {
   private conn?: DbConnection;
   private token = '';
-  private box: { tasks(): Task[]; approvals(): Approval[]; answer(id: string, approved: boolean, by: string): unknown };
+  private box: { tasks(): Task[]; approvals(): Approval[]; answer(id: string, approved: boolean, by: string): unknown; identities(): [string, string][] };
 
   constructor(box: Live['box']) {
     this.box = box;
@@ -93,6 +94,7 @@ export class Live {
             // Answers given while the box was away come first, then the box refills everything.
             for (const row of conn.db.approval.iter()) this.answered(row);
             this.conn = conn;
+            for (const [identity, name] of this.box.identities()) this.register(identity, name);
             for (const t of this.box.tasks()) this.task(t);
             for (const a of this.box.approvals()) this.approval(a);
           })
@@ -113,6 +115,15 @@ export class Live {
     if (row.state === 'pending') return;
     const a = this.box.approvals().find((x) => x.id === row.id);
     if (a?.state === 'pending') this.box.answer(row.id, row.state === 'approved', row.by || 'someone');
+  }
+
+  /** Vouch for a SpacetimeDB identity (a paired phone or the box's own screen) so its answers are accepted. */
+  register(identity: string, name: string) {
+    this.conn?.reducers.registerDevice({ identity: Identity.fromString(identity), name, at: new Date().toISOString() });
+  }
+
+  unregister(identity: string) {
+    this.conn?.reducers.removeDevice({ identity: Identity.fromString(identity) });
   }
 
   task(t: Task) {
