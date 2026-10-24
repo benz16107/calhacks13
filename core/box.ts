@@ -355,9 +355,12 @@ class Core {
         const task = this.state.tasks.get(this.uidTask.get(uid) ?? '');
         if (!task || !dst) continue; // not one of this box's tasks (another box on the machine, or a stray)
         if (dst.startsWith('127.0.0.53') && dpt === '53') continue; // the tool's own resolver lookup: refused, but not an attack to show anyone
-        const host = dpt ? `${dst}:${dpt}` : dst;
+        // Other DNS lookups (a task asking a resolver itself; the proxy resolves names for tasks) are refused and logged
+        // once per task, so a run of them can't flood the log but an attempt still shows.
+        const dns = dpt === '53';
+        const host = dns ? 'DNS lookups (port 53)' : dpt ? `${dst}:${dpt}` : dst;
         const key = `${task.id}|${host}`;
-        if (Date.now() - (lastSeen.get(key) ?? 0) < 5000) continue;
+        if (dns ? lastSeen.has(key) : Date.now() - (lastSeen.get(key) ?? 0) < 5000) continue;
         lastSeen.set(key, Date.now());
         this.write({ type: 'net.blocked', task: task.id, host });
       }
