@@ -319,5 +319,11 @@ The spike thread does not change `core/`. These are for the core thread.
 
 ## Not tested yet
 
-- A real power cut (`limactl stop --force` on the VM) followed by remounting each task's overlay. The VM is
-  shared with other threads, so this waits until it is free.
+- **A real power cut.** `07-powercut.sh` is ready: it leaves a task's overlay copy mid-write, has the Mac kill
+  the VM process (`limactl stop --force box`), boots it, and checks that the overlay remounts and which files
+  survived. It also times the boot. The header of the script has the exact commands. It did not run: at
+  18:33 another thread had just started a root SpacetimeDB on the laptop VM (`--data-dir /var/lib/spacetimedb`),
+  and a power cut would have killed its work. Run it when the VM is free.
+  What is known already: an `upper` survives a lazy unmount and remounts with its contents (spike 1), and
+  SpacetimeDB keeps its rows after `kill -9` of the server (spike 4). Expect files written in the last
+  ~30 s without `fsync` to be lost (ext4 default writeback), so the action log should `fsync` each entry.
