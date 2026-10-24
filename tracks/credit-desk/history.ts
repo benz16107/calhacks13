@@ -45,7 +45,7 @@ export function pastDecisions(events: LogEvent[], who: { ein?: string; name?: st
     const uses = toolUses(events, tasks).filter((u) => u.seq < before);
     for (const f of fs.readdirSync(appDir).filter((x) => x.endsWith('.json'))) {
       const a = JSON.parse(fs.readFileSync(path.join(appDir, f), 'utf8'));
-      const match = (who.application_id && a.application_id === who.application_id) || (who.ein && norm(a.business?.ein) === norm(who.ein)) || (who.name && norm(a.business?.legal_name) === norm(who.name));
+      const match = (who.application_id && a.application_id === who.application_id) || (who.ein && norm(a.business?.ein) === norm(who.ein)) || (who.name && norm(who.name).length >= 4 && norm(a.business?.legal_name).includes(norm(who.name)));
       if (!match) continue;
       const d = uses.findLast((u) => u.tool === 'credit-desk.credit_decision' && u.ok && u.output?.status === 'recorded' && u.input.application_id === a.application_id);
       if (!d) continue;

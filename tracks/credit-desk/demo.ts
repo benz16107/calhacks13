@@ -92,6 +92,8 @@ export default async function (d: DemoKit) {
 
   const why = await d.api('GET', '/t/credit-desk/why?subject=APP-1042');
   const answer = why.decisions[0]?.answer.join(' ') ?? '';
+  const partial = await d.api('GET', '/t/credit-desk/why?subject=Bright%20Harbor');
+  d.check(partial.decisions.length === 1 && partial.decisions[0].application_id === 'APP-1042', 'Ask why finds a customer by part of its name, not only the full name');
   d.check(/TransUnion 790/.test(answer) && /Approved by Rosa Delgado/.test(answer) && /Does it still hold\? No\./.test(answer),
     '"Why did we give Bright Harbor $40,000?" is answered from the log: what the desk knew, the rules, who approved it, and that it no longer holds');
 
