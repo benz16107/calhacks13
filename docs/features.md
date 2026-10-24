@@ -14,7 +14,7 @@ Devpost text, and Ben's approved list.
 **Demo step** names the check in `./demo` (`core/demo.ts` moments, or `tracks/<name>/demo.ts`). "none" means no
 automated check yet.
 
-Checked against main `91bf768`, Sat Oct 24 02:50 PT. `./demo` on that commit: 25 passed, 0 failed, 1 pending (real Droid, off by default).
+Checked against main `babd897`, Sat Oct 24 02:55 PT. `./demo` on that commit: 25 passed, 0 failed, 1 pending (real Droid, off by default).
 
 ## Summary
 
@@ -24,8 +24,8 @@ Checked against main `91bf768`, Sat Oct 24 02:50 PT. `./demo` on that commit: 25
 | verified | 27 |
 | merged | 28 |
 | building | 23 |
-| planned | 23 |
-| **Total** | **104** |
+| planned | 28 |
+| **Total** | **109** |
 
 **Collisions** (detail below): none open at 02:40. The three found at 02:25 were resolved on the `business` branch
 (rebased, kill switch on core's `settings.paused`). Still watched: portal/dist rebuilt from merged sources (C-4).
@@ -146,7 +146,7 @@ Checked against main `91bf768`, Sat Oct 24 02:50 PT. `./demo` on that commit: 25
 | Rich cards | fetch | merged (Interactive Cards for approve and undo) | 2b013a3 | fetch demo | Fetch.ai |
 | Reliability shown in chat | fetch | planned | | | Fetch.ai |
 | Picking a machine from chat | fetch | planned | | | Fetch.ai |
-| Guest requests | fetch | planned (showcase says "not built") | | | Fetch.ai |
+| Guest requests (one guest path shared with Mana) | fetch, mana | planned (showcase says "not built") | | | Fetch.ai, Mana |
 
 ## Coinbase and Solana (wallet)
 
@@ -181,12 +181,24 @@ Owner: the Jira thread.
 | Jira dashboard gadget | jira | building (uncommitted in the Jira worktree) | | | Atlassian Track 2 |
 | Jira-to-GurtOS people mapping in Business | jira, business | planned | | | Atlassian, Hyphenate |
 
+## Mana
+
+Owner: the Mana thread.
+
+| Feature | Owner | Status | Commit | Demo step | Tracks |
+|---|---|---|---|---|---|
+| Rules planning chat, project page, the GurtOS status app | mana | verified Oct 23 23:37 (app live, signed out) | 525f630, 4631f73 | tracks/mana/demo.ts | Mana, Hyphenate |
+| Guest requests to GurtOS from inside the Mana app, with the owner's approval (same guest path as Fetch's) | mana, fetch | planned | | | Mana, Fetch.ai |
+| Mana-drafted Business rules synced into the box's policy | mana, business | planned (needs the Business policy, `business` branch) | | | Mana, Hyphenate |
+| Public Mana planning chats for Visa mandates and the Fetch agent team | mana | planned | | | Mana, Visa, Fetch.ai |
+| A GurtOS guide agent in Mana | mana | planned | | | Mana |
+| A public Mana home page for the entry | mana | planned | | | Mana |
+
 ## Other tracks, as they exist
 
 | Feature | Owner | Status | Commit | Demo step | Tracks |
 |---|---|---|---|---|---|
 | Elastic: log in Serverless, GurtOS log agent | elastic | verified Oct 24 00:48 (index and agent via API) | 70f3673, ca03219 | tracks/elastic/demo.ts | Elastic |
-| Mana: rules chat, project page, GurtOS status app | mana | verified Oct 23 23:37 (app live, signed out) | 525f630, 4631f73 | tracks/mana/demo.ts | Mana |
 | /find: search page, photos described on request, Moss local index | find | verified Oct 24 00:33 (search on a phone) | a0d6dbd, 4351905 | tracks/find/demo.ts | Moss |
 | Apify: run any Actor, Best Buy price check, places | apify | verified Oct 23 23:40 (live Best Buy price) | 97694e0 | tracks/apify/demo.ts | Apify |
 | Figma: design, prototype, deck, stage log | figma | merged (stage log totals checked Oct 24 01:20) | many | none | Figma |
