@@ -370,7 +370,9 @@ refused (the check only wants a slug, though the message says "haiku, sonnet, op
 Droid task with it started and finished for 2.8 cents, so it isn't clear which model ran. Accept only haiku, sonnet,
 opus or an id starting with `claude-`, and refuse the rest with the 400 the feature promises. The task's JSON also
 shows `model: null` when none was chosen; the window says "Model", but the default (`claude-sonnet-5-5`) isn't in the
-API response. Found at 07:10 PT on 4b075fa. Not walked: the Haiku second look, the attack test (35 cents), and the
+API response. Found at 07:10 PT on 4b075fa. **Fixed in 907e93d, verified 08:35 PT:** `gpt-5` gets a 400 ("haiku, sonnet, opus, or a Claude model
+id that starts with claude-"); haiku and claude-sonnet-5-5 are accepted; a Droid task with no model shows
+`claude-sonnet-5-5`. Not walked: the Haiku second look, the attack test (35 cents), and the
 install script.
 
 **P2-32. A fresh box's setup clock reads UTC until the time-zone step.** Owner: image, portal. From the image thread's boot test
