@@ -83,7 +83,7 @@ type Handlers = Pick<NonNullable<Parameters<typeof createSession>[0]>, 'permissi
 const handlers: Handlers = {
   // What Droid asks permission for becomes a box approval. Droid runs at autonomy Off, so it asks about every tool use.
   permissionHandler: async ({ toolUses }): Promise<any> => {
-    for (const use of toolUses as { details: any }[]) {
+    for (const use of toolUses as { details: any; toolUse?: { input?: unknown } }[]) {
       const d = use.details;
       if (d.type === ToolConfirmationType.ExitSpecMode) {
         // Plan first: the plan is a step in the log and the question of an approval on the portal and phone.
@@ -100,7 +100,8 @@ const handlers: Handlers = {
         const why = d.riskLevelReason ? ` (${d.riskLevelReason})` : '';
         if (!(await ask(`droid.exec.${hash(d.fullCommand ?? d.command)}`, `Droid wants to run: ${d.fullCommand ?? d.command}${why}`))) return ToolConfirmationOutcome.Cancel;
       }
-      const risky = reviewOn ? classify(d as Record<string, any>, scope) : undefined;
+      // An MCP tool's confirmation carries no arguments; they are on toolUse.input, so the second look sees the real call.
+      const risky = reviewOn ? classify({ ...d, toolInput: d.toolInput ?? use.toolUse?.input } as Record<string, any>, scope) : undefined;
       if (risky && !(await mayRun(risky))) return ToolConfirmationOutcome.Cancel;
     }
     return ToolConfirmationOutcome.ProceedOnce;
