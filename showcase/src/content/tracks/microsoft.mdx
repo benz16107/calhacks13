@@ -150,14 +150,16 @@ Best shown in **GurtOS Business**. The scored credit desk runs were on GurtOS Se
 </div>
 <div slot="b">
 
-<Shot src="track/microsoft/iphone-biz-request-light.png" size="phone" alt="The GurtOS iPhone app signed in as Rosa Delgado at Fogline Supply: the $40,000 credit line for Bright Harbor Catering, requested by Sam Chen, the rule that sent it to the Controller, the agent's checks, and Deny and Approve $40,000." caption="The native iPhone app, iOS simulator." />
+<Shot src="track/microsoft/iphone-biz-request-light.png" dark="track/microsoft/iphone-biz-request-dark.png" size="phone" alt="The GurtOS iPhone app signed in as Rosa Delgado at Fogline Supply: the $40,000 credit line for Bright Harbor Catering, requested by Sam Chen, the rule that sent it to the Controller, the agent's checks, and Deny and Approve $40,000." caption="The native iPhone app, iOS simulator." />
 
 </div>
 </Compare>
 
 The same request reaches the controller on every device paired to them. It went to the controller because requests over $10,000 go to the Controller, and not to Sam Chen, who asked for it. The first answer wins, and the log names who answered and on which device, as the device reports it. Each device keeps its own token, and on Business it is tied to one person, so removing a person revokes their phone and its Watch.
 
-The box also decides which device may answer. A paired Apple Watch can approve only small requests, up to $25 by default, and never a Business request. The box answers the Watch with "needs iPhone", and the request waits for the iPhone. From a notification, a Business request opens in the app with **Approve with Face ID**. The iPhone app is in TestFlight (internal testing), and the Mac menu-bar app is a notarized download from the GitHub release. Sandbox data from CRS and Nessie.
+The box also decides which device may answer. A paired Apple Watch can approve only small requests, up to $25 by default, and never a Business request: the Watch shows only Deny, and if its token tries to approve, the box refuses with "Approve this on your iPhone: requests on GurtOS Business need Face ID." The request keeps waiting for the iPhone. From a notification, a Business request opens in the app with **Approve with Face ID**. The iPhone app is in TestFlight (internal testing), and the Mac menu-bar app is a notarized download from the GitHub release. Sandbox data from CRS and Nessie.
+
+<Shot src="track/microsoft/watch-biz-iphone.png" size="phone" alt="The GurtOS Apple Watch app on Fogline Supply's $15,000 credit line for Panaderia Castellanos: Approve this on your iPhone with Face ID, and only a Deny button." caption="The Watch app, watchOS simulator: a $15,000 Business request. Approve is not offered, and the box would refuse it from the Watch anyway. Deny always works." />
 
 It runs on a computer the company owns, so the company decides what leaves it: one Node service, 4 GB of memory and 17 GB of disk for GurtOS Server, no GPU, and Apache-2.0, so the company can read the code.
 

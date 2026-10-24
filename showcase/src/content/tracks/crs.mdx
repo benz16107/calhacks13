@@ -32,9 +32,9 @@ shots:
   - src: ../../assets/track/microsoft/biz-fraud.png
     alt: 'Waiting for me on GurtOS Business, signed in as the controller: the fraud flag on Pacific Crest Provisions, why it came to the controller, and the CRS checks behind it.'
     caption: 'The fraud flag on the controller''s inbox, with the CRS evidence, sandbox data.'
-  - src: ../../assets/track/hyphenate/crs-fraud-case-phone.png
-    alt: 'The fraud case for the controller on a phone: Pacific Crest Provisions LLC, APP-1043, asked $20,000, held in code for identity codes 2201, 2202 and 2101 and a Fraud Finder score of 88.'
-    caption: 'The fraud case on a phone, from recorded sandbox answers of Oct 23.'
+  - src: ../../assets/track/crs/iphone-biz-fraud-light.png
+    alt: 'The GurtOS iPhone app, signed in as Rosa Delgado: the fraud flag on Pacific Crest Provisions with the routing rule and the CRS checks.'
+    caption: 'The fraud flag on the controller''s iPhone, with the CRS evidence. Sandbox data.'
     tall: true
   - src: ../../assets/track/hyphenate/desk-moment.png
     alt: 'The Credit desk window in a scripted quick run, with APP-1043 highlighted amber where the simple rule approves $20,000.'
@@ -126,7 +126,20 @@ The analyst puts it on fraud hold. The tool will not record the hold on its own,
 </div>
 </Compare>
 
-<Shot src="track/microsoft/biz-fraud.png" alt="Waiting for me on GurtOS Business, signed in as the controller: the fraud flag on Pacific Crest Provisions, why it came to the controller, and the CRS checks behind it, with Deny and Approve." caption="The fraud flag on the controller's inbox on GurtOS Business: the identity codes, the Fraud Finder score, the phone and the inquiries, with Deny and Approve. Sandbox data." />
+<Compare labels={["The controller's desktop", "The controller's iPhone"]}>
+<div slot="a">
+
+<Shot src="track/microsoft/biz-fraud.png" alt="Waiting for me on GurtOS Business, signed in as the controller: the fraud flag on Pacific Crest Provisions, why it came to the controller, and the CRS checks behind it, with Deny and Approve." caption="The portal on GurtOS Business." />
+
+</div>
+<div slot="b">
+
+<Shot src="track/crs/iphone-biz-fraud-light.png" dark="track/crs/iphone-biz-fraud-dark.png" size="phone" alt="The GurtOS iPhone app, signed in as Rosa Delgado: Fraud flag on Pacific Crest Provisions with a Fraud referral badge, the rule that sent it to the fraud reviewer, and the CRS checks: identity fails with 2201, 2202 and 2101, Fraud Finder 88, nobody owns its phone, 9 credit inquiries between Aug 19 and Sep 12, with Deny and Approve." caption="The native iPhone app, iOS simulator." />
+
+</div>
+</Compare>
+
+The fraud referral reaches the controller's desktop and iPhone at once, each with the CRS evidence, not the agent's summary of it. A fraud referral is never answered from a Watch: the Watch app leaves it to the iPhone, and on GurtOS Business the box refuses any approval from a Watch. Sandbox data.
 
 <Shot src="track/hyphenate/desk-moment.png" alt="The Credit desk window in a scripted quick run: three agent seats and the applications table, with APP-1043 highlighted amber, the simple rule approving $20,000 and Deny and Approve for the controller." caption="The Credit desk window in a scripted quick run, retaken today: live CRS sandbox, test data, no model, about 10 seconds. It repeats the moment on every merge." />
 
@@ -285,7 +298,7 @@ track credit-desk
 - The purpose rule is not FCRA compliance.
 - The sandbox returns results only for its 20 personas, so every guarantor is one of them. Business credit is simulated until the sandbox has a route for it.
 - The desk reads CRS answers as summaries (scores, codes, signals). Full reports stay in CRS's retention, reachable by request id.
-- The fraud case screenshot shows recorded sandbox answers from Oct 23, because the sandbox could not be reached at that moment. It was taken before today's wording changes, as were the analyst's step screenshots.
+- The analyst's step screenshot in the decision record was taken before today's wording changes.
 - The scored runs were on GurtOS Server, the Business screens come from a seeded box with scripted seats, and the nightly re-check is off until switched on.
 - Questions we have for CRS are in `sandbox/crs.md`, including one about every sandbox Experian tradeline carrying the same charge-off amount.
 
