@@ -75,7 +75,7 @@ and the budget still hold.
   `curl ... | sh` and a few more, listed in `RISKY`) waits for your OK. Denied, Droid is told "The box owner turned
   this command down." Everyday commands such as `npm test` pass straight through.
 
-The hooks file sits in the task user's home, so a hijacked Droid could rewrite it. The pause is a convenience for an
+The hooks are a convenience, not a boundary. The hooks file sits in the task user's home, so a hijacked Droid could edit or delete it. The pause is a convenience for an
 honest agent. The security boundary is the OS: the task's own user, its own copy of the files, its firewall rule, its
 budget and the vault. Every app's droids are copied, even an app that is switched off; a droid can still only call the
 tools the task was given.
