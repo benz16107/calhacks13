@@ -7,17 +7,17 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { after, test } from 'node:test';
-import type { Ctx, Tool } from '../../core/contract.ts';
+import type { Approval, Ctx, LogEvent, Tool } from '../../core/contract.ts';
 import { newKey } from './keygen.ts';
-import { cdpKeys, startSeller } from './seller.ts';
-import wallet, { allowedUrl, atomic } from './track.ts';
+import { PAYEE, cdpKeys, startSeller } from './seller.ts';
+import wallet, { allowedUrl, atomic, payments } from './track.ts';
 
 process.env.BOX_HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'wallet-test-'));
 const tool = (name: string) => wallet.tools.find((t) => t.name === name) as Tool;
 // A fresh key with no funds: every case here must stop before signing.
 const key = newKey().secret;
-const ctx = (hosts: string[], callKey: string) =>
-  ({ key: callKey, task: { hosts }, secret: () => key, log: () => {}, cost: () => {} }) as unknown as Ctx;
+const ctx = (hosts: string[], callKey: string, approvals: Partial<Approval>[] = []) =>
+  ({ key: callKey, task: { id: 't1', hosts }, box: { approvals: () => approvals }, secret: () => key, log: () => {}, cost: () => {} }) as unknown as Ctx;
 
 const seller = await startSeller();
 const host = `api.localhost:${seller.port}`;
@@ -56,10 +56,37 @@ test('it pays exactly the agreed price or nothing, and never twice for one call'
   assert.equal(pay.cost!({ cents: 3 }), 3);
 });
 
-test('the status page labels the wallet as devnet test money, and says how to set it up without a key', async () => {
-  const fakeBox = { job: async () => ({ wallet: 'W1', usdc: 19.95, explorer: 'https://explorer.solana.com/address/W1?cluster=devnet' }) } as any;
+test('without cents it pays only the quoted price, which the budget check and the approval see', async () => {
+  const pay = tool('wallet.pay');
+  const report = { url: `http://${host}/report` }; // never quoted
+  assert.equal(pay.cost!(report), 0);
+  await assert.rejects(pay.run(report, ctx([host], 'n1')), /call wallet\.quote first/);
+
+  const joke = { url: `http://${host}/joke` }; // quoted at $0.01 by the earlier test
+  assert.equal(pay.cost!(joke), 1);
+  assert.deepEqual(pay.approval!(joke), { payee: PAYEE, purpose: `${joke.url} in devnet USDC (test money)` });
+  const approvedAt3 = [{ task: 't1', state: 'approved', purpose: `${joke.url} in devnet USDC (test money)`, costCents: 3 }] as Approval[];
+  await assert.rejects(pay.run(joke, ctx([host], 'n2', approvedAt3)), /price changed since the owner approved/);
+  await assert.rejects(pay.run({ url: joke.url }, ctx([host], 'n3')), /call wallet\.quote first/); // not the object cost() priced
+});
+
+test('the ledger keeps each settled payment once, and the page shows it as test money', async () => {
+  const paid = { usdc: '0.03', cents: 3, payee: PAYEE, network: 'solana-devnet', test: true, tx: 'TX1abcdefghijk', explorer: 'https://explorer.solana.com/tx/TX1abcdefghijk?cluster=devnet' };
+  const result = { seq: 1, at: '2026-10-24T17:00:00.000Z', type: 'tool.result', task: 't1', key: 'k', ok: true, output: { paid } } as LogEvent;
+  const reader = wallet.logReaders[0];
+  for (const e of [result, result, { ...result, output: { status: 200 } }, { ...result, ok: false }] as LogEvent[]) await reader.read(e);
+  assert.deepEqual(payments().map((p) => p.tx), ['TX1abcdefghijk']);
+
+  const fakeBox = { job: async () => ({ wallet: 'W1', usdc: 19.95 }), task: () => ({ title: 'Buy a <b>report</b>' }) } as any;
   const page = await (await wallet.routes['GET /'](new Request('http://box/t/wallet/'), fakeBox)).text();
-  assert.match(page, /19\.95 USDC on Solana devnet\. Test money/);
+  assert.match(page, /TEST MONEY/);
+  assert.match(page, /19\.95 USDC/);
+  assert.match(page, /\$0\.03/);
+  assert.match(page, /TX1a…hijk/);
+  assert.match(page, /Buy a &#60;b&#62;report/); // a task title is the owner's text: escaped
+});
+
+test('the status page says how to set it up without a key', async () => {
   const noKey = { secret: () => { throw new Error('the vault has no WALLET_SOLANA_KEY'); } } as unknown as Ctx;
   const status: any = await wallet.modelJobs[0].run({}, noKey);
   assert.equal(status.wallet, null);

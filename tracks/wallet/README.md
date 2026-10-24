@@ -30,28 +30,29 @@ receipt links to the Solana Explorer.
 ## What the demo shows
 
 `./demo` is everyone's merge gate, so by default this step stays offline: no network and no money. It shows
-two refusals. A task cannot point the wallet at the box's own API, and when the owner denies an
-over-budget payment, the wallet never runs.
+three refusals. A task cannot point the wallet at the box's own API. When the owner denies an over-budget
+payment, the wallet never runs. And a call that names no amount, for a URL nobody quoted, pays nothing.
 
 `DEMO_LIVE=wallet ./demo` adds the real flow on Solana devnet, with a scripted agent so it gives the same
-result each time. Run it before merging a change to this folder. It passed on 2026-10-23 on the linuxbox VM
-(x86) and the laptop VM (ARM64):
+result each time. Run it before merging a change to this folder. On 2026-10-24 on the linuxbox VM:
 
 ```
 track wallet
   ok    the box loaded wallet.quote and wallet.pay
   ok    the wallet refused a URL outside the task's hosts: "127.0.0.1:7700 is not one of this task's hosts"
-  ok    the owner said no to "Spend $0.03 on wallet.pay? Budget $0.02, spent $0.00.", so the wallet never ran and nothing was spent
+  ok    the owner said no to "Spend $0.03 to api.localhost:4021 on wallet.pay (http://api.localhost:4021/report in devnet USDC (test money))? Budget $0.02, spent $0.00.", so the wallet never ran and nothing was spent
+  ok    with no amount and no quote, it paid nothing: "no quoted price for this URL: call wallet.quote first, or pass cents"
   ok    DEMO_LIVE=wallet: WALLET_SOLANA_KEY is in /etc/box/vault.env on this test machine
-  ok    the box's agent wallet 6PyiR71c9aw3e8bgnxmcLvJECL5zHE5jMSWqJoVjPTxU holds 19.65 USDC on Solana devnet (test money)
+  ok    the box's agent wallet 6PyiR71c9aw3e8bgnxmcLvJECL5zHE5jMSWqJoVjPTxU holds 19.35 USDC on Solana devnet (test money)
   note  the test API settles through Coinbase's CDP facilitator
   ok    GET /joke answered 402 Payment Required: $0.01 devnet USDC to 39w7W3SB...
   ok    the wallet paid $0.01 and got the joke: An agent walks into a bar. The bar answers 402.
-  ok    the $0.03 report is over the $0.02 budget, so the task waits: "Spend $0.03 on wallet.pay? Budget $0.02, spent $0.01."
+  ok    the report named no amount, so the wallet took its quoted $0.03. That is over the $0.02 budget, so the task waits: "Spend $0.03 to 39w7W3SBxE62zsS7VQY5dgZQXGWko2EkBXMfHg2sLtKV on wallet.pay (http://api.localhost:38427/report in devnet USDC (test money))? Budget $0.02, spent $0.01."
   ok    approved, it paid $0.03 and got the report
   ok    both payments count toward the task's cost: $0.04
   ok    the log has each payment with its amount, payee, task and transaction, labeled devnet test money
-  ok    both transactions, settled by Coinbase's CDP facilitator, are confirmed on Solana devnet: https://explorer.solana.com/tx/Urd99HES...?cluster=devnet
+  ok    the Agent wallet page lists both payments: time, amount, payee, task and transaction, as test money
+  ok    both transactions, settled by Coinbase's CDP facilitator, are confirmed on Solana devnet: https://explorer.solana.com/tx/3MJcRLN3...?cluster=devnet
   ok    neither the wallet's key nor the CDP secret is anywhere in the task's log
 ```
 
@@ -87,7 +88,7 @@ You need a box (see `core/README.md`; any Ubuntu 24.04 test VM with `core/setup.
      "tools": ["wallet.quote", "wallet.pay"], "hosts": ["api.localhost:4021"], "budgetCents": 2,
      "prompt": "http://api.localhost:4021/joke is a paid API. Buy one joke with the box wallet and write it to joke.md."}'
    curl -s 127.0.0.1:7700/approvals                                # anything waiting for your OK
-   curl -s 127.0.0.1:7700/t/wallet/                                # the wallet's address and devnet balance
+   curl -s 127.0.0.1:7700/t/wallet/                                # the Agent wallet page: balance and payments
    ```
 
 Tests for the wallet's guards (no money moves): `node --experimental-strip-types --test tracks/wallet/wallet.test.ts`.
@@ -110,7 +111,9 @@ Tests for the wallet's guards (no money moves): `node --experimental-strip-types
         ◄── { content, paid } ───    log: tool.call, "Paid $0.01 ... to <payee>", tool.result with cents
 ```
 
-- `track.ts`: the two tools, `wallet.quote` and `wallet.pay`, plus the `/t/wallet/` page.
+- `track.ts`: the two tools, `wallet.quote` and `wallet.pay`, and the Agent wallet page at `/t/wallet/`. The
+  page shows the balance and the last 50 payments (time, amount, payee, task, transaction), from a ledger a
+  log reader keeps. It is drawn on the box, so it makes no requests of its own.
 - `seller.ts`: the test API. `GET /joke` costs $0.01 and `GET /report` $0.03. It settles through CDP when it
   is given CDP keys, else through x402.org.
 - `demo.ts`: the demo step. `wallet.test.ts`: the guard tests. `keygen.ts`: makes a wallet.
@@ -125,8 +128,11 @@ Tests for the wallet's guards (no money moves): `node --experimental-strip-types
   declares it, so no task or tool can get it from the vault. The demo checks it is nowhere in the log.
 - **Budget, then the owner.** The broker counts each payment toward the task's budget. Above it, the task
   waits until someone answers on the portal or phone. Denied means nothing is paid.
-- **Exactly the agreed price.** `wallet.pay` names the amount, which is what the budget check and the owner
-  saw. If the API asks for anything else, it pays nothing.
+- **Exactly the agreed price.** A call names its amount, or leaves it out to take the price from the latest
+  `wallet.quote` of that URL. Either way the budget check, the owner's OK and the payment all use that one
+  amount. If the API asks for anything else, the wallet pays nothing. With no amount and no quote, it pays
+  nothing. It never pays a quoted price that differs from one the owner approved for that URL.
+- **The owner sees who gets paid.** An approval names the payee's address (from the quote) and the URL.
 - **Only devnet USDC.** It pays only the `exact` scheme on Solana devnet in devnet USDC. The x402 client also
   refuses any single payment over $1, its default.
 - **Only the task's hosts.** The wallet reaches only hosts in the task's `hosts`, by the same rule as the
@@ -139,11 +145,7 @@ Tests for the wallet's guards (no money moves): `node --experimental-strip-types
 ### Known limits
 
 - Devnet only, by design. Mainnet needs a different network and asset in `track.ts`, real USDC and a review.
-- The approval question comes from the core: "Spend $0.03 on wallet.pay? Budget $0.02, spent $0.01." It does
-  not name the payee or URL yet. The quote step just before it, in the same task's log, does.
-- Two payments made at the same moment can together go over the budget, because the broker checks each call
-  against what is already spent, not what is in flight. Droid does make parallel calls. The core thread is
-  adding a reservation for this.
+- Quoted prices are kept in memory. After a restart, a call that names no amount needs a new quote first.
 - `GET` only. APIs that want a `POST` body are not supported yet.
 - After a power cut in the middle of a payment, the call fails rather than checking the chain for whether the
   payment went through. The owner checks the wallet on the explorer.

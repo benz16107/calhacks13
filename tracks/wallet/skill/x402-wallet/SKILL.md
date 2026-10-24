@@ -14,8 +14,9 @@ All payments are USDC on Solana devnet. That is test money, not real funds. Say 
 
 1. **Quote.** Call `wallet.quote` with `{ "url": "<the API's URL>" }`. A paid API returns `status: 402` and a
    price in `cents`, plus the payee. A free URL returns its content and `cents: 0`; you are done.
-2. **Pay.** Call `wallet.pay` with `{ "url": "<same URL>", "cents": <the cents from the quote> }`. It pays
-   exactly that amount or nothing, then returns the API's `content` and a `paid` receipt with the transaction.
+2. **Pay.** Call `wallet.pay` with `{ "url": "<same URL>" }` to pay the price you were quoted, or add
+   `"cents"` to name the amount yourself. It pays exactly that amount or nothing, then returns the API's
+   `content` and a `paid` receipt with the transaction.
 3. **Report.** Say what you bought, what it cost and the transaction link from `paid.explorer`.
 
 In Droid the tools appear as `wallet__quote` and `wallet__pay` (under the `box` MCP server).

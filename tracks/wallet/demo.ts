@@ -15,12 +15,13 @@ export default async function (d: DemoKit) {
   const health = await d.api('GET', '/health');
   d.check(health.tools.includes('wallet.quote') && health.tools.includes('wallet.pay'), 'the box loaded wallet.quote and wallet.pay');
 
-  // ---------- offline: two refusals, no network and no money ----------
+  // ---------- offline: three refusals, no network and no money ----------
   d.workspace('wallet', {});
   const spec = { workspace: 'wallet', worker: 'fake', source: 'demo', tools: ['wallet.pay'], hosts: ['api.localhost:4021'] };
-  const [A, B] = await Promise.all([
+  const [A, B, C] = await Promise.all([
     d.api<Task>('POST', '/tasks', { ...spec, title: 'Pay the box itself', budgetCents: 5, prompt: 'call wallet.pay {"url":"http://127.0.0.1:7700/approvals","cents":1}' }),
     d.api<Task>('POST', '/tasks', { ...spec, title: 'Buy a report', budgetCents: 2, prompt: 'call wallet.pay {"url":"http://api.localhost:4021/report","cents":3}' }),
+    d.api<Task>('POST', '/tasks', { ...spec, title: 'Pay with no price', budgetCents: 5, prompt: 'call wallet.pay {"url":"http://api.localhost:4021/report"}' }),
   ]);
   const ask = await d.waitFor('the over-budget payment to ask', async () =>
     (await d.api<Approval[]>('GET', '/approvals')).find((a) => a.task === B.id && a.state === 'pending'),
@@ -30,13 +31,14 @@ export default async function (d: DemoKit) {
     const r = await d.api<Detail>('GET', `/tasks/${t.id}`);
     return r.task.state === 'failed' ? r : undefined;
   });
-  const [a, b] = await Promise.all([failed(A), failed(B)]);
+  const [a, b, c] = await Promise.all([failed(A), failed(B), failed(C)]);
   const resultOf = (r: Detail) => r.events.findLast((e) => e.type === 'tool.result') as Extract<LogEvent, { type: 'tool.result' }> | undefined;
   d.check(resultOf(a)?.error?.includes("not one of this task's hosts"), `the wallet refused a URL outside the task's hosts: "${resultOf(a)?.error}"`);
   d.check(
     resultOf(b)?.error === 'not approved' && !b.events.some((e) => e.type === 'tool.call') && b.task.costCents === 0,
     `the owner said no to "${ask.question}", so the wallet never ran and nothing was spent`,
   );
+  d.check(resultOf(c)?.error?.includes('call wallet.quote first') && c.task.costCents === 0, `with no amount and no quote, it paid nothing: "${resultOf(c)?.error}"`);
 
   const live = (process.env.DEMO_LIVE ?? '').split(/[\s,]+/).includes('wallet');
   if (!live) {
@@ -65,7 +67,8 @@ export default async function (d: DemoKit) {
       prompt: [
         `call wallet.quote {"url":"${api}/joke"}`,
         `call wallet.pay {"url":"${api}/joke","cents":1}`,
-        `call wallet.pay {"url":"${api}/report","cents":3}`,
+        `call wallet.quote {"url":"${api}/report"}`,
+        `call wallet.pay {"url":"${api}/report"}`,
         'write done.txt yes',
       ].join('\n'),
     });
@@ -77,7 +80,10 @@ export default async function (d: DemoKit) {
     const [quote, joke] = before.events.flatMap((e) => (e.type === 'tool.result' && e.ok ? [e.output as any] : []));
     d.check(quote?.status === 402 && quote.cents === 1 && quote.payee === PAYEE, `GET /joke answered 402 Payment Required: $${quote?.usdc} devnet USDC to ${PAYEE.slice(0, 8)}...`);
     d.check(joke?.status === 200 && joke.content.includes('joke') && joke.paid.tx, `the wallet paid $0.01 and got the joke: ${JSON.parse(joke?.content ?? '{}').joke}`);
-    d.check(before.task.state === 'waiting' && ask.costCents === 3, `the $0.03 report is over the $0.02 budget, so the task waits: "${ask.question}"`);
+    d.check(
+      before.task.state === 'waiting' && ask.costCents === 3 && ask.payee === PAYEE,
+      `the report named no amount, so the wallet took its quoted $0.03. That is over the $0.02 budget, so the task waits: "${ask.question}"`,
+    );
 
     await d.api('POST', `/approvals/${ask.id}`, { approved: true, by: 'demo' });
     const [done] = await d.settled([T.id]);
@@ -91,6 +97,11 @@ export default async function (d: DemoKit) {
       paid.length === 2 && steps.length === 2 && paid.every((p) => p.payee === PAYEE && p.network === 'solana-devnet' && p.test),
       'the log has each payment with its amount, payee, task and transaction, labeled devnet test money',
     );
+    const html = await d.waitFor('both payments on the wallet page', async () => {
+      const page = await (await fetch(`${d.url}/t/wallet/`)).text();
+      return paid.every((p) => page.includes(p.tx)) ? page : undefined;
+    });
+    d.check(html.includes('TEST MONEY') && html.includes(T.title), 'the Agent wallet page lists both payments: time, amount, payee, task and transaction, as test money');
 
     const r = await fetch('https://api.devnet.solana.com', {
       method: 'POST',
