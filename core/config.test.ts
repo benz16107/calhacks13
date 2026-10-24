@@ -58,16 +58,19 @@ import { folderRefusal, hadHumanUse, neverFolder } from './config.ts';
 
 test('folders: only a Personal box hands them out, only the owner\'s home or chosen folders, never the box or root\'s', () => {
   const owner = { hasOwner: true, ownerHome: '/home/ana', chosen: ['/srv/shared'], folderUid: 1000 };
-  assert.equal(folderRefusal('/home/ana/Documents/thesis', owner), undefined);
+  assert.equal(folderRefusal('/home/ana/Documents/thesis', { ...owner, chosen: [] }), undefined, 'with no list, the owner\'s home');
   assert.equal(folderRefusal('/srv/shared/team', owner), undefined);
+  const listed = { ...owner, chosen: ['/home/ana/Documents'] };
+  assert.equal(folderRefusal('/home/ana/Documents/thesis', listed), undefined);
+  assert.equal(folderRefusal('/home/ana/Pictures/trip', listed), 'Pictures is not on your list. Add it in GurtOS Settings, Permissions.', 'with a list, only the list');
   for (const bad of ['/etc', '/etc/box', '/root', '/root/.ssh', '/proc/1', '/var/lib/box', '/var/lib/spacetimedb', '/usr/bin', '/opt/box']) {
     assert.ok(neverFolder(bad), `${bad} is never allowed`);
     assert.ok(folderRefusal(bad, owner), `${bad} is refused even for the owner`);
   }
   assert.ok(folderRefusal('/home/bob/docs', owner), "another person's home is not the owner's");
   assert.ok(folderRefusal('/home/anaconda', owner), 'a sibling that merely starts with the same letters is not inside the home');
-  assert.ok(folderRefusal('/home/ana/x', { ...owner, folderUid: 0 }), 'a folder that belongs to root is refused');
-  assert.equal(folderRefusal('/home/ana/x', { ...owner, folderUid: 0, allowRootOwned: true }), undefined, 'only a demo box allows that');
+  assert.ok(folderRefusal('/home/ana/x', { ...owner, chosen: [], folderUid: 0 }), 'a folder that belongs to root is refused');
+  assert.equal(folderRefusal('/home/ana/x', { ...owner, chosen: [], folderUid: 0, allowRootOwned: true }), undefined, 'only a demo box allows that');
   // A Server box: no owner and nothing chosen means no folders at all.
   assert.match(folderRefusal('/home/ana/x', { hasOwner: false, chosen: [], folderUid: 1000 })!, /Personal/);
   assert.equal(folderRefusal('/srv/shared/a', { hasOwner: false, chosen: ['/srv/shared'], folderUid: 1000 }), undefined);

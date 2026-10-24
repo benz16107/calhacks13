@@ -42,8 +42,8 @@ export interface Settings {
 }
 
 export const DEFAULT_SETTINGS: Settings = {
-  approvalThresholdCents: 10_000,
-  defaultBudgetCents: 0,
+  approvalThresholdCents: 500, // ask before any single spend over $5
+  defaultBudgetCents: 100, // a task may spend $1 without asking
   networkDefault: 'none',
   defaultHosts: [],
   agentFolders: [],
@@ -189,9 +189,12 @@ export function folderRefusal(real: string, ctx: { hasOwner: boolean; ownerHome?
   const never = neverFolder(real);
   if (never) return never;
   if (!ctx.hasOwner && !ctx.chosen.length) return 'folders are for GurtOS Personal: this box has no owner yet, and no folders were chosen in Settings (agentFolders)';
-  const inHome = !!ctx.ownerHome && insideAny(real, [ctx.ownerHome]);
-  if (!inHome && !insideAny(real, ctx.chosen)) {
-    return `${real} is not in the owner's home${ctx.ownerHome ? ` (${ctx.ownerHome})` : ''} or one of the folders agents may use (Settings > agentFolders: ${ctx.chosen.join(', ') || 'none chosen'})`;
+  // The owner's list, once they have one, is the list: a folder in their home that isn't on it is refused too.
+  const allowed = ctx.chosen.length ? insideAny(real, ctx.chosen) : !!ctx.ownerHome && insideAny(real, [ctx.ownerHome]);
+  if (!allowed) {
+    // Name the folder the way the owner sees it: "Pictures", not a path.
+    const top = ctx.ownerHome && insideAny(real, [ctx.ownerHome]) ? real.slice(ctx.ownerHome.length + 1).split('/')[0] : real;
+    return ctx.chosen.length || ctx.ownerHome ? `${top} is not on your list. Add it in GurtOS Settings, Permissions.` : `${real} is not one of the folders agents may use. Add it in GurtOS Settings, Permissions.`;
   }
   if (ctx.folderUid === 0 && !ctx.allowRootOwned) return `${real} belongs to root; agents are only given a person's folders`;
   return undefined;

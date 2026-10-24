@@ -41,6 +41,7 @@ for (let n = done + 1; n <= lines.length; n++) {
       break;
     case 'sleep':
       await new Promise((r) => setTimeout(r, Number(arg) * 1000));
+      note = ''; // a wait is not something a person needs to read: the step still counts for resume, with no text
       break;
     case 'expect': {
       const got = fs.existsSync(arg) ? fs.readFileSync(arg, 'utf8').trim() : '(missing)';

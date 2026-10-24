@@ -795,7 +795,7 @@ await moment('personal: one task on several folders, and a runtime owner', async
   await api('PATCH', '/api/settings', { agentFolders: [a] });
   const outside = await api('POST', '/tasks', { title: 'x', worker: 'fake', prompt: 'x', folders: [a, b] }).then(() => '', (e: Error) => e.message);
   await api('PATCH', '/api/settings', { agentFolders: ['/tmp'] });
-  check(/is inside/.test(nested) && /not both/.test(both) && /not in the owner's home/.test(outside), 'a folder inside another, folder and folders together, and a folder outside the chosen ones are all refused');
+  check(/is inside/.test(nested) && /not both/.test(both) && /not on your list|not one of the folders/.test(outside), 'a folder inside another, folder and folders together, and a folder outside the chosen ones are all refused');
   await api('POST', `/api/tasks/${T.id}/undo`);
 
   // The owner, set after the account exists (the image does this once GNOME's own setup has made it).
@@ -891,7 +891,7 @@ await moment('security: an outside caller gets nothing, and a folder cannot be t
   // Routes a track marks as public or self-checked are reachable through a proxy; the rest are not.
   const mana = await out('GET', '/t/mana/status');
   const jira = await out('GET', '/t/jira/task?id=none');
-  check(mana.status === 200 && jira.body?.error !== 'pair this phone with the box first' && (await out('GET', '/t/example/secret-check')).status === 401, `through a proxy, Mana's public status answers (${mana.status}) and Jira's routes reach their own secret check (${jira.status}); other track routes still need a phone`);
+  check(mana.status === 200 && jira.body?.error !== 'pair this phone with this computer first' && (await out('GET', '/t/example/secret-check')).status === 401, `through a proxy, Mana's public status answers (${mana.status}) and Jira's routes reach their own secret check (${jira.status}); other track routes still need a phone`);
 
   // Every task field is checked at the door.
   const badSpecs: Record<string, unknown>[] = [
@@ -916,7 +916,7 @@ await moment('security: an outside caller gets nothing, and a folder cannot be t
   const asks = async (folder: string, extra: Record<string, string> = {}) => (await out('POST', '/api/tasks', { title: 'Look', worker: 'fake', prompt: 'x', folder }, { ...auth, ...extra })).status;
   check((await asks('/etc/box')) === 403, 'a paired phone cannot give a task any folder at all (the owner\'s to hand out)');
   const refused = await Promise.all(['/etc', '/etc/box', '/root', '/proc', HOME, path.join(HOME, 'tasks')].map((f) => api('POST', '/tasks', { title: 'Look', worker: 'fake', prompt: 'x', folder: f }).then(() => 'ALLOWED', (e: Error) => e.message)));
-  check(refused.every((m) => m !== 'ALLOWED' && /inside|not in the owner's home|no folder/.test(m)), `even the owner cannot hand over /etc, /root, /proc or the box's own folder ("${refused[1].slice(0, 70)}")`);
+  check(refused.every((m) => m !== 'ALLOWED' && /inside|not on your list|not one of the folders|no folder/.test(m)), `even the owner cannot hand over /etc, /root, /proc or the box's own folder ("${refused[1].slice(0, 70)}")`);
   fs.mkdirSync(OWNER_ROOT, { recursive: true });
   try { fs.symlinkSync('/etc/box', path.join(OWNER_ROOT, 'sneaky')); } catch {}
   const viaLink = await api('POST', '/tasks', { title: 'Look', worker: 'fake', prompt: 'x', folder: path.join(OWNER_ROOT, 'sneaky') }).then(() => 'ALLOWED', (e: Error) => e.message);
@@ -976,6 +976,13 @@ await moment('setup: the wizard, settings, the vault and apps', async () => {
   const remote = await viaTcp('POST', '/api/setup/step', { id: 'network' }, RELAYED);
   check(denied(remote), 'a request relayed from elsewhere, with no token, cannot change setup');
   await api('POST', '/api/setup/step', { id: 'network', data: { wifi: 'home' } });
+  const setupNote = (await api<LogEvent[]>('GET', '/log')).filter((e) => e.type === 'note' && (e as { track?: string }).track === 'setup').pop() as { text?: string } | undefined;
+  check(setupNote?.text === 'Setup: network step done', `a setup step reads as a sentence in Activity ("${setupNote?.text}")`);
+  const emptyKey = await api('PUT', '/api/vault/ANTHROPIC_API_KEY', { value: '  ' }).then(() => 'saved', (e: Error) => e.message);
+  check(/empty/.test(emptyKey), `an empty model key is refused, not saved ("${emptyKey}")`);
+  const F = await api<Task>('POST', '/tasks', { title: 'Fails plainly', workspace: 'notes', worker: 'fake', source: 'demo', prompt: 'fail The report could not be found' });
+  const failed = await waitFor('the failure', async () => ((await task(F.id)).state === 'failed' ? task(F.id) : undefined));
+  check(failed.error === 'The report could not be found', `a failed task says why in plain words, without "worker exited with" ("${failed.error}")`);
   const plain = await api<{ code: string }>('POST', '/api/pair/start', {});
   const stranger = await api<{ token: string }>('POST', '/api/pair', { code: plain.code, name: 'a visitor' });
   const asStranger = await viaTcp('POST', '/api/setup/step', { id: 'folders' }, { ...RELAYED, authorization: `Bearer ${stranger.token}` });
@@ -1031,7 +1038,7 @@ await moment('setup: the wizard, settings, the vault and apps', async () => {
   const allowedTask = await api<Task>('POST', '/tasks', { title: 'Inside', worker: 'fake', prompt: 'write a.txt x', folder: okDir });
   await api('PATCH', '/api/settings', { agentFolders: ['/tmp'] }); // back to the demo's folders before any check can stop this step
   await settled([allowedTask.id]);
-  check(/not in the owner's home/.test(refused), 'a folder outside the chosen ones is refused, one inside is allowed');
+  check(/not on your list|not one of the folders/.test(refused), 'a folder outside the chosen ones is refused, one inside is allowed');
   await api('PATCH', '/api/settings', { agentFolders: ['/tmp'], quietHours: { enabled: true, from: '23:30' }, appearance: { theme: 'dark', accent: '#5b8cff' } });
   const set1 = await api<any>('GET', '/api/settings');
   check(set1.quietHours.enabled && set1.quietHours.from === '23:30' && set1.quietHours.to === '07:00' && set1.appearance.theme === 'dark', 'nested settings merge: changing one quiet-hours field keeps the others');

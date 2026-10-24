@@ -173,7 +173,7 @@ export type LogEvent =
   | Ev<'cost', { cents: number; what: string; model?: string; tokens?: Tokens }>
   | Ev<'net.blocked', { task: string; host: string }>
   /** Anything a track wants in the log. */
-  | Ev<'note', { track: string; data: unknown }>;
+  | Ev<'note', { track: string; data: unknown; /** A sentence for people (Activity, Audit); the core fills it for its own notes. */ text?: string }>;
 
 /** A log event before the log gives it a seq and a time. */
 export type NewEvent = LogEvent extends infer E ? (E extends unknown ? Omit<E, 'seq' | 'at'> : never) : never;
@@ -260,6 +260,8 @@ export interface Track {
    * falls back to test mode without. A new box turns the app on when only these are missing.
    */
   optionalSecrets?: string[];
+  /** Off on a new box even when nothing is missing: an app that makes something public (Mana's status page). */
+  offByDefault?: boolean;
   triggers?: Trigger[];
   tools?: Tool[];
   logReaders?: LogReader[];

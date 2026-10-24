@@ -70,7 +70,7 @@ function listenSocket(server: http.Server, file: string, owner?: { uid: number; 
 
 const dollars = (cents: number) => `$${(cents / 100).toFixed(2)}`;
 const BOX_ID = process.env.BOX_ID ?? os.hostname();
-const BOX_NAME = process.env.BOX_NAME ?? BOX_ID;
+const BOX_NAME = process.env.BOX_NAME ?? BOX_ID; // the name setup gives wins: see boxName()
 
 interface Device {
   id: string;
@@ -86,11 +86,39 @@ interface Device {
   push?: push.PushSub;
   /** Business: the person this phone signs in as (paired with a code an admin made for them). */
   person?: string;
+  /** When it last called this computer. */
+  lastSeen?: string;
 }
 
 const forbid = (message: string): never => {
   throw Object.assign(new Error(message), { status: 403 });
 };
+
+/** A task's failure in words a person reads: no "worker exited with", and the common causes named. */
+export function failureText(why: string | undefined, code: unknown, via?: string): string {
+  const w = (why ?? '').replace(/^Error:\s*/, '');
+  // Same words as the Personal desktop's banner.
+  if (/\b401\b|authentication_error|invalid x-api-key|invalid api key/i.test(w)) return `Your ${via === 'factory' ? 'Factory' : 'Anthropic'} key was not accepted. Change it in Settings, Keys.`;
+  if (/\b429\b|rate.?limit|overloaded/i.test(w)) return "Claude is busy or the key's limit was reached. Try again in a minute.";
+  if (/ENOTFOUND|ECONNREFUSED|ETIMEDOUT|EAI_AGAIN|fetch failed/i.test(w)) return "Couldn't reach Claude. Check this computer's internet connection.";
+  if (/still downloading/i.test(w)) return w;
+  if (w) return w.slice(0, 300);
+  return code === 'SIGKILL' || code === 137 ? 'The task was stopped: it used more memory than it may.' : `The agent stopped with an error (code ${code}).`;
+}
+
+/** Try a model key with a free call. Rejected keys are not saved; an unreachable service saves it unchecked. */
+export async function checkModelKey(name: string, value: string): Promise<{ status: 'ok' | 'rejected' | 'unchecked' | 'none'; message?: string }> {
+  if (name !== 'ANTHROPIC_API_KEY') return name === 'FACTORY_API_KEY' ? { status: 'unchecked', message: "Saved. GurtOS can't check a Factory key before its first task." } : { status: 'none' };
+  if (process.env.BOX_DEMO && value.startsWith('demo-')) return { status: 'unchecked', message: 'Saved. GurtOS couldn\'t check it yet.' };
+  try {
+    const r = await fetch('https://api.anthropic.com/v1/models?limit=1', { headers: { 'x-api-key': value, 'anthropic-version': '2023-06-01' }, signal: AbortSignal.timeout(6000) });
+    if (r.status === 401 || r.status === 403) return { status: 'rejected', message: "Anthropic didn't accept this key. Check that you copied all of it." };
+    if (r.ok) return { status: 'ok', message: 'Anthropic accepted this key.' };
+    return { status: 'unchecked', message: "Saved. GurtOS couldn't check it yet." };
+  } catch {
+    return { status: 'unchecked', message: "Saved. GurtOS couldn't check it yet." };
+  }
+}
 
 class Core {
   log = new Log(path.join(HOME, 'log.jsonl'));
@@ -204,7 +232,43 @@ class Core {
     routed: (a) => this.routing(a),
   });
 
+  /** The computer's name: the one given in setup, else BOX_NAME, else its id. */
+  boxName(): string {
+    const n = (this.setup?.steps?.name?.data as { boxName?: unknown } | undefined)?.boxName;
+    return typeof n === 'string' && n.trim() && n.trim().length <= 40 ? n.trim() : BOX_NAME;
+  }
+
+  /** A plain sentence for a note the core writes, so Activity and Audit never show raw data. */
+  noteText(track: string, d: Record<string, any> = {}): string | undefined {
+    const app = (n: string) => this.installed.get(n)?.track?.title ?? n;
+    switch (track) {
+      case 'setup':
+        return d.finished ? 'Setup finished' : d.reopened ? 'Setup opened again' : d.step ? `Setup: ${String(d.step).replace(/[-_]/g, ' ')} step done` : undefined;
+      case 'settings':
+        return d.changed ? `Settings changed: ${Object.keys(d.changed).join(', ')}` : undefined;
+      case 'vault':
+        return d.set ? `Key saved: ${d.set}` : d.removed ? `Key removed: ${d.removed}` : undefined;
+      case 'apps':
+        return d.enabled ? `App turned on: ${app(d.enabled)}` : d.disabled ? `App turned off: ${app(d.disabled)}` : undefined;
+      case 'owner':
+        return 'Owner set';
+      case 'kill-switch':
+        return d.drill ? 'Pause drill' : d.paused === true ? `All agents paused${d.by ? ` by ${d.by}` : ''}` : d.paused === false ? `All agents resumed${d.by ? ` by ${d.by}` : ''}` : undefined;
+      case 'security':
+        return d.tripwire ? `An agent tried to send a decoy key out (${d.where}). GurtOS stopped and undid the task.` : undefined;
+      case 'files':
+        return d.fast === true ? `Fast folders: workspace ready in ${d.ms} ms` : d.fast === false ? `Fast folders not used: ${d.why}` : undefined;
+      case 'remote':
+        return typeof d.text === 'string' ? d.text : undefined;
+    }
+    return undefined;
+  }
+
   write(e: NewEvent): LogEvent {
+    if (e.type === 'note' && !e.text) {
+      const text = this.noteText(e.track, e.data as Record<string, any>);
+      if (text) e = { ...e, text };
+    }
     if (this.business.on && !e.who) {
       const who = this.whoFor(e);
       if (who) e = { ...e, who };
@@ -389,7 +453,7 @@ class Core {
         this.workers.delete(t.id);
         if (t.state === 'running' || t.state === 'waiting') {
           const why = code === 0 ? undefined : sandbox.workerError(t);
-          this.move(t, code === 0 ? 'done' : 'failed', code === 0 ? {} : { error: `worker exited with ${signal ?? code}${why ? `: ${why}` : ''}` });
+          this.move(t, code === 0 ? 'done' : 'failed', code === 0 ? {} : { error: failureText(why, signal ?? code, this.modelVia() ?? undefined) });
           // A task on the owner's real folder waits for their Keep or Undo.
           if (code === 0 && sandbox.isLinked(t.workspace)) this.write({ type: 'keep', task: t.id, result: 'pending' });
         }
@@ -903,7 +967,7 @@ class Core {
     if (!t.tools.includes(name)) throw new Error(`this task may not use ${name}`);
     if (this.leaks(t, JSON.stringify(input ?? null))) {
       this.tripwire(t, `a call to ${name}`);
-      return { ok: false, error: 'refused by the box' };
+      return { ok: false, error: 'refused by GurtOS' };
     }
     const entry = this.tools.get(name);
     if (!entry) throw new Error(`no tool ${name}`);
@@ -946,7 +1010,7 @@ class Core {
       const q = `Spend ${dollars(cost)}${meta.payee ? ` to ${meta.payee}` : ''} on ${name}${meta.purpose ? ` (${meta.purpose})` : ''}? ${why}`;
       // Approval id keyed by the action, so a retry of the same call reuses it instead of asking again.
       const outcome = await this.askFor(t, `budget.${action}`, { question: q, costCents: cost, payee: meta.payee, purpose: meta.purpose });
-      if (outcome === 'pending') return { ok: false, pending: true, error: 'Waiting for the box owner to approve this spend. Call this tool again to check.' };
+      if (outcome === 'pending') return { ok: false, pending: true, error: 'Waiting for the owner to approve this spend. Call this tool again to check.' };
       if (outcome === 'denied') return result({ ok: false, error: 'not approved' });
     }
     this.reserved.set(t.id, (this.reserved.get(t.id) ?? 0) + cost); // reserve now, with no await before it, so a parallel call sees this spend
@@ -1174,6 +1238,7 @@ class Core {
     for (const name of fs.readdirSync(root).sort()) {
       const file = path.join(root, name, 'track.ts');
       if (!fs.existsSync(file)) continue;
+      if (name === 'example' && system.isImage() && !process.env.BOX_DEMO) continue; // the template app is for developers, not a release
       try {
         const track: Track = (await import(file)).default;
         if (track?.name !== name) throw new Error(`track.ts must default-export a Track named "${name}"`);
@@ -1328,7 +1393,8 @@ class Core {
     if (!fs.existsSync(path.join(HOME, 'apps.json')) && !this.log.events.length && !process.env.BOX_DEMO) {
       for (const name of this.installed.keys()) {
         const need = this.appEntry(name).access.secrets;
-        if (name === 'example' || need.some((k) => !k.set && !('optional' in k))) this.disabled.add(name);
+        // A new computer starts with only the model app on; the owner turns the others on in setup or the App Center.
+        if (name !== 'anthropic' || need.some((k) => !k.set && !('optional' in k))) this.disabled.add(name);
       }
       saveDisabled(HOME, this.disabled);
     }
@@ -1356,7 +1422,7 @@ class Core {
   vouch(req: http.IncomingMessage, identity: unknown) {
     if (typeof identity !== 'string' || !/^[0-9a-f]{64}$/i.test(identity)) throw new Error('identity: the 64 hex characters of your SpacetimeDB identity');
     const device = this.deviceOf(req);
-    if (!device && !this.isLocal(req)) throw Object.assign(new Error('pair this phone with the box first'), { status: 401 });
+    if (!device && !this.isLocal(req)) throw Object.assign(new Error('pair this phone with this computer first'), { status: 401 });
     const name = device ? device.name : 'box screen';
     const id = identity.toLowerCase();
     if (device) device.identity = id;
@@ -1409,7 +1475,7 @@ class Core {
   requireOwnerChange(req: http.IncomingMessage) {
     this.requireOwner(req);
     if (this.owner && req.socket.remoteAddress !== undefined && !this.deviceOf(req)?.owner) {
-      throw Object.assign(new Error('the owner is already set; change it from the box service or the owner\'s phone'), { status: 403 });
+      throw Object.assign(new Error('the owner is already set; change it on this computer or from the owner\'s phone'), { status: 403 });
     }
   }
 
@@ -1427,7 +1493,7 @@ class Core {
       timezone: system.timezone(),
       network: { online: await system.online(), interfaces: system.interfaces() },
       boxId: BOX_ID,
-      boxName: BOX_NAME,
+      boxName: this.boxName(),
       owner: this.owner,
       model: { ready: !!this.modelVia(), via: this.modelVia() },
       ...(this.business.on ? { company: this.business.company } : {}),
@@ -1457,7 +1523,7 @@ class Core {
     } catch (e) {
       console.error('BOX_PEERS is not valid JSON:', e);
     }
-    const self = { id: BOX_ID, name: BOX_NAME, url: this.boxUrl(), stdb: DB, self: true };
+    const self = { id: BOX_ID, name: this.boxName(), url: this.boxUrl(), stdb: DB, self: true };
     return [self, ...peers];
   }
 
@@ -1471,7 +1537,7 @@ class Core {
     // the QR opens the GurtOS app, which adds this box to its machines (`boxUrl` is the box's own copy).
     const remote = this.remote.saved;
     const url = remote ? `${APP}/pair?box=${remote.host}#${code}` : `${this.boxUrl()}/pair#${code}`;
-    return { code, url, ...(remote ? { boxUrl: `${remote.url}/pair#${code}` } : {}), expiresAt: new Date(expiry).toISOString(), box: { id: BOX_ID, name: BOX_NAME } };
+    return { code, url, ...(remote ? { boxUrl: `${remote.url}/pair#${code}` } : {}), expiresAt: new Date(expiry).toISOString(), box: { id: BOX_ID, name: this.boxName() } };
   }
 
   /** A phone redeems the code for a durable device token. */
@@ -1479,7 +1545,7 @@ class Core {
   pair(body: { code?: string; name?: string; identity?: string }) {
     // Pairing is reachable from outside the box, so guessing codes is limited: 10 wrong ones a minute, from everyone together.
     this.wrongCodes = this.wrongCodes.filter((at) => Date.now() - at < 60_000);
-    if (this.wrongCodes.length >= 10) throw Object.assign(new Error('too many wrong pairing codes; wait a minute and ask the box\'s screen for a new one'), { status: 429 });
+    if (this.wrongCodes.length >= 10) throw Object.assign(new Error('too many wrong pairing codes; wait a minute and ask this computer\'s screen for a new one'), { status: 429 });
     const entry = body.code ? this.pairCodes.get(body.code) : undefined;
     if (!entry || entry.expiry < Date.now()) {
       this.wrongCodes.push(Date.now());
@@ -1495,7 +1561,7 @@ class Core {
     if (device.identity && !this.business.on) this.live.register(device.identity, device.name);
     else if (device.identity && person) this.live.registerPerson(device.identity, person.id, person.name);
     // The edition comes along, so a phone shows the right home (GurtOS Business: Waiting for me) from its first frame.
-    return { token: device.token, device: { id: device.id, name: device.name, ...(person ? { person: person.id } : {}) }, box: { id: BOX_ID, name: BOX_NAME }, edition: system.edition(this.owner, this.business.on) };
+    return { token: device.token, device: { id: device.id, name: device.name, ...(person ? { person: person.id } : {}) }, box: { id: BOX_ID, name: this.boxName() }, edition: system.edition(this.owner, this.business.on) };
   }
 
   // ---------- Business: sign in with a work account (OpenID Connect) ----------
@@ -1541,7 +1607,7 @@ class Core {
       const device: Device = { id: 'd' + randomBytes(5).toString('hex'), name: (done.device || `${p.name}'s work sign-in`).slice(0, 40), token: randomBytes(24).toString('hex'), pairedAt: new Date().toISOString(), person: p.id };
       this.devices.push(device);
       this.saveDevices();
-      json(200, { token: device.token, device: { id: device.id, name: device.name, person: p.id }, box: { id: BOX_ID, name: BOX_NAME } });
+      json(200, { token: device.token, device: { id: device.id, name: device.name, person: p.id }, box: { id: BOX_ID, name: this.boxName() } });
     })();
     return true;
   }
@@ -1564,7 +1630,7 @@ class Core {
 
   /** To the provider's sign-in page, with state, nonce and PKCE. It comes back to /api/sso/callback on the address the person used. */
   async ssoStart(req: http.IncomingMessage, res: http.ServerResponse, url: URL, cfg?: Sso) {
-    if (!cfg) throw new Error('Sign-in with work accounts is not set up on this box.');
+    if (!cfg) throw new Error('Sign-in with work accounts is not set up on this computer.');
     const { authorization_endpoint } = await provider(cfg.issuer);
     this.sweep(this.ssoPending, 'Too many sign-ins are in progress. Try again in a few minutes.');
     const h = req.headers;
@@ -1587,7 +1653,7 @@ class Core {
     this.ssoPending.delete(state); // one-time
     if (!pending || pending.expiry < Date.now()) throw new Error('This sign-in has expired or was already used. Sign in again.');
     if (!(req.headers.cookie ?? '').split(/;\s*/).includes(`gurtos_sso=${pending.browser}`)) throw new Error('This sign-in was started in another browser. Sign in again here.');
-    if (!cfg) throw new Error('Sign-in with work accounts is not set up on this box.');
+    if (!cfg) throw new Error('Sign-in with work accounts is not set up on this computer.');
     const said = url.searchParams.get('error');
     if (said) throw new Error(`The sign-in provider said no: ${(url.searchParams.get('error_description') ?? said).slice(0, 300)}`);
     const secret = this.vault.get(cfg.secretKey);
@@ -1666,7 +1732,7 @@ class Core {
     if (!d.push) throw Object.assign(new Error('turn on notifications on this phone first'), { status: 409 });
     if (!s || !secret) throw Object.assign(new Error('notifications go through the relay: turn on "Reach this box from anywhere" first'), { status: 409 });
     try {
-      const r = await push.send(RELAY, s.name, secret, d.push, { v: 1, machine: BOX_ID, box: BOX_NAME, url: s.url, ...fields }, topic);
+      const r = await push.send(RELAY, s.name, secret, d.push, { v: 1, machine: BOX_ID, box: this.boxName(), url: s.url, ...fields }, topic);
       if (r.gone) delete d.push, this.saveDevices(); // the phone dropped the subscription
       return r;
     } catch (e) {
@@ -1698,7 +1764,7 @@ class Core {
     else if (p === '/push' && m === 'PUT') act = (b) => ((phone().push = push.parseSub(b)), this.saveDevices(), { subscribed: true });
     else if (p === '/push' && m === 'DELETE') act = () => (delete phone().push, this.saveDevices(), { subscribed: false });
     else if (p === '/push/test' && m === 'POST')
-      act = async () => (this.testThrottle(phone()), await this.pushTo(phone(), { type: 'test', id: `test-${Date.now()}`, task: '', title: 'Notifications work', body: `${BOX_NAME} will tell this phone when a task needs your OK.` }, 'test'), { sent: 1 });
+      act = async () => (this.testThrottle(phone()), await this.pushTo(phone(), { type: 'test', id: `test-${Date.now()}`, task: '', title: 'Notifications work', body: `${this.boxName()} will tell this phone when a task needs your OK.` }, 'test'), { sent: 1 });
     if (!act) return false;
     void (async () => {
       const json = (status: number, obj: unknown) => res.writeHead(status, { 'content-type': 'application/json' }).end(JSON.stringify(obj));
@@ -1778,7 +1844,7 @@ class Core {
 
   /** Setup, settings, apps on and off, and the vault are for the owner only. */
   requireOwner(req: http.IncomingMessage) {
-    if (!this.isOwner(req)) throw Object.assign(new Error("only the box's own screen or the owner's paired device can do this"), { status: 403 });
+    if (!this.isOwner(req)) throw Object.assign(new Error("only this computer's own screen or the owner's paired device can do this"), { status: 403 });
   }
 
   /** The paired, un-revoked device this request is from: by `Authorization: Bearer` or `?access_token=`. */
@@ -1789,7 +1855,9 @@ class Core {
 
   deviceByToken(token?: string): Device | undefined {
     const t = (token ?? '').replace(/^Bearer /i, '');
-    return t ? this.devices.find((d) => d.token === t && !d.revoked) : undefined;
+    const d = t ? this.devices.find((x) => x.token === t && !x.revoked) : undefined;
+    if (d) d.lastSeen = new Date().toISOString(); // saved with the next device change; shown as "seen <time>"
+    return d;
   }
 
   saveDevices() {
@@ -1850,7 +1918,7 @@ class Core {
             // Who started it: an off-box caller is named by its paired device, never by what it sends.
             const device = this.deviceOf(req);
             if (device) body.source = `phone:${device.name}`;
-            else if (!this.isLocal(req)) throw Object.assign(new Error('pair this phone with the box first'), { status: 401 });
+            else if (!this.isLocal(req)) throw Object.assign(new Error('pair this phone with this computer first'), { status: 401 });
             return this.createTask(body, this.personOf(req)?.id);
           }
           case 'GET /tasks/:id':
@@ -1884,9 +1952,9 @@ class Core {
             // A phone sends its device token; it must be a paired, un-revoked device, and `by` becomes its name.
             let by = String(body.by ?? 'api'); // the box's own screen says who it is
             const device = this.deviceOf(req);
-            if (headers.authorization && !device) throw Object.assign(new Error('pair this phone with the box first'), { status: 401 });
+            if (headers.authorization && !device) throw Object.assign(new Error('pair this phone with this computer first'), { status: 401 });
             if (device) by = device.name; // a paired phone is named by its device, whatever it sends
-            else if (!this.isLocal(req)) throw Object.assign(new Error('pair this phone with the box first'), { status: 401 });
+            else if (!this.isLocal(req)) throw Object.assign(new Error('pair this phone with this computer first'), { status: 401 });
             return this.answerAs(id, body.approved === true, this.personOf(req), by); // Business checks who may answer
           }
           case 'GET /business':
@@ -1997,13 +2065,16 @@ class Core {
           case 'PUT /vault/:id': {
             this.requireOwner(req);
             if (!VAULT_NAME.test(id)) throw new Error('key names are capital letters, digits and _ (like STRIPE_KEY), 2 to 64 characters');
+            if (typeof body?.value !== 'string' || !body.value.trim()) throw new Error('the key is empty');
+            const check = await checkModelKey(id, body.value.trim()); // a model key is tried before it is saved
+            if (check.status === 'rejected') throw Object.assign(new Error(check.message), { status: 400 });
             writeVaultKey(id, body?.value); // validates; throws without echoing the value
             this.vault.set(id, String(body.value).trim());
             this.vaultMeta[id] = new Date().toISOString();
             fs.writeFileSync(this.vaultMetaPath, JSON.stringify(this.vaultMeta, null, 2), { mode: 0o600 });
             const who = this.actor(req).who;
             this.write({ type: 'note', track: 'vault', data: { set: id }, ...(who ? { who } : {}) }); // the name only, never the value
-            return { name: id, setAt: this.vaultMeta[id] };
+            return { name: id, setAt: this.vaultMeta[id], ...(check.status !== 'none' ? { check: check.status, checked: check.status === 'ok', message: check.message } : {}) };
           }
           case 'GET /health': {
             // Open for the outage check and remote access's self-check; the rest only for this machine or a paired device.
@@ -2137,7 +2208,7 @@ data: ${JSON.stringify(e)}
     // A track route that is public on purpose, or checks its own secret, is reachable through a proxy.
     if (this.routes.get(`${m} ${new URL(req.url ?? '/', 'http://box').pathname}`)?.open) return false;
     if (this.deviceOf(req)) return false;
-    res.writeHead(401, { 'content-type': 'application/json' }).end(JSON.stringify({ error: 'pair this phone with the box first' }));
+    res.writeHead(401, { 'content-type': 'application/json' }).end(JSON.stringify({ error: 'pair this phone with this computer first' }));
     return true;
   }
 

@@ -92,8 +92,24 @@ charged once.
 with "call again to check"; the worker (and Droid, which calls the tool again) polls until the answer exists.
 So a task can wait hours for an OK.
 
-**Why a task failed.** The `task.state: failed` event's `error` ends with the worker's own last error message
-(`worker exited with 1: Error: ...`), so the screen can say what went wrong.
+**Why a task failed.** The `task.state: failed` event's `error` is a sentence a person can read: the worker's own
+last error message, or for the common causes a plain one ("Claude didn't accept the model key. Change it in
+Settings, Keys."). It never starts with `worker exited with`.
+
+**Notes have text.** A `note` the core writes carries `text`, a sentence for Activity and Audit ("Setup: network
+step done", "Key saved: ANTHROPIC_API_KEY", "App turned on: Mana"). Show `text` when it is there.
+
+**Names and defaults.** The computer's name is the one given in setup's `name` step (`boxName`, up to 40
+characters), else `BOX_NAME`, else its id. A new box asks before any single spend over $5
+(`approvalThresholdCents: 500`) and gives a task $1 (`defaultBudgetCents: 100`). A release image reads its build
+from `BUILD_ID` in `/usr/lib/os-release` and leaves out the `example` app; a checkout deployed with `./deploy` reads
+`VERSION`. With folders chosen in Settings (`agentFolders`), only those may be handed to agents, even inside the
+owner's home ("Pictures is not on your list. Add it in GurtOS Settings, Permissions.").
+
+**Model keys are checked.** `PUT /api/vault/ANTHROPIC_API_KEY` tries the key with a free call before saving: a
+key Anthropic refuses is a 400 ("Anthropic didn't accept this key...") and is not saved. The answer has
+`check: 'ok' | 'unchecked'` and a `message` to show ("Saved. GurtOS couldn't check it yet." when offline). A
+Factory key is saved unchecked. An empty key is a 400.
 
 **Closed at the end.** When a task reaches done, failed or undone, any approval still pending for it is
 closed, so none lingers.
@@ -198,6 +214,7 @@ Make `tracks/<name>/track.ts` and default-export a `Track` with any of these slo
 | `routes` | `'POST /hook': (req, box) => Response`, served at `/t/<name>/hook` on the box's API. Webhooks go here. |
 | `secrets` | Vault keys this track's routes and triggers may read with `box.secret(name)`. Tools and jobs declare their own. |
 | `optionalSecrets` | Keys among the app's declared secrets it can run without (it falls back to test mode). A new box turns the app on when only these are missing; the App Center marks them `optional: true`. |
+| `offByDefault` | A new box leaves the app off even when nothing is missing, for an app that makes something public (Mana's status page). The owner turns it on. |
 | `x-box-caller` | Not a slot: a header on the Request every route gets, set by the box (a copy the caller sends is replaced): `screen` (the box's own screen), `owner` (a phone paired as the owner), `device:<id>` (another paired phone), `service` (a helper on the box) or `none` (an open route reached through a proxy with no token). On a Business box, `x-box-person` carries the calling person's id (absent otherwise); the `box` the route gets already acts as that person. |
 | `openRoutes` | Route keys (like `'GET /status'`) that need no paired-phone token, even for a request that arrives through a public proxy. For a route that is public on purpose, or checks its own secret (the Jira panel's routes). Every other route needs a phone. An open route must return nothing private unless its own check passes. |
 

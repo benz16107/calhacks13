@@ -5,6 +5,18 @@ import os from 'node:os';
 
 const root = new URL('../', import.meta.url).pathname;
 
+/** /usr/lib/os-release as key and value. */
+function osRelease(): Record<string, string> {
+  try {
+    return Object.fromEntries(fs.readFileSync('/usr/lib/os-release', 'utf8').split('\n').map((l) => l.match(/^([A-Z_]+)=("?)(.*)\2$/)).filter(Boolean).map((m) => [m![1], m![3]]));
+  } catch {
+    return {};
+  }
+}
+
+/** Running from a GurtOS image (not a checkout on stock Ubuntu). */
+export const isImage = () => osRelease().ID === 'gurtos';
+
 export function version() {
   let v = '0.0.0';
   try {
@@ -13,7 +25,9 @@ export function version() {
   let build = 'dev';
   try {
     build = fs.readFileSync(`${root}VERSION`, 'utf8').trim() || build; // ./deploy writes the commit here
-  } catch {} // a checkout that was not deployed
+  } catch {
+    build = osRelease().BUILD_ID || build; // a release image names its build in os-release
+  }
   return { version: v, build };
 }
 
