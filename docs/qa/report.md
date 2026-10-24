@@ -342,6 +342,21 @@ nobody had set `seats`, `PUT /api/business {shadow:["Collections clerk"]}` said 
 none yet)" although the credit desk's seats had run. Seats are the company's list (`PUT /api/business {seats}`). The
 message could name that call, or the credit desk could register its seats when Business is on.
 
+**P2-29. The open `/api/health` tells the public internet more than "ok".** Owner: core. On the new public names
+(`gurt-cloud.box.gurtos.com`, `gurt-laptop.box.gurtos.com`) anyone can read the task count, whether the box is paused,
+when it started, the ids of resumed tasks and all 37 tool names. It is open on purpose for the phone's outage check.
+Trim it to `{ok}` plus what the app needs, or give the full version only to a paired phone.
+
+**P2-30. Opening a box's own HTTPS address in a browser shows raw JSON.** Owner: portal or remote access.
+`https://gurt-cloud.box.gurtos.com/` returns `{"error":"pair this phone with the box first"}` with a 401. A judge who
+types the address, rather than scanning the QR (which goes through app.gurtos.com), sees an error. Serve the portal's
+"Pair this phone first" page there.
+
+**Remote access checked from outside, main d7f9fc1, 06:25 PT:** both names answer (health 200); `/api/tasks`, `/api/system`,
+`/api/apps`, `/api/setup`, `/api/business` and `/t/credit-desk/` give 401 without a token; a foreign Origin gets 401;
+`/t/mana/status` is open as designed; app.gurtos.com answers 200. Not tested: pairing and an approval push through the
+relay on a real phone.
+
 ## Docs site (gurtos.com)
 
 **D-1 to D-4 and D-7 fixed in 199dce5 and live, spot-checked 00:00 PT:** real ISO names, `gurt-<id>`, the Personal ISO
