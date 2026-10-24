@@ -1,7 +1,8 @@
-// The shopper's demo step. Offline by default: the Box Test Store, the demo inbox and simulated test payments,
+// The shopper's demo step. Offline by default: the GurtOS Test Store, the demo inbox and simulated test payments,
 // with the fake worker playing the agent. DEMO_LIVE=shopper adds a live Best Buy watch through Apify, a Stripe
 // test-mode charge (once STRIPE_SECRET_KEY is in the vault), and Droid reading the receipts and setting a watch.
 import fs from 'node:fs';
+import http from 'node:http';
 import path from 'node:path';
 import type { Approval, DemoKit, LogEvent, Task } from '../../core/contract.ts';
 import { publicKeyOf, signRequest } from './tap.ts';
@@ -47,6 +48,16 @@ export default async function (d: DemoKit) {
   const replay = await post({ 'idempotency-key': 'demo-4', ...sig }, body);
   d.check(once.status === 409 && replay.status === 401 && /replay/.test((await replay.json()).error), 'a captured signature cannot be used twice (the dripper is sold out, so nothing was charged)');
 
+  // ---------- off the box: a paired phone opens the app with its token ----------
+  const code = await d.api<{ code: string }>('POST', '/api/pair/start', {});
+  const phone = await d.api<{ token: string }>('POST', '/api/pair', { code: code.code, name: 'Shopper demo phone' });
+  const away = (p: string, h: Record<string, string> = {}) => fetch(`${base}${p}`, { headers: { 'x-forwarded-for': '203.0.113.7', ...h } }); // not from the box's own screen
+  const [bare, page, st, shop] = await Promise.all([
+    away('/t/shopper/state'), away(`/t/shopper/?access_token=${phone.token}`), away('/t/shopper/state', { authorization: `Bearer ${phone.token}` }), away(`/t/shopper/store?access_token=${phone.token}`),
+  ]);
+  d.check(bare.status === 401 && page.status === 200 && st.status === 200 && shop.status === 200 && (await page.text()).includes("get('access_token')"),
+    'off the box, a paired phone gets the app, its live state and the store with its token, and 401 without it');
+
   // ---------- flow 1: watch a price, buy after the OK ----------
   await d.api('POST', '/t/shopper/store/admin', { sku: 'HV60-100', priceCents: 899, inStock: true });
   const w = await d.api('POST', '/t/shopper/watches', { store: 'test', product: 'HV60-100', maxCents: 700, qty: 2, when: 'price', everyMinutes: 60 });
@@ -67,6 +78,8 @@ export default async function (d: DemoKit) {
   const stripe = LIVE && !!vault.STRIPE_SECRET_KEY;
   if (stripe) d.check(o1.payment.provider === 'stripe test mode' && /^pi_/.test(o1.payment.id), `Stripe test mode took the charge (${o1.payment.id})`);
   else d.check(o1.payment.provider === 'simulated', `no Stripe call in this run: the payment is simulated and says so (${o1.payment.note})`);
+  const note = (bought.events.findLast((e) => e.type === 'task.step' && (e.data as any)?.undo) as any)?.data.undo;
+  d.check(note === 'Undo refunds this $13.00 test payment.', `the purchase tells the portal's Undo button what undo does: "${note}"`);
   d.check((await watch(w.id, (x) => x.status === 'bought', 'the watch to close')).status === 'bought', 'the watch closed: one purchase, no repeats');
 
   // ---------- flow 2: receipts from the demo inbox, a proposal, the OK, then undo refunds it ----------
@@ -97,11 +110,30 @@ export default async function (d: DemoKit) {
   // ---------- flow 3: an agent buys its own supplies with the wallet track's x402 payments ----------
   if (!tools.includes('wallet.pay')) console.log('  skip  supplies over x402: the wallet track is not on this box');
   else {
-    // Port 9 answers nothing, so offline this task stops at its quote and pays nothing.
-    const s = await d.api<Task>('POST', '/t/shopper/supplies', { url: 'http://api.localhost:9/report', cents: 3 });
-    d.check(s.tools.join() === 'wallet.quote,wallet.pay' && s.hosts.join() === 'api.localhost:9' && s.budgetCents === 3,
-      'supplies over x402: the task holds only the wallet tools, reaches only the seller, and may spend 3 cents');
-    await finish(s.id);
+    // Offline, a stand-in seller gives the same 402 answer as the wallet's test API ($0.03 in devnet USDC). The owner
+    // denies the payment, so the wallet never runs and no network or money is needed.
+    const offer = { scheme: 'exact', network: 'solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1', amount: '30000', asset: '4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU', payTo: '39w7W3SBxE62zsS7VQY5dgZQXGWko2EkBXMfHg2sLtKV', maxTimeoutSeconds: 300 };
+    const seller = http.createServer((req, res) => {
+      const pr = { x402Version: 2, error: 'Payment required', resource: { url: `http://${req.headers.host}${req.url}`, description: 'A market report (devnet test money)', mimeType: 'application/json' }, accepts: [offer] };
+      res.writeHead(402, { 'content-type': 'application/json', 'payment-required': Buffer.from(JSON.stringify(pr)).toString('base64') }).end('{}');
+    });
+    await new Promise<void>((r) => seller.listen(0, '127.0.0.1', r));
+    const host = `api.localhost:${(seller.address() as { port: number }).port}`;
+    try {
+      const q = await d.api<Task>('POST', '/t/shopper/supplies', { url: `http://${host}/report`, cents: 2 });
+      d.check(q.tools.join() === 'wallet.quote' && q.hosts.join() === host && q.budgetCents === 2, 'supplies over x402: a task asks the price first, reaching only the seller, with a 2 cent budget');
+      const pay = await d.waitFor('the payment to ask', async () => {
+        const p = (await d.api<Task[]>('GET', '/tasks')).find((t) => t.source === `shopper:supplies:pay:${q.id}`);
+        const a = p && (await run(p.id)).approvals.find((x) => x.state === 'pending');
+        return a && { p, a };
+      });
+      d.check(pay.p.tools.join() === 'wallet.pay' && pay.a.costCents === 3, `the price is $0.03, above the budget, so it asks first: "${pay.a.question}"`);
+      await approve(pay.a.id, false);
+      const r = await finish(pay.p.id);
+      d.check(r.task.state === 'failed' && r.task.costCents === 0 && !r.events.some((e) => e.type === 'tool.call'), 'denied: the wallet never ran and nothing was spent');
+    } finally {
+      seller.close();
+    }
   }
 
   const log = fs.readFileSync(path.join(d.home, 'log.jsonl'), 'utf8');
@@ -117,10 +149,13 @@ export default async function (d: DemoKit) {
     const { startSeller } = await import('../wallet/seller.ts');
     const seller = await startSeller();
     try {
-      const t = await d.api<Task>('POST', '/t/shopper/supplies', { url: `http://api.localhost:${seller.port}/report`, cents: 3 });
-      const r = await finish(t.id, 120_000);
+      const t = await d.api<Task>('POST', '/t/shopper/supplies', { url: `http://api.localhost:${seller.port}/report`, cents: 2 });
+      const p = await d.waitFor('the live payment to ask', async () => (await d.api<Task[]>('GET', '/tasks')).find((x) => x.source === `shopper:supplies:pay:${t.id}`), 60_000);
+      const a = await d.waitFor('its approval', async () => (await run(p.id)).approvals.find((x) => x.state === 'pending'));
+      await approve(a.id);
+      const r = await finish(p.id, 120_000);
       const paid = (r.events.findLast((e) => e.type === 'tool.result' && e.ok) as any)?.output?.paid;
-      d.check(r.task.state === 'done' && r.task.costCents === 3 && paid?.tx, `the agent bought its own supply: a $0.03 report over x402, devnet USDC (test money): ${paid?.explorer}`);
+      d.check(r.task.state === 'done' && r.task.costCents === 3 && paid?.tx, `approved over its 2 cent budget, the agent bought its supply: a $0.03 report over x402, devnet USDC (test money): ${paid?.explorer}`);
     } finally {
       seller.close();
     }

@@ -1,4 +1,4 @@
-// The Box Test Store: a small merchant the shopper agent buys from, because no real store accepts a test card.
+// The GurtOS Test Store: a small merchant the shopper agent buys from, because no real store accepts a test card.
 // It takes an order only when the request is signed with Visa Trusted Agent Protocol by a key in the agent
 // registry, charges it in Stripe test mode (or simulates the charge until the Stripe keys are in the vault),
 // and keeps its own order book. Every payment here is a TEST payment: no real money moves.
@@ -227,11 +227,11 @@ export function storePage() {
   const rows = products().map((p) => `<tr><td class="mono">${esc(p.sku)}</td><td>${esc(p.name)}</td><td class="mono">${money(p.priceCents)}${p.priceCents < p.regularCents ? ` <s>${money(p.regularCents)}</s>` : ''}</td><td>${p.inStock ? 'In stock' : 'Sold out'}</td></tr>`).join('');
   const book = allOrders().slice(0, 20).map((o) => `<tr><td class="mono">${esc(o.id)}</td><td>${o.items.map((l) => `${l.qty} × ${esc(l.name)}${l.from ? ` <small>(${esc(l.from)} price)</small>` : ''}`).join('<br>')}</td><td class="mono">${money(o.totalCents, o.currency)}</td><td>TEST: ${esc(o.payment.card)}, ${esc(o.payment.provider)}<br><small class="mono">${esc(o.payment.id)}</small>${o.refund ? '<br><b>Refunded</b>' : ''}</td><td>Signed by <span class="mono">${esc(o.agent.keyId)}</span>, verified</td></tr>`).join('') || '<tr><td colspan="5">No orders yet.</td></tr>';
   const refused = refusals.map((r) => `<li><span class="mono">${esc(r.at.slice(11, 19))}</span> ${esc(r.reason)}</li>`).join('') || '<li>None yet.</li>';
-  return `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Box Test Store</title>
+  return `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>GurtOS Test Store</title>
 <style>body{font:16px/24px "IBM Plex Sans",system-ui,sans-serif;background:#F3F1EA;color:#1C201D;margin:0;padding:24px;max-width:1000px}h1{font-size:24px;line-height:32px}h2{font-size:17px;margin-top:32px}
 table{border-collapse:collapse;width:100%;background:#FBFAF6;border:1px solid #D3D6CF;border-radius:6px}td,th{padding:8px 12px;border-top:1px solid #D3D6CF;text-align:left;vertical-align:top}th{font:500 12px/16px "IBM Plex Sans",system-ui;letter-spacing:.4px;text-transform:uppercase;color:#535A54}
 .mono,small.mono{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:14px}.test{background:#E6E7E1;border:1px solid #6B726C;border-radius:4px;padding:8px 12px}s{color:#535A54}</style>
-<h1>Box Test Store</h1>
+<h1>GurtOS Test Store</h1>
 <p class="test">TEST STORE. Every payment is a Stripe test-mode payment with a Visa test card. No real money moves, and nothing ships. It exists because no real store accepts a test card.</p>
 <p>Checkout takes orders only from agents that sign the request with <a href="https://github.com/visa/trusted-agent-protocol">Visa Trusted Agent Protocol</a>, checked against the agent registry key <span class="mono">${KEY_ID}</span>.</p>
 <h2>Products</h2><table><tr><th>SKU</th><th>Product</th><th>Price</th><th>Stock</th></tr>${rows}</table>

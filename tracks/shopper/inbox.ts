@@ -26,7 +26,7 @@ export function sampleMail(now = Date.now()): string[] {
   const receipts = [...byDay.entries()].sort((a, b) => b[0] - a[0]).map(([d, skus]) => {
     const lines = skus.map((sku) => `1 x ${BOUGHT[sku].name} (${sku}) @ $${(BOUGHT[sku].priceCents / 100).toFixed(2)}`);
     const total = skus.reduce((s, sku) => s + BOUGHT[sku].priceCents, 0);
-    return header('Box Test Store <receipts@store.box.test>', `Your Box Test Store receipt, order ${++order}`, new Date(now - d * DAY), `r${order}`) +
+    return header('GurtOS Test Store <receipts@store.box.test>', `Your GurtOS Test Store receipt, order ${++order}`, new Date(now - d * DAY), `r${order}`) +
       `Thanks for your order.\r\n\r\n${lines.join('\r\n')}\r\n\r\nTotal: $${(total / 100).toFixed(2)}\r\nSample receipt in the demo inbox.\r\n`;
   });
   return [

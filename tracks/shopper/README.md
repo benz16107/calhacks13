@@ -1,7 +1,7 @@
 # Shopper: an agent that shops for you, and pays only after your tap
 
 **Every payment here is a TEST payment.** Purchases go through Stripe test mode with a Visa test card. No real
-money moves, nothing ships, and no real store accepts a test card. So checkout happens at the **Box Test Store**,
+money moves, nothing ships, and no real store accepts a test card. So checkout happens at the **GurtOS Test Store**,
 a small store this track runs on the box. Where a payment is simulated instead (no Stripe key yet, or an offline
 demo run), the app, the log and the order all say so.
 
@@ -15,10 +15,13 @@ The shopper is an app on the box (Visa track: Reimagining Shopping). It does thr
    week (here: coffee filters and paper towels), and proposes one reorder for your OK. It sees the receipts,
    never the mailbox login and never your other email.
 3. **Agents buying their own supplies.** An agent pays for an API it needs with the wallet track's x402
-   payments (`wallet.quote`, `wallet.pay`), in USDC on Solana devnet, which is test money. The task reaches
-   only that API and may spend only its budget. We did not rebuild the wallet: see `tracks/wallet/README.md`.
+   payments, in USDC on Solana devnet, which is test money. A task asks the price with `wallet.quote`; then a
+   second task pays exactly that with `wallet.pay`. Above your budget it waits for your OK first. Both reach only
+   that API. We did not rebuild the wallet: see `tracks/wallet/README.md`.
 
 Open it at `/t/shopper/` on the box. The store is at `/t/shopper/store`. Both are in the portal's app list.
+Off the box (a paired phone or laptop), the page reads the pairing token the portal puts in its URL
+(`?access_token=`) and sends it as `Authorization: Bearer` on every call, and on its link to the store.
 
 ## How a purchase is made safe
 
@@ -31,7 +34,7 @@ Open it at `/t/shopper/` on the box. The store is at `/t/shopper/store`. Both ar
                                          │ yes
  purchase task ──► "Buy …? TEST PAYMENT" ──► your phone or the portal ──► Approve
                                          │
- shopper.buy (in the core) ── vault: card + signing key ──► signs with Visa TAP ──► Box Test Store
+ shopper.buy (in the core) ── vault: card + signing key ──► signs with Visa TAP ──► GurtOS Test Store
                                                                                     checks the signature,
                                                                                     the price, the stock,
                                                                                     then charges Stripe test mode
@@ -45,7 +48,8 @@ Open it at `/t/shopper/` on the box. The store is at `/t/shopper/store`. Both ar
   purchase above the budget stops and asks again (the core's budget pause, moment 3).
 - **Secrets stay in the vault.** The card, the signing key, the mailbox password and the Stripe key are read
   only by tools in the core. The demo checks that none of them is anywhere in the action log.
-- **Undo is a refund.** Undo a purchase task (moment 1) and the store refunds its order.
+- **Undo is a refund.** Undo a purchase task (moment 1) and the store refunds its order. The purchase step
+  carries `data.undo` ("Undo refunds this $13.00 test payment.") for the portal's Undo button to show.
 - **Power cuts don't pay twice.** Each checkout carries the broker's stable call key as its Idempotency-Key, at
   the store and at Stripe. A purchase cut off mid-way returns the same order when the task resumes (moment 4).
 - **One proposal and one watch per agent task**, so a looping agent cannot flood your phone.
@@ -70,7 +74,7 @@ One addition: Visa's sample signs only `@authority` and `@path`. We also sign `c
 order cannot be changed in transit: a different item, quantity or price fails the check. Visa's sample verifier
 only knows the first two components, so it would not accept our signatures as they are.
 
-The Box Test Store refuses, with the reason on its page:
+The GurtOS Test Store refuses, with the reason on its page:
 - an unsigned order (any agent or script without the box's key),
 - a signed order whose body changed,
 - a signature used twice (replay), even when the first use bought nothing,
@@ -84,8 +88,8 @@ needs a Visa representative, so nothing here depends on it.
 
 | Tool | Who gets it | What it does |
 |---|---|---|
-| `shopper.buy` | Purchase tasks the box starts, after the owner's OK | Signs the order with TAP and pays the Box Test Store with the vault's card. Cost = the order total |
-| `shopper.checkPrice` | Check tasks, Droid | Price and stock at the Box Test Store, in the same shape as `apify.checkPrice` |
+| `shopper.buy` | Purchase tasks the box starts, after the owner's OK | Signs the order with TAP and pays the GurtOS Test Store with the vault's card. Cost = the order total |
+| `shopper.checkPrice` | Check tasks, Droid | Price and stock at the GurtOS Test Store, in the same shape as `apify.checkPrice` |
 | `shopper.watch` | Droid | Sets up a watch: store, SKU, price limit, quantity, price drop or restock |
 | `shopper.receipts` | Droid | Reads the demo inbox over POP3 with the vault's password. Returns receipts only, how many other emails stayed behind, and when each regular item runs out |
 | `shopper.propose` | Droid | Proposes a reorder at the store's prices. Starts a purchase task that asks the owner |
@@ -103,8 +107,8 @@ the judgment: which receipts matter, what to skip, how much to buy, and the one-
 | `POST /watches/check {id}`, `POST /watches/cancel {id}` | Check now, stop watching |
 | `POST /ask {text}` | Droid turns your words into a watch |
 | `POST /reorder` | Droid reads the receipts and proposes a reorder |
-| `POST /supplies {url, cents}` | An agent buys a supply from an x402 API through the wallet track, within `cents` |
-| `GET /store`, `GET /store/products` | The Box Test Store: products, orders, refused requests |
+| `POST /supplies {url, cents}` | An agent buys a supply from an x402 API through the wallet track: it asks the price, then pays exactly that, asking you first above `cents` |
+| `GET /store`, `GET /store/products` | The GurtOS Test Store: products, orders, refused requests |
 | `POST /store/checkout` | Checkout. TAP signature and Idempotency-Key required |
 | `POST /store/admin {sku, priceCents?, inStock?}` | Demo controls: change a price or the stock |
 | `GET /keys/box-shopper` | The agent registry entry |
@@ -130,22 +134,23 @@ Live Best Buy checks need the Apify track's `APIFY_TOKEN`. x402 supplies need th
 `./demo` runs `demo.ts` offline in about 7 seconds:
 
 - TAP at the checkout: the registry serves the public key; unsigned, changed and replayed orders are refused.
-- Flow 1 on the Box Test Store: a check sees the filters at $8.99, above the $7.00 limit. The store drops the
+- Flow 1 on the GurtOS Test Store: a check sees the filters at $8.99, above the $7.00 limit. The store drops the
   price to $6.50, the next check asks "Buy 2 × … for $13.00? … TEST PAYMENT", the phone approves, and the task
   pays $13.00 within its $14.00 budget. The store verified the signature before charging.
 - Flow 2: a scripted agent reads 10 receipts (2 other emails withheld), sees filters and paper towels run out
   this week, and proposes them. Approved, it pays $17.99; undone, the store refunds it.
-- Flow 3: a supplies task holds only the wallet's two tools, reaches only the seller's host, and may spend 3 cents.
+- Flow 3: a supplies task asks a stand-in seller the price ($0.03, the same 402 answer as the wallet's test API).
+  That is above its 2-cent budget, so the payment asks first; denied, the wallet never runs.
 - No secret is anywhere in the action log.
 
 Without the three shopper keys in the vault it prints `skip` and says to run `setup.sh`.
 
 `DEMO_LIVE=shopper ./demo` (or `visa`) runs the same flows with real Stripe test-mode charges and refunds, and adds:
-an agent paying $0.03 of devnet USDC for a report over x402, Droid reading the receipts and proposing (denied, so
+an agent paying $0.03 of devnet USDC for a report over x402 after your OK (its budget is 2 cents), Droid reading the receipts and proposing (denied, so
 nothing is bought), a live Best Buy watch on Chemex filters (SKU 20220310) through Apify, bought at Best Buy's
 live price, and Droid turning "Get me the Chemex coffee filters at Best Buy when they're under $14" into a watch.
 
-It ran on Oct 23 on the linuxbox VM: Stripe test mode charged the filters (`pi_3UTv9jA2XM7HasiU0WFlJgLU`) and
+It ran on Oct 23 on an x86 test VM: Stripe test mode charged the filters (`pi_3UTv9jA2XM7HasiU0WFlJgLU`) and
 refunded the undone reorder (`re_3UTv9lA2XM7HasiU0SsOoCt1`); the agent paid $0.03 of devnet USDC for its
 report ([transaction](https://explorer.solana.com/tx/5PCwxRVPZ7hzjHaXPLtpbYH2k3nEdkzwjUxZXaVYcm46TsnGqkvGYtbCctcgWdpnAMzgRQu76MKW2HfByAzkcFvB?cluster=devnet));
 Droid proposed exactly the filters and paper towels; Apify read the Chemex filters at $15.36 CAD and the box
@@ -160,7 +165,7 @@ Unit tests, offline: `node --experimental-strip-types --test tracks/shopper/shop
 |---|---|
 | Best Buy Canada prices and stock | Live, through Apify's Playwright Scraper (the Apify track's `apify.checkPrice`) |
 | Product matching from your words, reading receipts | Live: Droid with Claude |
-| The Box Test Store | Ours. It stands in for the merchant, because no real store takes a test card. A Best Buy deal is bought here at Best Buy's live price |
+| The GurtOS Test Store | Ours. It stands in for the merchant, because no real store takes a test card. A Best Buy deal is bought here at Best Buy's live price |
 | Payments | Stripe test mode with a Visa test card once `STRIPE_SECRET_KEY` is in the vault; simulated before that, and in offline demo runs. Never real money |
 | Visa Trusted Agent Protocol | Real signatures and checks, per Visa's open sample. The registry is the box's own route, not Visa's |
 | The mailbox | A demo POP3 server on the box with sample receipts we wrote, standing in for Gmail (we could not make a Gmail account for the demo) |

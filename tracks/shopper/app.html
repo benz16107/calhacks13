@@ -45,7 +45,7 @@
 </style>
 <main>
   <h1>Shopper</h1>
-  <p class="test"><b>TEST PAYMENTS ONLY.</b> Purchases are Stripe test-mode payments with a Visa test card held in the box's vault. No real money moves, and no real store accepts this card, so checkout happens at the <a href="/t/shopper/store">Box Test Store</a>.</p>
+  <p class="test"><b>TEST PAYMENTS ONLY.</b> Purchases are Stripe test-mode payments with a Visa test card held in the box's vault. No real money moves, and no real store accepts this card, so checkout happens at the <a href="/t/shopper/store">GurtOS Test Store</a>.</p>
   <p class="small" id="setup" role="status">Loading…</p>
 
   <section aria-labelledby="ok-h">
@@ -62,7 +62,7 @@
         <button class="primary">Set up watch</button>
       </form>
       <form class="row" id="watch">
-        <label>Store <select name="store"><option value="test">Box Test Store (USD)</option><option value="bestbuy.ca">Best Buy Canada, live (CAD)</option></select></label>
+        <label>Store <select name="store"><option value="test">GurtOS Test Store (USD)</option><option value="bestbuy.ca">Best Buy Canada, live (CAD)</option></select></label>
         <label>Product (SKU or words) <input name="product" required value="HV60-100" size="14"></label>
         <label>Buy when <select name="when"><option value="price">it drops under</option><option value="restock">it's back in stock, up to</option></select></label>
         <label>Price per item <input name="max" required inputmode="decimal" value="7.00" size="6"></label>
@@ -90,7 +90,7 @@
   <section aria-labelledby="supplies-h">
     <h2 id="supplies-h">Agents buying their own supplies</h2>
     <form class="card row" id="supplies">
-      <p style="margin:0;flex:1 1 100%">An agent pays for an API it needs with x402, from the box's wallet, in USDC on Solana devnet (test money). The task reaches only that API and may spend only its budget.</p>
+      <p style="margin:0;flex:1 1 100%">An agent pays for an API it needs with x402, from the box's wallet, in USDC on Solana devnet (test money). It asks the price first and pays exactly that. Above your budget it waits for your OK. The task reaches only that API.</p>
       <label style="flex:1 1 320px">Paid API <input name="url" required value="http://api.localhost:4021/report"></label>
       <label>Budget, cents <input name="cents" type="number" min="1" max="500" value="3" style="width:6em"></label>
       <button>Buy it</button>
@@ -108,6 +108,11 @@
   </section>
 </main>
 <script>
+  // Off the box (a paired phone or laptop), every call needs the pairing token the portal put in this page's URL.
+  const token = new URLSearchParams(location.search).get('access_token');
+  const auth = token ? { authorization: `Bearer ${token}` } : {};
+  const withToken = (url) => (token ? `${url}${url.includes('?') ? '&' : '?'}access_token=${encodeURIComponent(token)}` : url);
+  document.querySelectorAll('a[href^="/t/"]').forEach((a) => (a.href = withToken(a.getAttribute('href'))));
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
   const money = (c, cur = 'USD') => `$${(c / 100).toFixed(2)}${cur === 'USD' ? '' : ' ' + cur}`;
@@ -115,7 +120,7 @@
   const pill = (s) => `<span class="pill ${esc(s.split(' ')[0])}">${esc({ waiting: 'Waiting for OK', running: 'Running', queued: 'Queued', done: 'Done', failed: 'Failed', undone: 'Undone' }[s] ?? s[0].toUpperCase() + s.slice(1))}</span>`;
   const ago = (t) => { const s = Math.round((Date.now() - Date.parse(t)) / 1000); return s < 60 ? `${s}s ago` : s < 3600 ? `${Math.round(s / 60)} min ago` : new Date(t).toLocaleString(); };
   const post = async (url, body) => {
-    const r = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body ?? {}) });
+    const r = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json', ...auth }, body: JSON.stringify(body ?? {}) });
     const out = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(out.error ?? `HTTP ${r.status}`);
     return out;
@@ -151,7 +156,12 @@
   }
 
   async function load() {
-    try { render(await (await fetch('/t/shopper/state')).json()); } catch (e) { $('setup').textContent = `The box did not answer: ${e.message}`; }
+    try {
+      const r = await fetch('/t/shopper/state', { headers: auth });
+      const s = await r.json();
+      if (!r.ok) throw new Error(s.error ?? `HTTP ${r.status}`);
+      render(s);
+    } catch (e) { $('setup').textContent = `The box did not answer: ${e.message}`; }
   }
   document.addEventListener('click', (e) => {
     if (e.target.closest('[data-ok],[data-no],[data-check],[data-cancel],#reorder')) onButton(e);
@@ -168,7 +178,9 @@
   $('supplies').addEventListener('submit', act(async (e) => { await post('/t/shopper/supplies', { url: e.target.url.value, cents: Number(e.target.cents.value) }); }));
   $('watch').addEventListener('submit', act(async (e) => {
     const f = e.target;
-    await post('/t/shopper/watches', { store: f.store.value, product: f.product.value, when: f.when.value, maxCents: Math.round(parseFloat(f.max.value.replace('$', '')) * 100), qty: Number(f.qty.value), everyMinutes: Number(f.every.value) });
+    const maxCents = Math.round(Number(f.max.value.trim().replace(/^\$/, '')) * 100);
+    if (!(maxCents >= 1 && maxCents <= 50000)) throw new Error('Price per item must be a dollar amount from $0.01 to $500.');
+    await post('/t/shopper/watches', { store: f.store.value, product: f.product.value, when: f.when.value, maxCents, qty: Number(f.qty.value), everyMinutes: Number(f.every.value) });
   }));
   load();
   setInterval(load, 3000);
