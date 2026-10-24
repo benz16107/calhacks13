@@ -931,8 +931,8 @@ function PrivacyStep({ w }: { w: Wiz }) {
           options={[...DAYS, ...(DAYS.some(([d]) => d === days) ? [] : [[days, `${days} days`] as [number, string]])].map(([d, l]) => [String(d), l])}
           onChange={(v) => apply(w, { logRetentionDays: +v })}
         />
-        <Row icon="utilities-terminal" title="Where it lives">
-          <span class="g-row-value t-mono">/var/lib/box/log.jsonl</span>
+        <Row icon="computer" title="Where it lives">
+          <span class="g-row-value">On this computer</span>
         </Row>
         <Row title="Who can read it">
           <span class="g-row-value">You and your paired phones</span>

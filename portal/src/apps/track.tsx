@@ -3,14 +3,24 @@
 // desktop's light or dark style.
 import { useRef } from 'preact/hooks';
 import { applyTheme, base, box, signedIn, tokenQuery, useBox } from '../live.ts';
-import { IconButton, StatusPage } from '../kit/ui.tsx';
+import { Button, IconButton, StatusPage } from '../kit/ui.tsx';
 import { HeaderBar } from '../wm.tsx';
+import { useToggleApp } from './settings.tsx';
 
 export const trackEntry = (arg: string) => box.apps.find((x) => `${x.track}/${x.name}` === arg);
+/** The installed app behind a window, on or off. */
+const installed = (arg: string) => box.allApps.find((x) => x.id === arg.split('/')[0]);
+/** A window's title: the app's own name, also while the app is off ("Factory", never "factory/factory"). */
+export const trackTitle = (arg: string) => {
+  const i = installed(arg);
+  return (trackEntry(arg)?.title ?? i?.ui.find((u) => u.name === arg.split('/')[1])?.title ?? i?.title ?? arg).replace(/\s*\(.*\)$/, '');
+};
 
 export function TrackApp({ arg }: { arg: string }) {
-  useBox();
+  const b = useBox();
+  const toggle = useToggleApp();
   const a = trackEntry(arg);
+  const off = !a && installed(arg);
   const frame = useRef<HTMLIFrameElement>(null);
   const src = a ? `${base()}/t/${a.track}${a.href}` : '';
   // Off the box's own screen a track page needs the pairing token: the URL carries it, /kit/gurtos.js carries it on.
@@ -19,8 +29,7 @@ export function TrackApp({ arg }: { arg: string }) {
   return (
     <>
       <HeaderBar
-        title={a?.title.replace(/\s*\(.*\)$/, '') ?? arg}
-        sub={a ? src : undefined}
+        title={trackTitle(arg)}
         start={a && <IconButton icon="view-refresh" label="Reload" onClick={() => frame.current?.contentWindow?.location.reload()} />}
         end={
           a && (
@@ -36,8 +45,12 @@ export function TrackApp({ arg }: { arg: string }) {
         {a ? (
           <iframe ref={frame} class="gos-track-frame" title={a.title} src={load} onLoad={applyTheme} allow="publickey-credentials-get; publickey-credentials-create" />
         ) : (
-          <StatusPage icon="preferences-desktop-apps" title="This app is off or not installed">
-            Turn it on in App Center to open it here.
+          <StatusPage
+            icon="preferences-desktop-apps"
+            title={off ? `${trackTitle(arg)} is off` : 'This app is not installed'}
+            action={off && b.owner ? <Button kind="suggested" onClick={() => void toggle(off, true)}>Turn on</Button> : undefined}
+          >
+            {off ? (b.owner ? 'Turn it on to open it here.' : 'The owner can turn it on in App Center.') : 'App Center lists the apps on this computer.'}
           </StatusPage>
         )}
       </div>

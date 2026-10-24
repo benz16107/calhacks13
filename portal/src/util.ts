@@ -12,7 +12,9 @@ export const sentence = (m: string) => (m ? m[0].toUpperCase() + m.slice(1) + (/
 /** Who answered or acted, for people: the box's own screen is "this computer's screen". */
 export const who = (by: string) => (by === 'box screen' ? "this computer's screen" : by);
 /** A key's name for people: ANTHROPIC_API_KEY is "Anthropic API key". The variable name stays a small caption. */
+const KEY_NAMES: Record<string, string> = { ASI_ONE_API_KEY: 'ASI:One API key', BACKUP_AGE_RECIPIENT: 'Backup encryption key' };
 export const keyLabel = (name: string) =>
+  KEY_NAMES[name] ??
   name
     .split('_')
     .filter(Boolean)

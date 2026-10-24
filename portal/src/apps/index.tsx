@@ -8,7 +8,7 @@ import { ActivityApp } from './activity.tsx';
 import { TimeMachineApp } from './timemachine.tsx';
 import { SettingsApp } from './settings.tsx';
 import { AppCenterApp } from './appcenter.tsx';
-import { TrackApp, trackEntry } from './track.tsx';
+import { TrackApp, trackTitle } from './track.tsx';
 import { PairApp } from './pair.tsx';
 import { AuditApp } from './audit.tsx';
 import { RequestApp, WaitingApp } from './business.tsx';
@@ -20,7 +20,7 @@ wm.apps = {
   'time-machine': { title: () => 'Time Machine', icon: 'time-machine', size: [1480, 680], render: () => <TimeMachineApp />, single: true },
   settings: { title: () => 'Settings', icon: 'settings', size: [1240, 920], render: (page) => <SettingsApp page={page} />, single: true },
   'app-center': { title: () => 'App Center', icon: 'app-center', size: [1240, 860], render: (id) => <AppCenterApp id={id} />, single: true },
-  app: { title: (arg) => trackEntry(arg)?.title.replace(/\s*\(.*\)$/, '') ?? arg, icon: '', size: [1280, 820], render: (arg) => <TrackApp arg={arg} key={arg} /> },
+  app: { title: (arg) => trackTitle(arg), icon: '', size: [1280, 820], render: (arg) => <TrackApp arg={arg} key={arg} /> },
   pair: { title: () => 'Pair this phone', icon: 'settings', size: [560, 560], render: (code) => <PairApp code={code} /> },
   // GurtOS Business
   waiting: { title: () => 'Waiting for me', icon: 'waiting', size: [1240, 820], render: () => <WaitingApp />, single: true },
