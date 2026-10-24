@@ -73,13 +73,13 @@ to the Personal thread as exported PNGs with notes, not as web code, because Per
 Each frame's sections became a widget: the indicator menu's "Needs you" and "Running", the notification's actions,
 the Ask an Agent dialog's access group. `docs/figma/system.md` holds the rules, including guidelines for app makers.
 
-**Code generation (Figma's MCP server, 162 minutes, 4 of 5).** Claude Code read the screens with `get_design_context`
+**Code generation (Figma's MCP server, 202 minutes, 4 of 5).** Claude Code read the screens with `get_design_context`
 and adapted Figma's React and Tailwind reference into the portal's own Preact components and CSS. The first rounds
 built Shopper's approval page and the direction A screens. When Ben approved the GurtOS design system, the next round
-turned its variables into a kit: each Figma variable is a CSS custom property with the same name in Light and Dark,
-with Atkinson Hyperlegible and GNOME's Adwaita icons self-hosted. On that kit it built a desktop with movable windows,
-the 12-step setup, ten Settings pages, App Center and the phone, with three helper agents building screens in parallel. The last round built GurtOS Personal's GNOME layer from the same frames and tokens as
-libadwaita widgets: the seven-step setup, Ask an Agent, Keep or Undo, the top-bar menu and the notification. Anything
+turned its variables into a kit: each Figma variable is a CSS custom property with the same name in Light and Dark. On that kit it built a desktop with movable windows,
+the 12-step setup, ten Settings pages, App Center and the phone. Another round built GurtOS Personal's GNOME layer from the same frames and tokens as
+libadwaita widgets: the seven-step setup, Ask an Agent, Keep or Undo, the top-bar menu and the notification. A later
+round (40 minutes) turned the Personal OS frames into a Shell extension and installed the exported theme. Anything
 the box can't back up was cut: no made-up greeting, no Power button without an API, no progress bar without a step
 count. The output is `portal/`, the kit at `/kit/` for track apps, and `personal/`.
 `portal/README.md` puts every Figma frame beside a screenshot of the running app.
