@@ -35,8 +35,22 @@ Also: one action log of everything every agent did, and the cost of each task.
 
 ## Layout
 
-The core thread owns this section and fills it in once the contract exists. Until then, don't create
-top-level folders other than your own.
+The core thread owns this section. Don't add other top-level folders; ask the core thread.
+
+- `core/` the box service. Core thread only. `core/contract.ts` is the contract (tasks, the action log, the
+  five slots, the API tracks get). **Read `core/README.md` before writing a track.**
+- `tracks/<name>/` one folder per sponsor track, owned by that track's thread. `track.ts` default-exports a
+  `Track`; the box loads every `tracks/*/track.ts` at boot. `demo.ts` is the track's demo step. Its own
+  `package.json` if it needs packages (the root is an npm workspace). `tracks/example/` shows every slot.
+- `portal/` the web app for the portal and the box's own screen, after the Figma handoff.
+- `spikes/` throwaway tests (spike thread). `docs/` tracks and the Figma stage log. `image/` the bootable
+  image, last.
+- `demo` the merge gate. `./demo` ships your checkout to a test VM and runs the four moments, then every
+  `tracks/*/demo.ts`. Exit 0 means you may merge.
+
+On the box: `BOX_HOME=/var/lib/box` holds `log.jsonl`, `workspaces/`, `views/` and `tasks/<id>/`. The vault
+is `/etc/box/vault.env` (root, 0600). The API is `127.0.0.1:7700`. Task users are `box-<id>`, uids 30000 to
+39999. Node runs `.ts` directly (type stripping), no build step: `npm test`, `npm run check`.
 
 ## Rules for every thread
 
@@ -55,7 +69,8 @@ top-level folders other than your own.
 
 - **Laptop VM** (ARM64, Ubuntu 24.04, Lima on Ben's MacBook): `ssh benmac 'limactl shell box -- <command>'`.
   The laptop sleeps when closed, so don't rely on it overnight. This is also the demo box on Sunday.
-- **linuxbox VM** (x86, always on): being set up.
+- **linuxbox VM** (x86, always on): `limactl shell box -- <command>` on linuxbox (Homebrew's `limactl`).
+  `./demo` uses it when it is running, else the laptop VM. `BOX_SHELL='<command prefix>' ./demo` picks any other.
 - **Vultr VM** (x86): being set up; also the second box for the Vultr track.
 
 ## If time runs short, cut in this order

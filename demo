@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+# The merge gate: runs the four demo moments, with no screen, on a test VM. Exit 0 = pass.
+#   ./demo                         the linuxbox VM if it is running, else the laptop VM
+#   BOX_SHELL='ssh my-vm' ./demo   any test machine with passwordless sudo
+#   ./demo --here                  this machine. Only on a test VM: it needs root.
+set -euo pipefail
+cd "$(dirname "$0")"
+
+if [[ ${1:-} == --here ]]; then
+  [[ $(id -u) == 0 ]] || exec sudo "$0" --here
+  core/setup.sh >/dev/null
+  exec node --experimental-strip-types --disable-warning=ExperimentalWarning core/demo.ts
+fi
+
+if [[ -z ${BOX_SHELL:-} ]]; then
+  lima=$(command -v limactl || echo /home/linuxbrew/.linuxbrew/bin/limactl)
+  if [[ -x $lima ]] && "$lima" list box 2>/dev/null | grep -q Running; then
+    BOX_SHELL="$lima shell --workdir / box --"
+  else
+    BOX_SHELL="ssh -o ConnectTimeout=10 benmac /opt/homebrew/bin/limactl shell --workdir / box --"
+  fi
+fi
+
+# Ship this checkout (tracked and new files, not ignored ones) and run it there. node_modules stays between runs.
+dest=/opt/box-dev/$(basename "$PWD")
+echo "demo: $BOX_SHELL, in $dest"
+{
+  echo "set -e; mkdir -p $dest; find $dest -mindepth 1 -maxdepth 1 ! -name node_modules -exec rm -rf {} +"
+  echo "base64 -d <<'EOF' | tar -xzf - -C $dest"
+  git ls-files -co --exclude-standard | while IFS= read -r f; do [[ -e $f ]] && printf '%s\n' "$f"; done |
+    tar -czf - -T - | base64
+  echo EOF
+  echo "exec $dest/demo --here"
+} | $BOX_SHELL sudo bash -s
