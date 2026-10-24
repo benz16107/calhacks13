@@ -16,10 +16,11 @@ Solana transaction, and counts toward the task's cost.
 **Coinbase tools.**
 - The x402 v2 TypeScript SDK: `@x402/fetch` and `@x402/core` to pay, `@x402/svm` for Solana payments,
   `@x402/express` for the test API that charges.
-- The x402.org facilitator, which Coinbase runs. It checks each payment, submits it to Solana and pays the
-  network fee.
-- Not yet: Coinbase's CDP facilitator and CDP wallets. They need CDP API keys, which this box does not have
-  yet (see "Next" below).
+- Coinbase's CDP facilitator, through `createCdpFacilitatorClient` in `@coinbase/cdp-sdk/x402`, signed in with
+  the box's CDP API key. It checks each payment, pays the Solana network fee and submits the transaction.
+- The x402.org facilitator, Coinbase's public testnet one, which needs no key. The test API falls back to it
+  when the vault has no CDP keys.
+- Not yet: CDP wallets. They need a CDP wallet secret, which the box does not have (see "Next" below).
 
 **Solana.** Payments are USDC on Solana devnet (Circle's devnet mint
 `4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU`). The box signs an SPL `TransferChecked` from its wallet, the
@@ -42,15 +43,16 @@ track wallet
   ok    the wallet refused a URL outside the task's hosts: "127.0.0.1:7700 is not one of this task's hosts"
   ok    the owner said no to "Spend $0.03 on wallet.pay? Budget $0.02, spent $0.00.", so the wallet never ran and nothing was spent
   ok    DEMO_LIVE=wallet: WALLET_SOLANA_KEY is in /etc/box/vault.env on this test machine
-  ok    the box's agent wallet 6PyiR71c9aw3e8bgnxmcLvJECL5zHE5jMSWqJoVjPTxU holds 19.83 USDC on Solana devnet (test money)
+  ok    the box's agent wallet 6PyiR71c9aw3e8bgnxmcLvJECL5zHE5jMSWqJoVjPTxU holds 19.65 USDC on Solana devnet (test money)
+  note  the test API settles through Coinbase's CDP facilitator
   ok    GET /joke answered 402 Payment Required: $0.01 devnet USDC to 39w7W3SB...
   ok    the wallet paid $0.01 and got the joke: An agent walks into a bar. The bar answers 402.
   ok    the $0.03 report is over the $0.02 budget, so the task waits: "Spend $0.03 on wallet.pay? Budget $0.02, spent $0.01."
   ok    approved, it paid $0.03 and got the report
   ok    both payments count toward the task's cost: $0.04
   ok    the log has each payment with its amount, payee, task and transaction, labeled devnet test money
-  ok    both transactions are confirmed on Solana devnet: https://explorer.solana.com/tx/27YsyeSK...?cluster=devnet
-  ok    the wallet's key is nowhere in the task's log
+  ok    both transactions, settled by Coinbase's CDP facilitator, are confirmed on Solana devnet: https://explorer.solana.com/tx/Urd99HES...?cluster=devnet
+  ok    neither the wallet's key nor the CDP secret is anywhere in the task's log
 ```
 
 The same flow also ran with a real agent, Factory's Droid with Claude Sonnet 4.6, given only "buy one joke and
@@ -72,11 +74,14 @@ You need a box (see `core/README.md`; any Ubuntu 24.04 test VM with `core/setup.
 3. **A payee.** The test API pays `39w7W3SBxE62zsS7VQY5dgZQXGWko2EkBXMfHg2sLtKV`, which already has a devnet
    USDC account. To use your own payee, run the faucet once for that address too: x402 cannot pay an
    address that has no USDC account yet.
-4. **Run the demo:** `DEMO_LIVE=wallet ./demo` from the repo root. It ships the checkout to the test VM and
+4. **CDP keys, for Coinbase's facilitator.** In the CDP Portal (portal.cdp.coinbase.com), create a Secret API
+   Key and add it to the vault as `CDP_API_KEY_ID=...` and `CDP_API_KEY_SECRET=...`. Without them the test
+   API settles through x402.org instead, and everything else works the same.
+5. **Run the demo:** `DEMO_LIVE=wallet ./demo` from the repo root. It ships the checkout to the test VM and
    runs every step, with real devnet payments for this track.
-5. **Or by hand**, on the box:
+6. **Or by hand**, on the box:
    ```sh
-   node --experimental-strip-types tracks/wallet/seller.ts &       # the test API on port 4021
+   sudo node --experimental-strip-types tracks/wallet/seller.ts &  # the test API on port 4021; root reads the vault's CDP keys
    curl -s 127.0.0.1:7700/tasks -H 'content-type: application/json' -d '{
      "title": "Buy a joke (devnet test money)", "worker": "droid",
      "tools": ["wallet.quote", "wallet.pay"], "hosts": ["api.localhost:4021"], "budgetCents": 2,
@@ -98,15 +103,16 @@ Tests for the wallet's guards (no money moves): `node --experimental-strip-types
   agent ── wallet.pay {url, cents} ► broker: over budget? ask the owner, wait for OK
                                      wallet.pay: read WALLET_SOLANA_KEY from the vault,
                                      check the offer, sign a USDC transfer
-                                     GET url + PAYMENT-SIGNATURE ─────────────────►  test API ──► facilitator
-                                                                                                  (verify, pay fee,
-                                                                                                   submit to Solana)
+                                     GET url + PAYMENT-SIGNATURE ─────────────────►  test API ──► CDP facilitator
+                                                                                                  (or x402.org): verify,
+                                                                                                  pay fee, submit to Solana
                                                      ◄── 200 + content + PAYMENT-RESPONSE (tx)
         ◄── { content, paid } ───    log: tool.call, "Paid $0.01 ... to <payee>", tool.result with cents
 ```
 
 - `track.ts`: the two tools, `wallet.quote` and `wallet.pay`, plus the `/t/wallet/` page.
-- `seller.ts`: the test API. `GET /joke` costs $0.01 and `GET /report` $0.03.
+- `seller.ts`: the test API. `GET /joke` costs $0.01 and `GET /report` $0.03. It settles through CDP when it
+  is given CDP keys, else through x402.org.
 - `demo.ts`: the demo step. `wallet.test.ts`: the guard tests. `keygen.ts`: makes a wallet.
 - `skill/x402-wallet/SKILL.md`: tells any agent in a box task how to pay (below).
 
@@ -115,6 +121,8 @@ Tests for the wallet's guards (no money moves): `node --experimental-strip-types
 - **The key stays in the core.** It lives in `/etc/box/vault.env` (root only). Only `wallet.pay` can read it,
   inside the box's own process. A task runs as its own Linux user with no way to read the vault, and only
   gets results back. The demo checks the key is nowhere in the task's log.
+- **The CDP key stays with the test API.** It is the seller's key: only `seller.ts` reads it. No box tool
+  declares it, so no task or tool can get it from the vault. The demo checks it is nowhere in the log.
 - **Budget, then the owner.** The broker counts each payment toward the task's budget. Above it, the task
   waits until someone answers on the portal or phone. Denied means nothing is paid.
 - **Exactly the agreed price.** `wallet.pay` names the amount, which is what the budget check and the owner
@@ -134,7 +142,8 @@ Tests for the wallet's guards (no money moves): `node --experimental-strip-types
 - The approval question comes from the core: "Spend $0.03 on wallet.pay? Budget $0.02, spent $0.01." It does
   not name the payee or URL yet. The quote step just before it, in the same task's log, does.
 - Two payments made at the same moment can together go over the budget, because the broker checks each call
-  against what is already spent, not what is in flight. Droid does make parallel calls.
+  against what is already spent, not what is in flight. Droid does make parallel calls. The core thread is
+  adding a reservation for this.
 - `GET` only. APIs that want a `POST` body are not supported yet.
 - After a power cut in the middle of a payment, the call fails rather than checking the chain for whether the
   payment went through. The owner checks the wallet on the explorer.
@@ -144,9 +153,6 @@ Tests for the wallet's guards (no money moves): `node --experimental-strip-types
 
 ### Next
 
-- **CDP facilitator.** With CDP keys, swap the facilitator in `seller.ts` for `createCdpFacilitatorClient()`
-  from `@coinbase/cdp-sdk/x402`. It reads `CDP_API_KEY_ID` and `CDP_API_KEY_SECRET` and supports Solana
-  devnet.
 - **CDP wallet.** With a CDP wallet secret as well (`CDP_WALLET_SECRET`), the box could hold only CDP
   credentials and let Coinbase sign, so no private key would be on the box at all.
 
@@ -159,4 +165,4 @@ task's broker socket. Install it for Droid by copying the folder into the worksp
 
 ## Builder feedback
 
-See [FEEDBACK.md](FEEDBACK.md): what worked, and eight points of friction with the x402 SDK and CDP.
+See [FEEDBACK.md](FEEDBACK.md): what worked, and ten points of friction with the x402 SDK and CDP.

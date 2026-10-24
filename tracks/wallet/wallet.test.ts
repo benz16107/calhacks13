@@ -9,7 +9,7 @@ import path from 'node:path';
 import { after, test } from 'node:test';
 import type { Ctx, Tool } from '../../core/contract.ts';
 import { newKey } from './keygen.ts';
-import { startSeller } from './seller.ts';
+import { cdpKeys, startSeller } from './seller.ts';
 import wallet, { allowedUrl, atomic } from './track.ts';
 
 process.env.BOX_HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'wallet-test-'));
@@ -64,4 +64,10 @@ test('the status page labels the wallet as devnet test money, and says how to se
   const status: any = await wallet.modelJobs[0].run({}, noKey);
   assert.equal(status.wallet, null);
   assert.match(status.setup, /WALLET_SOLANA_KEY/);
+});
+
+test('CDP keys come from the vault only when both are there', () => {
+  assert.deepEqual(cdpKeys('A=1\nCDP_API_KEY_ID = id-1\nCDP_API_KEY_SECRET=c2Vj+ZXQ/==\n'), { apiKeyId: 'id-1', apiKeySecret: 'c2Vj+ZXQ/==' });
+  assert.equal(cdpKeys('CDP_API_KEY_ID=id-1\n'), undefined);
+  assert.equal(cdpKeys(''), undefined);
 });

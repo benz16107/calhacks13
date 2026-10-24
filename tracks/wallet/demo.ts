@@ -2,11 +2,12 @@
 // host outside the task's list, and an over-budget payment that the owner denies pays nothing.
 // DEMO_LIVE=wallet ./demo also runs the real flow on Solana devnet with test money: a task asks a paid API for
 // a joke (402), pays $0.01 within its $0.02 budget and gets the joke. Then a $0.03 report is over budget, so
-// it waits for an OK, and goes through once approved. Both payments are checked on chain.
+// it waits for an OK, and goes through once approved. Both payments are checked on chain. The test API settles
+// through Coinbase's CDP facilitator when the vault has CDP keys, else through x402.org.
 import fs from 'node:fs';
 import path from 'node:path';
 import type { Approval, DemoKit, LogEvent, Task } from '../../core/contract.ts';
-import { PAYEE, startSeller } from './seller.ts';
+import { PAYEE, cdpKeys, startSeller } from './seller.ts';
 
 type Detail = { task: Task; events: LogEvent[] };
 
@@ -48,7 +49,10 @@ export default async function (d: DemoKit) {
   d.check(status.wallet, 'DEMO_LIVE=wallet: WALLET_SOLANA_KEY is in /etc/box/vault.env on this test machine');
   d.check(status.usdc >= 0.04, `the box's agent wallet ${status.wallet} holds ${status.usdc} USDC on Solana devnet (test money)`);
 
-  const seller = await startSeller();
+  const vault = fs.readFileSync(path.join(d.home, 'vault.env'), 'utf8');
+  const cdp = cdpKeys(vault);
+  const seller = await startSeller({ cdp });
+  console.log(`  note  the test API settles through ${seller.settledBy}`);
   try {
     const host = `api.localhost:${seller.port}`;
     const api = `http://${host}`;
@@ -96,11 +100,12 @@ export default async function (d: DemoKit) {
     const onChain = (await r.json()).result.value;
     d.check(
       onChain.every((s: any) => s && !s.err && ['confirmed', 'finalized'].includes(s.confirmationStatus)),
-      `both transactions are confirmed on Solana devnet: ${paid[1].explorer}`,
+      `both transactions, settled by ${seller.settledBy}, are confirmed on Solana devnet: ${paid[1].explorer}`,
     );
 
-    const key = fs.readFileSync(path.join(d.home, 'vault.env'), 'utf8').match(/^WALLET_SOLANA_KEY=(.+)$/m)?.[1];
-    d.check(key && !JSON.stringify(events).includes(key), "the wallet's key is nowhere in the task's log");
+    const key = vault.match(/^WALLET_SOLANA_KEY=(.+)$/m)?.[1];
+    const log = JSON.stringify(events);
+    d.check(key && !log.includes(key) && !(cdp && log.includes(cdp.apiKeySecret)), "neither the wallet's key nor the CDP secret is anywhere in the task's log");
   } finally {
     seller.close();
   }
