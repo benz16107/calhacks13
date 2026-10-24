@@ -24,6 +24,11 @@ install -Dm644 -t /etc/dconf/profile "$t/dconf/profile/user" "$t/dconf/profile/g
 install -Dm644 -t /etc/dconf/db/gurtos.d "$t"/dconf/db/gurtos.d/*
 install -Dm644 -t /etc/dconf/db/gdm.d "$t"/dconf/db/gdm.d/*
 dconf update
+install -Dm644 "$t/glib/90_gurtos.gschema.override" /usr/share/glib-2.0/schemas/90_gurtos.gschema.override
+glib-compile-schemas /usr/share/glib-2.0/schemas
+install -Dm644 "$t/gnome-initial-setup/vendor.conf" /etc/gnome-initial-setup/vendor.conf
+# Accounts made by GNOME's setup start with its first-login tour (Ubuntu's welcome pages) already marked done.
+install -Dm644 /dev/null /etc/skel/.config/gnome-initial-setup-done
 
 # Wallpaper, icons, GTK accents for new accounts, logos.
 # Figma's wallpapers (Hills is the default), light and dark.

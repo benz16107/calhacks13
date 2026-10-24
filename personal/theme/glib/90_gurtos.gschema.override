@@ -1,0 +1,10 @@
+# Loaded after Ubuntu's 10_ubuntu-settings, and for every user whatever its dconf profile: GNOME's first-boot setup
+# session (the gnome-initial-setup user) shows Hills, not Ubuntu's wallpaper.
+[org.gnome.desktop.background]
+picture-uri='file:///usr/share/backgrounds/gurtos/hills-light.svg'
+picture-uri-dark='file:///usr/share/backgrounds/gurtos/hills-dark.svg'
+picture-options='zoom'
+primary-color='#27313F'
+
+[org.gnome.desktop.screensaver]
+picture-uri='file:///usr/share/backgrounds/gurtos/hills-dark.svg'
