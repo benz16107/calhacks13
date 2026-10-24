@@ -73,7 +73,23 @@ $18,500 rush order to a Florida freight forwarder never ships.
   risk 88. The simple rule, on the same CRS answers, approves it for $20,000. The desk holds it, the box pauses the
   analyst, the controller's yes comes back through the approval, and the decision is logged with rule ids FRD-1 and
   FRD-2 and its 7 CRS request ids. Neither seat can act above its authority, and no key appears in the log.
-- **Live run with Droid on the whole case:** first run in progress on 2026-10-23; its score goes here.
+- **Live run with Droid on the whole case** (2026-10-23, run `88d75b`, about 9 minutes and about $1.50 of model
+  time): **caught 13 of 14 planted errors, with 1 false alarm. 6 of 6 credit decisions, 9 of 11 collection steps and
+  6 of 6 order decisions match the answer key.** Both reports, the score and the run's log are in
+  `runs/2026-10-23-live-88d75b/`.
+  - The analyst decided all six applications exactly as the key says, including band, limit and terms. It asked
+    the controller five times, each time with the exact question the tool gave it, and recorded each decision only
+    after the yes.
+  - Missed: E14. The analyst used the lowest of the three bureau scores and banded Castellanos B at $15,000, as the
+    key says, but did not flag the disagreement itself as a problem.
+  - False alarm: the clerk flagged the "Oakalnd" typo, which the key calls fine. It also noted four customers with
+    no email on file, so reminders cannot go out under COL-2. That is not in the key, so it is listed for a person
+    to judge.
+  - The two collection steps that differ: C-1005 and C-1007 (merged with C-1011) are over their limits, so the
+    clerk put them on credit hold under COL-3 instead of the aging step the key lists (phone call, friendly reminder).
+  - The score note inside that run's log says 5 false alarms. That was the first version of the scorer, which counted
+    the second seat's repeat of an error it had already caught as a false alarm. `score.json` is the same log scored
+    with the fixed scorer.
 
 ## What is here
 
@@ -85,6 +101,7 @@ $18,500 rush order to a Florida freight forwarder never ships.
 | `score.ts` | Scoring against the answer key, and the simple rule on the same CRS answers |
 | `desk.ts` | The log, the rules file, run workspaces, controller questions |
 | `demo.ts` | The demo step, and the live run with Droid |
+| `runs/` | Evidence from live runs: both seats' reports, the score and the run's log |
 | `company/profile.md` | The company: what it sells, size, people and seats, terms, current customers, policy in brief |
 | `rules/credit-rules.draft.yaml` | Credit rules, **first draft**. Ben's Mana chats will replace it |
 | `cases/fogline-2026-10/` | The planted case: 12 trade customers, 38 invoices, 15 payments, 6 open orders, 6 credit applications |
@@ -333,7 +350,7 @@ controller who signs off above $10,000 and on every fraud referral.
 | Time | Aging from the case date, a post-dated check, an invoice dated a year early, an 18-month-old report, a review 17 months overdue |
 | Approvals and segregation of duties | Tool access per seat, and the controller gate in `credit_decision` and `collections_action`, on the box's own approval pause |
 | Every call traceable | Every tool call and result is in the log; each decision carries its rule ids, the figures used, the CRS request ids and who approved it |
-| Proof | `POST /t/credit-desk/score` scores a run against the answer key: "caught N of 14", plus decisions matched |
+| Proof | `POST /t/credit-desk/score` scores a run against the answer key. The first live Droid run: caught 13 of 14, 1 false alarm, all 6 credit decisions right (`runs/2026-10-23-live-88d75b/`) |
 | They may run their own case | Any folder that passes `check-case.ts`: `POST /t/credit-desk/run {"dir": ...}`. See "Add your own case" |
 | A video that opens with the moment | APP-1043: the simple rule approves $20,000, CRS fails the identity, the analyst holds it, the controller confirms on the phone |
 
@@ -376,7 +393,8 @@ with the payer's memo, and each applicant's monthly deposits. The seats read it 
   those everyday failures.
 - **Measurable usefulness.** Every run is scored from the log against the answer key: planted errors caught out of
   14, false alarms, and decisions matched on 6 applications, 11 customers and 6 orders. The simple rule gives a
-  baseline on the same CRS answers: it approves all six applications for $153,000, including the fake one.
+  baseline on the same CRS answers: it approves all six applications for $153,000, including the fake one. The first
+  live Droid run caught 13 of 14 planted errors with 1 false alarm and decided all six applications as the key does.
 - **Path to production.** It runs on the box: each seat is its own Linux user with its own copy of the files, keys
   stay in the vault, every action is in an append-only log, approvals reach a phone, and the box resumes after a
   power cut. The rules are a file, so the controller can change policy without code.
@@ -402,7 +420,10 @@ answer key to match.
   applications, dates, duplicates, discounts, limits, reviews). They do not name the planted errors, and the answer
   key is never in the seats' files.
 - A planted error counts as caught when a finding names one of its rows and its wording and rule ids are closest to
-  that error. Whether the finding's conclusion is right is not checked by code; the decisions are, field by field.
+  that error. A second finding of the same error is a repeat, not a false alarm. A finding counts as a false alarm
+  only when it names a row the key calls fine and its wording is close to the key's reason; anything else the key
+  does not mention is listed under `other_findings` for a person to judge. Whether a finding's conclusion is right is
+  not checked by code; the decisions are, field by field.
 - The business credit file is simulated: the CRS sandbox has no business credit route.
 - Nessie is read, not written. The clerk's corrections are recorded in the log, not pushed to the bank, so undoing a
   task never leaves the bank out of step.

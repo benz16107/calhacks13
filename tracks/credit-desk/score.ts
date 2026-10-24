@@ -16,6 +16,8 @@ function similarity(a: Set<string>, b: Set<string>) {
   for (const w of a) if (b.has(w)) n++;
   return a.size && b.size ? n / Math.sqrt(a.size * b.size) : 0;
 }
+/** A finding at least this close in wording to a 'fine' entry is about the same thing. Below it, a person judges it. */
+const FINE_MIN = 0.15;
 const locId = (w: { file: string; id?: string }) => w.id ?? path.basename(w.file).replace(/\.json$/, '');
 
 const recorded = (uses: ToolUse[], tool: string) => uses.filter((u) => u.tool === tool && u.ok && u.output?.status === 'recorded');
@@ -41,23 +43,27 @@ export function scoreRun(info: RunInfo, events: LogEvent[], tasks: Task[]) {
     ...(key.planted_errors ?? []).map((e: any) => ({ kind: 'error', e, ids: new Set<string>(e.where.map(locId)), words: tokens(`${e.category} ${e.title} ${e.what_is_wrong} ${e.correct_conclusion} ${(e.rules ?? []).join(' ')}`) })),
     ...(key.not_errors ?? []).map((e: any) => ({ kind: 'fine', e, ids: new Set<string>(e.where.map(locId)), words: tokens(e.why_fine) })),
   ];
-  const pairs: { f: (typeof findings)[number]; t: (typeof targets)[number]; s: number }[] = [];
+  // Each finding goes to its closest target among those sharing a row. Two seats flagging the same error is one
+  // catch and a repeat, never a false alarm. It is a false alarm only when it is about what the key calls fine.
+  const placed = new Map<number, { t: (typeof targets)[number]; s: number; words: number }>();
   for (const f of findings) {
     for (const t of targets) {
       const shared = [...f.ids].filter((id) => t.ids.has(id)).length;
-      if (shared) pairs.push({ f, t, s: similarity(f.words, t.words) + 0.05 * shared });
+      const words = similarity(f.words, t.words);
+      const s = words + 0.05 * shared;
+      if (shared && (t.kind === 'error' || words >= FINE_MIN) && s > (placed.get(f.n)?.s ?? 0)) placed.set(f.n, { t, s, words });
     }
   }
-  pairs.sort((a, b) => b.s - a.s);
-  const caughtBy = new Map<string, (typeof findings)[number]>();
-  const placed = new Map<number, (typeof targets)[number]>();
-  for (const { f, t } of pairs) {
-    if (placed.has(f.n) || (t.kind === 'error' && caughtBy.has(t.e.id))) continue;
-    placed.set(f.n, t);
-    if (t.kind === 'error') caughtBy.set(t.e.id, f);
+  const caughtBy = new Map<string, { f: (typeof findings)[number]; words: number }>();
+  for (const f of findings) {
+    const p = placed.get(f.n);
+    if (p?.t.kind === 'error' && p.words > (caughtBy.get(p.t.e.id)?.words ?? -1)) caughtBy.set(p.t.e.id, { f, words: p.words });
   }
-  const errors = (key.planted_errors ?? []).map((e: any) => ({ id: e.id, title: e.title, caught: caughtBy.has(e.id), by: caughtBy.get(e.id)?.input.problem }));
-  const falseAlarms = findings.filter((f) => placed.get(f.n)?.kind === 'fine').map((f) => ({ problem: f.input.problem, ids: [...f.ids], key_says: placed.get(f.n)!.e.why_fine }));
+  const errors = (key.planted_errors ?? []).map((e: any) => ({
+    id: e.id, title: e.title, caught: caughtBy.has(e.id), by: caughtBy.get(e.id)?.f.input.problem ?? null,
+    findings: findings.filter((f) => placed.get(f.n)?.t.e === e).length,
+  }));
+  const falseAlarms = findings.filter((f) => placed.get(f.n)?.t.kind === 'fine').map((f) => ({ problem: f.input.problem, ids: [...f.ids], key_says: placed.get(f.n)!.t.e.why_fine }));
   const other = findings.filter((f) => !placed.has(f.n)).map((f) => ({ problem: f.input.problem, ids: [...f.ids] }));
 
   // ---------- application decisions ----------
