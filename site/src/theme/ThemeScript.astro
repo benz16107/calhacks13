@@ -1,0 +1,16 @@
+---
+// Put this in <head>. It sets data-theme on <html> before the page paints, from the saved choice or the system setting.
+// The choice is saved in localStorage ('gurtos-theme') and, so the three sites agree, in a cookie for .gurtos.com.
+---
+<script is:inline>
+  (function () {
+    var t = null;
+    try { t = localStorage.getItem('gurtos-theme'); } catch (e) {}
+    if (t !== 'light' && t !== 'dark') {
+      var m = document.cookie.match(/(?:^|; )gurtos-theme=(light|dark)/);
+      t = m ? m[1] : null;
+    }
+    if (!t) t = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    document.documentElement.dataset.theme = t;
+  })();
+</script>

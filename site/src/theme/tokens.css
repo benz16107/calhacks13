@@ -1,0 +1,124 @@
+/* GurtOS web design system, tokens. One file for gurtos.com, gurtos.com/docs and calhacks.gurtos.com.
+   The theme is the data-theme attribute on <html>: 'light' or 'dark'. ThemeScript.astro sets it before paint.
+   Fonts are self-hosted from ./fonts, so no page makes a request to another site. */
+
+@font-face { font-family: 'Atkinson Hyperlegible Next'; font-weight: 400; font-display: swap; src: url('./fonts/atkinson-hyperlegible-next-latin-400-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Atkinson Hyperlegible Next'; font-weight: 600; font-display: swap; src: url('./fonts/atkinson-hyperlegible-next-latin-600-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Atkinson Hyperlegible Next'; font-weight: 700; font-display: swap; src: url('./fonts/atkinson-hyperlegible-next-latin-700-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Atkinson Hyperlegible Mono'; font-weight: 400; font-display: swap; src: url('./fonts/atkinson-hyperlegible-mono-latin-400-normal.woff2') format('woff2'); }
+
+:root {
+  --gw-font: 'Atkinson Hyperlegible Next', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --gw-mono: 'Atkinson Hyperlegible Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+
+  /* Type scale: 17px body, ratio about 1.25 */
+  --gw-text-sm: 0.875rem;
+  --gw-text-base: 1.0625rem;
+  --gw-text-lg: 1.25rem;
+  --gw-h3: 1.5rem;
+  --gw-h2: 1.875rem;
+  --gw-h1: clamp(2.2rem, 5vw, 3.6rem);
+
+  --gw-space-1: 4px;
+  --gw-space-2: 8px;
+  --gw-space-3: 12px;
+  --gw-space-4: 16px;
+  --gw-space-5: 24px;
+  --gw-space-6: 32px;
+  --gw-space-7: 48px;
+  --gw-space-8: 64px;
+  --gw-radius: 6px;
+  --gw-radius-sm: 4px;
+  --gw-page: 76rem;
+  --gw-measure: 46rem;
+
+  /* The header and footer are the night sky in both modes */
+  --gw-glass: #141a21;
+  --gw-glass-rule: #2f3c4a;
+  --gw-on-glass: #f2efe8;
+  --gw-on-glass-2: #b9c0c8;
+  --gw-amber: #f2b544;
+  --gw-moon: #e9dfc8;
+}
+
+:root,
+:root[data-theme='light'] {
+  color-scheme: light;
+  --gw-canvas: #f3f1ea;
+  --gw-surface: #fbfaf6;
+  --gw-sunken: #e6e7e1;
+  --gw-rule: #d3d6cf;
+  --gw-rule-strong: #6b726c;
+  --gw-ink: #1c201d;
+  --gw-ink-2: #535a54;
+  --gw-link: #2d5784;
+  --gw-link-low: #dde8f2;
+  --gw-action: #1c201d;
+  --gw-on-action: #fbfaf6;
+  --gw-running-fg: #2d5784; --gw-running-bg: #dde8f2;
+  --gw-waiting-fg: #7f4c00; --gw-waiting-bg: #f8ebd0;
+  --gw-done-fg: #2e6338;    --gw-done-bg: #dfeddc;
+  --gw-failed-fg: #9c3326;  --gw-failed-bg: #f6e0da;
+  --gw-neutral-fg: #535a54; --gw-neutral-bg: #e6e7e1;
+  --gw-hill-1: #8a9bad; --gw-hill-2: #6f8296; --gw-hill-3: #586b82;
+  --gw-code-bg: #fbfaf6;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --gw-canvas: #171e25;
+  --gw-surface: #222c36;
+  --gw-sunken: #2f3c4a;
+  --gw-rule: #3a4653;
+  --gw-rule-strong: #6b7682;
+  --gw-ink: #f2efe8;
+  --gw-ink-2: #b9c0c8;
+  --gw-link: #8db4dd;
+  --gw-link-low: #203247;
+  --gw-action: #f2efe8;
+  --gw-on-action: #171e25;
+  --gw-running-fg: #8db4dd; --gw-running-bg: #203247;
+  --gw-waiting-fg: #f0c27a; --gw-waiting-bg: #3b2f17;
+  --gw-done-fg: #9fd0a6;    --gw-done-bg: #20352a;
+  --gw-failed-fg: #f0a493;  --gw-failed-bg: #3d2622;
+  --gw-neutral-fg: #b9c0c8; --gw-neutral-bg: #2f3c4a;
+  --gw-hill-1: #46586b; --gw-hill-2: #36475a; --gw-hill-3: #28343f;
+  --gw-code-bg: #1d262f;
+}
+
+/* The names the Cal Hacks site already uses, so its styles follow the theme without a rewrite. */
+:root {
+  --font-sans: var(--gw-font);
+  --font-mono: var(--gw-mono);
+  --measure: var(--gw-measure);
+  --page: var(--gw-page);
+  --space-1: var(--gw-space-1); --space-2: var(--gw-space-2); --space-3: var(--gw-space-3); --space-4: var(--gw-space-4);
+  --space-5: var(--gw-space-5); --space-6: var(--gw-space-6); --space-7: var(--gw-space-7); --space-8: var(--gw-space-8);
+  --radius-md: var(--gw-radius);
+  --radius-sm: var(--gw-radius-sm);
+  --color-bg-canvas: var(--gw-canvas);
+  --color-bg-surface: var(--gw-surface);
+  --color-bg-sunken: var(--gw-sunken);
+  --color-border-default: var(--gw-rule);
+  --color-border-strong: var(--gw-rule-strong);
+  --color-text-primary: var(--gw-ink);
+  --color-text-secondary: var(--gw-ink-2);
+  --color-action-primary: var(--gw-action);
+  --color-action-on-primary: var(--gw-on-action);
+  --color-focus: var(--gw-link);
+  --color-state-running-fg: var(--gw-running-fg); --color-state-running-bg: var(--gw-running-bg);
+  --color-state-waiting-fg: var(--gw-waiting-fg); --color-state-waiting-bg: var(--gw-waiting-bg);
+  --color-state-done-fg: var(--gw-done-fg);       --color-state-done-bg: var(--gw-done-bg);
+  --color-state-failed-fg: var(--gw-failed-fg);   --color-state-failed-bg: var(--gw-failed-bg);
+  --color-state-neutral-fg: var(--gw-neutral-fg); --color-state-neutral-bg: var(--gw-neutral-bg);
+  --color-desktop-sky: #27313f;
+  --color-desktop-glass: var(--gw-glass);
+  --color-desktop-text: var(--gw-on-glass);
+  --color-desktop-text-secondary: var(--gw-on-glass-2);
+  --color-desktop-accent: var(--gw-amber);
+  --color-desktop-moon: var(--gw-moon);
+  --color-desktop-hill-far: #46586b;
+  --color-desktop-hill-mid: #36475a;
+  --color-desktop-hill-near: #28343f;
+  --color-desktop-hill-front: #1c252d;
+}

@@ -2,8 +2,12 @@
    Light is the Paper surface the portal's windows use. Dark is the desktop's night sky. */
 
 :root {
-  --sl-font: 'Atkinson Hyperlegible Next', system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --sl-font-mono: 'Atkinson Hyperlegible Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  --sl-font: var(--gw-font);
+  --sl-font-mono: var(--gw-mono);
+  --sl-text-base: var(--gw-text-base);
+  --sl-color-bg-nav: var(--gw-glass);
+  --sl-nav-height: 3.5rem;
+  --sl-nav-pad-y: 0rem;
   --sl-content-width: 46rem;
   --sl-line-height: 1.65;
 
@@ -45,8 +49,8 @@
   --sl-color-gray-4: #6b726c;
   --sl-color-gray-5: #d3d6cf;
   --sl-color-gray-6: #e6e7e1;
-  --sl-color-gray-7: #f3f1ea;
-  --sl-color-black: #fbfaf6;
+  --sl-color-gray-7: #fbfaf6;
+  --sl-color-black: #f3f1ea;
 
   --diagram-ink: #1c201d;
   --diagram-muted: #535a54;

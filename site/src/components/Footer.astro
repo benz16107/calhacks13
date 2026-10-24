@@ -1,24 +1,14 @@
 ---
-// Starlight's footer (edit link, pagination), plus the licence and the source link on every page.
+// Starlight's pagination, then the footer shared with the other GurtOS sites.
 import Default from '@astrojs/starlight/components/Footer.astro';
-import { NAME, REPO, LICENSE_NAME, LICENSE_URL } from '../product.ts';
+import SiteFooter from '../theme/SiteFooter.astro';
 ---
 
 <Default />
-<p class="licence">
-  {NAME} is open source under the <a href={LICENSE_URL}>{LICENSE_NAME}</a>.{' '}
-  <a href={REPO}>Source code on GitHub</a>.{' '}<a href="/terms/">Terms</a> · <a href="/privacy/">Privacy</a>.
-</p>
+<div class="docs-footer"><SiteFooter /></div>
 
-<style>
-  .licence {
-    margin-top: 2rem;
-    padding-top: 1rem;
-    border-top: 1px solid var(--sl-color-gray-5);
-    font-size: var(--sl-text-sm);
-    color: var(--sl-color-gray-3);
-  }
-  .licence a {
-    color: var(--sl-color-gray-2);
-  }
+<style is:global>
+  /* Run the shared footer edge to edge below the docs' content column. */
+  .docs-footer { margin: 2rem calc(-1 * var(--sl-content-pad-x)) calc(-1 * var(--sl-content-pad-x)); }
+  .docs-footer .gw-footer { margin-top: 0; }
 </style>

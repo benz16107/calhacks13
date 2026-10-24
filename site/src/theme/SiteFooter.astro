@@ -1,0 +1,26 @@
+---
+// The footer on every GurtOS site: licence, Terms, Privacy and GitHub. `origin` as in SiteHeader.
+import { NAME, REPO, LICENSE_NAME, LICENSE_URL } from '../product.ts';
+
+interface Props { origin?: string }
+const { origin = '' } = Astro.props;
+---
+<footer class="gw-footer">
+  <div class="gw-bar">
+    <p>{NAME} v0.1.0-preview <span aria-hidden="true">·</span> open source under the <a href={LICENSE_URL}>{LICENSE_NAME}</a></p>
+    <nav aria-label="Footer" class="gw-nav">
+      <a href={`${origin}/terms/`}>Terms</a>
+      <a href={`${origin}/privacy/`}>Privacy</a>
+      <a href={LICENSE_URL}>Licence</a>
+      <a href={REPO}>GitHub</a>
+    </nav>
+  </div>
+</footer>
+
+<style is:global>
+  .gw-footer { background: var(--gw-glass); color: var(--gw-on-glass-2); border-top: 1px solid var(--gw-glass-rule); margin-top: var(--gw-space-8); }
+  .gw-footer .gw-bar { min-height: 64px; font-size: 0.9rem; }
+  .gw-footer p { margin: 0; margin-right: auto; }
+  .gw-footer a { color: var(--gw-on-glass); }
+  .gw-footer .gw-nav a { border-bottom: 0; }
+</style>

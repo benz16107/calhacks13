@@ -1,0 +1,51 @@
+---
+// The header on every GurtOS site. Links are absolute when `origin` is set, so the same header works on calhacks.gurtos.com.
+//   current: which link to mark as the current section
+//   origin:  '' on gurtos.com, 'https://gurtos.com' on the Cal Hacks site
+//   calhacks: the Cal Hacks site's address (defaults to its public address)
+//   nav:     false hides the links on narrow screens (the docs show them in the mobile menu instead)
+import ThemeToggle from './ThemeToggle.astro';
+import { REPO } from '../product.ts';
+
+interface Props {
+  current?: 'editions' | 'download' | 'docs' | 'calhacks' | '';
+  origin?: string;
+  calhacks?: string;
+  nav?: boolean;
+}
+const { current = '', origin = '', calhacks = 'https://calhacks.gurtos.com/', nav = true } = Astro.props;
+const links = [
+  { id: 'editions', label: 'Editions', href: `${origin}/#editions` },
+  { id: 'download', label: 'Download', href: `${origin}/download/` },
+  { id: 'docs', label: 'Docs', href: `${origin}/docs/` },
+  { id: 'calhacks', label: 'Cal Hacks', href: calhacks },
+  { id: 'github', label: 'GitHub', href: REPO },
+];
+---
+<header class="gw-header">
+  <div class="gw-bar">
+    <a class="gw-brand" href={`${origin}/`} aria-label="GurtOS home"><span class="g">Gurt</span><span class="o">OS</span></a>
+    <slot name="middle" />
+    <nav aria-label="Site" class:list={['gw-nav', { 'gw-nav-hidden': !nav }]}>
+      {links.map((l) => <a href={l.href} aria-current={l.id === current ? 'page' : undefined}>{l.label}</a>)}
+    </nav>
+    <ThemeToggle />
+  </div>
+</header>
+
+<style is:global>
+  .gw-header { background: var(--gw-glass); color: var(--gw-on-glass); border-bottom: 1px solid var(--gw-glass-rule); }
+  .gw-bar { display: flex; align-items: center; gap: 1.4rem; min-height: 56px; padding: 0; width: min(var(--gw-page), 100% - 2rem); margin: 0 auto; font-size: 0.95rem; flex-wrap: wrap; }
+  .gw-brand { color: var(--gw-on-glass); text-decoration: none; font-size: 1.25rem; letter-spacing: -0.02em; margin-right: auto; }
+  .gw-brand .g { font-weight: 700; }
+  .gw-nav { display: flex; gap: 1.3rem; flex-wrap: wrap; align-items: center; }
+  .gw-nav a { color: var(--gw-on-glass); text-decoration: none; padding: 0.5rem 0; border-bottom: 2px solid transparent; }
+  .gw-nav a:hover { text-decoration: underline; }
+  .gw-nav a[aria-current='page'] { border-bottom-color: var(--gw-amber); }
+  .gw-header a:focus-visible { outline: 3px solid var(--gw-amber); outline-offset: 2px; }
+  @media (max-width: 49.99rem) {
+    .gw-nav-hidden { display: none; }
+    .gw-nav { gap: 1rem; font-size: 0.9rem; }
+    .gw-bar { gap: 0.3rem 1rem; padding-block: 0.4rem; }
+  }
+</style>

@@ -6,8 +6,11 @@ description: What gurtos.com collects (nothing of its own), what the host sees, 
 
 ## This site
 
-gurtos.com is a static documentation site. It has no accounts, no forms, no comments and no cookies of its own, and it
-runs no analytics or tracking code. It collects nothing from you.
+gurtos.com is a static site. It has no accounts, no forms and no comments, and it runs no analytics or tracking code.
+It collects nothing from you. The one thing it remembers is your light or dark choice, if you use the theme switch: it
+saves `light` or `dark` in your browser's local storage and in a cookie for `.gurtos.com`, so gurtos.com, the docs and
+calhacks.gurtos.com agree. Nothing else is stored, and the cookie is never read by a server for anything but the page's
+own styling.
 
 Vercel hosts the site. Like any web host, it receives each request (your IP address, your browser's user agent and the
 page you asked for) and may keep ordinary server logs. Vercel's own privacy notice governs that. We do not read or

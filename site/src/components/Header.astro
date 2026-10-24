@@ -1,0 +1,30 @@
+---
+// The shared GurtOS header around Starlight's search. Links to the other sections show from 50rem; below that they are in the mobile menu.
+import Search from 'virtual:starlight/components/Search';
+import SiteHeader from '../theme/SiteHeader.astro';
+---
+<SiteHeader current="docs" nav={false}>
+  <div slot="middle" class="docs-search"><Search /></div>
+</SiteHeader>
+
+<style is:global>
+  /* The docs search sits on the dark header in both modes, so it gets the dark palette. */
+  .gw-header {
+    --sl-color-white: #f2efe8;
+    --sl-color-gray-1: #e4e1da;
+    --sl-color-gray-2: #c9cdd2;
+    --sl-color-gray-3: #b9c0c8;
+    --sl-color-gray-4: #8b96a1;
+    --sl-color-gray-5: #3a4653;
+    --sl-color-gray-6: #222c36;
+    --sl-color-gray-7: #1c252d;
+    --sl-color-black: #141a21;
+    --sl-color-text: #f2efe8;
+    --sl-color-accent: #8db4dd;
+  }
+  .gw-header .gw-bar { max-width: none; width: calc(100% - 2 * var(--sl-nav-pad-x, 1rem)); }
+  .gw-header .gw-brand { margin-right: 0; }
+  .docs-search { margin-right: auto; }
+  .docs-search button[data-open-modal] { border-color: #6b7682; }
+  @media (max-width: 49.99rem) { .docs-search { margin-left: auto; } }
+</style>

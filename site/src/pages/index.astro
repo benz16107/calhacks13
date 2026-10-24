@@ -46,9 +46,9 @@ const sums = (id: string) => isos(id, '', '').map((f) => `${SUMS[f.file]}  ${f.f
   </div>
 
   <svg class="hills" viewBox="0 0 1920 260" preserveAspectRatio="none" aria-hidden="true">
-    <path d="M0 80C300 0 520 40 760 10C1000 -20 1250 -40 1500 20C1750 80 1800 0 1920 30V260H0Z" fill="#8a9bad" />
-    <path d="M0 160C260 90 520 140 820 100C1120 60 1300 130 1560 80C1820 30 1820 120 1920 100V260H0Z" fill="#6f8296" />
-    <path d="M0 230C300 170 640 210 960 180C1280 150 1500 210 1920 160V260H0Z" fill="#586b82" />
+    <path d="M0 80C300 0 520 40 760 10C1000 -20 1250 -40 1500 20C1750 80 1800 0 1920 30V260H0Z" fill="var(--gw-hill-1)" />
+    <path d="M0 160C260 90 520 140 820 100C1120 60 1300 130 1560 80C1820 30 1820 120 1920 100V260H0Z" fill="var(--gw-hill-2)" />
+    <path d="M0 230C300 170 640 210 960 180C1280 150 1500 210 1920 160V260H0Z" fill="var(--gw-hill-3)" />
   </svg>
 
   <div class="wrap">
@@ -149,40 +149,36 @@ const sums = (id: string) => isos(id, '', '').map((f) => `${SUMS[f.file]}  ${f.f
 </script>
 
 <style>
-  .eyebrow { font-family: var(--font-mono); font-size: 0.86rem; color: var(--focus); margin-bottom: 1rem; }
+  .eyebrow { font-family: var(--gw-mono); font-size: 0.86rem; color: var(--gw-link); margin-bottom: 1rem; }
   .intro { padding: 3rem 0 2.5rem; }
   .intro-grid { display: grid; gap: 1.5rem 3rem; align-items: end; }
   .intro h1 { font-size: clamp(2.2rem, 5vw, 3.6rem); letter-spacing: -0.02em; }
   .lead { font-size: 1.15rem; }
   .actions { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 1.25rem; }
-  .btn { display: inline-block; padding: 0.65rem 1.1rem; border: 1px solid var(--ink); border-radius: 6px; color: var(--ink); text-decoration: none; font-weight: 600; }
-  .btn.primary { background: var(--ink); color: var(--surface); font-size: 1.1rem; padding: 0.8rem 1.4rem; }
-  .btn:hover { text-decoration: underline; }
   .hills { display: block; width: 100%; height: clamp(70px, 11vw, 170px); }
-  .section-h { font-size: 1.75rem; padding: 3rem 0 1.25rem; }
-  .edition { display: grid; gap: 1.5rem 3rem; padding: 2rem 0; border-top: 1px solid var(--rule); }
+  .section-h { font-size: var(--gw-h2); }
+  .edition { display: grid; gap: 1.5rem 3rem; padding: 2rem 0; border-top: 1px solid var(--gw-rule); }
   .media { margin: 0; align-self: start; }
-  .media img { width: 100%; border: 1px solid var(--rule); border-radius: 6px; }
+  .media img { width: 100%; border: 1px solid var(--gw-rule); border-radius: 6px; }
   .duo { position: relative; padding-bottom: 2.5rem; padding-right: 3rem; }
-  .duo .phone { position: absolute; right: 0; bottom: 0; width: 24%; border-width: 2px; background: var(--night); }
+  .duo .phone { position: absolute; right: 0; bottom: 0; width: 24%; border-width: 2px; background: var(--gw-glass); }
   .text h3 { font-size: 1.6rem; display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.9rem; }
   .dot { width: 0.8rem; height: 0.8rem; border-radius: 2px; flex: none; }
   .dot.server { background: #46586b; }
-  .dot.personal { background: var(--amber); }
-  .dot.business { background: var(--focus); }
+  .dot.personal { background: var(--gw-amber); }
+  .dot.business { background: var(--gw-link); }
   .dl { display: grid; gap: 0.6rem; margin: 1.1rem 0 0.6rem; }
-  .iso { display: flex; flex-direction: column; gap: 0.1rem; padding: 0.7rem 0.95rem; border: 1px solid var(--ink-2); border-radius: 6px; background: var(--surface); text-decoration: none; color: var(--ink); }
-  .iso.suggested { border: 2px solid var(--focus); padding: calc(0.7rem - 1px) calc(0.95rem - 1px); }
+  .iso { display: flex; flex-direction: column; gap: 0.1rem; padding: 0.7rem 0.95rem; border: 1px solid var(--gw-ink-2); border-radius: 6px; background: var(--gw-surface); text-decoration: none; color: var(--gw-ink); }
+  .iso.suggested { border: 2px solid var(--gw-link); padding: calc(0.7rem - 1px) calc(0.95rem - 1px); }
   .iso-main { font-weight: 700; }
-  .iso-sub { font-size: 0.9rem; color: var(--ink-2); }
+  .iso-sub { font-size: 0.9rem; color: var(--gw-ink-2); }
   .sums { font-size: 0.9rem; }
-  .sums summary { cursor: pointer; color: var(--ink-2); }
+  .sums summary { cursor: pointer; color: var(--gw-ink-2); }
   .sums pre { font-size: 0.72rem; margin: 0.6rem 0; }
-  .note { border: 1px solid var(--rule); border-radius: 6px; background: var(--surface); padding: 1rem 1.1rem 0.2rem; margin-top: 1.1rem; }
+  .note { border: 1px solid var(--gw-rule); border-radius: 6px; background: var(--gw-surface); padding: 1rem 1.1rem 0.2rem; margin-top: 1.1rem; }
   .core { list-style: none; padding: 0; margin: 0; }
-  .core li { padding: 0.8rem 0; border-top: 1px solid var(--rule); color: var(--ink-2); }
-  .core a { display: block; font-weight: 700; color: var(--ink); }
-  .measure { max-width: 46rem; }
+  .core li { padding: 0.8rem 0; border-top: 1px solid var(--gw-rule); color: var(--gw-ink-2); }
+  .core a { display: block; font-weight: 700; color: var(--gw-ink); }
   @media (min-width: 900px) {
     .intro-grid, .edition { grid-template-columns: 7fr 5fr; }
     .core { display: grid; grid-template-columns: 1fr 1fr; column-gap: 3rem; }

@@ -1,0 +1,19 @@
+---
+// In the docs' mobile menu: the links the header shows on wide screens.
+import { REPO } from '../product.ts';
+const links = [
+  ['Editions', '/#editions'],
+  ['Download', '/download/'],
+  ['Docs', '/docs/'],
+  ['Cal Hacks', 'https://calhacks.gurtos.com/'],
+  ['GitHub', REPO],
+];
+---
+<nav class="mm-nav" aria-label="GurtOS sites">
+  {links.map(([label, href]) => <a href={href}>{label}</a>)}
+</nav>
+
+<style>
+  .mm-nav { display: flex; flex-wrap: wrap; gap: 0.5rem 1.2rem; }
+  .mm-nav a { color: var(--sl-color-white); }
+</style>

@@ -1,0 +1,49 @@
+/* GurtOS web design system, base styles for pages that are not Starlight (the home page, Download, Terms,
+   Privacy and the Cal Hacks site). The docs load tokens.css only and map the tokens onto Starlight. */
+
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+body { margin: 0; background: var(--gw-canvas); color: var(--gw-ink); font: 400 var(--gw-text-base)/1.6 var(--gw-font); font-kerning: normal; }
+img, video { max-width: 100%; height: auto; display: block; }
+a { color: var(--gw-link); text-underline-offset: 0.18em; text-decoration-thickness: 1px; }
+a:hover { text-decoration-thickness: 2px; }
+:focus-visible { outline: 3px solid var(--gw-link); outline-offset: 2px; border-radius: 2px; }
+h1, h2, h3, h4 { font-weight: 600; line-height: 1.2; letter-spacing: -0.01em; margin: 0; text-wrap: balance; }
+h1 { font-size: var(--gw-h1); letter-spacing: -0.02em; }
+h2 { font-size: var(--gw-h2); }
+h3 { font-size: var(--gw-h3); }
+p { margin: 0 0 var(--gw-space-4); text-wrap: pretty; }
+code, kbd, pre, samp { font-family: var(--gw-mono); font-size: 0.86em; }
+:not(pre) > code { background: var(--gw-sunken); padding: 0.1em 0.35em; border-radius: var(--gw-radius-sm); }
+pre { background: var(--gw-code-bg); border: 1px solid var(--gw-rule); border-radius: var(--gw-radius); padding: var(--gw-space-4); overflow-x: auto; }
+hr { border: 0; border-top: 1px solid var(--gw-rule); margin: var(--gw-space-6) 0; }
+
+.wrap { width: min(var(--gw-page), 100% - 2rem); margin: 0 auto; }
+.skip { position: absolute; left: -999px; }
+.skip:focus { left: 1rem; top: 1rem; background: var(--gw-surface); color: var(--gw-ink); padding: 0.5rem 1rem; z-index: 20; }
+.measure { max-width: var(--gw-measure); }
+
+/* Buttons: ink on paper, inverted in dark. Primary is filled. */
+.btn { display: inline-block; padding: 0.65rem 1.1rem; border: 1px solid var(--gw-ink); border-radius: var(--gw-radius); color: var(--gw-ink); background: transparent; text-decoration: none; font: inherit; font-weight: 600; cursor: pointer; }
+.btn:hover { text-decoration: underline; }
+.btn.primary { background: var(--gw-action); border-color: var(--gw-action); color: var(--gw-on-action); }
+
+/* Ruled rows: a hairline between items, never a card. */
+.ruled > * { border-top: 1px solid var(--gw-rule); }
+.section-h { padding: var(--gw-space-7) 0 var(--gw-space-5); }
+
+/* Tables */
+.table-wrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 0.95rem; }
+th, td { text-align: left; padding: 0.55rem 0.7rem; border-bottom: 1px solid var(--gw-rule); vertical-align: top; }
+th { font-weight: 600; }
+
+.prose { max-width: 50rem; padding-top: var(--gw-space-7); }
+.prose h1 { margin-bottom: var(--gw-space-5); }
+.prose h2 { margin: var(--gw-space-7) 0 var(--gw-space-3); font-size: 1.5rem; }
+.prose ul, .prose ol { padding-left: 1.4rem; }
+.prose li { margin-bottom: 0.4rem; }
+.prose table { display: block; overflow-x: auto; }
+
+/* Screenshots: a hairline, no shadow. */
+.shot img, figure.shot img { border: 1px solid var(--gw-rule); border-radius: var(--gw-radius); }
