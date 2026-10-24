@@ -1,0 +1,3 @@
+# Ubuntu's crash reporting stays off on GurtOS Personal. Its Python hook fails on any system whose ID is not
+# ubuntu and prints a second traceback after every Python error. xserver-xorg needs the package, so it stays.
+enabled=0

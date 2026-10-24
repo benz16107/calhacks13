@@ -96,11 +96,9 @@ echo "test: back up after the power cut, same box $(box_id 2)"
 stdb=$(curl -s -o /dev/null -w '%{http_code}' --max-time 8 "http://127.0.0.1:$((port + 1000))/v1/ping" || true)
 [[ $stdb == 000 ]] || { echo "test: FAILED, SpacetimeDB on 3000 answered from outside ($stdb)"; exit 1; }
 echo "test: SpacetimeDB (3000) does not answer from outside"
-if [[ $edition == server- ]]; then
-  curl -sf --max-time 8 "http://127.0.0.1:$((port + 2000))/api/health" | grep -q '"ok":true' ||
-    { echo "test: FAILED, the box's API (7700) does not answer from a private network"; exit 1; }
-  echo "test: the box's API (7700) answers from a private network"
-fi
+curl -sf --max-time 8 "http://127.0.0.1:$((port + 2000))/api/health" | grep -q '"ok":true' ||
+  { echo "test: FAILED, the box's API (7700) does not answer from a private network"; exit 1; }
+echo "test: the box's API (7700) answers from a private network"
 
 if [[ $name != *-debug ]]; then
   echo "test: PASSED (a release build has no ssh, so the update steps need --debug)"
@@ -125,6 +123,12 @@ if [[ $edition == personal- ]]; then
     sudo -u ana touch /home/ana/.config/gnome-initial-setup-done && sudo -u ana HOME=/home/ana bash /tmp/gs' |
     grep -q would-open-the-wizard || { echo "test: FAILED, GurtOS Setup would not open the wizard"; exit 1; }
   echo "test: GurtOS Setup opens the wizard at the owner's first login"
+  check() { vm "$2" >/dev/null 2>&1 || { echo "test: FAILED, $1"; exit 1; }; }
+  check "a Python error prints apport's second traceback" '! python3 -c "raise ValueError" 2>&1 | grep -q "package manager"'
+  check "no BOX_URL" 'grep -q "^BOX_URL=http" /run/box-os/box.env'
+  check "no pretty hostname" 'grep -q "^PRETTY_HOSTNAME=gurt-" /etc/machine-info'
+  check "Yaru only in Ubuntu's session" '[ "$(sudo -u ana env -u XDG_CURRENT_DESKTOP gsettings get org.gnome.desktop.interface icon-theme)" = "'"'"'Yaru'"'"'" ]'
+  echo "test: no apport hook, BOX_URL set, pretty hostname set, Yaru outside Ubuntu's session"
 fi
 
 echo "test: system update to slot B"

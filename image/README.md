@@ -155,14 +155,14 @@ Updates do not touch it: setup's state lives with the box on the data partition.
 ## Network and firewall
 
 `/etc/nftables.conf` drops everything coming in except replies to the box's own connections, ping and DHCP. On
-GurtOS Server the box's API and portal (port 7700) are also open to private networks (10/8, 172.16/12,
+both editions the box's API and portal (port 7700) are also open to private networks (10/8, 172.16/12,
 192.168/16, Tailscale's 100.64/10, link-local, IPv6 ULA), so a phone on the same network can pair; the box
 listens on every address and sets `BOX_URL` to its own address at each start (`box-env`), so the pairing QR code
 opens on the phone. Never from the public internet: every request that does not come from the box itself
 already needs a paired phone's token (core's "Who may reach the API"), and the firewall keeps it that way one
 layer further out. SpacetimeDB (port 3000) is never open to the network; the portal falls back to the API's log
-stream. GurtOS Personal keeps the
-API on `127.0.0.1`. Debug builds also open ssh (22). The time zone is Pacific (`BOX_TIMEZONE` at build time
+stream. On Personal, `BOX_URL` is read when the box starts, so after a laptop moves to another network it shows
+the old address until the next restart. Debug builds also open ssh (22). The time zone is Pacific (`BOX_TIMEZONE` at build time
 changes it; Personal's own setup asks).
 
 ## GurtOS Personal
@@ -172,13 +172,16 @@ kiosk:
 
 - **Ubuntu's GNOME desktop**, `ubuntu-desktop-minimal` plus the parts Ubuntu only recommends (NetworkManager,
   the terminal, text editor, keyring, Yaru themes). No snaps: Ubuntu's Firefox is a snap, which cannot be built
-  into an image, so the browser is GNOME Web.
+  into an image, so the browser is GNOME Web. Yaru is the theme for every app, not only in Ubuntu's own session
+  (`rootfs-personal/usr/share/glib-2.0/schemas/`). GNOME's distributor logo is GurtOS's. Ubuntu's crash
+  reporting is off (`/etc/default/apport`): its Python hook fails on any system whose `ID` is not `ubuntu`.
 - **First boot runs GNOME's own setup** (`gnome-initial-setup`, started by GDM because the machine has no
   account yet). The account it makes is an administrator, so that person is in the `sudo` group. Root's password
   stays locked. The box's task users (`box-*`) are never in `sudo`.
 - **The box service** is the same as on Server, from `core/install.sh`. Its screen is the desktop's, not a kiosk.
 - **The Box desktop layer** comes from `personal/install.sh`, owned by the Personal thread. See the hook below.
-- **The computer's name** is `gurt-<id>` until the person names it in Settings.
+- **The computer's name** is `gurt-<id>` until the person names it in Settings. First boot sets it as the
+  pretty hostname too, so GNOME's setup offers it instead of naming the machine after the account.
 
 The data partition also holds `/home`, saved Wi-Fi and network connections, AccountsService (account pictures
 and types) and Bluetooth pairings. These mounts are required on Personal: a desktop that started without `/home`

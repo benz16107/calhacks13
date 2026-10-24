@@ -20,6 +20,6 @@ for n in $people; do
     while read -r g; do grep -q "^$g:" $new/etc/group && echo "$g"; done | paste -sd,)
   [ -z "$groups" ] || usermod -R "$new" -a -G "$groups" "$n"
 done
-for f in /etc/localtime /etc/timezone /etc/default/locale /etc/hostname /etc/gdm3/custom.conf; do
+for f in /etc/localtime /etc/timezone /etc/default/locale /etc/hostname /etc/machine-info /etc/gdm3/custom.conf; do
   [ -e $f ] && cp -a $f $new$f || true
 done

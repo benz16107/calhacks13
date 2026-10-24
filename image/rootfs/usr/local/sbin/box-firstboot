@@ -16,5 +16,8 @@ id=$(openssl pkey -pubin -in identity.pub -outform DER | sha256sum | cut -c1-6)
 # Written to /etc/hostname, not only the kernel: NetworkManager (Personal) resets the name from that file.
 if [ "$(cat /etc/hostname)" = gurt ]; then echo "gurt-$id" > /etc/hostname; fi
 cat /etc/hostname > /proc/sys/kernel/hostname
+# GNOME's first-boot setup fills the computer name from the pretty hostname; empty, it names the machine after
+# the person's account instead.
+grep -q '^PRETTY_HOSTNAME=' /etc/machine-info 2>/dev/null || echo "PRETTY_HOSTNAME=$(cat /etc/hostname)" >> /etc/machine-info
 if command -v sshd >/dev/null; then ssh-keygen -A >/dev/null; fi
 echo "gurt-$id is set up"

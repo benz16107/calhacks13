@@ -29,7 +29,7 @@ if [[ ${1:-} != --here ]]; then
     echo "rm -rf $dest; mkdir -p $dest"
     echo "base64 -d <<'EOF' | tar -xzf - -C $dest"
     git ls-files -co --exclude-standard | while IFS= read -r f; do [[ -e $f ]] && printf '%s\n' "$f"; done |
-      tar -czf - -T - | base64
+      tar -czf - --mode=go+rX,go-w -T - | base64 # task users must read /opt/box, whatever this checkout's umask
     echo EOF
     echo "echo '$(git rev-parse --short HEAD)$(git diff --quiet HEAD -- . || echo +dirty)' > $dest/image/.commit"
     [[ -n $key ]] && echo "echo $key | base64 -d > $dest/image/.ssh-key"
@@ -170,8 +170,7 @@ if [[ $edition == server ]]; then
 else
   # The shared files, without the Server's screen and networking, then the Personal edition's own.
   rsync -a --exclude /etc/fstab --exclude /etc/systemd/network/ --exclude /etc/systemd/system/box-kiosk.service \
-    --exclude /usr/local/lib/box-os/kiosk.py --exclude /etc/systemd/system/box.service.d/network.conf \
-    "$src/image/rootfs/" "$root/"
+    --exclude /usr/local/lib/box-os/kiosk.py "$src/image/rootfs/" "$root/"
   rsync -a "$src/image/rootfs-personal/" "$root/"
 fi
 mkdir -p "$root/etc/box-os"
@@ -226,6 +225,16 @@ printf 'GurtOS %s %s\n' "$Edition" "$version" > "$root/etc/issue.net"
   locale-gen en_US.UTF-8 >/dev/null
   update-locale LANG=en_US.UTF-8
   systemctl enable nftables box-firstboot box-confirm box-install box-owner.service box-owner.path >/dev/null 2>&1
+  # The distributor logo GNOME shows (its first-boot setup, Settings > About) is GurtOS, not Ubuntu.
+  logo=/usr/share/icons/hicolor/symbolic/apps/dev.box.Box-symbolic.svg
+  if [ -f $logo ]; then
+    for t in Yaru Adwaita; do
+      f=$(find /usr/share/icons/$t -name start-here-symbolic.svg | head -1)
+      [ -z "$f" ] || cp $logo "$f"
+      gtk-update-icon-cache -q -f /usr/share/icons/$t 2>/dev/null || true
+    done
+  fi
+  glib-compile-schemas /usr/share/glib-2.0/schemas
   systemctl set-default graphical.target >/dev/null 2>&1
   update-initramfs -u -k all >/dev/null
   cd /boot
