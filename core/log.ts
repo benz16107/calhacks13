@@ -7,12 +7,18 @@ import type { Approval, LogEvent, NewEvent, Task, TaskState } from './contract.t
 export const hashLine = (line: string) => createHash('sha256').update(line).digest('hex');
 const ZERO = '0'.repeat(64);
 
-/** The seqs whose `prev` does not match the line before them. Entries without a `prev` (a log from before the chain) are skipped. */
+/**
+ * The seqs whose `prev` does not match the line before them. Lines before the chain began (an older log) have no
+ * `prev` and are skipped; once one line has it, every later line must, or removing `prev` would hide an edit.
+ */
 export function chainBreaks(lines: string[]): number[] {
   const bad: number[] = [];
+  let chained = false;
   lines.forEach((line, i) => {
     const prev = JSON.parse(line).prev;
-    if (prev !== undefined && prev !== (i ? hashLine(lines[i - 1]) : ZERO)) bad.push(i + 1);
+    if (prev === undefined && !chained) return;
+    chained = true;
+    if (prev !== (i ? hashLine(lines[i - 1]) : ZERO)) bad.push(i + 1);
   });
   return bad;
 }
@@ -36,7 +42,8 @@ export class Log {
   }
 
   append(e: NewEvent): LogEvent {
-    const full = { seq: this.events.length + 1, at: new Date().toISOString(), prev: this.last, ...e } as LogEvent;
+    // prev comes last so an event cannot bring its own: the chain is the log's, not the caller's.
+    const full = { seq: this.events.length + 1, at: new Date().toISOString(), ...e, prev: this.last } as LogEvent;
     const line = JSON.stringify(full);
     fs.writeSync(this.fd, line + '\n');
     fs.fsyncSync(this.fd);

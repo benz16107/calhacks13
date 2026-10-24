@@ -98,3 +98,19 @@ test('a log from before the chain still loads, and the chain starts at its first
   assert.equal(JSON.parse(lines[1]).prev, hashLine(old));
   assert.deepEqual(chainBreaks(lines), []);
 });
+
+test('an event cannot bring its own prev, and stripping prev from the lines after an edit still shows the edit', () => {
+  const file = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'log-')), 'log.jsonl');
+  const log = new Log(file);
+  log.append({ type: 'task.created', task: 'a', spec, user: 'box-a' });
+  log.append({ type: 'cost', task: 'a', cents: 5, what: 'model', prev: 'forged' } as any); // a caller tries to set the link
+  log.append({ type: 'task.state', task: 'a', state: 'running', layers: [] });
+  const lines = () => fs.readFileSync(file, 'utf8').split('\n').filter(Boolean);
+  assert.equal(JSON.parse(lines()[1]).prev, hashLine(lines()[0]));
+  assert.deepEqual(chainBreaks(lines()), []);
+
+  const edited = lines();
+  edited[0] = edited[0].replace('"t"', '"edited"');
+  const stripped = edited.map((l, i) => (i === 0 ? l : JSON.stringify({ ...JSON.parse(l), prev: undefined })));
+  assert.deepEqual(chainBreaks(stripped), [2, 3], 'lines without prev after the chain began are breaks');
+});
