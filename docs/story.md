@@ -92,7 +92,7 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 | Keys never reach the agent: a placeholder in the task, the real key swapped in by the proxy | A hijacked or confused Claude has no key to leak | The vault and proxy | Nothing | Shipped |
 | A page with hidden instructions fails: the task reaches only its allowed hosts | Prompt injection cannot send anything out | The network rule | Nothing | Shipped |
 | Spending waits for your OK, and any one task can be undone | A wrong edit or purchase costs one tap | Approvals and undo | Nothing | Shipped |
-| Live view and control from the portal and phone | You can watch an unattended agent | The portal and phone app | Nothing | Shipped |
+| Live view and control from the portal, the phone, the Watch and the Mac menu bar, with the box deciding which device may approve what | You can watch and answer an unattended agent from wherever you are | The portal, the native iPhone, Watch and Mac apps, and the box rule: the Watch approves up to $25 and never Business or Shopper requests | Nothing | Shipped. iPhone in internal TestFlight, Mac a notarized download |
 | A GurtOS MCP server for Claude Code and Claude Desktop | The tools you already use start and watch tasks safely | core/claude-mcp.ts, using a paired device's token | Claude Code and Desktop are the clients | Shipped |
 | Current Claude models chosen per task, with their cost | Use the right model for each job and see what it costs | core/models.ts, core/pricing.ts | Haiku, Sonnet and Opus 5.5 | Shipped |
 | A Haiku second-opinion check before risky steps | A cheap second look before a step that spends, deletes or uses the network | The approval path | Haiku 5.5 as the checker | Shipped, inconsistent on one case |

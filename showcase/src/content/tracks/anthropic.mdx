@@ -133,6 +133,27 @@ The same one-line task cost 0.084 cents on Haiku (10 s), 1.31 cents on Sonnet (8
 
 </Details>
 
+## When it needs you, wherever you are
+
+The agents run at home while you are somewhere else, so the request comes to you. The same request reaches every paired device at once, and the box, not the device, decides which device may answer it.
+
+<Compare labels={["iPhone: anything, with Face ID when money moves", "Apple Watch: small requests only"]}>
+<div slot="a">
+
+<Shot src="track/anthropic/iphone-request.png" dark="track/anthropic/iphone-request-dark.png" size="phone" alt="The GurtOS iPhone app showing a request from Home box: Buy a GPU hour, $8, the agent's question, its budget, the payee Test Vendor and the agent's checks, with Deny and Approve $8 buttons." caption="A task asks to spend $8 of test money over its $5 budget. <strong>Approve $8</strong> asks for Face ID first, and the box logs the answer as Face ID, reported by the phone." />
+
+</div>
+<div slot="b">
+
+<Shot src="track/anthropic/watch-8-and-42.png" alt="Two Apple Watch screens. Left: Buy a GPU hour, $8, with deny and approve buttons. Right: Renew three domains, $42, with the text Approve this on your iPhone with Face ID and only a deny button." caption="$8 can be approved on the wrist with a double tap. $42 cannot: the box refuses a Watch above $25 (the default, set in Settings), any request on GurtOS Business and any Shopper purchase, so the Watch shows only Deny and points to the iPhone." />
+
+</div>
+</Compare>
+
+<Shot src="track/anthropic/mac-menu.png" dark="track/anthropic/mac-menu-dark.png" size="phone" alt="The GurtOS Mac menu bar menu: Home box with 0 running, three requests under Needs you, Ask Home box with the shortcut Option Command G, Machines, Pause all agents, Settings and Quit." caption="On the Mac where you work, the menu bar lists what needs you (Approve uses Touch ID when money moves), starts a task with ⌥⌘G, and has <strong>Pause all agents</strong>, the kill switch." />
+
+The iPhone app is in internal TestFlight testing, the Mac app is a notarized download from the GitHub release, and Android uses the web app as an APK. None is on an app store. The web app at app.gurtos.com needs no install. These screens are from the iOS and watchOS simulators and a Mac, with test money.
+
 ## From the tools you already use
 
 A GurtOS MCP server (`core/claude-mcp.ts`) lets Claude Code and Claude Desktop start a task, list tasks, read a task's log and diff, see and answer pending approvals, and undo or keep a task. It calls the box's API with a paired device's token, so it goes through the same approvals, budgets and log as a phone and never sees a vault key. The merge gate has Claude start a task, answer its question as its own paired device, read its log, see its diff and undo it, and a refused action comes back as an error with no key in it. Keep needs a device paired as the owner.
@@ -170,7 +191,7 @@ The 12 cases include a hidden comment in a page asking for `.env`, invisible pag
   { what: "Keys never reach the agent: a placeholder in the task, the real key swapped in by the proxy", why: "A hijacked or confused Claude has no key to leak", os: "The vault and proxy", track: "Nothing", status: "Shipped" },
   { what: "A page with hidden instructions fails: the task reaches only its allowed hosts", why: "Prompt injection cannot send anything out", os: "The network rule", track: "Nothing", status: "Shipped" },
   { what: "Spending waits for your OK, and any one task can be undone", why: "A wrong edit or purchase costs one tap", os: "Approvals and undo", track: "Nothing", status: "Shipped" },
-  { what: "Live view and control from the portal and phone", why: "You can watch an unattended agent", os: "The portal and phone app", track: "Nothing", status: "Shipped" },
+  { what: "Live view and control from the portal, the phone, the Watch and the Mac menu bar, with the box deciding which device may approve what", why: "You can watch and answer an unattended agent from wherever you are", os: "The portal, the native iPhone, Watch and Mac apps, and the box rule: the Watch approves up to $25 and never Business or Shopper requests", track: "Nothing", status: "Shipped. iPhone in internal TestFlight, Mac a notarized download" },
   { what: "A GurtOS MCP server for Claude Code and Claude Desktop", why: "The tools you already use start and watch tasks safely", os: "core/claude-mcp.ts, using a paired device's token", track: "Claude Code and Desktop are the clients", status: "Shipped" },
   { what: "Current Claude models chosen per task, with their cost", why: "Use the right model for each job and see what it costs", os: "core/models.ts, core/pricing.ts", track: "Haiku, Sonnet and Opus 5.5", status: "Shipped" },
   { what: "A Haiku second-opinion check before risky steps", why: "A cheap second look before a step that spends, deletes or uses the network", os: "The approval path", track: "Haiku 5.5 as the checker", status: "Shipped, inconsistent on one case" },
