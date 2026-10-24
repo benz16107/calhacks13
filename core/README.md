@@ -106,6 +106,7 @@ Make `tracks/<name>/track.ts` and default-export a `Track` with any of these slo
 | `apps` | The portal lists them. Their pages are your routes. |
 | `routes` | `'POST /hook': (req, box) => Response`, served at `/t/<name>/hook` on the box's API. Webhooks go here. |
 | `secrets` | Vault keys this track's routes and triggers may read with `box.secret(name)`. Tools and jobs declare their own. |
+| `optionalSecrets` | Keys among the app's declared secrets it can run without (it falls back to test mode). A new box turns the app on when only these are missing; the App Center marks them `optional: true`. |
 | `openRoutes` | Route keys (like `'GET /status'`) that need no paired-phone token, even for a request that arrives through a public proxy. For a route that is public on purpose, or checks its own secret (the Jira panel's routes). Every other route needs a phone. An open route must return nothing private unless its own check passes. |
 
 Rules:
@@ -189,7 +190,7 @@ The `owner` flag is ignored from anyone who is not already the owner.
 **An app** is a track. Each entry has `id` (the track name), `title`, `description` (the track's own, else the
 first paragraph of its README), `status` (`enabled`, `disabled` or `error`, with `error` text), and `access`:
 `tools` (name and description), `jobs`, `hosts` the tools reach, `secrets` (the key **names** it needs, each with
-`set: true or false`, never a value), `triggers` and `routes`. `ui` lists its windows (`name, title, href`).
+`set: true or false` and `optional: true` for a key it can run without, never a value), `triggers` and `routes`. `ui` lists its windows (`name, title, href`).
 
 Turning an app **off** takes its tools, jobs, routes, webhooks, log readers and windows out at once and stops
 its triggers; a task that asks for one of its tools is refused. A trigger that returns a stop function from

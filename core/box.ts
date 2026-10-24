@@ -794,7 +794,7 @@ class Core {
         tools: tools.map((t) => ({ name: t.name, description: t.description })),
         jobs: jobs.map((j) => j.name),
         hosts: [...new Set(tools.flatMap((t) => t.hosts ?? []))].sort(),
-        secrets: secretNames.map((n) => ({ name: n, set: this.vault.has(n) })),
+        secrets: secretNames.map((n) => ({ name: n, set: this.vault.has(n), ...(track?.optionalSecrets?.includes(n) ? { optional: true } : {}) })),
         triggers: (track?.triggers ?? []).map((t) => t.name),
         routes: Object.keys(track?.routes ?? {}),
       },
@@ -811,7 +811,7 @@ class Core {
     if (!fs.existsSync(path.join(HOME, 'apps.json')) && !this.log.events.length && !process.env.BOX_DEMO) {
       for (const name of this.installed.keys()) {
         const need = this.appEntry(name).access.secrets;
-        if (name === 'example' || need.some((k) => !k.set)) this.disabled.add(name);
+        if (name === 'example' || need.some((k) => !k.set && !('optional' in k))) this.disabled.add(name);
       }
       saveDisabled(HOME, this.disabled);
     }

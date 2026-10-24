@@ -171,6 +171,11 @@ export interface Track {
   description?: string;
   /** Vault keys this track's routes and triggers may read with box.secret(). Tools and jobs declare their own. */
   secrets?: string[];
+  /**
+   * Keys among this app's declared secrets (track, tool or job) that it can run without, like a payment key it
+   * falls back to test mode without. A new box turns the app on when only these are missing.
+   */
+  optionalSecrets?: string[];
   triggers?: Trigger[];
   tools?: Tool[];
   logReaders?: LogReader[];
