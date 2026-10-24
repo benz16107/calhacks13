@@ -2,6 +2,7 @@
 //   node --experimental-strip-types core/box.ts
 // Env: BOX_HOME (default /var/lib/box), BOX_VAULT, BOX_PORT (default 7700, 0 = off), BOX_LISTEN (default 127.0.0.1).
 import type { ChildProcess } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 import { createHash, randomBytes } from 'node:crypto';
 import fs from 'node:fs';
 import http from 'node:http';
@@ -52,6 +53,7 @@ function listenSocket(server: http.Server, file: string, owner?: { uid: number; 
 
 const dollars = (cents: number) => `$${(cents / 100).toFixed(2)}`;
 const BOX_ID = process.env.BOX_ID ?? os.hostname();
+const BOX_OWNER = process.env.BOX_OWNER; // the human (with sudo) on a Personal box; unset on a Server box
 const BOX_NAME = process.env.BOX_NAME ?? BOX_ID;
 
 interface Device {
@@ -82,6 +84,8 @@ class Core {
   devicesPath = path.join(HOME, 'devices.json');
   devices: Device[] = fs.existsSync(this.devicesPath) ? JSON.parse(fs.readFileSync(this.devicesPath, 'utf8')) : [];
   pairCodes = new Map<string, number>(); // one-time code -> expiry (ms)
+  linksPath = path.join(HOME, 'links.json');
+  links: Record<string, string> = fs.existsSync(this.linksPath) ? JSON.parse(fs.readFileSync(this.linksPath, 'utf8')) : {};
   uidTask = new Map<number, string>();
   relay = relayCert(HOME);
   proxyPort = 0;
@@ -146,7 +150,10 @@ class Core {
   async start(t: Task) {
     try {
       sandbox.kill(t); // a worker left over from a core that died without the box rebooting
-      if (t.state === 'queued') this.move(t, 'running', { layers: doneLayers(this.log.events, this.state, t.workspace) });
+      // A linked (real-folder) workspace is not layer-stacked: each task starts from the real folder, and
+      // the owner Keeps or Undoes it. An owned workspace stacks done tasks as layers (Server undo model).
+      const layers = sandbox.isLinked(t.workspace) ? [] : doneLayers(this.log.events, this.state, t.workspace);
+      if (t.state === 'queued') this.move(t, 'running', { layers });
       // Everything goes through the box's proxy. Its own address stays direct, for Droid's Factory calls.
       const proxy = `http://127.0.0.1:${this.proxyPort}`;
       const env: Record<string, string> = {
@@ -170,6 +177,7 @@ class Core {
         });
       }
       const ids = sandbox.prepare(t);
+      sandbox.snapshotBase(t);
       this.uidTask.set(ids.uid, t.id);
       await this.openBroker(t, ids);
       const child = sandbox.spawnWorker(t, ids, env);
@@ -192,7 +200,7 @@ class Core {
     this.brokers.get(t.id)?.close();
     this.brokers.delete(t.id);
     sandbox.seal(t);
-    if (t.state === 'done' || t.state === 'undone') this.refreshView(t.workspace);
+    if ((t.state === 'done' || t.state === 'undone') && !sandbox.isLinked(t.workspace)) this.refreshView(t.workspace);
   }
 
   refreshView(workspace: string) {
@@ -375,10 +383,38 @@ class Core {
 
   // ---------- tracks ----------
 
+  /** Point a workspace at a real folder on disk (the owner's ~/Documents/thesis). Tasks copy it; Keep writes back. */
+  linkWorkspace(name: string, realPath: string) {
+    if (!/^[\w.-]+$/.test(name)) throw new Error(`bad workspace name ${name}`);
+    const real = path.resolve(realPath);
+    if (!fs.existsSync(real) || !fs.statSync(real).isDirectory()) throw new Error(`no folder ${real}`);
+    if (BOX_OWNER) {
+      // The owner's folder may be 0700; let task users read it through their overlay copies.
+      try {
+        execFileSync('setfacl', ['-R', '-m', 'u:root:rX', real]);
+      } catch {} // setfacl may be absent; the mount still works when perms already allow
+    }
+    this.links[name] = real;
+    sandbox.linkBase(name, real);
+    fs.writeFileSync(this.linksPath, JSON.stringify(this.links, null, 2));
+    if (!fs.existsSync(dirs.view(name)) && !sandbox.isLinked(name)) return;
+  }
+
+  /** Apply a done task's changes to its linked real folder (owner's Keep), or report a conflict. */
+  keep(id: string) {
+    const t = this.must(id);
+    if (t.state !== 'done') throw new Error(`task ${id} is ${t.state}; only a done task can be kept`);
+    const out = sandbox.keep(t);
+    if (out.conflicts) this.write({ type: 'task.step', task: id, text: `keep found a conflict: you changed ${out.conflicts.join(', ')} too`, data: { keep: 'conflict', conflicts: out.conflicts } });
+    else this.write({ type: 'task.step', task: id, text: `kept ${out.kept?.length ?? 0} change(s) to ${this.links[t.workspace]}`, data: { keep: 'applied', changes: out.kept } });
+    return out;
+  }
+
   boxFor(track: string): Box {
     return {
       createTask: (spec) => this.createTask({ source: track, ...spec }),
       workspace: (name, fromDir) => sandbox.workspace(name, fromDir),
+      linkWorkspace: (name, realPath) => this.linkWorkspace(name, realPath),
       task: (id) => this.state.tasks.get(id),
       tasks: () => [...this.state.tasks.values()],
       undo: (id) => this.undo(id),
@@ -542,8 +578,15 @@ class Core {
         switch (route) {
           case 'GET /tasks':
             return [...this.state.tasks.values()];
-          case 'POST /tasks':
+          case 'POST /tasks': {
+            // "Ask an agent on this folder" (Personal): link the real folder, then make the task on it.
+            if (body.folder) {
+              const name = 'owner-' + path.basename(String(body.folder)).replace(/[^\w.-]/g, '-');
+              this.linkWorkspace(name, String(body.folder));
+              body.workspace = name;
+            }
             return this.createTask(body);
+          }
           case 'GET /tasks/:id':
             return {
               task: this.must(id),
@@ -552,6 +595,8 @@ class Core {
             };
           case 'GET /tasks/:id/diff':
             return sandbox.diff(this.must(id));
+          case 'POST /tasks/:id/keep':
+            return this.keep(id);
           case 'POST /tasks/:id/undo':
             return this.undo(id);
           case 'GET /approvals':
@@ -568,6 +613,8 @@ class Core {
           }
           case 'GET /log':
             return this.log.events.slice(Number(q('after') ?? 0)).filter((e) => !q('task') || e.task === q('task'));
+          case 'GET /owner':
+            return BOX_OWNER ? { user: BOX_OWNER, home: os.homedir() === '/root' ? `/home/${BOX_OWNER}` : os.homedir() } : null;
           case 'GET /apps':
             return this.apps;
           case 'GET /health':
@@ -692,6 +739,7 @@ data: ${JSON.stringify(e)}
       factoryKey: () => this.vault.get('FACTORY_API_KEY'),
     }, this.relay);
     const tracks = await this.loadTracks();
+    for (const [name, real] of Object.entries(this.links)) sandbox.linkBase(name, real);
     for (const ws of fs.readdirSync(path.join(HOME, 'workspaces'))) this.refreshView(ws);
     // Resume what was going when the box went down. Approvals still pending stay pending.
     for (const t of this.state.tasks.values()) {

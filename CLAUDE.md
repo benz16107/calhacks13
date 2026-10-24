@@ -23,6 +23,24 @@ The product is four demo moments. Every thread's work serves one of them or plug
 
 Also: one action log of everything every agent did, and the cost of each task.
 
+## Editions
+
+The same OS ships in three editions. Server and Personal are built now; Team is a maybe for later. The core,
+the tracks and the four moments are shared; the editions differ in who the box belongs to and how its screen
+and controls are presented.
+
+- **Server** (what we have built): an always-on box at home or in the cloud. The Vultr VM is a Server box,
+  not a separate edition. Agents work 24/7. The box's screen is the home-server OS UI (Figma direction A).
+  There is no human user with sudo.
+- **Personal:** installed on your own laptop or desktop. You use it as a normal computer: Ubuntu's GNOME
+  desktop, your own account with sudo. Agents work beside you as separate users without sudo, on copies of
+  your real folders, with undo. The Box layer lives in the desktop: approvals as desktop notifications, a
+  top-bar indicator for running tasks, the Box app (the portal in a window), Time Machine for what agents
+  changed in your files, and "Ask an agent" on a folder in Files. The desktop side is built in `personal/`.
+- **Team (maybe):** one box shared by several people with roles (who may approve what, up to how much),
+  routed approvals, per-person budgets, a shared audit trail. Don't build it, but don't design anything that
+  blocks it. For example, approvals already record who answered and could later record who is allowed to.
+
 ## Decided
 
 - TypeScript on Node 22 or newer. It must run on ARM64 (laptop VM) and x86 (linuxbox and Vultr VMs).

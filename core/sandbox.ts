@@ -10,13 +10,21 @@
 //     root/            the task's copy of the workspace, only its user can enter
 //     home/            the task user's home              broker.sock  worker.log
 import { execFileSync, spawn, spawnSync, type ChildProcess } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import type { Task } from './contract.ts';
 
 export const HOME = process.env.BOX_HOME ?? '/var/lib/box';
+
+// A workspace's base is BOX_HOME/workspaces/<ws>, unless it is linked to a real folder (Personal edition):
+// then the base is that folder, so Keep writes the task's changes straight into the owner's files.
+const bases = new Map<string, string>();
+export const linkBase = (ws: string, realPath: string) => bases.set(ws, realPath);
+export const isLinked = (ws: string) => bases.has(ws);
+
 export const dirs = {
-  workspace: (ws: string) => path.join(HOME, 'workspaces', ws),
+  workspace: (ws: string) => bases.get(ws) ?? path.join(HOME, 'workspaces', ws),
   view: (ws: string) => path.join(HOME, 'views', ws),
   task: (id: string) => path.join(HOME, 'tasks', id),
   upper: (id: string) => path.join(HOME, 'tasks', id, 'upper'),
@@ -90,7 +98,17 @@ export function prepare(task: Task): { uid: number; gid: number } {
   // The overlay's top directory takes the upper dir's owner, so only this task's user can enter its copy.
   fs.chownSync(dirs.upper(task.id), uid, gid);
   fs.chownSync(path.join(t, 'home'), uid, gid);
-  mountOverlay(dirs.root(task.id), [...task.layers.map(dirs.upper), dirs.workspace(task.workspace)], dirs.upper(task.id));
+  // A linked (real-folder) workspace: the owner's files keep their own permissions, so overlay would refuse
+  // the agent write access to copy them up. Give the task a writable copy of the folder as its lower instead.
+  // It is also a clean snapshot, so the owner editing the folder mid-task can't disturb the agent.
+  let base = dirs.workspace(task.workspace);
+  if (isLinked(task.workspace)) {
+    base = path.join(t, 'base');
+    fs.rmSync(base, { recursive: true, force: true });
+    fs.cpSync(dirs.workspace(task.workspace), base, { recursive: true }); // shortcut: whole-folder copy; fine for a document folder, chunk it for huge trees
+    run('chmod', '-R', 'a+rwX', base);
+  }
+  mountOverlay(dirs.root(task.id), [...task.layers.map(dirs.upper), base], dirs.upper(task.id));
   return { uid, gid };
 }
 
@@ -145,22 +163,31 @@ export function spawnWorker(task: Task, ids: { uid: number; gid: number }, extra
 
 export type Change = { path: string; change: 'added' | 'modified' | 'deleted' };
 
-/** What a task changed, from its own layer only, and a unified diff of it. Cost: the number of changes. */
-export function diff(task: Task, maxBytes = 200_000): { changes: Change[]; diff: string } {
+/** The files a task changed, from its own layer only. Cost: the number of changes, not the workspace size. */
+export function changes(task: Task): Change[] {
   const upper = dirs.upper(task.id);
   const lowers = [...task.layers.map(dirs.upper), dirs.workspace(task.workspace)];
   const below = (rel: string) => lowers.map((l) => path.join(l, rel)).find((f) => fs.existsSync(f));
-  const changes: Change[] = [];
+  const out: Change[] = [];
   const walk = (rel: string) => {
     for (const name of fs.readdirSync(path.join(upper, rel)).sort()) {
       const r = path.join(rel, name);
       const st = fs.lstatSync(path.join(upper, r));
-      if (st.isCharacterDevice() && st.rdev === 0) changes.push({ path: r, change: 'deleted' }); // overlayfs whiteout
+      if (st.isCharacterDevice() && st.rdev === 0) out.push({ path: r, change: 'deleted' }); // overlayfs whiteout
       else if (st.isDirectory()) walk(r);
-      else changes.push({ path: r, change: below(r) ? 'modified' : 'added' });
+      else out.push({ path: r, change: below(r) ? 'modified' : 'added' });
     }
   };
   if (fs.existsSync(upper)) walk('');
+  return out;
+}
+
+/** What a task changed, from its own layer only, and a unified diff of it. */
+export function diff(task: Task, maxBytes = 200_000): { changes: Change[]; diff: string } {
+  const upper = dirs.upper(task.id);
+  const lowers = [...task.layers.map(dirs.upper), dirs.workspace(task.workspace)];
+  const below = (rel: string) => lowers.map((l) => path.join(l, rel)).find((f) => fs.existsSync(f));
+  const changes = changesOf(task);
   let text = '';
   for (const c of changes) {
     if (text.length > maxBytes) break;
@@ -170,6 +197,72 @@ export function diff(task: Task, maxBytes = 200_000): { changes: Change[]; diff:
     text += r.stdout;
   }
   return { changes, diff: text.slice(0, maxBytes) };
+}
+const changesOf = changes;
+
+const sha = (file: string) => createHash('sha256').update(fs.readFileSync(file)).digest('hex');
+
+/** Record a hash of every file in a linked workspace's real folder when a task starts, to catch later
+ *  owner edits at Keep time. Only for linked (real-folder) workspaces. */
+export function snapshotBase(task: Task) {
+  if (!isLinked(task.workspace)) return;
+  const base = dirs.workspace(task.workspace);
+  const manifest: Record<string, string> = {};
+  const walk = (rel: string) => {
+    for (const name of fs.readdirSync(path.join(base, rel))) {
+      const r = rel ? path.join(rel, name) : name;
+      const st = fs.lstatSync(path.join(base, r));
+      if (st.isDirectory()) walk(r);
+      else if (st.isFile()) manifest[r] = sha(path.join(base, r));
+    }
+  };
+  if (fs.existsSync(base)) walk('');
+  fs.writeFileSync(path.join(dirs.task(task.id), 'manifest.json'), JSON.stringify(manifest));
+}
+
+/**
+ * Apply a done task's changes to its linked real folder, atomically per file and all-or-nothing on conflict.
+ * If the owner changed any of the same files since the task started, nothing is applied and the clash is
+ * reported. Before-images are kept under BOX_HOME/timemachine/<task> so the desktop can undo the Keep later.
+ */
+export function keep(task: Task): { kept?: Change[]; conflicts?: string[] } {
+  if (!isLinked(task.workspace)) throw new Error(`workspace ${task.workspace} is not a real folder; nothing to keep`);
+  const base = dirs.workspace(task.workspace);
+  const upper = dirs.upper(task.id);
+  const manifestPath = path.join(dirs.task(task.id), 'manifest.json');
+  const manifest: Record<string, string> = fs.existsSync(manifestPath) ? JSON.parse(fs.readFileSync(manifestPath, 'utf8')) : {};
+  const cs = changesOf(task);
+
+  // Conflict: the owner touched a file this task also touched, since the task started.
+  const conflicts: string[] = [];
+  for (const c of cs) {
+    const real = path.join(base, c.path);
+    const now = fs.existsSync(real) && fs.statSync(real).isFile() ? sha(real) : undefined;
+    if (c.change === 'added' && now !== undefined) conflicts.push(c.path); // the owner created it too
+    if ((c.change === 'modified' || c.change === 'deleted') && now !== manifest[c.path]) conflicts.push(c.path);
+  }
+  if (conflicts.length) return { conflicts };
+
+  const saveDir = path.join(HOME, 'timemachine', task.id);
+  fs.mkdirSync(saveDir, { recursive: true });
+  for (const c of cs) {
+    const real = path.join(base, c.path);
+    if (fs.existsSync(real)) {
+      // keep a before-image so Time Machine can undo this Keep
+      fs.mkdirSync(path.dirname(path.join(saveDir, c.path)), { recursive: true });
+      fs.copyFileSync(real, path.join(saveDir, c.path));
+    }
+    if (c.change === 'deleted') {
+      fs.rmSync(real, { force: true });
+    } else {
+      fs.mkdirSync(path.dirname(real), { recursive: true });
+      const tmp = `${real}.box-${process.pid}`;
+      fs.copyFileSync(path.join(upper, c.path), tmp);
+      fs.renameSync(tmp, real); // atomic per file
+    }
+  }
+  fs.writeFileSync(path.join(saveDir, 'kept.json'), JSON.stringify({ at: new Date().toISOString(), changes: cs }));
+  return { kept: cs };
 }
 
 /** Put the task's file changes on disk, so a step the log calls done survives a power cut. */

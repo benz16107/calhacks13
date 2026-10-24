@@ -48,7 +48,7 @@ async function startBox() {
   box = spawn(process.execPath, [...process.execArgv, new URL('./box.ts', import.meta.url).pathname], {
     detached: true,
     stdio: ['ignore', out, out],
-    env: { ...process.env, BOX_HOME: HOME, BOX_PORT: 'auto', BOX_VAULT: path.join(HOME, 'vault.env'), BOX_STDB_DB: DB, BOX_PROXY_PORT: 'auto', BOX_APPROVAL_WAIT_MS: String(WINDOW), BOX_ID: 'demo-box', BOX_NAME: 'Demo box', BOX_PEERS: JSON.stringify([{ id: 'vultr', name: 'Vultr box', stdb: 'box' }]) },
+    env: { ...process.env, BOX_HOME: HOME, BOX_PORT: 'auto', BOX_VAULT: path.join(HOME, 'vault.env'), BOX_STDB_DB: DB, BOX_PROXY_PORT: 'auto', BOX_APPROVAL_WAIT_MS: String(WINDOW), BOX_OWNER: 'owner', BOX_ID: 'demo-box', BOX_NAME: 'Demo box', BOX_PEERS: JSON.stringify([{ id: 'vultr', name: 'Vultr box', stdb: 'box' }]) },
   });
   for (let i = 0; i < 300; i++) {
     if (await api('GET', '/health').catch(() => undefined)) {
@@ -485,6 +485,42 @@ await moment('pairing and more than one box', async () => {
   check(status === 401, 'after it is revoked, that phone can no longer approve (401)');
   await api('POST', `/api/approvals/${askB.id}`, { approved: true, by: 'demo' }); // let B finish
   await settled([B.id]);
+});
+
+// ---------- Personal: work on the owner's real folder, then Keep or Undo ----------
+
+await moment("personal: an agent works on the owner's folder, then Keep or Undo", async () => {
+  const folder = path.join(HOME, 'owner', 'thesis');
+  fs.mkdirSync(folder, { recursive: true });
+  fs.writeFileSync(path.join(folder, 'intro.md'), 'Draft intro.\n');
+  fs.writeFileSync(path.join(folder, 'notes.md'), 'notes\n');
+
+  const owner = await api<{ user: string } | null>('GET', '/api/owner');
+  check(owner?.user === 'owner', `the box knows its owner (${owner?.user}); agents run as their own users, never as the owner`);
+
+  // "Ask an agent on this folder": the task works on a copy; the real folder is untouched until Keep.
+  const T = await api<Task>('POST', '/tasks', { title: 'Polish the intro', worker: 'fake', source: 'demo', folder, prompt: 'append intro.md Polished by the agent.' });
+  await settled([T.id]);
+  check(fs.readFileSync(path.join(folder, 'intro.md'), 'utf8').trim() === 'Draft intro.', 'the real folder was untouched while the agent worked');
+  const d = await api<{ changes: { path: string }[]; diff: string }>('GET', `/api/tasks/${T.id}/diff`);
+  check(d.changes.some((c) => c.path === 'intro.md') && d.diff.includes('+Polished by the agent.'), 'the owner sees the diff of what the agent changed');
+
+  const kept = await api<{ kept?: unknown[] }>('POST', `/api/tasks/${T.id}/keep`);
+  check(!!kept.kept && fs.readFileSync(path.join(folder, 'intro.md'), 'utf8').includes('Polished by the agent.'), 'Keep applied the change to the real folder');
+  check(fs.existsSync(path.join(HOME, 'timemachine', T.id, 'intro.md')), 'a before-image was saved, so Time Machine can undo the Keep later');
+
+  // Conflict: the owner edits the same file while a task works; Keep refuses rather than overwrite.
+  const C = await api<Task>('POST', '/tasks', { title: 'Edit the notes', worker: 'fake', source: 'demo', folder, prompt: 'append notes.md a line from the agent' });
+  await settled([C.id]);
+  fs.writeFileSync(path.join(folder, 'notes.md'), 'notes\nthe owner edited this\n');
+  const clash = await api<{ conflicts?: string[] }>('POST', `/api/tasks/${C.id}/keep`);
+  check(clash.conflicts?.includes('notes.md') && !fs.readFileSync(path.join(folder, 'notes.md'), 'utf8').includes('from the agent'), "Keep reported a conflict and did not overwrite the owner's edit");
+
+  // Undo discards a task's changes without ever touching the real folder.
+  const U = await api<Task>('POST', '/tasks', { title: 'Throwaway', worker: 'fake', source: 'demo', folder, prompt: 'write scratch.md x' });
+  await settled([U.id]);
+  await api('POST', `/api/tasks/${U.id}/undo`);
+  check(!fs.existsSync(path.join(folder, 'scratch.md')), 'Undo discarded the change; the real folder never received it');
 });
 
 // ---------- each track's own steps: tracks/<name>/demo.ts ----------

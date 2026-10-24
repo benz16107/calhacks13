@@ -102,6 +102,8 @@ export interface Box {
   createTask(spec: TaskSpec): Promise<Task>;
   /** Make a workspace, empty or as a copy of a folder (a git clone, a track's case files). Leaves an existing one alone. */
   workspace(name: string, fromDir?: string): void;
+  /** Link a workspace to a real folder (Personal edition). A task works on an overlay copy; Keep writes back. */
+  linkWorkspace(name: string, realPath: string): void;
   task(id: string): Task | undefined;
   tasks(): Task[];
   /** Stop the task if it is still going and remove its file changes. Other tasks keep theirs. */

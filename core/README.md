@@ -141,6 +141,26 @@ for each thing your part shows. `./demo` runs it after the four moments on a fre
 loaded. Keep it under about 10 seconds. Test-mode keys go in `/etc/box/vault.env` on the test VM; the demo
 copies them into each run's vault.
 
+## Personal edition: the owner and their real folders
+
+On a Personal box the human is the **owner**, a Linux user with sudo, set with `BOX_OWNER`. `GET /api/owner`
+returns `{user, home}` (null on a Server box). Agents always run as their own `box-<id>` users and never as the
+owner; the owner's files are reached only through an overlay copy, never directly.
+
+A task can work on one of the owner's real folders:
+
+- `POST /api/tasks {folder: "/home/you/Documents/thesis", title, prompt}` links that folder to a workspace and
+  starts the task on a writable copy of it. The real folder is untouched while the task runs.
+- `GET /api/tasks/<id>/diff` shows what the agent changed.
+- `POST /api/tasks/<id>/keep` applies the task's changes to the real folder, each file atomically. If the owner
+  changed any of the same files since the task started, it applies nothing and returns `{conflicts: [paths]}`.
+  Otherwise it returns `{kept: changes}` and saves before-images under `BOX_HOME/timemachine/<id>` so the
+  desktop's Time Machine can undo the Keep later.
+- `POST /api/tasks/<id>/undo` discards the task's changes; the real folder never received them.
+
+The portal is reachable on localhost without pairing: pairing only gates requests that carry a device token
+(a phone). The desktop layer in `personal/` uses these routes and the SSE log stream for approvals and events.
+
 ## The API for the portal and the phone
 
 Two parts. **The box's HTTP API** for lists, details and actions. **SpacetimeDB** for live updates and for
@@ -157,7 +177,9 @@ answers without `/api`, which is what the demo and tracks use.
 | `POST /api/tasks {title, prompt, workspace?, tools?, hosts?, budgetCents?}` | The new task. Workspace defaults to `home`, worker to Droid. |
 | `GET /api/tasks/<id>` | `{task, approvals, events}`: the task, its approvals, and its whole action log |
 | `GET /api/tasks/<id>/diff` | `{changes: [{path, change}], diff}`: what it added, modified or deleted, and a unified diff |
-| `POST /api/tasks/<id>/undo` | The task, now `undone` |
+| `POST /api/tasks/<id>/undo` | The task, now `undone`. For a real-folder task, discards its changes. |
+| `POST /api/tasks/<id>/keep` | Personal: apply a done task's changes to its real folder. `{kept}` or `{conflicts}`. |
+| `GET /api/owner` | Personal: `{user, home}`, or null on a Server box |
 | `GET /api/approvals?state=pending` | The inbox. Leave out `state` for all of them. |
 | `POST /api/approvals/<id> {approved: true or false, by: "portal"}` | The approval. The first answer wins. |
 | `GET /api/log?after=<seq>&task=<id>` | Log events, both filters optional (cursor polling) |
