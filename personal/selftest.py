@@ -3,6 +3,7 @@
 # own code (boxapi.py) against a running box at BOX_URL: the calls the notification service, the top bar and the
 # Ask an Agent dialog make, and the service's choices about which notifications to post and close.
 # Prints one JSON line per check: {"ok": true, "what": "..."}.
+import atexit
 import json
 import os
 import shutil
@@ -10,10 +11,11 @@ import sys
 import tempfile
 import time
 import urllib.request
+from datetime import datetime
 
 HERE = os.path.dirname(os.path.realpath(__file__))
 sys.path.insert(0, HERE)
-from boxapi import BOX, api, ask_spec, plan, quote, top_bar  # noqa: E402
+from boxapi import BOX, api, ask_spec, plan, quiet_now, quote, top_bar  # noqa: E402
 
 WS = os.environ.get('PERSONAL_WORKSPACE', 'home')
 
@@ -36,10 +38,20 @@ def state():
     return api('GET', '/api/tasks'), api('GET', '/api/approvals?state=pending')
 
 
-for f in ('box-desktop.py', 'box-ui.py', 'boxapi.py', 'files/box-nautilus.py'):
+# The checks change settings as Setup would; put the box's own settings back however the run ends.
+BEFORE = api('GET', '/api/settings')
+atexit.register(lambda: api('PATCH', '/api/settings', {k: BEFORE[k] for k in ('agentFolders', 'approvalThresholdCents', 'quietHours')}))
+# The box only takes folders in the owner's home or in agentFolders, so the checks use folders under one temporary
+# folder that they name as the folder agents may use, the way Setup's Folders step would.
+ROOT = tempfile.mkdtemp(prefix='personal-demo-')
+atexit.register(lambda: shutil.rmtree(ROOT, ignore_errors=True))
+api('PATCH', '/api/settings', {'agentFolders': [ROOT]})
+
+
+for f in ('box-desktop.py', 'box-ui.py', 'setupwin.py', 'boxapi.py', 'files/box-nautilus.py'):
     with open(os.path.join(HERE, f)) as src:
         compile(src.read(), f, 'exec')  # a syntax check that writes no .pyc
-check(True, 'the notification service, the GurtOS app and the Files extension compile under the system Python')
+check(True, 'the notification service, the GurtOS app, GurtOS Setup and the Files extension compile under the system Python')
 
 with urllib.request.urlopen(f'{BOX}/api/log/stream?after=0', timeout=5) as r:
     head = [r.readline().decode() for _ in range(2)]
@@ -76,7 +88,7 @@ check(f"approval:{a2['id']}" in close, 'denied on the phone: the desktop closes 
 # Ask an Agent on a folder: the task runs on a copy, the service asks for a review, and Keep writes the folder.
 # The folder belongs to a pretend owner (uid 4242), with a private file, to check Keep keeps who owns what.
 OWNER = 4242
-folder = tempfile.mkdtemp(prefix='personal-demo-')
+folder = tempfile.mkdtemp(prefix='notes-', dir=ROOT)
 notes = os.path.join(folder, 'notes.md')
 with open(notes, 'w') as f:
     f.write('# Notes\n')
@@ -85,7 +97,7 @@ os.chmod(folder, 0o750)
 if os.getuid() == 0:
     for p in (folder, notes):
         os.chown(p, OWNER, OWNER)
-spec = ask_spec('Tidy the notes\nKeep the headings.', folder, 1.5)
+spec = ask_spec('Tidy the notes\nKeep the headings.', [folder], 1.5)
 check(spec['title'] == 'Tidy the notes' and spec['budgetCents'] == 150 and spec['folder'] == folder,
       "Ask an Agent turns the owner's words, the folder and a $1.50 budget into a task")
 t3 = api('POST', '/api/tasks', {**spec, 'worker': 'fake', 'prompt': 'write tidy.txt tidied\nappend notes.md - one more line'})
@@ -113,3 +125,43 @@ with open(notes) as f:
 check(back and not os.path.exists(tidy) and api('GET', f"/api/tasks/{t3['id']}")['task'].get('review') == 'undone',
       'Undo Keep puts the changed file back and removes the added one')
 shutil.rmtree(folder, ignore_errors=True)
+
+# GurtOS Setup: the calls its steps make, and what they change on the box.
+setup = api('GET', '/api/setup')
+api('POST', '/api/setup/step', {'id': 'folders'})
+check('folders' in api('GET', '/api/setup')['steps'] and isinstance(setup.get('done'), bool), 'Setup records a step the owner took (POST /api/setup/step)')
+
+a, b = (tempfile.mkdtemp(prefix=f'setup-{n}-', dir=ROOT) for n in 'ab')
+outside = tempfile.mkdtemp(prefix='personal-outside-')
+try:
+    api('PATCH', '/api/settings', {'agentFolders': [a, b]})  # the Folders step
+    two = api('POST', '/api/tasks', {**ask_spec('Compare the two', [a, b], 0), 'worker': 'fake', 'prompt': 'write both.txt yes'})
+    refused = None
+    try:
+        api('POST', '/api/tasks', {**ask_spec('Not allowed', [outside], 0), 'worker': 'fake', 'prompt': 'write x.txt no'})
+    except Exception as e:  # noqa: BLE001
+        refused = str(e)
+    check(two.get('folders') == [a, b] and refused,
+          f'after Setup names the folders agents may use, Ask an agent on two of them is one task, and a folder outside is refused ({refused})')
+    wait(lambda: api('GET', f"/api/tasks/{two['id']}")['task']['state'] in ('done', 'failed'))
+    api('POST', f"/api/tasks/{two['id']}/undo", {})
+
+    api('PATCH', '/api/settings', {'approvalThresholdCents': 500, 'quietHours': {'enabled': True, 'from': '22:00', 'to': '07:00'}})  # Permissions
+    now = api('GET', '/api/settings')
+    late, noon = datetime(2026, 10, 24, 23, 30), datetime(2026, 10, 24, 12, 0)
+    check(now['approvalThresholdCents'] == 500 and quiet_now(now, late) and not quiet_now(now, noon),
+          'Permissions saves the spend limit and quiet hours; at 23:30 approvals arrive without a banner, at 12:00 with one')
+finally:
+    for d in (a, b, outside):
+        shutil.rmtree(d, ignore_errors=True)
+
+secret = 'setup-test-' + os.urandom(6).hex()
+api('PUT', '/api/vault/GURTOS_SETUP_TEST', {'value': secret})  # a key typed into AI models or Apps
+names = api('GET', '/api/vault')
+seen = json.dumps([names, api('GET', '/api/apps?all=1'), api('GET', '/api/settings'), api('GET', '/api/setup')])
+check(any(k['name'] == 'GURTOS_SETUP_TEST' and k['setAt'] for k in names) and secret not in seen,
+      'a key saved in Setup is listed by name and time, and no route the desktop reads shows its value')
+
+apps = api('GET', '/api/apps?all=1')
+check(apps and all('access' in x and 'enabled' in x for x in apps),
+      f'the Apps step lists all {len(apps)} apps with what each reaches and the keys it needs')

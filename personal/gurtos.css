@@ -1,0 +1,77 @@
+/* The GurtOS system (docs/figma/system.md) on libadwaita: its tokens become libadwaita's named colors, so every
+   standard widget picks them up. Light here; gurtos-dark.css overrides the colors when GNOME is dark.
+   One accent (blue: you can act here), one alarm (amber: waits for you), red for undo and blocked. */
+@define-color accent_bg_color #2F64A6;
+@define-color accent_fg_color #FFFFFF;
+@define-color accent_color #2A5C99;
+@define-color destructive_bg_color #B3392B;
+@define-color destructive_fg_color #FFFFFF;
+@define-color destructive_color #A3322A;
+@define-color success_color #2E6B3A;
+@define-color warning_color #7E5200;
+@define-color error_color #A3322A;
+@define-color window_bg_color #F6F5F2;
+@define-color window_fg_color #1D2127;
+@define-color view_bg_color #FDFCFA;
+@define-color view_fg_color #1D2127;
+@define-color headerbar_bg_color #EDEBE6;
+@define-color headerbar_fg_color #1D2127;
+@define-color sidebar_bg_color #ECEAE5;
+@define-color sidebar_fg_color #1D2127;
+@define-color card_bg_color #FEFDFB;
+@define-color card_fg_color #1D2127;
+@define-color popover_bg_color #FEFDFB;
+@define-color dialog_bg_color #FEFDFB;
+@define-color gurt_secondary #565C64;
+@define-color gurt_border #DCD8D0;
+@define-color gurt_border_strong #8A8D92;
+@define-color gurt_accent_subtle #DCE6F3;
+@define-color gurt_attention_bg #F2B544;
+@define-color gurt_attention_fg #7E5200;
+@define-color gurt_add #2E6B3A;
+@define-color gurt_del #A3322A;
+
+/* Type: Atkinson Hyperlegible Next, drawn so I, l and 1 differ and zero is slashed. */
+window, dialog, popover { font-family: "Atkinson Hyperlegible Next", "Ubuntu Sans", sans-serif; font-size: 15px; }
+.monospace, .gurt-mono { font-family: "Atkinson Hyperlegible Mono", monospace; font-size: 14px; }
+.gurt-display { font-size: 34px; font-weight: 700; }
+.gurt-title-2 { font-size: 22px; font-weight: 700; }
+.gurt-numeric { font-size: 40px; font-weight: 700; }
+.caption, .gurt-caption { font-size: 13px; }
+.dim-label, .gurt-secondary { color: @gurt_secondary; opacity: 1; }
+row .subtitle, .gurt-subtitle { font-size: 13px; color: @gurt_secondary; opacity: 1; }
+
+/* Boxed lists: 12 px radius, a border, the faint elevation 1. */
+.boxed-list { border-radius: 12px; border: 1px solid @gurt_border; box-shadow: 0 1px 2px rgba(29, 33, 39, 0.06); }
+
+/* The amber count: one meaning only, an approval that waits for you. */
+.gurt-attention { background: @gurt_attention_bg; color: #1A1206; border-radius: 999px; padding: 1px 8px; font-size: 13px; font-weight: 600; }
+.gurt-attention-text { color: @gurt_attention_fg; }
+.gurt-chip { background: alpha(@window_fg_color, 0.06); border-radius: 999px; padding: 2px 9px; font-size: 13px; }
+
+/* Changes in a review. */
+.change-added { color: @gurt_add; font-weight: 600; }
+.change-modified { color: @gurt_secondary; font-weight: 600; }
+.change-deleted { color: @gurt_del; font-weight: 600; }
+
+/* Setup: a step list on the left is the progress indicator; large 44 px controls. */
+.gurt-steps { background: none; }
+.gurt-steps row { border-radius: 6px; padding: 7px 8px; }
+.gurt-step-num { min-width: 22px; min-height: 22px; border-radius: 999px; border: 1.5px solid @gurt_border_strong; font-size: 12px; color: @gurt_secondary; }
+.gurt-step-current .gurt-step-num { border: 2px solid @accent_bg_color; color: @accent_color; font-weight: 700; }
+.gurt-step-current .gurt-step-label { font-weight: 700; }
+.gurt-step-done .gurt-step-num { background: @accent_bg_color; border-color: @accent_bg_color; color: @accent_fg_color; }
+.gurt-step-upcoming .gurt-step-label { color: @gurt_secondary; }
+.gurt-footer { border-top: 1px solid @gurt_border; padding: 12px 24px; }
+.gurt-footer button { min-height: 44px; padding: 0 22px; border-radius: 999px; }
+.gurt-wordmark { font-size: 22px; }
+.gurt-qr { background: white; border-radius: 12px; padding: 12px; }
+.gurt-add-row .title { color: @accent_color; }
+.gurt-title-1 { font-size: 28px; font-weight: 700; }
+.gurt-chip-attention { background: @gurt_attention_bg; color: #1A1206; }
+/* A review's reassurance strip: nothing outside the folder changed. */
+.gurt-success-strip { background: alpha(@success_color, 0.12); border-radius: 12px; padding: 12px 16px; }
+.gurt-success-strip image { color: @success_color; }
+.gurt-diff { background: @view_bg_color; border: 1px solid @gurt_border; border-radius: 12px; }
+.gurt-side-card button.pill { min-height: 44px; padding-top: 0; padding-bottom: 0; }
+.gurt-title-3 { font-size: 18px; font-weight: 600; }

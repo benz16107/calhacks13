@@ -1,16 +1,16 @@
 #!/usr/bin/env bash
-# The Personal edition's test machine: a Vultr VM with Ubuntu 24.04 and GNOME (see README.md). Run from linuxbox.
+# The Personal edition's test machine: a Vultr VM with Ubuntu 24.04 and GNOME (see README.md). Run from the machine that reaches it over ssh.
 #   personal/vm.sh setup          once: a test owner (ana, with sudo) logged in by GDM, on Xorg so we can take screenshots
 #   personal/vm.sh install        ship this checkout, then core/install.sh and personal/install.sh, and restart the layer
 #   personal/vm.sh layer          on an installed GurtOS Personal: replace only /opt/box/personal and restart the layer
 #   personal/vm.sh as <command>   run a command as ana inside her desktop session
 #   personal/vm.sh wl <args>      input on the machine's screen, any session (personal/wl.py): click X Y, type TEXT, key Return
 #   personal/vm.sh shot <name>    screenshot of her screen into personal/screenshots/<name>.png
-# PERSONAL_VM picks the machine (default personalbox), PERSONAL_USER the session's user (default ana; during GNOME's
+# PERSONAL_VM is its ssh host (required; kept out of the repo), PERSONAL_USER the session's user (default ana; during GNOME's
 # first-boot setup it is gnome-initial-setup).
 set -euo pipefail
 cd "$(dirname "$0")/.."
-vm=${PERSONAL_VM:-personalbox}
+vm=${PERSONAL_VM:?set PERSONAL_VM to the test machine ssh host}
 owner=${PERSONAL_USER:-ana}
 # The session's own environment, read from its gnome-shell, so it also works in GDM's first-boot setup session,
 # which runs on a private D-Bus.

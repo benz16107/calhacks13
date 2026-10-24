@@ -5,47 +5,78 @@ sudo. Agents work beside you as their own users without sudo, on copies of your 
 changes until you choose Keep. This folder is the GNOME side of that: five small pieces that talk to the box's API on
 `127.0.0.1:7700`. The box itself (tasks, the vault, the action log, Keep and Undo) is `core/`.
 
-Tested two ways on a Vultr VM: installed onto plain Ubuntu 24.04 with GNOME 46 (Xorg), and as a fresh install of the
+Tested two ways on a cloud VM: installed onto plain Ubuntu 24.04 with GNOME 46 (Xorg), and as a fresh install of the
 GurtOS Personal ISO walked as a new person on Wayland, Ubuntu's default (below).
 
 ## What it adds
 
 | Piece | What it does | File |
 |---|---|---|
-| Approvals as notifications | Each approval becomes a GNOME notification with Deny and Approve (Approve names the amount). Clicking the body opens the task in GurtOS. An answer from anywhere else (phone, portal, the top bar) withdraws it | `box-desktop.py` |
-| Top-bar indicator | The GurtOS cube with "2 running · 1 needs you". Its menu lists what needs you (with Approve and Deny), what runs, Ask an Agent, Open GurtOS and Settings | `box-desktop.py` |
+| GurtOS Setup | At the owner's first login, after GNOME's own setup: Welcome, AI models, Folders, Permissions, Apps, Pair a phone, Done. Every answer goes to the box | `box-ui.py setup`, `setupwin.py` |
+| Approvals as notifications | Each approval becomes a GNOME notification with Deny and Approve (Approve names the amount). Clicking the body opens the task in GurtOS. An answer from anywhere else (phone, portal, the top bar) withdraws it. In quiet hours it waits in the list with no banner | `box-desktop.py` |
+| Top-bar indicator | The GurtOS box icon with "1 running · 2 need you". Its menu: Needs your OK (with Approve and Deny), Ready to review, Running, then Ask an Agent, Open GurtOS and GurtOS settings | `box-desktop.py` |
 | The GurtOS app | The portal in its own window (WebKitGTK), first in the dock | `box-ui.py app` |
-| Ask an Agent in Files | Right-click a folder. A dialog asks what to do and a budget, and starts a Droid task on a copy of that folder | `files/box-nautilus.py`, `box-ui.py ask` |
-| Keep or Undo | When the task is done, a notification opens a review: every changed file, the diff, the cost. Keep writes the changes into your folder; Undo throws them away; Undo Keep puts the files back later | `box-ui.py review` |
-| Welcome | Once per account, after GNOME's own first-login setup: what agents can and cannot do, and phone pairing when the box has an address a phone can reach | `box-ui.py welcome` |
+| Ask an Agent in Files | Right-click one folder or up to ten. One dialog: the task, the folders it may change, its internet, budget and worker. One Droid task on copies of them | `files/box-nautilus.py`, `box-ui.py ask` |
+| Keep or Undo | When the task is done, a notification opens the review: what changed, the diff, and a card that asks Keep these changes? Put files back undoes a Keep | `box-ui.py review` |
 | Failures | A task that cannot finish says why in a notification (for example, a fresh install's vault has no model key yet) | `box-desktop.py` |
 
-![The welcome after account setup](screenshots/1-welcome.png)
+**The design.** These windows follow the GurtOS system (`docs/figma/system.md`) and the Personal frames in
+`docs/figma/os-v2/personal/`, built from libadwaita's own widgets so they sit among GNOME apps. The system's colour
+tokens in light and dark become libadwaita's named colours (`gurtos.css`, `gurtos-dark.css`); the type is Atkinson
+Hyperlegible Next and Mono (bundled in `fonts/`, SIL OFL); app icons are the system's glyphs on coloured tiles
+(`apptiles.py`, the same paths the portal draws). GNOME's own surfaces (the top bar, notification banners, menus,
+Files) stay GNOME's, with GurtOS content: notification titles use GNOME's header capitalization, as the system says.
 
-![An approval as a GNOME notification](screenshots/2-approval.png)
+## GurtOS Setup and the redesign (Oct 24)
 
-![The top-bar indicator and its menu](screenshots/3-indicator.png)
+Walked on the GurtOS Personal VM as the owner, on Wayland. Each step changes the box as it goes: settings with
+`PATCH /api/settings`, keys with the write-only `PUT /api/vault/<NAME>`, apps with `/api/apps/<id>/enable|disable`,
+each step with `POST /api/setup/step`, then `POST /api/setup/finish`. It opens by itself at login for the owner only,
+after GNOME's own setup, until the box says setup is done, and resumes at the first step not yet taken.
 
-![Ask an Agent in a folder's menu in Files](screenshots/4-files-menu.png)
+| Step | What it does | Checked |
+|---|---|---|
+| Welcome | What keeps agents safe on this computer | Opened by itself at login |
+| AI models | The worker and the write-only `FACTORY_API_KEY`. A saved key shows as saved, never its value | The VM's key was detected without being shown |
+| Folders | The owner's usual folders, each May change or Not allowed (`agentFolders`), plus Add a folder | Documents and Projects saved; a folder outside is refused (self-test) |
+| Permissions | Internet for new tasks, the spend that always asks, the default budget, quiet hours | $5.00 saved; quiet hours mute approval banners (self-test) |
+| Apps | Every app with its icon, the sites it reaches and its keys (amber when missing); a switch turns it on or off; clicking an app with a missing key opens a sheet to add it | `APIFY_TOKEN` saved: listed by name and time, the chip turned grey; ASI:One turned off and on again in the box |
+| Pair a phone | QR and code when the box has an address a phone can reach; otherwise it says so and offers Skip | No address on Personal yet, so Skip |
+| Done | Four cards: Ask an Agent, the top bar, Keep or Undo, Time Machine. Start using GurtOS finishes and opens the app | `done: true`, six steps recorded |
 
-![The Ask an Agent dialog](screenshots/5-ask.png)
+![GurtOS Setup opens at login](screenshots/setup/00-first-login.png)
 
-![The GurtOS app: the portal in its own window](screenshots/6-app.png)
+![AI models](screenshots/setup/02-models.png)
 
-A real Droid task (Claude Sonnet, 3 cents) fixed the spelling in `~/Documents/thesis/chapter1.md` and sorted
-`refs.txt`. The folder stayed as it was until Keep:
+![Folders](screenshots/setup/03-folders.png)
 
-![The task is done: review its changes](screenshots/7-review-notification.png)
+![Permissions](screenshots/setup/04-permissions.png)
 
-![Review: the diff, with Undo and Keep](screenshots/8-review.png)
+![Apps](screenshots/setup/05-apps.png)
 
-![Kept: the changes are in the folder](screenshots/9-kept.png)
+![Apps in dark](screenshots/setup/05-apps-dark.png)
 
-![Undo asks first](screenshots/10-undo-confirm.png)
+![Pair a phone, with no address yet](screenshots/setup/06-phone.png)
+
+![Done](screenshots/setup/07-done.png)
+
+The rest of the layer in the new system:
+
+![Ask an Agent in Files](screenshots/setup/10-files-menu.png)
+
+![The Ask an Agent dialog](screenshots/setup/11-ask.png)
+
+![An approval as a notification](screenshots/setup/12-approval.png)
+
+![The top-bar menu](screenshots/setup/13-indicator.png)
+
+![Review: Keep these changes?](screenshots/setup/14-review.png)
+
+![Kept, with Put files back](screenshots/setup/15-kept.png)
 
 ## A fresh install, as a new person (Oct 24)
 
-The GurtOS Personal ISO (`image/build personal`, debug build `20261024-0542-ada8208`) attached to the Vultr VM as a
+The GurtOS Personal ISO (`image/build personal`, debug build `20261024-0542-ada8208`) attached to the cloud VM as a
 custom ISO, installed on its wiped disk, and walked by hand as a new person, Maya Chen, on Wayland:
 
 | Step | Result |
@@ -103,7 +134,7 @@ sudo core/install.sh && sudo personal/install.sh [owner]
 
 `install.sh` installs GNOME if it is missing (`ubuntu-desktop-minimal`) and the libraries the layer uses (GTK 4,
 libadwaita, WebKitGTK 6, AyatanaAppIndicator, nautilus-python). It copies this folder to `/opt/box/personal`, adds the
-desktop entry, icons, the Files extension, the welcome's autostart entry, the user service (enabled for every
+desktop entry, icons, the GurtOS fonts, the Files extension, GurtOS Setup's autostart entry, the user service (enabled for every
 account), and a schema override that puts GurtOS first in the dock for new accounts. It sets `BOX_OWNER` on the box
 service to the owner you name, or to the first human in the `sudo` group. It is safe to run again.
 
@@ -148,7 +179,10 @@ the layer's own code: the calls the service, the indicator and the dialogs make,
 that a task stopping for an OK becomes a notification and is counted in the top bar, that Approve lets it finish and
 withdraws the notification, that a denial on the phone withdraws it too, and that a folder task leaves the folder
 untouched until Keep, asks for a review, Keep writes both changes with the owner's uid, gid and mode, and Undo Keep
-puts them back. About 3 seconds, no model, no money.
+puts them back. For GurtOS Setup it checks that a step is recorded, that folders chosen in Setup limit Ask an agent
+(two of them make one task, a folder outside is refused), that the spend limit and quiet hours are saved and quiet
+hours mute banners, that a key saved in Setup is listed by name and never shown, and that every app is listed with
+its access. It puts the box's settings back afterwards. About 4 seconds, no model, no money.
 
 ```
 BOX_URL=http://127.0.0.1:7700 /usr/bin/python3 personal/selftest.py   # on any box, prints one JSON line per check
@@ -156,19 +190,12 @@ BOX_URL=http://127.0.0.1:7700 /usr/bin/python3 personal/selftest.py   # on any b
 
 ## The test machine
 
-A Vultr VM made for this edition: instance `55e7912b-aa38-4f8d-9caa-cd9633e744eb`, label `calhacks13-personal`,
-`vc2-4c-8gb` in San Jose, `140.82.51.9`, about $0.055 an hour. **Delete it after Sunday, Oct 25:**
+A cloud VM made for this edition (4 vCPU, 8 GB). Its address and how to delete it are kept outside the repo.
 
-```
-curl -X DELETE -H "Authorization: Bearer $VULTR_API_KEY" https://api.vultr.com/v2/instances/55e7912b-aa38-4f8d-9caa-cd9633e744eb
-```
-
-(from linuxbox: the key is in `~/.config/calhacks13/env`, and Vultr only accepts linuxbox's address).
-
-Since Oct 24 it runs a fresh install of the GurtOS Personal debug ISO, owned by `mayachen` (password in
-`/root/maya-password`), on Wayland. `ssh personalbox` from linuxbox reaches it as root (debug builds have sshd).
-`personal/vm.sh` drives it; `wl.py` gives it a virtual tablet and keyboard through `/dev/uinput`, so it works on
-Wayland and even in GDM's first-boot setup, where xdotool and GNOME's remote-desktop input do not:
+Since Oct 24 it runs a fresh install of the GurtOS Personal debug ISO, owned by `mayachen`, on Wayland (debug builds
+have sshd for root). `personal/vm.sh` drives it, with `PERSONAL_VM` set to its ssh host; `wl.py` gives it a virtual
+tablet and keyboard through `/dev/uinput`, so it works on Wayland and even in GDM's first-boot setup, where xdotool
+and GNOME's remote-desktop input do not:
 
 ```
 PERSONAL_USER=mayachen personal/vm.sh layer         # replace /opt/box/personal on the installed system, restart the layer
@@ -177,7 +204,7 @@ PERSONAL_USER=mayachen personal/vm.sh shot <name>   # screenshot into personal/s
 personal/vm.sh install                              # the older path: the box and this layer onto plain Ubuntu
 ```
 
-To reinstall from a new ISO: serve it from vultrbox, add it with `POST /v2/iso {url}`, wipe the disk
+To reinstall from a new ISO: serve it from the build VM, add it with `POST /v2/iso {url}`, wipe the disk
 (`wipefs -af /dev/vda`) and `POST /v2/instances/<id>/iso/attach`. The account allows two custom ISOs. Detach and
 delete it afterwards.
 
@@ -185,7 +212,9 @@ delete it afterwards.
 
 - **One folder per task.** The core takes one `folder`, so Files offers Ask an Agent for one folder at a time.
 - **May read, the Internet switch and Pause All Agents** from the Figma frames: the core has no API for them yet.
-- **Pairing a phone** on Personal: the box has no address a phone can reach yet, so the welcome hides Pair a Phone
-  until `GET /api/boxes` reports one.
-- **Setup:** the model key and other keys go into the vault by hand today. The GurtOS Setup window is next, on the
-  core's setup APIs, in the new design system.
+- **Pairing a phone** on Personal: the box has no address a phone can reach yet, so Setup's phone step says so and
+  offers Skip until `GET /api/boxes` reports one. The QR path (with `qrencode`) is written but not walked.
+- **From the Personal frames, waiting on the core:** "May read" for a folder (the core has one kind of grant, may
+  change), "May also read" in Ask an Agent, Pause all agents in the top-bar menu, and a per-task internet choice (the
+  dialog shows what Settings gives a new task). The amber count in the top bar is plain text, because an AppIndicator
+  label cannot be coloured.

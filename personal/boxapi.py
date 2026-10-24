@@ -39,7 +39,7 @@ def quote(ident):
 
 
 def ui(*args):
-    """Open a Box window (the app, Ask an agent, a review, the welcome) in the one running Box app."""
+    """Open a Box window (the app, Ask an Agent, a review, Setup) in the one running GurtOS app."""
     subprocess.Popen([UI, *args], start_new_session=True)
 
 
@@ -78,13 +78,64 @@ def top_bar(tasks, pending):
     return ' · '.join(parts)
 
 
-def ask_spec(prompt, folder, budget_dollars):
-    """The task Files' "Ask an Agent" starts: the owner's words, the real folder it may change, and its budget."""
+def ask_spec(prompt, folders, budget_dollars):
+    """The task Files' "Ask an Agent" starts: the owner's words, the folders it may change, and its budget. One folder is
+    sent as `folder`, several as `folders` (the box takes one or the other)."""
     first = prompt.strip().splitlines()[0]
     title = first if len(first) <= 60 else first[:59].rstrip() + '…'
-    return {'title': title, 'prompt': prompt.strip(), 'folder': folder, 'budgetCents': round(budget_dollars * 100), 'source': 'files'}
+    where = {'folder': folders[0]} if len(folders) == 1 else {'folders': list(folders)}
+    return {'title': title, 'prompt': prompt.strip(), **where, 'budgetCents': round(budget_dollars * 100), 'source': 'files'}
+
+
+def background(work, done):
+    """Run work() off the GTK main loop, then done(result, error) on it, so windows stay responsive if the box is slow."""
+    import threading
+
+    from gi.repository import GLib
+
+    def run():
+        try:
+            out, err = work(), None
+        except Exception as e:  # noqa: BLE001 (shown to the owner as is)
+            out, err = None, e
+        GLib.idle_add(lambda: done(out, err) and False)
+    threading.Thread(target=run, daemon=True).start()
+
+
+def quiet_now(settings, now):
+    """Whether quiet hours are on at `now` (a datetime in local time). The window may run past midnight."""
+    q = (settings or {}).get('quietHours') or {}
+    if not q.get('enabled'):
+        return False
+    t = now.strftime('%H:%M')
+    start, end = q.get('from', '22:00'), q.get('to', '07:00')
+    return start <= t < end if start <= end else t >= start or t < end
 
 
 def tilde(p):
     home = os.path.expanduser('~')
     return '~' + p[len(home):] if p == home or p.startswith(home + '/') else p
+
+
+def where(task):
+    """The folders a task works on, as a person would say them: "~/thesis", "~/a and ~/b" or "3 folders"."""
+    folders = task.get('folders') or ([task['folder']] if task.get('folder') else [])
+    if not folders:
+        return task.get('workspace', '')
+    if len(folders) > 2:
+        return f'{len(folders)} folders'
+    return ' and '.join(tilde(f) for f in folders)
+
+
+SMALL_WORDS = {'a', 'an', 'and', 'as', 'at', 'but', 'by', 'for', 'in', 'of', 'on', 'or', 'the', 'to', 'up', 'via'}
+
+
+def header_caps(text):
+    """GNOME's header capitalization, which its HIG asks of notification titles: "Buy a GPU Hour Needs Your OK"."""
+    words = text.split(' ')
+    out = []
+    for i, w in enumerate(words):
+        small = w.lower() in SMALL_WORDS and 0 < i < len(words) - 1
+        literal = any(c in w for c in './_@:0123456789')  # file names, hosts, amounts stay as they are
+        out.append(w if small or literal or not w[:1].islower() else w[:1].upper() + w[1:])
+    return ' '.join(out)

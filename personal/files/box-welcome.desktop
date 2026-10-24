@@ -1,9 +1,0 @@
-[Desktop Entry]
-Type=Application
-Name=Welcome to GurtOS Personal
-Comment=What agents can do on this computer, once per account
-Exec=/opt/box/personal/box-ui.py welcome
-Icon=dev.box.Box
-NoDisplay=true
-OnlyShowIn=GNOME;Unity;
-X-GNOME-Autostart-Delay=3

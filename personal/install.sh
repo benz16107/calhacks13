@@ -5,9 +5,9 @@
 # It only installs files and packages and never starts anything, so image/build can run it in a chroot.
 # What it adds, for every account on the machine:
 #   box-desktop (user service)  approvals as notifications with Approve and Deny, and the top-bar indicator
-#   Box (app, first in the dock) the portal in its own window
-#   Files: Ask an Agent…         right-click a folder; the agent works on a copy until you Keep or Undo
-#   Welcome to Box               once per account, after GNOME's own first-login setup
+#   GurtOS (app, first in dock)  the portal in its own window
+#   Files: Ask an agent…         right-click folders; the agent works on copies until you keep or undo
+#   GurtOS Setup                 at the owner's first login, after GNOME's own setup: models, folders, permissions, apps
 set -euo pipefail
 here=$(cd "$(dirname "$0")" && pwd)
 [[ $(id -u) == 0 ]] || { echo 'personal/install.sh: run it as root' >&2; exit 1; }
@@ -36,7 +36,11 @@ gtk-update-icon-cache -q -t -f /usr/share/icons/hicolor 2>/dev/null || true
 install -Dm644 "$here/files/apparmor-box-ui" /etc/apparmor.d/box-ui
 apparmor_parser -r -W /etc/apparmor.d/box-ui 2>/dev/null || true # in a chroot it loads at the next boot instead
 install -Dm644 "$here/files/box-nautilus.py" /usr/share/nautilus-python/extensions/box-nautilus.py
-install -Dm644 "$here/files/box-welcome.desktop" /etc/xdg/autostart/box-welcome.desktop
+rm -f /etc/xdg/autostart/box-welcome.desktop # GurtOS Setup took over the welcome
+install -Dm644 "$here/files/box-setup.desktop" /etc/xdg/autostart/box-setup.desktop
+# The GurtOS typeface (docs/figma/system.md): Atkinson Hyperlegible Next and Mono, SIL OFL, for GurtOS's own windows.
+install -Dm644 -t /usr/share/fonts/truetype/gurtos "$here"/fonts/*.ttf "$here/fonts/OFL.txt"
+fc-cache -f /usr/share/fonts/truetype/gurtos >/dev/null 2>&1 || true
 install -Dm644 "$here/files/box-desktop.service" /etc/systemd/user/box-desktop.service
 systemctl --global enable box-desktop.service >/dev/null 2>&1
 install -Dm644 "$here/files/90_box-personal.gschema.override" /usr/share/glib-2.0/schemas/90_box-personal.gschema.override

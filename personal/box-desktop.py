@@ -20,7 +20,7 @@ gi.require_version('AyatanaAppIndicator3', '0.1')
 from gi.repository import AyatanaAppIndicator3 as AppIndicator, Gio, GLib, Gtk  # noqa: E402
 
 sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
-from boxapi import BOX, api, dollars, plan, quote, reviews, running, tilde, top_bar, ui  # noqa: E402
+from boxapi import BOX, api, dollars, header_caps, plan, quiet_now, quote, reviews, running, top_bar, ui, where  # noqa: E402
 
 APP = 'dev.box.Box'
 USER = getpass.getuser()
@@ -39,6 +39,7 @@ class Desktop:
         self.online = None
         self.pending = False
         self.generation = 0  # refreshes run off the main loop; only the newest one is applied
+        self.quiet = False
         self.started = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%S')  # the core's updatedAt format, to the second
         self.told_failed = set()
         self.indicator = AppIndicator.Indicator.new(APP, f'{APP}-symbolic', AppIndicator.IndicatorCategory.APPLICATION_STATUS)
@@ -94,14 +95,16 @@ class Desktop:
             try:
                 tasks = api('GET', '/api/tasks')
                 pending = {a['id']: a for a in api('GET', '/api/approvals?state=pending')}
+                settings = api('GET', '/api/settings')
             except Exception:  # noqa: BLE001
                 return GLib.idle_add(self.set_online, False)
-            GLib.idle_add(lambda: generation == self.generation and self.apply(tasks, pending))
+            GLib.idle_add(lambda: generation == self.generation and self.apply(tasks, pending, settings))
         threading.Thread(target=fetch, daemon=True).start()
         return False
 
-    def apply(self, tasks, pending):
+    def apply(self, tasks, pending, settings):
         self.tasks = tasks
+        self.quiet = quiet_now(settings, datetime.now())
         self.online = True
         close, post = plan(self.notified, self.tasks, pending.values())
         for key in close:
@@ -116,7 +119,7 @@ class Desktop:
         for t in self.tasks:  # a task that failed since this login, once
             if t['state'] == 'failed' and t['updatedAt'] >= self.started and t['id'] not in self.told_failed:
                 self.told_failed.add(t['id'])
-                self.notify(f"failed:{t['id']}", f"{t['title']} could not finish", t.get('error') or 'It stopped with an error.',
+                self.notify(f"failed:{t['id']}", header_caps(f"{t['title'].rstrip('.')} could not finish"), t.get('error') or 'It stopped with an error.',
                             ['default', 'Open in GurtOS'], 1, track=False)
         self.approvals = pending
         self.render()
@@ -140,15 +143,16 @@ class Desktop:
     def notify_approval(self, a, title):
         # The box's own question already names the amount, who gets paid and the budget.
         approve = f"Approve {dollars(a['costCents'])}" if a.get('costCents') else 'Approve'
-        # Critical: the task has stopped until you answer, so the banner stays until you do.
+        # Critical: the task has stopped until you answer, so the banner stays until you do. In quiet hours, low: it waits
+        # in the notification list with no banner and no sound.
         question = a['question'].strip()
         question += '' if question[-1:] in '.?!' else '.'
-        self.notify(f"approval:{a['id']}", f'{title} needs your OK', f'{question} Your other tasks keep running.',
-                    ['deny', 'Deny', 'approve', approve, 'default', 'Open in GurtOS'], 2)
+        self.notify(f"approval:{a['id']}", header_caps(f"{title.rstrip('.')} needs your OK"), f'{question} Your other agents keep working.',
+                    ['deny', 'Deny', 'approve', approve, 'default', 'Open in GurtOS'], 0 if self.quiet else 2)
 
     def notify_review(self, t):
-        self.notify(f"review:{t['id']}", f"{t['title']} is done", f"Nothing in {tilde(t['folder'])} has changed yet. Review its changes, then Keep or Undo.",
-                    ['review', 'Review Changes', 'default', 'Review Changes'], 1)
+        self.notify(f"review:{t['id']}", header_caps(f"{t['title'].rstrip('.')} is done"), f"Nothing in {where(t)} has changed yet. Review its changes, then keep or undo them.",
+                    ['review', 'Review changes', 'default', 'Review changes'], 1)
 
     def close(self, nid):
         self.shown.pop(nid, None)
@@ -195,7 +199,7 @@ class Desktop:
         menu = Gtk.Menu()
 
         def item(text, on=None, parent=menu):
-            mi = Gtk.MenuItem(label=text if len(text) <= 72 else text[:71] + '…')
+            mi = Gtk.MenuItem(label=text if len(text) <= 56 else text[:55].rstrip() + '…')
             mi.set_sensitive(on is not None)
             if on:
                 mi.connect('activate', lambda _mi: on())
@@ -205,28 +209,33 @@ class Desktop:
         if self.online is False:
             item("GurtOS isn't answering. Retrying…")
             menu.append(Gtk.SeparatorMenuItem())
-        if need:
-            item(f'Needs you · {need}')
+        if self.approvals:
+            item(f'Needs your OK, {len(self.approvals)}')
             for a in self.approvals.values():
-                sub = Gtk.Menu()
-                item(f"Approve {dollars(a['costCents'])}" if a.get('costCents') else 'Approve', lambda a=a: self.answer(a['id'], True), parent=sub)
-                item('Deny', lambda a=a: self.answer(a['id'], False), parent=sub)
-                item('Open in GurtOS', lambda a=a: ui('app', f"task/{a['task']}"), parent=sub)
-                item(f"{titles.get(a['task'], 'A task')}: {a['question']}", lambda: None).set_submenu(sub)
+                sub_menu = Gtk.Menu()
+                item(f"Approve {dollars(a['costCents'])}" if a.get('costCents') else 'Approve', lambda a=a: self.answer(a['id'], True), parent=sub_menu)
+                item('Deny', lambda a=a: self.answer(a['id'], False), parent=sub_menu)
+                item('Open in GurtOS', lambda a=a: ui('app', f"task/{a['task']}"), parent=sub_menu)
+                what = f"Spend {dollars(a['costCents'])}" if a.get('costCents') else a['question']
+                item(f"{titles.get(a['task'], 'A task')} · {what}", lambda: None).set_submenu(sub_menu)
+            menu.append(Gtk.SeparatorMenuItem())
+        if done:
+            item(f'Ready to review, {len(done)}')
             for t in done:
-                item(f"{t['title']}: review its changes", lambda t=t: ui('review', t['id']))
+                names = [os.path.basename(f) for f in (t.get('folders') or [t.get('folder', '')])]
+                item(f"{t['title']} · {', '.join(names)}", lambda t=t: ui('review', t['id']))
             menu.append(Gtk.SeparatorMenuItem())
         if going:
-            item(f'Running · {len(going)}')
+            item(f'Running, {len(going)}')
             for t in going:
-                item(f"{t['title']}: {t.get('step') or t['state']}", lambda t=t: ui('app', f"task/{t['id']}"))
+                item(f"{t['title']} · {t.get('step') or t['state']}", lambda t=t: ui('app', f"task/{t['id']}"))
             menu.append(Gtk.SeparatorMenuItem())
         elif not need and self.online is not False:
             item('No agents are working')
             menu.append(Gtk.SeparatorMenuItem())
         item('Ask an Agent…', lambda: ui('ask'))
         item('Open GurtOS', lambda: ui('app'))
-        item('GurtOS Settings', lambda: ui('app', 'settings'))
+        item('GurtOS settings', lambda: ui('app', 'settings'))
         menu.show_all()
         self.indicator.set_menu(menu)
 
