@@ -9,7 +9,15 @@ systemd 255, util-linux 2.39.3, ext4 root). Lima cannot snapshot `vz` VMs (`lima
 group, dpkg list, sysctl, unit list). The VM came with rootless containerd and Lima's own `ip nat` table
 (`LIMADNS`); leave both alone.
 
-Run a script: `tar c spikes/NN-*.sh | ssh benmac 'limactl shell box -- bash -c "mkdir -p ~/spikes && tar x -C ~/spikes --strip-components=1 && sudo bash ~/spikes/NN-*.sh"'`
+Copy the folder in, then run one: `tar c spikes | ssh benmac 'limactl shell box -- tar x -C ~'`, then
+`ssh benmac 'limactl shell box -- sudo bash ~/spikes/01-overlay.sh'`. Scripts 01, 02, 03, 05 and 07 run as
+root, while 04 and 06 run as the normal user. 03 needs the users from 02.
+
+**Left installed in the laptop VM by the spikes:** Node 24.22.1 (NodeSource apt, `/usr/bin/node`, so
+`core/setup.sh` skips its own Node), `attr`, `jq`, `bc`, `ripgrep`, the Droid CLI 0.248.0 through
+`npm i -g droid` (`/usr/local/bin/droid`, the version `core/setup.sh` pins, so it skips its own download),
+and the SpacetimeDB 2.13.0 CLI in the Lima user's `~/.local/bin`, with a test database `spike4` in its
+default data dir. All spike users, mounts, nft tables, units and servers were removed.
 
 | # | Test | Result |
 |---|---|---|
