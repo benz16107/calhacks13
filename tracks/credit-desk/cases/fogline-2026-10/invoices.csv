@@ -1,0 +1,39 @@
+invoice_id,customer_id,bill_to_name,invoice_date,terms,due_date,po_number,ship_to,total,amount_paid,discount_allowed,balance,status
+INV-24044,C-1002,Harborview Oyster House,2026-08-01,Net 30,2026-08-31,HV-0731,"610 Bridgeway, Sausalito CA 94965",4410.00,4410.00,0.00,0.00,paid
+INV-24047,C-1002,Harborview Oyster House,2026-08-04,Net 30,2026-09-03,HV-0803,"610 Bridgeway, Sausalito CA 94965",6240.00,0.00,0.00,6240.00,open
+INV-24049,C-1010,Dogpatch Deli,2026-08-06,Net 30,2026-09-05,,"2295 3rd St, San Francisco CA 94107",1845.30,1845.30,0.00,0.00,paid
+INV-24050,C-1012,Piedmont Provisions Catering,2026-08-07,Net 30,2026-09-06,PPC-2208,"4186 Piedmont Ave, Oakland CA 94611",5310.20,5310.20,0.00,0.00,paid
+INV-24054,C-1005,Telegraph Avenue Pizza,2026-08-11,Net 30,2026-09-10,,"4920 Telegraph Ave, Oakland CA 94609",4880.40,0.00,0.00,4880.40,open
+INV-24058,C-1001,Golden Gate Bagel Co.,2026-08-14,Net 30,2026-09-13,GGB-814,"3150 Geary Blvd, San Francisco CA 94118",3120.40,3120.40,0.00,0.00,paid
+INV-24062,C-1002,Harborview Oyster House,2026-08-18,Net 30,2026-09-17,HV-0817,"610 Bridgeway, Sausalito CA 94965",8115.50,0.00,0.00,8115.50,open
+INV-24066,C-1003,Mission St. Taqueria,2026-08-21,Net 30,2026-09-20,,"2401 Mission St, San Francisco CA 94110",1284.60,1284.60,0.00,0.00,paid
+INV-24071,C-1007,Sunset Noodle Bar LLC,2026-08-25,Net 30,2026-09-24,,"1825 Irving St, San Francisco CA 94122",2940.50,2940.50,0.00,0.00,paid
+INV-24074,C-1009,Rockridge Ramen,2026-08-27,2/10 Net 30,2026-09-26,,"5422 College Ave, Oakland CA 94618",2318.40,2318.40,0.00,0.00,paid
+INV-24077,C-1005,Telegraph Avenue Pizza,2026-08-29,Net 30,2026-09-28,,"4920 Telegraph Ave, Oakland CA 94609",5212.90,0.00,0.00,5212.90,open
+INV-24083,C-1006,Bluebird Bakery & Cafe,2026-09-01,2/10 Net 30,2026-10-01,BB-0901,"1433 Park St, Alameda CA 94501",2214.00,2169.72,44.28,0.00,paid
+INV-24089,C-1004,Green Leaf Juice Co,2026-09-03,Net 30,2026-10-03,,"2100 Shattuck Ave Unit 3, Berkeley CA 94704",1490.00,1940.00,0.00,-450.00,paid
+INV-24091,C-1010,Dogpatch Deli,2026-09-04,Net 30,2026-10-04,,"2295 3rd St, San Francisco CA 94107",2036.75,2036.75,0.00,0.00,paid
+INV-24092,C-1008,Fruitvale Food Truck Collective,2026-09-05,Net 15,2026-09-20,FFTC-0904,"3340 E 12th St, Oakland CA 94601",1620.00,1620.00,0.00,0.00,paid
+INV-24094,C-1002,Harborview Oyster House,2026-09-07,Net 30,2026-10-07,HV-0906,"610 Bridgeway, Sausalito CA 94965",7380.00,0.00,0.00,7380.00,open
+INV-24095,C-1009,Rockridge Ramen,2026-09-08,2/10 Net 30,2026-10-08,,"5422 College Ave, Oakland CA 94618",2460.00,2410.80,49.20,0.00,paid
+INV-24098,C-1001,Golden Gate Bagel Co.,2026-09-12,Net 30,2026-10-12,GGB-912,"3150 Geary Blvd, San Francisco CA 94118",1940.00,0.00,0.00,1940.00,open
+INV-24100,C-1012,Piedmont Provisions Catering,2026-09-15,Net 30,2026-10-15,PPC-2231,"4186 Piedmont Ave, Oakland CA 94611",3968.75,3968.75,0.00,0.00,paid
+INV-24102,C-1007,Sunset Noodle Bar LLC,2026-09-18,Net 30,2026-10-18,,"1825 Irving St, San Francisco CA 94122",3615.20,0.00,0.00,3615.20,open
+INV-24104,C-1003,Mission St. Taqueria,2026-09-21,Net 30,2026-10-21,,"2401 Mission St, San Francisco CA 94110",1512.75,1512.75,0.00,0.00,paid
+INV-24105,C-1012,Piedmont Provisions Catering,2026-09-22,Net 30,2026-10-22,PPC-2240,"4186 Piedmont Ave, Oakland CA 94611",4862.40,0.00,0.00,4862.40,open
+INV-24107,C-1005,Telegraph Avenue Pizza,2026-09-24,Net 30,2026-10-24,,"4920 Telegraph Ave, Oakland CA 94609",4407.30,0.00,0.00,4407.30,open
+INV-24110,C-1011,Sunset Noodle Bar,2026-09-29,Net 30,2026-10-29,,"1825 Irving Street Ste A, San Francisco CA 94122",3180.00,0.00,0.00,3180.00,open
+INV-24111,C-1012,Piedmont Provisions Catering,2025-09-29,Net 30,2025-10-29,PPC-2247,"4186 Piedmont Ave, Oakland CA 94611",3905.60,0.00,0.00,3905.60,open
+INV-24113,C-1004,Green Leaf Juice Co,2026-09-30,Net 30,2026-10-30,,"2100 Shattuck Ave Unit 3, Berkeley CA 94704",1126.80,0.00,0.00,1126.80,open
+INV-24116,C-1008,Fruitvale Food Truck Collective,2026-10-02,Net 15,2026-10-17,FFTC-0930,"3340 E 12th St, Oakland CA 94601",1486.40,0.00,0.00,1486.40,open
+INV-24117,C-1008,Fruitvale Food Truck Collective,2026-10-02,Net 15,2026-10-17,FFTC-0930,"3340 E 12th St, Oakland CA 94601",1486.40,0.00,0.00,1486.40,open
+INV-24119,C-1002,Harborview Oyster House,2026-10-05,Net 30,2026-11-04,HV-1004,"610 Bridgeway, Sausalito CA 94965",5920.25,0.00,0.00,5920.25,open
+INV-24121,C-1006,Bluebird Bakery & Cafe,2026-10-06,2/10 Net 30,2026-11-05,BB-1006,"1433 Park St, Alameda CA 94501",1875.00,1837.50,37.50,0.00,paid
+INV-24122,C-1007,Sunset Noodle Bar LLC,2026-10-07,Net 30,2026-11-06,,"1825 Irving St, San Francisco CA 94122",4234.80,0.00,0.00,4234.80,open
+INV-24124,C-1001,Golden Gate Bagel Co.,2026-10-08,Net 30,2026-11-07,GGB-1008V,"780 Valencia St, San Francisco CA 94110",2655.30,0.00,0.00,2655.30,open
+INV-24127,C-1005,Telegraph Avenue Pizza,2026-10-10,Net 30,2026-11-09,,"4920 Telegraph Ave, Oakland CA 94609",3740.00,0.00,0.00,3740.00,open
+INV-24129,C-1003,Mission St. Taqueria,2026-10-12,Net 30,2026-11-11,,"2401 Mission St, San Francisco CA 94110",1398.20,0.00,0.00,1398.20,open
+INV-24131,C-1009,Rockridge Ramen,2026-10-14,2/10 Net 30,2026-11-13,,"5422 College Ave, Oakland CA 94618",2186.90,0.00,0.00,2186.90,open
+INV-24132,C-1010,Dogpatch Deli,2026-10-16,Net 30,2026-11-15,,"2295 3rd St, San Francisco CA 94107",1792.60,0.00,0.00,1792.60,open
+INV-24134,C-1006,Bluebird Bakery & Cafe,2026-10-19,2/10 Net 30,2026-11-18,BB-1019,"1433 Park St, Alameda CA 94501",2048.60,0.00,0.00,2048.60,open
+INV-24136,C-1011,Sunset Noodle Bar,2026-10-20,Net 30,2026-11-19,,"1825 Irving Street Ste A, San Francisco CA 94122",3240.00,0.00,0.00,3240.00,open

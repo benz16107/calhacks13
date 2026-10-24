@@ -1,0 +1,9 @@
+{
+  "case_id": "fogline-2026-10",
+  "title": "Fogline Supply Co., credit desk, week of 2026-10-19",
+  "as_of": "2026-10-23",
+  "currency": "USD",
+  "company_profile": "../../company/profile.md",
+  "rules": "../../rules/credit-rules.draft.yaml",
+  "description": "Twelve trade customers with their open invoices, payments and orders, plus six new credit applications. Planted errors are listed in answer_key.json."
+}

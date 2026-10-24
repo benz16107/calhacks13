@@ -1,0 +1,126 @@
+# Fogline Supply Co. credit rules
+#
+# DRAFT 0.1. Ben is planning the real rules in Mana chats; that output replaces this file.
+# Keep the rule ids stable if you can: the answer key and every logged decision cite them.
+# Amounts are USD. "Days past due" counts from the due date. All dates are as of the case's as_of date.
+
+status: draft
+version: 0.1-draft
+replaced_by: "Ben's Mana chats (link them here when they are public)"
+
+seats:
+  credit_analyst:
+    kind: agent
+    does: [pull credit, identity and fraud checks, propose risk band, terms and limit, approve within authority, decline]
+    authority_limit: 10000
+  collections_clerk:
+    kind: agent
+    does: [issue and correct invoices, apply payments, send reminders, place credit holds, release orders for current customers]
+  controller:
+    kind: human
+    name: Rosa Delgado
+    does: [approve limits above the analyst's authority, approve terms with public records, decide fraud referrals, release credit holds, write off balances]
+
+rules:
+  # Segregation of duties
+  - id: SOD-1
+    text: The credit analyst may approve a new or changed limit up to authority_limit (10,000).
+  - id: SOD-2
+    text: A limit above 10,000 is a proposal. It waits for the controller, and the customer gets no terms until then.
+  - id: SOD-3
+    text: The collections clerk cannot change limits or terms and cannot write off a balance.
+  - id: SOD-4
+    text: No seat approves its own proposal. Fraud referrals go to the controller and no agent can clear them.
+
+  # Checks before any terms
+  - id: CHK-1
+    text: >-
+      Before terms, the analyst runs, through CRS, on the owner who signs the personal guarantee: tri-bureau credit report,
+      TransUnion identity verification, Fraud Finder (name, phone, email, address and the IP the application came from),
+      and PitchPoint bankruptcies, liens and judgments. Then the business credit file and state registration, and
+      the application's answers against all of these.
+  - id: CHK-2
+    text: Do not pull criminal or eviction records. They are not relevant to trade credit.
+  - id: CHK-3
+    text: Every check is logged with the CRS RequestID it returned, so each decision can be traced to its data.
+
+  # Fraud stops: any one means fraud hold, no credit, refer to the controller
+  - id: FRD-1
+    text: TransUnion identity verification fails (deceased SSN, SSN issued to another name, SSN issued before the date of birth, several names on one SSN).
+  - id: FRD-2
+    text: Fraud Finder risk.score is 70 or higher.
+  - id: FRD-3
+    text: The business was registered less than 12 months ago but the application claims 2 or more years in business.
+  - id: FRD-4
+    text: >-
+      Two or more of: billing address is a private mailbox; ship-to is a freight forwarder or differs from the business
+      address; trade references share a phone number; bank account opened in the last 90 days; first order above 50% of
+      the requested limit with rush shipping; 5 or more credit inquiries in 30 days.
+  - id: FRD-5
+    text: TransUnion asks for KBA (fraud alert on file). Step up and ask for more proof; never approve automatically.
+
+  # Risk bands, from the guarantor's credit
+  - id: BND-1
+    text: Use the lowest score any bureau returns. A derogatory item (collection, charge-off, 90 days late) at any one bureau counts. A bureau with no file counts as missing, not as clean.
+  - id: BND-A
+    text: Lowest score 720 or higher, no derogatory items, no public records. Net 30, limit at most 50,000.
+  - id: BND-B
+    text: Lowest score 680 to 719, or one derogatory item, or one bureau missing. Net 30, limit at most 15,000.
+  - id: BND-C
+    text: Lowest score 620 to 679, thin file, or an open lien or judgment. Net 15, limit at most 7,500.
+  - id: BND-D
+    text: Below 620, an open bankruptcy, or no file at any bureau. Cash in advance only.
+
+  # Limit sizing
+  - id: LIM-1
+    text: Limit = the smallest of the amount requested, the band's maximum, and 10% of verified annual revenue.
+  - id: LIM-2
+    text: >-
+      Verified revenue is the lowest of stated revenue, the business credit estimate, and 12 times average monthly bank
+      deposits. When stated revenue is more than 25% above the lowest figure, say so in the decision.
+
+  # Document freshness
+  - id: DOC-1
+    text: The desk pulls its own credit reports, valid for 30 days. Reports supplied by the applicant are never used.
+  - id: DOC-2
+    text: Bank and trade reference letters must be dated within 6 months.
+
+  # Public records
+  - id: PUB-1
+    text: An open tax lien or unpaid judgment puts the applicant in band C at best, and open terms need the controller.
+  - id: PUB-2
+    text: An application answer that public records contradict goes to the controller with the contradiction noted.
+
+  # Collections
+  - id: COL-1
+    text: >-
+      Dunning by the oldest past-due invoice: 1 to 14 days, friendly reminder; 15 to 29, second notice; 30 to 59, phone
+      call and hold new orders; 60 to 89, credit hold and controller notified; 90 or more, final demand, controller decides
+      on an agency or write-off.
+  - id: COL-2
+    text: Reminders go to the email on the customer record, never to an address taken from a payment or remittance.
+  - id: COL-3
+    text: A customer whose open balance is above its limit goes on credit hold. Only the controller releases it.
+  - id: COL-4
+    text: An early-payment discount (2/10 Net 30) is earned only if payment is received within 10 days of the invoice date. An unearned discount is still owed.
+  - id: COL-5
+    text: A post-dated check is not cash until its date. The invoice stays open until then.
+  - id: COL-6
+    text: Never chase an invoice with a known error (wrong total, misapplied payment, duplicate). Fix it first.
+  - id: COL-7
+    text: One business, one customer record. Records with the same EIN are merged and share one limit.
+
+  # Orders and reviews
+  - id: ORD-1
+    text: >-
+      The clerk releases an order when the customer is not on hold, nothing is 30 or more days past due, and the order
+      keeps the open balance within the limit. Otherwise the order is held and only the controller releases it.
+  - id: REV-1
+    text: Every customer's limit is reviewed every 12 months. When a review is overdue, no limit increase and flag it to the analyst.
+
+# The baseline the desk has to beat. A naive desk approves when all four hold.
+simple_rule:
+  - Score from one bureau is 620 or higher.
+  - No bankruptcy declared.
+  - Stated years in business is 2 or more.
+  - Requested limit is at most 10% of stated revenue.

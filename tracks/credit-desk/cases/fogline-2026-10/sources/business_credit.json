@@ -1,0 +1,128 @@
+{
+  "source": "business credit bureau and state filings",
+  "simulated": true,
+  "note": "Simulated. CRS lists business credit, but the CalHacks sandbox routes do not include it yet. Replace with a live pull if CRS turns it on.",
+  "reports": [
+    {
+      "report_id": "BC-1041",
+      "application_id": "APP-1041",
+      "legal_name": "Kettle & Crumb LLC",
+      "ein": "82-4471093",
+      "report_date": "2026-10-22",
+      "registration": {
+        "state": "CA",
+        "filed_on": "2017-03-14",
+        "status": "Active",
+        "registered_agent": "Grace Nakamura"
+      },
+      "estimated_annual_revenue": 590000,
+      "estimated_employees": 10,
+      "trade_lines": 6,
+      "days_beyond_terms": 2,
+      "inquiries_last_30_days": 0,
+      "ucc_filings": 1,
+      "business_liens_judgments": 0
+    },
+    {
+      "report_id": "BC-1042",
+      "application_id": "APP-1042",
+      "legal_name": "Bright Harbor Catering Inc.",
+      "ein": "45-0918372",
+      "report_date": "2026-10-22",
+      "registration": {
+        "state": "CA",
+        "filed_on": "2012-06-01",
+        "status": "Active",
+        "registered_agent": "Margaret Okafor"
+      },
+      "estimated_annual_revenue": 2150000,
+      "estimated_employees": 30,
+      "trade_lines": 14,
+      "days_beyond_terms": 4,
+      "inquiries_last_30_days": 1,
+      "ucc_filings": 2,
+      "business_liens_judgments": 0
+    },
+    {
+      "report_id": "BC-1043",
+      "application_id": "APP-1043",
+      "legal_name": "Pacific Crest Provisions LLC",
+      "ein": "93-2210457",
+      "report_date": "2026-10-22",
+      "registration": {
+        "state": "CA",
+        "filed_on": "2026-09-01",
+        "status": "Active",
+        "registered_agent": "Statewide Registered Agents Inc. (commercial agent service)"
+      },
+      "estimated_annual_revenue": null,
+      "estimated_employees": null,
+      "trade_lines": 0,
+      "days_beyond_terms": null,
+      "inquiries_last_30_days": 6,
+      "ucc_filings": 0,
+      "business_liens_judgments": 0,
+      "remarks": "No trade history on file."
+    },
+    {
+      "report_id": "BC-1044",
+      "application_id": "APP-1044",
+      "legal_name": "Saffron Table Catering LLC",
+      "ein": "36-4471820",
+      "report_date": "2026-10-22",
+      "registration": {
+        "state": "IL",
+        "filed_on": "2015-04-20",
+        "status": "Active",
+        "registered_agent": "Priya Venkatesan"
+      },
+      "estimated_annual_revenue": 940000,
+      "estimated_employees": 16,
+      "trade_lines": 9,
+      "days_beyond_terms": 6,
+      "inquiries_last_30_days": 0,
+      "ucc_filings": 1,
+      "business_liens_judgments": 0
+    },
+    {
+      "report_id": "BC-1045",
+      "application_id": "APP-1045",
+      "legal_name": "Panaderia Castellanos LLC",
+      "ein": "84-2290615",
+      "report_date": "2026-10-22",
+      "registration": {
+        "state": "TX",
+        "filed_on": "2019-02-11",
+        "status": "Active",
+        "registered_agent": "Elena Castellanos"
+      },
+      "estimated_annual_revenue": 700000,
+      "estimated_employees": 12,
+      "trade_lines": 7,
+      "days_beyond_terms": 3,
+      "inquiries_last_30_days": 1,
+      "ucc_filings": 0,
+      "business_liens_judgments": 0
+    },
+    {
+      "report_id": "BC-1046",
+      "application_id": "APP-1046",
+      "legal_name": "Lakeshore Diner Inc.",
+      "ein": "74-3318845",
+      "report_date": "2026-10-22",
+      "registration": {
+        "state": "TX",
+        "filed_on": "2009-05-18",
+        "status": "Active",
+        "registered_agent": "Daniel Whitfield"
+      },
+      "estimated_annual_revenue": 210000,
+      "estimated_employees": 5,
+      "trade_lines": 5,
+      "days_beyond_terms": 1,
+      "inquiries_last_30_days": 1,
+      "ucc_filings": 0,
+      "business_liens_judgments": 0
+    }
+  ]
+}

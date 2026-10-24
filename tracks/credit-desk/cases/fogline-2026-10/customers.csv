@@ -1,0 +1,13 @@
+customer_id,legal_name,ein,phone,email,address_line1,address_line2,city,state,zip,terms,credit_limit,last_credit_review,on_credit_hold,created_on,sales_rep,notes
+C-1001,Golden Gate Bagel Co.,94-3307716,(415) 555-0121,ap@ggbagel.example,3150 Geary Blvd,,San Francisco,CA,94118,Net 30,20000,2026-02-11,no,2019-04-02,M. Chen,Two shops: Geary Blvd (bill-to) and 780 Valencia St
+C-1002,Harborview Oyster House,68-0551942,415.555.0134,accounts@harborviewoysters.example,610 Bridgeway,,Sausalito,CA,94965,Net 30,30000,2024-05-20,no,2016-09-12,M. Chen,
+C-1003,Mission Street Taqueria Inc.,45-2290187,415-555-0139,,2401 Mission Street,,San Francisco,CA,94110,Net 30,10000,2026-03-02,no,2018-01-22,J. Park,
+C-1004,Greenleaf Juice Co.,82-1176350,(510) 555-0142,hello@greenleafjuice.example,2100 Shattuck Ave,Unit 3,Berkeley,CA,94704,Net 30,8000,2025-12-01,no,2021-11-15,J. Park,
+C-1005,Telegraph Ave Pizza LLC,46-4012288,(510) 555-0155,,4920 Telegraph Ave,,Oakland,CA,94609-2010,Net 30,15000,2026-01-15,no,2017-06-30,M. Chen,
+C-1006,Bluebird Bakery & Cafe,27-3349015,(510) 555-0163,orders@bluebirdbakery.example,1433 Park St,,Alameda,CA,94501,2/10 Net 30,12000,2026-04-09,no,2015-03-03,M. Chen,Usually takes the early-payment discount
+C-1007,Sunset Noodle Bar LLC,47-3318290,(415) 555-0147,sunsetnoodlebar@example.com,1825 Irving St,,San Francisco,CA,94122,Net 30,10000,2026-06-30,no,2020-08-19,M. Chen,
+C-1008,Fruitvale Food Truck Collective,85-0927731,510 555 0170,,3340 E 12th St,,Oakalnd,CA,94601,Net 15,5000,2026-07-22,no,2023-02-08,J. Park,Commissary kitchen for 6 trucks
+C-1009,Rockridge Ramen,83-2056614,(510) 555-0178,,5422 College Ave,,Oakland,CA,94618,2/10 Net 30,9000,2026-05-14,no,2022-05-10,J. Park,
+C-1010,Dogpatch Deli,92-0663158,(415) 555-0186,dogpatchdeli@example.com,2295 3rd St,,San Francisco,CA,94107,Net 30,7500,2026-08-03,no,2024-07-29,M. Chen,Pays by check
+C-1011,Sunset Noodle Bar,473318290,415-555-0147,orders@sunsetnoodle.example,1825 Irving Street,Ste A,San Francisco,CA,94122-1709,Net 30,10000,2026-09-28,no,2026-09-28,J. Park,New account opened by sales at the Outer Sunset food fair
+C-1012,Piedmont Provisions Catering,61-1849023,(510) 555-0191,billing@piedmontprovisions.example,4186 Piedmont Ave,,Oakland,CA,94611,Net 30,25000,2026-03-19,no,2014-10-06,M. Chen,

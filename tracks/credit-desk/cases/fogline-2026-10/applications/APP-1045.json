@@ -1,0 +1,95 @@
+{
+  "application_id": "APP-1045",
+  "received_at": "2026-10-22T08:17:00-07:00",
+  "channel": "email to credit@fogline.example",
+  "submitted_from_ip": "203.0.113.27",
+  "business": {
+    "legal_name": "Panaderia Castellanos LLC",
+    "dba": "Castellanos Panaderia",
+    "entity_type": "LLC",
+    "state_of_formation": "TX",
+    "ein": "84-2290615",
+    "year_started": 2019,
+    "years_in_business": 7,
+    "annual_revenue": 720000,
+    "employees": 14,
+    "industry": "Bakery, retail and wholesale bread",
+    "billing_address": {
+      "line1": "2720 Elm St",
+      "city": "Dallas",
+      "state": "TX",
+      "zip": "75226"
+    },
+    "ship_to_address": {
+      "line1": "2720 Elm St",
+      "city": "Dallas",
+      "state": "TX",
+      "zip": "75226"
+    },
+    "phone": "(214) 555-0153",
+    "email": "elena.castellanos@example.com",
+    "website": "castellanospanaderia.example"
+  },
+  "request": {
+    "credit_limit": 25000,
+    "terms": "Net 30",
+    "first_order_amount": 6200,
+    "first_order_ship_date": "2026-11-04",
+    "reason": "We are adding wholesale bread accounts and need flour, butter and boxes on terms."
+  },
+  "guarantor": {
+    "first_name": "ELENA",
+    "last_name": "CASTELLANOS",
+    "title": "Owner",
+    "ownership_pct": 100,
+    "ssn": "666701017",
+    "dob": "1987-11-20",
+    "home_address": {
+      "line1": "4400 N CENTRAL EXPY STE 100",
+      "city": "DALLAS",
+      "state": "TX",
+      "zip": "75206"
+    },
+    "phone": "5550101017",
+    "email": "elena.castellanos@example.com"
+  },
+  "declarations": {
+    "bankruptcy_last_7_years": false,
+    "open_liens_or_judgments": false,
+    "personal_guarantee_signed": true,
+    "credit_check_authorized": true
+  },
+  "trade_references": [
+    {
+      "name": "Lone Star Mill & Grain",
+      "contact": "Bo Harris",
+      "phone": "(214) 555-0164",
+      "customer_since": "2019",
+      "high_credit": 9000,
+      "terms": "Net 30"
+    },
+    {
+      "name": "Deep Ellum Packaging",
+      "contact": "Marisol Cruz",
+      "phone": "(469) 555-0137",
+      "customer_since": "2020",
+      "high_credit": 5400,
+      "terms": "Net 15"
+    }
+  ],
+  "bank_reference": {
+    "bank": "Applicant's bank (Nessie sandbox)",
+    "account_opened": "2019-01-30",
+    "letter_date": "2026-10-16"
+  },
+  "attachments": [
+    {
+      "type": "credit report",
+      "supplied_by": "applicant",
+      "bureau": "TransUnion",
+      "report_date": "2025-04-02",
+      "score": 760,
+      "note": "Owner's own copy, attached to the email"
+    }
+  ]
+}

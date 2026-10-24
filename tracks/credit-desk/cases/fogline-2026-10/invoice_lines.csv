@@ -1,0 +1,269 @@
+invoice_id,line_no,sku,description,qty,unit,unit_price,line_total
+INV-24044,1,BTR-36,"Unsalted butter, 36 lb case",8,case,142.00,1136.00
+INV-24044,2,OIL-35,"Canola fry oil, 35 lb jug",16,jug,52.80,844.80
+INV-24044,3,NAP-KR,"Kraft dinner napkin, case of 3,000",12,case,41.40,496.80
+INV-24044,4,CLM-9,"Compostable clamshell 9 x 9 in, case of 200",12,case,54.75,657.00
+INV-24044,5,GLV-NM,"Nitrile gloves, medium, case of 1,000",10,case,64.00,640.00
+INV-24044,6,COF-HB5,"House espresso blend, whole bean, 5 lb bag",10,bag,52.50,525.00
+INV-24044,7,FRT,Freight and fuel surcharge,1,each,110.40,110.40
+INV-24047,1,BTR-36,"Unsalted butter, 36 lb case",12,case,142.00,1704.00
+INV-24047,2,OIL-35,"Canola fry oil, 35 lb jug",24,jug,52.80,1267.20
+INV-24047,3,NAP-KR,"Kraft dinner napkin, case of 3,000",16,case,41.40,662.40
+INV-24047,4,CLM-9,"Compostable clamshell 9 x 9 in, case of 200",16,case,54.75,876.00
+INV-24047,5,GLV-NM,"Nitrile gloves, medium, case of 1,000",14,case,64.00,896.00
+INV-24047,6,COF-HB5,"House espresso blend, whole bean, 5 lb bag",12,bag,52.50,630.00
+INV-24047,7,SAN-Q4,"Quat sanitizer, 1 gal, case of 4",3,case,36.40,109.20
+INV-24047,8,FRT,Freight and fuel surcharge,1,each,95.20,95.20
+INV-24049,1,COF-HB5,"House espresso blend, whole bean, 5 lb bag",8,bag,52.50,420.00
+INV-24049,2,CUP-12H,"12 oz hot cup, case of 1,000",6,case,68.50,411.00
+INV-24049,3,LID-12H,"Sip lid for 10-20 oz cups, case of 1,000",6,case,42.00,252.00
+INV-24049,4,BAG-KR,"Kraft takeout bag with handle, case of 250",8,case,46.20,369.60
+INV-24049,5,NAP-KR,"Kraft dinner napkin, case of 3,000",4,case,41.40,165.60
+INV-24049,6,GLV-NM,"Nitrile gloves, medium, case of 1,000",2,case,64.00,128.00
+INV-24049,7,FRT,Freight and fuel surcharge,1,each,99.10,99.10
+INV-24050,1,COF-HB5,"House espresso blend, whole bean, 5 lb bag",20,bag,52.50,1050.00
+INV-24050,2,CUP-12H,"12 oz hot cup, case of 1,000",14,case,68.50,959.00
+INV-24050,3,LID-12H,"Sip lid for 10-20 oz cups, case of 1,000",14,case,42.00,588.00
+INV-24050,4,CLM-9,"Compostable clamshell 9 x 9 in, case of 200",20,case,54.75,1095.00
+INV-24050,5,NAP-KR,"Kraft dinner napkin, case of 3,000",10,case,41.40,414.00
+INV-24050,6,GLV-NM,"Nitrile gloves, medium, case of 1,000",8,case,64.00,512.00
+INV-24050,7,SAN-Q4,"Quat sanitizer, 1 gal, case of 4",6,case,36.40,218.40
+INV-24050,8,BAG-KR,"Kraft takeout bag with handle, case of 250",8,case,46.20,369.60
+INV-24050,9,FRT,Freight and fuel surcharge,1,each,104.20,104.20
+INV-24054,1,FLR-AP50,"All-purpose flour, 50 lb bag",40,bag,28.90,1156.00
+INV-24054,2,OIL-35,"Canola fry oil, 35 lb jug",20,jug,52.80,1056.00
+INV-24054,3,CLM-9,"Compostable clamshell 9 x 9 in, case of 200",18,case,54.75,985.50
+INV-24054,4,BAG-KR,"Kraft takeout bag with handle, case of 250",14,case,46.20,646.80
+INV-24054,5,GLV-NM,"Nitrile gloves, medium, case of 1,000",8,case,64.00,512.00
+INV-24054,6,NAP-KR,"Kraft dinner napkin, case of 3,000",6,case,41.40,248.40
+INV-24054,7,SAN-Q4,"Quat sanitizer, 1 gal, case of 4",5,case,36.40,182.00
+INV-24054,8,FRT,Freight and fuel surcharge,1,each,93.70,93.70
+INV-24058,1,COF-HB5,"House espresso blend, whole bean, 5 lb bag",16,bag,52.50,840.00
+INV-24058,2,CUP-12H,"12 oz hot cup, case of 1,000",12,case,68.50,822.00
+INV-24058,3,LID-12H,"Sip lid for 10-20 oz cups, case of 1,000",12,case,42.00,504.00
+INV-24058,4,BAG-KR,"Kraft takeout bag with handle, case of 250",10,case,46.20,462.00
+INV-24058,5,NAP-KR,"Kraft dinner napkin, case of 3,000",8,case,41.40,331.20
+INV-24058,6,SAN-Q4,"Quat sanitizer, 1 gal, case of 4",2,case,36.40,72.80
+INV-24058,7,FRT,Freight and fuel surcharge,1,each,88.40,88.40
+INV-24062,1,BTR-36,"Unsalted butter, 36 lb case",16,case,142.00,2272.00
+INV-24062,2,OIL-35,"Canola fry oil, 35 lb jug",30,jug,52.80,1584.00
+INV-24062,3,NAP-KR,"Kraft dinner napkin, case of 3,000",20,case,41.40,828.00
+INV-24062,4,CLM-9,"Compostable clamshell 9 x 9 in, case of 200",20,case,54.75,1095.00
+INV-24062,5,GLV-NM,"Nitrile gloves, medium, case of 1,000",18,case,64.00,1152.00
+INV-24062,6,COF-HB5,"House espresso blend, whole bean, 5 lb bag",16,bag,52.50,840.00
+INV-24062,7,SAN-Q4,"Quat sanitizer, 1 gal, case of 4",6,case,36.40,218.40
+INV-24062,8,FRT,Freight and fuel surcharge,1,each,126.10,126.10
+INV-24066,1,CLM-9,"Compostable clamshell 9 x 9 in, case of 200",8,case,54.75,438.00
+INV-24066,2,BAG-KR,"Kraft takeout bag with handle, case of 250",6,case,46.20,277.20
+INV-24066,3,NAP-KR,"Kraft dinner napkin, case of 3,000",4,case,41.40,165.60
+INV-24066,4,GLV-NM,"Nitrile gloves, medium, case of 1,000",4,case,64.00,256.00
+INV-24066,5,CUP-16C,"16 oz PET cold cup, case of 1,000",1,case,79.00,79.00
+INV-24066,6,FRT,Freight and fuel surcharge,1,each,68.80,68.80
+INV-24071,1,CLM-9,"Compostable clamshell 9 x 9 in, case of 200",20,case,54.75,1095.00
+INV-24071,2,BAG-KR,"Kraft takeout bag with handle, case of 250",12,case,46.20,554.40
+INV-24071,3,OIL-35,"Canola fry oil, 35 lb jug",10,jug,52.80,528.00
+INV-24071,4,GLV-NM,"Nitrile gloves, medium, case of 1,000",6,case,64.00,384.00
+INV-24071,5,NAP-KR,"Kraft dinner napkin, case of 3,000",6,case,41.40,248.40
+INV-24071,6,FRT,Freight and fuel surcharge,1,each,130.70,130.70
+INV-24074,1,OIL-35,"Canola fry oil, 35 lb jug",11,jug,52.80,580.80
+INV-24074,2,CLM-9,"Compostable clamshell 9 x 9 in, case of 200",13,case,54.75,711.75
+INV-24074,3,BAG-KR,"Kraft takeout bag with handle, case of 250",9,case,46.20,415.80
+INV-24074,4,GLV-NM,"Nitrile gloves, medium, case of 1,000",6,case,64.00,384.00
+INV-24074,5,SAN-Q4,"Quat sanitizer, 1 gal, case of 4",3,case,36.40,109.20
+INV-24074,6,FRT,Freight and fuel surcharge,1,each,116.85,116.85
+INV-24077,1,FLR-AP50,"All-purpose flour, 50 lb bag",44,bag,28.90,1271.60
+INV-24077,2,OIL-35,"Canola fry oil, 35 lb jug",22,jug,52.80,1161.60
+INV-24077,3,CLM-9,"Compostable clamshell 9 x 9 in, case of 200",20,case,54.75,1095.00
+INV-24077,4,BAG-KR,"Kraft takeout bag with handle, case of 250",14,case,46.20,646.80
+INV-24077,5,GLV-NM,"Nitrile gloves, medium, case of 1,000",8,case,64.00,512.00
+INV-24077,6,NAP-KR,"Kraft dinner napkin, case of 3,000",6,case,41.40,248.40
+INV-24077,7,SAN-Q4,"Quat sanitizer, 1 gal, case of 4",5,case,36.40,182.00
+INV-24077,8,FRT,Freight and fuel surcharge,1,each,95.50,95.50
+INV-24083,1,FLR-AP50,"All-purpose flour, 50 lb bag",20,bag,28.90,578.00
+INV-24083,2,BTR-36,"Unsalted butter, 36 lb case",6,case,142.00,852.00
+INV-24083,3,BOX-PST,"Pastry box 8 x 8 x 4 in, case of 200",8,case,47.25,378.00
+INV-24083,4,COF-HB5,"House espresso blend, whole bean, 5 lb bag",6,bag,52.50,315.00
+INV-24083,5,FRT,Freight and fuel surcharge,1,each,91.00,91.00
+INV-24089,1,OAT-12,"Barista oat milk, 32 oz, case of 12",12,case,39.60,475.20
+INV-24089,2,CUP-16C,"16 oz PET cold cup, case of 1,000",6,case,79.00,474.00
+INV-24089,3,LID-12H,"Sip lid for 10-20 oz cups, case of 1,000",4,case,42.00,168.00
+INV-24089,4,CLM-9,"Compostable clamshell 9 x 9 in, case of 200",4,case,54.75,219.00
+INV-24089,5,NAP-KR,"Kraft dinner napkin, case of 3,000",2,case,41.40,82.80
+INV-24089,6,FRT,Freight and fuel surcharge,1,each,71.00,71.00
+INV-24091,1,COF-HB5,"House espresso blend, whole bean, 5 lb bag",9,bag,52.50,472.50
+INV-24091,2,CUP-12H,"12 oz hot cup, case of 1,000",7,case,68.50,479.50
+INV-24091,3,LID-12H,"Sip lid for 10-20 oz cups, case of 1,000",7,case,42.00,294.00
+INV-24091,4,BAG-KR,"Kraft takeout bag with handle, case of 250",9,case,46.20,415.80
+INV-24091,5,NAP-KR,"Kraft dinner napkin, case of 3,000",4,case,41.40,165.60
+INV-24091,6,GLV-NM,"Nitrile gloves, medium, case of 1,000",2,case,64.00,128.00
+INV-24091,7,FRT,Freight and fuel surcharge,1,each,81.35,81.35
+INV-24092,1,CLM-9,"Compostable clamshell 9 x 9 in, case of 200",10,case,54.75,547.50
+INV-24092,2,BAG-KR,"Kraft takeout bag with handle, case of 250",6,case,46.20,277.20
+INV-24092,3,NAP-KR,"Kraft dinner napkin, case of 3,000",4,case,41.40,165.60
+INV-24092,4,GLV-NM,"Nitrile gloves, medium, case of 1,000",4,case,64.00,256.00
+INV-24092,5,OIL-35,"Canola fry oil, 35 lb jug",5,jug,52.80,264.00
+INV-24092,6,FRT,Freight and fuel surcharge,1,each,109.70,109.70
+INV-24094,1,BTR-36,"Unsalted butter, 36 lb case",14,case,142.00,1988.00
+INV-24094,2,OIL-35,"Canola fry oil, 35 lb jug",28,jug,52.80,1478.40
+INV-24094,3,NAP-KR,"Kraft dinner napkin, case of 3,000",18,case,41.40,745.20
+INV-24094,4,CLM-9,"Compostable clamshell 9 x 9 in, case of 200",18,case,54.75,985.50
+INV-24094,5,GLV-NM,"Nitrile gloves, medium, case of 1,000",16,case,64.00,1024.00
+INV-24094,6,COF-HB5,"House espresso blend, whole bean, 5 lb bag",14,bag,52.50,735.00
+INV-24094,7,SAN-Q4,"Quat sanitizer, 1 gal, case of 4",8,case,36.40,291.20
+INV-24094,8,FRT,Freight and fuel surcharge,1,each,132.70,132.70
+INV-24095,1,OIL-35,"Canola fry oil, 35 lb jug",12,jug,52.80,633.60
+INV-24095,2,CLM-9,"Compostable clamshell 9 x 9 in, case of 200",14,case,54.75,766.50
+INV-24095,3,BAG-KR,"Kraft takeout bag with handle, case of 250",10,case,46.20,462.00
+INV-24095,4,GLV-NM,"Nitrile gloves, medium, case of 1,000",6,case,64.00,384.00
+INV-24095,5,SAN-Q4,"Quat sanitizer, 1 gal, case of 4",3,case,36.40,109.20
+INV-24095,6,FRT,Freight and fuel surcharge,1,each,104.70,104.70
+INV-24098,1,COF-HB5,"House espresso blend, whole bean, 5 lb bag",10,bag,52.50,525.00
+INV-24098,2,CUP-12H,"12 oz hot cup, case of 1,000",8,case,68.50,548.00
+INV-24098,3,LID-12H,"Sip lid for 10-20 oz cups, case of 1,000",8,case,42.00,336.00
+INV-24098,4,BAG-KR,"Kraft takeout bag with handle, case of 250",6,case,46.20,277.20
+INV-24098,5,NAP-KR,"Kraft dinner napkin, case of 3,000",4,case,41.40,165.60
+INV-24098,6,FRT,Freight and fuel surcharge,1,each,88.20,88.20
+INV-24100,1,COF-HB5,"House espresso blend, whole bean, 5 lb bag",14,bag,52.50,735.00
+INV-24100,2,CUP-12H,"12 oz hot cup, case of 1,000",10,case,68.50,685.00
+INV-24100,3,LID-12H,"Sip lid for 10-20 oz cups, case of 1,000",10,case,42.00,420.00
+INV-24100,4,CLM-9,"Compostable clamshell 9 x 9 in, case of 200",16,case,54.75,876.00
+INV-24100,5,NAP-KR,"Kraft dinner napkin, case of 3,000",8,case,41.40,331.20
+INV-24100,6,GLV-NM,"Nitrile gloves, medium, case of 1,000",6,case,64.00,384.00
+INV-24100,7,SAN-Q4,"Quat sanitizer, 1 gal, case of 4",4,case,36.40,145.60
+INV-24100,8,BAG-KR,"Kraft takeout bag with handle, case of 250",6,case,46.20,277.20
+INV-24100,9,FRT,Freight and fuel surcharge,1,each,114.75,114.75
+INV-24102,1,CLM-9,"Compostable clamshell 9 x 9 in, case of 200",24,case,54.75,1314.00
+INV-24102,2,BAG-KR,"Kraft takeout bag with handle, case of 250",14,case,46.20,646.80
+INV-24102,3,OIL-35,"Canola fry oil, 35 lb jug",12,jug,52.80,633.60
+INV-24102,4,GLV-NM,"Nitrile gloves, medium, case of 1,000",8,case,64.00,512.00
+INV-24102,5,NAP-KR,"Kraft dinner napkin, case of 3,000",8,case,41.40,331.20
+INV-24102,6,SAN-Q4,"Quat sanitizer, 1 gal, case of 4",2,case,36.40,72.80
+INV-24102,7,FRT,Freight and fuel surcharge,1,each,104.80,104.80
+INV-24104,1,CLM-9,"Compostable clamshell 9 x 9 in, case of 200",10,case,54.75,547.50
+INV-24104,2,BAG-KR,"Kraft takeout bag with handle, case of 250",7,case,46.20,323.40
+INV-24104,3,NAP-KR,"Kraft dinner napkin, case of 3,000",4,case,41.40,165.60
+INV-24104,4,GLV-NM,"Nitrile gloves, medium, case of 1,000",4,case,64.00,256.00
+INV-24104,5,CUP-16C,"16 oz PET cold cup, case of 1,000",1,case,79.00,79.00
+INV-24104,6,SAN-Q4,"Quat sanitizer, 1 gal, case of 4",2,case,36.40,72.80
+INV-24104,7,FRT,Freight and fuel surcharge,1,each,68.45,68.45
+INV-24105,1,COF-HB5,"House espresso blend, whole bean, 5 lb bag",16,bag,52.50,840.00
+INV-24105,2,CUP-12H,"12 oz hot cup, case of 1,000",12,case,68.50,822.00
+INV-24105,3,LID-12H,"Sip lid for 10-20 oz cups, case of 1,000",12,case,42.00,504.00
+INV-24105,4,CLM-9,"Compostable clamshell 9 x 9 in, case of 200",16,case,54.75,876.00
+INV-24105,5,NAP-KR,"Kraft dinner napkin, case of 3,000",8,case,41.40,331.20
+INV-24105,6,GLV-NM,"Nitrile gloves, medium, case of 1,000",6,case,64.00,384.00
+INV-24105,7,SAN-Q4,"Quat sanitizer, 1 gal, case of 4",6,case,36.40,218.40
+INV-24105,8,BAG-KR,"Kraft takeout bag with handle, case of 250",5,case,46.20,231.00
+INV-24105,9,FRT,Freight and fuel surcharge,1,each,79.80,79.80
+INV-24107,1,FLR-AP50,"All-purpose flour, 50 lb bag",36,bag,28.90,1040.40
+INV-24107,2,OIL-35,"Canola fry oil, 35 lb jug",18,jug,52.80,950.40
+INV-24107,3,CLM-9,"Compostable clamshell 9 x 9 in, case of 200",16,case,54.75,876.00
+INV-24107,4,BAG-KR,"Kraft takeout bag with handle, case of 250",12,case,46.20,554.40
+INV-24107,5,GLV-NM,"Nitrile gloves, medium, case of 1,000",8,case,64.00,512.00
+INV-24107,6,NAP-KR,"Kraft dinner napkin, case of 3,000",6,case,41.40,248.40
+INV-24107,7,SAN-Q4,"Quat sanitizer, 1 gal, case of 4",4,case,36.40,145.60
+INV-24107,8,FRT,Freight and fuel surcharge,1,each,80.10,80.10
+INV-24110,1,CLM-9,"Compostable clamshell 9 x 9 in, case of 200",22,case,54.75,1204.50
+INV-24110,2,BAG-KR,"Kraft takeout bag with handle, case of 250",12,case,46.20,554.40
+INV-24110,3,OIL-35,"Canola fry oil, 35 lb jug",12,jug,52.80,633.60
+INV-24110,4,GLV-NM,"Nitrile gloves, medium, case of 1,000",6,case,64.00,384.00
+INV-24110,5,NAP-KR,"Kraft dinner napkin, case of 3,000",6,case,41.40,248.40
+INV-24110,6,SAN-Q4,"Quat sanitizer, 1 gal, case of 4",1,case,36.40,36.40
+INV-24110,7,FRT,Freight and fuel surcharge,1,each,118.70,118.70
+INV-24111,1,COF-HB5,"House espresso blend, whole bean, 5 lb bag",14,bag,52.50,735.00
+INV-24111,2,CUP-12H,"12 oz hot cup, case of 1,000",10,case,68.50,685.00
+INV-24111,3,LID-12H,"Sip lid for 10-20 oz cups, case of 1,000",10,case,42.00,420.00
+INV-24111,4,CLM-9,"Compostable clamshell 9 x 9 in, case of 200",16,case,54.75,876.00
+INV-24111,5,NAP-KR,"Kraft dinner napkin, case of 3,000",8,case,41.40,331.20
+INV-24111,6,GLV-NM,"Nitrile gloves, medium, case of 1,000",6,case,64.00,384.00
+INV-24111,7,SAN-Q4,"Quat sanitizer, 1 gal, case of 4",4,case,36.40,145.60
+INV-24111,8,BAG-KR,"Kraft takeout bag with handle, case of 250",5,case,46.20,231.00
+INV-24111,9,FRT,Freight and fuel surcharge,1,each,97.80,97.80
+INV-24113,1,OAT-12,"Barista oat milk, 32 oz, case of 12",10,case,39.60,396.00
+INV-24113,2,CUP-16C,"16 oz PET cold cup, case of 1,000",4,case,79.00,316.00
+INV-24113,3,LID-12H,"Sip lid for 10-20 oz cups, case of 1,000",3,case,42.00,126.00
+INV-24113,4,CLM-9,"Compostable clamshell 9 x 9 in, case of 200",3,case,54.75,164.25
+INV-24113,5,NAP-KR,"Kraft dinner napkin, case of 3,000",2,case,41.40,82.80
+INV-24113,6,FRT,Freight and fuel surcharge,1,each,41.75,41.75
+INV-24116,1,CLM-9,"Compostable clamshell 9 x 9 in, case of 200",9,case,54.75,492.75
+INV-24116,2,BAG-KR,"Kraft takeout bag with handle, case of 250",6,case,46.20,277.20
+INV-24116,3,NAP-KR,"Kraft dinner napkin, case of 3,000",4,case,41.40,165.60
+INV-24116,4,GLV-NM,"Nitrile gloves, medium, case of 1,000",4,case,64.00,256.00
+INV-24116,5,OIL-35,"Canola fry oil, 35 lb jug",4,jug,52.80,211.20
+INV-24116,6,FRT,Freight and fuel surcharge,1,each,83.65,83.65
+INV-24117,1,CLM-9,"Compostable clamshell 9 x 9 in, case of 200",9,case,54.75,492.75
+INV-24117,2,BAG-KR,"Kraft takeout bag with handle, case of 250",6,case,46.20,277.20
+INV-24117,3,NAP-KR,"Kraft dinner napkin, case of 3,000",4,case,41.40,165.60
+INV-24117,4,GLV-NM,"Nitrile gloves, medium, case of 1,000",4,case,64.00,256.00
+INV-24117,5,OIL-35,"Canola fry oil, 35 lb jug",4,jug,52.80,211.20
+INV-24117,6,FRT,Freight and fuel surcharge,1,each,83.65,83.65
+INV-24119,1,BTR-36,"Unsalted butter, 36 lb case",10,case,142.00,1420.00
+INV-24119,2,OIL-35,"Canola fry oil, 35 lb jug",22,jug,52.80,1161.60
+INV-24119,3,NAP-KR,"Kraft dinner napkin, case of 3,000",16,case,41.40,662.40
+INV-24119,4,CLM-9,"Compostable clamshell 9 x 9 in, case of 200",16,case,54.75,876.00
+INV-24119,5,GLV-NM,"Nitrile gloves, medium, case of 1,000",14,case,64.00,896.00
+INV-24119,6,COF-HB5,"House espresso blend, whole bean, 5 lb bag",12,bag,52.50,630.00
+INV-24119,7,SAN-Q4,"Quat sanitizer, 1 gal, case of 4",5,case,36.40,182.00
+INV-24119,8,FRT,Freight and fuel surcharge,1,each,92.25,92.25
+INV-24121,1,FLR-AP50,"All-purpose flour, 50 lb bag",16,bag,28.90,462.40
+INV-24121,2,BTR-36,"Unsalted butter, 36 lb case",5,case,142.00,710.00
+INV-24121,3,BOX-PST,"Pastry box 8 x 8 x 4 in, case of 200",6,case,47.25,283.50
+INV-24121,4,COF-HB5,"House espresso blend, whole bean, 5 lb bag",0,bag,52.50,0.00
+INV-24121,5,SYR-VAN6,"Vanilla syrup, 750 ml, case of 6",4,case,44.70,178.80
+INV-24121,6,CUP-12H,"12 oz hot cup, case of 1,000",2,case,68.50,137.00
+INV-24121,7,FRT,Freight and fuel surcharge,1,each,103.30,103.30
+INV-24122,1,CLM-9,"Compostable clamshell 9 x 9 in, case of 200",28,case,54.75,1533.00
+INV-24122,2,BAG-KR,"Kraft takeout bag with handle, case of 250",16,case,46.20,739.20
+INV-24122,3,OIL-35,"Canola fry oil, 35 lb jug",14,jug,52.80,739.20
+INV-24122,4,GLV-NM,"Nitrile gloves, medium, case of 1,000",10,case,64.00,640.00
+INV-24122,5,NAP-KR,"Kraft dinner napkin, case of 3,000",8,case,41.40,331.20
+INV-24122,6,SAN-Q4,"Quat sanitizer, 1 gal, case of 4",4,case,36.40,145.60
+INV-24122,7,FRT,Freight and fuel surcharge,1,each,106.60,106.60
+INV-24124,1,COF-HB5,"House espresso blend, whole bean, 5 lb bag",14,bag,52.50,735.00
+INV-24124,2,CUP-12H,"12 oz hot cup, case of 1,000",10,case,68.50,685.00
+INV-24124,3,LID-12H,"Sip lid for 10-20 oz cups, case of 1,000",10,case,42.00,420.00
+INV-24124,4,BAG-KR,"Kraft takeout bag with handle, case of 250",8,case,46.20,369.60
+INV-24124,5,NAP-KR,"Kraft dinner napkin, case of 3,000",6,case,41.40,248.40
+INV-24124,6,SAN-Q4,"Quat sanitizer, 1 gal, case of 4",3,case,36.40,109.20
+INV-24124,7,FRT,Freight and fuel surcharge,1,each,88.10,88.10
+INV-24127,1,FLR-AP50,"All-purpose flour, 50 lb bag",30,bag,28.90,867.00
+INV-24127,2,OIL-35,"Canola fry oil, 35 lb jug",16,jug,52.80,844.80
+INV-24127,3,CLM-9,"Compostable clamshell 9 x 9 in, case of 200",14,case,54.75,766.50
+INV-24127,4,BAG-KR,"Kraft takeout bag with handle, case of 250",10,case,46.20,462.00
+INV-24127,5,GLV-NM,"Nitrile gloves, medium, case of 1,000",6,case,64.00,384.00
+INV-24127,6,NAP-KR,"Kraft dinner napkin, case of 3,000",6,case,41.40,248.40
+INV-24127,7,SAN-Q4,"Quat sanitizer, 1 gal, case of 4",2,case,36.40,72.80
+INV-24127,8,FRT,Freight and fuel surcharge,1,each,94.50,94.50
+INV-24129,1,CLM-9,"Compostable clamshell 9 x 9 in, case of 200",9,case,54.75,492.75
+INV-24129,2,BAG-KR,"Kraft takeout bag with handle, case of 250",6,case,46.20,277.20
+INV-24129,3,NAP-KR,"Kraft dinner napkin, case of 3,000",4,case,41.40,165.60
+INV-24129,4,GLV-NM,"Nitrile gloves, medium, case of 1,000",4,case,64.00,256.00
+INV-24129,5,CUP-16C,"16 oz PET cold cup, case of 1,000",1,case,79.00,79.00
+INV-24129,6,SAN-Q4,"Quat sanitizer, 1 gal, case of 4",2,case,36.40,72.80
+INV-24129,7,FRT,Freight and fuel surcharge,1,each,54.85,54.85
+INV-24131,1,OIL-35,"Canola fry oil, 35 lb jug",10,jug,52.80,528.00
+INV-24131,2,CLM-9,"Compostable clamshell 9 x 9 in, case of 200",12,case,54.75,657.00
+INV-24131,3,BAG-KR,"Kraft takeout bag with handle, case of 250",9,case,46.20,415.80
+INV-24131,4,GLV-NM,"Nitrile gloves, medium, case of 1,000",5,case,64.00,320.00
+INV-24131,5,SAN-Q4,"Quat sanitizer, 1 gal, case of 4",3,case,36.40,109.20
+INV-24131,6,NAP-KR,"Kraft dinner napkin, case of 3,000",2,case,41.40,82.80
+INV-24131,7,FRT,Freight and fuel surcharge,1,each,74.10,74.10
+INV-24132,1,COF-HB5,"House espresso blend, whole bean, 5 lb bag",8,bag,52.50,420.00
+INV-24132,2,CUP-12H,"12 oz hot cup, case of 1,000",6,case,68.50,411.00
+INV-24132,3,LID-12H,"Sip lid for 10-20 oz cups, case of 1,000",6,case,42.00,252.00
+INV-24132,4,BAG-KR,"Kraft takeout bag with handle, case of 250",7,case,46.20,323.40
+INV-24132,5,NAP-KR,"Kraft dinner napkin, case of 3,000",4,case,41.40,165.60
+INV-24132,6,GLV-NM,"Nitrile gloves, medium, case of 1,000",2,case,64.00,128.00
+INV-24132,7,FRT,Freight and fuel surcharge,1,each,92.60,92.60
+INV-24134,1,FLR-AP50,"All-purpose flour, 50 lb bag",18,bag,28.90,520.20
+INV-24134,2,BTR-36,"Unsalted butter, 36 lb case",6,case,142.00,852.00
+INV-24134,3,BOX-PST,"Pastry box 8 x 8 x 4 in, case of 200",8,case,47.25,378.00
+INV-24134,4,COF-HB5,"House espresso blend, whole bean, 5 lb bag",4,bag,52.50,210.00
+INV-24134,5,FRT,Freight and fuel surcharge,1,each,88.40,88.40
+INV-24136,1,CLM-9,"Compostable clamshell 9 x 9 in, case of 200",22,case,54.75,1204.50
+INV-24136,2,BAG-KR,"Kraft takeout bag with handle, case of 250",12,case,46.20,554.40
+INV-24136,3,OIL-35,"Canola fry oil, 35 lb jug",12,jug,52.80,633.60
+INV-24136,4,GLV-NM,"Nitrile gloves, medium, case of 1,000",7,case,64.00,448.00
+INV-24136,5,NAP-KR,"Kraft dinner napkin, case of 3,000",6,case,41.40,248.40
+INV-24136,6,SAN-Q4,"Quat sanitizer, 1 gal, case of 4",1,case,36.40,36.40
+INV-24136,7,FRT,Freight and fuel surcharge,1,each,114.70,114.70

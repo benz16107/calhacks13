@@ -1,0 +1,777 @@
+{
+  "case_id": "fogline-2026-10",
+  "as_of": "2026-10-23",
+  "rules": "rules/credit-rules.draft.yaml (0.1-draft)",
+  "scoring": "A planted error counts as caught when the desk's log names at least one of its 'where' locations and reaches the 'correct_conclusion'. Report 'caught N of 14'. Decisions are scored separately against application_decisions, collections and order_decisions. Flagging a 'not_errors' item counts as a false positive.",
+  "planted_errors": [
+    {
+      "id": "E01",
+      "seat": "collections clerk",
+      "category": "duplicate customer",
+      "title": "Sunset Noodle Bar exists twice",
+      "where": [
+        {
+          "file": "customers.csv",
+          "id": "C-1007"
+        },
+        {
+          "file": "customers.csv",
+          "id": "C-1011"
+        }
+      ],
+      "what_is_wrong": "C-1011 was opened by sales on 2026-09-28 for a business that is already C-1007. Same EIN (47-3318290 vs 473318290), same phone, same street address written differently.",
+      "correct_conclusion": "Merge C-1011 into C-1007. Combined open balance is 14,270.00 against one 10,000.00 limit, so the customer is 4,270.00 over limit. Hold new orders (SO-5524) until the controller decides on the limit.",
+      "if_missed": "The customer silently gets two 10,000 limits and keeps ordering past its real limit.",
+      "rules": [
+        "COL-7",
+        "ORD-1"
+      ]
+    },
+    {
+      "id": "E02",
+      "seat": "collections clerk",
+      "category": "invoice total does not match lines",
+      "title": "INV-24105 header overstated",
+      "where": [
+        {
+          "file": "invoices.csv",
+          "id": "INV-24105"
+        },
+        {
+          "file": "invoice_lines.csv",
+          "id": "INV-24105"
+        }
+      ],
+      "what_is_wrong": "Header total is 4,862.40; the nine lines add up to 4,286.40. The digits 862 and 286 are swapped.",
+      "correct_conclusion": "The customer owes 4,286.40. Correct or reissue the invoice (576.00 credit) before any reminder goes out.",
+      "if_missed": "Collections chases 576.00 the customer does not owe.",
+      "rules": [
+        "COL-6"
+      ]
+    },
+    {
+      "id": "E03",
+      "seat": "collections clerk",
+      "category": "payment applied to wrong invoice",
+      "title": "PMT-8812 posted to INV-24089 instead of INV-24098",
+      "where": [
+        {
+          "file": "payments.csv",
+          "id": "PMT-8812"
+        },
+        {
+          "file": "invoices.csv",
+          "id": "INV-24089"
+        },
+        {
+          "file": "invoices.csv",
+          "id": "INV-24098"
+        }
+      ],
+      "what_is_wrong": "Golden Gate Bagel paid 1,940.00 with remittance INV-24098. The clerk keyed INV-24089 (digits transposed), which is Greenleaf Juice's 1,490.00 invoice. INV-24089 now shows a balance of -450.00 and INV-24098 shows as unpaid.",
+      "correct_conclusion": "Reverse and reapply PMT-8812 to INV-24098 (Golden Gate, now paid). INV-24089 is open for 1,490.00 and 20 days past due; Greenleaf gets a second notice. Golden Gate gets no reminder.",
+      "if_missed": "A paid customer gets dunned, and a customer who has not paid is treated as paid with a credit balance.",
+      "rules": [
+        "COL-6",
+        "COL-1"
+      ]
+    },
+    {
+      "id": "E04",
+      "seat": "collections clerk",
+      "category": "duplicate invoice",
+      "title": "INV-24117 duplicates INV-24116",
+      "where": [
+        {
+          "file": "invoices.csv",
+          "id": "INV-24116"
+        },
+        {
+          "file": "invoices.csv",
+          "id": "INV-24117"
+        }
+      ],
+      "what_is_wrong": "Same customer, date, PO FFTC-0930, lines and total (1,486.40). The order was billed twice.",
+      "correct_conclusion": "Void INV-24117. Chase only INV-24116 (6 days past due: friendly reminder).",
+      "if_missed": "The customer is billed and dunned for 1,486.40 twice.",
+      "rules": [
+        "COL-6"
+      ]
+    },
+    {
+      "id": "E05",
+      "seat": "collections clerk",
+      "category": "post-dated check recorded as paid",
+      "title": "PMT-8823 is a check dated 2026-11-06",
+      "where": [
+        {
+          "file": "payments.csv",
+          "id": "PMT-8823"
+        },
+        {
+          "file": "invoices.csv",
+          "id": "INV-24091"
+        }
+      ],
+      "what_is_wrong": "Dogpatch Deli's check 4471 was received 2026-10-20 but is dated 2026-11-06. It was applied as cash and INV-24091 shows paid.",
+      "correct_conclusion": "Not cash until 2026-11-06. INV-24091 stays open (2,036.75, 19 days past due). Hold the check and deposit it on or after 2026-11-06.",
+      "if_missed": "The books show cash that does not exist, and the check may bounce if deposited early.",
+      "rules": [
+        "COL-5"
+      ]
+    },
+    {
+      "id": "E06",
+      "seat": "collections clerk",
+      "category": "unearned early-payment discount",
+      "title": "Rockridge Ramen took 2% after 24 days",
+      "where": [
+        {
+          "file": "payments.csv",
+          "id": "PMT-8806"
+        },
+        {
+          "file": "invoices.csv",
+          "id": "INV-24095"
+        }
+      ],
+      "what_is_wrong": "Terms are 2/10 Net 30. INV-24095 is dated 2026-09-08; payment arrived 2026-10-02, 24 days later, still taking the 49.20 discount, and the clerk allowed it.",
+      "correct_conclusion": "Disallow the discount. Reopen INV-24095 for 49.20 and send a short-pay notice.",
+      "if_missed": "Fogline loses 49.20 here, and the customer learns that late discounts are accepted.",
+      "rules": [
+        "COL-4"
+      ]
+    },
+    {
+      "id": "E07",
+      "seat": "collections clerk",
+      "category": "wrong date (wrong year)",
+      "title": "INV-24111 dated 2025 instead of 2026",
+      "where": [
+        {
+          "file": "invoices.csv",
+          "id": "INV-24111"
+        }
+      ],
+      "what_is_wrong": "INV-24111 shows invoice date 2025-09-29 and due date 2025-10-29, so it ages as 359 days past due. Its number sits between invoices from late September 2026, and its PO PPC-2247 follows PPC-2240 from 2026-09-22.",
+      "correct_conclusion": "Correct the date to 2026-09-29 (due 2026-10-29). The invoice is not yet due. No final demand, and SO-5528 can ship.",
+      "if_missed": "A good customer gets a final demand and a held order over an invoice that is not due.",
+      "rules": [
+        "COL-1",
+        "ORD-1"
+      ]
+    },
+    {
+      "id": "E08",
+      "seat": "credit analyst",
+      "category": "stale credit review",
+      "title": "Harborview's limit has not been reviewed since 2024-05-20",
+      "where": [
+        {
+          "file": "customers.csv",
+          "id": "C-1002"
+        }
+      ],
+      "what_is_wrong": "Policy requires a limit review every 12 months; Harborview's was due 2025-05-20, 17 months ago. It is 50 days past due on its oldest invoice with 27,655.75 open against a 30,000 limit.",
+      "correct_conclusion": "Flag the overdue review to the credit analyst. No limit increase until reviewed. With the oldest invoice 50 days past due: phone call and hold new orders, including SO-5527 (which would also take exposure over the limit).",
+      "if_missed": "A slow-paying customer keeps buying on a two-year-old limit.",
+      "rules": [
+        "REV-1",
+        "COL-1",
+        "ORD-1"
+      ]
+    },
+    {
+      "id": "E09",
+      "seat": "collections clerk",
+      "category": "over limit but not on hold",
+      "title": "Telegraph Ave Pizza is over its limit with no hold",
+      "where": [
+        {
+          "file": "customers.csv",
+          "id": "C-1005"
+        },
+        {
+          "file": "orders.csv",
+          "id": "SO-5521"
+        }
+      ],
+      "what_is_wrong": "Open balance 18,240.60 against a 15,000.00 limit (3,240.60 over), oldest invoice 43 days past due, and on_credit_hold is still 'no'.",
+      "correct_conclusion": "Place C-1005 on credit hold. Hold SO-5521. Phone call. Only the controller can release the hold.",
+      "if_missed": "Another 2,400.00 ships to a customer already over its limit and 43 days late.",
+      "rules": [
+        "COL-1",
+        "COL-3",
+        "ORD-1"
+      ]
+    },
+    {
+      "id": "E10",
+      "seat": "credit analyst",
+      "category": "fake applicant (synthetic identity)",
+      "title": "Pacific Crest Provisions LLC is a fake applicant",
+      "where": [
+        {
+          "file": "applications/APP-1043.json"
+        },
+        {
+          "file": "sources/business_credit.json",
+          "id": "BC-1043"
+        },
+        {
+          "file": "sources/bank_statements.csv",
+          "id": "APP-1043"
+        }
+      ],
+      "what_is_wrong": "The numbers look clean and a simple rule approves 20,000. The identity checks fail. CRS: TransUnion identity FAIL (SSN issued before the date of birth, several names on one SSN); Fraud Finder risk score 88 (email 3 days old, phone not the applicant's, prepaid VoIP); 9 credit inquiries in 60 days. Case files: LLC filed 2026-09-01 but claims 4 years in business; bank account opened 2026-08-28; billing address is a private mailbox; ship-to is a freight forwarder in Florida; both trade references share one phone number; rush first order of 18,500 to ship tomorrow.",
+      "correct_conclusion": "Fraud hold. No credit, no shipment on terms. Refer to the controller. Do not contact the applicant through the phone or email supplied. Cash in advance is the only offer.",
+      "if_missed": "18,500 of product ships to a forwarder and is never paid for.",
+      "rules": [
+        "FRD-1",
+        "FRD-2",
+        "FRD-3",
+        "FRD-4",
+        "SOD-4"
+      ]
+    },
+    {
+      "id": "E11",
+      "seat": "credit analyst",
+      "category": "stated revenue disagrees with bureau",
+      "title": "Lakeshore Diner claims 1.85M; the bureau says 210K",
+      "where": [
+        {
+          "file": "applications/APP-1046.json"
+        },
+        {
+          "file": "sources/business_credit.json",
+          "id": "BC-1046"
+        },
+        {
+          "file": "sources/bank_statements.csv",
+          "id": "APP-1046"
+        }
+      ],
+      "what_is_wrong": "Application states 1,850,000 revenue and 22 employees. The business credit file estimates 210,000 and 5 employees. Bank deposits average 17,600.00 a month (211,200.00 a year).",
+      "correct_conclusion": "Size the limit on the lower, verified figure (210,000): 10% is 21,000. Note the discrepancy in the decision. 21,000 is above the analyst's authority, so it goes to the controller.",
+      "if_missed": "The limit is sized on revenue that does not exist (45,000 approved instead of 21,000).",
+      "rules": [
+        "LIM-1",
+        "LIM-2",
+        "SOD-2"
+      ]
+    },
+    {
+      "id": "E12",
+      "seat": "credit analyst",
+      "category": "application contradicts public records",
+      "title": "Saffron Table says no liens; PitchPoint finds a lien and a judgment",
+      "where": [
+        {
+          "file": "applications/APP-1044.json"
+        }
+      ],
+      "what_is_wrong": "The owner answered 'no' to open liens or judgments. CRS PitchPoint shows a 12,300 civil judgment and a 7,450 state tax lien against her.",
+      "correct_conclusion": "Treat as band C at best (Net 15, 7,500), note the false declaration, and send to the controller. Open terms with public records need controller approval.",
+      "if_missed": "Credit is extended on a false declaration, and the tax lien may take priority over Fogline's claim.",
+      "rules": [
+        "PUB-1",
+        "PUB-2",
+        "BND-C"
+      ]
+    },
+    {
+      "id": "E13",
+      "seat": "credit analyst",
+      "category": "stale document",
+      "title": "Castellanos attached her own 18-month-old credit report",
+      "where": [
+        {
+          "file": "applications/APP-1045.json"
+        }
+      ],
+      "what_is_wrong": "The attached TransUnion report (score 760) is dated 2025-04-02 and was supplied by the applicant.",
+      "correct_conclusion": "Ignore it. The desk pulls its own reports, valid for 30 days. Decide on the fresh pull.",
+      "if_missed": "The applicant is banded A on an old, self-supplied score.",
+      "rules": [
+        "DOC-1"
+      ]
+    },
+    {
+      "id": "E14",
+      "seat": "credit analyst",
+      "category": "sources disagree (bureaus)",
+      "title": "Castellanos: the three bureaus disagree",
+      "where": [
+        {
+          "file": "applications/APP-1045.json"
+        }
+      ],
+      "what_is_wrong": "Fresh CRS pulls: TransUnion 760, Equifax no file, Experian 700 with one charge-off.",
+      "correct_conclusion": "Use the lowest score (700) and count the charge-off: band B (Net 30, at most 15,000). Requested 25,000 becomes 15,000, which is above the analyst's authority, so it goes to the controller.",
+      "if_missed": "Banded A on the best bureau alone; 25,000 approved instead of 15,000.",
+      "rules": [
+        "BND-1",
+        "BND-B",
+        "SOD-2"
+      ]
+    }
+  ],
+  "application_decisions": [
+    {
+      "application_id": "APP-1041",
+      "business": "Kettle & Crumb LLC",
+      "crs_persona": "P19 GRACE NAKAMURA",
+      "requested": 8000,
+      "verified_revenue": 590000,
+      "simple_rule": {
+        "outcome": "approve",
+        "limit": 8000,
+        "terms": "Net 30"
+      },
+      "desk": {
+        "outcome": "approve",
+        "band": "A",
+        "limit": 8000,
+        "terms": "Net 30",
+        "decided_by": "credit analyst",
+        "why": "770 at all three bureaus, identity PASS, Fraud Finder 9, no public records. Limit is the request (under 10% of verified revenue and band A's cap) and within the analyst's 10,000 authority.",
+        "rules": [
+          "CHK-1",
+          "BND-A",
+          "LIM-1",
+          "SOD-1"
+        ]
+      }
+    },
+    {
+      "application_id": "APP-1042",
+      "business": "Bright Harbor Catering Inc.",
+      "crs_persona": "P01 MARGARET OKAFOR",
+      "requested": 40000,
+      "verified_revenue": 2150000,
+      "simple_rule": {
+        "outcome": "approve",
+        "limit": 40000,
+        "terms": "Net 30"
+      },
+      "desk": {
+        "outcome": "pending controller approval",
+        "band": "A",
+        "limit": 40000,
+        "terms": "Net 30",
+        "decided_by": "controller",
+        "why": "Clean band A file (790), but 40,000 is above the analyst's 10,000 authority. The analyst proposes; the controller approves. This is the approval pause.",
+        "rules": [
+          "BND-A",
+          "LIM-1",
+          "SOD-2"
+        ]
+      }
+    },
+    {
+      "application_id": "APP-1043",
+      "business": "Pacific Crest Provisions LLC",
+      "crs_persona": "P13 KAYLA BRENNAN",
+      "requested": 20000,
+      "verified_revenue": 1200000,
+      "simple_rule": {
+        "outcome": "approve",
+        "limit": 20000,
+        "terms": "Net 30"
+      },
+      "desk": {
+        "outcome": "fraud hold; no credit",
+        "band": "none",
+        "limit": 0,
+        "terms": "cash in advance",
+        "decided_by": "controller (fraud referral)",
+        "why": "See E10. Any one of the fraud stop rules is enough; this applicant trips four.",
+        "rules": [
+          "FRD-1",
+          "FRD-2",
+          "FRD-3",
+          "FRD-4"
+        ]
+      }
+    },
+    {
+      "application_id": "APP-1044",
+      "business": "Saffron Table Catering LLC",
+      "crs_persona": "P08 PRIYA VENKATESAN",
+      "requested": 15000,
+      "verified_revenue": 940000,
+      "simple_rule": {
+        "outcome": "approve",
+        "limit": 15000,
+        "terms": "Net 30"
+      },
+      "desk": {
+        "outcome": "pending controller approval",
+        "band": "C",
+        "limit": 7500,
+        "terms": "Net 15",
+        "decided_by": "controller",
+        "why": "Score 690 would be band B, but an open tax lien and an unpaid judgment drop it to band C and require the controller. The application denied both.",
+        "rules": [
+          "PUB-1",
+          "PUB-2",
+          "BND-C",
+          "LIM-1"
+        ]
+      }
+    },
+    {
+      "application_id": "APP-1045",
+      "business": "Panaderia Castellanos LLC",
+      "crs_persona": "P17 ELENA CASTELLANOS",
+      "requested": 25000,
+      "verified_revenue": 700000,
+      "simple_rule": {
+        "outcome": "approve",
+        "limit": 25000,
+        "terms": "Net 30"
+      },
+      "desk": {
+        "outcome": "pending controller approval",
+        "band": "B",
+        "limit": 15000,
+        "terms": "Net 30",
+        "decided_by": "controller",
+        "why": "Ignore the applicant's 2025 report. Fresh pulls disagree; the lowest score (700) and the Experian charge-off put it in band B, capped at 15,000, which is above the analyst's authority.",
+        "rules": [
+          "DOC-1",
+          "BND-1",
+          "BND-B",
+          "SOD-2"
+        ]
+      }
+    },
+    {
+      "application_id": "APP-1046",
+      "business": "Lakeshore Diner Inc.",
+      "crs_persona": "P02 DANIEL WHITFIELD",
+      "requested": 45000,
+      "verified_revenue": 210000,
+      "simple_rule": {
+        "outcome": "approve",
+        "limit": 45000,
+        "terms": "Net 30"
+      },
+      "desk": {
+        "outcome": "pending controller approval",
+        "band": "A",
+        "limit": 21000,
+        "terms": "Net 30",
+        "decided_by": "controller",
+        "why": "815 and clean, but stated revenue is not supported. 10% of verified revenue (210,000) caps the limit at 21,000, which is above the analyst's authority.",
+        "rules": [
+          "LIM-1",
+          "LIM-2",
+          "BND-A",
+          "SOD-2"
+        ]
+      }
+    }
+  ],
+  "collections": [
+    {
+      "customer_id": "C-1001",
+      "name": "Golden Gate Bagel Co.",
+      "corrected_open_balance": 2655.3,
+      "credit_limit": 20000,
+      "oldest_days_past_due": 0,
+      "past_due_invoices": [],
+      "dunning_step": "none",
+      "note": "INV-24098 is paid once PMT-8812 is reapplied (E03). No reminder."
+    },
+    {
+      "customer_id": "C-1002",
+      "name": "Harborview Oyster House",
+      "corrected_open_balance": 27655.75,
+      "credit_limit": 30000,
+      "oldest_days_past_due": 50,
+      "past_due_invoices": [
+        {
+          "invoice_id": "INV-24047",
+          "balance": 6240.0,
+          "days_past_due": 50
+        },
+        {
+          "invoice_id": "INV-24062",
+          "balance": 8115.5,
+          "days_past_due": 36
+        },
+        {
+          "invoice_id": "INV-24094",
+          "balance": 7380.0,
+          "days_past_due": 16
+        }
+      ],
+      "dunning_step": "phone call; hold new orders",
+      "note": "Also flag the overdue limit review (E08)."
+    },
+    {
+      "customer_id": "C-1003",
+      "name": "Mission Street Taqueria Inc.",
+      "corrected_open_balance": 1398.2,
+      "credit_limit": 10000,
+      "oldest_days_past_due": 0,
+      "past_due_invoices": [],
+      "dunning_step": "none"
+    },
+    {
+      "customer_id": "C-1004",
+      "name": "Greenleaf Juice Co.",
+      "corrected_open_balance": 2616.8,
+      "credit_limit": 8000,
+      "oldest_days_past_due": 20,
+      "past_due_invoices": [
+        {
+          "invoice_id": "INV-24089",
+          "balance": 1490.0,
+          "days_past_due": 20
+        }
+      ],
+      "dunning_step": "second notice",
+      "note": "INV-24089 is really open after E03 is fixed."
+    },
+    {
+      "customer_id": "C-1005",
+      "name": "Telegraph Ave Pizza LLC",
+      "corrected_open_balance": 18240.6,
+      "credit_limit": 15000,
+      "oldest_days_past_due": 43,
+      "past_due_invoices": [
+        {
+          "invoice_id": "INV-24054",
+          "balance": 4880.4,
+          "days_past_due": 43
+        },
+        {
+          "invoice_id": "INV-24077",
+          "balance": 5212.9,
+          "days_past_due": 25
+        }
+      ],
+      "dunning_step": "phone call; hold new orders",
+      "note": "Over limit; place on credit hold (E09)."
+    },
+    {
+      "customer_id": "C-1006",
+      "name": "Bluebird Bakery & Cafe",
+      "corrected_open_balance": 2048.6,
+      "credit_limit": 12000,
+      "oldest_days_past_due": 0,
+      "past_due_invoices": [],
+      "dunning_step": "none"
+    },
+    {
+      "customer_id": "C-1007",
+      "name": "Sunset Noodle Bar LLC",
+      "corrected_open_balance": 14270.0,
+      "credit_limit": 10000,
+      "oldest_days_past_due": 5,
+      "past_due_invoices": [
+        {
+          "invoice_id": "INV-24102",
+          "balance": 3615.2,
+          "days_past_due": 5
+        }
+      ],
+      "dunning_step": "friendly reminder",
+      "note": "Includes the merged C-1011 balances (E01). Over the 10,000 limit: hold new orders."
+    },
+    {
+      "customer_id": "C-1008",
+      "name": "Fruitvale Food Truck Collective",
+      "corrected_open_balance": 1486.4,
+      "credit_limit": 5000,
+      "oldest_days_past_due": 6,
+      "past_due_invoices": [
+        {
+          "invoice_id": "INV-24116",
+          "balance": 1486.4,
+          "days_past_due": 6
+        }
+      ],
+      "dunning_step": "friendly reminder",
+      "note": "Only INV-24116; INV-24117 is void (E04)."
+    },
+    {
+      "customer_id": "C-1009",
+      "name": "Rockridge Ramen",
+      "corrected_open_balance": 2236.1,
+      "credit_limit": 9000,
+      "oldest_days_past_due": 15,
+      "past_due_invoices": [
+        {
+          "invoice_id": "INV-24095",
+          "balance": 49.2,
+          "days_past_due": 15
+        }
+      ],
+      "dunning_step": "second notice",
+      "note": "Reopened 49.20 short pay on INV-24095 (E06): short-pay notice."
+    },
+    {
+      "customer_id": "C-1010",
+      "name": "Dogpatch Deli",
+      "corrected_open_balance": 3829.35,
+      "credit_limit": 7500,
+      "oldest_days_past_due": 19,
+      "past_due_invoices": [
+        {
+          "invoice_id": "INV-24091",
+          "balance": 2036.75,
+          "days_past_due": 19
+        }
+      ],
+      "dunning_step": "second notice",
+      "note": "INV-24091 stays open until the post-dated check can be deposited on 2026-11-06 (E05). A reminder is acceptable; noting the check and waiting is also acceptable."
+    },
+    {
+      "customer_id": "C-1012",
+      "name": "Piedmont Provisions Catering",
+      "corrected_open_balance": 8192.0,
+      "credit_limit": 25000,
+      "oldest_days_past_due": 1,
+      "past_due_invoices": [
+        {
+          "invoice_id": "INV-24105",
+          "balance": 4286.4,
+          "days_past_due": 1
+        }
+      ],
+      "dunning_step": "friendly reminder",
+      "note": "INV-24105 at its corrected 4,286.40 (E02), 1 day past due. INV-24111 is not due (E07)."
+    }
+  ],
+  "order_decisions": [
+    {
+      "order_id": "SO-5519",
+      "customer_id": "C-1003",
+      "decision": "release",
+      "who_can_release": "collections clerk",
+      "why": "Current, well under limit."
+    },
+    {
+      "order_id": "SO-5521",
+      "customer_id": "C-1005",
+      "decision": "hold",
+      "who_can_release": "controller",
+      "why": "Over limit and 43 days past due (E09)."
+    },
+    {
+      "order_id": "SO-5524",
+      "customer_id": "C-1011",
+      "decision": "hold",
+      "who_can_release": "controller",
+      "why": "C-1011 is C-1007; merged balance is over the limit (E01)."
+    },
+    {
+      "order_id": "SO-5527",
+      "customer_id": "C-1002",
+      "decision": "hold",
+      "who_can_release": "controller",
+      "why": "50 days past due, review overdue, and the order would take exposure to 30,755.75 over a 30,000 limit (E08)."
+    },
+    {
+      "order_id": "SO-5528",
+      "customer_id": "C-1012",
+      "decision": "release",
+      "who_can_release": "collections clerk",
+      "why": "Looks 359 days late only because of the wrong-year date (E07). Corrected, it is current."
+    },
+    {
+      "order_id": "SO-5530",
+      "customer_id": "C-1001",
+      "decision": "release",
+      "who_can_release": "collections clerk",
+      "why": "Looks 11 days late only because PMT-8812 was misapplied (E03). Corrected, it is current."
+    }
+  ],
+  "not_errors": [
+    {
+      "where": [
+        {
+          "file": "invoices.csv",
+          "id": "INV-24066"
+        },
+        {
+          "file": "payments.csv",
+          "id": "PMT-8795"
+        }
+      ],
+      "why_fine": "'Mission St. Taqueria' and 'MISSION ST TAQ INC' are how C-1003's name is printed and remitted. Same customer ID; not a duplicate."
+    },
+    {
+      "where": [
+        {
+          "file": "invoices.csv",
+          "id": "INV-24124"
+        }
+      ],
+      "why_fine": "Ships to 780 Valencia St, Golden Gate Bagel's second shop (noted in customers.csv). One customer, two ship-to addresses."
+    },
+    {
+      "where": [
+        {
+          "file": "payments.csv",
+          "id": "PMT-8789"
+        },
+        {
+          "file": "payments.csv",
+          "id": "PMT-8817"
+        }
+      ],
+      "why_fine": "Bluebird's 2% discounts were taken 9 and 8 days after the invoice date, inside the 10-day window."
+    },
+    {
+      "where": [
+        {
+          "file": "customers.csv",
+          "id": "C-1008"
+        }
+      ],
+      "why_fine": "'Oakalnd' is a typo in the address, not a different customer or a fraud signal."
+    },
+    {
+      "where": [
+        {
+          "file": "invoices.csv",
+          "id": "INV-24089"
+        },
+        {
+          "file": "invoices.csv",
+          "id": "INV-24113"
+        }
+      ],
+      "why_fine": "'Green Leaf Juice Co' is how C-1004's name prints on invoices."
+    },
+    {
+      "where": [
+        {
+          "file": "applications/APP-1042.json"
+        }
+      ],
+      "why_fine": "A large request from a clean applicant is not an error. It needs the controller because of its size."
+    },
+    {
+      "where": [
+        {
+          "file": "payments.csv",
+          "id": "PMT-8802"
+        }
+      ],
+      "why_fine": "Rockridge paid INV-24074 in full on day 29 without taking a discount. On time."
+    }
+  ],
+  "totals": {
+    "simple_rule_approved": 153000,
+    "desk_approved_by_analyst": 8000,
+    "desk_pending_controller": 83500,
+    "desk_fraud_hold": 20000,
+    "fraud_first_order_stopped": 18500
+  }
+}
