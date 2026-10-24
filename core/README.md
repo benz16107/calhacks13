@@ -173,7 +173,7 @@ The `owner` flag is ignored from anyone who is not already the owner.
 - `approvalThresholdCents` (10000): a single spend above this always asks for an OK, even inside the task's budget.
 - `defaultBudgetCents` (0): the budget of a task that names none. 0 means every spend asks.
 - `networkDefault` (`none`) and `defaultHosts` (`[]`): with `allowlist`, a task that names no hosts gets `defaultHosts`; a task that names its own keeps them.
-- `agentFolders` (`[]`): Personal. When not empty, `POST /api/tasks {folder}` only accepts a folder inside one of these. Empty means none has been chosen yet, so any folder is allowed.
+- `agentFolders` (`[]`): Personal. Folders agents may use besides the owner's home. Can't include the system or the box's own state. Empty means only the owner's home.
 - `quietHours` (`{enabled: false, from: "22:00", to: "07:00"}`): read by the desktop and phone for notifications.
 - `logRetentionDays` (365), `updateChannel` (`stable` | `beta`), `autoUpdate` (true), `appearance` (`{theme: light | dark | system, accent: "#rrggbb" or ""}`): stored for the screens and the updater to read.
 
@@ -187,6 +187,34 @@ its triggers; a task that asks for one of its tools is refused. A trigger that r
 `start` stops cleanly (the generic `schedule`, `webhook` and `onFileChange` all do). A trigger that returns
 nothing keeps running until the box restarts, and the app reports `restartNeeded: true`. Turning it **on** loads
 it again with no reinstall. The choice is saved in `apps.json`, so it survives a restart.
+
+## Who may reach the API
+
+**From the box's own screen** (a request on this machine, over the socket or loopback, with no proxy header) the
+API is open, as it always was. **From anywhere else every request must carry a paired phone's token**, as
+`Authorization: Bearer <token>` or `?access_token=<token>` (an EventSource cannot set headers, so the SSE stream
+takes the query form). Without one the answer is `401` and nothing is read, started, approved or undone. The
+only open routes are `GET /api/health`, `POST /api/pair` (redeeming a pairing code) and the portal's own pages
+(`index.html` and its assets, which hold nothing private). Webhooks and track routes need a token too.
+
+A paired phone can read, start tasks and answer approvals, and the log names the phone by its device name: for
+anyone not on the box's own screen, `by` in the request body is ignored. Minting pairing codes, listing or
+removing devices, setup, settings, the vault, apps, the owner, Keep and Undo-Keep are the **owner's** (the box's own
+screen, or a phone paired as the owner).
+
+**SpacetimeDB listens on loopback only** (`127.0.0.1:3000`). It has no login, so a reachable port would let anyone
+read every task and forge an approval. The box's own screen subscribes to it locally; a phone follows the box's
+authed API and `GET /api/log/stream` instead. To expose it deliberately (a tailnet address), put
+`STDB_LISTEN=<address>` in `/etc/box/stdb.env` and restart `spacetimedb`; anyone who can reach it then can read it
+and answer approvals, so only do that on a network you trust.
+
+**Folders for agents** (`folder`, `folders`) are only for GurtOS Personal and only for the owner. A folder must be
+in the owner's home or in one of Settings `agentFolders`, must not belong to root, and can never be the system or
+the box's own state (`/etc`, `/root`, `/proc`, `/var/lib`, `/opt`, `/usr`, the box's data folder...). Links are
+followed to where they really go. A Server box (no owner, no `agentFolders`) hands out no folders.
+
+**Undo removes the task's files**: its layer is deleted from disk (once no running task still reads it), and
+`GET /api/tasks/<id>/diff` for an undone task is empty.
 
 ## Personal edition: the owner and their real folders
 

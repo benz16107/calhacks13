@@ -80,9 +80,24 @@ const host = (s: string) => {
   if (!/^(\*\.)?[a-z0-9]([a-z0-9.-]{0,251}[a-z0-9])?(:\d{1,5})?$/i.test(s)) fail('defaultHosts', `"${s}" is not a host name (use example.com, *.example.com or example.com:8080)`);
   return s.toLowerCase();
 };
+/**
+ * Places an agent may never be given a copy of, whatever the owner or Settings say: the system, the box's own
+ * state and keys, and other people's runtime data.
+ */
+const NEVER = ['/etc', '/root', '/proc', '/sys', '/dev', '/boot', '/run', '/usr', '/bin', '/sbin', '/lib', '/lib32', '/lib64', '/var/lib', '/var/log', '/opt', '/snap'];
+const under = (p: string, root: string) => p === root || p.startsWith(root + '/');
+/** Why this folder can never be used by an agent, or undefined if it is not one of the forbidden places. */
+export function neverFolder(p: string): string | undefined {
+  const home = process.env.BOX_HOME ?? '/var/lib/box';
+  const hit = [...NEVER, home].find((r) => under(p, r));
+  return hit ? `${p} is inside ${hit}, which holds the system or the box's own keys and state` : undefined;
+}
+
 const folder = (s: string) => {
   const clean = path.posix.normalize(s).replace(/\/+$/, '') || '/';
   if (!path.posix.isAbsolute(s) || s.split('/').includes('..') || clean === '/') fail('agentFolders', `"${s}" must be an absolute folder, not / or one with ..`);
+  const never = neverFolder(clean);
+  if (never) fail('agentFolders', never);
   return clean;
 };
 
@@ -146,6 +161,23 @@ export function applyPatch(current: Settings, patch: unknown): Settings {
 export const loadSettings = (home: string): Settings => applyPatch(structuredClone(DEFAULT_SETTINGS), readJson(path.join(home, 'settings.json'), {}));
 export const saveSettings = (home: string, s: Settings) => writeJson(path.join(home, 'settings.json'), s);
 
+/**
+ * Why an agent may not be given a copy of this real folder, or undefined if it may. Only a Personal box (it has
+ * an owner) hands out folders, and only the owner's home or the folders the owner chose in Settings: never the
+ * system or the box's own keys, and never a folder that belongs to root.
+ */
+export function folderRefusal(real: string, ctx: { hasOwner: boolean; ownerHome?: string; chosen: string[]; folderUid: number; allowRootOwned?: boolean }): string | undefined {
+  const never = neverFolder(real);
+  if (never) return never;
+  if (!ctx.hasOwner && !ctx.chosen.length) return 'folders are for GurtOS Personal: this box has no owner yet, and no folders were chosen in Settings (agentFolders)';
+  const inHome = !!ctx.ownerHome && insideAny(real, [ctx.ownerHome]);
+  if (!inHome && !insideAny(real, ctx.chosen)) {
+    return `${real} is not in the owner's home${ctx.ownerHome ? ` (${ctx.ownerHome})` : ''} or one of the folders agents may use (Settings > agentFolders: ${ctx.chosen.join(', ') || 'none chosen'})`;
+  }
+  if (ctx.folderUid === 0 && !ctx.allowRootOwned) return `${real} belongs to root; agents are only given a person's folders`;
+  return undefined;
+}
+
 /** Whether `dir` is one of the folders, or inside one. */
 export const insideAny = (dir: string, folders: string[]) => folders.some((f) => dir === f || dir.startsWith(f + '/'));
 
@@ -161,6 +193,20 @@ export interface SetupState {
 
 /** The steps the wizard walks through, in order. The box accepts any step id; this is the suggested list. */
 export const SETUP_STEPS = ['welcome', 'network', 'safety', 'folders', 'apps', 'keys', 'updates', 'phone'] as const;
+
+/**
+ * A box was already in use if a person answered an approval, paired a phone, or started a task themselves.
+ * Tasks the box starts on its own (a track's trigger at boot, like the photo index) do not count, so a fresh
+ * install is not mistaken for an old box and the first-run wizard still shows.
+ */
+export function hadHumanUse(events: { type: string; source?: string; spec?: { source: string } }[], trackNames: string[], pairedDevices: number): boolean {
+  const automatic = new Set([...trackNames, 'schedule', 'webhook', 'file']);
+  return (
+    pairedDevices > 0 ||
+    events.some((e) => e.type === 'approval.answered') ||
+    events.some((e) => e.type === 'task.created' && !automatic.has(e.spec?.source ?? ''))
+  );
+}
 
 export const loadSetup = (home: string, hasHistory: boolean): SetupState => {
   const file = path.join(home, 'setup.json');

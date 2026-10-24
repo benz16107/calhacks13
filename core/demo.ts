@@ -39,6 +39,8 @@ async function stdbRows(sql: string): Promise<Record<string, any>[]> {
 
 let box: ReturnType<typeof spawn> | undefined;
 let PORT = 0; // the box's API port, which the box picks and writes to BOX_HOME/api.port
+// The owner's test folders live here, not in the box's own directory (agents are never given that).
+const OWNER_ROOT = `/tmp/gurt-demo-owner-${run}`;
 const DEFAULT_THRESHOLD = 10_000; // the approval threshold setting's default
 const WINDOW = 600; // the approval wait window; short here so a long wait is quick to act out (a fake clock)
 
@@ -77,6 +79,7 @@ function stop(keepFiles: boolean) {
   toreDown = true;
   teardown(HOME, box?.pid);
   spawnSync('spacetime', ['delete', '--server', 'local', '-y', DB]);
+  fs.rmSync(OWNER_ROOT, { recursive: true, force: true });
   if (keepFiles) console.log(`\nkept ${HOME} for a look (box.log, log.jsonl, tasks/*/worker.log)`);
   else fs.rmSync(HOME, { recursive: true, force: true });
 }
@@ -89,7 +92,7 @@ async function startBox() {
   box = spawn(process.execPath, [...process.execArgv, new URL('./box.ts', import.meta.url).pathname], {
     detached: true,
     stdio: ['ignore', out, out],
-    env: { ...process.env, BOX_HOME: HOME, BOX_PORT: 'auto', BOX_VAULT: path.join(HOME, 'vault.env'), BOX_STDB_DB: DB, BOX_PROXY_PORT: 'auto', BOX_APPROVAL_WAIT_MS: String(WINDOW), BOX_OWNER: 'owner', BOX_NO_DROID: LIVE_DROID ? '' : '1', BOX_ID: 'demo-box', BOX_NAME: 'Demo box', BOX_PEERS: JSON.stringify([{ id: 'vultr', name: 'Vultr box', stdb: 'box' }]) },
+    env: { ...process.env, BOX_HOME: HOME, BOX_PORT: 'auto', BOX_VAULT: path.join(HOME, 'vault.env'), BOX_STDB_DB: DB, BOX_PROXY_PORT: 'auto', BOX_APPROVAL_WAIT_MS: String(WINDOW), BOX_OWNER: 'owner', BOX_NO_DROID: LIVE_DROID ? '' : '1', BOX_DEMO: '1', BOX_ID: 'demo-box', BOX_NAME: 'Demo box', BOX_PEERS: JSON.stringify([{ id: 'vultr', name: 'Vultr box', stdb: 'box' }]) },
   });
   for (let i = 0; i < 300; i++) {
     if (await api('GET', '/health').catch(() => undefined)) {
@@ -156,6 +159,7 @@ function authApi<T = any>(token: string, method: string, p: string, body?: unkno
 function viaTcp(method: string, p: string, body?: unknown, headers: Record<string, string> = {}): Promise<{ status: number; body: any }> {
   return new Promise((resolve, reject) => {
     const req = http.request({ host: '127.0.0.1', port: PORT, method, path: p, headers: { 'content-type': 'application/json', ...headers } }, (res) => {
+      if (res.headers['content-type']?.includes('text/event-stream')) return resolve({ status: res.statusCode ?? 0, body: undefined }), req.destroy(); // a stream never ends: the status is the answer
       let t = '';
       res.on('data', (c) => (t += c));
       res.on('end', () => resolve({ status: res.statusCode ?? 0, body: t ? JSON.parse(t) : undefined }));
@@ -164,6 +168,7 @@ function viaTcp(method: string, p: string, body?: unknown, headers: Record<strin
     req.end(body === undefined ? undefined : JSON.stringify(body));
   });
 }
+const denied = (r: { status: number }) => r.status === 401 || r.status === 403; // no token, or a token without the right
 const RELAYED = { 'x-forwarded-for': '203.0.113.9' }; // what a reverse proxy or tailnet serve adds: not the box's own screen
 
 const task = async (id: string) => (await api<{ task: Task }>('GET', `/tasks/${id}`)).task;
@@ -216,6 +221,7 @@ workspace('notes', { 'a.txt': 'original a\n' });
 const machineVault = fs.existsSync('/etc/box/vault.env') ? fs.readFileSync('/etc/box/vault.env', 'utf8') : '';
 fs.writeFileSync(path.join(HOME, 'vault.env'), `DEMO_SECRET=sk_test_canary_never_leaves_the_vault\n${machineVault}`, { mode: 0o600 });
 await startBox();
+await api('PATCH', '/api/settings', { agentFolders: ['/tmp'] }); // the demo's fake owner has no home, so the test folders in /tmp are chosen explicitly
 const tcp = await fetch(`http://127.0.0.1:${PORT}/health`).then((r) => r.json()).catch(() => undefined);
 if (!tcp?.ok) throw new Error(`the box's API did not answer on port ${PORT}`);
 
@@ -553,7 +559,7 @@ await moment('pairing and more than one box', async () => {
 // ---------- Personal: work on the owner's real folder, then Keep or Undo ----------
 
 await moment("personal: an agent works on the owner's folder, then Keep or Undo", async () => {
-  const folder = path.join(HOME, 'owner', 'thesis');
+  const folder = path.join(OWNER_ROOT, 'thesis');
   fs.mkdirSync(folder, { recursive: true });
   fs.writeFileSync(path.join(folder, 'intro.md'), 'Draft intro.\n');
   fs.writeFileSync(path.join(folder, 'notes.md'), 'notes\n');
@@ -617,8 +623,8 @@ await moment("personal: an agent works on the owner's folder, then Keep or Undo"
   check(fs.readFileSync(path.join(folder, 'intro.md'), 'utf8').trim() === 'Draft intro.' && back.uid === OWNER.uid && back.mode === 0o640, 'undoing the other Keep restored the old content with its owner and mode');
 
   // Two folders with the same name in different places stay separate: Keep writes into the one it started on.
-  const dirA = path.join(HOME, 'owner', 'a', 'notes');
-  const dirB = path.join(HOME, 'owner', 'b', 'notes');
+  const dirA = path.join(OWNER_ROOT, 'a', 'notes');
+  const dirB = path.join(OWNER_ROOT, 'b', 'notes');
   for (const [dir, text] of [[dirA, 'A original'], [dirB, 'B original']] as const) {
     fs.mkdirSync(dir, { recursive: true });
     fs.writeFileSync(path.join(dir, 'n.md'), text + '\n');
@@ -643,7 +649,7 @@ await moment("personal: an agent works on the owner's folder, then Keep or Undo"
 
 await moment('personal: one task on several folders, and a runtime owner', async () => {
   const OWNER = { uid: 4242, gid: 4343 };
-  const root = path.join(HOME, 'owner', 'proj');
+  const root = path.join(OWNER_ROOT, 'proj');
   const [a, b, c] = ['a/notes', 'b/notes', 'c'].map((x) => path.join(root, x));
   for (const [dir, text] of [[a, 'A original'], [b, 'B original'], [c, 'C original']] as const) {
     fs.mkdirSync(dir, { recursive: true });
@@ -686,8 +692,8 @@ await moment('personal: one task on several folders, and a runtime owner', async
   const both = await api('POST', '/tasks', { title: 'x', worker: 'fake', prompt: 'x', folder: a, folders: [b] }).then(() => '', (e: Error) => e.message);
   await api('PATCH', '/api/settings', { agentFolders: [a] });
   const outside = await api('POST', '/tasks', { title: 'x', worker: 'fake', prompt: 'x', folders: [a, b] }).then(() => '', (e: Error) => e.message);
-  await api('PATCH', '/api/settings', { agentFolders: [] });
-  check(/is inside/.test(nested) && /not both/.test(both) && /not one of the folders agents may use/.test(outside), 'a folder inside another, folder and folders together, and a folder outside the chosen ones are all refused');
+  await api('PATCH', '/api/settings', { agentFolders: ['/tmp'] });
+  check(/is inside/.test(nested) && /not both/.test(both) && /not in the owner's home/.test(outside), 'a folder inside another, folder and folders together, and a folder outside the chosen ones are all refused');
   await api('POST', `/api/tasks/${T.id}/undo`);
 
   // The owner, set after the account exists (the image does this once GNOME's own setup has made it).
@@ -697,7 +703,7 @@ await moment('personal: one task on several folders, and a runtime owner', async
     const before = await api<any>('GET', '/api/owner');
     const refusals = await Promise.all(['root', 'nosuchuser99', 'Bad Name'].map((u) => api('PUT', '/api/owner', { user: u }).then(() => '', (e: Error) => e.message)));
     check(before?.user === 'owner' && refusals.every((m) => m.startsWith('user:')), `root, a missing account and a bad name are refused ("${refusals[0].slice(0, 60)}")`);
-    check((await viaTcp('PUT', '/api/owner', { user }, RELAYED)).status === 403, 'from outside the box it is refused (403)');
+    check(denied(await viaTcp('PUT', '/api/owner', { user }, RELAYED)), 'from outside the box it is refused');
     check((await viaTcp('PUT', '/api/owner', { user })).status === 403, 'with an owner already set, a plain local process cannot replace it either (403)');
     const set = await api<any>('PUT', '/api/owner', { user });
     const sys = await api<any>('GET', '/api/system');
@@ -721,6 +727,65 @@ await moment('a failed task carries the worker\'s own error message', async () =
 
 
 
+
+// ---------- a stranger on the network, and a task that asks for the box's own files ----------
+
+await moment('security: an outside caller gets nothing, and a folder cannot be the box itself', async () => {
+  // A caller from another machine looks like a request that is not from the box's own screen (here, one with proxy headers).
+  const out = (m: string, p: string, body?: unknown, extra: Record<string, string> = {}) => viaTcp(m, p, body, { ...RELAYED, ...extra });
+  workspace('guarded', {});
+  const mine = await api<Task>('POST', '/tasks', { title: 'Needs an OK', workspace: 'guarded', worker: 'fake', source: 'demo', prompt: 'ask May I spend $500?\nwrite spent.txt yes' });
+  const ask = await waitFor('the request', async () => (await api<{ id: string; task: string }[]>('GET', '/api/approvals?state=pending')).find((a) => a.task === mine.id));
+
+  const attempts = await Promise.all([
+    out('GET', '/api/log'), out('GET', '/api/tasks'), out('GET', '/api/approvals'), out('GET', '/tasks'), out('GET', '/api/system'),
+    out('POST', '/api/tasks', { title: 'x', prompt: 'x', worker: 'fake' }),
+    out('POST', `/api/approvals/${encodeURIComponent(ask.id)}`, { approved: true, by: "Ben's iPhone" }),
+    out('POST', `/api/tasks/${mine.id}/undo`, {}),
+    out('POST', '/api/pair/start', {}), out('GET', '/api/devices'), out('DELETE', '/api/devices/dxxxx'),
+    out('GET', '/api/log/stream'), out('POST', '/hook/example/start', {}), out('GET', '/t/example/secret-check'),
+  ]);
+  check(attempts.every((r) => r.status === 401), `with no token an outside caller is refused everywhere: log, tasks, approvals, approving, undoing, pairing, devices, the stream, webhooks (${attempts.map((r) => r.status).join(' ')})`);
+  check((await out('GET', '/api/tasks', undefined, { authorization: 'Bearer not-a-token' })).status === 401, 'a made-up token is refused too');
+  check((await out('GET', '/api/health')).status === 200 && (await out('POST', '/api/pair', { code: 'nope', name: 'x' })).status === 400, 'only the health check and redeeming a pairing code are open, and a wrong code is just refused');
+  check((await api<{ state: string }[]>('GET', '/api/approvals')).find((a: any) => a.id === ask.id)?.state === 'pending' && (await task(mine.id)).state === 'waiting', 'none of that touched the real request: it is still waiting for the owner');
+
+  // A paired phone, not the owner's: it can read and answer, and the log names the phone, never what it claims.
+  const code = await api<{ code: string }>('POST', '/api/pair/start', {});
+  const phone = await api<{ token: string; device: { id: string; name: string } }>('POST', '/api/pair', { code: code.code, name: 'Judge phone' });
+  const auth = { authorization: `Bearer ${phone.token}` };
+  check((await out('GET', '/api/log', undefined, auth)).status === 200 && (await out('GET', `/api/log/stream?access_token=${phone.token}&after=999999`, undefined, {})).status === 200, 'with its token the phone can read the log, and follow the stream with ?access_token= (an EventSource cannot set headers)');
+  const ownerOnly = await Promise.all([out('POST', '/api/pair/start', {}, auth), out('GET', '/api/devices', undefined, auth), out('DELETE', `/api/devices/${phone.device.id}`, undefined, auth), out('POST', '/api/setup/finish', {}, auth), out('POST', `/api/tasks/${mine.id}/keep`, {}, auth)]);
+  check(ownerOnly.every((r) => r.status === 403), "but it cannot mint pairing codes, list or remove devices, finish setup or Keep: those are the owner's (403)");
+  const approved = await out('POST', `/api/approvals/${encodeURIComponent(ask.id)}`, { approved: true, by: "Ben's iPhone" }, auth);
+  await settled([mine.id]);
+  const answered = (await api<{ events: LogEvent[] }>('GET', `/api/tasks/${mine.id}`)).events.find((e) => e.type === 'approval.answered');
+  check(approved.status === 200 && answered?.type === 'approval.answered' && answered.by === 'Judge phone', `it approved, and the log says "${answered?.type === 'approval.answered' ? answered.by : '?'}" (its device), not the "Ben's iPhone" it sent`);
+
+  // The box's own files cannot be handed to an agent, however it is asked.
+  workspace('probe', {});
+  const asks = async (folder: string, extra: Record<string, string> = {}) => (await out('POST', '/api/tasks', { title: 'Look', worker: 'fake', prompt: 'x', folder }, { ...auth, ...extra })).status;
+  check((await asks('/etc/box')) === 403, 'a paired phone cannot give a task any folder at all (the owner\'s to hand out)');
+  const refused = await Promise.all(['/etc', '/etc/box', '/root', '/proc', HOME, path.join(HOME, 'tasks')].map((f) => api('POST', '/tasks', { title: 'Look', worker: 'fake', prompt: 'x', folder: f }).then(() => 'ALLOWED', (e: Error) => e.message)));
+  check(refused.every((m) => m !== 'ALLOWED' && /inside|not in the owner's home|no folder/.test(m)), `even the owner cannot hand over /etc, /root, /proc or the box's own folder ("${refused[1].slice(0, 70)}")`);
+  fs.mkdirSync(OWNER_ROOT, { recursive: true });
+  try { fs.symlinkSync('/etc/box', path.join(OWNER_ROOT, 'sneaky')); } catch {}
+  const viaLink = await api('POST', '/tasks', { title: 'Look', worker: 'fake', prompt: 'x', folder: path.join(OWNER_ROOT, 'sneaky') }).then(() => 'ALLOWED', (e: Error) => e.message);
+  check(viaLink !== 'ALLOWED', 'a link inside an allowed folder that points at /etc/box is followed to where it really goes, and refused');
+  const badSetting = await api('PATCH', '/api/settings', { agentFolders: ['/etc'] }).then(() => 'ALLOWED', (e: Error) => e.message);
+  check(/inside \/etc/.test(badSetting), 'and Settings will not whitelist them either');
+
+  // Undo really removes what a task did: its changes are not served afterwards.
+  workspace('undoing', {});
+  const U = await api<Task>('POST', '/tasks', { title: 'Writes a file', workspace: 'undoing', worker: 'fake', source: 'demo', prompt: 'write secret-ish.txt contents' });
+  await settled([U.id]);
+  check((await api<{ changes: unknown[] }>('GET', `/api/tasks/${U.id}/diff`)).changes.length === 1, 'before undo, the diff shows the file');
+  await api('POST', `/api/tasks/${U.id}/undo`);
+  const after = await api<{ changes: unknown[]; diff: string }>('GET', `/api/tasks/${U.id}/diff`);
+  await waitFor('the layer to be deleted', async () => (fs.existsSync(path.join(HOME, 'tasks', U.id, 'upper')) ? undefined : true));
+  check(after.changes.length === 0 && after.diff === '', 'after undo, the diff is empty and the task\'s layer is deleted from disk');
+});
+
 // ---------- first-run setup, settings, the vault, apps on and off, system facts ----------
 
 await moment('setup: the wizard, settings, the vault and apps', async () => {
@@ -732,7 +797,7 @@ await moment('setup: the wizard, settings, the vault and apps', async () => {
   const s0 = await api<any>('GET', '/api/setup');
   check(s0.done === false && s0.suggested.includes('network'), 'a new box has not finished setup, so its screen shows the wizard');
   const remote = await viaTcp('POST', '/api/setup/step', { id: 'network' }, RELAYED);
-  check(remote.status === 403, 'a request relayed from elsewhere cannot change setup (403)');
+  check(denied(remote), 'a request relayed from elsewhere, with no token, cannot change setup');
   await api('POST', '/api/setup/step', { id: 'network', data: { wifi: 'home' } });
   const plain = await api<{ code: string }>('POST', '/api/pair/start', {});
   const stranger = await api<{ token: string }>('POST', '/api/pair', { code: plain.code, name: 'a visitor' });
@@ -745,7 +810,7 @@ await moment('setup: the wizard, settings, the vault and apps', async () => {
   const forgedOwner = await viaTcp('POST', '/api/pair/start', { owner: true }, RELAYED);
   const forged = await viaTcp('POST', '/api/pair', { code: forgedOwner.body.code, name: 'sneaky' });
   const asForged = await viaTcp('POST', '/api/setup/step', { id: 'apps' }, { ...RELAYED, authorization: `Bearer ${forged.body.token}` });
-  check(asForged.status === 403, 'asking a code to be an owner code from outside the box does not work (403)');
+  check(denied(forgedOwner) && asForged.status === 401, 'asking for an owner code from outside the box, without a token, gets nothing');
   await api('POST', '/api/setup/finish', {});
   const s1 = await api<any>('GET', '/api/setup');
   check(s1.done === true && !!s1.finishedAt && Object.keys(s1.steps).sort().join() === 'folders,network', 'finishing marks setup done and keeps the steps taken');
@@ -755,7 +820,7 @@ await moment('setup: the wizard, settings, the vault and apps', async () => {
   check(set0.networkDefault === 'none' && set0.autoUpdate === true && set0.appearance.theme === 'system', 'settings start at safe defaults');
   const bad = await Promise.all([{ approvalThresholdCents: -5 }, { nope: 1 }, { quietHours: { from: '25:00' } }, { defaultHosts: ['not a host'] }, { agentFolders: ['relative/path'] }].map((b) => api('PATCH', '/api/settings', b).then(() => '', (e: Error) => e.message)));
   check(bad.every((m) => m.startsWith('settings.')), `bad values are refused with the field named ("${bad[0]}")`);
-  check((await viaTcp('PATCH', '/api/settings', { autoUpdate: false }, RELAYED)).status === 403, 'settings cannot be changed from outside the box (403)');
+  check(denied(await viaTcp('PATCH', '/api/settings', { autoUpdate: false }, RELAYED)), 'settings cannot be changed from outside the box');
 
   workspace('prefs', {});
   const run = (extra: Record<string, unknown> = {}) => api<Task>('POST', '/tasks', { title: 'Settings probe', workspace: 'prefs', worker: 'fake', source: 'demo', prompt: 'write p.txt yes', ...extra });
@@ -781,15 +846,16 @@ await moment('setup: the wizard, settings, the vault and apps', async () => {
   await api('PATCH', '/api/settings', { approvalThresholdCents: DEFAULT_THRESHOLD });
 
   // The folders agents may use (Personal).
-  const okDir = path.join(HOME, 'owner', 'allowed', 'docs');
-  const noDir = path.join(HOME, 'owner', 'elsewhere');
+  const okDir = path.join(OWNER_ROOT, 'allowed', 'docs');
+  const noDir = path.join(OWNER_ROOT, 'elsewhere');
   for (const d of [okDir, noDir]) fs.mkdirSync(d, { recursive: true });
-  await api('PATCH', '/api/settings', { agentFolders: [path.join(HOME, 'owner', 'allowed') + '/'] });
+  await api('PATCH', '/api/settings', { agentFolders: [path.join(OWNER_ROOT, 'allowed') + '/'] });
   const refused = await api('POST', '/tasks', { title: 'Outside', worker: 'fake', prompt: 'x', folder: noDir }).then(() => '', (e: Error) => e.message);
   const allowedTask = await api<Task>('POST', '/tasks', { title: 'Inside', worker: 'fake', prompt: 'write a.txt x', folder: okDir });
+  await api('PATCH', '/api/settings', { agentFolders: ['/tmp'] }); // back to the demo's folders before any check can stop this step
   await settled([allowedTask.id]);
-  check(/not one of the folders agents may use/.test(refused), 'a folder outside the chosen ones is refused, one inside is allowed');
-  await api('PATCH', '/api/settings', { agentFolders: [], quietHours: { enabled: true, from: '23:30' }, appearance: { theme: 'dark', accent: '#5b8cff' } });
+  check(/not in the owner's home/.test(refused), 'a folder outside the chosen ones is refused, one inside is allowed');
+  await api('PATCH', '/api/settings', { agentFolders: ['/tmp'], quietHours: { enabled: true, from: '23:30' }, appearance: { theme: 'dark', accent: '#5b8cff' } });
   const set1 = await api<any>('GET', '/api/settings');
   check(set1.quietHours.enabled && set1.quietHours.from === '23:30' && set1.quietHours.to === '07:00' && set1.appearance.theme === 'dark', 'nested settings merge: changing one quiet-hours field keeps the others');
   const logText = fs.readFileSync(path.join(HOME, 'log.jsonl'), 'utf8');
@@ -799,7 +865,7 @@ await moment('setup: the wizard, settings, the vault and apps', async () => {
   // The vault: write-only. Names and times come back; values never do.
   const SECRET1 = 'sk_demo_first_value_8f3a91c2';
   const SECRET2 = 'sk_demo_second_value_77d1e0aa';
-  check((await viaTcp('PUT', '/api/vault/DEMO_NEW_KEY', { value: SECRET1 }, RELAYED)).status === 403 && (await viaTcp('GET', '/api/vault', undefined, RELAYED)).status === 403, 'the vault cannot be reached from outside the box (403)');
+  check(denied(await viaTcp('PUT', '/api/vault/DEMO_NEW_KEY', { value: SECRET1 }, RELAYED)) && denied(await viaTcp('GET', '/api/vault', undefined, RELAYED)), 'the vault cannot be reached from outside the box (403)');
   const put = await api<any>('PUT', '/api/vault/DEMO_NEW_KEY', { value: SECRET1 });
   const names1 = await api<{ name: string; setAt: string | null }[]>('GET', '/api/vault');
   check(put.name === 'DEMO_NEW_KEY' && names1.some((n) => n.name === 'DEMO_NEW_KEY' && n.setAt) && names1.some((n) => n.name === 'DEMO_SECRET'), 'a key is set and the list shows names and when they were set');
@@ -818,7 +884,7 @@ await moment('setup: the wizard, settings, the vault and apps', async () => {
   check(ex?.status === 'enabled' && ex.access.tools.some((t: { name: string }) => t.name === 'example.spend') && ex.access.secrets.some((s: { name: string; set: boolean }) => s.name === 'DEMO_SECRET' && s.set) && ex.access.triggers.length === 3, `the App Center lists ${all.length} apps; "${ex?.title}" shows its tools, triggers and the key names it needs`);
   check(all.every((a) => typeof a.description === 'string') && all.filter((a) => a.description).length >= all.length - 1, 'each app has a description (its own, or the first paragraph of its README)');
   check(JSON.stringify(all).includes(SECRET2) === false, 'the list names the keys an app needs and whether they are set, never their values');
-  check((await viaTcp('POST', '/api/apps/example/disable', {}, RELAYED)).status === 403, 'apps cannot be switched from outside the box (403)');
+  check(denied(await viaTcp('POST', '/api/apps/example/disable', {}, RELAYED)), 'apps cannot be switched from outside the box');
 
   const off = await api<any>('POST', '/api/apps/example/disable', {});
   const tasksBefore = (await api<Task[]>('GET', '/tasks')).length;

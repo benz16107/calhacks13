@@ -15,7 +15,7 @@ import { PLACEHOLDER_KEY, firewall, relayCert, reservePort, startProxy } from '.
 import * as sandbox from './sandbox.ts';
 import { HOME, dirs } from './sandbox.ts';
 import { usageCents } from './pricing.ts';
-import { DEFAULT_SETTINGS, SETUP_STEPS, applyPatch, insideAny, loadDisabled, loadSetup, loadSettings, recordStep, saveDisabled, saveSettings, saveSetup, type Settings, type SetupState } from './config.ts';
+import { DEFAULT_SETTINGS, SETUP_STEPS, applyPatch, folderRefusal, hadHumanUse, insideAny, neverFolder, loadDisabled, loadSetup, loadSettings, recordStep, saveDisabled, saveSettings, saveSetup, type Settings, type SetupState } from './config.ts';
 import * as system from './system.ts';
 import { VAULT_NAME, loadVault, writeVaultKey } from './vault.ts';
 
@@ -98,7 +98,7 @@ class Core {
     }
   })();
   settings: Settings = loadSettings(HOME);
-  setup: SetupState = loadSetup(HOME, this.log.events.some((e) => e.type === 'task.created'));
+  setup: SetupState = loadSetup(HOME, hadHumanUse(this.log.events as never, fs.existsSync(new URL('../tracks/', import.meta.url)) ? fs.readdirSync(new URL('../tracks/', import.meta.url)) : [], this.devices.length));
   vaultMetaPath = path.join(HOME, 'vault-meta.json');
   vaultMeta: Record<string, string> = fs.existsSync(this.vaultMetaPath) ? JSON.parse(fs.readFileSync(this.vaultMetaPath, 'utf8')) : {};
   startedAt = new Date().toISOString();
@@ -230,6 +230,14 @@ class Core {
     this.brokers.delete(t.id);
     sandbox.seal(t);
     if ((t.state === 'done' || t.state === 'undone') && !sandbox.isLinked(t.workspace)) this.refreshView(t.workspace);
+    this.sweepUndone();
+  }
+
+  /** Delete the files of undone tasks that no running task still reads as a lower layer. */
+  sweepUndone() {
+    const needed = new Set<string>();
+    for (const t of this.state.tasks.values()) if (t.state === 'queued' || t.state === 'running' || t.state === 'waiting') for (const l of t.layers) needed.add(l);
+    for (const t of this.state.tasks.values()) if (t.state === 'undone' && !needed.has(t.id) && !this.workers.has(t.id)) sandbox.purge(t);
   }
 
   refreshView(workspace: string) {
@@ -444,6 +452,10 @@ class Core {
     fs.writeFileSync(this.linksPath, JSON.stringify(this.links, null, 2));
   }
 
+  folderRefusal(real: string): string | undefined {
+    return folderRefusal(real, { hasOwner: !!this.owner, ownerHome: this.ownerInfo()?.home, chosen: this.settings.agentFolders, folderUid: fs.statSync(real).uid, allowRootOwned: !!process.env.BOX_DEMO });
+  }
+
   /**
    * Link the folder(s) a Personal task works on and return its workspace. The name carries a hash of the full
    * real paths, so same-named folders in different places never share a workspace.
@@ -452,9 +464,8 @@ class Core {
     if (!Array.isArray(given) || !given.length || given.length > 10 || given.some((f) => typeof f !== 'string' || !f)) throw new Error('folders: a list of 1 to 10 folders');
     const reals = [...new Set((given as string[]).map((f) => fs.realpathSync(f)))].sort();
     for (const r of reals) {
-      if (this.settings.agentFolders.length && !insideAny(r, this.settings.agentFolders)) {
-        throw new Error(`${r} is not one of the folders agents may use (Settings > agentFolders: ${this.settings.agentFolders.join(', ')})`);
-      }
+      const why = this.folderRefusal(r);
+      if (why) throw new Error(why);
     }
     for (const a of reals) for (const b of reals) if (a !== b && b.startsWith(a + '/')) throw new Error(`${b} is inside ${a}; pick one of them, or the same file would be changed twice`);
     const hash = (x: string) => createHash('sha256').update(x).digest('hex').slice(0, 6);
@@ -772,7 +783,7 @@ class Core {
   /** Changing an owner that already exists takes the box's socket (root) or an owner-paired phone, not any local process. */
   requireOwnerChange(req: http.IncomingMessage) {
     this.requireOwner(req);
-    if (this.owner && req.socket.remoteAddress !== undefined && !this.deviceByToken(req.headers.authorization)?.owner) {
+    if (this.owner && req.socket.remoteAddress !== undefined && !this.deviceOf(req)?.owner) {
       throw Object.assign(new Error('the owner is already set; change it from the box service or the owner\'s phone'), { status: 403 });
     }
   }
@@ -862,12 +873,18 @@ class Core {
 
   /** The box's own screen, or a device that was paired as the owner. */
   isOwner(req: http.IncomingMessage): boolean {
-    return this.isLocal(req) || !!this.deviceByToken(req.headers.authorization)?.owner;
+    return this.isLocal(req) || !!this.deviceOf(req)?.owner;
   }
 
   /** Setup, settings, apps on and off, and the vault are for the owner only. */
   requireOwner(req: http.IncomingMessage) {
     if (!this.isOwner(req)) throw Object.assign(new Error("only the box's own screen or the owner's paired device can do this"), { status: 403 });
+  }
+
+  /** The paired, un-revoked device this request is from: by `Authorization: Bearer` or `?access_token=`. */
+  deviceOf(req: http.IncomingMessage): Device | undefined {
+    const q = new URL(req.url ?? '/', 'http://box').searchParams.get('access_token') ?? undefined;
+    return this.deviceByToken(req.headers.authorization) ?? this.deviceByToken(q);
   }
 
   deviceByToken(token?: string): Device | undefined {
@@ -889,9 +906,9 @@ class Core {
     // ours, so return false and let the static portal handler serve the app.
     let act: ((body: any) => unknown) | undefined;
     if (m === 'GET' && p === '/boxes') act = () => this.boxes();
-    else if (m === 'POST' && (p === '/pair/start' || p === '/pair/new')) act = (body) => this.pairStart(body?.owner === true && this.isOwner(req));
-    else if (m === 'GET' && (p === '/devices' || p === '/pair/devices')) act = () => this.devices.filter((d) => !d.revoked).map(({ token, ...d }) => d);
-    else if ((m === 'DELETE' || m === 'POST') && del) act = () => this.revokeDevice(del);
+    else if (m === 'POST' && (p === '/pair/start' || p === '/pair/new')) act = (body) => (this.requireOwner(req), this.pairStart(body?.owner === true));
+    else if (m === 'GET' && (p === '/devices' || p === '/pair/devices')) act = () => (this.requireOwner(req), this.devices).filter((d) => !d.revoked).map(({ token, ...d }) => d);
+    else if ((m === 'DELETE' || m === 'POST') && del) act = () => (this.requireOwner(req), this.revokeDevice(del));
     const needsBody = m === 'POST' && p === '/pair';
     if (!act && !needsBody) return false;
     void (async () => {
@@ -924,6 +941,7 @@ class Core {
             // "Ask an agent on this folder" (Personal): link the real folder(s), then make the task on them.
             if (body.folder && body.folders) throw new Error('send folder or folders, not both');
             const given = body.folders ?? (body.folder ? [body.folder] : undefined);
+            if (given || (typeof body.workspace === 'string' && sandbox.isLinked(body.workspace))) this.requireOwner(req); // the owner's folders are the owner's to hand out
             if (given) {
               body.workspace = this.linkFolders(given);
               if (body.folders) body.folder = String(body.folders[0]); // readers that know one folder see the first
@@ -938,12 +956,15 @@ class Core {
             };
           case 'GET /tasks/:id/diff': {
             const t = this.must(id);
+            if (t.state === 'undone') return { changes: [], diff: '', undone: true }; // an undone task's changes are gone
             const roots = sandbox.multiRoots(t.workspace); // several folders: each change path starts with its label
             return { ...sandbox.diff(t), ...(roots ? { roots } : {}) };
           }
           case 'POST /tasks/:id/keep':
+            this.requireOwner(req); // Keep writes into the owner's real files
             return this.keep(id);
           case 'POST /tasks/:id/unkeep':
+            this.requireOwner(req);
             return this.unkeep(id);
           case 'POST /tasks/:id/undo':
             return this.undo(id);
@@ -951,12 +972,11 @@ class Core {
             return [...this.state.approvals.values()].filter((x) => !q('state') || x.state === q('state'));
           case 'POST /approvals/:id': {
             // A phone sends its device token; it must be a paired, un-revoked device, and `by` becomes its name.
-            let by = String(body.by ?? 'api');
-            if (headers.authorization) {
-              const device = this.deviceByToken(headers.authorization);
-              if (!device) throw Object.assign(new Error('pair this phone with the box first'), { status: 401 });
-              by = device.name;
-            }
+            let by = String(body.by ?? 'api'); // the box's own screen says who it is
+            const device = this.deviceOf(req);
+            if (headers.authorization && !device) throw Object.assign(new Error('pair this phone with the box first'), { status: 401 });
+            if (device) by = device.name; // a paired phone is named by its device, whatever it sends
+            else if (!this.isLocal(req)) throw Object.assign(new Error('pair this phone with the box first'), { status: 401 });
             return this.answer(id, body.approved === true, by);
           }
           case 'GET /log':
@@ -1033,7 +1053,7 @@ class Core {
             return { ok: true, startedAt: this.startedAt, resumed: this.resumed, tasks: this.state.tasks.size, tools: [...this.tools.keys()], spacetime: { port: 3000, database: DB } };
         }
       },
-      (req, res) => this.cors(req, res) || this.pairing(req, res) || this.logStream(req, res) || this.webhook(req, res) || this.trackRoute(req, res) || this.portal(req, res),
+      (req, res) => this.cors(req, res) || this.gate(req, res) || this.pairing(req, res) || this.logStream(req, res) || this.webhook(req, res) || this.trackRoute(req, res) || this.portal(req, res),
     );
 
   /** Browsers on other origins (a portal dev server) need BOX_ORIGINS, comma separated, or '*'. */
@@ -1122,17 +1142,39 @@ data: ${JSON.stringify(e)}
     return true;
   }
 
-  /** The built portal, if there is one, on the same address as the API: files, and index.html for page loads. */
-  portal(req: http.IncomingMessage, res: http.ServerResponse) {
+  /** The portal file this request would be answered with, or undefined if it is an API call. */
+  portalTarget(req: http.IncomingMessage): string | undefined {
     const root = path.resolve(process.env.BOX_PORTAL ?? new URL('../portal/dist/', import.meta.url).pathname);
     const { pathname } = new URL(req.url ?? '/', 'http://box');
-    if (req.method !== 'GET' || pathname.startsWith('/api/') || pathname.startsWith('/t/') || !fs.existsSync(root)) return false;
+    if (req.method !== 'GET' || pathname.startsWith('/api/') || pathname.startsWith('/t/') || pathname.startsWith('/hook/') || !fs.existsSync(root)) return undefined;
     const file = path.resolve(root, '.' + decodeURIComponent(pathname));
     const isFile = file.startsWith(root + path.sep) && fs.existsSync(file) && fs.statSync(file).isFile();
-    if (!isFile && !(req.headers.accept ?? '').includes('text/html')) return false; // fetch('/tasks') still gets the API
-    const target = isFile ? file : path.join(root, 'index.html');
+    if (!isFile && !(req.headers.accept ?? '').includes('text/html')) return undefined; // fetch('/tasks') still gets the API
+    return isFile ? file : path.join(root, 'index.html');
+  }
+
+  /** The built portal, if there is one, on the same address as the API: files, and index.html for page loads. */
+  portal(req: http.IncomingMessage, res: http.ServerResponse) {
+    const target = this.portalTarget(req);
+    if (!target) return false;
     const types: Record<string, string> = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png', '.json': 'application/json', '.woff2': 'font/woff2', '.ico': 'image/x-icon' };
     res.writeHead(200, { 'content-type': types[path.extname(target)] ?? 'application/octet-stream' }).end(fs.readFileSync(target));
+    return true;
+  }
+
+  /**
+   * Who may reach the API at all. A request from the box's own screen is trusted (it is on the machine). Any
+   * other must carry a paired phone's token, as `Authorization: Bearer ...` or `?access_token=` (an EventSource
+   * cannot set headers), except: the health check, redeeming a pairing code, and the portal's own pages, which
+   * hold nothing private. Without a token the answer is 401 and nothing is read, started, approved or undone.
+   */
+  gate(req: http.IncomingMessage, res: http.ServerResponse): boolean {
+    if (this.isLocal(req)) return false;
+    const m = req.method ?? 'GET';
+    const p = new URL(req.url ?? '/', 'http://box').pathname.replace(/^\/api(?=\/)/, '');
+    if (m === 'OPTIONS' || (m === 'GET' && p === '/health') || (m === 'POST' && p === '/pair') || this.portalTarget(req)) return false;
+    if (this.deviceOf(req)) return false;
+    res.writeHead(401, { 'content-type': 'application/json' }).end(JSON.stringify({ error: 'pair this phone with the box first' }));
     return true;
   }
 
@@ -1162,6 +1204,7 @@ data: ${JSON.stringify(e)}
         void this.start(t);
       }
     }
+    this.sweepUndone();
     for (const pump of this.readers) pump();
     await listenSocket(this.api(), path.join(HOME, 'api.sock'));
     // BOX_PORT=auto (the demo) takes any free port and writes it to BOX_HOME/api.port.

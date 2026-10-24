@@ -48,7 +48,12 @@ StartLimitIntervalSec=0
 
 [Service]
 Environment=HOME=/root
-ExecStart=/usr/local/bin/spacetime start --non-interactive --data-dir /var/lib/spacetimedb --listen-addr 0.0.0.0:3000
+# Loopback only: SpacetimeDB has no login, so anyone who could reach it could read every task and forge an
+# approval. Phones follow the box's authed API and SSE stream instead. To expose it on purpose (a tailnet
+# address), put STDB_LISTEN=<address> in /etc/box/stdb.env.
+Environment=STDB_LISTEN=127.0.0.1
+EnvironmentFile=-/etc/box/stdb.env
+ExecStart=/usr/local/bin/spacetime start --non-interactive --data-dir /var/lib/spacetimedb --listen-addr ${STDB_LISTEN}:3000
 Restart=always
 RestartSec=3
 

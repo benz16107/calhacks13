@@ -376,16 +376,31 @@ export const kill = (task: Task) => tryRun('pkill', '-KILL', '-u', task.user);
 
 /** After a task ends: unmount its copy, open its layer to later tasks' users, remove its user. */
 export function seal(task: Task) {
-  kill(task);
+  // A task that failed while being set up may have no user and no layer yet; skip what is not there.
+  if (tryRun('id', '-u', task.user)) kill(task);
   unmount(dirs.root(task.id));
-  // Later tasks run as other users and must be able to change files this task made, through their own
-  // copies. The layer's own folder becomes root-only, so no task can reach the layer directly.
-  tryRun('chmod', '-R', 'a+rwX', dirs.upper(task.id));
-  tryRun('chown', 'root:root', dirs.upper(task.id));
-  tryRun('chmod', '0700', dirs.upper(task.id));
-  try {
-    runLocked('userdel', task.user);
-  } catch {} // already gone
+  if (fs.existsSync(dirs.upper(task.id))) {
+    // Later tasks run as other users and must be able to change files this task made, through their own
+    // copies. The layer's own folder becomes root-only, so no task can reach the layer directly.
+    tryRun('chmod', '-R', 'a+rwX', dirs.upper(task.id));
+    tryRun('chown', 'root:root', dirs.upper(task.id));
+    tryRun('chmod', '0700', dirs.upper(task.id));
+  }
+  if (tryRun('id', '-u', task.user)) {
+    try {
+      runLocked('userdel', task.user);
+    } catch {} // already gone
+  }
+}
+
+/** Delete an undone task's files: its layer, scratch space and copy. The caller makes sure nothing still reads them. */
+export function purge(task: Task) {
+  for (const d of ['upper', 'work', 'base', 'root']) {
+    const dir = path.join(dirs.task(task.id), d);
+    if (!fs.existsSync(dir)) continue;
+    if (fs.readFileSync('/proc/self/mountinfo', 'utf8').includes(` ${dir} `)) continue; // still mounted: leave it
+    tryRun('rm', '-rf', '--one-file-system', dir);
+  }
 }
 
 /** Rebuild a workspace's read-only view from its done layers, newest first. */

@@ -53,3 +53,32 @@ test('the vault file: a key is set or replaced in place, the file stays 0600, an
   assert.throws(() => writeVaultKey('D_KEY', 'a\nE_KEY=injected'), /one line/);
   assert.throws(() => writeVaultKey('lower', 'x'), /capital letters/);
 });
+
+import { folderRefusal, hadHumanUse, neverFolder } from './config.ts';
+
+test('folders: only a Personal box hands them out, only the owner\'s home or chosen folders, never the box or root\'s', () => {
+  const owner = { hasOwner: true, ownerHome: '/home/ana', chosen: ['/srv/shared'], folderUid: 1000 };
+  assert.equal(folderRefusal('/home/ana/Documents/thesis', owner), undefined);
+  assert.equal(folderRefusal('/srv/shared/team', owner), undefined);
+  for (const bad of ['/etc', '/etc/box', '/root', '/root/.ssh', '/proc/1', '/var/lib/box', '/var/lib/spacetimedb', '/usr/bin', '/opt/box']) {
+    assert.ok(neverFolder(bad), `${bad} is never allowed`);
+    assert.ok(folderRefusal(bad, owner), `${bad} is refused even for the owner`);
+  }
+  assert.ok(folderRefusal('/home/bob/docs', owner), "another person's home is not the owner's");
+  assert.ok(folderRefusal('/home/anaconda', owner), 'a sibling that merely starts with the same letters is not inside the home');
+  assert.ok(folderRefusal('/home/ana/x', { ...owner, folderUid: 0 }), 'a folder that belongs to root is refused');
+  assert.equal(folderRefusal('/home/ana/x', { ...owner, folderUid: 0, allowRootOwned: true }), undefined, 'only a demo box allows that');
+  // A Server box: no owner and nothing chosen means no folders at all.
+  assert.match(folderRefusal('/home/ana/x', { hasOwner: false, chosen: [], folderUid: 1000 })!, /Personal/);
+  assert.equal(folderRefusal('/srv/shared/a', { hasOwner: false, chosen: ['/srv/shared'], folderUid: 1000 }), undefined);
+});
+
+test('setup: tasks a track starts at boot do not make a fresh install look already set up', () => {
+  const tracks = ['find', 'jira'];
+  const created = (source: string) => ({ type: 'task.created', spec: { source } });
+  assert.equal(hadHumanUse([created('find')], tracks, 0), false, 'the photo index the find track starts at every boot');
+  assert.equal(hadHumanUse([created('find'), created('schedule')], tracks, 0), false);
+  assert.equal(hadHumanUse([created('api')], tracks, 0), true, 'a person started a task');
+  assert.equal(hadHumanUse([created('find'), { type: 'approval.answered' }], tracks, 0), true, 'a person answered an approval');
+  assert.equal(hadHumanUse([created('find')], tracks, 1), true, 'a phone was paired');
+});
