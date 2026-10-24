@@ -31,12 +31,12 @@ Checked against main `8a4cbf4`, Sat Oct 24 05:30 PT. `./demo` from a clean workt
 | Status | Count |
 |---|---|
 | verified (ISO) | 3 |
-| verified | 54 |
-| merged | 71 |
-| building | 37 |
+| verified | 52 |
+| merged | 68 |
+| building | 27 |
 | planned | 20 |
-| not pursued | 3 |
-| **Total** | **188** |
+| not pursued | 0 |
+| **Total** | **170** |
 
 **Collisions** (detail below): none open at 03:27. The three found at 02:25 are resolved and Business is on main. Still
 watched: portal/dist rebuilt from merged sources (C-4).
@@ -328,62 +328,21 @@ Owner: the Figma thread. `docs/figma-products.md` is not on main yet; its items 
 | App-vs-Figma comparisons (the built screen next to its frame) | figma, portal | planned | | | Figma |
 | A Figma Sites landing page | figma | planned (named on the showcase's Figma page) | | | Figma, GoDaddy |
 
-## Vultr and GoDaddy
+## Vultr
 
-Owner: the Vultr/GoDaddy thread, branch `vultr-godaddy-push` (not merged at 04:00 PT). **The Vultr account has $0 credit
-and refuses new instances** ("does not have any additional credit"), and holds its two-ISO maximum. That blocks the
-live runs below; it also blocks QA's overnight fresh installs on new instances, so QA reinstalls the existing debug
-instance through the disc menu instead.
-
-| Feature | Owner | Status | Commit | Demo step | Tracks |
-|---|---|---|---|---|---|
-| Boot the real GurtOS disc on Vultr from a script (`tracks/vultr/up.ts`) | vultr | building (script written, **blocked**: no Vultr credit; QA installed the disc by hand twice, Oct 23 22:29 and Oct 24 00:02) | | none | Vultr |
-| Encrypted backup to Object Storage (age; the owner holds the key) | vultr | building (code, unit test, demo step on the branch; live restore **blocked** by the credit error) | | demo step on branch | Vultr |
-| Vultr firewall managed from the box | vultr | building (group create, add, remove and delete proven against the real API; attaching to an instance **blocked**) | | | Vultr |
-| Vultr Serverless Inference as a hosted model for /find | vultr, find | not pursued (needs a paid subscription; Ben's call, Oct 24) | | | Vultr, Moss |
-| gurtos.co short pairing links (the code stays in the URL fragment) | vultr | not pursued (Ben is not entering the MLH GoDaddy prize, Oct 24; the redirect code stays on its branch) | | | GoDaddy |
-| Domain story text for the showcase | vultr, submission | not pursued as a prize entry (GoDaddy); the showcase page for it should go (submission thread) | | none | GoDaddy |
-
-## Factory (Droid SDK)
-
-Owner: the Factory thread. All seven on main as da08615 (gate 28 of 28, 1 pending; a live `DEMO_LIVE=droid,github` run on
-the Vultr test box passed every Factory check). QA has not walked them by hand yet.
+Owner: the Vultr thread, branch `vultr-godaddy-push` (merging after a full `./demo`). Live results are the Vultr thread's
+(Oct 24, all test resources destroyed, under $0.20). **The Vultr account still has $0 credit** (raised Oct 24 04:00 PT);
+QA cannot create instances.
 
 | Feature | Owner | Status | Commit | Demo step | Tracks |
 |---|---|---|---|---|---|
-| Droid as the worker in every task with Claude, scheduled, webhook and file triggers, plan and diff visible | core, factory | verified Oct 24 00:10 (real Droid started from a phone; moment 2 with real Droid at 23:37) | b53e1c7 | moment 1 with Droid (live) | Factory |
-| Plan first, then approve: Droid's spec-mode plan becomes an approval; work starts only after Approve, Deny fails the task with nothing changed | factory, core | merged | da08615 | "Droid planned first in spec mode, and the plan became an approval" (live) | Factory |
-| A team of custom droids: coder, reviewer (read-only), credit-analyst, shopper in tracks/factory/droids; the reviewer checks the coder's diff before Keep or the PR | factory | merged | da08615 | "the coder droid made the change and the reviewer droid checked it" (live); "the reviewer can only read" | Factory |
-| Autonomy levels the OS enforces (`TaskSpec.droid.autonomy`): low = no network and every spend asks; medium = budget at most $1; Droid's permission requests become approvals | core, factory | merged | da08615 | "low autonomy: ..." and "medium autonomy: ..." | Factory |
-| Droid hooks report to GurtOS: PostToolUse logs each tool result; PreToolUse pauses risky commands (rm -rf, git push, sudo, npm publish, curl or sh) for an OK | core | merged | da08615 | "Droid's hooks logged each tool call's result" (live); core/hook.test.ts | Factory |
-| Droid on GitHub: the box watches `FACTORY_GITHUB_REPO` for issues labelled droid; each becomes a plan-first task on its own clone; `factory.openPullRequest` pushes with the vault's `GITHUB_TOKEN`, never in the task | factory | merged (a real PR exists; not set up on the QA box: no GITHUB_TOKEN in its vault) | da08615 | "Droid opened a pull request through the vault's token" (DEMO_LIVE=droid,github) | Factory |
-| `gurtos-exec`: a safe runner for `droid exec`; submit a job to a box, get back steps, the diff, the cost and credits (text or `-o json`) | factory | merged | da08615 | "gurtos-exec ran a job on the box and got back its diff and cost" | Factory |
-| Factory usage in the portal: per-task Factory credits, and the plan's 5-hour and weekly use through the vault key, which is never shown | factory, core | merged | da08615 | "usage reads Factory's limits without showing the key" | Factory |
-
-## SpacetimeDB
-
-Owner: the Spacetime thread. Branch `spacetime` (13 commits ahead of main, `./demo` 30 passed on the VM, in core review,
-meant to merge before the 9 PM freeze). QA's trial merge at 05:55 PT: clean onto main, and clean together with the `crs-push`
-and `armadin-push` branches. It changes the SpacetimeDB module and `core/spacetime/bindings`, so `portal/dist` must be
-rebuilt from them (the portal's gate fails on a bundle built from older bindings).
-
-| Feature | Owner | Status | Commit | Demo step | Tracks |
-|---|---|---|---|---|---|
-| SpacetimeDB holds live task status and approvals; a paired phone answers through the vouched reducer | core | verified Oct 24 00:09 (two phones, the reducer refusing anonymous calls) | 6879fb9 | moment 3; security | SpacetimeDB |
-| Shared work queue with atomic claims (`spacetime.claim`, `finish`, `post`, `team`): 15 claims by 3 agents on 12 jobs, none twice; 30 simultaneous claims on 10 jobs; jobs return when a task ends holding them | spacetime | building (branch `spacetime`) | | tracks/spacetime/demo.ts on branch | SpacetimeDB |
-| Live agent presence and status (agent table, the Live window's Agents view) | spacetime | building (branch) | | tracks/spacetime/demo.ts on branch | SpacetimeDB |
-| Each person is sent only their own requests (Business `my_requests` view, private tables) | spacetime, business | building (branch) | | tracks/spacetime/demo.ts on branch | SpacetimeDB, Hyphenate |
-| No double approvals: the first answer wins in the reducer, the late one gets "already approved by X" | spacetime, core | building (branch) | | tracks/spacetime/demo.ts on branch | SpacetimeDB |
-| "X is viewing" presence on a request (clears when the connection drops) | spacetime | building (branch) | | tracks/spacetime/demo.ts on branch | SpacetimeDB |
-| A reminder timer in the database ("brings Priya in after N seconds"); the Business policy line that sets the delay is not on main | spacetime, business | building (branch; module and demo only) | | tracks/spacetime/demo.ts on branch | SpacetimeDB |
-| Live meters (`meter`, `activity`) matching the box's task list | spacetime | building (branch) | | tracks/spacetime/demo.ts on branch | SpacetimeDB |
-| Paired devices reach SpacetimeDB at `/stdb/<token>/` (identity and subscription only; wrong token 401; SQL 404) | spacetime, core | building (branch; touches the token gate, so QA tests it) | | tracks/spacetime/demo.ts on branch | SpacetimeDB, Armadin |
-| Live window `/t/spacetime/` | spacetime | building (branch) | | tracks/spacetime/demo.ts on branch | SpacetimeDB |
-| Maincloud fleet view (opt-in, counts only, per-viewer visibility) | spacetime | building (module and offline demo; the live check waits on Ben signing in to SpacetimeDB once: `DEMO_LIVE=spacetime ./demo`) | | DEMO_LIVE=spacetime | SpacetimeDB |
+| Boot the real GurtOS disc on Vultr from a script (`tracks/vultr/up.ts`): release ISO 20261024-0644-881318a on vc2-1c-1gb; installed in about 5 minutes; came back from its own disk after the disc was detached; the first-boot wizard shows | vultr | building (branch; proven live by the Vultr thread; QA also installed the disc by hand twice, Oct 23 22:29 and Oct 24 00:02) | | tracks/vultr on branch | Vultr |
+| Encrypted backup to Object Storage (age; the owner holds the key) and a restore onto a fresh Vultr box in 2.8 s: a finished task stayed done, a waiting task came back waiting and finished after an OK | vultr | building (branch; proven live; the image has no `age` binary yet, it was added by hand, and the release disc has no shell) | | tracks/vultr on branch | Vultr |
+| Vultr firewall managed from the box: a group attached to a live instance blocked ssh from a wrong address and allowed the right one (a rule can take up to about 3 minutes to apply) | vultr | building (branch; the box's own `PUT /t/vultr/firewall` route only tested against stubs) | | tracks/vultr on branch | Vultr |
 
 ## Not pursued
 
-- **MLH GoDaddy Registry prize and Vultr Serverless Inference** (Oct 24). Their rows above are marked "not pursued".
+- **MLH GoDaddy Registry prize and Vultr Serverless Inference** (Oct 24). Their rows were removed from the Vultr section: the gurtos.co redirect code is gone and Serverless Inference was not built.
 - **Capital One (Nessie) prize track.** Ben is not entering it (Oct 24). No ledger row was only for it. Nessie stays as
   the credit desk's bank (payments, bills, AP payments in test money), so its rows are checked as part of the credit
   desk. The showcase still has a Nessie page and `docs/tracks.md` still lists the track; both are for the owners of
