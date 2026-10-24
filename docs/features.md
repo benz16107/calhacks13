@@ -32,8 +32,8 @@ Checked against main `7fe6651`, Sat Oct 24 08:09 PT. `./demo` from a clean workt
 |---|---|
 | verified (ISO) | 3 |
 | verified | 56 |
-| merged | 151 |
-| building | 7 |
+| merged | 152 |
+| building | 6 |
 | planned | 1 |
 | not pursued | 6 |
 | **Total** | **224** |
@@ -413,7 +413,7 @@ Owner: the Spacetime thread. Merged as ed88206. `portal/dist` matches its source
 | Live meters (`meter`, `activity`) matching the box's task list | spacetime | merged (ed88206) | ed88206 | track spacetime | SpacetimeDB |
 | Paired devices reach SpacetimeDB at `/stdb/<token>/` | spacetime, core | not pursued (core refused the proxy; the Live window on a phone or laptop polls `GET /t/spacetime/snapshot` through the API instead) | | | SpacetimeDB |
 | Live window `/t/spacetime/` | spacetime | merged (ed88206) | ed88206 | track spacetime | SpacetimeDB |
-| Maincloud fleet view (opt-in, counts only, per-viewer visibility) | spacetime | building (module and offline demo are in; the live check waits on Ben signing in to SpacetimeDB once: `DEMO_LIVE=spacetime ./demo`) | ed88206 | DEMO_LIVE=spacetime | SpacetimeDB |
+| Maincloud fleet view (opt-in, off on a new box, counts only: no prompts, files or keys; per-viewer visibility) | spacetime | merged (verified by the gate against live Maincloud, not hand-verified by QA: `DEMO_LIVE=spacetime ./demo` on main 6091870, Oct 24 about 2:35 PM PT, three live checks ok. The owner turned the view on and the box reported to database `gurtos-fleet`; a granted viewer saw "Demo box" live and a stranger got nothing; turned off, the box's row and every grant were gone. Spacetime's other 15 checks passed in the same run. The run's 1 failure was credit-desk "timed out waiting for the fraud referral" with the gate VM at load average 110 to 190, not Spacetime's. By hand: Live board, Computers tab, switch "Show this computer on your other computers") | ed88206, 6091870 | DEMO_LIVE=spacetime | SpacetimeDB |
 
 ## Not pursued
 
