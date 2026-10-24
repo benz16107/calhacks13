@@ -29,10 +29,25 @@ An agent that can pay usually holds the key, so one tricked step can drain the w
   { value: '83', label: 'agent payments settled on Solana devnet, every fee paid by the facilitator', href: 'https://explorer.solana.com/address/6PyiR71c9aw3e8bgnxmcLvJECL5zHE5jMSWqJoVjPTxU?cluster=devnet', source: 'the wallet on Explorer' },
   { value: '2', label: "of the box's paid routes listed in the x402 Bazaar", href: '#evidence', source: 'the lookup' },
   { value: '0', label: 'times the key or the CDP secret appeared in a task log', href: '#evidence', source: 'the live run' },
-  { value: '27', label: 'points of builder feedback, with times', href: 'https://github.com/benz16107/calhacks13/blob/main/tracks/wallet/FEEDBACK.md', source: 'FEEDBACK.md' },
+  { value: '28', label: 'points of builder feedback, with times', href: 'https://github.com/benz16107/calhacks13/blob/main/tracks/wallet/FEEDBACK.md', source: 'FEEDBACK.md' },
 ]} />
 
-<Shot src="track/coinbase/phone-request.png" dark="track/coinbase/phone-request-dark.png" size="phone" alt="GurtOS on a phone, Needs you: Buy the weekly price report. Spend $0.03 to api.localhost:4021 on wallet.pay, in devnet USDC (test money), budget $0.02, with Deny and Approve $0.03 buttons." caption="A payment over the task's budget, on the owner's phone: the amount, the payee, the URL and the budget, with <strong>Approve $0.03</strong>. Nothing is paid until someone answers. Captured Oct 24 from a test box; the payee is our test API, and the money is devnet test money." />
+## Your OK, from the device you carry
+
+A payment over the task's budget waits for a person, and every GurtOS device can give the answer. The box decides what each device may approve.
+
+<Compare labels={['iPhone: Face ID before any payment', 'Apple Watch: small requests, on the wrist']}>
+<div slot="a">
+<Shot src="track/coinbase/iphone-wallet-faceid.png" size="phone" alt="The GurtOS iPhone app showing the request Buy the weekly price report, $0.03: Spend $0.03 to api.localhost:4021 on wallet.pay in devnet USDC (test money), budget $0.02, with the Face ID sheet over it." caption="The iPhone app asks for Face ID before it sends <strong>Approve $0.03</strong>. The action log then reads &quot;Approved by iPhone (Face ID, reported)&quot;." />
+</div>
+<div slot="b">
+<Shot src="track/coinbase/watch-wallet.png" size="phone" alt="The GurtOS Apple Watch app showing Buy the weekly price report, $0.03, with deny and approve buttons." caption="The same request on the Watch. The box lets a Watch approve only up to $25, only on the wrist, and never on GurtOS Business or for a Shopper purchase. Anything else says to approve on the iPhone." />
+</div>
+</Compare>
+
+Captured Oct 24 in the iOS and watchOS simulators from the real apps, connected to a GurtOS test box. The payee is our test API, and the money is devnet test money. The iPhone and Watch apps are in internal TestFlight testing; anyone can use the same request from a browser at [app.gurtos.com](https://app.gurtos.com) (shown below), and the Mac app asks for Touch ID the same way.
+
+<Shot src="track/coinbase/phone-request.png" dark="track/coinbase/phone-request-dark.png" size="phone" alt="GurtOS in a phone browser, Needs you: Buy the weekly price report. Spend $0.03 to api.localhost:4021 on wallet.pay, in devnet USDC (test money), budget $0.02, with Deny and Approve $0.03 buttons." caption="The same request in GurtOS on the web, the app served by every box and at app.gurtos.com, which works on any phone. Captured Oct 24 from a test box. Test money." />
 
 ## Summary
 
@@ -50,6 +65,7 @@ Coinbase asks for four parts: a summary, a working example, the architecture wit
   { what: 'The key never reaches the agent', why: 'Technical design', os: 'A root-only key file, opened only by wallet.pay inside the box; each task is its own Linux user', track: 'None', status: 'Shipped. The live run checks neither the wallet key nor the CDP secret is in the log' },
   { what: 'Pay for APIs with x402', why: 'Usefulness', os: "The box fetches the URL, only from the task's hosts, no redirects", track: 'x402 v2 SDK, exact scheme; settled by the CDP facilitator, which pays the fee', status: 'Shipped. 70 fixed-price payments on devnet' },
   { what: "Budget, then the owner's OK on the phone", why: 'Usefulness, technical design', os: 'Budgets reserved before the call, so two payments at once cannot both slip through; the pause names the amount, payee and URL', track: 'The x402 client policy: exact price, devnet USDC only, at most $1 a payment', status: 'Shipped' },
+  { what: 'Approve from the iPhone with Face ID, the Mac with Touch ID, or the Watch up to $25', why: 'Usefulness, technical design', os: 'The box decides what each device may approve and logs how it was checked: "Approved by iPhone (Face ID, reported)"', track: 'None', status: 'Shipped. The iPhone and Watch apps are in internal TestFlight testing' },
   { what: 'Every payment on the record', why: 'Technical design', os: 'The append-only action log: amount, payee, task, transaction', track: 'The settlement receipt', status: 'Shipped' },
   { what: 'The box earns over x402: audit proof $0.01, metered search up to $0.02, renting its agent $0.25 after the owner approves', why: 'Usefulness', os: 'Only these routes open to strangers; renting starts a task only after the owner says yes', track: '@x402/express sellers, CDP facilitator, Bazaar metadata', status: 'Shipped. Live at gurt-cloud.box.gurtos.com' },
   { what: 'Listed in the x402 Bazaar', why: 'Usefulness, reuse', os: 'A public HTTPS address for the box (remote access)', track: 'Bazaar cataloging on the first settled payment', status: 'Shipped. A lookup by pay-to address returns both paid routes; free-text search did not find them on Oct 24' },

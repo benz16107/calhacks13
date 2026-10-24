@@ -61,6 +61,10 @@ you      (Approve)
 GurtOS   Paid 0.5 test FET (tx ...).   [receipt card]
 ```
 
+The same requests reach the owner's devices, so you can answer away from the chat. The first answer wins, in the chat or on a device.
+
+<Shot src="track/fetch/iphone-fetch-notification-actions.png" size="phone" alt="An iPhone lock screen notification from GurtOS, Home box: Approve $0.50 to a fetch1test address? Pay for the market data report (test FET on Fetch testnet, test money), with Approve with Face ID and Deny." caption="A <code>fetch.pay</code> request from an agent on the iPhone lock screen: <strong>Approve with Face ID</strong> or <strong>Deny</strong>, without opening the app. Captured Oct 24 in the iOS simulator from the real GurtOS app, connected to a test box. The payee is a test address and the money is test FET. The iPhone app is in internal TestFlight testing; the web app at app.gurtos.com gets the same request." />
+
 ## Why it needs an operating system
 
 On an ordinary computer, an agent that takes orders from a chat runs as you: it can read your keys, change any file and reach any host, and nothing can take back what it did. Agents that talk to strangers' agents make it worse, because any reply can carry a hidden instruction. GurtOS runs each chat request as its own Linux user, with its own copy of the files, no keys and only the network it was given. Spending over the task's budget waits for you, in the chat and on your phone, and Undo removes exactly that task's changes. The chat agent itself runs as an unprivileged user and uses only the box's HTTP API, the same one the portal and phone use, so it has no powers the portal lacks.
