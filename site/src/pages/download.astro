@@ -68,8 +68,37 @@ const url = (e: string, a: string) => `${RELEASE}/${file(e, a)}`;
     </section>
 
     <section aria-labelledby="apps-h">
-      <h2 id="apps-h">Apps</h2>
-      <p>Open <a href="https://app.gurtos.com">app.gurtos.com</a> on your iPhone, Android phone, Mac or Windows PC and install it from the browser (Add to Home Screen, or Install in Edge). It approves, denies and undoes tasks on any paired box. <a href="/docs/guides/reach-your-box-from-anywhere/">Set it up</a>.</p>
+      <h2 id="apps-h">Get the GurtOS app</h2>
+      <p class="apps-lead">Approve, deny and undo tasks from your phone or computer. Every app talks to the same box.</p>
+      <dl class="apps">
+        <div>
+          <dt>Android</dt>
+          <dd>
+            <a class="btn" href={`${RELEASE}/gurtos-android-0.1.0.apk`}>Download the APK <span class="size">0.9 MB</span></a>
+            <p>Open the file on your phone. If Android asks, allow installs from your browser, then tap Install. It is the GurtOS web app in an installed app, with notifications. <a href={`${RELEASE}/gurtos-android-0.1.0.apk.sha256`}>SHA-256</a>: <code>cef69ba2f14d5d0833ee6cf7349d412b730b80a284da5c9034159258d0228b3a</code></p>
+          </dd>
+        </div>
+        <div>
+          <dt>iPhone and Apple Watch</dt>
+          <dd>
+            <p>The iPhone app (TestFlight) is in internal testing, so there is no public link yet. Until then, open <a href="https://app.gurtos.com">app.gurtos.com</a> in Safari and add it to your Home Screen. The Watch app installs with the iPhone app.</p>
+          </dd>
+        </div>
+        <div>
+          <dt>Mac</dt>
+          <dd>
+            <p>A menu bar app with Approve by Touch ID, ⌥⌘G to ask your computer for a task, and Send to GurtOS in the Share menu. Coming soon. Until then, use <a href="https://app.gurtos.com">app.gurtos.com</a> in a browser.</p>
+          </dd>
+        </div>
+        <div>
+          <dt>Windows</dt>
+          <dd>
+            <p>Open <a href="https://app.gurtos.com">app.gurtos.com</a> in Microsoft Edge. Select "App available. Install GurtOS" in the address bar, or the <b>...</b> menu, then Apps, then Install GurtOS. It opens in its own window and can show notifications. Pair it with your computer's QR code or code, as on a phone.</p>
+            <p class="caveat">We checked this in Edge 156 on Linux, where Edge reported the app installable. We have not tried it on a Windows PC.</p>
+          </dd>
+        </div>
+      </dl>
+      <p><a href="/docs/guides/reach-your-box-from-anywhere/">Set up remote access</a> to reach your box from any of them.</p>
     </section>
 
     <section aria-label="Details" class="details">
@@ -176,6 +205,16 @@ image/build personal        # GurtOS Personal`}</pre>
   .chooser td, .chooser th { padding: 0.8rem 0.8rem 0.8rem 0; }
   .size { font-family: var(--gw-mono); font-size: var(--gw-text-sm); opacity: 0.8; margin-left: 0.3rem; }
   .sr { position: absolute; left: -999px; }
+  .apps-lead { max-width: 46rem; color: var(--gw-ink-2); }
+  .apps { margin: 1rem 0; }
+  .apps > div { display: grid; gap: 0.4rem 2rem; padding: 1.1rem 0; border-top: 1px solid var(--gw-rule); }
+  .apps dt { font-weight: 600; font-size: var(--gw-text-lg); }
+  .apps dd { margin: 0; max-width: 46rem; }
+  .apps dd p { margin: 0 0 0.6rem; }
+  .apps dd .btn { margin-bottom: 0.8rem; }
+  .apps code { word-break: break-all; font-size: 0.75rem; }
+  .caveat { color: var(--gw-ink-2); font-size: var(--gw-text-sm); }
+  @media (min-width: 900px) { .apps > div { grid-template-columns: 14rem 1fr; } }
   .details { margin-top: 2.5rem; border-bottom: 1px solid var(--gw-rule); }
   details { border-top: 1px solid var(--gw-rule); }
   summary { cursor: pointer; padding: 1rem 0; font-weight: 600; font-size: var(--gw-text-lg); }
