@@ -100,7 +100,7 @@ watched: portal/dist rebuilt from merged sources (C-4).
 | GurtOS Setup (first boot) | personal | merged | 96ce0cb | none | |
 | Approvals as GNOME notifications, Ask an Agent in Files | personal | merged (owner verified) | 65679b2 | personal/demo.ts | |
 | Reach this computer from anywhere (Settings) | personal, remote access | merged | 1d64435, 6cdeb9a | remote access and push | |
-| Talk to your computer: Super+Alt+Space, answer as a notification and a local voice; voice approves only a request that spends nothing, signed `voice:<user>`; audio deleted after reading | personal | merged (selftest checks the safety rule; speech to text 1.1 s on CPU; QA has not heard it through a real microphone, and the Personal ISO must contain `/opt/box/voice-venv`, about 600 MB, from `voice-setup.sh`) | e78480c | personal/selftest.py | Moss |
+| Talk to your computer: Super+Alt+Space, answer as a notification and a local voice; voice approves only a request that spends nothing, signed `voice:<user>`; audio deleted after reading | personal | merged (selftest checks the safety rule; speech to text 1.1 s on CPU; QA has not heard it through a real microphone, and the model (about 600 MB) is not in the ISO: `box-voice.service` downloads it at first boot (image branch e19dddf, not on main yet), so check `systemctl status box-voice`, `/opt/box/voice-models/.ready` and `findmnt /opt/box/voice-models` a few minutes after the first boot; with no network the feature stays off) | e78480c | personal/selftest.py | Moss |
 
 ## GurtOS Business (preview)
 
