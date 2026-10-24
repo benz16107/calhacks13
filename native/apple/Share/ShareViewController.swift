@@ -1,5 +1,6 @@
-// Send to GurtOS: the Mac's Share menu sends the chosen text or link to a new task on a paired computer, through its
-// API with this Mac's token. Files wait for the box to take them (core: after Sunday, into the task's own layer).
+// Send to GurtOS: the Mac's Share menu sends the chosen files, text or link to a new task on a paired computer,
+// through its API with this Mac's token. The box puts files in a new workspace of their own and keeps its usual
+// limits on the task.
 import AppKit
 import GurtKit
 import SwiftUI
@@ -21,6 +22,7 @@ struct ShareForm: View {
   @State var machine = ""
   @State var ask = ""
   @State var shared = ""
+  @State var files: [(name: String, data: Data)] = []
   @State var error: String?
   @State var busy = false
 
@@ -48,15 +50,25 @@ struct ShareForm: View {
     }
   }
 
-  /** Links and text only, at most 20,000 characters. */
+  /** Files (up to 8, 5 MB in all, the box's limits), or text and links (at most 20,000 characters). */
   func load() async {
     var parts: [String] = []
+    var total = 0
     for p in providers {
-      if let u = try? await p.loadItem(forTypeIdentifier: UTType.url.identifier) as? URL { parts.append(u.absoluteString) }
+      if p.hasItemConformingToTypeIdentifier(UTType.fileURL.identifier) {
+        let item = try? await p.loadItem(forTypeIdentifier: UTType.fileURL.identifier)
+        guard let url = (item as? URL) ?? (item as? Data).flatMap({ URL(dataRepresentation: $0, relativeTo: nil) }), let d = try? Data(contentsOf: url) else { continue }
+        total += d.count
+        files.append((url.lastPathComponent, d))
+      } else if let u = try? await p.loadItem(forTypeIdentifier: UTType.url.identifier) as? URL { parts.append(u.absoluteString) }
       else if let t = try? await p.loadItem(forTypeIdentifier: UTType.plainText.identifier) as? String { parts.append(t) }
     }
-    shared = String(parts.joined(separator: "\n\n").prefix(20_000))
-    if shared.isEmpty { error = "GurtOS takes text and links for now." }
+    if files.count > 8 { error = "GurtOS takes up to 8 files at a time."; files = [] }
+    if total > 5 * 1024 * 1024 { error = "That's more than 5 MB. Send fewer or smaller files."; files = [] }
+    let text = String(parts.joined(separator: "\n\n").prefix(20_000))
+    shared = files.isEmpty ? text : files.map(\.name).joined(separator: ", ")
+    if shared.isEmpty && error == nil { error = "Nothing to send." }
+    if !text.isEmpty, !files.isEmpty { shared += "\n" + text }
   }
 
   func send() {
@@ -64,7 +76,8 @@ struct ShareForm: View {
     busy = true
     Task {
       do {
-        _ = try await BoxClient(machine: m).newTask(title: String(ask.prefix(80)), prompt: "\(ask)\n\nShared from my Mac:\n\(shared)")
+        let prompt = files.isEmpty ? "\(ask)\n\nShared from my Mac:\n\(shared)" : "\(ask)\n\nThe files are in this task's folder: \(files.map(\.name).joined(separator: ", "))."
+        _ = try await BoxClient(machine: m).newTask(title: String(ask.prefix(80)), prompt: prompt, files: files)
         done()
       } catch {
         self.error = (error as? BoxError)?.message ?? error.localizedDescription

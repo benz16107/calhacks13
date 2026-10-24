@@ -78,8 +78,9 @@ closed needs push-to-update through the relay. The widget and the notification c
 - ⌥⌘G anywhere opens "Ask your machine" for a new task. Carbon hot keys need no Accessibility permission.
 - New requests become Mac notifications, made on the Mac from the live log. Nothing goes through a push service.
 - Pairing: drop a screenshot of the QR code, paste its link, or type the address and code.
-- **Send to GurtOS** in the Share menu sends the chosen text or link to a new task. Files wait for the box to take
-  them: core plans that after Sunday, written into the task's own layer and never into a linked real folder.
+- **Send to GurtOS** in the Share menu sends the chosen files (up to 8, 5 MB in all), text or link to a new task.
+  The box puts files in a new workspace of their own that it names (`POST /api/tasks {files}`), never an owner's
+  folder or an existing workspace, so the task's copy holds only them; the log keeps names and sizes.
 - The menu picture is drawn by the app's `--render-shots` mode from the same model: macOS blocks screen capture
   over ssh. The Ask and Pair pictures are the real views.
 
