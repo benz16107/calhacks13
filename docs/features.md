@@ -14,7 +14,7 @@ Devpost text, and Ben's approved list.
 **Demo step** names the check in `./demo` (`core/demo.ts` moments, or `tracks/<name>/demo.ts`). "none" means no
 automated check yet.
 
-Checked against main `60f5184`, Sat Oct 24 04:20 PT. `./demo` on that tree: 26 passed, 0 failed, 1 pending (real Droid, off by default).
+Checked against main `3799b74`, Sat Oct 24 04:35 PT. `./demo` on that tree: 26 passed, 0 failed, 1 pending (real Droid, off by default).
 
 ## Freeze plan
 
@@ -30,10 +30,10 @@ Checked against main `60f5184`, Sat Oct 24 04:20 PT. `./demo` on that tree: 26 p
 | Status | Count |
 |---|---|
 | verified (ISO) | 3 |
-| verified | 39 |
-| merged | 37 |
-| building | 28 |
-| planned | 34 |
+| verified | 40 |
+| merged | 38 |
+| building | 31 |
+| planned | 29 |
 | **Total** | **141** |
 
 **Collisions** (detail below): none open at 03:27. The three found at 02:25 are resolved and Business is on main. Still
@@ -215,11 +215,11 @@ Owner: the Mana thread.
 | Feature | Owner | Status | Commit | Demo step | Tracks |
 |---|---|---|---|---|---|
 | Rules planning chat, project page, the GurtOS status app | mana | verified Oct 23 23:37 (app live, signed out) | 525f630, 4631f73 | tracks/mana/demo.ts | Mana, Hyphenate |
-| Guest requests to GurtOS from inside the Mana app, with the owner's approval (same guest path as Fetch's) | mana, fetch | planned | | | Mana, Fetch.ai |
-| Mana-drafted Business rules synced into the box's policy | mana, business | planned (Business policy is on main; Mana's proposal hook not built) | | | Mana, Hyphenate |
-| Public Mana planning chats for Visa mandates and the Fetch agent team | mana | planned | | | Mana, Visa, Fetch.ai |
-| A GurtOS guide agent in Mana | mana | planned | | | Mana |
-| A public Mana home page for the entry | mana | planned | | | Mana |
+| Mana: guest requests (one path with Fetch): a gate task for the owner's OK, then a run in the empty `guest` workspace; deny by default, 3 per guest and 10 an hour, 30-minute expiry | mana, fetch | verified Oct 24 04:25 (one approval, no second question; no network; refusals; Deny; public status hides the words). 804e8d0 (owner's wording, price steered to checkPrice) not yet verified | 03bade4, 804e8d0 | tracks/mana/demo.ts | Mana, Fetch.ai |
+| Mana: rules from a Mana chat sync into Business policy (`POST/GET /t/mana/policy`; only an owner or admin approving applies it) | mana, business | merged (not walked by QA yet) | bc717b4 | tracks/mana/demo.ts | Mana, Hyphenate |
+| Mana: four planning chats (credit, Business, Visa, Fetch) | mana | building | | none | Mana, Visa, Fetch.ai |
+| Mana: GurtOS guide agent | mana | building (lands within the hour of 04:35 PT) | | none | Mana |
+| Mana: public home page | mana | building (lands within the hour of 04:35 PT) | | none | Mana |
 
 ## Apify (GurtOS Personal and Server)
 
