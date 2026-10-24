@@ -1,5 +1,8 @@
 # Public-readiness audit
 
+**The repository went public on Sat Oct 24, 2026 at 01:02 PDT (08:02:26 UTC)**, on Ben's go, after the final
+scans below came back clean.
+
 Before `benz16107/calhacks13` goes public with its full history. Run by the release thread on Oct 24, 2026,
 between 02:20 and 02:55 PT, against every ref in Ben's clone (which every working copy shares) and on GitHub.
 Threads keep committing, so the counts grow; re-run the scans right before the flip (below).
@@ -97,7 +100,17 @@ closed before the repository goes public.
   npm dependencies are MIT, ISC, Apache-2.0 and BSD. The fonts are OFL. All are listed in `NOTICE`.
 - The root `package.json` had no licence; it now says Apache-2.0.
 
-## Before the flip
+## The final scans, right before the flip (00:55 to 01:02 PDT)
+
+- gitleaks over `--all`: 243 refs, 445 commits, about 24 MB: no leaks.
+- `release/scan-history.py` with 64 real values (every test VM's vault, the seeds, identity and update keys, the
+  release keys, the account notes): 1,878 blobs, no secret. The matches were the known non-secrets above, plus a
+  local Ollama address and test-VM instance ids, both accepted.
+- On GitHub: only `main` and `credit-desk-data`. The `refs/t3/*` checkpoints were never pushed.
+- After the flip: the repo page, README and LICENSE return 200 logged out, and all 42 GitHub links on gurtos.com
+  and calhacks.gurtos.com resolve. Private vulnerability reporting, secret scanning and push protection are on.
+
+## Before the flip (done)
 
 1. Merge the top-level public files (README, CONTRIBUTING, LICENSE, NOTICE, the public CLAUDE.md). The internal
    operations that were in CLAUDE.md now live outside git, so the threads that need them keep them.

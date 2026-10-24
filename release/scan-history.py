@@ -12,6 +12,7 @@ the apps' seeds and keys, right before a repository's visibility changes. See re
 import re
 import subprocess
 import sys
+import threading
 
 repo, files = sys.argv[1], sys.argv[2:]
 values = {}  # value -> names
@@ -37,8 +38,10 @@ kinds = git('cat-file', '--batch-check', input='\n'.join(paths), text=True).stdo
 blobs = [k.split()[0] for k in kinds if k.split()[1:2] == ['blob']]
 
 cat = subprocess.Popen(['git', '-C', repo, 'cat-file', '--batch'], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
-cat.stdin.write(('\n'.join(blobs) + '\n').encode())
-cat.stdin.close()
+def feed():  # in a thread: writing every name before reading fills both pipes and hangs
+    cat.stdin.write(('\n'.join(blobs) + '\n').encode())
+    cat.stdin.close()
+threading.Thread(target=feed, daemon=True).start()
 hits = {}
 needles = [(v.encode(), names) for v, names in values.items()]
 for sha in blobs:
