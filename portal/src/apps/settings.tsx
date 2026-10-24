@@ -11,6 +11,8 @@ import { HeaderBar, InWindow, open, phone, useWin } from '../wm.tsx';
 import { access } from '../shell.tsx';
 import { PRODUCT } from '../product.ts';
 import { dollars, plural, selfBox, useNow } from '../util.ts';
+/** One model key lets agents think: an Anthropic key or a Factory key. */
+const MODEL_KEYS = ['ANTHROPIC_API_KEY', 'FACTORY_API_KEY'];
 
 type Page = [id: string, title: string, icon: string, words: string];
 const PAGES: (Page | 'sep')[] = [
@@ -300,7 +302,17 @@ function Agents() {
     if (e.type === 'tool.result') tools += e.cents ?? 0;
   }
   const ran = [...b.tasks.values()].filter((t) => new Date(t.createdAt).toDateString() === today).length;
-  const factory = vault?.find((k) => k.name === 'FACTORY_API_KEY');
+  const keyRow = (name: string, what: string) => {
+    const k = vault?.find((x) => x.name === name);
+    const other = vault?.some((x) => x.name !== name && MODEL_KEYS.includes(x.name));
+    return (
+      <Row title={what} sub={!b.owner ? 'Only the owner sees which keys are set' : k ? `${name} · ${k.setAt ? `set ${when(k.setAt)}` : 'put there by hand'}` : `${name} · ${other ? 'not needed, the other key is set' : "not set: tasks can't run until one model key is"}`}>
+        <Button onClick={() => setSheet(name)} disabled={!b.owner}>
+          {k ? 'Replace' : 'Set key'}
+        </Button>
+      </Row>
+    );
+  };
   return (
     <>
       <Group title="Worker" caption="Every task runs as its own Linux user, with this worker inside.">
@@ -311,12 +323,9 @@ function Agents() {
           <Value>{modelId || 'Default'}</Value>
         </Row>
       </Group>
-      <Group title="Keys" caption="Write-only. Replace a key here or in Accounts & Keys.">
-        <Row title={<span class="gos-set-mono">FACTORY_API_KEY</span>} sub={!b.owner ? 'Only the owner sees which keys are set' : factory ? (factory.setAt ? `Set ${when(factory.setAt)}` : 'Put there by hand') : 'Not set · Droid needs it to run tasks'}>
-          <Button onClick={() => setSheet('FACTORY_API_KEY')} disabled={!b.owner}>
-            {factory ? 'Replace' : 'Set key'}
-          </Button>
-        </Row>
+      <Group title="Model key" caption="One is enough: an Anthropic API key (console.anthropic.com, bills your Anthropic account) or a Factory API key (app.factory.ai, uses Factory credits). Write-only. Agents never see it.">
+        {keyRow('ANTHROPIC_API_KEY', 'Anthropic API key')}
+        {keyRow('FACTORY_API_KEY', 'Factory API key')}
         <LinkRow title="Other keys" sub="Every key the apps need" onClick={() => open('settings/keys')} />
       </Group>
       <Group title="Today" caption="Test money and model estimates, from the action log">
@@ -464,10 +473,10 @@ function Keys() {
   const [sheet, setSheet] = useState<string | null>();
   const [devices, setDevices] = useState<Device[]>();
   useEffect(() => void api<Device[]>('GET', '/devices').then(setDevices, () => setDevices([])), []);
-  const users = new Map<string, string[]>([['FACTORY_API_KEY', ['Droid with Claude']]]);
+  const users = new Map<string, string[]>(MODEL_KEYS.map((k) => [k, ['Droid with Claude (one model key is enough)']]));
   for (const a of b.allApps) for (const s of a.access.secrets) users.set(s.name, [...(users.get(s.name) ?? []), appTitle(a)]);
   // Droid's key first, then the rest by name.
-  const names = [...new Set([...(vault ?? []).map((k) => k.name), ...users.keys()])].sort((x, y) => +(y === 'FACTORY_API_KEY') - +(x === 'FACTORY_API_KEY') || x.localeCompare(y));
+  const names = [...new Set([...(vault ?? []).map((k) => k.name), ...users.keys()])].sort((x, y) => +MODEL_KEYS.includes(y) - +MODEL_KEYS.includes(x) || x.localeCompare(y));
   const owners = devices?.filter((d) => d.owner) ?? [];
   return (
     <>
@@ -938,6 +947,17 @@ function About() {
         <Row title="Up for">
           <Value>{s ? upText : '…'}</Value>
         </Row>
+      </Group>
+      <Group title="Open source">
+        <Row
+          icon="help-about"
+          title={`${PRODUCT} is open source under the Apache License 2.0`}
+          sub={
+            <a href="https://github.com/benz16107/calhacks13" target="_blank" rel="noopener">
+              github.com/benz16107/calhacks13
+            </a>
+          }
+        />
       </Group>
       <Group title="Credits">
         <Row title="Symbolic icons" sub="Adwaita">

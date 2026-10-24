@@ -495,7 +495,10 @@ export function DesktopHome() {
   const twice = paidTwice();
   return (
     <section class="gos-desk" aria-label="Today">
-      <h1 class="t-title1 gos-desk-title">{r ? 'Welcome back' : greeting(now)}</h1>
+      <h1 class="t-title1 gos-desk-title">
+        {r ? 'Welcome back' : greeting(now)}
+        {b.ownerName ? `, ${b.ownerName}` : ''}
+      </h1>
       <p class="t-body gos-desk-sub">{summary}</p>
       <div class="gos-desk-widgets">
         <Widget label="Needs you" value={need.length} tone={need.length ? 'attention' : undefined} lines={need.length ? need.slice(0, 3).map(askLine) : ['Nothing waits for your OK']} onClick={() => toggle('notifications')} />
@@ -509,6 +512,11 @@ export function DesktopHome() {
         ) : (
           <Widget label="Spent today" value={dollars(b.today.cents)} lines={[`${plural(b.tasks.size, 'task')}, ${plural(blocked, 'blocked attempt')}`, 'Test money']} onClick={() => open('activity')} />
         )}
+      </div>
+      <div class="gos-desk-actions">
+        <Button kind="suggested" large icon="list-add" onClick={() => open('tasks/new')}>
+          New task
+        </Button>
       </div>
     </section>
   );

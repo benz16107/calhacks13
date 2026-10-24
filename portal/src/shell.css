@@ -166,6 +166,7 @@ html.is-dragging iframe { pointer-events: none; }
 .gos-desk-title { margin: 0; }
 .gos-desk-sub { margin: var(--space-sm) 0 var(--space-md); color: var(--color-topbar-fg-secondary); }
 .gos-desk-widgets { display: flex; flex-wrap: wrap; gap: var(--space-md); }
+.gos-desk-actions { margin-top: var(--space-md); pointer-events: auto; display: flex; gap: var(--space-sm); }
 .gos-widget-card {
   pointer-events: auto; width: 300px; min-height: 152px; display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
   padding: var(--space-md) 20px; border: 1px solid rgb(255 255 255 / 0.08); border-radius: 20px; background: rgb(15 19 24 / 0.55);

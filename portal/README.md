@@ -125,10 +125,11 @@ cd portal
 npm ci                 # esbuild, Preact, the two fonts, a QR encoder: build-time only
 npm run build          # writes dist/ (committed, so the box needs no build step), including dist/kit/
 node icons.ts          # regenerate src/kit/icons.ts from the system's Adwaita icons
-./dev-box.sh           # a seeded box on the linuxbox VM at http://127.0.0.1:7790 serving this dist/
+./dev-box.sh           # a seeded box on a Lima test VM at http://127.0.0.1:7790 serving this dist/
 ./dev-box.sh dist      # ship a new build to it; reload the page
 ./dev-box.sh restart   # pull its plug and boot it again on the same data
 DEV=mine DEV_PORT=7792 ./dev-box.sh   # a second dev box beside it, for another checkout
+# DEV_VM (how to reach the VM) and DEV_URL (the address in the pairing QR) are settings too: see the script's top
 ```
 
 `demo.ts` is the portal's step in `./demo`. The VM has no browser, so it checks what the browser needs: `dist/` is

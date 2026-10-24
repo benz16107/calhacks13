@@ -46,6 +46,10 @@ export function askedAt(id: string) {
   return e ? Date.parse(e.at) : 0;
 }
 
+/** A task that failed because the box has no model key (or a bad one): the fix is to add one in Settings. */
+export const needsModelKey = (t: Pick<Task, 'state' | 'error'>) =>
+  t.state === 'failed' && /api[_ ]?key|FACTORY_API_KEY|ANTHROPIC_API_KEY|unauthori[sz]ed|\b401\b|authenticat|no model key|credentials/i.test(t.error ?? '');
+
 /** The track a task belongs to: its source up to the first colon ('shopper:buy:3' is Shopper's). */
 export const trackOf = (t: Pick<Task, 'source'>) => t.source.split(':')[0];
 /** The app a task belongs to, for its icon and the App column. Tasks started by people or the API are Tasks'. */

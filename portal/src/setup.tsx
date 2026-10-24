@@ -5,7 +5,7 @@ import type { ComponentChildren } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import qrcode from 'qrcode-generator';
 import { api, box, loadApps, loadSetup, patchSettings, surface, useBox, type AppInfo } from './live.ts';
-import { AppIcon, Badge, Button, Chip, ComboRow, Group, Icon, IconButton, LinkRow, Popover, Row, Sheet, SwitchRow } from './kit/ui.tsx';
+import { AppIcon, Badge, Button, Chip, ComboRow, Group, Icon, IconButton, LinkRow, Popover, Row, Sheet, SwitchRow, ToggleGroup } from './kit/ui.tsx';
 import { access } from './shell.tsx';
 import { phone } from './wm.tsx';
 import { PRODUCT } from './product.ts';
@@ -16,6 +16,9 @@ interface Step {
   id: string;
   label: string;
   optional?: boolean;
+  /** Next stays off until this is true. Skip (or skipLabel) is the way past it. */
+  ready?: (w: Wiz) => boolean;
+  skipLabel?: string;
   page: (w: Wiz) => ComponentChildren;
   summary: (w: Wiz) => string;
   data?: (w: Wiz) => Record<string, unknown>;
@@ -70,6 +73,9 @@ const rank = (a: AppInfo) => (ORDER.includes(a.id) ? ORDER.indexOf(a.id) : ORDER
 const offered = () => box.allApps.filter((a) => a.id !== 'example').sort((x, y) => rank(x) - rank(y) || nice(x).localeCompare(nice(y)));
 const enabled = () => offered().filter((a) => a.status === 'enabled');
 const needed = () => enabled().flatMap((a) => a.access.secrets);
+/** The model key that lets agents think: an Anthropic key or a Factory key. Either one is enough. */
+const MODEL_KEYS = ['ANTHROPIC_API_KEY', 'FACTORY_API_KEY'] as const;
+const modelKey = (w: Wiz) => MODEL_KEYS.find((k) => keySet(w, k));
 const iface = () => box.system?.network.interfaces.find((i) => !i.address.startsWith('127.') && i.name !== 'lo');
 const wifi = (name = '') => name.startsWith('w');
 
@@ -148,10 +154,12 @@ const STEPS: Step[] = [
   },
   {
     id: 'models',
-    label: 'AI models',
+    label: 'Model key',
     page: (w) => <ModelsStep w={w} />,
-    summary: (w) => (keySet(w, 'FACTORY_API_KEY') ? 'The Factory key is in the vault. Tasks can start.' : 'Tasks can start once the Factory key is saved.'),
-    data: (w) => ({ worker: 'droid', model: 'claude-sonnet-4-6', factoryKey: keySet(w, 'FACTORY_API_KEY') }),
+    ready: (w) => !!modelKey(w),
+    skipLabel: 'Skip for now',
+    summary: (w) => (modelKey(w) ? 'A model key is in the vault. Tasks can run.' : "Add one key to go on. If you skip, tasks can't run until a key is added in Settings."),
+    data: (w) => ({ worker: 'droid', via: modelKey(w) === 'ANTHROPIC_API_KEY' ? 'anthropic' : modelKey(w) === 'FACTORY_API_KEY' ? 'factory' : 'none' }),
   },
   {
     id: 'safety',
@@ -341,12 +349,12 @@ export function SetupWizard() {
               <p class={`gos-setup-summary${error ? ' t-destructive' : ''}`} role={error ? 'alert' : 'status'}>
                 {error ? `That did not work: ${error}` : summary}
               </p>
-              {step.optional && (
+              {(step.optional || (step.skipLabel && !step.ready?.(w))) && (
                 <Button large kind="flat" disabled={busy} onClick={() => void go(true)}>
-                  Skip
+                  {step.skipLabel ?? 'Skip'}
                 </Button>
               )}
-              <button type="submit" class="g-btn g-btn-suggested g-btn-large" disabled={busy}>
+              <button type="submit" class="g-btn g-btn-suggested g-btn-large" disabled={busy || (step.ready ? !step.ready(w) : false)}>
                 {last ? `Start using ${PRODUCT}` : 'Next'}
               </button>
             </footer>
@@ -582,49 +590,68 @@ function NameStep({ w }: { w: Wiz }) {
 // ---------- AI models ----------
 
 function ModelsStep({ w }: { w: Wiz }) {
+  const [via, setVia] = useState<(typeof MODEL_KEYS)[number]>(modelKey(w) ?? 'ANTHROPIC_API_KEY');
   const [value, setValue] = useState('');
   const [saved, setSaved] = useState('');
   const save = () => {
     if (!value.trim()) return;
-    api('PUT', '/vault/FACTORY_API_KEY', { value: value.trim() }).then(
+    api('PUT', `/vault/${via}`, { value: value.trim() }).then(
       () => (setValue(''), setSaved('Saved to the vault.'), w.reloadVault()),
       w.fail,
     );
   };
+  const anthropic = via === 'ANTHROPIC_API_KEY';
   const vultr = 'VULTR_INFERENCE_KEY';
   return (
     <div class="gos-setup-col">
-      <Intro title="Connect AI models">Every task runs on Factory's Droid with Claude. Keys go straight into the vault: no screen shows them again.</Intro>
-      <Group title="The worker">
-        <Row icon="applications-science" title="Droid with Claude" sub="Factory Droid SDK · claude-sonnet-4-6">
-          <span class="g-row-value">Recommended</span>
-        </Row>
-      </Group>
+      <Intro title="Add a model key">
+        {PRODUCT} needs one key so agents can think. Use either an Anthropic API key or a Factory API key. The key goes into the vault. Agents never see it: the box adds it to their model calls on the way out.
+      </Intro>
+      <ToggleGroup
+        label="Which key"
+        value={via}
+        onChange={(v) => (setVia(v), setValue(''), setSaved(''))}
+        options={[
+          ['ANTHROPIC_API_KEY', 'Anthropic'],
+          ['FACTORY_API_KEY', 'Factory'],
+        ]}
+      />
       <div class="gos-setup-field">
-        <label class="t-heading" for="gos-setup-factory">
-          FACTORY_API_KEY
+        <label class="t-heading" for="gos-setup-model-key">
+          {anthropic ? 'Anthropic API key' : 'Factory API key'}
         </label>
         <input
-          id="gos-setup-factory"
+          id="gos-setup-model-key"
           class="g-field"
           type="password"
           autoComplete="off"
           spellcheck={false}
-          placeholder={keySet(w, 'FACTORY_API_KEY') ? `${setText(w, 'FACTORY_API_KEY')}. Paste a new key to replace it.` : 'Paste the key'}
+          placeholder={keySet(w, via) ? `${setText(w, via)}. Paste a new key to replace it.` : anthropic ? 'sk-ant-…' : 'Paste the key'}
           value={value}
           onInput={(e) => setValue((e.target as HTMLInputElement).value)}
-          onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), save())}
+          onKeyDown={(e) => e.key === 'Enter' && value.trim() && (e.preventDefault(), save())}
         />
-        <span class="t-caption t-secondary">From app.factory.ai &gt; Settings &gt; API keys. Saved to /etc/box/vault.env, readable only by root.</span>
-      </div>
-      <div class="gos-setup-save">
-        <Button disabled={!value.trim()} onClick={save}>
-          Save to vault
-        </Button>
-        <span class={`t-caption${saved || keySet(w, 'FACTORY_API_KEY') ? ' t-success' : ' t-secondary'}`} role="status">
-          {saved || (keySet(w, 'FACTORY_API_KEY') ? `${setText(w, 'FACTORY_API_KEY')}. Write-only: you can replace it, never read it.` : 'Write-only: you can replace a key, never read it.')}
+        <span class="t-caption t-secondary">
+          {anthropic
+            ? 'From console.anthropic.com, under API keys. It starts with sk-ant-. Usage bills your Anthropic account.'
+            : 'From app.factory.ai, under Settings, API keys. Usage uses your Factory credits.'}
         </span>
       </div>
+      <div class="gos-setup-save">
+        <Button kind="suggested" disabled={!value.trim()} onClick={save}>
+          Save to vault
+        </Button>
+        <span class={`t-caption${saved || keySet(w, via) ? ' t-success' : ' t-secondary'}`} role="status">
+          {saved || (keySet(w, via) ? `${setText(w, via)}. Write-only: you can replace it, never read it.` : 'Write-only: you can replace a key, never read it.')}
+        </span>
+      </div>
+      <Group title="Model keys in the vault">
+        {MODEL_KEYS.map((k) => (
+          <Row icon="dialog-password" title={k === 'ANTHROPIC_API_KEY' ? 'Anthropic' : 'Factory'} sub={k} key={k}>
+            <span class={`g-row-value${keySet(w, k) ? ' t-success' : ''}`}>{keySet(w, k) ? setText(w, k) : 'Not set'}</span>
+          </Row>
+        ))}
+      </Group>
       <Group title="Other models (optional)">
         <Row icon="dialog-password" title="Vultr inference" sub={`${vultr} · photo descriptions for Find`}>
           {keySet(w, vultr) ? <span class="t-success">{setText(w, vultr)}</span> : <Button onClick={() => w.setKey(vultr)}>Add key</Button>}
@@ -748,7 +775,7 @@ function AppRow({ a, w }: { a: AppInfo; w: Wiz }) {
 function AppsStep({ w }: { w: Wiz }) {
   return (
     <div class="gos-setup-col">
-      <Intro title="Choose apps">Each app shows what it can reach and which keys it needs. You can change this later in App Center.</Intro>
+      <Intro title="Choose apps">Optional. Each app stays off until you add its keys. Each one shows what it can reach and which keys it needs, and you can change this later in App Center.</Intro>
       <div class="g-list">
         {offered().map((a) => (
           <AppRow a={a} w={w} key={a.id} />
@@ -982,7 +1009,7 @@ function DoneStep({ w }: { w: Wiz }) {
           <span class="g-row-value">{owner}</span>
         </Row>
         <Row title="Worker">
-          <span class="g-row-value">{keySet(w, 'FACTORY_API_KEY') ? 'Droid with Claude' : 'Droid with Claude, key not set yet'}</span>
+          <span class="g-row-value">{modelKey(w) === 'ANTHROPIC_API_KEY' ? 'Droid with Claude, Anthropic key' : modelKey(w) ? 'Droid with Claude, Factory key' : "No model key yet: tasks can't run"}</span>
         </Row>
         <Row title="Apps">
           <span class="g-row-value">{enabled().map(nice).join(', ') || 'None'}</span>

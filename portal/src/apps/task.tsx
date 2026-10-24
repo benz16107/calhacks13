@@ -4,7 +4,7 @@ import { useEffect, useState } from 'preact/hooks';
 import { api, onEvent, undo, useBox, type Approval, type LogEvent, type Task } from '../live.ts';
 import { Alert, AppIcon, Badge, Button, Icon, IconButton, Menu, Popover, StatusPage } from '../kit/ui.tsx';
 import { HeaderBar, open, useWin } from '../wm.tsx';
-import { STATE, appOf, clock, dollars, taskTitle } from '../util.ts';
+import { STATE, appOf, clock, dollars, needsModelKey, taskTitle } from '../util.ts';
 import { DiffView, describe, undoCopy, type Diff } from './log.tsx';
 import { AnswerButtons } from './answer.tsx';
 
@@ -166,6 +166,18 @@ export function TaskApp({ id }: { id: string }) {
                 </span>
               </div>
             ))}
+            {needsModelKey(t) && (
+              <div class="g-banner" role="note">
+                <Icon name="dialog-password" />
+                <div>
+                  <p class="t-body-strong">No model key, so the agent could not think</p>
+                  <p class="t-body">Add an Anthropic or Factory API key in Settings, then start the task again.</p>
+                </div>
+                <Button kind="suggested" onClick={() => open('settings/agents')}>
+                  Add a model key
+                </Button>
+              </div>
+            )}
             {(t.error || (t.summary && t.state === 'done')) && <p class={`t-body${t.error ? ' t-destructive' : ''}`}>{t.error ?? t.summary}</p>}
 
             <h3 class="t-heading">Steps, from the action log</h3>

@@ -1,15 +1,19 @@
 #!/usr/bin/env bash
-# A box for portal work on the linuxbox test VM, beside the installed one: its own BOX_HOME, API port 7790 and
-# SpacetimeDB database, serving this checkout's portal/dist. Lima forwards the port: open http://127.0.0.1:7790
-# on linuxbox. It starts with tasks in every state the portal shows (all scripted, no model, test money only).
+# A box for portal work on a test VM, beside the installed one: its own BOX_HOME, API port 7790 and SpacetimeDB
+# database, serving this checkout's portal/dist. Lima forwards the port: open http://127.0.0.1:7790 on the machine
+# that runs the VM. It starts with tasks in every state the portal shows (all scripted, no model, test money only).
 #   portal/dev-box.sh            ship this checkout, start the box fresh and seed it
 #   portal/dev-box.sh dist       ship portal/dist only (the box serves files from disk, no restart)
 #   portal/dev-box.sh restart    pull the plug: kill the box and its tasks at once, then boot it on the same data
 #   portal/dev-box.sh stop       stop it and delete its data
-# DEV=<name> DEV_PORT=<port> runs a second one beside it (another thread's checkout), with its own data and database.
+# Settings, all optional:
+#   DEV_VM='limactl shell --workdir / box --'   how to run a command in the VM (any command that takes one after it)
+#   DEV_URL=http://192.168.1.20:7700            the address a phone uses to reach the box, shown in the pairing QR
+#   DEV=<name> DEV_PORT=<port>                  a second box beside the first (another checkout), with its own data
 set -euo pipefail
 cd "$(dirname "$0")/.."
-vm() { /home/linuxbrew/.linuxbrew/bin/limactl shell --workdir / box -- "$@"; }
+read -r -a vm_cmd <<< "${DEV_VM:-limactl shell --workdir / box --}"
+vm() { "${vm_cmd[@]}" "$@"; }
 name=${DEV:-portal-dev}
 dest=/opt/box-dev/$name
 home=/var/lib/box-$name
@@ -24,7 +28,7 @@ wipe="$kill
   rm -rf $home
   flock /run/lock/box-spacetime-cli.lock spacetime delete --server local -y box-$name >/dev/null 2>&1 || true"
 start="cd $dest
-  BOX_ID=dev-box BOX_NAME='dev box' BOX_URL=http://linuxbox.tailb51682.ts.net:$((port + 1)) BOX_PEERS='[{\"id\":\"vultr\",\"name\":\"vultr box\",\"stdb\":\"box\"}]' \
+  BOX_ID=dev-box BOX_NAME='dev box' BOX_URL=${DEV_URL:-http://192.168.1.20:7700} BOX_PEERS='[{\"id\":\"peer\",\"name\":\"second box\",\"stdb\":\"box\"}]' \
   BOX_HOME=$home BOX_PORT=$port BOX_VAULT=$home/vault.env BOX_STDB_DB=box-$name BOX_PROXY_PORT=auto \
   BOX_PORTAL=$dest/portal/dist setsid nohup node --experimental-strip-types --disable-warning=ExperimentalWarning core/box.ts \
   >> $home/box.log 2>&1 < /dev/null &

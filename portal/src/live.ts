@@ -99,6 +99,8 @@ export const box = {
   blockedLive: [] as LogEvent[],
   /** This device is off the box's screen and not paired (or its pairing was revoked): the box answers 401. */
   unpaired: false,
+  /** The owner's first name for the greeting, when the box knows it (GurtOS Personal, GET /api/owner `name`). */
+  ownerName: '',
   /** Requests that were waiting here and just got an answer, from this screen or another: shown for a moment. */
   resolved: new Map<string, { at: number; approved: boolean; by?: string; mine: boolean }>(),
 };
@@ -417,6 +419,10 @@ export async function loadApps() {
   box.allApps = all;
   changed();
 }
+async function loadOwner() {
+  const o = await api<{ name?: string } | null>('GET', '/owner').catch(() => null);
+  box.ownerName = o?.name?.trim().split(/\s+/)[0] ?? '';
+}
 export async function loadSystem() {
   box.system = await api<System>('GET', '/system').catch(() => box.system);
   changed();
@@ -437,6 +443,7 @@ export async function start() {
   });
   if (box.unpaired) return changed();
   box.boxes = await api<BoxEntry[]>('GET', '/boxes').catch(() => []);
+  await loadOwner();
   box.owner = await api('GET', '/vault').then(
     () => true,
     () => false,
