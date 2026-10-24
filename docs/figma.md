@@ -8,9 +8,9 @@ like umbrelOS. Apps open as windows, approvals arrive as notification banners, a
 pocket. The box's screen and the portal are the same desktop: on the box it fills the display, in a browser it fills
 the tab. Research and the three directions are in `docs/figma/refs/` and `docs/figma/directions/`.
 
-**Built so far:** every box screen (home, Tasks, Notification Center, task detail, Activity, Time Machine, Credit
-desk, Shopper, Wallet, Find, pairing, the session restore) and the phone home. Still to come: the phone's
-approval notification, live activity and task list.
+**Built:** every screen in the set. On the box: home, Tasks, Notification Center, task detail, Activity, Time Machine,
+Credit desk, Shopper, Wallet, Find, pairing, and the session restore. On the phone: home, the approval as a
+notification, running tasks as Live Activities, and the task list. The clickable prototype comes next.
 
 ## Files
 
@@ -54,6 +54,9 @@ The box screen is 1920 x 1080. Phone screens are 390 x 844.
 | Box / Pair a phone | `31:1636` (window `31:1736`) | `docs/figma/os/box-pair.png` | Settings: a QR code, the code to compare, and paired phones. The QR encodes the example `https://box.local/pair?code=7Q4M-2KXD`; the core has no pairing route yet |
 | Box / Home after a power cut | `31:1765` | `docs/figma/os/box-after-power-cut.png` | Moment 4 as a session restore: "Welcome back", the running widget says "resumed", and an Info banner lists what picked up where it stopped. Data: the `task.state` events after boot and the boot time |
 | Phone / Home | `23:304` | `docs/figma/os/phone-home.png` | The same OS on a phone: the Dynamic Island shows how many tasks run, two widgets, the app grid with badges, the dock |
+| Phone / Approval notification | `32:1801` | `docs/figma/os/phone-approval.png` | The approval arrives on the lock screen as a notification with full-width Approve and Deny (48 px). Other pending approvals stack below it, collapsed |
+| Phone / Live Activity | `32:1853` | `docs/figma/os/phone-live-activity.png` | Running tasks as Live Activities: the Dynamic Island expanded with one task's progress, and lock-screen cards with step progress and the latest `step`. Data: the SpacetimeDB `task` table |
+| Phone / Tasks | `32:1907` | `docs/figma/os/phone-tasks.png` | The Tasks app on the phone: filter chips by state and TaskRowCompact rows |
 
 Apps and where they come from: Tasks, Activity and Time Machine are the core's own. Credit desk, Shopper and Wallet
 are tracks (`GET /api/apps` lists them; open `/t/<track><href>`). Find is the planned Moss track. Settings holds
@@ -75,7 +78,7 @@ On the "Design system" page. Desktop pieces are new; window content reuses the f
 | Glyph/... | `21:20` Tasks, `21:23` Activity, `21:28` Time Machine, `21:32` Credit desk, `21:36` Shopper, `21:40` Wallet, `21:44` Find, `21:50` Settings, `21:54` Pair, `21:59` Box | none | Drawn for this product on a 48 px grid; not an icon library |
 | Badge | `21:73` | `Count` | Amber means "needs you" everywhere on the desktop |
 | Widget | `21:75` | `Title`, `Value`, `Caption` | A glanceable number. The richer widgets on the home screen are the same glass card with a list or progress bars |
-| Banner | `22:67` (set) | `Kind`: Approval, Info. `Kicker`, `Meta`, `Body` | Approval has Approve and Deny (the `answer` reducer or `POST /api/approvals/<id> {approved, by}`). Info is for what the box tells you, such as a session restore |
+| Banner | `22:67` (set) | `Kind`: Approval, Info. `Size`: Box (460 wide), Phone (366 wide, 48 px buttons). `Kicker`, `Meta`, `Body` | Approval has Approve and Deny (the `answer` reducer or `POST /api/approvals/<id> {approved, by}`). Info is for what the box tells you, such as a session restore |
 | WindowChrome | `22:90` | `Title`, `Subtitle` | The title bar of an app window |
 
 ### Inside windows
