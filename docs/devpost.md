@@ -293,16 +293,20 @@ Fits Moss's second example: a personal agent that remembers you and works across
 
 [Full write-up, video and evidence →](https://calhacks.gurtos.com/tracks/moss/)
 
-### Apify: Best Use of Apify
+### Apify: Best Use of Apify, and Best Actor
 
-**Best shown in:** GurtOS Personal and GurtOS Server. Agents doing your web errands, a price check or a place nearby, never hold the Apify token. It stays in the vault on your own machine, a laptop on Personal or an always-on box on Server.
+**Best shown in:** GurtOS Personal and GurtOS Server. GurtOS lets your agents use Apify's web robots from their own isolated space, with no keys: the broker holds the token, a scraped page is treated as untrusted data, and every run's cost is capped by the task budget and shown in the portal. On a Server box, schedules and webhooks start those tasks while you're away. It is light and open source.
 
 
-Apify is how every agent on the box reaches the web: `apify.checkPrice` (Playwright Scraper on Best Buy Canada), `apify.findPlaces` (Google Maps Scraper) and `apify.run` (any Store Actor). Tools run in the box's core with the token from the vault. The agent's task has no network and no secrets.
+**The problem.** Web agents today drive your logged-in browser with your accounts, read booby-trapped pages, and you can't see what they spend.
 
-**Proof:** On Oct 23 two network-less tasks ran Actors live in parallel on both test VMs and got AirPods Pro 3 at $299.99 CAD, in stock, and Cole Coffee Café at 6255 College Ave, Oakland. The token was in neither task's log.
+**GurtOS runs Apify's robots from the agent's own space.** The agent never sees the Apify token (the vault and broker hold it), a scraped page is untrusted data, and the run's cost is capped by the task budget and shown in the portal and phone. Apify is how every agent on the box reaches the web: `apify.checkPrice` (Playwright Scraper on Best Buy Canada), `apify.findPlaces` (Google Maps Scraper) and `apify.run` (any Store Actor). On a Server box, schedules and webhooks will start those tasks while you're away.
 
-Also used live by the Visa shopping agent (Chemex filters at $15.36 CAD) and by the ASI:One chat agent (web search). Spending is capped by `maxTotalChargeUsd` and by the box's budget approval.
+**Proof:** On Oct 23 two network-less tasks ran Actors live in parallel on both test VMs and got AirPods Pro 3 at $299.99 CAD, in stock, and Cole Coffee Café at 6255 College Ave, Oakland. The token was in neither task's log. Also used live by the Visa shopping agent (Chemex filters at $15.36 CAD) and by the ASI:One chat agent (web search).
+
+**From the OS, not the track:** the isolated space, the vault and broker, the network rule, the budget and the approval pause, and the live view. **From the track:** the three tools and the Actors. **Being built:** our own published Actor, Agent-Safe Page Reader, which flags hidden instructions in a page (for Best Actor), Apify's MCP server through the broker, schedules and webhooks, the Crawler into /find, a web source for the credit desk, and the real Apify cost in budgets.
+
+GurtOS is open source (Apache-2.0): anyone can run it, customise it and reuse these tools in their own agents.
 
 [Full write-up, video and evidence →](https://calhacks.gurtos.com/tracks/apify/)
 

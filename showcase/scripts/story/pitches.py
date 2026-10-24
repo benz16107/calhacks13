@@ -34,7 +34,7 @@ E = {
  'moss': ("GurtOS Personal",
    "Your photos, files and task history are personal. /find keeps its index on your own machine, and only text, never a photo, goes to Moss's cloud copy."),
  'apify': ("GurtOS Personal and GurtOS Server",
-   "Agents doing your web errands, a price check or a place nearby, never hold the Apify token. It stays in the vault on your own machine, a laptop on Personal or an always-on box on Server."),
+   "GurtOS lets your agents use Apify's web robots from their own isolated space, with no keys: the broker holds the token, a scraped page is treated as untrusted data, and every run's cost is capped by the task budget and shown in the portal. On a Server box, schedules and webhooks start those tasks while you're away. It is light and open source."),
  'mana': ("GurtOS Personal",
    "Mana is a personal workspace for planning and small apps; GurtOS Personal is the computer where your agents do the work. Here a Mana chat rewrote the credit desk's rules, and a Mana app shows a box's live status."),
  'armadin': ("All three editions",

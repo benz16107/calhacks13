@@ -61,7 +61,7 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 | SpacetimeDB | All three editions, strongest in GurtOS Business | to review with Ben |
 | Elastic | GurtOS Business (preview) and GurtOS Server | to review with Ben |
 | Moss | GurtOS Personal | to review with Ben |
-| Apify | GurtOS Personal and GurtOS Server | to review with Ben |
+| Apify | GurtOS Personal and GurtOS Server | decided |
 | CRS | GurtOS Business (preview) | to review with Ben |
 | Capital One | GurtOS Business (preview), then GurtOS Personal | to review with Ben |
 | Solana | GurtOS Server, and GurtOS Business | decided |
@@ -391,24 +391,41 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 
 ## Apify: Best Use of Apify (top 5)
 
-**Status:** to review with Ben. **Page:** https://calhacks.gurtos.com/tracks/apify/
+**Status:** decided. **Page:** https://calhacks.gurtos.com/tracks/apify/
 
 **Best shown in:** GurtOS Personal and GurtOS Server
 
-**Pitch:** Agents doing your web errands, a price check or a place nearby, never hold the Apify token. It stays in the vault on your own machine, a laptop on Personal or an always-on box on Server.
+**Pitch:** GurtOS lets your agents use Apify's web robots from their own isolated space, with no keys: the broker holds the token, a scraped page is treated as untrusted data, and every run's cost is capped by the task budget and shown in the portal. On a Server box, schedules and webhooks start those tasks while you're away. It is light and open source.
 
-**The problem:** Draft: agents that browse the web for you either drive a full browser with your logins or hold a scraping token, and one injected page can misuse either.
+**The problem:** Web agents today drive your logged-in browser with your accounts, read booby-trapped pages, and you can't see what they spend.
 
-**Features, by the sponsor's criteria** (no OS-vs-track table yet; to write when reviewed):
+**Features** (from the page's table):
 
-- *A project that uses Apify meaningfully.* (met): Apify is how every agent on the box reaches the web. Three box tools run Actors: apify.checkPrice (Playwright Scraper on Best Buy Canada), apify.findPlaces (Google Maps Scraper) and apify.run (any Actor from the Store). The Visa shopping agent watches prices with the first, and the ASI:One chat agent searches the web with the third.
-- *Overall quality.* (met): Each Actor was picked for a reason and tested live (below). Spending is capped twice, by Apify's maxTotalChargeUsd and by the box's per-task budget. Results are trimmed for the log, a token in a result is refused, and offline unit tests stub Apify so every merge runs them.
+| Feature | Why it is there | Apify criterion | From | Today |
+|---|---|---|---|---|
+| The agent runs Apify Actors from its own space: its own Linux user, no network, and the tool runs in the core | The agent gets the web without a browser or your logins | Meaningful use | GurtOS (task space, broker) and the app (the tools) | Shipped. Two network-less tasks ran Actors live on Oct 23 |
+| The token stays in the root-only vault; a result that contains it is refused; an Actor never gets it | An injected page or a hostile Actor cannot take the token | Overall quality | GurtOS (vault) and the app | Shipped. The live run checked the token is in neither task's log |
+| A scraped page is data: the task has no network and no secrets to act on a hidden instruction | A booby-trapped page can spoil its own result, nothing more | Overall quality | GurtOS (network rule, no keys) | Shipped |
+| Spending is capped twice: Apify's `maxTotalChargeUsd` and the box's task budget, with a pause for your OK above it | You decide what a web job may spend | Overall quality | GurtOS (budget and approval) and Apify (the cap) | Shipped. The box counts the cap or the Actor's list price, an estimate |
+| Live view and control on the portal and phone | You can see and stop what a web agent is doing | Overall quality | GurtOS | Shipped |
+| Agent-Safe Page Reader, our own published Actor: reads a page and flags hidden instructions in it | The agent gets the text with the risky parts marked, instead of raw page text | Best Actor | The track (the Actor), with GurtOS treating the result as untrusted | Being built; not on main yet |
+| Apify's MCP server through the broker: an agent finds and runs any Store Actor | Apify's hosted MCP asks the agent to hold the token; through the broker it never does | Meaningful use | GurtOS (broker) and Apify | Being built; not on main yet |
+| Schedules and webhooks that start Apify tasks while you are away | Web jobs, like a price check or a nightly crawl, run with the laptop closed (Server) | Meaningful use | GurtOS (triggers) | Being built; not on main yet |
+| Apify's Crawler into /find | The pages you care about become searchable by meaning, on your own box | Meaningful use | The track and /find (Moss) | Being built; not on main yet |
+| A web source for the credit desk | The credit desk can check an application against the web, not only its own data | Meaningful use | The track and the credit desk | Being built; not on main yet |
+| The real Apify cost of a run counts against the task budget | The budget reflects what Apify charged, not an estimate | Overall quality | GurtOS (budget) and the app | Being built; not on main yet |
 
 **Demo moment and proof:** The live run on Oct 23, on both the x86 and the ARM64 test VMs, started two tasks with no network at all. Both Actors ran on Apify at the same time and came back with AirPods Pro 3 at $299.99 CAD, in stock, at Best Buy Canada, and Cole Coffee Café at 6255 College Ave, Oakland. The token was nowhere in either task's log.
 
 **Still to do:**
 
-- Review the story with Ben: problem, features with their why, OS vs track
+- Best Actor: our own published Actor. (open)
+- Agent-Safe Page Reader, our own published Actor: reads a page and flags hidden instructions in it
+- Apify's MCP server through the broker: an agent finds and runs any Store Actor
+- Schedules and webhooks that start Apify tasks while you are away
+- Apify's Crawler into /find
+- A web source for the credit desk
+- The real Apify cost of a run counts against the task budget
 
 ## CRS: Overall, Best Financial AI Agent, Best Identity/Fraud, and Most Unexpected
 

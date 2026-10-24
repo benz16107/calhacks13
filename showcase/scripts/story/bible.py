@@ -4,7 +4,7 @@ root = sys.argv[1]
 import os
 HERE = os.path.dirname(os.path.abspath(__file__))
 exec(open(os.path.join(HERE, 'pitches.py')).read().split("if __name__")[0])
-DECIDED = {'hyphenate', 'visa', 'fetch', 'coinbase', 'solana'}
+DECIDED = {'hyphenate', 'visa', 'fetch', 'coinbase', 'solana', 'apify'}
 PROBLEM = {
  'hyphenate': "Companies want AI employees, but today's computers and clouds weren't built for them. An agent runs as you, with your keys, on one shared filesystem, with no separation of duties, no record you can trust and no undo, so nobody lets one do real finance work.",
  'visa': "Shopping agents need your card or your password, stores can't tell a good agent from a bot, you can't see or stop what they do, and cloud agents run on computers you don't control.",
@@ -21,7 +21,7 @@ PROBLEM = {
  'spacetime': "Draft: when agents run unattended, the people responsible need to see every request live, on every screen at once, and answer from wherever they are.",
  'elastic': "Draft: after a week of agents working, nobody can answer \"what did they change, what did it cost, why did that fail\" without digging through raw logs.",
  'moss': "Draft: a personal agent is only useful if it remembers your photos, files and past work, and today that memory means uploading your life to someone's cloud.",
- 'apify': "Draft: agents that browse the web for you either drive a full browser with your logins or hold a scraping token, and one injected page can misuse either.",
+ 'apify': "Web agents today drive your logged-in browser with your accounts, read booby-trapped pages, and you can't see what they spend.",
  'vultr': "Draft: an agent box should be reachable around the clock without exposing everything on it to the internet.",
  'godaddy': "Draft: the product needs one name a person can remember for every edition, the domain and the OS itself.",
  'figma': "Draft: an OS for agents has to feel like an OS people trust, not another dashboard, and the design has to reach the code without drift.",
