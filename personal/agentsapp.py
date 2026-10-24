@@ -11,10 +11,11 @@ import urllib.request
 from gi.repository import Adw, GLib, Gtk, Pango
 
 import tasklogic as tl
+from apptiles import tile
 from boxapi import BOX, api, background, quote, tilde
+from setupwin import PERSONAL_APPS
 
 ME = GLib.get_user_name()
-HIDDEN_PANELS = ('spacetime', 'anthropic')  # the box's own plumbing, not apps a person opens
 
 
 # ---------- small builders ----------
@@ -140,7 +141,7 @@ class AgentsWindow(Adw.ApplicationWindow):
                 return
             self.set_offline(False)
             self.tasks, self.pending, self.settings, self.apps, self.system = state[:5]
-            self.apps = [a for a in self.apps if a.get('track') not in HIDDEN_PANELS]
+            self.apps = [a for a in self.apps if a.get('track') in PERSONAL_APPS]  # the same apps Setup offers; no developer samples
             if first:
                 self.events = state[5]
                 self.fill_sidebar()
@@ -166,6 +167,7 @@ class AgentsWindow(Adw.ApplicationWindow):
             return
         self.offline = off
         self.banner.set_reveal_child(off)
+        self.update_badges()
         self.new_button_sensitive(not off)
         for fn in list(self.refreshers.values()):
             fn()
@@ -216,12 +218,15 @@ class AgentsWindow(Adw.ApplicationWindow):
         self.badge = Gtk.Label(css_classes=['gurt-count'], visible=False, valign=Gtk.Align.CENTER)
         items = [('agents', 'Agents', 'applications-science-symbolic'), ('activity', 'Activity', 'view-list-symbolic'),
                  ('timemachine', 'Time Machine', 'document-open-recent-symbolic')]
-        items += [(f"app:{a['name']}", a['title'], 'application-x-addon-symbolic') for a in self.apps]
+        items += [(f"app:{a['name']}", a['title'], a) for a in self.apps]
         if self.system.get('edition') == 'business':
             items.append(('business', 'Company (opens in your browser)', 'system-users-symbolic'))
         for n, (pid, title, icon) in enumerate(items):
             line = Gtk.Box(spacing=12, margin_top=6, margin_bottom=6, margin_start=6, margin_end=6)
-            line.append(Gtk.Image(icon_name=icon, accessible_role=Gtk.AccessibleRole.PRESENTATION))
+            if isinstance(icon, dict):  # an app: its own tile, as in Setup and Settings
+                line.append(tile(icon.get('track') or icon['name'], icon['title'], 20))
+            else:
+                line.append(Gtk.Image(icon_name=icon, accessible_role=Gtk.AccessibleRole.PRESENTATION))
             line.append(label(title, wrap=False, hexpand=True, ellipsize=Pango.EllipsizeMode.END))
             if pid == 'agents':
                 line.append(self.badge)
@@ -236,7 +241,7 @@ class AgentsWindow(Adw.ApplicationWindow):
     def update_badges(self):
         n = len(self.pending)  # requests only, the same count as the top bar
         self.badge.set_label(str(n))
-        self.badge.set_visible(n > 0)
+        self.badge.set_visible(n > 0 and not self.offline)  # no stale count while GurtOS is down
 
     # ----- navigation -----
 
