@@ -35,7 +35,8 @@ function App() {
 
   // Off the box's own screen the box answers only paired devices.
   // On app.gurtos.com, /pair adds a machine even when others are paired already.
-  if (b.unpaired || (hosted && location.pathname === '/pair')) return <PairFirst />;
+  // A work-account sign-in comes back to /#sso/<code>, even on a device paired as someone else.
+  if (b.unpaired || (hosted && location.pathname === '/pair') || location.hash.startsWith('#sso/')) return <PairFirst />;
   // On the box's own screen, the box out of reach means its service is starting: show the boot screen.
   if (b.down && surface === 'box screen') return <BootScreen />;
   // First run: the wizard on the box's screen (or the owner's phone) until setup is done. Nothing else shows.

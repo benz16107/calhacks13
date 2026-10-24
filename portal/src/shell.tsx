@@ -878,6 +878,19 @@ export function PairFirst() {
   // On app.gurtos.com the link names the box: /pair?box=rosa.box.gurtos.com#<code>.
   const [boxAddr, setBoxAddr] = useState(new URLSearchParams(location.search).get('box') ?? '');
   const adding = hosted && machines().length > 0;
+  // GurtOS Business: sign in with a work account. The box comes back to /#sso/<one-time code>, redeemed here for this device's token.
+  const [work, setWork] = useState<{ on: boolean; name?: string }>();
+  const [workError, setWorkError] = useState('');
+  useEffect(() => {
+    if (hosted) return;
+    fetch('/api/sso').then((r) => r.json()).then(setWork, () => {});
+    const sso = h.startsWith('sso/') ? h.slice(4) : '';
+    if (!sso) return;
+    setState('busy');
+    api<Pairing>('POST', '/sso/redeem', { code: sso })
+      .then((p) => (setPairing(p), localStorage.setItem('gurtos.was-paired', '1'), location.replace('/')))
+      .catch((err) => (setState('ask'), setWorkError((err as Error).message)));
+  }, []);
   const redeem = (c: string) => {
     setState('busy');
     const body = { code: c.replace(/[^0-9a-z]/gi, '').toLowerCase(), name: name.trim() || guess };
@@ -925,6 +938,19 @@ export function PairFirst() {
           {state !== 'ask' && state !== 'busy' && (
             <p class="gos-error" role="alert">
               Could not pair: {state}. Ask the box's screen for a new code.
+            </p>
+          )}
+          {work?.on && (
+            <>
+              <Button large icon="avatar-default" disabled={state === 'busy'} onClick={() => location.assign(`/api/sso/start?device=${encodeURIComponent(name.trim() || guess)}`)}>
+                Sign in with your work account
+              </Button>
+              <p class="t-caption t-secondary">{work.name}</p>
+            </>
+          )}
+          {workError && (
+            <p class="gos-error" role="alert">
+              Could not sign in: {workError}
             </p>
           )}
           <p class="t-caption t-secondary">A paired device can approve, deny and start tasks. It never holds a key.</p>

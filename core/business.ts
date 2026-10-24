@@ -1,6 +1,7 @@
 // GurtOS Business: one box shared by a company. People hold roles, agents hold seats, and a policy in plain words
 // sends each approval to the people who may answer it. Pure functions; core/box.ts keeps the state and the files.
 import type { ApprovalRoute, LogEvent, Task, Who } from './contract.ts';
+import type { Sso } from './sso.ts';
 
 export const ROLES = ['owner', 'admin', 'approver', 'requester', 'auditor'] as const;
 export type Role = (typeof ROLES)[number];
@@ -18,6 +19,8 @@ export interface Person {
   limitCents: number | null;
   /** The names in the policy this person approves for: 'Controller', 'IT'. */
   approvesFor: string[];
+  /** Their work address, from a work-account sign-in. Kept in the box's state only, never in the log. */
+  email?: string;
 }
 
 /** An agent seat, for people to read: what it does and how far it may go on its own. */
@@ -35,6 +38,8 @@ export interface Business {
   seats: Seat[];
   /** Who last changed each line of the policy, and when. */
   policyMeta: Record<string, { by: string; at: string }>;
+  /** Sign-in with work accounts (OpenID Connect), when an admin set it up. */
+  sso?: Sso;
 }
 
 /** Agent seats, checked: at most 20, each a name and two short lines. */
@@ -61,7 +66,7 @@ const key = (s: string) => s.toLowerCase().trim().replace(/\.$/, '').replace(/^(
 /** A new or changed person, checked. With the id of someone who exists, the fields given change and the rest stay. */
 export function checkPerson(input: unknown, people: Person[]): Person {
   if (!isObj(input)) throw new Error('send a person: {name, role}, and for an approver {limitCents, approvesFor}');
-  const fields = ['id', 'name', 'role', 'title', 'limitCents', 'approvesFor'];
+  const fields = ['id', 'name', 'role', 'title', 'limitCents', 'approvesFor', 'email'];
   const unknown = Object.keys(input).filter((k) => !fields.includes(k));
   if (unknown.length) throw new Error(`unknown field${unknown.length > 1 ? 's' : ''}: ${unknown.join(', ')} (known: ${fields.join(', ')})`);
   const old = typeof input.id === 'string' ? people.find((p) => p.id === input.id) : undefined;
@@ -69,6 +74,7 @@ export function checkPerson(input: unknown, people: Person[]): Person {
   if (typeof p.name !== 'string' || !p.name.trim() || p.name.length > 60) throw new Error('name: text, 1 to 60 characters');
   if (!ROLES.includes(p.role as Role)) throw new Error(`role: one of ${ROLES.join(', ')}`);
   if (p.title !== undefined && (typeof p.title !== 'string' || p.title.length > 40)) throw new Error('title: text, at most 40 characters');
+  if (p.email !== undefined && (typeof p.email !== 'string' || p.email.length > 120 || !/^[^\s@]+@[^\s@]+$/.test(p.email))) throw new Error('email: an address, at most 120 characters');
   if (p.limitCents !== null && (!Number.isInteger(p.limitCents) || (p.limitCents as number) < 0 || (p.limitCents as number) > 1e12)) throw new Error('limitCents: a whole number of cents, or null for no limit');
   if (p.role === 'approver' && p.limitCents === null) throw new Error('limitCents: an approver needs a spending limit, in US cents ($50,000 is 5000000)');
   if (!Array.isArray(p.approvesFor) || p.approvesFor.length > 10 || p.approvesFor.some((g) => typeof g !== 'string' || !/^[\w &.'-]{1,40}$/.test(g))) {
@@ -90,6 +96,7 @@ export function checkPerson(input: unknown, people: Person[]): Person {
     ...(p.title ? { title: p.title as string } : {}),
     limitCents: p.limitCents as number | null,
     approvesFor: [...new Set((p.approvesFor as string[]).map((g) => g.trim()))],
+    ...(p.email ? { email: p.email as string } : {}),
   };
 }
 

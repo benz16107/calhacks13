@@ -19,6 +19,7 @@ import { usageCents } from './pricing.ts';
 import { DEFAULT_SETTINGS, SETUP_STEPS, applyPatch, folderRefusal, hadHumanUse, hostProblem, insideAny, neverFolder, loadDisabled, loadSetup, loadSettings, readJson, recordStep, saveDisabled, saveSettings, saveSetup, writeJson, type Settings, type SetupState } from './config.ts';
 import * as system from './system.ts';
 import { VAULT_NAME, loadVault, removeVaultKey, writeVaultKey } from './vault.ts';
+import { challenge, checkSso, noGroup, personId, provider, random, roleFor, verifyIdToken, whoIs, type Claims, type Sso } from './sso.ts';
 import * as push from './push.ts';
 import { APP, RELAY, Remote, SECRET_KEY } from './remote.ts';
 
@@ -550,8 +551,8 @@ class Core {
   setBusiness(body: unknown, req: http.IncomingMessage) {
     if (!body || typeof body !== 'object') throw new Error('send {on, company, policy}');
     const b = body as Record<string, unknown>;
-    const unknown = Object.keys(b).filter((k) => !['on', 'company', 'policy', 'seats'].includes(k));
-    if (unknown.length) throw new Error(`unknown field: ${unknown.join(', ')} (known: on, company, policy, seats)`);
+    const unknown = Object.keys(b).filter((k) => !['on', 'company', 'policy', 'seats', 'sso'].includes(k));
+    if (unknown.length) throw new Error(`unknown field: ${unknown.join(', ')} (known: on, company, policy, seats, sso)`);
     if ('on' in b) {
       if (typeof b.on !== 'boolean') throw new Error('on: true or false');
       if (!this.isOwner(req)) forbid('only the owner turns GurtOS Business on or off');
@@ -560,6 +561,11 @@ class Core {
     if ('company' in b && (typeof b.company !== 'string' || b.company.length > 80)) throw new Error('company: text, at most 80 characters');
     if ('policy' in b) parsePolicy(b.policy as string); // throws naming the bad line
     if ('seats' in b) b.seats = checkSeats(b.seats);
+    if ('sso' in b) {
+      b.sso = b.sso === null ? undefined : checkSso(b.sso); // null turns work-account sign-in off
+      const owners = (s?: Sso) => Object.values(s?.groups ?? {}).some((g) => g.role === 'owner');
+      if ((owners(b.sso as Sso | undefined) || owners(this.business.sso)) && !this.isOwner(req)) forbid('only the owner can map a group to the owner role');
+    }
     const { name, who } = this.actor(req);
     const was = this.business.on;
     if ('policy' in b) {
@@ -584,7 +590,7 @@ class Core {
       approvers: r.blocked ? [] : this.business.people.filter((p) => p.role !== 'requester' && p.role !== 'auditor' && holds(p, r.to)).map((p) => p.name),
       changed: this.business.policyMeta[r.line] ?? null,
     }));
-    return { on: this.business.on, company: this.business.company, policy: this.business.policy, rules, seats: this.business.seats, paused: this.paused };
+    return { on: this.business.on, company: this.business.company, policy: this.business.policy, rules, seats: this.business.seats, sso: this.business.sso ?? null, paused: this.paused };
   }
 
   /**
@@ -1329,6 +1335,142 @@ class Core {
     return { token: device.token, device: { id: device.id, name: device.name, ...(person ? { person: person.id } : {}) }, box: { id: BOX_ID, name: BOX_NAME } };
   }
 
+  // ---------- Business: sign in with a work account (OpenID Connect) ----------
+
+  /** Sign-ins gone to the provider, by `state`, and finished ones waiting for the page, by one-time code. Both expire and are capped. */
+  ssoPending = new Map<string, { nonce: string; verifier: string; browser: string; redirect: string; device: string; expiry: number }>();
+  ssoDone = new Map<string, { expiry: number; person?: string; device?: string; error?: string }>();
+
+  /** GET /api/sso, /api/sso/start and /api/sso/callback, POST /api/sso/redeem. Open routes: they say nothing private. */
+  ssoRoutes(req: http.IncomingMessage, res: http.ServerResponse) {
+    const url = new URL(req.url ?? '/', 'http://box');
+    const p = url.pathname.replace(/^\/api(?=\/)/, '');
+    const m = req.method ?? 'GET';
+    const cfg = this.business.on ? this.business.sso : undefined;
+    const json = (status: number, obj: unknown) => res.writeHead(status, { 'content-type': 'application/json', 'cache-control': 'no-store' }).end(JSON.stringify(obj));
+    const go = (to: string) => res.writeHead(302, { location: to, 'cache-control': 'no-store' }).end();
+    if (m === 'GET' && p === '/sso') return json(200, cfg ? { on: true, name: cfg.name } : { on: false }), true;
+    if (m === 'GET' && (p === '/sso/start' || p === '/sso/callback')) {
+      (p === '/sso/start' ? this.ssoStart(req, res, url, cfg) : this.ssoCallback(req, url, cfg)).then(go, (e: Error) => {
+        // The log never holds an address: the provider's own message can name the account.
+        if (p === '/sso/callback') this.write({ type: 'note', track: 'business', data: { sso: 'refused', idp: cfg?.name ?? null, why: e.message.replace(/[^\s'"@]+@[^\s'"]+/g, '<address>') } });
+        go(this.ssoFinish({ error: e.message }));
+      });
+      return true;
+    }
+    if (m !== 'POST' || p !== '/sso/redeem') return false;
+    void (async () => {
+      let text = '';
+      for await (const c of req) text += c;
+      const code = (() => {
+        try {
+          return String(JSON.parse(text).code ?? '');
+        } catch {
+          return '';
+        }
+      })();
+      const done = this.ssoDone.get(code);
+      this.ssoDone.delete(code); // one-time
+      const p = this.person(done?.person);
+      if (!done || done.expiry < Date.now()) return json(400, { error: 'This sign-in has expired. Sign in again.' });
+      if (done.error || !p) return json(403, { error: done.error ?? 'You were removed from this box.' });
+      // A device token bound to the person, exactly as pairing a phone for them makes one.
+      const device: Device = { id: 'd' + randomBytes(5).toString('hex'), name: (done.device || `${p.name}'s work sign-in`).slice(0, 40), token: randomBytes(24).toString('hex'), pairedAt: new Date().toISOString(), person: p.id };
+      this.devices.push(device);
+      this.saveDevices();
+      json(200, { token: device.token, device: { id: device.id, name: device.name, person: p.id }, box: { id: BOX_ID, name: BOX_NAME } });
+    })();
+    return true;
+  }
+
+  /** Forget expired entries; at the cap, refuse new ones (`full`) or drop the oldest. */
+  sweep<T extends { expiry: number }>(map: Map<string, T>, full?: string) {
+    for (const [k, v] of map) if (v.expiry < Date.now()) map.delete(k);
+    if (map.size < 200) return;
+    if (full) throw new Error(full);
+    map.delete(map.keys().next().value!);
+  }
+
+  /** Where the page picks up a finished sign-in: a one-time code in the fragment, so no token is ever in an address. */
+  ssoFinish(done: { person?: string; device?: string; error?: string }) {
+    this.sweep(this.ssoDone);
+    const code = random();
+    this.ssoDone.set(code, { ...done, expiry: Date.now() + 2 * 60_000 });
+    return `/#sso/${code}`;
+  }
+
+  /** To the provider's sign-in page, with state, nonce and PKCE. It comes back to /api/sso/callback on the address the person used. */
+  async ssoStart(req: http.IncomingMessage, res: http.ServerResponse, url: URL, cfg?: Sso) {
+    if (!cfg) throw new Error('Sign-in with work accounts is not set up on this box.');
+    const { authorization_endpoint } = await provider(cfg.issuer);
+    this.sweep(this.ssoPending, 'Too many sign-ins are in progress. Try again in a few minutes.');
+    const h = req.headers;
+    const host = String(h['x-forwarded-host'] ?? h.host ?? '').split(',')[0].trim();
+    const proto = String(h['x-forwarded-proto'] ?? 'http').split(',')[0].trim();
+    if (!/^[\w.:[\]-]{1,200}$/.test(host) || !/^https?$/.test(proto)) throw new Error('This request has no usable address to come back to.');
+    const [state, nonce, verifier, browser] = [random(), random(), random(32), random()];
+    const redirect = `${proto}://${host}/api/sso/callback`; // the provider accepts only the redirect addresses registered for the app
+    this.ssoPending.set(state, { nonce, verifier, browser, redirect, device: (url.searchParams.get('device') ?? '').trim().slice(0, 40), expiry: Date.now() + 10 * 60_000 });
+    // The sign-in must come back to the browser that started it, so nobody can hand someone else a link that signs them in as the sender.
+    res.setHeader('set-cookie', `gurtos_sso=${browser}; Path=/api/sso; Max-Age=600; HttpOnly; SameSite=Lax${proto === 'https' ? '; Secure' : ''}`);
+    const q = new URLSearchParams({ response_type: 'code', client_id: cfg.clientId, redirect_uri: redirect, scope: 'openid profile email', state, nonce, code_challenge: challenge(verifier), code_challenge_method: 'S256' });
+    return `${authorization_endpoint}${authorization_endpoint.includes('?') ? '&' : '?'}${q}`;
+  }
+
+  /** Back from the provider: check the state, trade the code for an ID token, check the token and the groups, then sign the person in. */
+  async ssoCallback(req: http.IncomingMessage, url: URL, cfg?: Sso) {
+    const state = url.searchParams.get('state') ?? '';
+    const pending = this.ssoPending.get(state);
+    this.ssoPending.delete(state); // one-time
+    if (!pending || pending.expiry < Date.now()) throw new Error('This sign-in has expired or was already used. Sign in again.');
+    if (!(req.headers.cookie ?? '').split(/;\s*/).includes(`gurtos_sso=${pending.browser}`)) throw new Error('This sign-in was started in another browser. Sign in again here.');
+    if (!cfg) throw new Error('Sign-in with work accounts is not set up on this box.');
+    const said = url.searchParams.get('error');
+    if (said) throw new Error(`The sign-in provider said no: ${(url.searchParams.get('error_description') ?? said).slice(0, 300)}`);
+    const secret = this.vault.get(cfg.secretKey);
+    if (!secret) throw new Error(`The client secret is not in the vault yet (${cfg.secretKey}).`);
+    const prov = await provider(cfg.issuer);
+    const r = await fetch(prov.token_endpoint, {
+      method: 'POST',
+      headers: { 'content-type': 'application/x-www-form-urlencoded', accept: 'application/json' },
+      body: new URLSearchParams({ grant_type: 'authorization_code', code: url.searchParams.get('code') ?? '', redirect_uri: pending.redirect, client_id: cfg.clientId, client_secret: secret, code_verifier: pending.verifier }),
+      signal: AbortSignal.timeout(10_000),
+    });
+    const tokens = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(`The sign-in provider refused the code: ${String(tokens.error_description ?? tokens.error ?? r.status).slice(0, 300)}`);
+    const check = (keys: JsonWebKey[]) => verifyIdToken(tokens.id_token, { keys, issuer: cfg.issuer, clientId: cfg.clientId, nonce: pending.nonce });
+    let claims: Claims;
+    try {
+      claims = check(prov.keys);
+    } catch (e) {
+      if (!(e as { unknownKey?: boolean }).unknownKey) throw e;
+      claims = check((await provider(cfg.issuer, true)).keys); // the provider rotated its keys
+    }
+    return this.ssoFinish({ person: this.ssoPerson(cfg, claims), device: pending.device });
+  }
+
+  /** The person for these claims: added or updated from the groups, or, when no group maps any more, removed with their devices. */
+  ssoPerson(cfg: Sso, claims: Claims): string {
+    const id = personId(cfg.issuer, claims.sub);
+    const old = this.person(id);
+    const { name, email } = whoIs(claims, cfg.domain);
+    const role = roleFor(claims.groups, cfg.groups);
+    if (!role) {
+      if (old) {
+        this.business.people = this.business.people.filter((x) => x.id !== id);
+        this.saveBusiness();
+        for (const d of this.devices) if (d.person === id && !d.revoked) this.revokeDevice(d.id);
+        this.write({ type: 'note', track: 'business', data: { sso: 'removed', person: id, idp: cfg.name, why: 'no group maps to a role any more' }, who: { by: id } });
+      }
+      throw new Error(noGroup(claims));
+    }
+    const p = checkPerson({ id, name, ...role, ...(email ? { email } : {}) }, this.business.people);
+    this.business.people = old ? this.business.people.map((x) => (x.id === id ? p : x)) : [...this.business.people, p];
+    this.saveBusiness();
+    this.write({ type: 'note', track: 'business', data: { sso: 'signed in', person: id, idp: cfg.name, role: p.role, limitCents: p.limitCents, approvesFor: p.approvesFor, ...(old ? {} : { added: true }) }, who: { by: id } });
+    return id;
+  }
+
   // ---------- remote access and push notifications ----------
 
   /** Where phones reach this box: its https address when remote access is on, else BOX_URL. */
@@ -1687,7 +1829,7 @@ class Core {
             return { ok: true, startedAt: this.startedAt, cleanStart: this.cleanStart, resumed: this.resumed, paused: !!this.paused, tasks: this.state.tasks.size, tools: [...this.tools.keys()], spacetime: { port: 3000, database: DB } };
         }
       },
-      (req, res) => this.cors(req, res) || this.gate(req, res) || this.readOnly(req, res) || this.pairing(req, res) || this.remoteRoutes(req, res) || this.logStream(req, res) || this.auditCsv(req, res) || this.webhook(req, res) || this.trackRoute(req, res) || this.portal(req, res),
+      (req, res) => this.cors(req, res) || this.gate(req, res) || this.ssoRoutes(req, res) || this.readOnly(req, res) || this.pairing(req, res) || this.remoteRoutes(req, res) || this.logStream(req, res) || this.auditCsv(req, res) || this.webhook(req, res) || this.trackRoute(req, res) || this.portal(req, res),
     );
 
   /** The GurtOS app (app.gurtos.com) may call the box from the browser; other origins (a portal dev server) need BOX_ORIGINS, comma separated, or '*'. Tokens are required either way. */
@@ -1807,6 +1949,7 @@ data: ${JSON.stringify(e)}
     const m = req.method ?? 'GET';
     const p = new URL(req.url ?? '/', 'http://box').pathname.replace(/^\/api(?=\/)/, '');
     if (m === 'OPTIONS' || (m === 'GET' && p === '/health') || (m === 'POST' && p === '/pair') || this.portalTarget(req)) return false;
+    if ((m === 'GET' && /^\/sso(\/start|\/callback)?$/.test(p)) || (m === 'POST' && p === '/sso/redeem')) return false; // work-account sign-in
     // A track route that is public on purpose, or checks its own secret, is reachable through a proxy.
     if (this.routes.get(`${m} ${new URL(req.url ?? '/', 'http://box').pathname}`)?.open) return false;
     if (this.deviceOf(req)) return false;

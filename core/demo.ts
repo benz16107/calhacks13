@@ -1031,6 +1031,7 @@ if (fs.existsSync(personalDemo)) await moment('personal desktop layer', async ()
 
 // GurtOS Business: people, routed approvals, the audit and the kill switch. Last, because it turns Business on (and off).
 await moment('business edition', async () => (await import('./business-demo.ts')).default(kit));
+await moment('business: sign in with a work account (OpenID Connect, roles from groups)', async () => (await import('./sso-demo.ts')).default(kit));
 
 // ---------- cleanup ----------
 

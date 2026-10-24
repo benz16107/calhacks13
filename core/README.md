@@ -254,7 +254,8 @@ browser on the box (GurtOS Personal) also arrives from loopback, but its `Origin
 as remote and needs a paired token. **From anywhere else every request must carry a paired phone's token**, as
 `Authorization: Bearer <token>` or `?access_token=<token>` (an EventSource cannot set headers, so the SSE stream
 takes the query form). Without one the answer is `401` and nothing is read, started, approved or undone. The
-only open routes are `GET /api/health`, `POST /api/pair` (redeeming a pairing code) and the portal's own pages
+only open routes are `GET /api/health`, `POST /api/pair` (redeeming a pairing code), the work-account sign-in
+(`GET /api/sso`, `/api/sso/start`, `/api/sso/callback` and `POST /api/sso/redeem`, below) and the portal's own pages
 (`index.html` and its assets, which hold nothing private). Webhooks and track routes need a token too.
 
 A paired phone can read, start tasks and answer approvals, and the log names the phone by its device name: for
@@ -398,6 +399,102 @@ task no person started, like `schedule`), and a person's own actions carry `who:
 task's later events the last person who approved one of its requests. `GET /api/audit?person=&seat=&app=&from=&to=`
 returns rows `{seq, at, event, task, title, app, seat, asked, approver, by, what}`; `GET /api/audit.csv` is the same
 rows as a CSV file (a cell that starts like a formula gets a leading `'`). For an auditor, an admin or the owner.
+
+### Sign in with a work account (Microsoft Entra ID)
+
+**Why it is here: the path to production.** A company already keeps its people and their groups in Microsoft Entra ID
+(or another OpenID Connect provider). With this on, people sign in to the box with their work account, and their role
+comes from their Entra groups. Joining, leaving and moving to another team happen in Entra, in one place, instead of
+an admin pairing each phone with a code. Pairing still works beside it. The code is `sso.ts` (pure checks, tested in
+`sso.test.ts`), the routes in `box.ts`, and `./demo` runs the whole flow against a small provider of its own
+(`sso-demo.ts`), so the merge gate needs no internet.
+
+**The flow** is the standard authorization code flow with PKCE:
+
+1. The pairing page asks `GET /api/sso` (open: it returns only `{on, name}`) and shows "Sign in with your work account".
+2. `GET /api/sso/start` sends the browser to the provider's sign-in page (from its discovery document) with `state`, a
+   `nonce` and a PKCE challenge (S256). A cookie ties the sign-in to that browser. At most 200 sign-ins wait at once,
+   each for 10 minutes.
+3. The provider sends the browser to `GET /api/sso/callback` on the address the person used. The box checks the state
+   and the cookie, trades the code for an ID token (with the client secret from the vault and the PKCE verifier), and
+   checks the token: RS256 only, signed by one of the provider's keys (`jwks_uri`, fetched again once for a key it has
+   not seen), `iss` exactly the configured issuer, `aud` this app (and `azp` when there are several), not expired, and
+   the `nonce` of this sign-in.
+4. The `groups` claim gives the role (below). The person is added, or updated if they signed in before. Their id
+   (`sso-` and 12 hex characters) comes from the issuer and the subject, so it stays the same at every sign-in. Name
+   and address come from the claims; the address stays in the box's state (`GET /api/people` for admins, `GET
+   /api/me` for themselves), never in the log.
+5. The box sends the browser to `/#sso/<one-time code>` and the page redeems it with `POST /api/sso/redeem {code}`
+   for a device token bound to that person, exactly as pairing a phone for them does. No token is ever in an address.
+   The code works once, for 2 minutes.
+
+Each sign-in is a `business` note: `{sso: "signed in", person, idp, role, limitCents, approvesFor}`. Each refusal is
+`{sso: "refused", idp, why}`: no mapped group, another domain, a bad signature, another app or issuer, a replayed token,
+a used or expired sign-in, another browser. Notes never hold an address, a token or the secret.
+
+**Groups to roles.** `groups` maps a group id (Entra: the group's Object ID) to `{role, approvesFor?, limitCents?}`.
+Someone in several mapped groups gets the strongest role (owner, admin, approver, requester, auditor, in that order),
+every name those groups approve for, and the highest limit among that role's groups. Someone in **no** mapped group is
+refused: "Your work account is not in a group that may use this box." If they had signed in before, they are removed
+from the people and their devices stop working at once, so taking someone out of the group in Entra takes them off the
+box at their next sign-in. A group gives `owner` only when the mapping says so, and only the owner can write such a
+mapping.
+
+**Setting it up** (the owner, or an admin). The secret goes to the vault, the rest to `PUT /api/business`:
+
+```
+PUT /api/vault/SSO_CLIENT_SECRET {"value": "<the client secret's value>"}      (the owner)
+PUT /api/business {"sso": {
+  "name": "Fogline (Microsoft Entra ID)",
+  "issuer": "https://login.microsoftonline.com/<directory (tenant) id>/v2.0",
+  "clientId": "<application (client) id>",
+  "secretKey": "SSO_CLIENT_SECRET",
+  "domain": "fogline.example",
+  "groups": {
+    "<Fogline Controllers object id>": {"role": "approver", "approvesFor": ["Controller"], "limitCents": 5000000},
+    "<Fogline IT object id>": {"role": "admin", "approvesFor": ["IT"]}
+  }
+}}
+```
+
+`secretKey` must start with `SSO_`, because the box sends that key to the provider and must never be able to name
+another key in the vault. `domain` is optional: only addresses at it may sign in. `{"sso": null}` turns it off. The
+change is a `business` note with who made it; `GET /api/business` shows the settings (never the secret).
+
+**In Microsoft Entra** (the Entra admin center, `entra.microsoft.com`, as an admin of the tenant):
+
+1. **App registrations, New registration.** Name it (for example "GurtOS Business"). Supported account types:
+   "Accounts in this organizational directory only (single tenant)". Redirect URI: platform **Web**,
+   `https://<the box's address>/api/sso/callback`, the address people open the portal at. Entra allows plain `http`
+   only for `localhost`, so a box tried on the same machine uses `http://localhost:7700/api/sso/callback`. Add one
+   redirect URI for each address people use.
+2. On the app's **Overview**, copy the **Application (client) ID** into `clientId`, and the **Directory (tenant) ID**
+   into `issuer`: `https://login.microsoftonline.com/<directory id>/v2.0`. That address is exactly the `issuer` in
+   `https://login.microsoftonline.com/<directory id>/v2.0/.well-known/openid-configuration`; check it there.
+3. **Certificates & secrets, Client secrets, New client secret.** Copy its **Value** (Entra shows it once, and the
+   Secret ID is not it) into the vault as `SSO_CLIENT_SECRET`. Note when it expires, and put the new one in the
+   vault before then.
+4. **Token configuration, Add groups claim.** Tick **Security groups**, and under **ID** choose **Group ID**. Without
+   this the ID token has no `groups` and everyone is refused. If people are in more than 200 groups, Entra leaves the
+   list out; choose "Groups assigned to the application" instead and assign the groups to the app under Enterprise
+   applications (that needs Entra ID P1), and the box says so when it happens.
+5. **API permissions.** The default Microsoft Graph `User.Read` is enough; the box asks only for `openid profile
+   email`. If people cannot consent for themselves, an admin grants consent here once.
+6. **Groups, New group.** Group type Security, for example "Fogline Controllers" and "Fogline IT". Add the members.
+   Copy each group's **Object ID** into `groups`.
+
+| In Entra | On the box |
+|---|---|
+| Directory (tenant) ID | `sso.issuer`: `https://login.microsoftonline.com/<it>/v2.0` |
+| Application (client) ID | `sso.clientId` |
+| Client secret, Value | the vault, under the name in `sso.secretKey` |
+| Redirect URI (Web) | `https://<box address>/api/sso/callback` |
+| Groups claim, ID token, Group ID | read from the `groups` claim |
+| Each group's Object ID | a key in `sso.groups` |
+
+Any other OpenID Connect provider works the same way, as long as its ID token carries a `groups` claim. Not built:
+signing out at the provider, and sign-in from the hosted app (`app.gurtos.com`); a device signed in this way lasts
+until it is removed, its person is removed, or a later sign-in is refused.
 
 ## The kill switch
 
