@@ -17,15 +17,25 @@ import shotPowerCut from '../assets/repo/portal/restored.png';
 import shotPhone from '../assets/repo/portal/phone-home.png';
 import shotPersonal from '../assets/repo/personal/12-approval.png';
 import shotPersonalReview from '../assets/repo/personal/14-review.png';
+import homeBusinessDesktop from '../assets/repo/home/business-desktop.png';
+import homeBusinessPhone from '../assets/repo/home/business-phone.png';
+import homePersonal from '../assets/repo/home/personal-everyday.png';
+import homeServer from '../assets/repo/home/server-screen.png';
 
 const tracks = (await getCollection('tracks')).sort((a, b) => a.data.order - b.data.order);
 // Which tracks each edition carries, from each page's "Best shown in" line.
 const carries = (ed: string) => tracks.filter((t) => t.data.editions.includes('All three') || t.data.editions.includes(ed));
-const strip = [
-  { name: 'GurtOS Server', ed: 'Server', note: 'built: an always-on box at home or in the cloud' },
-  { name: 'GurtOS Personal', ed: 'Personal', note: 'built: your own laptop, with agents beside you' },
-  { name: 'GurtOS Business', ed: 'Business', note: 'built: one box for a team, with roles and routed approvals; sign-in with a work account (Microsoft Entra ID) and shadow mode are built' },
-].map((e) => ({ ...e, tracks: carries(e.ed) }));
+const sponsorLinks = (ed: string) => carries(ed).map((t) => ({ id: t.id, sponsor: t.data.sponsor }));
+// "Best shown in" for the ledger, in the page's own order of editions.
+const shortEd = (text: string) => {
+  if (text.includes('All three')) return 'All three';
+  return ['Server', 'Personal', 'Business']
+    .map((n) => [n, text.indexOf(n)] as const)
+    .filter(([, i]) => i >= 0)
+    .sort((x, y) => x[1] - y[1])
+    .map(([n]) => n)
+    .join(', ');
+};
 const hasClip = (name: string) => (clips as { name: string }[]).some((c) => c.name === name);
 
 // The merge gate's own words for each moment, from the Oct 24 run in src/data/demo-latest.txt.
@@ -120,33 +130,100 @@ const prizes = [
   title="GurtOS: an OS where AI agents work safely | Cal Hacks 13.0"
   description="GurtOS is an operating system where AI agents do real work with real access, and never hold your keys. Every task runs as its own Linux user, in its own copy of your files. Undo any one task, approve spending from your phone, pull the plug without losing work."
 >
-  <section class="hero">
-    <div class="wrap hero-in">
-      <p class="hero-kicker">Cal Hacks 13.0 · Solo project by Ben Zhou</p>
-      <h1 class="mark"><span class="g">Gurt</span><span class="o">OS</span></h1>
-      <p class="tag">An operating system where AI agents work safely: real access, never your keys.</p>
-      <p class="sub">
-        Today's operating systems were built for one person at a keyboard, not for agents. GurtOS is a lightweight OS,
-        and a suite around it, built for agents: every task runs as its own Linux user, in its own copy-on-write copy
-        of your files, and reaches only the hosts it needs. You can undo any one task, approve its spending from your
-        phone, and pull the plug without losing work.
-      </p>
-      <p class="actions">
-        <a href="#video">Watch it</a>
-        <a href="#moments">The four moments</a>
-        <a href="#tracks">Sponsor tracks</a>
-        <a href={LINKS.docs}>Product docs</a>
-        <a href={LINKS.repo}>Code</a>
-      </p>
-    </div>
-    <svg class="hills" viewBox="0 0 1920 260" preserveAspectRatio="none" aria-hidden="true">
-      <path d="M0 80C300 0 520 40 760 10C1000 -20 1250 -40 1500 20C1750 80 1800 0 1920 30V260H0Z" fill="#46586B" />
-      <path d="M0 160C260 90 520 140 820 100C1120 60 1300 130 1560 80C1820 30 1820 120 1920 100V260H0Z" fill="#36475A" />
-      <path d="M0 230C300 170 640 210 960 180C1280 150 1500 210 1920 160V260H0Z" fill="#28343F" />
-    </svg>
-  </section>
+  <div class="wrap">
+    <section id="editions" class="eco" aria-labelledby="editions-h">
+      <p class="eyebrow">The GurtOS ecosystem · Cal Hacks 13.0, a solo project by Ben Zhou</p>
+      <div class="eco-head">
+        <h1 id="editions-h">One core, three editions</h1>
+        <div class="eco-side">
+          <p>
+            GurtOS is an operating system where AI agents work safely: real access, never your keys. One core runs in
+            three editions, with a portal, a phone app, remote access and an open-source license around it.
+          </p>
+          <p class="actions"><a class="btn" href="#download">Download the preview</a> <a class="btn alt" href={LINKS.docs}>Docs</a></p>
+        </div>
+      </div>
+
+      <article class="edition" id="edition-server">
+        <div class="ed-media">
+          <figure class="panel">
+            <Image src={homeServer} alt="The GurtOS Server box screen: what needs you, what is running, what was spent today, and a dock of apps." widths={[720, 1440]} sizes="(max-width: 900px) 100vw, 640px" />
+          </figure>
+        </div>
+        <div class="ed-text">
+          <h2>GurtOS Server</h2>
+          <p>An always-on box at home or in the cloud. Agents work all day, and you watch from the box's own screen, a browser or your phone. There is no desktop and no user with sudo.</p>
+          <p class="ed-tracks"><span>Shows best</span> {sponsorLinks('Server').map((t, i) => (<>{i > 0 && ', '}<a href={`/tracks/${t.id}/`}>{t.sponsor}</a></>))}</p>
+        </div>
+      </article>
+
+      <article class="edition" id="edition-personal">
+        <div class="ed-media">
+          <figure class="panel">
+            <Image src={homePersonal} alt="GurtOS Personal in everyday use: mail, a browser and Files open, while the GurtOS app and a notification ask to approve a $42.10 grocery order." widths={[720, 1440]} sizes="(max-width: 900px) 100vw, 640px" />
+          </figure>
+        </div>
+        <div class="ed-text">
+          <h2>GurtOS Personal</h2>
+          <p>Your own laptop on GNOME, with your own account. Agents work beside you as separate users, on copies of your folders, and nothing changes until you choose Keep. The top-bar pill, approval notifications and the GurtOS app are built in.</p>
+          <p class="ed-tracks"><span>Shows best</span> {sponsorLinks('Personal').map((t, i) => (<>{i > 0 && ', '}<a href={`/tracks/${t.id}/`}>{t.sponsor}</a></>))}</p>
+        </div>
+      </article>
+
+      <article class="edition" id="edition-business">
+        <div class="ed-media">
+          <figure class="panel duo">
+            <Image class="desk" src={homeBusinessDesktop} alt="GurtOS Business: a $40,000 credit line Sam asked for waits for Rosa, the Controller, on her desktop." widths={[720, 1440]} sizes="(max-width: 900px) 100vw, 640px" />
+            <Image class="phone" src={homeBusinessPhone} alt="The same $40,000 credit line on Rosa's phone, with Deny and Approve $40,000." widths={[180, 360]} sizes="(max-width: 900px) 25vw, 150px" />
+          </figure>
+        </div>
+        <div class="ed-text">
+          <h2>GurtOS Business</h2>
+          <p>One box shared by a team. People have roles, approvals go to whoever the rules allow, and an audit with CSV export and a kill switch show and stop what agents do. The portal runs on any desktop and the phone app answers approvals. Shown on the made-up Fogline Supply, with sandbox data.</p>
+          <p class="ed-tracks"><span>Shows best</span> {sponsorLinks('Business').map((t, i) => (<>{i > 0 && ', '}<a href={`/tracks/${t.id}/`}>{t.sponsor}</a></>))}</p>
+        </div>
+      </article>
+
+      <h2 class="around-h">Around the core</h2>
+      <dl class="around">
+        <div><dt>The portal</dt><dd>The same web app is the box's own screen and a page in any browser: tasks, approvals, apps, settings and the action log.</dd></div>
+        <div><dt>The phone app</dt><dd>One app for the machines you pair, at <a href="https://app.gurtos.com">app.gurtos.com</a>: approve, undo or pause from anywhere.</dd></div>
+        <div><dt>Remote access</dt><dd>Reach a box from anywhere at its own https address, set up by its owner. Nothing is opened to the internet by default.</dd></div>
+        <div><dt>Open source</dt><dd>Apache-2.0 on <a href={LINKS.repo}>GitHub</a>, with signed release images and published checksums.</dd></div>
+      </dl>
+    </section>
+  </div>
+
+  <svg class="hills-band" viewBox="0 0 1920 260" preserveAspectRatio="none" aria-hidden="true">
+    <path d="M0 80C300 0 520 40 760 10C1000 -20 1250 -40 1500 20C1750 80 1800 0 1920 30V260H0Z" fill="#8a9bad" />
+    <path d="M0 160C260 90 520 140 820 100C1120 60 1300 130 1560 80C1820 30 1820 120 1920 100V260H0Z" fill="#6f8296" />
+    <path d="M0 230C300 170 640 210 960 180C1280 150 1500 210 1920 160V260H0Z" fill="#586b82" />
+  </svg>
 
   <div class="wrap">
+    <section id="tracks" aria-labelledby="tracks-h">
+      <h2 id="tracks-h">Tracks</h2>
+      <p class="measure">One page per sponsor: the problem, why it needs an operating system, the evidence, and what it does not cover.</p>
+      <div class="table-wrap">
+        <table class="ledger">
+          <thead>
+            <tr><th scope="col">No.</th><th scope="col">Sponsor</th><th scope="col">Track</th><th scope="col">Best shown in</th></tr>
+          </thead>
+          <tbody>
+            {tracks.map((t, i) => (
+              <tr>
+                <td class="num">{String(i + 1).padStart(2, '0')}</td>
+                <th scope="row"><a href={`/tracks/${t.id}/`}>{t.data.sponsor}</a></th>
+                <td>{t.data.prize}</td>
+                <td>{shortEd(t.data.editions)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p class="measure strip-foot">The Cal Hacks prizes are best shown in all three. Business-led pages show the Business screens from a box seeded as the made-up Fogline Supply; the scored credit desk runs were on GurtOS Server.</p>
+    </section>
+
     <section id="video" class="main-video" aria-label="Video">
       {
         VIDEOS.main ? (
@@ -155,7 +232,7 @@ const prizes = [
           <VideoSlot clip="moment-3-approval" />
         ) : (
           <figure class="still">
-            <Image src={shotApproval} alt="The GurtOS desktop with Notification Center open: two requests waiting for an OK with Deny and Approve, and earlier notices." widths={[800, 1400, 1920]} sizes="(max-width: 1200px) 100vw, 1200px" />
+            <Image src={shotApproval} alt="The GurtOS desktop with Notification Center open: two requests waiting for an OK with Deny and Approve, and earlier notices." widths={[720, 1440]} sizes="(max-width: 900px) 100vw, 1000px" />
             <figcaption>The box's own screen, running: two tasks wait for your OK while others keep running.</figcaption>
           </figure>
         )
@@ -207,28 +284,6 @@ const prizes = [
           </ul>
         </div>
       </div>
-    </section>
-
-    <section class="proofs" aria-labelledby="proofs">
-      <h2 id="proofs" class="kicker">Proof, in numbers</h2>
-      <dl>
-        <div>
-          <dt>{passed} checks, 0 failed</dt>
-          <dd>The merge gate on Oct 24: the four moments, then every app, on a fresh box on an x86 test VM. {skipped} paid live calls skipped, run separately.</dd>
-        </div>
-        <div>
-          <dt>16 of 17</dt>
-          <dd>Planted finance errors caught by the credit desk in the full live run with real Droid on all three seats, with 1 false alarm and all 6 credit decisions right; the January review caught 2 of 2. The merge gate's scripted seats act out only 2 of them.</dd>
-        </div>
-        <div>
-          <dt>0 keys</dt>
-          <dd>Reached a real agent's task. In the gate's real-Droid section on Oct 24, 240 process samples of a running Droid task held only a placeholder key.</dd>
-        </div>
-        <div>
-          <dt>No step twice</dt>
-          <dd>After a hard kill, the box came back, resumed the long job where it was, and kept the approval waiting.</dd>
-        </div>
-      </dl>
     </section>
 
     <section class="why" aria-labelledby="why">
@@ -302,8 +357,8 @@ const prizes = [
       </div>
     </section>
 
-    <section aria-labelledby="editions">
-      <h2 id="editions">Three editions</h2>
+    <section aria-labelledby="editions-detail">
+      <h2 id="editions-detail">Editions in detail</h2>
       <div class="table-wrap">
         <table>
           <thead>
@@ -328,19 +383,6 @@ const prizes = [
           </tbody>
         </table>
       </div>
-      <h3 class="strip-h">Which edition shows each track best</h3>
-      <ul class="strip">
-        {strip.map((e) => (
-          <li>
-            <span class="strip-name">{e.name}</span> <span class="strip-note">({e.note})</span>:{' '}
-            {e.tracks.map((t, i) => (
-              <>{i > 0 && ', '}<a href={`/tracks/${t.id}/`}>{t.data.sponsor}</a></>
-            ))}
-            {e.ed !== 'Business' && ', and the Cal Hacks prizes'}.
-          </li>
-        ))}
-      </ul>
-      <p class="measure strip-foot">The Cal Hacks prizes are best shown in all three. Business-led pages show the Business screens from a box seeded as the made-up Fogline Supply; the scored credit desk runs were on GurtOS Server.</p>
       <div class="pair">
         <figure>
           <Image src={shotPhone} alt="GurtOS on a phone: what needs you comes first, each request with Deny and Approve, then the running tasks." widths={[390, 780]} sizes="320px" />
@@ -417,24 +459,6 @@ const prizes = [
       </ol>
     </section>
 
-    <section id="tracks" aria-labelledby="tracks-h">
-      <h2 id="tracks-h">Sponsor tracks</h2>
-      <p class="measure">One page per track: what the sponsor asked for and how each item is met, the video, screenshots, live links, evidence, how it works, how to try it, and what is live or test.</p>
-      <ol class="track-list">
-        {
-          tracks.map((t) => (
-            <li>
-              <a href={`/tracks/${t.id}/`}>
-                <span class="t-sponsor">{t.data.sponsor}</span>
-                <span class="t-title">{t.data.title}</span>
-              </a>
-              <span class="t-prize">{t.data.prize}</span>
-            </li>
-          ))
-        }
-      </ol>
-    </section>
-
     <section aria-labelledby="live">
       <h2 id="live">Live, test and simulated</h2>
       <div class="table-wrap">
@@ -479,77 +503,152 @@ const prizes = [
 </Base>
 
 <style>
-  .hero {
-    margin-top: 0;
-    background: var(--color-desktop-sky);
-    color: var(--color-desktop-text);
-    position: relative;
-    padding-top: var(--space-7);
+  section {
+    margin-top: var(--space-8);
   }
-  .hero-in {
-    position: relative;
-    z-index: 1;
-    padding-bottom: var(--space-5);
+  section > h2 {
+    font-size: 2rem;
+    margin-bottom: var(--space-4);
   }
-  .hero-kicker {
-    color: var(--color-desktop-text-secondary);
-    font-size: 0.95rem;
-    margin-bottom: var(--space-3);
+  .eco {
+    margin-top: var(--space-6);
   }
-  .mark {
-    font-size: clamp(4rem, 12vw, 8rem);
-    letter-spacing: -0.03em;
-    line-height: 0.95;
-    margin-bottom: var(--space-5);
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--color-focus);
+    margin-bottom: var(--space-4);
   }
-  .mark .g {
-    font-weight: 600;
+  .eco-head {
+    display: grid;
+    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+    gap: var(--space-6) var(--space-7);
+    align-items: end;
+    padding-bottom: var(--space-6);
   }
-  .mark .o {
-    font-weight: 400;
+  .eco-head h1 {
+    font-size: clamp(2.4rem, 6vw, 4.2rem);
+    line-height: 1.05;
   }
-  .tag {
-    font-size: clamp(1.4rem, 2.6vw, 2rem);
-    font-weight: 500;
-    line-height: 1.25;
-    max-width: 34ch;
-    letter-spacing: -0.01em;
-  }
-  .sub {
-    color: var(--color-desktop-text-secondary);
-    font-size: 1.1rem;
-    max-width: 44rem;
+  .eco-side p {
+    color: var(--color-text-secondary);
   }
   .actions {
     display: flex;
     flex-wrap: wrap;
-    gap: var(--space-2) var(--space-5);
-    margin-top: var(--space-5);
+    gap: var(--space-3);
+    margin-top: var(--space-4);
   }
-  .actions a {
-    color: var(--color-desktop-text);
-    font-weight: 500;
-  }
-  .actions a:first-child {
-    background: var(--color-desktop-accent);
-    color: var(--color-desktop-on-accent);
+  .btn {
+    display: inline-block;
+    background: var(--color-focus);
+    color: #fff;
     text-decoration: none;
-    padding: var(--space-2) var(--space-4);
+    padding: var(--space-2) var(--space-5);
+    border-radius: 999px;
+    font-weight: 600;
+  }
+  .btn.alt {
+    background: var(--color-bg-sunken);
+    color: var(--color-text-primary);
+  }
+  .edition {
+    display: grid;
+    grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+    gap: var(--space-7);
+    align-items: center;
+    padding: var(--space-6) 0;
+    border-top: 1px solid var(--color-border-strong);
+  }
+  .edition figure {
+    margin: 0;
+  }
+  .panel {
+    background: var(--color-bg-sunken);
+    padding: var(--space-5);
     border-radius: var(--radius-md);
+    position: relative;
   }
-  .actions a:focus-visible {
-    outline-color: var(--color-desktop-accent);
+  .panel img {
+    border-radius: var(--radius-sm);
+    box-shadow: 0 6px 24px rgb(28 32 29 / 0.2);
   }
-  .hills {
+  .panel.duo .phone {
+    position: absolute;
+    right: var(--space-6);
+    bottom: var(--space-6);
+    width: 24%;
+    height: auto;
+    border-radius: 14px;
+    box-shadow: 0 8px 28px rgb(28 32 29 / 0.35);
+  }
+  .ed-text h2 {
+    font-size: 1.8rem;
+    margin-bottom: var(--space-3);
+  }
+  .ed-text p {
+    color: var(--color-text-secondary);
+  }
+  .ed-tracks {
+    font-size: 0.92rem;
+  }
+  .ed-tracks span {
+    font-weight: 600;
+    margin-right: var(--space-2);
+    color: var(--color-focus);
+  }
+  .around-h {
+    font-size: 1.6rem !important;
+    margin: var(--space-7) 0 var(--space-4) !important;
+  }
+  .around {
+    margin: 0;
+    border-top: 1px solid var(--color-border-strong);
+  }
+  .around > div {
+    display: grid;
+    grid-template-columns: 14rem minmax(0, 1fr);
+    gap: var(--space-5);
+    padding: var(--space-4) 0;
+    border-bottom: 1px solid var(--color-border-default);
+  }
+  .around dt {
+    font-weight: 600;
+    font-size: 1.1rem;
+  }
+  .around dd {
+    margin: 0;
+    color: var(--color-text-secondary);
+  }
+  .hills-band {
     display: block;
     width: 100%;
     height: clamp(90px, 14vw, 220px);
-    margin-top: calc(-1 * var(--space-6));
+    margin-top: var(--space-7);
+  }
+  .ledger th[scope='row'] {
+    font-size: 1rem;
+    font-weight: 600;
+    letter-spacing: 0;
+    text-transform: none;
+    color: var(--color-text-primary);
+    border-bottom: 1px solid var(--color-border-default);
+  }
+  .ledger th[scope='row'] a {
+    color: var(--color-text-primary);
+    text-decoration: none;
+  }
+  .ledger th[scope='row'] a:hover {
+    text-decoration: underline;
+  }
+  .ledger .num {
+    font-family: var(--font-mono);
+    color: var(--color-focus);
+    width: 3.5rem;
   }
   .main-video {
-    margin-top: calc(-1 * clamp(60px, 10vw, 170px));
-    position: relative;
-    z-index: 2;
     max-width: 68rem;
   }
   .still {
@@ -562,15 +661,6 @@ const prizes = [
     margin-top: var(--space-2);
     color: var(--color-text-secondary);
     font-size: 0.88rem;
-  }
-  section {
-    margin-top: var(--space-8);
-  }
-  section > h2 {
-    margin-bottom: var(--space-4);
-  }
-  .frame {
-    margin-top: var(--space-7);
   }
   .frame-grid {
     display: grid;
@@ -595,29 +685,6 @@ const prizes = [
   }
   .frame p {
     margin: 0 0 var(--space-3);
-  }
-  .proofs {
-    margin-top: var(--space-6);
-  }
-  .proofs dl {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
-    gap: var(--space-5) var(--space-6);
-    margin: 0;
-    border-top: 1px solid var(--color-border-strong);
-    padding-top: var(--space-5);
-  }
-  .proofs dt {
-    font-size: 1.6rem;
-    font-weight: 600;
-    letter-spacing: -0.01em;
-    line-height: 1.2;
-    margin-bottom: var(--space-2);
-  }
-  .proofs dd {
-    margin: 0;
-    color: var(--color-text-secondary);
-    font-size: 0.95rem;
   }
   .why-grid {
     display: grid;
@@ -684,26 +751,6 @@ const prizes = [
     grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));
     gap: 0 var(--space-6);
     max-width: 64rem;
-  }
-  .strip-h {
-    margin: var(--space-6) 0 var(--space-3);
-  }
-  .strip {
-    list-style: none;
-    padding: 0;
-    margin: 0 0 var(--space-3);
-    border-top: 1px solid var(--color-border-strong);
-  }
-  .strip li {
-    padding: var(--space-3) 0;
-    border-bottom: 1px solid var(--color-border-default);
-  }
-  .strip-name {
-    font-weight: 600;
-  }
-  .strip-note {
-    color: var(--color-text-secondary);
-    font-size: 0.92rem;
   }
   .strip-foot {
     font-size: 0.9rem;
@@ -772,47 +819,14 @@ const prizes = [
   .criteria-list p {
     margin: 0;
   }
-  .track-list {
-    list-style: none;
-    padding: 0;
-    margin: var(--space-5) 0 0;
-    border-top: 1px solid var(--color-border-strong);
-    counter-reset: t;
-  }
-  .track-list li {
-    display: grid;
-    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
-    gap: var(--space-2) var(--space-5);
-    padding: var(--space-3) 0;
-    border-bottom: 1px solid var(--color-border-default);
-    align-items: baseline;
-  }
-  .track-list a {
-    display: flex;
-    gap: var(--space-3);
-    align-items: baseline;
-    text-decoration: none;
-    color: var(--color-text-primary);
-  }
-  .track-list a:hover .t-title {
-    text-decoration: underline;
-  }
-  .t-sponsor {
-    font-weight: 600;
-    min-width: 8.5rem;
-    color: var(--color-focus);
-  }
-  .t-title {
-    font-weight: 500;
-  }
-  .t-prize {
-    font-size: 0.85rem;
-    color: var(--color-text-secondary);
-  }
   @media (max-width: 900px) {
+    .edition,
     .moment,
-    .pair {
+    .pair,
+    .eco-head,
+    .around > div {
       grid-template-columns: 1fr;
+      gap: var(--space-4);
     }
     .pair figure:first-child img {
       max-width: 320px;
@@ -820,13 +834,6 @@ const prizes = [
     .criteria-list li {
       grid-template-columns: 1fr;
       gap: var(--space-2);
-    }
-    .track-list li {
-      grid-template-columns: 1fr;
-    }
-    .track-list a {
-      flex-direction: column;
-      gap: 0;
     }
   }
 </style>

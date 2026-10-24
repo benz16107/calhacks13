@@ -20,6 +20,7 @@ export async function getStaticPaths() {
 const { entry, prev, next, all } = Astro.props;
 const d = entry.data;
 const { Content } = await render(entry);
+const number = String(d.order).padStart(2, '0');
 const jumps = [
   ['criteria', 'Criteria'],
   ...(d.shots.length ? [['shots', 'Screenshots']] : []),
@@ -34,12 +35,16 @@ const jumps = [
 
 <Base title={`${d.sponsor}: ${d.title} | GurtOS at Cal Hacks 13.0`} description={d.summary}>
   <article class="wrap track">
-    <nav class="crumbs" aria-label="Breadcrumb"><a href="/">Overview</a> / <a href="/#tracks">Tracks</a> / {d.sponsor}</nav>
+    <nav class="crumbs" aria-label="Breadcrumb"><a href="/#tracks">Tracks</a> / {number} / {d.sponsor}</nav>
     <header class="head">
-      <p class="kicker">{d.prize}</p>
-      <h1>{d.title}</h1>
-      <div class="best measure">
-        <p class="best-line"><span class="label">Best shown in</span> {d.editions}</p>
+      <div class="head-main">
+        <p class="kicker">Track {number} · Sponsor track</p>
+        <h1>{d.title}</h1>
+        <p class="sponsor">{d.sponsor} · {d.prize}</p>
+      </div>
+      <div class="best">
+        <p class="label">Best shown in</p>
+        <p class="best-line">{d.editions}</p>
         <p class="pitch" set:html={d.pitch} />
       </div>
       <p class="lead measure">{d.summary}</p>
@@ -48,6 +53,11 @@ const jumps = [
         {jumps.map(([id, label]) => <a href={`#${id}`}>{label}</a>)}
       </nav>
     </header>
+    <svg class="hills" viewBox="0 0 1920 200" preserveAspectRatio="none" aria-hidden="true">
+      <path d="M0 70C300 0 520 35 760 8C1000 -18 1250 -34 1500 18C1750 70 1800 0 1920 26V200H0Z" fill="#8a9bad" />
+      <path d="M0 130C260 75 520 115 820 85C1120 50 1300 110 1560 68C1820 26 1820 100 1920 85V200H0Z" fill="#6f8296" />
+      <path d="M0 185C300 140 640 172 960 148C1280 124 1500 172 1920 132V200H0Z" fill="#586b82" />
+    </svg>
 
     <VideoSlot video={d.video ?? entry.id} clip={d.clip} label={`${d.sponsor} video`} />
 
@@ -99,41 +109,62 @@ const jumps = [
     color: var(--color-text-secondary);
     margin-bottom: var(--space-6);
   }
+  .head {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+    gap: var(--space-4) var(--space-7);
+    align-items: start;
+    margin-bottom: var(--space-5);
+  }
+  .head > .lead,
+  .head > .proof,
+  .head > .jumps {
+    grid-column: 1 / -1;
+  }
+  .head .kicker {
+    font-family: var(--font-mono);
+    color: var(--color-focus);
+    letter-spacing: 0.06em;
+  }
   .head h1 {
-    margin-bottom: var(--space-4);
+    margin-bottom: var(--space-3);
+  }
+  .sponsor {
+    color: var(--color-text-secondary);
+    font-size: 1.15rem;
+    font-weight: 500;
+    margin: 0;
   }
   .best {
-    margin: 0 0 var(--space-5);
-    padding: var(--space-3) var(--space-4);
-    background: var(--color-desktop-sky);
-    color: var(--color-desktop-text);
-    border-radius: var(--radius-md);
+    padding-top: var(--space-2);
+    border-top: 1px solid var(--color-border-strong);
   }
   .best p {
     margin: 0;
+  }
+  .best .label {
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--color-text-secondary);
+    margin-bottom: var(--space-2);
   }
   .best-line {
     font-weight: 600;
     font-size: 1.05rem;
   }
-  .best .label {
-    font-size: 0.75rem;
-    font-weight: 600;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: var(--color-desktop-accent);
-    margin-right: var(--space-2);
-  }
   .pitch {
     margin-top: var(--space-2) !important;
-    color: var(--color-desktop-text-secondary);
-    font-size: 0.97rem;
+    color: var(--color-text-secondary);
+    font-size: 0.95rem;
   }
-  .pitch :global(a) {
-    color: var(--color-desktop-text);
-  }
-  .pitch :global(code) {
-    background: rgb(255 255 255 / 0.1);
+  .hills {
+    display: block;
+    width: 100%;
+    height: clamp(70px, 12vw, 150px);
+    margin: var(--space-4) 0 var(--space-6);
+    border-radius: var(--radius-md);
   }
   .runs-on {
     margin: var(--space-6) 0;
@@ -208,3 +239,4 @@ const jumps = [
     margin-bottom: var(--space-1);
   }
 </style>
+

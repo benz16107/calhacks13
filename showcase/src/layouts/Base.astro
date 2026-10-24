@@ -32,42 +32,46 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
     <a class="skip" href="#main">Skip to content</a>
     <header class="site">
       <div class="wrap bar">
-        <a class="brand" href="/" aria-label="GurtOS at Cal Hacks 13.0, overview">
-          <span class="wordmark"><span class="g">Gurt</span><span class="o">OS</span></span>
-          <span class="event">at Cal Hacks 13.0</span>
-        </a>
-        <nav aria-label="Site">
-          <a href="/">Overview</a>
+        <nav class="primary" aria-label="Site">
+          <a class="brand" href="/" aria-label="GurtOS at Cal Hacks 13.0, overview"><span class="g">Gurt</span><span class="o">OS</span></a>
+          <a href="/#editions">The ecosystem</a>
           <a href="/#tracks">Tracks</a>
-          <a href={LINKS.docs}>Docs</a>
-          <a href={LINKS.repo}>Code</a>
+          <a href="/#download">Download</a>
         </nav>
+        <p class="where">Cal Hacks 13.0 <span aria-hidden="true">·</span> calhacks.gurtos.com</p>
       </div>
     </header>
     <main id="main">
       <slot />
     </main>
     <footer class="site">
-      <div class="wrap foot">
+      <div class="wrap note">
         <p>
-          GurtOS, by Ben Zhou, solo, for Cal Hacks 13.0 (Oct 23 to 25, 2026). Product docs:{' '}
-          <a href={LINKS.docs}>gurtos.com</a>. Code: <a href={LINKS.repo}>GitHub</a>.
+          GurtOS is a solo project by Ben Zhou for Cal Hacks 13.0 (Oct 23 to 25, 2026), open source under the Apache
+          License 2.0. Every payment on this site is test money: Stripe test mode, a Visa test card, or USDC on Solana
+          devnet. Pages say which parts are live and which are simulated.
         </p>
-        <p>
-          GurtOS is open source under the Apache License 2.0: <a href={LINKS.repo}>github.com/benz16107/calhacks13</a>.
-        </p>
-        <p>
-          Every payment on this site is test money: Stripe test mode, a Visa test card, or USDC on Solana devnet. Pages
-          say which parts are live and which are simulated.
-        </p>
+      </div>
+      <div class="bottom">
+        <div class="wrap bar">
+          <p>GurtOS v0.1.0-preview <span aria-hidden="true">·</span> Apache-2.0 <span aria-hidden="true">·</span> Built at Cal Hacks 13.0</p>
+          <nav aria-label="Footer">
+            <a href="/#download">Download</a>
+            <a href={LINKS.repo}>GitHub</a>
+            <a href={LINKS.docs}>Docs</a>
+            <a href="/terms/">Terms</a>
+            <a href="/privacy/">Privacy</a>
+          </nav>
+        </div>
       </div>
     </footer>
   </body>
 </html>
 
 <style>
-  header.site {
-    background: var(--color-desktop-sky);
+  header.site,
+  .bottom {
+    background: var(--color-desktop-glass);
     color: var(--color-desktop-text);
   }
   .bar {
@@ -75,70 +79,69 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
     align-items: center;
     justify-content: space-between;
     gap: var(--space-4);
-    min-height: 56px;
+    min-height: 40px;
     flex-wrap: wrap;
+    font-size: 0.86rem;
   }
-  .brand {
-    display: flex;
-    align-items: baseline;
-    gap: var(--space-2);
-    color: inherit;
-    text-decoration: none;
-    padding: var(--space-2) 0;
-  }
-  .wordmark {
-    font-size: 1.25rem;
-    letter-spacing: -0.03em;
-  }
-  .wordmark .g {
-    font-weight: 600;
-  }
-  .wordmark .o {
-    font-weight: 400;
-  }
-  .event {
-    color: var(--color-desktop-text-secondary);
-    font-size: 0.9rem;
+  .bar p {
+    margin: 0;
   }
   nav {
     display: flex;
     gap: var(--space-5);
     flex-wrap: wrap;
+    align-items: center;
   }
   nav a {
     color: var(--color-desktop-text);
     text-decoration: none;
-    font-weight: 500;
-    font-size: 0.95rem;
     padding: var(--space-2) 0;
   }
   nav a:hover {
     text-decoration: underline;
   }
-  nav a:focus-visible,
-  .brand:focus-visible {
+  nav a:focus-visible {
     outline-color: var(--color-desktop-accent);
+  }
+  .brand {
+    font-size: 1rem;
+    letter-spacing: -0.02em;
+  }
+  .brand .g {
+    font-weight: 700;
+  }
+  .brand .o {
+    font-weight: 400;
+  }
+  .where {
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    color: var(--color-desktop-text-secondary);
   }
   footer.site {
     margin-top: var(--space-8);
-    border-top: 1px solid var(--color-border-default);
-    color: var(--color-text-secondary);
     font-size: 0.9rem;
+    color: var(--color-text-secondary);
   }
-  .foot {
-    padding-top: var(--space-6);
-    padding-bottom: var(--space-7);
+  .note {
+    padding-top: 0;
+    padding-bottom: var(--space-5);
     max-width: var(--page);
   }
-  .foot p {
+  .note p {
     max-width: var(--measure);
+    margin: 0;
+  }
+  .bottom .bar {
+    color: var(--color-desktop-text-secondary);
+    font-size: 0.82rem;
   }
   @media (max-width: 640px) {
+    .where {
+      display: none;
+    }
     nav {
       gap: var(--space-4);
-    }
-    .event {
-      display: none;
     }
   }
 </style>

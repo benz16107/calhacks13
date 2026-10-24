@@ -1,9 +1,10 @@
-/* GurtOS design tokens (docs/figma.md, direction A). Night sky for the top band, Paper for reading. */
-@import '@fontsource/instrument-sans/400.css';
-@import '@fontsource/instrument-sans/500.css';
-@import '@fontsource/instrument-sans/600.css';
-@import '@fontsource/ibm-plex-mono/400.css';
-@import '@fontsource/ibm-plex-mono/500.css';
+/* GurtOS design tokens (docs/figma.md). Atkinson Hyperlegible, as the OS uses; Paper for reading, the night desktop for the top and bottom bars. Showcase option B (docs/figma/showcase-options). */
+@import '@fontsource/atkinson-hyperlegible-next/400.css';
+@import '@fontsource/atkinson-hyperlegible-next/500.css';
+@import '@fontsource/atkinson-hyperlegible-next/600.css';
+@import '@fontsource/atkinson-hyperlegible-next/700.css';
+@import '@fontsource/atkinson-hyperlegible-mono/400.css';
+@import '@fontsource/atkinson-hyperlegible-mono/500.css';
 
 :root {
   --color-desktop-sky: #27313f;
@@ -50,8 +51,8 @@
   --radius-sm: 4px;
   --radius-md: 6px;
 
-  --font-sans: 'Instrument Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --font-mono: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  --font-sans: 'Atkinson Hyperlegible Next', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'Atkinson Hyperlegible Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
   --measure: 46rem;
   --page: 76rem;
 }
@@ -107,7 +108,7 @@ h4 {
   text-wrap: balance;
 }
 h1 {
-  font-size: clamp(2rem, 4.2vw, 3rem);
+  font-size: clamp(2.2rem, 5vw, 3.6rem);
   letter-spacing: -0.02em;
 }
 h2 {
@@ -216,11 +217,35 @@ th {
   left: var(--space-4);
 }
 
-/* Markdown bodies of track pages and the overview's prose. */
-.prose h2 {
-  margin: var(--space-8) 0 var(--space-4);
-  padding-top: var(--space-5);
-  border-top: 1px solid var(--color-border-default);
+/* Markdown bodies of track pages: a number and heading in the left column, the section in the right (showcase option B). */
+.prose {
+  display: grid;
+  grid-template-columns: 13rem minmax(0, 1fr);
+  column-gap: var(--space-7);
+  counter-reset: sec;
+}
+.prose > * {
+  grid-column: 2;
+  min-width: 0;
+}
+.prose > h2 {
+  grid-column: 1;
+  counter-increment: sec;
+  margin: var(--space-7) 0 var(--space-4);
+  font-size: 1.35rem;
+  align-self: start;
+}
+.prose > h2::before {
+  content: counter(sec, decimal-leading-zero);
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--color-focus);
+  margin-bottom: var(--space-2);
+}
+.prose > h2 + * {
+  margin-top: var(--space-7);
 }
 .prose h3 {
   margin: var(--space-6) 0 var(--space-3);
@@ -245,10 +270,20 @@ th {
 .prose > p,
 .prose > ul,
 .prose > ol,
-.prose > h2,
 .prose > h3,
 .prose > blockquote {
   max-width: var(--measure);
+}
+@media (max-width: 900px) {
+  .prose {
+    display: block;
+  }
+  .prose > h2 {
+    margin: var(--space-7) 0 var(--space-3);
+  }
+  .prose > h2 + * {
+    margin-top: 0;
+  }
 }
 
 @media (max-width: 640px) {

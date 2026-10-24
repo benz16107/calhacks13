@@ -1,0 +1,72 @@
+---
+import Base from '../layouts/Base.astro';
+import { LINKS } from '../data/site';
+---
+
+<Base title="Privacy | GurtOS at Cal Hacks 13.0" description="What the GurtOS Cal Hacks showcase site collects: nothing of its own. A plain account of what the host and linked services may see.">
+  <article class="wrap legal">
+    <p class="kicker">Privacy</p>
+    <h1>What this site collects</h1>
+    <p class="lead">This is a static showcase for a hackathon project. It has no accounts, no forms, no comments and no cookies of its own, and it adds no analytics or tracking code. We collect nothing from you.</p>
+
+    <h2>What the host sees</h2>
+    <p>
+      The site is served by Vercel. Like any web host, Vercel receives each request to show you a page (your IP address,
+      your browser's user agent and the page you asked for) and may keep ordinary server logs and, if it is switched on
+      for the project, cookie-free page-view counts. Vercel's own privacy notice governs that. We do not read or
+      export those logs for anything but keeping the site running.
+    </p>
+
+    <h2>What we do not do</h2>
+    <ul>
+      <li>We do not set cookies, store anything in your browser, or fingerprint it.</li>
+      <li>We do not run third-party scripts, ads or trackers.</li>
+      <li>We do not ask for your name, email or any personal detail, and we do not sell or share data, because we hold none.</li>
+    </ul>
+
+    <h2>Videos and links</h2>
+    <p>
+      The video clips on this site are files served from the site itself. If a narrated video is added later, it loads
+      from YouTube's privacy-enhanced domain only when the page is opened. Links to GitHub, Mana, Agentverse, Figma,
+      Solana Explorer and other sites take you to services with their own privacy notices. Downloads of the install
+      discs come from GitHub Releases and a Vultr Object Storage mirror, which see the download request.
+    </p>
+
+    <h2>The software</h2>
+    <p>
+      GurtOS is software you run on your own computer. This site does not collect any data from a GurtOS box, and a box
+      sends nothing to us. Each box's own docs say what it stores and where.
+    </p>
+
+    <h2>Contact</h2>
+    <p>To ask about this page, open an issue in the project's <a href={LINKS.repo}>GitHub repository</a>.</p>
+    <p class="updated">Last updated Oct 24, 2026.</p>
+  </article>
+</Base>
+
+<style>
+  .legal {
+    padding-top: var(--space-6);
+    max-width: 52rem;
+  }
+  .legal .kicker {
+    font-family: var(--font-mono);
+    color: var(--color-focus);
+  }
+  .legal h2 {
+    font-size: 1.3rem;
+    margin: var(--space-6) 0 var(--space-3);
+  }
+  .legal ul {
+    padding-left: 1.3em;
+    margin: 0 0 var(--space-5);
+  }
+  .legal li {
+    margin-bottom: var(--space-2);
+  }
+  .updated {
+    color: var(--color-text-secondary);
+    font-size: 0.9rem;
+    margin-top: var(--space-6);
+  }
+</style>
