@@ -36,7 +36,7 @@ E = {
  'mana': ("GurtOS Personal",
    "Mana is a personal workspace for planning and small apps; GurtOS Personal is the computer where your agents do the work. Here a Mana chat rewrote the credit desk's rules, and a Mana app shows a box's live status."),
  'armadin': ("All three editions",
-   "The protections live in the core every edition shares: separate users, the vault and broker, per-task network rules, approvals and the log. A booby-trapped page fails the same way on Server, Personal and Business."),
+   "Agents get attacked through the pages they read and the packages they install, and on an ordinary OS a fooled agent can read every key and send it anywhere. GurtOS stops it at the OS, whatever the model does, in every edition, and publishes the test for each control. Next (being built): a poisoned npm package, tripwire keys, a deeper per-task sandbox, a scoreboard of about 15 OS-level attacks with its misses, a hijacked payment and an OWASP mapping."),
  'godaddy': ("All three editions",
    "One name for every edition, GurtOS Server, GurtOS Personal and GurtOS Business, all at gurtos.com."),
  'figma': ("All three editions",

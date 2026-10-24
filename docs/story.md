@@ -59,7 +59,7 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 | Atlassian | GurtOS Business | to review with Ben |
 | Hyphenate | GurtOS Business | decided |
 | Factory | GurtOS Server and GurtOS Personal | to review with Ben |
-| Armadin | All three editions | to review with Ben |
+| Armadin | All three editions | decided |
 | Microsoft | GurtOS Business | decided |
 | Visa | GurtOS Personal, plus GurtOS Server for routines that keep running when you close your laptop | decided |
 | Coinbase | GurtOS Server, and GurtOS Business | decided |
@@ -206,23 +206,39 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 
 ## Armadin: Best Security Hack
 
-**Status:** to review with Ben. **Page:** https://calhacks.gurtos.com/tracks/armadin/
+**Status:** decided. **Page:** https://calhacks.gurtos.com/tracks/armadin/
 
 **Best shown in:** All three editions
 
-**Pitch:** The protections live in the core every edition shares: separate users, the vault and broker, per-task network rules, approvals and the log. A booby-trapped page fails the same way on Server, Personal and Business.
+**Pitch:** Agents get attacked through the pages they read and the packages they install, and on an ordinary OS a fooled agent can read every key and send it anywhere. GurtOS stops it at the OS, whatever the model does, in every edition, and publishes the test for each control. Next (being built): a poisoned npm package, tripwire keys, a deeper per-task sandbox, a scoreboard of about 15 OS-level attacks with its misses, a hijacked payment and an OWASP mapping.
 
-**The problem:** Draft: a web page can carry hidden instructions, and an agent that obeys them can read every key on the machine and send it anywhere, because nothing in a normal OS stands between the agent and your secrets.
+**The problem:** Agents get attacked through the pages they read and the packages they install, and on an ordinary OS a fooled agent can read every key and send it anywhere.
 
-**Features, by the sponsor's criteria** (no OS-vs-track table yet; to write when reviewed):
+**Features** (from the page's table):
 
-- *Best security project.* (met): A real attack on AI agents, prompt injection that steals keys, stopped by the operating system instead of by the model behaving. Six separate controls (vault, separate users, process isolation, per-task network rule, proxy allowlist, approvals), each checked by an automated test on every merge, against both a hijacked scripted agent and a real Claude agent. The page lists what the box does not defend against.
+| Feature | Which attack it answers | From | Today |
+|---|---|---|---|
+| Keys in a root-only vault, never in a task's files or environment | A hijacked agent reads every key | GurtOS (vault, broker) | Shipped. The merge gate samples every process of a real Claude task 240 times and finds only a placeholder key |
+| Each task is its own Linux user in its own copy of the files, seeing no process but its own | A task reads another task's files or the box's | GurtOS | Shipped |
+| A per-task network rule and a proxy allowlist | The stolen data has nowhere to go | GurtOS | Shipped. A send to attacker.example is refused and logged, and a raw connection to an IP is refused by the firewall |
+| Approvals and an append-only log, and undo of the task | A fooled agent cannot approve its own action, and the damage is removable | GurtOS | Shipped. The task cannot reach SpacetimeDB or the API to approve itself |
+| The poisoned npm package: a package whose install script hunts for keys and sends them out, run inside a task | The September 2025 npm worm, which stole tokens and cloud keys from developer machines | GurtOS (task user, vault, network rule) and the Armadin test | Being built; not on main yet |
+| Tripwire keys: fake keys planted where an attacker looks, so a read is logged and alerts you | A hijacked agent that hunts for keys gives itself away | GurtOS (the vault and the log) | Being built; not on main yet |
+| A deeper per-task sandbox: seccomp filters, Landlock file rules and cgroup caps | A task that tries to widen its own reach inside the kernel | GurtOS (core) | Being built; not on main yet |
+| A scoreboard of about 15 OS-level attacks, with the ones it misses | A score you can check, not a claim | GurtOS and the Armadin tests | Being built; not on main yet |
+| The hijacked payment: a business email compromise that tries to change who gets paid | Fraud by fooling an agent or a person about where money goes | GurtOS (approvals) and the credit desk (its refusal of changed bank details) | Being built; not on main yet |
+| A mapping of the controls to the OWASP list for agents | A shared checklist a security reviewer already knows | The Armadin page | Being built; not on main yet |
 
 **Demo moment and proof:** In every merge-gate run, a scripted agent obeys the hidden instructions step by step and is stopped at each one: the vault read fails (EACCES), the send to attacker.example is refused by the proxy, a raw connection to 1.1.1.1 is refused by the firewall, and reaching SpacetimeDB or the box's API to approve itself is refused. Then real Claude reads the same page: it refused, and no vault secret appeared in its files, environment or log.
 
 **Still to do:**
 
-- Review the story with Ben: problem, features with their why, OS vs track
+- The poisoned npm package: a package whose install script hunts for keys and sends them out, run inside a task
+- Tripwire keys: fake keys planted where an attacker looks, so a read is logged and alerts you
+- A deeper per-task sandbox: seccomp filters, Landlock file rules and cgroup caps
+- A scoreboard of about 15 OS-level attacks, with the ones it misses
+- The hijacked payment: a business email compromise that tries to change who gets paid
+- A mapping of the controls to the OWASP list for agents
 
 ## Microsoft: Built for the Real World, and the Customer Impact Award
 
