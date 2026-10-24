@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+# Point gurtos.co at the GurtOS app project the day the domain is registered (a person registers it, with the MLH
+# code; this script buys nothing). Without --run it only prints the steps.
+#   relay/go-live-co          show what it would do
+#   relay/go-live-co --run    add the domain to the Vercel project, add the GoDaddy records, then check the redirects
+# Needs: vercel logged in here, and `ssh macserver` (it has gddy, the GoDaddy CLI).
+# Undo: `vercel domains rm gurtos.co`, and `gddy dns delete gurtos.co --type A --name @` plus `--type CNAME --name www`.
+set -euo pipefail
+cd "$(dirname "$0")/app"
+go=false; [[ ${1:-} == --run ]] && go=true
+do_() { echo "+ $*"; $go && "$@" || true; }
+ssh macserver '~/.local/bin/gddy domain list' | grep -q '"gurtos.co"' || { echo "gurtos.co is not in the GoDaddy account yet; register it first" >&2; $go && exit 1; }
+do_ vercel link --yes --project gurtos-app
+do_ vercel domains add gurtos.co gurtos-app
+do_ vercel domains add www.gurtos.co gurtos-app
+do_ ssh macserver "~/.local/bin/gddy dns add gurtos.co --type A --name @ --data 76.76.21.21"
+do_ ssh macserver "~/.local/bin/gddy dns add gurtos.co --type CNAME --name www --data cname.vercel-dns.com"
+do_ ../../relay/deploy-app   # the redirects in relay/app/vercel.json ship with the app
+$go || exit 0
+# The fragment (#code) is never sent to a server; check the redirect sends the box name only.
+curl -sI --retry 12 --retry-delay 10 --retry-all-errors https://gurtos.co/p/rosa | grep -i '^location: https://app.gurtos.com/pair?box=rosa.box.gurtos.com$'
+curl -sI https://gurtos.co/anything | grep -i '^location: https://gurtos.com/anything'
+echo "gurtos.co is live"
