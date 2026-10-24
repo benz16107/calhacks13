@@ -195,7 +195,9 @@ await moment(
         const seen = [...envs, fs.readFileSync(path.join(HOME, 'tasks', D.id, 'worker.log'), 'utf8'), JSON.stringify(events)].join('\n');
         const onlyPlaceholder = keys.size === 1 && keys.has(`FACTORY_API_KEY=${PLACEHOLDER_KEY}`);
         check(onlyPlaceholder && !secrets.some((v) => seen.includes(v)), `all ${envs.length} process samples held only a placeholder key; no real key ever entered the task`);
-        check(d.costCents > 50, `its cost is counted: $${(d.costCents / 100).toFixed(2)}, the $0.50 test spend plus the model (estimated)`);
+        const modelCost = events.find((e) => e.type === 'cost' && e.model);
+        check(modelCost && modelCost.type === 'cost' && (modelCost.tokens?.output ?? 0) > 0, 'its model cost is priced from real token counts, logged with the model and a token breakdown');
+        check(d.costCents > 50, `its cost is real: $${(d.costCents / 100).toFixed(4)}, the $0.50 test spend plus the model`);
         await api('POST', `/tasks/${D.id}/undo`);
         check(view('repo', 'notes.md') === '# Notes', 'undo removed its changes');
       },

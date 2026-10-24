@@ -12,6 +12,7 @@ import { Log, apply, canMove, doneLayers, fold, type State } from './log.ts';
 import { PLACEHOLDER_KEY, firewall, relayCert, reservePort, startProxy } from './net.ts';
 import * as sandbox from './sandbox.ts';
 import { HOME, dirs } from './sandbox.ts';
+import { usageCents } from './pricing.ts';
 import { loadVault } from './vault.ts';
 
 type Handler = (method: string, url: URL, body: any) => unknown;
@@ -292,6 +293,10 @@ class Core {
         return this.write({ type: 'task.step', task: t.id, text: String(body.text), data: body.data });
       }
       if (route === 'POST /cost') return this.write({ type: 'cost', task: t.id, cents: Number(body.cents), what: String(body.what) });
+      if (route === 'POST /usage') {
+        const tokens = body.tokens;
+        return this.write({ type: 'cost', task: t.id, cents: usageCents(String(body.model), tokens), what: String(body.what ?? 'model'), model: String(body.model), tokens });
+      }
       if (route === 'POST /call') return this.callTool(t, String(body.key), String(body.tool), body.input);
       if (route === 'POST /ask') return { approved: await this.ask(t, String(body.key), String(body.question), Number(body.costCents ?? 0)) };
     });

@@ -2,6 +2,8 @@
 // The core never imports a track: it loads every tracks/<name>/track.ts at boot.
 // Change this file only from the core thread.
 
+import type { Tokens } from './pricing.ts';
+
 // ---------- Tasks ----------
 
 export type TaskState =
@@ -81,7 +83,7 @@ export type LogEvent =
   | Ev<'tool.result', { task: string; key: string; ok: boolean; output?: unknown; error?: string; cents?: number }>
   | Ev<'approval.asked', { task: string; approval: Approval }>
   | Ev<'approval.answered', { task: string; id: string; approved: boolean; by: string }>
-  | Ev<'cost', { cents: number; what: string }>
+  | Ev<'cost', { cents: number; what: string; model?: string; tokens?: Tokens }>
   | Ev<'net.blocked', { task: string; host: string }>
   /** Anything a track wants in the log. */
   | Ev<'note', { track: string; data: unknown }>;

@@ -63,7 +63,9 @@ portal and phone). The first answer wins. The task carries on, and other tasks n
 ## Cost
 
 Tools declare `cost(input)` in US cents. The broker counts it when the call succeeds, in the same log line as
-the result. Workers report model
+the result. A Droid task's model cost is real: the worker reports its token counts and model, and the core
+prices them at the model's list rates (`core/pricing.ts`), writing a `cost` event with `model` and a `tokens`
+breakdown. `task.costCents` is tool spending plus model cost. Workers report model
 spending with `POST /cost`. `task.costCents` is the total.
 
 ## Writing a track

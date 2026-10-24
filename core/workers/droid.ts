@@ -53,8 +53,11 @@ try {
       text += msg.text;
     } else if (msg.type === DroidMessageType.Result) {
       const u = msg.tokenUsage;
-      // shortcut: priced at Sonnet list rates ($3 in, $15 out per million tokens); Factory bills in its own units.
-      if (u) await call(sock, 'POST', '/cost', { cents: Math.ceil((u.inputTokens * 3 + u.outputTokens * 15) / 10000), what: 'model (estimate)' });
+      // The core prices these at the model's list rates (core/pricing.ts). Factory bills in its own credits.
+      if (u) {
+        const tokens = { input: u.inputTokens, output: u.outputTokens, cacheWrite: u.cacheCreationTokens, cacheRead: u.cacheReadTokens };
+        await call(sock, 'POST', '/usage', { model: session.settings.modelId, what: 'model', tokens });
+      }
       if (!msg.success) throw new Error(msg.error?.message ?? `Droid stopped: ${msg.subtype}`);
     }
   }
