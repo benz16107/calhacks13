@@ -548,6 +548,8 @@ await moment('pairing and more than one box', async () => {
   let reused = false;
   await api('POST', '/api/pair', { code, name: 'another' }).catch(() => (reused = true));
   check(reused, 'the pairing code is one-time: a second phone cannot reuse it');
+  const listed = await api<Record<string, unknown>[]>('GET', '/api/devices');
+  check(listed.length > 0 && listed.every((x) => !('token' in x) && (x.push === undefined || typeof x.push === 'boolean')), 'the device list carries no token and no push subscription, only whether push is on');
 
   workspace('pair', {});
   const A = await api<Task>('POST', '/tasks', { title: 'Ship the build', workspace: 'pair', worker: 'fake', source: 'demo', prompt: 'ask Ship the build?\nwrite shipped.txt yes' });
