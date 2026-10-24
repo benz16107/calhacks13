@@ -17,8 +17,8 @@ import watch from '../assets/home/watch-small.png';
 
 const RELEASE = `${REPO}/releases/download/v0.1.0-preview`;
 const isos = (edition: string) => [
-  { arch: 'x86_64', label: 'x86_64', file: `gurtos-${edition}-x86_64.iso` },
-  { arch: 'arm64', label: 'arm64, Apple silicon', file: `gurtos-${edition}-arm64.iso` },
+  { arch: 'x86_64', label: 'Intel or AMD (x86_64)', file: `gurtos-${edition}-x86_64.iso` },
+  { arch: 'arm64', label: 'Apple silicon (arm64)', file: `gurtos-${edition}-arm64.iso` },
 ];
 const core = [
   { label: 'Undo one task', line: 'Each task works on its own layer.', href: '/docs/concepts/workspaces-and-layers/' },
@@ -58,8 +58,9 @@ const core = [
         <div class="text">
           <h3><span class="dot server" aria-hidden="true"></span>{NAME} Server</h3>
           <p>An always-on agent box, at home or in the cloud.</p>
+          <p class="dl-label">Download</p>
           <div class="dl">
-            {isos('server').map((f) => <a class="btn" href={`${RELEASE}/${f.file}`} data-arch={f.arch}>Download {f.label}</a>)}
+            {isos('server').map((f) => <a class="btn" href={`${RELEASE}/${f.file}`} data-arch={f.arch}>{f.label}</a>)}
           </div>
         </div>
       </article>
@@ -73,8 +74,9 @@ const core = [
         <div class="text">
           <h3><span class="dot personal" aria-hidden="true"></span>{NAME} Personal</h3>
           <p>Your own laptop, with agents working beside you.</p>
+          <p class="dl-label">Download</p>
           <div class="dl">
-            {isos('personal').map((f) => <a class="btn" href={`${RELEASE}/${f.file}`} data-arch={f.arch}>Download {f.label}</a>)}
+            {isos('personal').map((f) => <a class="btn" href={`${RELEASE}/${f.file}`} data-arch={f.arch}>{f.label}</a>)}
           </div>
         </div>
       </article>
@@ -120,7 +122,7 @@ const core = [
   .intro h1 { margin-bottom: 1rem; }
   .lead { font-size: var(--gw-text-lg); color: var(--gw-ink-2); }
   .actions { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 1.5rem; }
-  .btn.primary { font-size: 1.1rem; padding: 0.8rem 1.4rem; }
+  .actions .btn.primary { font-size: 1.1rem; padding: 0.8rem 1.4rem; }
   .hills { display: block; width: 100%; height: clamp(70px, 11vw, 170px); }
   .section-h { font-size: var(--gw-h2); }
   .edition { display: grid; gap: 1.5rem 3rem; padding: 2rem 0; border-top: 1px solid var(--gw-rule); align-items: center; }
@@ -137,6 +139,13 @@ const core = [
     .rig .phone { position: static; width: 36cqw; }
     .rig .watch { position: static; width: 24cqw; margin: 35cqw 0 0 -2.5cqw; }
   }
+  /* Two equal buttons side by side, or stacked at the same width where the column is narrow. */
+  .text { container-type: inline-size; }
+  .dl-label { margin: 1.1rem 0 0.4rem; font-size: var(--gw-text-sm); color: var(--gw-ink-2); }
+  .dl { display: grid; grid-template-columns: repeat(2, 11.5rem); gap: 0.5rem; margin-top: 1.1rem; }
+  .dl-label + .dl { margin-top: 0; }
+  .dl .btn { padding: 0.5rem 0.8rem; font-size: 0.9rem; text-align: center; white-space: nowrap; }
+  @container (max-width: 23.6rem) { .dl { grid-template-columns: 11.5rem; } }
   .more { margin-top: 0.5rem; font-size: var(--gw-text-sm); }
   .core { list-style: none; padding: 0; margin: 0; color: var(--gw-ink-2); }
   .core li { padding: 0.8rem 0; border-top: 1px solid var(--gw-rule); }
