@@ -496,7 +496,7 @@ plain-zero alternate, so the only fix is a second typeface for numbers. Recommen
 - **P-33. P1. Fixed in 2786909.** The app's sidebar lists the developer app "Example", and every app has the same puzzle-piece icon
   (`after/personal-offline-app.png`). Fix: hide `example` (as setup does) and use the app tiles from `apptiles.py`.
   Owner: personal.
-- **P-34. P2. Fixed in 61180f4** (the first after-shot predates it).** Key names made from variable names: "ASI one API key", "Wallet solana key". Fix: "ASI:One API key",
+- **P-34. P2. Fixed in 61180f4** (the first after-shot predates it). Key names made from variable names: "ASI one API key", "Wallet solana key". Fix: "ASI:One API key",
   "Solana wallet key". Owner: personal.
 - **P-35. P2.** The Find panel shows `FIND_CLOUD_SYNC=1` and "Described by claude-sonnet-4-6 via Droid task
   tzw81bc1dd" (`after/personal-panel-dark.png`). Fix: "Search runs on this computer." and "Described by Claude".
