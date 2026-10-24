@@ -60,6 +60,8 @@ What you get for free on every track page, kit or legacy:
 | `<OSvsTrack>` | `sponsor`, `rows={[{ what, why, os, track, status }]}`: one row per feature, saying what the OS provides and what the sponsor's product provides. `bible.py` reads these rows for `docs/story.md`, so this is where a feature's status ("Being built") lives |
 | `<Steps>` | `title`, `time`; slot: a numbered markdown list (blank line after the opening tag) |
 | `<Evidence>` | `title`, `run` (what was run, when), `numbers={[{ value, label }]}`, `sources={[{ label, href }]}`; slot: a code block or list of log lines |
+| `<Numbers>` | `items={[{ value, label, href, source }]}`: 3 to 5 big figures, each with a source link (`source` is the link text) |
+| `<Sources>` | `title`, `intro`, `items={[{ name, date, what, href, source, gurtos }]}`: cited incidents, each with a source you fetched; `gurtos` says what the OS's controls do about that kind of attack and what they do not. Never invent or round up |
 | `<Limits>` | `title`; slot: a list of what is not covered. Say it plainly; judges trust it |
 | `<Flow>`, `<Status>`, `<LinkList>`, `<Video>` | The older components, still available. `Flow` and `Status` read their data from frontmatter; `Video` shows the narrated video or a clip |
 

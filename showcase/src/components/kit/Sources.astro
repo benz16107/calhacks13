@@ -1,0 +1,79 @@
+---
+// Cited incidents or facts, each with a source you fetched. Never invent or round up: say it as the source states it.
+// items: { name (the incident), date, what (what was taken, as the source states it), href, source (link text), gurtos? (what GurtOS's controls do about that kind of attack, and what they do not) }
+import { slug } from './slug';
+
+interface Props {
+  title?: string;
+  intro?: string;
+  items: { name: string; date: string; what: string; href: string; source?: string; gurtos?: string }[];
+}
+const { title = 'Real attacks, with sources', intro, items } = Astro.props;
+const hasGurtos = items.some((i) => i.gurtos);
+---
+
+<section class="k-section" aria-labelledby={slug(title)}>
+  <h2 id={slug(title)}>{title}</h2>
+  {intro && <p class="k-intro" set:html={intro} />}
+  <div class="k-table">
+    <table>
+      <thead>
+        <tr>
+          <th scope="col">Incident</th>
+          <th scope="col">What was taken, as the source states it</th>
+          <th scope="col">Source</th>
+          {hasGurtos && <th scope="col">What GurtOS does about that kind of attack</th>}
+        </tr>
+      </thead>
+      <tbody>
+        {
+          items.map((i) => (
+            <tr>
+              <th scope="row">
+                {i.name}
+                <span class="k-date">{i.date}</span>
+              </th>
+              <td set:html={i.what} />
+              <td>
+                <a href={i.href}>{i.source ?? 'Source'}</a>
+              </td>
+              {hasGurtos && <td set:html={i.gurtos ?? ''} />}
+            </tr>
+          ))
+        }
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<style>
+  .k-section {
+    margin: var(--space-7) 0;
+  }
+  .k-intro {
+    max-width: var(--measure);
+    color: var(--color-text-secondary);
+    margin-top: var(--space-2);
+  }
+  .k-table {
+    overflow-x: auto;
+    margin-top: var(--space-4);
+  }
+  table {
+    min-width: 40rem;
+    margin: 0;
+  }
+  tbody th {
+    text-transform: none;
+    letter-spacing: 0;
+    font-size: 0.94rem;
+    color: var(--color-text-primary);
+    border-bottom-color: var(--color-border-default);
+  }
+  .k-date {
+    display: block;
+    font-weight: 400;
+    color: var(--color-text-secondary);
+    font-size: 0.85rem;
+  }
+</style>

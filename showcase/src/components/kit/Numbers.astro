@@ -1,0 +1,56 @@
+---
+// A row of 3 to 5 big figures, each with where it comes from. items: { value, label, href?, source? (link text, default "source") }
+interface Props {
+  items: { value: string; label: string; href?: string; source?: string }[];
+}
+const { items } = Astro.props;
+---
+
+<ul class="k-numbers">
+  {
+    items.map((n) => (
+      <li>
+        <span class="k-n">{n.value}</span>
+        <span class="k-l">{n.label}</span>
+        {n.href && (
+          <a class="k-s" href={n.href}>
+            {n.source ?? 'source'}
+          </a>
+        )}
+      </li>
+    ))
+  }
+</ul>
+
+<style>
+  .k-numbers {
+    list-style: none;
+    padding: 0;
+    margin: var(--space-5) 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+    gap: var(--space-5);
+    padding: var(--space-4) 0;
+    border-top: 1px solid var(--color-border-strong);
+    border-bottom: 1px solid var(--color-border-default);
+  }
+  .k-numbers li {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    margin: 0;
+  }
+  .k-n {
+    font-family: var(--font-mono);
+    font-size: 2rem;
+    font-weight: 600;
+    line-height: 1.1;
+  }
+  .k-l {
+    font-size: 0.9rem;
+    color: var(--color-text-secondary);
+  }
+  .k-s {
+    font-size: 0.85rem;
+  }
+</style>
