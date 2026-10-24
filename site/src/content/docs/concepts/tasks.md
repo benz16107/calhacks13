@@ -16,13 +16,15 @@ You start a task with a spec. Every field except the title and the prompt has a 
 | `workspace` | The folder the task works on. It gets its own copy. | `home` |
 | `worker` | `droid` (Factory's Droid with Claude) or `fake` (scripted, for tests) | `droid` |
 | `tools` | Tool names the task may call through its broker | None |
-| `hosts` | Host names the task's network may reach | None |
-| `budgetCents` | Spending above this, in US cents, pauses the task for an OK | `0` |
-| `source` | Who started it, such as `portal`, `schedule` or `jira:BOX-12` | `api` |
+| `hosts` | Host names the task's network may reach | None, or the Settings default (below) |
+| `budgetCents` | Spending above this, in US cents, pauses the task for an OK | `0`, or the Settings default (below) |
+| `source` | Who started it, such as `api`, `schedule` or `jira:BOX-12` | `api` |
 
 The defaults are deliberate. A task with no `tools`, no `hosts` and a budget of zero can read and change its own copy of the files and nothing else. Every extra power is something you list.
 
-On GurtOS Personal, `POST /api/tasks` also takes `folder`, an absolute path to one of your own folders, instead of `workspace`. See [give an agent a folder](/guides/keep-or-undo/).
+The box's settings can change two of these defaults for tasks that do not name their own. `defaultBudgetCents` (default 0) sets the budget. `networkDefault` is `none` by default; set it to `allowlist` and a task that names no hosts gets the hosts in `defaultHosts`. A task that names its own `hosts` or `budgetCents` keeps them. See [network policy](/concepts/network-policy/) and [approvals and budgets](/concepts/approvals-and-budgets/).
+
+On GurtOS Personal, `POST /api/tasks` also takes `folder`, an absolute path to one of the owner's folders, or `folders`, a list of up to 10, instead of `workspace`. Only the owner can hand out folders. See [give an agent a folder](/guides/keep-or-undo/).
 
 ```json
 {
@@ -34,7 +36,7 @@ On GurtOS Personal, `POST /api/tasks` also takes `folder`, an absolute path to o
 }
 ```
 
-The core checks the spec before it starts anything. An unknown workspace, an unknown worker or a tool that no app provides is an error, and no task is created.
+The core checks the spec before it starts anything. A field it does not know (a typo such as `budget`), an unknown workspace, an unknown worker or a tool that no app provides is an error that names the problem, and no task is created.
 
 ## What the box adds
 
@@ -46,6 +48,8 @@ When the task starts, the core fills in the rest:
 - `costCents`, everything the task has spent so far: tool spending plus model cost.
 - `step`, the latest thing the worker reported, for a one-line "doing now".
 - `error`, set when the task fails. Droid's final message is not a field: it is the task's last step in the log.
+- `folder` and `folders`, on Personal, the owner's real folders the task works on.
+- `review`, on Personal, for a task on the owner's folders: `pending` (done, waiting for Keep or Undo), `kept`, `conflict` (the owner changed the same files, so nothing was applied) or `undone`.
 
 ## States
 
@@ -75,7 +79,7 @@ Anything that is not already undone can be undone. Undo is final: an undone task
 
 ## How a task ends
 
-The worker is a process. When it exits with code 0, the task is `done`. Any other exit makes it `failed`, with the error `worker exited with <code>`. If the core cannot start the worker at all, for example because the vault has no `FACTORY_API_KEY` for a Droid task, the task fails with that reason.
+The worker is a process. When it exits with code 0, the task is `done`. Any other exit makes it `failed`. The error is `worker exited with <code>`, followed by the worker's own last error message, so the portal can say what went wrong. If the core cannot start the worker at all, for example because the vault has no `FACTORY_API_KEY` for a Droid task, the task fails with that reason.
 
 When a task ends in any way, the core does the same cleanup:
 
@@ -84,8 +88,9 @@ When a task ends in any way, the core does the same cleanup:
 3. It stops every process the task's user still runs and unmounts the task's copy.
 4. It removes the task's Linux user.
 5. If the task is done or undone, it rebuilds the workspace's view.
+6. If the task is undone, it deletes the task's layer from disk, once no running task still reads it.
 
-A failed task's changes stay in its own layer, out of the workspace. You can read them with `GET /api/tasks/<id>/diff`, but no later task sees them.
+A failed task's changes stay in its own layer, out of the workspace. You can read them with `GET /api/tasks/<id>/diff`, but no later task sees them. An undone task's diff is empty, because its changes are gone.
 
 ## What you can see
 
@@ -101,7 +106,7 @@ Every task has the same three views, which the portal shows as its task window:
 
 ## Who starts tasks
 
-Anything that can reach the API can start a task with `POST /api/tasks`. Apps can also start tasks from inside the core with `box.createTask()`: on a schedule, from a webhook, when a file arrives, or from a chat. The task's `source` records which. See [triggers](/concepts/triggers/).
+The box's own screen and any paired device can start a task with `POST /api/tasks`. The portal has no button for it yet. Apps can also start tasks from inside the core with `box.createTask()`: on a schedule, from a webhook, when a file arrives, or from a chat. The task's `source` records which. See [triggers](/concepts/triggers/).
 
 Tasks run side by side. One task waiting for an OK, failing or being undone does not stop any other.
 

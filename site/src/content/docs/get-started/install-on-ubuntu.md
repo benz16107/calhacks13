@@ -39,16 +39,17 @@ computer you use every day.
    `/etc/box/vault.env` with mode `0600`, and installs and starts `box.service`.
    It prints `active` when the service is up. Running it again is safe.
 
-3. Add your Factory key to the vault. The file is `KEY=value`, one per line:
+3. Add your Factory key to the vault through the box's API. A request from the machine itself is allowed to set
+   keys, the key takes effect at once, and the box never returns it:
 
    ```sh
-   sudo sh -c 'echo "FACTORY_API_KEY=your-key-here" >> /etc/box/vault.env'
-   sudo chmod 600 /etc/box/vault.env
-   sudo systemctl restart box.service
+   read -rs -p 'FACTORY_API_KEY: ' v && echo
+   printf '{"value":"%s"}' "$v" | curl -s -X PUT http://127.0.0.1:7700/api/vault/FACTORY_API_KEY \
+     -H 'content-type: application/json' -d @- && unset v
    ```
 
-   The box reads the vault when it starts. It refuses to start if the vault is readable by anyone but root.
-   See [Add a secret to the vault](/guides/add-a-secret/).
+   You can also edit `/etc/box/vault.env` (`KEY=value`, one per line) as root and restart `box.service`. The box
+   refuses to start if that file is readable by anyone but root. See [Add a secret to the vault](/guides/add-a-secret/).
 
 ## Check it runs
 
@@ -68,7 +69,7 @@ journalctl -u box.service -n 20 --no-pager
 ```
 
 ```text
-box up: 0 tasks in the log, tracks: apify, credit-desk, elastic, example, fetch, find, jira, shopper, wallet
+box up: 0 tasks in the log, tracks: apify, credit-desk, elastic, example, fetch, find, jira, mana, shopper, wallet
 ```
 
 An app that fails to load is skipped and logged there. The box keeps running without it.
@@ -90,10 +91,14 @@ ssh -L 7700:127.0.0.1:7700 -L 3000:127.0.0.1:3000 you@192.0.2.10
 Then open `http://127.0.0.1:7700/` on your own computer. Forwarding port 3000 as well gives the portal live
 updates through SpacetimeDB; without it the portal falls back to the action log stream.
 
+A forwarded connection arrives at the box from `127.0.0.1`, so the box treats it like its own screen, with the
+owner's rights. That is fine for you over your own SSH login. Do not forward the port for anyone else.
+
 :::caution
-You can make the API listen on every interface with `BOX_LISTEN=0.0.0.0` in the service's environment. The API
-has no login, so anyone who can reach that port can start, approve and undo tasks. Only do this on a network you
-control, or behind a proxy that adds authentication. See the [threat model](/security/threat-model/).
+You can make the API listen on another address with `BOX_LISTEN` in the service's environment. Every request from
+outside the box then needs a paired device's token, and only the box itself or a phone paired as the owner can
+change settings, the vault or the owner's folders. Even so, open it only on a network you control, such as a VPN.
+See [Approve from your phone](/guides/approve-from-your-phone/) and the [threat model](/security/threat-model/).
 :::
 
 ## Update or remove

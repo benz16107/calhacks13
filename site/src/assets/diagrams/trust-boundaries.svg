@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 520" role="img" aria-labelledby="trust-title trust-desc">
   <title id="trust-title">Trust boundaries</title>
-  <desc id="trust-desc">Your devices reach the box's API on port 7700 and SpacetimeDB on port 3000. Inside the box, the core runs as root and holds the API, SpacetimeDB, the action log, the apps, the vault, the brokers and the proxy. Each task runs as its own user in its own zone. A task reaches the core only through its broker socket and the network only through the proxy, which lets it reach its allowed hosts. Three paths are blocked: a task reading the vault, a task connecting straight to any other host, and a task opening another task's copy of the files.</desc>
+  <desc id="trust-desc">Your devices reach the box's API on port 7700 with a paired device's token. SpacetimeDB listens on the box's loopback only. Inside the box, the core runs as root and holds the API, SpacetimeDB, the action log, the apps, the vault, the brokers and the proxy. Each task runs as its own user in its own zone. A task reaches the core only through its broker socket and the network only through the proxy, which lets it reach its allowed hosts. Three paths are blocked: a task reading the vault, a task connecting straight to any other host, and a task opening another task's copy of the files.</desc>
   <defs>
     <marker id="trust-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
       <path d="M0 0L10 5L0 10z" class="arrowhead"/>
@@ -14,12 +14,11 @@
   <text x="106" y="75" text-anchor="middle">Portal</text>
   <rect x="186" y="48" width="130" height="44" rx="6" class="node"/>
   <text x="251" y="75" text-anchor="middle">Phone</text>
-  <text x="350" y="44" class="muted">The API has no login. It listens on 127.0.0.1</text>
-  <text x="350" y="62" class="muted">unless you set BOX_LISTEN. SpacetimeDB listens</text>
-  <text x="350" y="80" class="muted">on port 3000 on every interface.</text>
+  <text x="350" y="44" class="muted">From outside the box, every request needs a</text>
+  <text x="350" y="62" class="muted">paired device's token. Settings, the vault and</text>
+  <text x="350" y="80" class="muted">folders need the owner. SpacetimeDB is loopback only.</text>
 
-  <text x="114" y="150" class="muted mono">:7700</text>
-  <text x="259" y="150" class="muted mono">:3000</text>
+  <text x="114" y="150" class="muted mono">:7700 + token</text>
 
   <!-- The box -->
   <rect x="20" y="136" width="560" height="372" rx="10" class="zone"/>
@@ -30,8 +29,9 @@
   <text x="548" y="186" text-anchor="end" class="muted">Root: the core</text>
   <rect x="52" y="196" width="120" height="48" rx="6" class="accent"/>
   <text x="112" y="225" text-anchor="middle">API</text>
-  <rect x="184" y="196" width="130" height="48" rx="6" class="accent"/>
-  <text x="249" y="225" text-anchor="middle">SpacetimeDB</text>
+  <rect x="184" y="196" width="130" height="48" rx="6" class="node"/>
+  <text x="249" y="216" text-anchor="middle">SpacetimeDB</text>
+  <text x="249" y="234" text-anchor="middle" class="muted mono">127.0.0.1 only</text>
   <rect x="326" y="196" width="110" height="48" rx="6" class="node"/>
   <text x="381" y="225" text-anchor="middle">Action log</text>
   <rect x="448" y="196" width="104" height="48" rx="6" class="node"/>
@@ -89,5 +89,5 @@
 
   <!-- Drawn last so the boxes above do not cover them -->
   <path d="M106 92V194" class="line" marker-end="url(#trust-arrow)"/>
-  <path d="M251 92V194" class="line" marker-end="url(#trust-arrow)"/>
+  <path d="M251 92V122H108" class="line"/>
 </svg>

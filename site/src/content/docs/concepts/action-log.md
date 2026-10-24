@@ -30,7 +30,8 @@ The event types:
 | `approval.answered` | Someone answered, and who |
 | `cost` | Model spending or other spending, with the model and token counts |
 | `net.blocked` | The proxy refused a connection |
-| `note` | Anything an app wants on the record |
+| `keep` | Personal: a decision on a task that ran on the owner's folders: pending, kept, conflict or reverted |
+| `note` | Anything an app wants on the record. The core also writes notes for setup steps, settings changes, apps turned on or off, a new owner, and vault keys set, with the key's name and never its value. |
 
 The exact fields of each are in [log events](/reference/log-events/).
 
@@ -77,7 +78,7 @@ The log is append-only. Nothing in the core edits or deletes a line. It is root-
 
 - The log grows without limit. This release has no rotation or archiving.
 - Every boot reads the whole file. For a long-lived box, that time grows with the log.
-- The log records a failed task's error as `worker exited with <code>`. The cause is usually in the steps just before it.
+- A failed task's error is `worker exited with <code>` and the worker's last error message. When that message is generic, the cause is usually in the steps right before it.
 
 ## Related
 

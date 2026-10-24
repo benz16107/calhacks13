@@ -18,7 +18,7 @@ This page names the parts and how they talk to each other. The pages after it ex
 
 The core is one Node.js process, `box.service`, running as root. It is the only part of the system that can read secrets, create users and mount file systems. It does six jobs:
 
-- **The API.** An HTTP server on port 7700 for the portal, the phone and other programs. It listens on `127.0.0.1` unless you change `BOX_LISTEN`. See [the HTTP API](/reference/http-api/).
+- **The API.** An HTTP server on port 7700 for the portal, the phone and other programs. It listens on `127.0.0.1` unless you change `BOX_LISTEN`. GurtOS Server from the ISO listens on every address and lets only private networks through its firewall. A request from the box's own machine is trusted; any other request needs a paired device's token. See [the HTTP API](/reference/http-api/).
 - **Tasks.** It creates a Linux user for each task, mounts the task's own copy of its workspace, and starts the worker as a hardened systemd unit.
 - **One broker per task.** A Unix socket that only that task's user can open. It is the task's only way to reach the core: to log a step, call a tool, ask for an OK, or report cost.
 - **The vault.** A root-only file of secrets. Tools run inside the core and read the secrets they declare. Tasks never do.
@@ -39,7 +39,7 @@ A worker holds no secrets. Droid needs a Factory API key to reach its model, so 
 
 ## Live state
 
-SpacetimeDB runs on the box on port 3000 and holds two public tables, `task` and `approval`. The core mirrors every change into them, so the portal and a phone see updates the moment they happen. A phone can answer an approval by calling the `answer` reducer, and the core writes that answer to the log within milliseconds.
+SpacetimeDB runs on the box on port 3000 and holds two public tables, `task` and `approval`. The core mirrors every change into them, so the box's own screen sees updates the moment they happen. SpacetimeDB has no login, so it listens on `127.0.0.1` only. A phone or a laptop follows the box's log stream over the authenticated API instead.
 
 The mirror is a convenience, not the record. If SpacetimeDB is down, tasks keep running and the portal falls back to the log stream. When it comes back, the core refills it. See [live updates](/reference/live-updates/).
 
@@ -47,16 +47,16 @@ The mirror is a convenience, not the record. If SpacetimeDB is down, tasks keep 
 
 - **The portal** is a web app the core serves from the same address as the API.
 - **The box's own screen** is a full-screen browser that shows the portal's box screen, which the core serves at `/screen`. It has no desktop and no login prompt.
-- **A phone** opens the portal and answers approvals. Pairing gives it a device token, so the log records which phone said yes. See [approve from your phone](/guides/approve-from-your-phone/).
+- **A phone or a laptop** opens the portal at the box's address. Pairing gives it a device token, which every request from it carries, and the log records which device said yes. See [approve from your phone](/guides/approve-from-your-phone/).
 
 Other programs can drive the box too. Apps on the box connect it to Jira, Elastic and ASI:One. They use the same API and the same approvals as the portal.
 
 ## The operating system around it
 
-On a box installed from the ISO, the core is part of a small, fixed system:
+On a machine installed from a GurtOS ISO, the core is part of a fixed system:
 
-- There is no human account. Root's password is locked and there is no `sudo` binary.
-- `box-firstboot` makes the box's identity key and an empty vault on first start, and names the box `box-<id>` from that key.
+- On GurtOS Server there is no human account. Root's password is locked and there is no `sudo` binary. On GurtOS Personal the person who owns the computer has an account with `sudo`; task users never do.
+- `box-firstboot` makes the box's identity key and an empty vault on first start. The box's id is the first 6 hex digits of the SHA-256 of its public key, and the machine is named `gurt-<id>`, for example `gurt-bf07fe`. The core uses that name as the box's id.
 - The disk has two system slots, A and B. An update writes the other slot, starts it once, and keeps it only if the box reports healthy. See [system updates](/concepts/system-updates/).
 
 You can also install the core on an existing Ubuntu 24.04 machine. That gives you the same tasks, vault, log and API, without the A/B updates or the locked-down system. See [install on Ubuntu](/get-started/install-on-ubuntu/).

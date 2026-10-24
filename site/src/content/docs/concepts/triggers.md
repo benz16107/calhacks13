@@ -3,11 +3,13 @@ title: Triggers
 description: Triggers start GurtOS tasks without you, on a schedule, from a webhook, when a file arrives or from a chat. Each turns an event into a task spec.
 ---
 
-You can start a task by hand from the portal or the API. Most agent work on an always-on box starts some other way: at night, when a ticket is filed, when a receipt lands in a folder, when you ask in a chat. A trigger is the code that turns such an event into a task.
+You can start a task by hand through the [HTTP API](/reference/http-api/), and the apps on the box start tasks from their own pages and chats. The portal has no button for a new task yet. Most agent work on an always-on box starts some other way: at night, when a ticket is filed, when a receipt lands in a folder, when you ask in a chat. A trigger is the code that turns such an event into a task.
 
 ## How triggers work
 
-A trigger is an object in an app's `triggers` slot with a `name` and a `start(box)` function. The core calls `start` once at boot, after the API is up, and passes a `Box` handle. From then on the trigger can call `box.createTask(spec)` whenever its event happens.
+A trigger is an object in an app's `triggers` slot with a `name` and a `start(box)` function. The core calls `start` when the app turns on: at boot, after the API is up, or when the owner turns the app on again. It passes a `Box` handle. From then on the trigger can call `box.createTask(spec)` whenever its event happens.
+
+`start` may return a function that stops the trigger. Then the app can be turned off without a restart. The generic triggers below all do this. A trigger that returns nothing keeps running until the box restarts, and the app reports `restartNeeded` when you turn it off.
 
 Because `start` runs at every boot, a trigger re-arms itself after a restart. A schedule keeps its timing, a webhook is served again, and a file watcher watches again.
 

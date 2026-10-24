@@ -3,7 +3,7 @@ title: Apps
 description: The apps that ship with GurtOS today, with the tools, routes, triggers and vault keys each one adds, and which payments are test money.
 ---
 
-These apps ship in the source tree and load on every box. Each one is a folder under `tracks/`. An app with missing vault keys still loads; the parts that need a key report that it is missing. To write your own, see the [App SDK](/reference/app-sdk/).
+These apps ship in the source tree. Each one is a folder under `tracks/`. Every app is on unless the owner turns it off: `GET /api/apps?all=1` lists them all with what each can reach, and `POST /api/apps/<id>/disable` and `/enable` switch one without a reinstall (see [HTTP API](/reference/http-api/#setup-settings-apps-and-the-vault)). An app with missing vault keys still loads; the parts that need a key report that it is missing. To write your own, see the [App SDK](/reference/app-sdk/).
 
 :::note[Test money]
 Every payment an app makes today is test money. The shopper uses Stripe test mode and a Visa test card, or a simulated charge. The wallet pays USDC on Solana devnet, which has no value. The example app's `example.spend` moves no money at all.
@@ -20,6 +20,7 @@ Every payment an app makes today is test money. The shopper uses Stripe test mod
 | `fetch` | The box as a chat agent in ASI:One | [Reach GurtOS from ASI:One](/guides/asi-one/) |
 | `find` | Search over photos, files and finished tasks | [Search your files](/guides/find/) |
 | `jira` | Every task as a Jira issue, with approve and roll back in Jira | [Connect Jira](/guides/connect-jira/) |
+| `mana` | A read-only status summary for an outside status page | |
 | `shopper` | Price and restock watches, household reorders, signed test checkouts | [Set up the shopping agent](/guides/shopping-agent/) |
 | `wallet` | x402 payments for APIs, in USDC on Solana devnet | [Let agents pay for APIs](/guides/agent-payments/) |
 
@@ -96,7 +97,7 @@ Indexes every photo, text file and finished task, and searches them by meaning w
 | Routes | `GET /t/find/search?q=&kind=&k=`, `GET /t/find/file?workspace=&path=`, `GET /t/find/status` |
 | Vault keys | `MOSS_PROJECT_ID`, `MOSS_PROJECT_KEY`, `VULTR_INFERENCE_KEY` (optional). The Claude fallback uses `FACTORY_API_KEY`. |
 
-The vision models it tries, in order, are listed in `tracks/find/find.ts`. When none answers, a Droid task describes the photos. Any task given `find.search` can search every workspace, not only its own.
+The vision models it tries, in order, are listed in `tracks/find/find.ts`. When none answers, a Droid task describes the photos. Any task given `find.search` can search every workspace, not only its own. The Moss session is open only while someone searches. The cloud copy of the index is off unless the box runs with `FIND_CLOUD_SYNC=1`.
 
 ## `jira`
 
@@ -105,10 +106,19 @@ Writes every task to a Jira issue: the prompt, the approvals, blocked attempts, 
 | Slot | What |
 |---|---|
 | Log readers | Creates and updates one issue per task, with status, labels, comments and the `box.task` issue property |
-| Routes | `GET /t/jira/task`, `POST /t/jira/answer`, `POST /t/jira/undo`. Each needs the shared secret as a bearer token. |
+| Routes | `GET /t/jira/task`, `POST /t/jira/answer`, `POST /t/jira/undo`. Each needs the shared secret as a bearer token. The app lists them in `openRoutes`, so they need no paired device's token. |
 | Vault keys | `ATLASSIAN_SITE`, `ATLASSIAN_EMAIL`, `ATLASSIAN_API_TOKEN`, `JIRA_BOX_SECRET` |
 
 It writes nothing to Jira until `BOX_HOME/jira/config.json` exists.
+
+## `mana`
+
+A read-only summary of the box for an outside status page: counts of tasks in each state, total cost, the active and recent tasks with their titles, states, latest step and cost, and the questions waiting for an OK. It holds no prompts, tool calls, log lines or secrets.
+
+| Slot | What |
+|---|---|
+| Routes | `GET /t/mana/status`. It allows any origin, so a page on another site can read it. The app lists it in `openRoutes`, so it needs no token. |
+| Vault keys | none |
 
 ## `shopper`
 

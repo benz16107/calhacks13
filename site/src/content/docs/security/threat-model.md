@@ -13,7 +13,8 @@ This page states what GurtOS tries to protect, from whom, and where its protecti
 | Your files | Workspaces under `BOX_HOME/workspaces` |
 | Your money | Payment keys in the vault, task budgets and approvals |
 | The record of what happened | The action log, `BOX_HOME/log.jsonl` |
-| Your say over risky actions | Approvals, answered from the portal or a paired phone |
+| Your say over risky actions | Approvals, answered from the box's own screen or a paired phone |
+| Your settings and your devices | Settings, setup, the list of paired devices, and which apps are on |
 | The box itself | Root on the machine, the core service, the system image |
 
 ## Who GurtOS defends against
@@ -32,7 +33,13 @@ The main adversary is **the agent inside a task**, whether it is wrong, buggy, o
 | A malicious web page | Plant instructions in the agent | Same limits as a prompt-injected agent. The attempt and any refused connection are in the log. |
 | Another task | Read or change this task's files or processes | Separate users, private copies, `ProtectProc=invisible`, private `/tmp` |
 | A power cut | Lose work or pay twice | The log is fsynced per line. Tasks resume from their last logged step. A call cut off mid-way runs again with the same key. |
-| A stolen phone | Approve requests | Revoke its device token. Its next answer through the API is refused. See the limits below. |
+| Someone on the internet | Reach the box's API or SpacetimeDB | On the OS image, the inbound firewall drops them. Port 7700 is open to private networks only, port 3000 to nothing. |
+| Someone on your network | Read tasks, start work, approve spending, undo tasks | Every request from off the box needs a paired device's token, else `401`. SpacetimeDB listens on `127.0.0.1` only, and its `answer` works only from a connection the box vouched for. |
+| | Forge who approved | A paired device's answer is logged under the device's name, whatever the request says |
+| | Change settings or keys, or pair a new device | These are the owner's: the box's own screen or a device paired as the owner. Others get `403`. No route returns a vault value. |
+| A paired phone that is not the owner's | Read the vault, change settings, hand a task your folders, Keep | All owner-only (`403`) |
+| A stolen phone | Approve requests | Remove the device. Its next request is refused. See the limits below. |
+| A task, or a person, aiming an agent at system files | Give a task `/etc`, the box's own state or a root-owned folder | Folders are owner-only, must be in the owner's home or chosen folders, and the system and the box's state are always refused, links included |
 | A tampered update | Install altered system code | The image must be signed by the build key and match its hash |
 | A broken update | Leave the box unusable | The new system is tried once and kept only if it reports healthy |
 | Someone at the keyboard | Log in to the box | The OS image has no login prompt, no human account and no SSH in release builds |
@@ -49,10 +56,14 @@ These are known limits of the current release. Some are planned work; see the [r
 
 ### Access to the box's services
 
-- **The HTTP API has no authentication.** Anyone who can reach port 7700 can start tasks, answer approvals and undo work. It listens on `127.0.0.1` by default. If you set `BOX_LISTEN`, the network you expose it on is your access control.
-- **SpacetimeDB listens on every interface.** Its `task` and `approval` tables are public, and anyone who can reach port 3000 can call the `answer` reducer. Keep the box on a network you trust, or block port 3000 at your firewall.
-- **Device tokens are optional.** A paired phone's token is checked when it is sent, so revoking a phone stops that token. A request with no token is still accepted. Revoking a phone does not lock out someone who can reach the API or SpacetimeDB another way.
-- **Webhooks and app routes** have no authentication of their own. An app that needs one must check a secret itself, as the Jira app does.
+- **The box's own machine is trusted.** A request over the Unix socket, or from `127.0.0.1` without a proxy header, counts as the box's own screen and may do everything, owner's actions included. Task users cannot make such a request, because their network reaches only the proxy. Other software you run on the box can. On GurtOS Personal that includes programs you run in your own desktop session.
+- **A local proxy that drops forwarding headers looks local.** The box tells relayed requests apart by headers such as `X-Forwarded-For`. A proxy or tunnel on the box that forwards outside requests without them would hand every caller the box's own rights.
+- **Device tokens are bearer secrets.** Whoever holds one can use it, and it does not expire. A stolen phone or a copied token works until you remove the device.
+- **No encryption in transit.** The API serves plain HTTP. On a network others can watch, a token or a task's contents can be read on the way. Reach the box over a VPN, or put a TLS proxy in front of it.
+- **A paired device is trusted with tasks.** Any paired device, not only the owner's, can start tasks, undo any task and answer any approval.
+- **SpacetimeDB has no login.** It listens on `127.0.0.1`, and its `answer` reducer accepts only vouched connections. If you widen it with `STDB_LISTEN`, anyone who can reach port 3000 can still read every task.
+- **A private network is trusted to reach the API.** On GurtOS Server, anyone on your home network or tailnet can reach port 7700. They still need a paired device's token for anything but the health check and redeeming a pairing code, and a pairing code comes only from the box's own screen.
+- **Webhooks and app routes** accept any paired device's token. An app can also mark routes as open (`openRoutes`), with no token at all, for a route that is public on purpose or checks its own secret. The Mana app's status route and the Jira app's three routes are open. An open route is only as safe as its own check.
 
 ### Data that leaves on purpose
 

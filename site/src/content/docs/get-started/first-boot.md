@@ -20,12 +20,17 @@ update keeps everything it made. Both files live in `/etc/box` on the data parti
 | `identity.key`, `identity.pub` | The box's own ed25519 key pair |
 | `vault.env` | The vault, empty, readable by root only |
 
-The box's id is the first 10 hex digits of the SHA-256 of its public key. The box takes `box-<id>` as its hostname,
-and the service uses it as the box's id and name, so no two boxes share one.
+The box's id is the first 6 hex digits of the SHA-256 of its public key. The box takes `gurt-<id>` as its hostname,
+for example `gurt-bf07fe`, and the service uses it as the box's id and name, so no two boxes share one.
 
 Then the GurtOS service starts. It creates its state folder `/var/lib/box`, makes the `home` workspace, loads its
-firewall rule, starts its network proxy, loads every installed app, and listens on `127.0.0.1:7700`. SpacetimeDB
-starts beside it on port 3000.
+firewall rule, starts its network proxy, loads every installed app, and listens on port 7700. On GurtOS Server it listens on every address, behind the
+firewall below. SpacetimeDB
+starts beside it on `127.0.0.1:3000`.
+
+The OS image also loads an inbound firewall. It drops everything that comes in except replies to the box's own
+connections, ping and DHCP, plus the box's API on port 7700 from private networks only. SpacetimeDB is never
+reachable from the network. Debug builds also allow SSH.
 
 Last, `box-confirm.service` waits for the box to report healthy. On a fresh install this confirms the running
 system. After an update, it decides whether to keep the new system. See [System updates](/concepts/system-updates/).
@@ -46,28 +51,32 @@ After a power cut, the screen lists the tasks that picked up where they stopped.
 
 ## Add your keys
 
-Agent tasks need `FACTORY_API_KEY` in the vault, and some apps need their own keys. A release build of the OS image
-has no shell, and the portal has no screen for keys yet, so for now:
+Agent tasks need `FACTORY_API_KEY` in the vault, and some apps need their own keys. The box sets a key with
+`PUT /api/vault/<NAME>`, which only the box itself or a phone paired as the owner may call, and never returns a
+value. The portal has no screen for it yet, and a release build has no shell, so for now:
 
-- build a **debug** image (`BOX_SSH_KEY=~/.ssh/id_ed25519.pub image/build`) and add keys over SSH, or
+- build a **debug** image (`BOX_SSH_KEY=~/.ssh/id_ed25519.pub image/build`) and set keys over SSH, or
 - use [the Ubuntu install](/get-started/install-on-ubuntu/).
 
 See [Add a secret to the vault](/guides/add-a-secret/). A settings screen for keys is [planned](/project/roadmap/).
 
 ## Pair a phone
 
-Pairing gives a phone its own device token. When the phone answers a request, the action log records which phone it
-was, and you can remove one phone without affecting the others.
+Pairing gives a phone, or a laptop's browser, its own device token. From anywhere but the box itself, the API
+answers only requests that carry a paired device's token. When a phone answers a request, the action log records
+which phone it was, and you can remove one phone without affecting the others.
 
 In outline:
 
-1. Give the phone a route to the box. The API listens on `127.0.0.1` until you set `BOX_LISTEN`.
-2. Open the portal from a laptop at the box's address and open **Settings**. It shows a QR code and a one-time code
-   that works for 5 minutes.
-3. Scan the QR code with the phone, check the code matches, name the phone and pair it.
+1. Put the phone on the same private network as the box: your home network, or a VPN such as Tailscale. GurtOS
+   Server listens on every address, sets its own phone address (`BOX_URL`) at each start, and its firewall lets the
+   API in from private networks only, never from the public internet.
+2. On the box's own screen, open **Settings**. It shows a one-time code that works for 5 minutes, and a QR code.
+3. Scan the QR code with the phone, or open `http://<box address>:7700/#pair/<code>` on it. Check the code matches,
+   name the phone and pair it.
 
-The box's own screen shows the code but not the QR code, because it does not know the address your phone uses to
-reach it. [Approve from your phone](/guides/approve-from-your-phone/) has the full steps.
+[Approve from your phone](/guides/approve-from-your-phone/) has the full steps, including pairing a phone as the
+owner.
 
 ## Next
 

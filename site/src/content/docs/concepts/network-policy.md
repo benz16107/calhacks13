@@ -29,6 +29,17 @@ A program that ignores the proxy settings and connects directly gets nothing. Th
 
 The proxy resolves the name once and connects to that address, so a name cannot change between the check and the connection.
 
+## The default for tasks that name no hosts
+
+A task that names no `hosts` reaches nothing, by default. The owner can change that in the box's settings:
+
+| Setting | Default | Effect |
+|---|---|---|
+| `networkDefault` | `none` | `none`: a task with no `hosts` reaches nothing. `allowlist`: it gets `defaultHosts`. |
+| `defaultHosts` | `[]` | The host rules a task gets when `networkDefault` is `allowlist` and it names none of its own |
+
+A task that names its own `hosts` always keeps exactly those. Change the settings with `PATCH /api/settings`, from the box's own screen or a phone paired as the owner. See the [HTTP API](/reference/http-api/).
+
 ## Names that land on the box
 
 Some tasks need a service on the box itself, such as a test store on `shop.localhost:8081`. A name that resolves to the box (loopback, link-local, or one of the box's own addresses) has stricter rules:

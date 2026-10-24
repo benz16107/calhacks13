@@ -3,44 +3,75 @@ title: Add a secret to the vault
 description: Put an API key in the box's vault so tools can use it on a task's behalf, while the task itself never sees the key.
 ---
 
-The vault is where the box keeps keys and tokens. Agents never read it. A tool that runs inside the box service reads the keys it declared, makes the call, and hands the task only the result. In this guide you add a key to the vault and restart the box so it loads.
+The vault is where the box keeps keys and tokens. Agents never read it. A tool that runs inside the box service reads
+the keys it declared, makes the call, and hands the task only the result. In this guide you add a key to the vault,
+either through the box's API, which takes effect at once, or by editing the file.
 
 ## Before you start
 
-- A root shell on the box. This works on a box installed on Ubuntu, and on a debug build of the ISO, which has SSH. A release build of the ISO has no shell.
 - The key's name, as the app that uses it expects. See [Vault keys](/reference/vault-keys/).
+- One of these:
+  - A shell on the box: on Ubuntu, on GurtOS Personal (a terminal on the desktop), or over SSH on a debug build of
+    GurtOS Server.
+  - A phone paired as the owner. See [pair a phone as the owner](/guides/approve-from-your-phone/#pair-a-phone-as-the-owner).
 
 :::caution[Planned]
-A screen in the portal for adding keys is planned. Until then, a release build of the ISO starts with an empty vault and no way to fill it.
+A screen in the portal for adding keys is planned. Until then, a release build of GurtOS Server has no shell and no
+screen to fill its vault.
 :::
 
-## Steps
+## With the API
 
-1. **Add one line per key.** The vault is a plain `KEY=value` file. Names are capital letters, digits and
-   underscores. Everything after `=` is the value, with no quotes. This reads the value without echoing it or
-   leaving it in your shell history:
+Only the owner may set keys: a request from the box's own machine, or from a phone paired as the owner. Names are
+capital letters, digits and underscores.
+
+1. **Set the key.** This reads the value without echoing it or leaving it in your shell history:
+
+   ```sh
+   read -rs -p 'Value: ' v && curl -s -X PUT http://127.0.0.1:7700/api/vault/FACTORY_API_KEY \
+     -H 'content-type: application/json' -d "{\"value\": \"$v\"}"; unset v
+   ```
+
+   ```json
+   {"name":"FACTORY_API_KEY","setAt":"2026-10-24T07:12:00.000Z"}
+   ```
+
+   The box writes the key to `/etc/box/vault.env`, keeps the file root-only, and uses the key at once. The action log
+   records that `FACTORY_API_KEY` was set, never the value.
+
+2. **Check the names.** No route ever returns a value:
+
+   ```sh
+   curl -s http://127.0.0.1:7700/api/vault
+   ```
+
+   ```json
+   [{"name":"FACTORY_API_KEY","setAt":"2026-10-24T07:12:00.000Z"}]
+   ```
+
+   `setAt` is `null` for a key that was put in the file by hand.
+
+## With the file
+
+The vault is a plain `KEY=value` file. Everything after `=` is the value, with no quotes.
+
+1. **Add one line per key:**
 
    ```sh
    read -rs -p 'Value: ' v && echo "FACTORY_API_KEY=$v" | sudo tee -a /etc/box/vault.env >/dev/null; unset v
    ```
 
-   On a debug build of the OS image you are already root, and the image has no `sudo` and no text editor. Run the
+   On a debug build of GurtOS Server you are already root, and the image has no `sudo` and no text editor. Run the
    same line without `sudo`.
 
-2. **Check the names.** List them without showing the values:
-
-   ```sh
-   sudo cut -d= -f1 /etc/box/vault.env
-   ```
-
-3. **Keep it readable by root only.** The box refuses to start if anyone else can read the file.
+2. **Keep it readable by root only.** The box refuses to start if anyone else can read the file.
 
    ```sh
    sudo chown root:root /etc/box/vault.env
    sudo chmod 600 /etc/box/vault.env
    ```
 
-4. **Restart the box service.** The vault is read once, at start.
+3. **Restart the box service.** The box reads the file at start.
 
    ```sh
    sudo systemctl restart box.service
@@ -55,7 +86,8 @@ systemctl is-active box.service
 curl -s http://127.0.0.1:7700/api/health
 ```
 
-The service is `active` and health answers `{"ok":true,...}`. If the file's mode is wrong, the service fails and the journal says the vault "must be readable by root only (chmod 600)":
+The service is `active` and health answers `{"ok":true,...}`. If the file's mode is wrong, the service fails and the
+journal says the vault "must be readable by root only (chmod 600)":
 
 ```sh
 journalctl -u box.service -n 20
@@ -72,12 +104,14 @@ A tool whose key is missing fails its call with "the vault has no `<NAME>`", whi
 | A model job | Only the keys in its own `secrets` list. |
 | An app's routes and triggers | Only the keys in the app's `secrets` list. |
 | The box's network proxy | `FACTORY_API_KEY`, which it swaps in on calls to Factory, so a Droid task holds only a placeholder. |
+| You, through the API | Names and when each was set. Never a value. |
 
 ## Limits
 
 - The vault is a plain file on the data disk, protected by file permissions. It is not encrypted at rest.
-- Changes need a restart of the box service.
-- A tool's result goes into the action log. A tool that returned a key would leak it there, so tools must never return one.
+- Edits to the file by hand need a restart of the box service. Keys set through the API do not.
+- A tool's result goes into the action log. A tool that returned a key would leak it there, so tools must never return
+  one.
 
 ## Related
 

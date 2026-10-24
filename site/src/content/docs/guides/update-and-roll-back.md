@@ -3,14 +3,14 @@ title: Update and roll back
 description: Install a signed system update on a box, let it prove itself healthy, and roll back to the previous system if you need to.
 ---
 
-A box installed from the ISO holds two complete systems on its disk, in slots A and B. It runs from one. An update is written to the other slot and started once on trial. It becomes the default only if the box comes up healthy within 5 minutes. In this guide you check which system runs, apply an update, and roll back.
+A machine installed from a GurtOS ISO, Server or Personal, holds two complete systems on its disk, in slots A and B. It runs from one. An update is written to the other slot and started once on trial. It becomes the default only if the box comes up healthy within 5 minutes. In this guide you check which system runs, apply an update, and roll back.
 
 A box installed on Ubuntu updates differently. See [Update a box installed on Ubuntu](#update-a-box-installed-on-ubuntu) below.
 
 ## Before you start
 
-- A box installed from the ISO, with a root shell. A **debug build** has SSH for root. A release build has no shell yet, so it cannot run these commands.
-- An update image from the same build machine that made your box: `root-<arch>.sqfs`, with `root-<arch>.sqfs.sha256` and `root-<arch>.sqfs.sig` beside it. `image/build` makes all three.
+- A machine installed from a GurtOS ISO, and a root shell on it. On GurtOS Personal, open a terminal and use `sudo`. On GurtOS Server, a **debug build** (`gurtos-server-<arch>-debug.iso`) has SSH for root; a release build has no shell, so it cannot run these commands yet.
+- An update image of the **same edition** from the same build machine that made your system: `gurtos-<edition>-<arch>.sqfs`, with `gurtos-<edition>-<arch>.sqfs.sha256` and `gurtos-<edition>-<arch>.sqfs.sig` beside it. The edition is `server` or `personal`. `image/build` makes all three.
 
 ## Steps
 
@@ -29,10 +29,12 @@ A box installed on Ubuntu updates differently. See [Update a box installed on Ub
 2. **Apply the update.** Give it a URL or a local file. The `.sha256` and `.sig` files must sit beside it.
 
    ```sh
-   box-update apply https://updates.example.com/root-x86_64.sqfs
+   box-update apply https://updates.example.com/gurtos-server-x86_64.sqfs
    ```
 
-   The box checks the signature against its build key in `/etc/box-os/update.pub` and checks the hash. If either fails, it stops and writes nothing:
+   On Personal, run it as `sudo box-update apply ...` and use the `gurtos-personal-<arch>.sqfs` image.
+
+   The box checks the signature against its build key in `/etc/box-os/update.pub`, checks the hash, and checks that the image is the same edition. If any check fails, it stops and writes nothing:
 
    ```text
    box-update: the update is not signed by this box's build key
@@ -64,7 +66,9 @@ This makes the other slot the default again and restarts into it.
 
 Everything on the data partition stays: the action log, workspaces and tasks (`/var/lib/box`), the vault and the box's identity (`/etc/box`), SpacetimeDB's data, and the system journal. An update also carries over the machine id, SSH host keys and the task users, so a task that was running resumes with the same Linux user.
 
-Changes made by hand inside a running system slot are lost at the next update. That is by design.
+On GurtOS Personal, `/home` is on the data partition too, and an update carries over people's accounts, their `sudo` membership, saved network connections, the time zone, language and computer name.
+
+Changes made by hand inside a running system slot are lost at the next update. That is by design. On Personal this includes software installed with `apt` outside your home folder: reinstall it after an update.
 
 ## Update a box installed on Ubuntu
 
@@ -78,7 +82,7 @@ It copies the checkout to `/opt/box`, installs dependencies and restarts the ser
 
 ## Limits
 
-- An update must be signed by the one key on the build machine that made the box. Images from another build machine will not install.
+- An update must be signed by the one key on the build machine that made the box, and be the same edition. Images from another build machine, or of the other edition, will not install.
 - There is no protection against installing an older signed image, and no key rotation.
 - A new system that hangs, instead of failing its health check or panicking, stays hung until someone restarts the machine.
 - A change to the boot menu itself needs a reinstall.
@@ -88,5 +92,5 @@ It copies the checkout to `/opt/box`, installs dependencies and restarts the ser
 
 - [System updates and rollback](/concepts/system-updates/)
 - [Disk layout](/reference/disk-layout/)
-- [Install Server](/get-started/install-server/)
+- [Install GurtOS Server](/get-started/install-server/)
 - [Resume after power loss](/concepts/resume-after-power-loss/)

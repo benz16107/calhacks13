@@ -4,11 +4,50 @@ description: What changed in GurtOS, newest first. GurtOS has no numbered releas
 ---
 
 GurtOS has no numbered releases yet. Everything below is part of one early preview and may change. Dates are in
-Pacific Time.
+Eastern Time.
 
 ## Preview
 
-### 2026-10-24
+### 2026-10-24: access, setup and GurtOS Personal
+
+**Security**
+- From anywhere but the box itself, every API request needs a paired device's token. The health check, redeeming a
+  pairing code and the portal's own pages stay open.
+- Setup, settings, the vault, apps on and off, the owner, the owner's folders, Keep and Undo Keep are for the owner:
+  the box's own screen, or a phone paired as the owner.
+- SpacetimeDB listens on `127.0.0.1` only. Phones follow the box's API and its log stream instead.
+- Folders handed to agents must be in the owner's home or a folder the owner chose in Settings, never the system or
+  the box's own state.
+- Undo deletes the task's layer from disk.
+- The OS image has an inbound firewall. GurtOS Server opens its API to private networks only (home networks and
+  Tailscale), never the public internet, and sets its own address for pairing, so the box's screen shows a QR code.
+- SpacetimeDB's `answer` works only from a connection the box has vouched for, and records the vouched name.
+- Apps can mark routes as open (`openRoutes`) when the route is public on purpose or checks its own secret, as the
+  Mana status page and the Jira panel do.
+
+**GurtOS Personal**
+- An installer ISO, `gurtos-personal-<arch>.iso`, with Ubuntu's GNOME desktop, GNOME's own first-boot setup and the
+  same A/B updates and rollback as Server. The first account becomes the owner.
+- The desktop layer: approvals as notifications, a top-bar indicator, the GurtOS app, **Ask an Agent** in Files, a
+  review window with Keep and Undo, and a first-run welcome.
+- Undo Keep (`POST /api/tasks/<id>/unkeep`) puts kept files back with their old content, owner and mode.
+- Keep never changes a file's owner or widens its permissions. A task can work on several folders at once.
+- `task.review` and a `keep` log event say where a task's changes stand.
+- The owner can be set while the box runs (`PUT /api/owner`).
+
+**Core**
+- The box's API for first-run setup, settings, the App Center and the vault: `/api/setup`, `/api/settings`,
+  `/api/apps?all=1` with enable and disable, `GET /api/vault` (names only) and `PUT /api/vault/<NAME>`.
+- Settings the core enforces: a spend above `approvalThresholdCents` (default $100) always asks; a default budget;
+  a default network rule and hosts; folders agents may use.
+- `GET /api/system` reports the edition, version, build, hostname and network.
+- A failed task's error ends with the worker's own last error message.
+- Images are named `gurtos-<edition>-<arch>`. Debug builds add `-debug`.
+
+**Test suite**
+- Real Droid tasks are off by default, because they spend model credit. `--live-droid` turns them on.
+
+### 2026-10-24: the OS image and the portal
 
 **GurtOS Personal: owner folders**
 - A task can work on a copy of one of the owner's real folders: `folder` on `POST /api/tasks`. The real folder is
@@ -24,7 +63,8 @@ Pacific Time.
 - Two system slots. Signed whole-system updates are tried once and kept only if the box reports healthy within
   5 minutes; otherwise the box rolls back by itself. `box-update status`, `apply` and `rollback`.
 - No human account, no login prompt, no `sudo`, no package manager. Release builds have no SSH server.
-- The screen shows the portal's box screen. Each box names itself `box-<id>` from its own key.
+- The screen shows the portal's box screen. Each box names itself `gurt-<id>` from the first 6 hex digits of a hash
+  of its own key.
 
 **Portal**
 - One web app for the box's own screen, a browser and a phone: home screen, Tasks, a task's steps and diff with Undo
@@ -40,7 +80,7 @@ Pacific Time.
 - One approval per action: a tool call that is retried reuses its approval and is charged once. Requests can wait
   past a client's tool-call timeout. Approvals still pending when a task ends are closed.
 
-### 2026-10-23
+### 2026-10-23: the core and the apps
 
 **Core**
 - Each task runs as its own Linux user, in its own overlayfs copy of its workspace, in a hardened systemd unit.

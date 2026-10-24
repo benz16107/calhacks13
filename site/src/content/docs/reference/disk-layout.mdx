@@ -5,7 +5,7 @@ description: The partitions the GurtOS installer makes, what survives a system u
 
 import DiskLayout from '../../../assets/diagrams/disk-layout.svg';
 
-The GurtOS keeps two complete systems on disk, slots A and B, and runs from one. An update is written to the other slot, started once on trial, and kept only if the box comes up healthy. Everything that must outlive an update lives on a separate data partition. For the reasoning, read [System updates](/concepts/system-updates/). To run an update, see [Update and roll back](/guides/update-and-roll-back/).
+GurtOS keeps two complete systems on disk, slots A and B, and runs from one. An update is written to the other slot, started once on trial, and kept only if the box comes up healthy. Everything that must outlive an update lives on a separate data partition. For the reasoning, read [System updates](/concepts/system-updates/). To run an update, see [Update and roll back](/guides/update-and-roll-back/).
 
 <figure class="diagram">
   <DiskLayout />
@@ -20,11 +20,16 @@ The installer erases the disk and makes these partitions, in this order:
 |---|---|---|---|---|
 | BIOS boot | 1 MB | `box-bios` | | GRUB for machines that start with BIOS. x86 only. |
 | EFI system partition | 512 MB | `box-esp` (FAT label `BOX-ESP`) | `/boot/efi` | GRUB, its menu, and `grubenv`, which says which slot starts |
-| System slot A | 6 GB | `box-a` | `/` when running | A whole system: kernel, Ubuntu base, the box service |
-| System slot B | 6 GB | `box-b` | `/` when running | The other system. Empty until the first update. |
+| System slot A | 6 GB, 12 GB on GurtOS Personal | `box-a` | `/` when running | A whole system: kernel, Ubuntu base, the box service, and the desktop on Personal |
+| System slot B | the same as slot A | `box-b` | `/` when running | The other system. Empty until the first update. |
 | Data | the rest | `box-data` | `/data` | Everything that must outlive an update |
 
-The two system slots take 12 GB. The smallest disk that works is about 17 GB. Use at least 25 GB in practice.
+| Edition | Both slots | Smallest disk | Use in practice |
+|---|---|---|---|
+| GurtOS Server | 12 GB | about 17 GB | 25 GB or more |
+| GurtOS Personal | 24 GB | about 29 GB | 48 GB or more |
+
+The installer refuses a disk too small for both slots, the EFI system partition and 4 GB of data.
 
 The installer uses a blank disk straight away. It erases a disk that has anything on it only after someone types `erase` on the box's screen.
 
@@ -40,9 +45,20 @@ The data partition is mounted at `/data`, and these paths are bind-mounted from 
 | `/root/.config/spacetime` | The identity that owns the box's SpacetimeDB database |
 | `/var/log/journal` | System logs, so a failed update's logs are still there after the rollback |
 
+GurtOS Personal also keeps these on the data partition, and will not start its desktop without them:
+
+| Path | What |
+|---|---|
+| `/home` | People's home folders |
+| Network connections | Saved Wi-Fi and wired connections (NetworkManager) |
+| AccountsService | Account pictures and account types |
+| Bluetooth | Paired devices |
+
 `/data/update` holds `trial` and `last`: the update in progress and the last result.
 
-An update also copies into the new slot: `/etc/machine-id`, SSH host keys (debug builds), and the task users the core made (uids 30000 to 39999), so a resumed task keeps its uid.
+An update also copies into the new slot: `/etc/machine-id`, SSH host keys (debug builds), and the task users the core made (uids 30000 to 39999), so a resumed task keeps its uid. On GurtOS Personal it also carries people's accounts (uids 1000 to 29999), their groups, including `sudo`, the time zone, language, computer name and login settings.
+
+On GurtOS Personal, software someone installs with `apt`, and any other change outside their home folder and the settings above, is gone after the next system update, because the update replaces the whole system.
 
 ## Which slot starts
 
@@ -57,9 +73,9 @@ The running slot is on the kernel command line as `box.slot=a` or `box.slot=b`. 
 
 ## An update, step by step
 
-1. `box-update apply <file or URL>` fetches `root-<arch>.sqfs` with its `.sha256` and `.sig`.
+1. `box-update apply <file or URL>` fetches `gurtos-<edition>-<arch>.sqfs` with its `.sha256` and `.sig`.
 2. It checks the signature on the hash against `/etc/box-os/update.pub`, then checks the hash against the file. Either failing stops the update.
-3. It formats the other slot, unpacks the image into it, and checks it holds a kernel and the box service.
+3. It formats the other slot, unpacks the image into it, and checks it holds a kernel and the box service, and that it is the same edition as the running system. A GurtOS Server image never replaces GurtOS Personal, which would lose its desktop.
 4. It copies the machine's identity and task users across, as above.
 5. It sets `next_entry` to the new slot, writes `/data/update/trial`, and restarts.
 6. At every start, `box-confirm.service` waits up to 5 minutes for `GET /health` on the box's API to answer `ok`.
@@ -71,16 +87,16 @@ Each result is written to `/data/update/last` and printed on the serial console.
 
 ## Update files
 
-`image/build` makes these, and the same `root-<arch>.sqfs` is both on the install disc and the update file:
+`image/build` makes these, and the same `.sqfs` is both on the install disc and the update file:
 
 | File | What |
 |---|---|
-| `box-<arch>.iso` | The install disc. Starts with BIOS and UEFI. Also runs as a live system. |
-| `root-<arch>.sqfs` | The whole system as one compressed image |
-| `root-<arch>.sqfs.sha256` | Its SHA-256 hash |
-| `root-<arch>.sqfs.sig` | The hash, signed with the build machine's ed25519 update key |
+| `gurtos-<edition>-<arch>.iso` | The install disc. Starts with BIOS and UEFI. Also runs as a live system. |
+| `gurtos-<edition>-<arch>.sqfs` | The whole system as one compressed image |
+| `gurtos-<edition>-<arch>.sqfs.sha256` | Its SHA-256 hash |
+| `gurtos-<edition>-<arch>.sqfs.sig` | The hash, signed with the build machine's ed25519 update key |
 
-`<arch>` is `x86_64` or `arm64`. Debug builds are named `<arch>-debug`.
+`<edition>` is `server` or `personal`, and `<arch>` is `x86_64` or `arm64`: for example `gurtos-server-x86_64.iso` or `gurtos-personal-x86_64.iso`. Debug builds end in `-debug`, such as `gurtos-server-x86_64-debug.iso`.
 
 ## `box-update`
 
@@ -88,8 +104,8 @@ Run as root on the box. Release builds have no shell, so today this needs a debu
 
 ```sh
 box-update status                                   # the running slot, the other slot, the default, the last result
-box-update apply https://updates.example/root-x86_64.sqfs
-box-update apply /tmp/root-x86_64.sqfs --no-reboot  # write the slot now, restart later
+box-update apply https://updates.example/gurtos-server-x86_64.sqfs
+box-update apply /tmp/gurtos-server-x86_64.sqfs --no-reboot  # write the slot now, restart later
 box-update rollback                                 # make the other slot the default and restart into it
 box-update confirm                                  # what box-confirm.service runs at every start
 ```
@@ -111,5 +127,5 @@ Updates from the portal, and a shell-free way to apply them on release builds, a
 ## Related
 
 - [System updates](/concepts/system-updates/)
-- [Install Server](/get-started/install-server/)
+- [Install GurtOS Server](/get-started/install-server/)
 - [Files and paths](/reference/files-and-paths/)

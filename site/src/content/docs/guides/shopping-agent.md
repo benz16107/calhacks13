@@ -46,7 +46,7 @@ Every payment here is a test payment: Stripe test mode with Stripe's Visa test c
    sudo systemctl restart box.service
    ```
 
-4. **Open the app.** In the portal, open **Shopper (test payments)**, or browse to `/t/shopper/` on the box. The store is at `/t/shopper/store`.
+4. **Open the app.** In the portal, open **Shopper (test payments)**, or browse to `/t/shopper/` on the box. The store is at `/t/shopper/store`. Open it on the box's own screen, or through an SSH tunnel to the box. From another device the box asks every request for a paired device's token, and the app's pages do not send one yet.
 
 5. **Make a watch.** Type what you want in words, or fill in the store, product, price limit and quantity and click **Set up watch**. For example: "Two packs of the V60 paper filters when they're under $7 each." Droid finds the product and sets the rule with the `shopper.watch` tool. It cannot buy anything itself.
 

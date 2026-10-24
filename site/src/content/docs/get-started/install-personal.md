@@ -1,57 +1,130 @@
 ---
 title: Install GurtOS Personal
-description: GurtOS Personal runs agents beside you on your own Ubuntu desktop. It is in development; this page describes what it will install and how it will work.
+description: Install GurtOS Personal from its ISO on your own computer. You get Ubuntu's GNOME desktop with your own account, and agents work beside you as separate users.
 sidebar:
-  label: Install Personal
+  label: Install GurtOS Personal
   badge:
     text: Preview
     variant: note
 ---
 
-GurtOS Personal puts the GurtOS service on your own laptop or desktop. You keep using the computer as usual, with
-Ubuntu's GNOME desktop and your own account. Agents work beside you as separate users without `sudo`, on copies
-of your real folders, and nothing they change reaches your files until you choose **Keep**.
+GurtOS Personal is GurtOS on your own laptop or desktop. You use it as a normal computer, with Ubuntu's GNOME desktop
+and your own account with `sudo`. Agents work beside you as separate users without `sudo`, on copies of your
+folders, and nothing in your folders changes until you choose **Keep**.
 
-:::caution[Preview, in development]
-GurtOS Personal has no release yet and no supported installer. The core already runs agents on copies of an owner's
-folders with Keep and Undo, through its API. The desktop pieces below run on test machines and are not released.
-To try the core part today, see [the API steps](/guides/keep-or-undo/#with-the-api-works-today).
+It installs from its own ISO, like [GurtOS Server](/get-started/install-server/), and updates the same way: the
+whole system at once, with an automatic rollback if the new system is not healthy.
+
+:::caution[Preview]
+GurtOS Personal installs and runs, and has been walked end to end on a fresh install. Two things are not finished:
+a fresh install has an empty vault and nothing on the desktop to fill it yet, and pairing a phone needs the box's
+address set by hand. See [What is not finished](#what-is-not-finished).
 :::
 
-## What it will install
+## Requirements
 
-Personal is the same core as Server, plus a layer for the desktop. The pieces being built:
+| | Minimum | Recommended |
+|---|---|---|
+| CPU | x86_64 | 4 cores |
+| Memory | 4 GB | 8 GB or more. The desktop needs room, and each task may use up to 2 GB. |
+| Disk | 29 GB | 48 GB. The two system slots take 24 GB. |
+| Firmware | BIOS or UEFI, with **Secure Boot off** | |
 
-| Piece | What it does |
-|---|---|
-| The GurtOS service | The same core as Server: task users, the vault, the network proxy, approvals and the action log. It runs as a system service, with your user name as `BOX_OWNER`. |
-| Approvals as notifications | A small service in your desktop session follows the box's live events. An approval appears as a GNOME notification with **Approve** and **Deny**. The log records the answer as `desktop:<your user name>`. |
-| Top-bar indicator | Shows how many agents are working and how many requests need you. Its menu lists them, and you can answer a request from there. |
-| The GurtOS app | The portal in its own window, pinned to the dock, with a badge for requests that need you. |
-| Ask an agent | An item in the Files right-click menu. A dialog asks what to do, the budget, and which folders the task may touch. |
-| Review | When a task on your folders finishes, a window shows the files it changed and the diff, with **Keep** and **Undo**. |
-| Welcome | A first-run window after GNOME's own account setup. It explains how agents work on this computer and offers to pair a phone. |
+An arm64 build exists but has not been tested.
 
-## How it will work
+:::danger
+The installer takes the whole disk. Dual boot with another operating system is not supported. A disk with anything
+on it is erased only after you type `erase` on the screen, but back up first.
+:::
 
-1. You right-click a folder in Files and choose **Ask an agent**.
-2. You describe the job and set a budget. GurtOS starts a task as a new Linux user, working on an overlay copy of
-   that folder. Your own files are not touched while it works.
-3. The agent's requests reach you as notifications. Other tasks, and your own work, carry on.
-4. When the task finishes, the review window shows what it changed. **Keep** applies those changes to your real
-   folder. **Undo** throws them away.
+## Get the ISO
 
-The rules that keep an agent apart from your account are the ones GurtOS Server uses. See
-[Agents as their own users](/concepts/agent-users/) and [Workspaces and layers](/concepts/workspaces-and-layers/).
+GurtOS has no public downloads yet. If you have the source, build it on an Ubuntu 24.04 build machine where you have
+root:
 
-## Requirements, when released
+```sh
+BUILD_SHELL='ssh my-build-vm' image/build personal          # gurtos-personal-x86_64.iso
+BUILD_SHELL='ssh my-build-vm' image/build personal arm64    # gurtos-personal-arm64.iso, untested
+```
 
-- Ubuntu 24.04 with the GNOME desktop, on x86_64 or arm64.
-- An account with `sudo` for the install. Agents never get it.
-- At least 8 GB of memory. Each task may use up to 2 GB.
+The build leaves `gurtos-personal-<arch>.iso` and its update file `gurtos-personal-<arch>.sqfs` (with `.sha256` and
+`.sig`) in `/var/lib/box-image/out/` on the build machine. With `BOX_SSH_KEY` it makes a debug build named with
+`-debug`.
+
+## Install
+
+1. Write the ISO to a USB stick, or attach it to a virtual machine, and start from it. The steps are the same as for
+   [GurtOS Server](/get-started/install-server/#install-on-a-real-machine): Secure Boot off, then start from the disc.
+2. The disc's menu says GurtOS Personal and waits 5 seconds, then installs. On a disk with data, type `erase` when
+   asked.
+3. The machine restarts into GNOME's own first-boot setup: language, keyboard, time zone, your name and a password.
+   The account it makes is an administrator, so it is in the `sudo` group.
+4. Within a second of that account existing, GurtOS makes it the box's **owner**. Only the owner can hand folders
+   to agents, keep their changes and change settings.
+5. Log in. After Ubuntu's welcome, the GurtOS welcome explains what agents can and cannot do. GurtOS is first in the
+   dock, and its indicator is in the top bar.
+
+## Add your model key
+
+Agent tasks need a Factory API key in the vault. The desktop has no screen for it yet. Open a terminal and run:
+
+```sh
+read -rs -p 'FACTORY_API_KEY: ' v && echo
+printf '{"value":"%s"}' "$v" | curl -s -X PUT http://127.0.0.1:7700/api/vault/FACTORY_API_KEY \
+  -H 'content-type: application/json' -d @- && unset v
+```
+
+A request from the computer itself counts as the owner, so this needs no `sudo`. The key never shows on screen or
+in the process list, and the box never returns it. See [Add a secret to the vault](/guides/add-a-secret/).
+
+## Use it
+
+Right-click a folder in Files and choose **Ask an Agent**. Describe the job and set a budget. The agent works on a
+copy of the folder as its own user.
+
+![Files with a folder's menu open, showing an Ask an Agent item.](../../../assets/screens/personal-files-ask.png)
+
+*Ask an Agent in Files, on a fresh GurtOS Personal install.*
+
+Requests for your OK arrive as GNOME notifications with **Deny** and **Approve**. The log records your answer as
+`desktop:<your user name>`.
+
+![A GNOME notification from GurtOS asking to approve an $8.00 test spend, with Deny and Approve buttons.](../../../assets/screens/personal-approval.png)
+
+*An approval as a notification. The spend is test money.*
+
+When the task is done, a review window shows every changed file and the diff. **Keep** writes the changes into your
+folder; **Undo** throws them away. Your folder is untouched until you choose.
+
+![A review window listing two modified files with their diff, and Undo and Keep buttons.](../../../assets/screens/personal-review.png)
+
+*The review after a task fixed spelling in a thesis chapter.*
+
+See [Give an agent a folder, then keep or undo](/guides/keep-or-undo/) for the details, including undoing a Keep.
+
+## What updates keep
+
+GurtOS Personal updates the whole system, like Server, and rolls back by itself if the new system is not healthy.
+See [System updates](/concepts/system-updates/).
+
+An update keeps your files, your account and its `sudo` membership, other people's accounts, Wi-Fi and network
+connections, Bluetooth pairings, time zone, language, the computer's name and login settings.
+
+Software you install yourself with `apt`, and other changes outside your home folder and those settings, are gone
+after the next system update, because the update replaces the whole system. Ubuntu's Software Updater is still
+installed and can update the running system, but the next GurtOS update replaces that too.
+
+## What is not finished
+
+- **Keys.** A fresh install has an empty vault, and the desktop has no screen to fill it. Use the terminal command
+  above.
+- **Phones.** The box listens on `127.0.0.1` and has no address set for phones, so pairing a phone needs
+  `BOX_LISTEN` and `BOX_URL` set by hand. See [Approve from your phone](/guides/approve-from-your-phone/).
+- **Testing.** Tested on x86_64 in virtual machines. Not tested on arm64 or on a real laptop.
 
 ## Related
 
 - [Give an agent a folder, then keep or undo](/guides/keep-or-undo/)
 - [Editions](/introduction/editions/)
+- [Agents as their own users](/concepts/agent-users/)
 - [Roadmap](/project/roadmap/)

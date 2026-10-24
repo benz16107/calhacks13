@@ -9,7 +9,7 @@ A box is divided into zones with different trust. Each arrow between zones is a 
 
 <figure class="diagram">
   <TrustBoundaries />
-  <figcaption>The zones on one box. Tasks reach the rest only through their broker and the proxy; the red paths are blocked.</figcaption>
+  <figcaption>The zones on one box. Your devices reach the API with a paired token, SpacetimeDB answers only on the box, tasks reach the rest only through their broker and the proxy, and the red paths are blocked.</figcaption>
 </figure>
 
 ## The zones
@@ -17,8 +17,9 @@ A box is divided into zones with different trust. Each arrow between zones is a 
 | Zone | What is in it | Trust |
 |---|---|---|
 | Outside | The internet, the model provider, paid APIs, outside services such as Jira | Untrusted. Reached on purpose, for specific jobs. |
-| Your devices | The portal in a browser, paired phones | Trusted to give orders. GurtOS cannot tell them apart from anyone else who reaches the API. |
-| The core, as root | The box service, the vault, every app's code, the action log, the task proxy, SpacetimeDB | Fully trusted. Holds every key. |
+| The box's own screen | The portal on the box's display, and anything else that calls the API from the box itself | Trusted like the owner |
+| Your devices | Phones and browsers paired with a one-time code | Trusted to read, start tasks, undo and answer approvals. Owner's actions only for a device paired as the owner. Anyone without a token is refused. |
+| The core, as root | The box service, the vault, every app's code, the action log, the task proxy, SpacetimeDB on `127.0.0.1` | Fully trusted. Holds every key. |
 | Each task | One Linux user, its own copy of a workspace, its worker (Droid or a test worker) | Untrusted. Assumed to be wrong or hostile. |
 
 The core trusts apps completely: an app's tools, routes, triggers and log readers run inside the core as root.
@@ -49,11 +50,14 @@ The core trusts apps completely: an app's tools, routes, triggers and log reader
 
 | From | To | What crosses | Who checks | Logged as |
 |---|---|---|---|---|
-| Portal, phone, scripts | The HTTP API (port 7700) | New tasks, answers, undo, pairing | The listen address only (`127.0.0.1` by default). A device token, if sent, must be valid. | `task.created` with its `source`, `approval.answered` with `by`, `task.state` |
-| Portal, phone | SpacetimeDB (port 3000) | Answers through the `answer` reducer; reads of public tables | Nothing on `answer`. Only the box can write tasks and approvals. | `approval.answered` with `by` |
-| Outside services | App routes `/t/<app>/...` | Whatever the app accepts | The app. The Jira app requires a shared secret and checks the approval belongs to the task. | What the app writes, such as `approval.answered` by `jira:<name>` |
-| Outside callers | Webhooks `/hook/<app>/<name>` | A JSON payload that usually starts a task | Nothing in the core. The app's handler decides. | `task.created` |
-| The chat agent (ASI:One) | The HTTP API | The same actions as the portal | It runs as `nobody` and talks only to the API. Only paired chat owners can give it work. | `task.created` with source `asi1`, answers by `asi1` |
+| The box's own screen | The HTTP API (port 7700, or the Unix socket) | Everything | The request comes from the box itself with no proxy header | `task.created` with its `source`, `approval.answered` with the `by` it sends, `note` for settings, setup, vault and apps |
+| A paired device | The HTTP API | Reads, new tasks, answers, undo | A valid device token, as a header or `?access_token=`. Without one, `401`. | `approval.answered` with the device's name, whatever the request says |
+| A device paired as the owner | The HTTP API | Also pairing, settings, setup, the vault, apps, the owner, folders, Keep | The token's device was paired as the owner from the box's own screen. Other devices get `403`. | `note` events, `keep` events. A vault key's name, never its value. |
+| Anyone else | The HTTP API | Only the health check, redeeming a pairing code and the portal's pages | Every other request gets `401` | Not logged |
+| The box's own screen | SpacetimeDB (`127.0.0.1:3000`) | Live tasks and approvals; answers through the `answer` reducer | It listens on loopback, and the firewall never opens port 3000. Only the box writes tasks and approvals, and `answer` works only from a connection the box vouched for. | `approval.answered` with the vouched name |
+| Outside services | App routes `/t/<app>/...` | Whatever the app accepts | A paired device's token, unless the app marks the route open (`openRoutes`). Open routes must check their own secret: the Jira app's routes require a shared secret and check the approval belongs to the task; the Mana app's status route returns only a public summary. | What the app writes, such as `approval.answered` by `jira:<name>` |
+| Outside callers | Webhooks `/hook/<app>/<name>` | A JSON payload that usually starts a task | A paired device's token, then the app's handler | `task.created` |
+| The chat agent (ASI:One) | The HTTP API | The same actions as the box's own screen | It runs on the box as `nobody` and calls the API on `127.0.0.1`, so the API treats it as the box's own screen. Only paired chat owners can give it work. | `task.created` with source `asi1`, answers by `asi1` |
 
 ### Into the system
 
@@ -66,7 +70,7 @@ The core trusts apps completely: an app's tools, routes, triggers and log reader
 
 - Every path from a task to anything else goes through the broker or the proxy. Both run in the core and both write to the log.
 - The core is the one zone with the keys. Protecting the box means protecting root and choosing apps carefully.
-- The API and SpacetimeDB trust the network they listen on. Keep them on `127.0.0.1` or a network you control. See the [threat model](/security/threat-model/#access-to-the-boxs-services).
+- The API trusts the box itself and paired devices. Everyone else is refused. SpacetimeDB stays on `127.0.0.1`. The API speaks plain HTTP, so reach it from other devices over a network you control. See the [threat model](/security/threat-model/#access-to-the-boxs-services).
 
 ## Related
 

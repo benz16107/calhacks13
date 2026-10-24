@@ -40,6 +40,8 @@ Undo takes one task's layer out of the stack and rebuilds the view. Nothing else
 
 Undo is `POST /api/tasks/<id>/undo`. The portal's Undo button and Time Machine both call it. The task's state becomes `undone`, which is final, and the log records when. It does not record who asked for the undo.
 
+Once no running task still reads the undone layer, the core deletes it from disk. An undone task's diff is empty, because its changes are gone.
+
 ![Time Machine showing three task layers stacked over the base files, with a preview of what comes back and what stays](../../../assets/screens/box-time-machine.png)
 
 *Time Machine, from the portal's design. It shows one workspace's layers, newest first, and previews an undo before you confirm it. Names and times are examples.*
@@ -67,7 +69,7 @@ overlayfs is in the kernel, costs nothing until a task writes, and records each 
 ## On the Personal edition
 
 :::note[Preview]
-On Personal, a task can work on one of your own folders: `folder` on `POST /api/tasks`. The box links the folder as a workspace, copies it when the task starts, and runs the task on a layer over that copy, so your folder is untouched while the task runs. When the task is done, **Keep** (`POST /api/tasks/<id>/keep`) writes its changes into the real folder, one file at a time, and refuses if you changed the same files since the task started. **Undo** discards them. The core supports this today; the desktop pieces around it are in development. See [give an agent a folder](/guides/keep-or-undo/).
+On Personal, a task can work on your own folders: `folder` or `folders` on `POST /api/tasks`. Such a workspace does not stack layers. Each task gets a fresh copy of the real folder when it starts and runs on a layer over that copy, so your folder is untouched while the task runs. When the task is done, **Keep** (`POST /api/tasks/<id>/keep`) writes its changes into the real folder, one file at a time, keeping each file's owner and mode, and refuses if you changed the same files since the task started. **Undo** discards them. **Undo Keep** (`POST /api/tasks/<id>/unkeep`) puts back what a Keep changed. In GNOME, **Ask an Agent** in Files and a review window do the same. See [give an agent a folder](/guides/keep-or-undo/).
 :::
 
 ## Related

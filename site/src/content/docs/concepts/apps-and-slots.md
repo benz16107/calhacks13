@@ -3,7 +3,7 @@ title: "Apps and slots"
 description: "An app extends GurtOS by filling slots in the core: triggers, tools, log readers, model jobs and portal entries, plus HTTP routes and the vault keys it may read."
 ---
 
-GurtOS's core does tasks, approvals, undo and the log. Everything else is an app: the Jira connection, the wallet, the shopping agent, /find. An app is a folder of TypeScript that the core loads at boot. It plugs into the core through named slots, and it never changes the core.
+GurtOS's core does tasks, approvals, undo and the log. Everything else is an app: the Jira connection, the wallet, the shopping agent, /find. An app is a folder of TypeScript that the core loads at boot. It plugs into the core through named slots, and it never changes the core. The owner can turn each app off and on again without a reinstall.
 
 ## What an app is
 
@@ -14,6 +14,8 @@ import type { Track } from '../../core/contract.ts';
 
 export default {
   name: 'notes',
+  title: 'Notes',
+  description: 'Keeps a tidy notes folder.',
   secrets: ['NOTES_API_KEY'],
   triggers: [],
   tools: [],
@@ -24,13 +26,13 @@ export default {
 } satisfies Track;
 ```
 
-Every slot is optional. An app may also have its own `package.json` for npm packages, and a `demo.ts` that the test suite runs. The full types are in [the app SDK reference](/reference/app-sdk/).
+Every slot is optional. `title` and `description` describe the app in `GET /api/apps?all=1`; without them the box uses the first window's title and the first paragraph of the app's README. An app may also have its own `package.json` for npm packages, and a `demo.ts` that the test suite runs. The full types are in [the app SDK reference](/reference/app-sdk/).
 
 ## The five slots
 
 | Slot | What the core does with it |
 |---|---|
-| `triggers` | Calls `start(box)` once at boot. The trigger starts tasks whenever it likes. |
+| `triggers` | Calls `start(box)` when the app turns on: at boot, or when you turn it on. The trigger starts tasks whenever it likes. |
 | `tools` | Tasks that list a tool's name may call it through their broker. It runs in the core, with its declared secrets. |
 | `logReaders` | Feeds `read(event)` every log event in order, from the first, and resumes after restarts |
 | `modelJobs` | Work the box does for itself, run with `box.job(name, input)`, such as describing a photo |
@@ -64,13 +66,13 @@ A model job is model work the box does for itself, outside any task, such as /fi
 
 ### Portal entries
 
-The `apps` slot lists the app's pages for the portal: a `name`, a `title`, and an `href` under the app's routes. `GET /api/apps` returns every entry, and the portal opens `/t/<app><href>`.
+The `apps` slot lists the app's pages for the portal: a `name`, a `title`, and an `href` under the app's routes. `GET /api/apps` returns the entries of apps that are on, and the portal opens `/t/<app><href>`.
 
 ## Routes and secrets
 
 Two more fields complete an app.
 
-**`routes`** maps `'METHOD /path'` to a handler that takes a standard `Request` and returns a `Response`. The core serves it at `/t/<app>/path` on the box's API. Webhooks, an app's own pages and its JSON API go here:
+**`routes`** maps `'METHOD /path'` to a handler that takes a standard `Request` and returns a `Response`. The core serves it at `/t/<app>/path` on the box's API. Like every API route, a request from off the box needs a paired device's token, unless the app lists the route in `openRoutes`. An open route is for something public on purpose, or for an outside service that proves itself with the app's own secret, such as the Jira panel. Webhooks, an app's own pages and its JSON API go here:
 
 ```ts
 routes: {
@@ -86,7 +88,19 @@ routes: {
 - An app imports only types from the core's contract. It never imports another core file or another app. The core never imports an app.
 - Tool names are `<app>.<verb>`. Two apps cannot define the same tool; the second one fails to load.
 - Keys go in the vault, never in the app's folder.
-- An app that throws while loading is skipped and logged. It cannot stop the box.
+- An app that throws while loading is skipped and logged. It cannot stop the box. `GET /api/apps?all=1` lists it with `status: error` and the error text.
+
+## Turning apps on and off
+
+The owner can turn an app off and on without a reinstall, through the API from the box's own machine or a phone paired as the owner. An App Center screen in the portal is planned.
+
+| Request | Does |
+|---|---|
+| `GET /api/apps?all=1` | Every installed app, on or off: `id`, `title`, `description`, `status` (`enabled`, `disabled` or `error`), and `access`: its tools, jobs, the hosts its tools reach, the vault key names it needs with whether each is set, its triggers and routes |
+| `POST /api/apps/<id>/disable` | Takes out the app's tools, jobs, routes, webhooks, log readers and windows at once, and stops its triggers. A task that asks for one of its tools is refused. |
+| `POST /api/apps/<id>/enable` | Loads it again |
+
+The choice is saved in `apps.json` in the box's state folder, so it survives a restart. A trigger that returned a stop function from `start` stops cleanly. One that returned nothing keeps running until the box restarts, and the app reports `restartNeeded: true`.
 
 ## What an app cannot do
 
@@ -94,7 +108,7 @@ Apps run inside the core, as root, with the core's privileges. The slots define 
 
 ## Apps that ship with GurtOS
 
-GurtOS includes apps for Jira, Elastic, ASI:One, x402 payments, a shopping agent, web work through Apify, /find, and a sample credit desk. Each is listed with its tools and routes in [included apps](/reference/apps/).
+GurtOS includes apps for Jira, Elastic, ASI:One, x402 payments, a shopping agent, web work through Apify, /find, a read-only status summary, and a sample credit desk. Each is listed with its tools and routes in [included apps](/reference/apps/).
 
 ## Related
 

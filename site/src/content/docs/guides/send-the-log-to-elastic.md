@@ -93,7 +93,7 @@ The first six are ES|QL tools. Those that take `days` default to 7. `box.search`
 
 ## Limits
 
-- The box records a failed task's error as "worker exited with N". The agent reads the task's timeline to find the cause, which usually works but is not exact.
+- A failed task's error is "worker exited with N" plus the worker's last error message. When that message is generic, the agent reads the task's timeline to find the cause, which usually works but is not exact.
 - `tool.result` events carry no tool name, so the reader takes it from the `tool.call` before it. A restart between the two loses the name on that one result. The cost and the task are still right.
 
 ## Related

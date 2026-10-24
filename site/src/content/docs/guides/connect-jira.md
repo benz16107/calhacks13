@@ -5,6 +5,10 @@ description: Turn every agent task into a Jira issue with its prompt, steps, app
 
 The Jira app writes each task on the box to a Jira issue, and keeps it up to date as the task runs. A Forge app adds a **Box agent task** panel to those issues, where people who may edit the issue can approve, deny or roll back the task. In this guide you connect a box to a Jira Cloud site and install the panel.
 
+The panel reaches the box through a reverse proxy. The box asks every request from off the machine for a paired
+device's token, except routes an app marks as open. The Jira app marks its three panel routes open, because each one
+checks the app's shared secret itself.
+
 ## Before you start
 
 - A box with a root shell and the Jira app installed (it ships with GurtOS, in `tracks/jira/`).

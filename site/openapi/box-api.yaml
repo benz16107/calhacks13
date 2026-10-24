@@ -17,15 +17,25 @@ info:
     ## Format
 
     Requests and responses are JSON. Send `content-type: application/json` with a body. A failed request
-    returns a JSON object with one field, `error`, and status 400. An unknown route returns 404. A device
-    token that is unknown or revoked returns 401.
+    returns a JSON object with one field, `error`. Bad input, an unknown task field and an id that does not
+    exist are 400. A missing, unknown or revoked device token is 401. An owner's route called by anyone else
+    is 403. An unknown route is 404.
 
-    ## Authentication
+    ## Who may call what
 
-    The API has no authentication. Anyone who can reach the port can do anything the API allows, so the
-    box listens on `127.0.0.1` by default. `BOX_LISTEN` changes the address. Only expose it on a network
-    you trust, or behind a VPN. A paired phone sends its device token when it answers an approval, so the
-    log records which phone answered.
+    A request from the box itself (over the Unix socket, or from `127.0.0.1` or `::1` with no proxy header
+    such as `X-Forwarded-For`, `Forwarded`, `X-Real-IP`, `X-Forwarded-Host` or `Tailscale-User-Login`) is
+    the box's own screen and needs no token.
+
+    Every other request must carry a paired device's token, as `Authorization: Bearer <token>` or
+    `?access_token=<token>`. Without one the answer is 401. Three things are open: `GET /health`,
+    `POST /pair` and the portal's own pages.
+
+    Some routes are the owner's: pairing codes and devices, setup, settings, the vault, apps on and off, the
+    owner, folders on a task, Keep and Undo Keep. From outside the box they need a device that was paired
+    as the owner, else 403.
+
+    The box listens on `127.0.0.1` by default. `BOX_LISTEN` changes the address.
 
     ## Cross-origin requests
 
@@ -42,7 +52,10 @@ servers:
   - url: http://127.0.0.1:7700/api
     description: On the box itself (the default listen address)
   - url: http://box.local:7700/api
-    description: From another device, when BOX_LISTEN allows it
+    description: From another device, with a paired device token, when BOX_LISTEN allows it
+security:
+  - deviceToken: []
+  - accessToken: []
 tags:
   - name: Tasks
     description: Start tasks, read them with their steps and diffs, and undo them.
@@ -51,7 +64,11 @@ tags:
   - name: Action log
     description: Every event the box writes, by cursor or as a live stream.
   - name: Apps
-    description: Pages that installed apps add to the portal.
+    description: Installed apps, their windows, and turning them on or off.
+  - name: Setup and settings
+    description: First-run setup, the owner's settings, and facts about the box.
+  - name: Vault
+    description: Key names in the vault, and setting a key. No route returns a value.
   - name: Health
     description: Whether the box service is up.
   - name: Pairing
@@ -61,7 +78,7 @@ tags:
   - name: Webhooks
     description: Start tasks from outside. Served without the /api prefix.
   - name: Personal
-    description: 'Preview. The owner of a Personal box and their real folders: work on a copy, then Keep or Undo.'
+    description: 'Preview. The owner of a GurtOS Personal box and their real folders: work on a copy, then Keep or Undo.'
 
 paths:
   /tasks:
@@ -87,7 +104,7 @@ paths:
                   tools: []
                   hosts: []
                   budgetCents: 25
-                  source: portal
+                  source: api
                   state: done
                   user: box-t3k9x2a1b2
                   layers: []
@@ -104,13 +121,19 @@ paths:
         `running`. If the task cannot start (for example, a Droid task when the vault has no
         `FACTORY_API_KEY`), the task is returned as `failed` with an `error`.
 
-        Defaults: `workspace` is `home`, `worker` is `droid`, `tools` and `hosts` are empty, `budgetCents`
-        is 0 and `source` is `api`. The workspace must exist and every tool must be installed. Host names
-        are not checked here; the proxy checks them on every connection.
+        Defaults: `workspace` is `home`, `worker` is `droid`, `tools` are empty and `source` is `api`. A task
+        that names no `budgetCents` gets Settings `defaultBudgetCents` (0 unless changed). A task that names
+        no `hosts` gets none, or Settings `defaultHosts` when `networkDefault` is `allowlist`. The workspace
+        must exist and every tool must be installed. A field the box does not know is a 400 that names it.
+        Host names are not checked here; the proxy checks them on every connection.
 
-        **Personal (preview).** Send `folder`, an absolute path to one of the owner's folders, instead of
-        `workspace`. The box links that folder to a workspace named `owner-<folder name>` and starts the
-        task on a copy of it. The real folder is not touched until the owner keeps the task.
+        **Personal (preview), owner only.** Send `folder`, an absolute path to one of the owner's folders, or
+        `folders`, a list of up to 10, instead of `workspace`. A folder must be in the owner's home or in
+        Settings `agentFolders`, must not belong to root, and can never be the system or the box's own state.
+        Links are followed to where they really go. One folder becomes a workspace named
+        `owner-<folder name>-<hash>`, where the hash comes from the full path. Several folders share one
+        workspace and show up side by side, each named after its real folder. The task works on a copy; the
+        real folders are not touched until the owner keeps the task.
       requestBody:
         required: true
         content:
@@ -122,7 +145,12 @@ paths:
                   properties:
                     folder:
                       type: string
-                      description: 'Personal (preview): an absolute path to a real folder. Replaces `workspace`.'
+                      description: 'Personal (preview), owner only: an absolute path to a real folder. Replaces `workspace`.'
+                    folders:
+                      type: array
+                      items: { type: string }
+                      maxItems: 10
+                      description: 'Personal (preview), owner only: several real folders in one task. Send `folder` or `folders`, not both.'
             example:
               title: Summarise the meeting notes
               prompt: Read notes.md and write a five-line summary to summary.md.
@@ -135,11 +163,12 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Task' }
         '400':
-          description: A missing title or prompt, an unknown workspace, worker or tool.
+          description: A missing title or prompt, an unknown field, workspace, worker or tool, or a folder agents may not use.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
               example: { error: 'no workspace notes' }
+        '403': { $ref: '#/components/responses/Forbidden' }
 
   /tasks/{id}:
     get:
@@ -179,8 +208,9 @@ paths:
       summary: Get what a task changed
       description: |
         The files the task added, modified or deleted, read from its own layer only, and a unified diff.
-        The diff is cut at 200,000 bytes. An undone task's layer is kept on disk, so its diff still
-        answers.
+        The diff is cut at 200,000 bytes. An undone task's files are deleted, so its diff is empty and
+        carries `undone: true`. For a task on several folders, each path starts with its folder's label and
+        `roots` maps each label to the real folder.
       parameters:
         - $ref: '#/components/parameters/TaskId'
       responses:
@@ -207,8 +237,9 @@ paths:
       summary: Undo a task
       description: |
         Stops the task if it is still going, denies its pending approvals (answered by `undo`) and takes
-        its layer out of the workspace's view. Other tasks keep their changes. A task in any state can be
-        undone. Undoing a task that is already undone returns it unchanged.
+        its layer out of the workspace's view. The layer's files are then deleted from disk, as soon as no
+        running task still reads them. Other tasks keep their changes. A task in any state can be undone.
+        Undoing a task that is already undone returns it unchanged.
 
         Undo removes file changes on the box. It cannot recall something a task already sent out through a
         tool or an allowed host.
@@ -232,12 +263,15 @@ paths:
       operationId: keepTask
       summary: Keep a task's changes in the real folder
       description: |
-        Preview. For a done task that worked on one of the owner's real folders: applies its changes to that
-        folder, one file at a time, each replaced atomically. Before each file is written, its old version
-        is saved under `BOX_HOME/timemachine/<id>/`, so the Keep can be reversed later.
+        Preview, owner only. For a done task that worked on the owner's real folders: applies its changes,
+        one file at a time, each replaced atomically. A kept file keeps the real file's owner, group and
+        mode; a new file takes the owner of the folder it lands in. Before each file is written, its old
+        version is saved under `BOX_HOME/timemachine/<id>/`, so the Keep can be undone with
+        `POST /tasks/{id}/unkeep`.
 
         If the owner changed, created or deleted any of the same files since the task started, nothing is
-        applied and the response lists the clashing paths.
+        applied in any folder and the response lists the clashing paths. The task's `review` becomes `kept`
+        or `conflict`, and a `keep` event goes into the log.
       parameters:
         - $ref: '#/components/parameters/TaskId'
       responses:
@@ -265,18 +299,64 @@ paths:
                 conflict:
                   value: { conflicts: [notes.md] }
         '400':
-          description: No such task, the task is not done, or its workspace is not a real folder.
+          description: No such task, the task is not done or was already kept, or its workspace is not a real folder.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
               example: { error: 'task t3k9x2a1b2 is running; only a done task can be kept' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /tasks/{id}/unkeep:
+    post:
+      tags: [Personal]
+      operationId: unkeepTask
+      summary: Undo a Keep
+      description: |
+        Preview, owner only. Puts the owner's files back as they were before a Keep, from the copies saved
+        under `BOX_HOME/timemachine/<id>/`: kept files get their old content, owner and mode back, and files
+        the Keep added are removed. If the owner edited a kept file since, nothing changes and the response
+        lists the files. The task's `review` becomes `undone`, and a `keep` event with `result: reverted`
+        goes into the log.
+      parameters:
+        - $ref: '#/components/parameters/TaskId'
+      responses:
+        '200':
+          description: The files put back, or the conflicts that stopped it.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: object
+                    required: [reverted]
+                    properties:
+                      reverted:
+                        type: array
+                        items: { $ref: '#/components/schemas/Change' }
+                  - type: object
+                    required: [conflicts]
+                    properties:
+                      conflicts:
+                        type: array
+                        items: { type: string }
+              examples:
+                reverted:
+                  value: { reverted: [{ path: intro.md, change: modified }] }
+                conflict:
+                  value: { conflicts: [intro.md] }
+        '400':
+          description: No such task, or the task has no Keep to undo.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+              example: { error: 'task t3k9x2a1b2 has no Keep to undo' }
+        '403': { $ref: '#/components/responses/Forbidden' }
 
   /owner:
     get:
       tags: [Personal]
       operationId: getOwner
       summary: Get the box's owner
-      description: Preview. On a Personal box, the owner's Linux user and home folder. On a Server box, `null`.
+      description: Preview. On a GurtOS Personal box, the owner's Linux user, uid and home folder. On a Server box, `null`.
       responses:
         '200':
           description: The owner, or null.
@@ -285,12 +365,54 @@ paths:
               schema:
                 oneOf:
                   - type: 'null'
-                  - type: object
-                    required: [user, home]
-                    properties:
-                      user: { type: string }
-                      home: { type: string }
-              example: { user: alex, home: /home/alex }
+                  - $ref: '#/components/schemas/Owner'
+              example: { user: alex, uid: 1000, home: /home/alex }
+    put:
+      tags: [Personal]
+      operationId: setOwner
+      summary: Set the owner
+      description: |
+        Preview, owner only. Makes an existing account the owner. It must be a person's account: uid 1000 to
+        29999 or 40000 and up, not root, a system account or a task user. The choice is saved in
+        `BOX_HOME/owner.json` and survives a restart, and the box then reports itself as GurtOS Personal.
+        Once an owner is set, changing it takes the box's Unix socket or a phone paired as the owner.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [user]
+              properties:
+                user: { type: string, description: The account name. }
+            example: { user: alex }
+      responses:
+        '200':
+          description: The new owner.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Owner' }
+        '400':
+          description: No such account, or a system account.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    delete:
+      tags: [Personal]
+      operationId: clearOwner
+      summary: Forget the saved owner
+      description: Preview, owner only. Removes `owner.json` and goes back to `BOX_OWNER`, or to no owner.
+      responses:
+        '200':
+          description: The owner now, or null.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: 'null'
+                  - $ref: '#/components/schemas/Owner'
+        '403': { $ref: '#/components/responses/Forbidden' }
 
   /approvals:
     get:
@@ -330,15 +452,9 @@ paths:
         Answers one approval. The first answer wins: an approval that is already answered is returned
         unchanged. `approved` must be `true` to approve; any other value denies.
 
-        `by` names who answered and goes into the action log. If the request carries a device token
-        (`Authorization: Bearer <token>`), the token must belong to a paired phone that is not revoked, and
-        the phone's name replaces `by`.
-
-        The path does not decode percent-escapes. An approval id with a space or a slash in it (Droid's own
-        questions) cannot be answered here; answer it through the SpacetimeDB `answer` reducer instead.
-      security:
-        - {}
-        - deviceToken: []
+        From a paired device, the log records the device's name as who answered, whatever `by` says. `by`
+        is used only when the box's own screen answers. Percent-encode an id that holds spaces, such as
+        one made from Droid's own question.
       parameters:
         - name: id
           in: path
@@ -359,7 +475,7 @@ paths:
                   description: '`true` approves. Anything else denies.'
                 by:
                   type: string
-                  description: Who answered, for the log. Default `api`. Replaced by the device name when a device token is sent.
+                  description: Who answered, for the log, when the box's own screen answers. Default `api`. Ignored from a paired device.
             example: { approved: true, by: portal }
       responses:
         '200':
@@ -373,12 +489,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
               example: { error: 'no approval t3k9x2a1b2.deploy' }
-        '401':
-          description: The device token is unknown or revoked.
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/Error' }
-              example: { error: 'pair this phone with the box first' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
 
   /log:
     get:
@@ -417,7 +528,8 @@ paths:
         every 25 seconds to keep the connection open.
 
         To resume after a disconnect, send the `Last-Event-ID` header (browsers do this for you) or
-        `?after=<seq>`. The header wins when both are present.
+        `?after=<seq>`. The header wins when both are present. From outside the box, a browser's
+        `EventSource` cannot send headers, so pass the token as `?access_token=<token>`.
       parameters:
         - name: after
           in: query
@@ -448,24 +560,285 @@ paths:
     get:
       tags: [Apps]
       operationId: listApps
-      summary: List app pages
-      description: The pages installed apps add to the portal's app grid. Open each at `/t/<track><href>`.
+      summary: List apps
+      description: |
+        By default, the windows of the apps that are on, for the portal's app grid. Open each at
+        `/t/<track><href>`. Each entry also carries the app's details below. With `?all=1`, every installed
+        app, on or off, one entry per app: the App Center.
+      parameters:
+        - name: all
+          in: query
+          required: false
+          description: Any value lists every installed app, on or off.
+          schema: { type: string }
       responses:
         '200':
-          description: The app pages.
+          description: The apps.
           content:
             application/json:
               schema:
                 type: array
                 items: { $ref: '#/components/schemas/AppEntry' }
               example:
-                - { name: wallet, title: 'Agent wallet (Solana devnet, test money)', href: /, track: wallet }
+                - name: wallet
+                  title: 'Agent wallet (Solana devnet, test money)'
+                  href: /
+                  track: wallet
+                  id: wallet
+                  status: enabled
+                  enabled: true
+                  access:
+                    tools: [{ name: wallet.pay, description: Pay an x402 API from the box's wallet. }]
+                    jobs: []
+                    hosts: []
+                    secrets: [{ name: WALLET_SOLANA_KEY, set: true }]
+                    triggers: []
+                    routes: ['GET /']
+                  ui: [{ name: wallet, title: 'Agent wallet (Solana devnet, test money)', href: / }]
+
+  /apps/{id}/enable:
+    post:
+      tags: [Apps]
+      operationId: enableApp
+      summary: Turn an app on
+      description: Owner only. Loads the app's tools, jobs, routes, log readers and windows and starts its triggers, with no reinstall. The choice is saved in `BOX_HOME/apps.json`.
+      parameters:
+        - $ref: '#/components/parameters/AppId'
+      responses:
+        '200':
+          description: The app.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AppEntry' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404':
+          description: No app with this id.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /apps/{id}/disable:
+    post:
+      tags: [Apps]
+      operationId: disableApp
+      summary: Turn an app off
+      description: |
+        Owner only. Takes the app's tools, jobs, routes, webhooks, log readers and windows out at once and
+        stops its triggers. A task that asks for one of its tools is refused. A trigger that cannot be
+        stopped keeps running until the box restarts, and the app reports `restartNeeded: true`.
+      parameters:
+        - $ref: '#/components/parameters/AppId'
+      responses:
+        '200':
+          description: The app.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AppEntry' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404':
+          description: No app with this id.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /system:
+    get:
+      tags: [Setup and settings]
+      operationId: getSystem
+      summary: Facts about the box
+      description: The product, edition, version and build, hostname, time zone, network, box id and name, owner, start time and uptime. For first-run setup and Settings.
+      responses:
+        '200':
+          description: The facts.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SystemFacts' }
+
+  /setup:
+    get:
+      tags: [Setup and settings]
+      operationId: getSetup
+      summary: First-run setup state
+      description: Until `done` is true, the box's own screen shows the setup steps. A box that already ran tasks when setup arrived is `migrated` and counts as done.
+      responses:
+        '200':
+          description: The setup state.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SetupState' }
+
+  /setup/step:
+    post:
+      tags: [Setup and settings]
+      operationId: recordSetupStep
+      summary: Record a setup step
+      description: Owner only. Marks a step as taken. `suggested` in `GET /setup` lists the usual ids. `data` is at most 4 KB and holds answers, never keys; keys go to `PUT /vault/{name}`. The log records the step id only.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [id]
+              properties:
+                id: { type: string, pattern: '^[a-z][\w-]{0,31}$' }
+                data: { description: Answers for this step. At most 4 KB as JSON. }
+            example: { id: network, data: { wired: true } }
+      responses:
+        '200':
+          description: The setup state.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SetupState' }
+        '400':
+          description: A bad step id, or data over 4 KB.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /setup/finish:
+    post:
+      tags: [Setup and settings]
+      operationId: finishSetup
+      summary: Finish setup
+      description: Owner only. Marks setup done, so the box's own screen shows the home screen.
+      responses:
+        '200':
+          description: The setup state.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SetupState' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /setup/reopen:
+    post:
+      tags: [Setup and settings]
+      operationId: reopenSetup
+      summary: Show setup again
+      description: Owner only. Marks setup not done, so the box's own screen shows the setup steps again.
+      responses:
+        '200':
+          description: The setup state.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SetupState' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /settings:
+    get:
+      tags: [Setup and settings]
+      operationId: getSettings
+      summary: Read the settings
+      responses:
+        '200':
+          description: Every setting.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Settings' }
+    patch:
+      tags: [Setup and settings]
+      operationId: updateSettings
+      summary: Change some settings
+      description: |
+        Owner only. Changes only the keys you send; `quietHours` and `appearance` merge one level deep. An
+        unknown key or a bad value is a 400 that names the field, and nothing changes. Each change is a
+        `note` event in the log with the old and the new value. The settings are saved in
+        `BOX_HOME/settings.json`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Settings' }
+            example: { approvalThresholdCents: 2000, networkDefault: allowlist, defaultHosts: [example.com] }
+      responses:
+        '200':
+          description: Every setting, after the change.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Settings' }
+        '400':
+          description: An unknown setting or a bad value.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+              example: { error: 'settings.defaultBudgetCents: must be a whole number from 0 to 100000000' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /vault:
+    get:
+      tags: [Vault]
+      operationId: listVault
+      summary: List vault key names
+      description: Owner only. The name of every key in the vault, and when it was set through the API (`null` for a key put in the file by hand). Never a value.
+      responses:
+        '200':
+          description: The key names.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  required: [name, setAt]
+                  properties:
+                    name: { type: string }
+                    setAt: { type: ['string', 'null'], format: date-time }
+              example:
+                - { name: FACTORY_API_KEY, setAt: '2026-10-24T09:02:11.000Z' }
+                - { name: STRIPE_SECRET_KEY, setAt: null }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /vault/{name}:
+    put:
+      tags: [Vault]
+      operationId: setVaultKey
+      summary: Set a vault key
+      description: |
+        Owner only. Sets or replaces one key in `/etc/box/vault.env`, which stays readable by root only. The
+        value is one line of up to 8192 characters. The log records that the name was set, never the value.
+        No route reads a value back. The box uses the new value straight away.
+      parameters:
+        - name: name
+          in: path
+          required: true
+          description: Capital letters, digits and `_`, 2 to 64 characters, starting with a letter.
+          schema: { type: string, pattern: '^[A-Z][A-Z0-9_]{1,63}$' }
+          example: FACTORY_API_KEY
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [value]
+              properties:
+                value: { type: string, description: The key. Never shown again. }
+            example: { value: example-key-value }
+      responses:
+        '200':
+          description: The name and when it was set.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [name, setAt]
+                properties:
+                  name: { type: string }
+                  setAt: { type: string, format: date-time }
+        '400':
+          description: A bad name or value. The message never repeats the value.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '403': { $ref: '#/components/responses/Forbidden' }
 
   /health:
     get:
       tags: [Health]
       operationId: getHealth
       summary: Check the box service
+      security: []
       description: Answers once the box has replayed its log, loaded its apps and opened the API. The OS image's update check waits for `ok` here before it keeps a new system.
       responses:
         '200':
@@ -496,15 +869,28 @@ paths:
                 type: array
                 items: { $ref: '#/components/schemas/BoxEntry' }
               example:
-                - { id: box-3f9a1c7b2e, name: Home box, url: 'http://box.local:7700', stdb: box, self: true }
-                - { id: box-8d02e4a6f1, name: Cloud box, url: 'http://192.0.2.20:7700', stdb: box }
+                - { id: gurt-3f9a1c, name: Home box, url: 'http://box.local:7700', stdb: box, self: true }
+                - { id: gurt-8d02e4, name: Cloud box, url: 'http://192.0.2.20:7700', stdb: box }
 
   /pair/start:
     post:
       tags: [Pairing]
       operationId: newPairingCode
       summary: Make a pairing code
-      description: A one-time code for the QR code in the portal's Settings. It works once and expires after 5 minutes. `POST /pair/new` is the same route under its older name.
+      description: |
+        Owner only. A one-time code for the QR code on the box's own screen. It works once and expires after
+        5 minutes. With `owner: true`, the phone that redeems it becomes an owner device; the flag is ignored
+        from anyone who is not already the owner. When `BOX_URL` is set, `url` is absolute, so the QR code
+        opens on a phone. `POST /pair/new` is the same route under its older name.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                owner: { type: boolean, description: Pair the phone as the owner's. }
+            example: { owner: true }
       responses:
         '200':
           description: The code.
@@ -513,16 +899,18 @@ paths:
               schema: { $ref: '#/components/schemas/PairCode' }
               example:
                 code: 7f3a9c21
-                url: '/pair#7f3a9c21'
+                url: 'http://box.local:7700/pair#7f3a9c21'
                 expiresAt: '2026-10-24T09:17:03.000Z'
-                box: { id: box-3f9a1c7b2e, name: Home box }
+                box: { id: gurt-3f9a1c, name: gurt-3f9a1c }
+        '403': { $ref: '#/components/responses/Forbidden' }
 
   /pair:
     post:
       tags: [Pairing]
       operationId: redeemPairingCode
       summary: Pair a phone
-      description: A phone trades a pairing code for its own device token. The code stops working once used. Keep the token; the box does not show it again.
+      security: []
+      description: A phone trades a pairing code for its own device token. The code stops working once used. Keep the token; the box does not show it again. Open without a token.
       requestBody:
         required: true
         content:
@@ -547,12 +935,54 @@ paths:
               schema: { $ref: '#/components/schemas/Error' }
               example: { error: 'bad or expired pairing code' }
 
+  /pair/identity:
+    post:
+      tags: [Pairing]
+      operationId: vouchIdentity
+      summary: Register a live connection
+      description: |-
+        Tells the box which SpacetimeDB identity this caller holds, so the box vouches for it. After that, the
+        `answer` reducer accepts approvals from that connection and records them under the caller's name: the
+        device's name for a paired phone, `box screen` for the box's own screen. Accepted from the box's own screen,
+        or from a paired device with its token. A phone can also send `identity` when it redeems its pairing code.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [identity]
+              properties:
+                identity: { type: string, pattern: '^[0-9a-fA-F]{64}$', description: 'The 64 hex characters of the SpacetimeDB identity, from `identity.toHexString()`.' }
+            example: { identity: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef }
+      responses:
+        '200':
+          description: The identity the box now vouches for, and the name it records answers under.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  identity: { type: string }
+                  name: { type: string }
+              example: { identity: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef, name: My phone }
+        '400':
+          description: The identity is not 64 hex characters.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '401':
+          description: Not the box's own screen, and no paired device's token.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
   /devices:
     get:
       tags: [Pairing]
       operationId: listDevices
       summary: List paired phones
-      description: Phones that are paired and not revoked. Tokens are never listed. `GET /pair/devices` is the same route under its older name.
+      description: Owner only. Phones that are paired and not revoked. Tokens are never listed. `GET /pair/devices` is the same route under its older name.
       responses:
         '200':
           description: The devices.
@@ -561,13 +991,14 @@ paths:
               schema:
                 type: array
                 items: { $ref: '#/components/schemas/Device' }
+        '403': { $ref: '#/components/responses/Forbidden' }
 
   /devices/{id}:
     delete:
       tags: [Pairing]
       operationId: revokeDevice
       summary: Revoke a phone
-      description: The phone's token stops working at once. An approval it sends afterwards gets 401. `POST /pair/devices/{id}/revoke` does the same.
+      description: Owner only. The phone's token stops working at once. Its next request gets 401. `POST /pair/devices/{id}/revoke` does the same.
       parameters:
         - name: id
           in: path
@@ -585,6 +1016,7 @@ paths:
                 properties:
                   id: { type: string }
                   revoked: { type: boolean, const: true }
+        '403': { $ref: '#/components/responses/Forbidden' }
         '404':
           description: No device with this id.
           content:
@@ -602,7 +1034,8 @@ paths:
       description: |
         Runs the webhook an app registered with the `webhook` trigger (or `box.onWebhook`). The JSON body
         and the headers go to the app, which usually starts a task. The response is the new task, or
-        `{"ok": true}` when the app returns nothing. This route has no `/api` form.
+        `{"ok": true}` when the app returns nothing. This route has no `/api` form. From outside the box it
+        needs a device token like any other route.
       parameters:
         - name: app
           in: path
@@ -644,7 +1077,26 @@ components:
     deviceToken:
       type: http
       scheme: bearer
-      description: A phone's device token from `POST /pair`. Optional, and only read by `POST /approvals/{id}`.
+      description: A paired device's token from `POST /pair`. Required from outside the box on every route but `GET /health` and `POST /pair`. Requests from the box itself need none.
+    accessToken:
+      type: apiKey
+      in: query
+      name: access_token
+      description: The same device token as a query parameter, for clients that cannot send headers, such as a browser's EventSource on `/log/stream`.
+
+  responses:
+    Unauthorized:
+      description: An outside request with no device token, or with one that is unknown or revoked.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example: { error: 'pair this phone with the box first' }
+    Forbidden:
+      description: The owner's route, called by someone who is not the box's own screen or a device paired as the owner.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example: { error: "only the box's own screen or the owner's paired device can do this" }
 
   parameters:
     TaskId:
@@ -654,6 +1106,13 @@ components:
       description: The task id.
       schema: { type: string }
       example: t3k9x2a1b2
+    AppId:
+      name: id
+      in: path
+      required: true
+      description: The app's id, its folder name.
+      schema: { type: string }
+      example: wallet
 
   schemas:
     Error:
@@ -699,12 +1158,18 @@ components:
           description: 'Hosts the task''s network may reach: `example.com` (any port), `example.com:8080` (one port) or `*.example.com` (subdomains).'
         budgetCents:
           type: number
-          default: 0
-          description: Spending above this, in US cents, pauses the task for an OK.
+          description: Spending above this, in US cents, pauses the task for an OK. Default Settings `defaultBudgetCents`, 0 unless changed.
         source:
           type: string
           default: api
-          description: 'Who started it, for the log and the portal: `portal`, `schedule`, `asi1`, `jira:BOX-12`.'
+          description: 'Who started it, for the log and the portal: `api`, `schedule`, `asi1`, `jira:BOX-12`.'
+        folder:
+          type: string
+          description: 'Personal: the first real folder the task works on a copy of.'
+        folders:
+          type: array
+          items: { type: string }
+          description: 'Personal: every real folder the task works on.'
 
     Task:
       allOf:
@@ -723,8 +1188,12 @@ components:
             step: { type: string, description: The latest step, up to 200 characters. }
             createdAt: { type: string, format: date-time }
             updatedAt: { type: string, format: date-time }
-            error: { type: string, description: Why it failed. }
+            error: { type: string, description: 'Why it failed. A worker that exited with an error ends with its own last error line: `worker exited with 1: Error: ...`.' }
             summary: { type: string }
+            review:
+              type: string
+              enum: [pending, kept, conflict, undone]
+              description: 'Personal, for a task on real folders: done and waiting for the owner, kept, stopped by a conflict, or undone.'
 
     ApprovalState:
       type: string
@@ -741,7 +1210,7 @@ components:
         payee: { type: string, description: Who gets paid, or the host being reached. }
         purpose: { type: string, description: What the spend or action is for. }
         state: { $ref: '#/components/schemas/ApprovalState' }
-        by: { type: string, description: "Who answered: `portal`, `phone`, a device name, `jira:<name>`, `undo`, or `task ended`." }
+        by: { type: string, description: "Who answered: a paired device's name, what the box's own screen sent (such as `box screen`), `jira:<name>`, `asi1`, `undo`, or `task ended`." }
 
     Change:
       type: object
@@ -758,6 +1227,11 @@ components:
           type: array
           items: { $ref: '#/components/schemas/Change' }
         diff: { type: string, description: A unified diff of every change, cut at 200,000 bytes. }
+        roots:
+          type: object
+          additionalProperties: { type: string }
+          description: For a task on several folders, each label and the real folder it stands for.
+        undone: { type: boolean, description: Set when the task is undone and its files are gone. }
 
     Tokens:
       type: object
@@ -783,7 +1257,7 @@ components:
           required: [type, task, spec, user]
           properties:
             type: { const: task.created }
-            spec: { $ref: '#/components/schemas/TaskSpec' }
+            spec: { $ref: '#/components/schemas/TaskSpec', description: 'The spec with every default filled in.' }
             user: { type: string }
     TaskStateEvent:
       allOf:
@@ -864,6 +1338,20 @@ components:
           properties:
             type: { const: net.blocked }
             host: { type: string, description: '`host:port` the task tried to reach.' }
+    KeepEvent:
+      allOf:
+        - $ref: '#/components/schemas/EventBase'
+        - type: object
+          required: [type, task, result]
+          properties:
+            type: { const: keep }
+            result: { type: string, enum: [pending, kept, conflict, reverted] }
+            changes:
+              type: array
+              items: { $ref: '#/components/schemas/Change' }
+            conflicts:
+              type: array
+              items: { type: string }
     NoteEvent:
       allOf:
         - $ref: '#/components/schemas/EventBase'
@@ -886,6 +1374,7 @@ components:
         - $ref: '#/components/schemas/ApprovalAnsweredEvent'
         - $ref: '#/components/schemas/CostEvent'
         - $ref: '#/components/schemas/NetBlockedEvent'
+        - $ref: '#/components/schemas/KeepEvent'
         - $ref: '#/components/schemas/NoteEvent'
       discriminator:
         propertyName: type
@@ -899,16 +1388,132 @@ components:
           approval.answered: '#/components/schemas/ApprovalAnsweredEvent'
           cost: '#/components/schemas/CostEvent'
           net.blocked: '#/components/schemas/NetBlockedEvent'
+          keep: '#/components/schemas/KeepEvent'
           note: '#/components/schemas/NoteEvent'
 
     AppEntry:
       type: object
-      required: [name, title, href, track]
+      required: [id, title, status, access, ui]
       properties:
-        name: { type: string }
+        name: { type: string, description: The window's name, in the default list. The app's id with `?all=1`. }
+        href: { type: string, description: 'The window''s path under `/t/<track>/`, in the default list.' }
+        track: { type: string, description: The app that added it. }
+        id: { type: string, description: The app's id, its folder name. }
         title: { type: string }
-        href: { type: string, description: 'Path under `/t/<track>/`.' }
-        track: { type: string, description: The app package that added it. }
+        description: { type: string, description: 'The app''s own, else the first paragraph of its README.' }
+        status: { type: string, enum: [enabled, disabled, error] }
+        enabled: { type: boolean }
+        error: { type: string, description: Why the app failed to load. }
+        restartNeeded: { type: boolean, description: Turned off while a trigger that cannot be stopped was running. }
+        access:
+          type: object
+          description: What the app can reach. Key names only, never values.
+          properties:
+            tools:
+              type: array
+              items:
+                type: object
+                properties:
+                  name: { type: string }
+                  description: { type: string }
+            jobs: { type: array, items: { type: string } }
+            hosts: { type: array, items: { type: string }, description: Hosts the app's tools reach. }
+            secrets:
+              type: array
+              items:
+                type: object
+                properties:
+                  name: { type: string }
+                  set: { type: boolean, description: Whether the vault holds this key. }
+            triggers: { type: array, items: { type: string } }
+            routes: { type: array, items: { type: string } }
+        ui:
+          type: array
+          description: The app's windows.
+          items:
+            type: object
+            properties:
+              name: { type: string }
+              title: { type: string }
+              href: { type: string }
+
+    Owner:
+      type: object
+      required: [user, uid, home]
+      properties:
+        user: { type: string }
+        uid: { type: ['integer', 'null'], description: The account's uid, or null if the account does not exist. }
+        home: { type: string }
+
+    Settings:
+      type: object
+      properties:
+        approvalThresholdCents: { type: integer, default: 10000, description: 'A single spend above this, in US cents, always asks for an OK, even inside the task''s budget.' }
+        defaultBudgetCents: { type: integer, default: 0, description: The budget of a task that names none. 0 means every spend asks. }
+        networkDefault: { type: string, enum: [none, allowlist], default: none, description: 'With `allowlist`, a task that names no hosts gets `defaultHosts`.' }
+        defaultHosts: { type: array, items: { type: string }, default: [], maxItems: 100 }
+        agentFolders: { type: array, items: { type: string }, default: [], maxItems: 50, description: 'Personal. Folders agents may be given besides the owner''s home. Never the system or the box''s own state.' }
+        quietHours:
+          type: object
+          properties:
+            enabled: { type: boolean, default: false }
+            from: { type: string, default: '22:00' }
+            to: { type: string, default: '07:00' }
+        logRetentionDays: { type: integer, default: 365, minimum: 1, maximum: 3650 }
+        updateChannel: { type: string, enum: [stable, beta], default: stable }
+        autoUpdate: { type: boolean, default: true }
+        appearance:
+          type: object
+          properties:
+            theme: { type: string, enum: [light, dark, system], default: system }
+            accent: { type: string, description: 'A color like `#5b8cff`, or empty for the default.' }
+
+    SetupState:
+      type: object
+      required: [done, steps, suggested]
+      properties:
+        done: { type: boolean }
+        finishedAt: { type: ['string', 'null'], format: date-time }
+        migrated: { type: boolean, description: The box already ran tasks when setup arrived, so it counts as done. }
+        steps:
+          type: object
+          additionalProperties:
+            type: object
+            properties:
+              at: { type: string, format: date-time }
+              data: {}
+        suggested:
+          type: array
+          items: { type: string }
+          example: [welcome, network, safety, folders, apps, keys, updates, phone]
+
+    SystemFacts:
+      type: object
+      properties:
+        product: { type: string, example: GurtOS }
+        edition: { type: string, enum: [server, personal, business] }
+        editionName: { type: string, example: GurtOS Server }
+        version: { type: string }
+        build: { type: string, description: The commit that was installed, or `dev`. }
+        hostname: { type: string, example: gurt-3f9a1c }
+        timezone: { type: string }
+        network:
+          type: object
+          properties:
+            online: { type: boolean }
+            interfaces:
+              type: array
+              items:
+                type: object
+                properties:
+                  name: { type: string }
+                  address: { type: string }
+                  mac: { type: string }
+        boxId: { type: string }
+        boxName: { type: string }
+        owner: { type: ['string', 'null'] }
+        startedAt: { type: string, format: date-time }
+        uptimeSec: { type: integer }
 
     Health:
       type: object
@@ -947,7 +1552,7 @@ components:
       required: [code, url, expiresAt, box]
       properties:
         code: { type: string, description: Eight hexadecimal characters. Works once. }
-        url: { type: string, description: 'The pairing path, `/pair#<code>`. The portal opens pairing at `/#pair/<code>`.' }
+        url: { type: string, description: 'Where the phone pairs: `<BOX_URL>/pair#<code>`, or the path `/pair#<code>` when `BOX_URL` is unset.' }
         expiresAt: { type: string, format: date-time, description: Five minutes after it was made. }
         box:
           type: object
@@ -978,3 +1583,4 @@ components:
         id: { type: string, example: d4e5f6a7b8c }
         name: { type: string }
         pairedAt: { type: string, format: date-time }
+        owner: { type: boolean, description: Paired as the owner's device. }

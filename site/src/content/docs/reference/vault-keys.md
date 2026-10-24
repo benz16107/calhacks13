@@ -14,11 +14,29 @@ This page lists key names only. Never put a value in a document, a prompt or a l
 | Path | `/etc/box/vault.env`, or `BOX_VAULT` |
 | Owner and mode | root, `0600`. If group or others have any access to it, the box refuses to start. |
 | Format | One `KEY=value` per line. Key names use capital letters, digits and `_`. Other lines are ignored. |
-| When read | Once, when the box service starts. Restart `box.service` after a change. |
+| When read | When the box service starts, and again for each key set through the API. Restart `box.service` after editing the file by hand. |
 
 ```sh title="/etc/box/vault.env"
 FACTORY_API_KEY=...
 APIFY_TOKEN=...
+```
+
+## Setting a key through the API
+
+The owner can set a key without a shell: from the box itself, or from a phone paired as the owner.
+
+| Request | Does |
+|---|---|
+| `PUT /api/vault/<NAME> {"value": "..."}` | Sets or replaces one key. The file is rewritten atomically and stays root-only `0600`. The value is one line, at most 8192 characters. |
+| `GET /api/vault` | Lists the key names, with the time each was set through the API, or `null` for one put in the file by hand |
+
+No route reads a value back. The action log records that a name was set, never the value. Names are capital letters, digits and `_`, 2 to 64 characters, starting with a letter.
+
+```sh
+read -rs -p 'Factory API key: ' KEY && echo
+curl -s -X PUT http://127.0.0.1:7700/api/vault/FACTORY_API_KEY \
+  -H 'content-type: application/json' -d "{\"value\": \"$KEY\"}"
+unset KEY
 ```
 
 A part of the box can read a key only if it declares it: a tool or model job in its `secrets`, an app's routes and triggers in the app's `secrets`. Asking for any other name throws an error.

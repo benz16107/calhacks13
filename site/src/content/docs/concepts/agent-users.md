@@ -61,7 +61,7 @@ The trade-off is that tasks share one kernel. A kernel bug that lets a user beco
 ## On the Personal edition
 
 :::note[Preview]
-On Personal, you have your own account with sudo, and agents work beside you as separate users without sudo, on copies of your real folders. This edition is in progress. See [install Personal](/get-started/install-personal/).
+On GurtOS Personal, you have your own account with sudo, and agents work beside you as separate users without sudo, on copies of your real folders. Task users are never in the `sudo` group, and your folders are only handed out by you, the owner. See [install GurtOS Personal](/get-started/install-personal/).
 :::
 
 ## Related

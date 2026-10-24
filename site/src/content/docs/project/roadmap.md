@@ -13,11 +13,10 @@ intended. **Not built** means a known gap with no plan yet; it is listed so you 
 
 | Item | Status | Why |
 |---|---|---|
-| A settings screen in the portal for vault keys | Planned | A release build of the OS image has no shell, so today keys need a debug build or the Ubuntu install. |
-| A setting for the API's listen address | Planned | Today it is the `BOX_LISTEN` environment variable. |
-| Authentication on the HTTP API | Planned | The API trusts anyone who can reach it. Today the protection is that it listens on `127.0.0.1`. |
-| Requiring a paired device for every answer | Planned | Answers without a device token, and SpacetimeDB's `answer` reducer, are accepted today. |
-| The QR code on the box's own screen | Preview | The screen shows the pairing code, but not the QR code, until the box knows the address phones use. |
+| Authentication on the HTTP API | Preview | Built: from anywhere but the box itself, every request needs a paired device's token, and setup, settings, the vault and the owner's folders need the owner. Pairing a phone as the owner still takes a command on the box. |
+| First-run setup, Settings and App Center screens in the portal | Planned | The box's API for them is built (`/api/setup`, `/api/settings`, `/api/apps`, `/api/vault`). The portal has no screens for them yet, so a release build of the OS image still cannot take keys. |
+| Starting a task from the portal | Planned | Today tasks start from the API, apps and triggers, or Files on GurtOS Personal. |
+| A setting for the API's listen address and the phone address | Planned | GurtOS Server from the ISO sets them by itself for private networks. On the Ubuntu install and GurtOS Personal they are the `BOX_LISTEN` and `BOX_URL` environment variables, set by hand. |
 | Push notifications to phones | Not built | A request shows when the portal is open on the phone. |
 | Public downloads of the ISO | Planned | Today the ISO is built from source. |
 
@@ -25,30 +24,29 @@ intended. **Not built** means a known gap with no plan yet; it is listed so you 
 
 | Item | Status | Why |
 |---|---|---|
-| Tested on real PCs, UTM, Parallels and cloud providers | Planned | Tested so far in QEMU on x86_64 (BIOS and UEFI) and arm64 (emulated). |
+| Tested on real PCs, UTM and Parallels | Planned | Tested so far in QEMU on x86_64 (BIOS and UEFI) and arm64 (emulated), and on a Vultr instance. |
 | Verified, read-only system slots (dm-verity) | Not built | Slots are plain writable ext4 today. |
 | Update key rotation and rollback protection | Not built | One signing key, and an older signed image still installs. |
 | A hardware watchdog | Not built | A system that hangs, rather than failing its health check, stays hung until someone restarts it. |
 | Boot menu updates without a reinstall | Not built | The boot menu is written once at install. |
 | Signed boot loader for Secure Boot | Not built | Secure Boot must be off today. |
-| Wi-Fi | Not built | Only wired networking is set up. |
+| Wi-Fi on GurtOS Server | Not built | Server sets up wired networking only. GurtOS Personal has NetworkManager and Wi-Fi. |
 
 ## Tasks and workspaces
 
 | Item | Status | Why |
 |---|---|---|
 | Squashing old layers into the base | Not built | A workspace's view can stack about 60 layers before mount options run out. |
-| The worker's own error in the log | Not built | A failed task records only "worker exited with N". |
 | Logging allowed connections, not only refusals | Not built | Only `net.blocked` events are logged today. |
 
 ## GurtOS Personal
 
 | Item | Status | Why |
 |---|---|---|
-| Owner folders with Keep and Undo in the core | Preview | Works through the API. |
-| The desktop layer | Preview | Notifications with Approve and Deny, a top-bar indicator, the GurtOS app window, **Ask an agent** in Files, a review window and a first-run welcome. In development, not released. |
-| An installer for Personal | Planned | No supported install steps yet. |
-| Undoing a Keep from Time Machine | Planned | Before-images are saved, but restoring them is manual. |
+| The GurtOS Personal ISO, desktop layer, Keep and Undo Keep | Preview | Built and walked end to end on a fresh install in a virtual machine. |
+| Filling the vault from the desktop | Planned | A fresh install has an empty vault; today it takes a terminal command. |
+| Pairing a phone on Personal | Planned | Needs `BOX_LISTEN` and `BOX_URL` set by hand. |
+| GurtOS Personal on arm64 and real laptops | Planned | Tested on x86_64 virtual machines only. |
 
 ## GurtOS Business
 

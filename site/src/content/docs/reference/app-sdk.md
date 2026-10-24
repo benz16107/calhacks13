@@ -54,7 +54,7 @@ export default {
 } satisfies Track;
 ```
 
-Restart the box service and the tool is installed, the schedule is armed, and the page is at `/t/hello/` and in the portal's app grid. `tracks/example/` in the source tree uses every slot.
+Restart the box service and the tool is installed, the schedule is armed, and the page is at `/t/hello/` and in the portal's app grid. The owner can turn the app off and on again without a restart. `tracks/example/` in the source tree uses every slot.
 
 ## `Track`
 
@@ -63,13 +63,16 @@ What `track.ts` default-exports.
 | Field | Type | Meaning |
 |---|---|---|
 | `name` | `string` | Must equal the folder name. |
+| `title` | `string?` | The name in the App Center. Defaults to the first window's title, then `name`. |
+| `description` | `string?` | One or two plain sentences for the App Center. Defaults to the first paragraph of the app's `README.md`. |
 | `secrets` | `string[]` | Vault keys the app's routes and triggers may read with `box.secret()`. Tools and model jobs declare their own. |
-| `triggers` | `Trigger[]` | Started once at boot. |
+| `triggers` | `Trigger[]` | Started when the app turns on: at boot, or when the owner enables it. |
 | `tools` | `Tool[]` | Tasks that list a tool's name can call it through their broker. |
 | `logReaders` | `LogReader[]` | Fed every log event in order, from the start, resuming after restarts. |
 | `modelJobs` | `ModelJob[]` | Work the box does for itself. Anyone with a `Box` can run one with `box.job()`. |
 | `apps` | `App[]` | Pages listed in the portal's app grid. |
 | `routes` | `Record<string, Route>` | HTTP routes keyed `'METHOD /path'`, served at `/t/<name>/path`. |
+| `openRoutes` | `string[]` | Route keys, as in `routes`, that need no paired device's token from off the box. For a route that is public on purpose, or checks its own credential such as a shared secret. An open route must return nothing private unless its own check passes. |
 
 ## `TaskSpec`
 
@@ -83,8 +86,12 @@ What a trigger, route or API call asks for when it starts a task.
 | `worker` | `'droid' \| 'fake'` | `'droid'` | Droid with Claude, or scripted steps with no model for tests |
 | `tools` | `string[]` | `[]` | Tool names the task may call |
 | `hosts` | `string[]` | `[]` | Hosts the task's network may reach. See [Network policy](/concepts/network-policy/). |
-| `budgetCents` | `number` | `0` | Spending above this, in US cents, pauses the task for an OK |
-| `source` | `string` | the app's name, or `'api'` | Who started it: `'schedule'`, `'portal'`, `'jira:BOX-12'` |
+| `budgetCents` | `number` | Settings `defaultBudgetCents`, `0` unless changed | Spending above this, in US cents, pauses the task for an OK |
+| `source` | `string` | the app's name, or `'api'` | Who started it: `'schedule'`, `'api'`, `'jira:BOX-12'` |
+| `folder` | `string?` | none | GurtOS Personal: a real folder of the owner's that the task works on a copy of. Through the API only the owner may send it. |
+| `folders` | `string[]?` | none | GurtOS Personal: several real folders in one task, side by side. `folder` is then the first. |
+
+A task that names no `hosts` gets none, or Settings `defaultHosts` when `networkDefault` is `allowlist`. A field the box does not know is refused with an error that names it.
 
 ## `Task`
 
@@ -99,8 +106,9 @@ A `TaskSpec` with every field filled in, plus:
 | `costCents` | `number` | Tool spending plus model cost, not rounded |
 | `step` | `string?` | The latest step, up to 200 characters |
 | `createdAt`, `updatedAt` | `string` | ISO 8601 times |
-| `error` | `string?` | Why it failed |
+| `error` | `string?` | Why it failed. A worker that exits with an error adds its own last error line. |
 | `summary` | `string?` | A summary, if one was recorded |
+| `review` | `string?` | GurtOS Personal, for a task on real folders: `pending` (done, waiting for the owner), `kept`, `conflict` or `undone` |
 
 ## `TaskState`
 
@@ -124,7 +132,7 @@ A `TaskSpec` with every field filled in, plus:
 | `payee` | `string?` | Who gets paid, or the host being reached |
 | `purpose` | `string?` | What it is for |
 | `state` | `'pending' \| 'approved' \| 'denied'` | |
-| `by` | `string?` | Who answered: `'portal'`, `'phone'`, a device name, `'jira:<name>'` |
+| `by` | `string?` | Who answered: a paired device's name, what the box's own screen sent, `'jira:<name>'`, `'asi1'` |
 
 ## `Box`
 
@@ -137,7 +145,7 @@ What triggers, routes, log readers and tools (as `ctx.box`) get to act on the bo
 | `linkWorkspace(name, realPath)` | Personal (preview): points a workspace at a real folder. Tasks work on a copy of it, and Keep writes back. |
 | `task(id)` | One task, or `undefined` |
 | `tasks()` | Every task |
-| `undo(id)` | Stops the task if it is going and removes its file changes |
+| `undo(id)` | Stops the task if it is going and removes its file changes. The layer is deleted from disk once no running task reads it. |
 | `approvals()` | Every approval |
 | `answer(id, approved, by)` | Answers an approval. The first answer wins. |
 | `on(listener)` | Live events as they are written. Returns a function that stops listening. To read the whole log reliably, use a `LogReader`. |
@@ -177,9 +185,9 @@ What a tool's `run` and a model job's `run` receive. Both run inside the core, n
 | Field | Type | Meaning |
 |---|---|---|
 | `name` | `string` | |
-| `start(box)` | `void \| Promise<void>` | Runs once at boot, after the API is up. Call `box.createTask()` whenever you like. |
+| `start(box)` | `void \| (() => void) \| Promise<...>` | Runs when the app turns on: at boot, after the API is up, or when the owner enables the app. Call `box.createTask()` whenever you like. Return a function that stops the trigger. |
 
-The generic triggers `schedule`, `webhook` and `onFileChange` are in `core/triggers.ts`. See [Triggers](/concepts/triggers/).
+When the owner turns an app off, the box calls each trigger's stop function. A trigger that returned nothing keeps running until the box restarts, and the app reports `restartNeeded: true`. The generic triggers `schedule`, `webhook` and `onFileChange` are in `core/triggers.ts`. See [Triggers](/concepts/triggers/).
 
 ## `LogReader`
 
@@ -214,7 +222,7 @@ An entry in the portal's app grid.
 type Route = (req: Request, box: Box) => Response | Promise<Response>;
 ```
 
-A standard Web `Request` in, a `Response` out. Routes run in the core. A route that throws returns 500 with `{"error": "..."}`. Routes have no authentication of their own: check a shared secret yourself if an outside service calls one.
+A standard Web `Request` in, a `Response` out. Routes run in the core. A route that throws returns 500 with `{"error": "..."}`. From outside the box a route needs a paired device's token, like the rest of the API, and a request relayed by a reverse proxy on the box counts as outside. A route that an outside service calls should still check its own shared secret, as the Jira app's routes do.
 
 ## `DemoKit`
 

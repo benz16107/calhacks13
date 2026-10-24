@@ -15,14 +15,15 @@ Listing and switching boxes is built. Switching opens the other box's own portal
 
 ## Before you start
 
-- Two machines running GurtOS. See [Install on Ubuntu](/get-started/install-on-ubuntu/) or [Install Server](/get-started/install-server/).
+- Two machines running GurtOS. See [Install on Ubuntu](/get-started/install-on-ubuntu/) or [Install GurtOS Server](/get-started/install-server/).
 - A root shell on each.
-- A network route from your browser to both boxes. The API listens on `127.0.0.1` by default; see step 2 of [Approve from your phone](/guides/approve-from-your-phone/) for `BOX_LISTEN`.
+- A network route from your browser to both boxes. GurtOS Server from the ISO opens its API to private networks and sets its own `BOX_URL`. On the Ubuntu install, see step 2 of [Approve from your phone](/guides/approve-from-your-phone/) for `BOX_LISTEN`.
+- Your browser paired with each box. Off the box itself, every request needs a paired device's token, and each box pairs its own devices.
 
 ## Steps
 
 1. **Name each box and give its address.** On each machine, set an id, a display name and the address its portal
-   answers on. Without `BOX_ID`, the id is the machine's host name (`box-<id>` on the OS image), and the name is the id.
+   answers on. Without `BOX_ID`, the id is the machine's host name, and the name is the id. A GurtOS ISO install names itself `gurt-<id>`, from the first 6 hex digits of the SHA-256 of its public key, for example `gurt-bf07fe`, so two boxes never share an id.
 
    ```sh
    sudo systemctl edit box.service
@@ -62,7 +63,8 @@ Listing and switching boxes is built. Switching opens the other box's own portal
 
 4. **Switch boxes.** Open the first box's portal. The box switcher in the menu bar, the boxes at the end of the dock,
    and **Settings** under **Boxes** all list both boxes. Choose the other box, and the browser opens that box's own
-   portal. A peer without a `url` shows as "no address yet".
+   portal. Pair your browser with that box the first time, the same way as a phone. A peer without a `url` shows
+   as "no address yet".
 
 ## Check it worked
 

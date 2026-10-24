@@ -1,15 +1,15 @@
 ---
 title: Live updates
-description: The SpacetimeDB tables and reducers that carry live task status and approvals to the portal and phones, and the log stream fallback.
+description: The SpacetimeDB tables and reducers that carry live task status and approvals to the box's own screen, and the log stream phones follow instead.
 ---
 
-The portal and phones show task status and approvals as they change. The box mirrors both into SpacetimeDB, which runs on the box, and clients subscribe to it. The action log on disk stays the source of truth: SpacetimeDB is a copy the box refills whenever it reconnects.
+The portal shows task status and approvals as they change. The box mirrors both into SpacetimeDB, which runs on the box, and the box's own screen subscribes to it. A phone or a laptop follows the box's authenticated API and its log stream instead. The action log on disk stays the source of truth: SpacetimeDB is a copy the box refills whenever it reconnects.
 
 ## Where it runs
 
 | Setting | Value |
 |---|---|
-| Address | `ws://<box>:3000` (SpacetimeDB listens on every interface of the box) |
+| Address | `ws://127.0.0.1:3000`. SpacetimeDB listens on loopback only, unless `STDB_LISTEN` in `/etc/box/stdb.env` names another address. |
 | Database | `box` by default. [`BOX_STDB_DB`](/reference/environment/) changes it. |
 | Service | `spacetimedb.service`, data in `/var/lib/spacetimedb` |
 
@@ -54,14 +54,17 @@ The inbox is the rows where `state` is `pending`.
 
 | Reducer | Who may call it | Does |
 |---|---|---|
-| `answer({id, approved, by})` | Anyone | Answers a pending approval. The first answer wins; later answers change nothing. `by` is cut to 40 characters and defaults to `someone`. The box sees the answer within milliseconds and writes `approval.answered` to its log. |
+| `answer({id, approved, by})` | A connection the box has vouched for | Answers a pending approval. The first answer wins; later answers change nothing. The answer is recorded under the name the box vouched with (`box screen`, or the phone's device name); the `by` the caller sends is ignored. Any other connection is refused. The box sees the answer within milliseconds and writes `approval.answered` to its log. |
+| `registerDevice({identity, name, at})`, `removeDevice({identity})` | The box only | Vouch for a connection, or forget it. The vouched identities live in a private `device` table that clients cannot read. |
 | `putTask(row)` | The box only | Inserts or updates a task row |
 | `putApproval(row)` | The box only | Inserts or updates an approval row. An answered approval is never set back to pending. |
 
-`putTask` and `putApproval` refuse any caller that is not the identity that published the module.
+`putTask`, `putApproval`, `registerDevice` and `removeDevice` refuse any caller that is not the identity that published the module.
+
+To be vouched for, a client connects, then tells the box its identity with `POST /api/pair/identity {identity}` (64 hex characters, `identity.toHexString()`). The box accepts that from its own screen, or from a paired phone with its token, and registers the identity under that device's name.
 
 :::caution
-`answer` does not check who calls it. Anyone who can reach port 3000 can answer an approval. Keep SpacetimeDB on a network you trust, as with the [HTTP API](/reference/http-api/#authentication-and-its-limits).
+SpacetimeDB has no login. Anyone who can reach port 3000 can read every task, though only a vouched connection can answer an approval. That is why it listens on `127.0.0.1` by default, and the OS image's firewall never opens port 3000. Set `STDB_LISTEN` only to an address on a network you trust. Other devices use the [HTTP API](/reference/http-api/#who-may-call-what), which needs a paired device's token.
 :::
 
 ## TypeScript client
@@ -105,9 +108,9 @@ Columns are camelCase in the TypeScript client and snake_case in SQL. `costCents
 SELECT id, question, cost_cents FROM approval WHERE state = 'pending'
 ```
 
-## When SpacetimeDB is out of reach
+## Phones, laptops, and when SpacetimeDB is out of reach
 
-The portal falls back to the action log's event stream, `GET /api/log/stream`, and answers approvals with `POST /api/approvals/<id>`. Both carry the same information, from the log itself. See [Following the action log](/reference/http-api/#following-the-action-log).
+Away from the box, the portal follows the action log's event stream, `GET /api/log/stream?access_token=<token>`, and answers approvals with `POST /api/approvals/<id>` and its device token, so the log names the device. Both carry the same information, from the log itself. See [Following the action log](/reference/http-api/#following-the-action-log).
 
 A client that cannot use either can poll `GET /api/tasks` and `GET /api/approvals?state=pending`.
 

@@ -28,10 +28,13 @@ Your own laptop or desktop, used as a normal computer, with agents working besid
 desktop and your own account. Agents work as separate users without `sudo`, on copies of your real folders.
 When a task finishes, you look at what it changed and choose **Keep** or **Undo**.
 
-**Status: Preview, in development.** The core already runs tasks on copies of your folders, with Keep and Undo,
-through its API. The desktop pieces are being built: approvals as desktop notifications,
-a top-bar indicator, the GurtOS app window, and "Ask an agent" on a folder in Files.
-See [Install GurtOS Personal](/get-started/install-personal/).
+It installs from its own GurtOS Personal ISO. GNOME's first-boot setup makes your account, and GurtOS makes that
+account the owner. Approvals arrive as desktop notifications, a top-bar indicator shows what agents are doing, the
+GurtOS app opens the portal in a window, and **Ask an Agent** in Files hands an agent a folder. You can undo a Keep
+later, too.
+
+**Status: Preview.** It installs and runs, and has been walked end to end on a fresh install. Filling the vault and
+pairing a phone still take a terminal. See [Install GurtOS Personal](/get-started/install-personal/).
 
 ## GurtOS Business
 
@@ -48,16 +51,17 @@ intent is:
 
 | | GurtOS Server | GurtOS Personal | GurtOS Business |
 |---|---|---|---|
-| Status | Preview | Preview, in development | Planned |
+| Status | Preview | Preview | Planned |
 | Runs on | A spare PC, a VM or a cloud instance | Your own laptop or desktop | The company's machines |
-| Base system | GurtOS image (Ubuntu 24.04 packages, no desktop), or Ubuntu 24.04 with the box service | Ubuntu 24.04 with GNOME | Planned |
+| Install | The GurtOS Server ISO, or the box service on Ubuntu 24.04 | The GurtOS Personal ISO | Planned |
+| Base system | Ubuntu 24.04 packages, no desktop | Ubuntu 24.04 with GNOME | Planned |
 | Human login | None. No shell, no `sudo` on the OS image | Your own account, with `sudo` | Planned: people with roles |
 | Agents run as | One Linux user per task | One Linux user per task | Planned: the same |
 | Agents work on | Workspaces on the box | Copies of your own folders | Planned |
-| Undo | Undo any one task | Keep or Undo after each task | Planned |
+| Undo | Undo any one task | Keep or Undo after each task, and undo a Keep | Planned |
 | Approvals | Portal, phone, and apps such as Jira or a chat | Desktop notifications, portal, phone | Planned: routed by role |
 | Screen | The portal, full screen on the box's display | Your GNOME desktop | Planned |
-| Updates | Whole-system A/B updates with automatic rollback (OS image) | Ubuntu's own updates | Planned: staged across a fleet |
+| Updates | Whole-system A/B updates with automatic rollback | The same. Your files, accounts and settings stay; software installed with `apt` does not | Planned: staged across a fleet |
 | Many machines | One portal can list several boxes (Preview) | One computer | Planned: fleet management |
 
 All editions share the same task model, vault, network policy, approvals, action log and app SDK. A guide for one

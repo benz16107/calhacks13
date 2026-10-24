@@ -41,7 +41,11 @@ The worker starts as a transient systemd unit, `box-task-<id>`, with these prope
 
 A task never works on the real files. It gets an overlayfs copy: its own changes on top of the changes of tasks that finished before it, on top of the workspace's base files. The base files are in a folder only root can enter. The copy's top folder belongs to the task's user with mode `0700`, so no other task can enter it. When the task finishes, its changes become a layer that later tasks see, and undo takes that one layer out.
 
-**Stops:** a task damaging the original files, a task seeing another running task's changes, and a bad task's changes outliving an undo. See [Workspaces and layers](/concepts/workspaces-and-layers/).
+Undo takes the layer out of the view, then deletes its files from disk as soon as no running task still reads it.
+
+On GurtOS Personal a task can work on a copy of the owner's real folders. Only the owner may hand out a folder. It must be in the owner's home or in the folders chosen in Settings (`agentFolders`), must not belong to root, and can never be the system or the box's own state: `/etc`, `/root`, `/proc`, `/sys`, `/dev`, `/boot`, `/run`, `/usr`, `/var/lib`, `/var/log`, `/opt` and the box's data folder are refused, and Settings cannot add them. Links are followed to where they really go before the check. Nothing reaches the real folder until the owner chooses Keep, and Keep keeps each file's owner and mode.
+
+**Stops:** a task damaging the original files, a task seeing another running task's changes, a bad task's changes outliving an undo, and an agent being given the system's or the box's own files. See [Workspaces and layers](/concepts/workspaces-and-layers/).
 
 ## 4. No secrets in the task
 
@@ -62,7 +66,7 @@ The proxy knows which task opened each connection from the uid that owns it, so 
 - A name that resolves to the box itself is refused unless the exact `host:port` is listed, and the box's own ports (the API, SpacetimeDB, the proxy range) are always refused.
 - Every refusal is a `net.blocked` event in the action log.
 
-A task with an empty `hosts` list has no network at all.
+A task with an empty `hosts` list has no network at all. A task that names no hosts gets none, unless the owner sets Settings `networkDefault` to `allowlist`, which gives it the hosts in `defaultHosts`.
 
 **Stops:** sending data to a host the task was not given, going around the proxy, reaching the box's API or SpacetimeDB to approve itself, and reaching services on your local network. See [Network policy](/concepts/network-policy/).
 
@@ -81,12 +85,14 @@ The authority's private key is in `BOX_HOME/ca`, root only. Tasks that are not D
 
 Every tool declares what a call costs. Before a call runs, the broker adds the cost to what the task has spent and to what its other calls in flight have reserved. If the total would pass the task's budget, the task pauses and asks for an OK. The tool runs only after someone approves.
 
+- A single spend above Settings `approvalThresholdCents` always asks, even inside the budget. The default is 10000 cents, $100.
+- A task that names no budget gets Settings `defaultBudgetCents`, 0 by default, so every spend asks.
 - One approval per action. A call retried while waiting shares one approval and is charged once.
 - The first answer wins, from any device.
 - A task's pending approvals close when it ends.
 - Agents can also ask for an OK before anything risky.
 
-**Stops:** a task spending past its budget without a person agreeing, and two payments fired at once together passing the budget. See [Approvals and budgets](/concepts/approvals-and-budgets/).
+**Stops:** a task spending past its budget, or a large single amount, without a person agreeing, and two payments fired at once together passing the budget. See [Approvals and budgets](/concepts/approvals-and-budgets/).
 
 ## 8. Everything is written down
 
@@ -94,18 +100,36 @@ Every state change, step, tool call and result, approval and answer, cost and re
 
 **Gives you:** a record of what each agent did, which person approved what and from which device, and the base for undo and resume. The log is append-only by design but not tamper-evident: root on the box can edit it. See [The action log](/concepts/action-log/).
 
-## 9. Signed, whole-system updates
+## 9. Only paired devices reach the API
 
-On the GurtOS, the system updates as one image. An update must carry a valid ed25519 signature from the build machine's key and match its SHA-256 hash. It is written to the slot that is not running, tried once, and kept only if the box reports healthy within 5 minutes. Otherwise the box starts the previous system again.
+On the Ubuntu install and GurtOS Personal, the box's HTTP API listens on `127.0.0.1` unless you set `BOX_LISTEN`. GurtOS Server from the ISO listens on every address behind an inbound firewall (below). Wherever it listens, it sorts each request:
+
+- **The box's own screen.** A request over the Unix socket, or from `127.0.0.1` with no proxy header such as `X-Forwarded-For`, may do everything.
+- **A paired device.** Any other request must carry the token of a device paired with a one-time code from the box's own screen. It may read, start tasks, undo and answer approvals. The log names the device as the approver; the request cannot choose the name.
+- **Anyone else** gets `401`. Only the health check, redeeming a pairing code and the portal's own pages are open.
+
+Pairing codes, the list of devices, setup, settings, the vault, apps on and off, the owner, folders and Keep are the **owner's**: the box's own screen, or a device paired as the owner from that screen. Anyone else gets `403`. No route returns a vault value.
+
+SpacetimeDB, which mirrors live tasks and approvals for the box's own screen, has no login of its own, so it listens on `127.0.0.1` only. Its `answer` reducer also works only from a connection the box has vouched for (the box's own screen, or a paired phone that told the box its SpacetimeDB identity through the API), and it records the vouched name. Phones follow the box's API instead.
+
+The OS image adds an inbound firewall. It drops everything that comes in except replies to the box's own connections, ping and DHCP. On GurtOS Server it also lets the API on port 7700 in from private networks only (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`, Tailscale's `100.64.0.0/10`, link-local and IPv6 unique local addresses), never from the public internet. SpacetimeDB's port is never open. Debug builds also allow SSH.
+
+**Stops:** anyone on the internet reaching the API at all on the OS image, and someone on your network reading tasks, starting work, approving spending or undoing tasks; a paired phone changing settings or the vault; and a forged approval through SpacetimeDB. See [HTTP API](/reference/http-api/#who-may-call-what).
+
+## 10. Signed, whole-system updates
+
+On the GurtOS image, the system updates as one image. An update must carry a valid ed25519 signature from the build machine's key and match its SHA-256 hash. It is written to the slot that is not running, tried once, and kept only if the box reports healthy within 5 minutes. Otherwise the box starts the previous system again.
 
 **Stops:** an unsigned or altered image being installed, and a broken update leaving the box unusable. See [System updates](/concepts/system-updates/).
 
-## 10. No human account on the OS image
+## 11. No human account on GurtOS Server
 
-The GurtOS has no login prompt and no user with sudo. Root's password is locked, the `sudo` binary is absent, and every console login is masked. Release builds have no SSH server. The screen is a full-screen browser that runs as a `kiosk` user with no password and no shell, showing the portal from the box's own API. The system is built from 40 named packages and their dependencies, without apt, snapd or cloud-init: it changes only by whole-system updates.
+GurtOS Server has no login prompt and no user with sudo. Root's password is locked, the `sudo` binary is absent, and every console login is masked. Release builds have no SSH server. The screen is a full-screen browser that runs as a `kiosk` user with no password and no shell, showing the portal from the box's own API. The system is built from 40 named packages and their dependencies, without apt, snapd or cloud-init: it changes only by whole-system updates.
 
 **Stops:** someone at the keyboard, or on the network, logging in to the box. Debug builds add SSH with one key for root and say so in `/etc/box-os/release`.
 
+GurtOS Personal is different on purpose: it is your own computer, and your account has `sudo`. The agents' task users never do.
+
 ## What these layers have in common
 
-Every limit is enforced by the kernel, systemd or the box's own core, outside the agent's process. None depends on the model following instructions. The trust that remains is in the core, the apps installed in it, the machine's root account and the people who can reach the API. The [threat model](/security/threat-model/) covers those.
+Every limit is enforced by the kernel, systemd or the box's own core, outside the agent's process. None depends on the model following instructions. The trust that remains is in the core, the apps installed in it, the machine's root account, other software running on the box itself, and the devices you pair. The [threat model](/security/threat-model/) covers those.

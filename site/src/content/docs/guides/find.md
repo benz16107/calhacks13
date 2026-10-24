@@ -20,7 +20,7 @@ The Find app keeps one index of every photo, text file and finished task on the 
    MOSS_PROJECT_KEY=your-project-key
    ```
 
-   Restart the box service. Moss runs inside the box: it embeds documents and answers queries in the box's own memory, so a search never waits on the network. A few seconds after the index changes, it pushes a copy to your Moss project's cloud index. Only text goes there (descriptions, file text and task summaries), never a photo.
+   Restart the box service. Moss runs inside the box: it embeds documents and answers queries in the box's own memory, so a search never waits on the network. A Moss session is open only while someone searches, and closes after 2 quiet minutes, because Moss bills open sessions by the minute. Search never needs Moss's cloud. To keep a cloud copy too, set `FIND_CLOUD_SYNC=1` in the box service's environment: the box then pushes its index when a session closes, at most every 10 minutes and only when it changed. Only text goes there (descriptions, file text and task summaries), never a photo.
 
 2. **Check the vision models.** The box tries each model in order, and the first that answers wins:
 

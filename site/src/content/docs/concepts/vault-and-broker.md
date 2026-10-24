@@ -14,7 +14,7 @@ FACTORY_API_KEY=...
 APIFY_TOKEN=...
 ```
 
-The core reads it at startup. If the file is readable by anyone but root, the core refuses to start. On an ISO install, first-boot setup creates the vault empty on the data partition, so it survives system updates. You can point the core at another file with `BOX_VAULT`.
+The core reads it at startup. If the file is readable by anyone but root, the core refuses to start. The owner can also set a key while the box runs, with `PUT /api/vault/<NAME>`. The file stays root-only, the key takes effect at once, and the log records only the key's name. No route ever returns a value: `GET /api/vault` lists the names and when each was set. On an ISO install, first-boot setup creates the vault empty on the data partition, so it survives system updates. You can point the core at another file with `BOX_VAULT`.
 
 Who may read which key is declared in code, not decided at run time:
 
@@ -25,7 +25,7 @@ Who may read which key is declared in code, not decided at run time:
 Asking for any other key throws an error. A tool that declares `STRIPE_SECRET_KEY` cannot read `WALLET_SOLANA_KEY`, even though both are in the same file.
 
 :::caution[Planned]
-In this release you add keys by editing the vault file as root. A setup screen in the portal for adding keys is planned. See [add a secret](/guides/add-a-secret/).
+In this release you add keys through the vault API or by editing the file as root. A screen in the portal for adding keys is planned. See [add a secret](/guides/add-a-secret/).
 :::
 
 ## The broker
