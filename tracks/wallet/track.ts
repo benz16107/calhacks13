@@ -2,43 +2,22 @@
 // Required, with x402, in USDC on Solana devnet (test money). Tasks call wallet.quote and wallet.pay through
 // their broker; the key never leaves the core. The broker counts each payment toward the task's budget and
 // asks for an OK above it.
-import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
-import { createKeyPairSignerFromBytes, getBase58Encoder } from '@solana/kit';
-import type { PaymentRequired, PaymentRequirements } from '@x402/core/types';
-import { decodePaymentResponseHeader, wrapFetchWithPayment, x402Client, x402HTTPClient } from '@x402/fetch';
+import type { PaymentRequirements } from '@x402/core/types';
+import { decodePaymentResponseHeader, wrapFetchWithPayment, x402Client } from '@x402/fetch';
 import { ExactSvmScheme } from '@x402/svm/exact/client';
-import type { Approval, Ctx, Track } from '../../core/contract.ts';
+import type { Approval, Track } from '../../core/contract.ts';
+import { CDP_SECRETS, checkLocalPolicy, localPolicy, policyRoutes, policySummary, walletSigner } from './cdp-wallet.ts';
+import { auditJob, auditOptionalSecrets, auditRoutes, auditTrigger, latestAudit } from './audit.ts';
+import { discover } from './bazaar.ts';
+import { withTaskMemo } from './memo.ts';
+import { payMetered } from './metered.ts';
+import { onrampRoutes, topupSection } from './onramp.ts';
+import { earnings, sellRoutes, type Sale } from './sell.ts';
+import { DEVNET, LABEL, MAX_CONTENT, RPC, TIMEOUT_MS, allowedUrl, atomic, balance, claim, devnetOffer, explorer, paymentRequired, signer, usdc, validCents, walletDir } from './lib.ts';
 
-export const DEVNET = 'solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1';
-export const USDC = '4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU'; // Circle's devnet USDC mint
-const RPC = 'https://api.devnet.solana.com';
-const LABEL = 'Solana devnet USDC (test money)';
-const MAX_CONTENT = 20_000;
-const TIMEOUT_MS = 30_000;
-
-/** USDC has 6 decimals, so 1 cent is 10,000 atomic units. */
-export const atomic = (cents: number) => String(Math.round(cents * 10_000));
-const validCents = (c: unknown): c is number => typeof c === 'number' && Number.isFinite(c) && c > 0;
-const usdc = (amount: string) => (Number(amount) / 1e6).toString();
-const explorer = (kind: 'tx' | 'address', id: string) => `https://explorer.solana.com/${kind}/${id}?cluster=devnet`;
-
-/** The same host rule as the task's network (core/net.ts), so the wallet reaches only the task's own hosts. */
-export function allowedUrl(hosts: string[], raw: string): URL {
-  const url = new URL(raw);
-  if (url.protocol !== 'http:' && url.protocol !== 'https:') throw new Error(`only http and https URLs, not ${url.protocol}`);
-  const port = url.port || (url.protocol === 'https:' ? '443' : '80');
-  const host = url.hostname;
-  const ok = hosts.some((h) => h === host || h === `${host}:${port}` || (h.startsWith('*.') && host.endsWith(h.slice(1))));
-  if (!ok) throw new Error(`${url.host} is not one of this task's hosts`);
-  return url;
-}
-
-/** The one offer the wallet will pay: exact, on Solana devnet, in devnet USDC. */
-export function devnetOffer(accepts: PaymentRequirements[]): PaymentRequirements | undefined {
-  return accepts.find((a) => a.scheme === 'exact' && a.network === DEVNET && a.asset === USDC);
-}
+export { DEVNET, USDC, allowedUrl, atomic, devnetOffer } from './lib.ts';
 
 /** The latest quoted devnet offer per URL. wallet.pay uses it when a call leaves out `cents`. */
 const quoted = new Map<string, PaymentRequirements>();
@@ -53,24 +32,8 @@ const href = (raw: unknown) => {
 };
 const purposeFor = (url: string) => `${url} in devnet USDC (test money)`;
 
-async function signer(ctx: Ctx) {
-  return createKeyPairSignerFromBytes(getBase58Encoder().encode(ctx.secret('WALLET_SOLANA_KEY')));
-}
-
-/** Read a 402 answer's offers. x402 v2 puts them in a base64 PAYMENT-REQUIRED header. */
-async function paymentRequired(res: Response): Promise<PaymentRequired> {
-  const body = await res.json().catch(() => undefined);
-  return new x402HTTPClient(new x402Client()).getPaymentRequiredResponse((name) => res.headers.get(name), body);
-}
-
-/** The wallet's own files: payment marks and the ledger. Read at call time, since tests set BOX_HOME late. */
-function walletDir() {
-  const dir = path.join(process.env.BOX_HOME ?? '/var/lib/box', 'wallet');
-  fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
-  return dir;
-}
-
-type Payment = { at: string; task: string; usdc: string; payee: string; tx: string; explorer: string };
+/** One settled payment. `amount` is shown as is: other payment routes (Fetch.ai's) use their own units. */
+type Payment = { at: string; task: string; amount: string; network: string; payee: string; tx: string; explorer?: string };
 
 /** Settled payments, newest first. The log reader may write one twice after a crash, so keep the first per tx. */
 export function payments(): Payment[] {
@@ -78,7 +41,9 @@ export function payments(): Payment[] {
   const lines = fs.existsSync(file) ? fs.readFileSync(file, 'utf8').split('\n').filter(Boolean) : [];
   const byTx = new Map<string, Payment>();
   for (const line of lines) {
-    const p = JSON.parse(line) as Payment;
+    const raw = JSON.parse(line);
+    // Ledgers written before Fetch.ai payments had only x402 lines: { usdc } and no network.
+    const p: Payment = { ...raw, amount: raw.amount ?? `$${raw.usdc}`, network: raw.network ?? 'solana-devnet' };
     if (!byTx.has(p.tx)) byTx.set(p.tx, p);
   }
   return [...byTx.values()].reverse();
@@ -88,16 +53,34 @@ const esc = (v: unknown) => String(v ?? '').replace(/[&<>"']/g, (c) => `&#${c.ch
 const short = (id: string) => (id.length > 12 ? `${id.slice(0, 4)}…${id.slice(-4)}` : id);
 const when = (at: string) => new Date(at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 
+/** The two locks: GurtOS's budget and OK, then the payee list and cap, held by Coinbase in cdp mode. */
+function locks(p: any = {}) {
+  const payees = (p.payees ?? []).map((a: string) => `<li class="mono"><a href="${esc(explorer('address', a))}">${esc(a)}</a></li>`).join('');
+  return `<section aria-labelledby="lock-h">
+    <h2 id="lock-h">Two locks on the money</h2>
+    <p>1. GurtOS: each task's budget, and your OK on the phone above it. 2. ${p.mode === 'cdp' ? "Coinbase's policy engine" : 'The owner policy below'}: ${esc(p.label ?? p.error ?? '')}</p>
+    <p class="small">Mode <b>${esc(p.mode ?? '?')}</b>${p.account ? `, Coinbase account <span class="mono addr">${esc(p.account)}</span>` : ''}${p.policyId ? `, policy <span class="mono">${esc(p.policyId)}</span>` : ''}.
+    Cap per payment: ${p.maxCentsPerPayment ? `$${(p.maxCentsPerPayment / 100).toFixed(2)}` : 'none set'}. Payees allowed: ${payees ? '' : 'any (none listed)'}</p>
+    ${payees ? `<ul>${payees}</ul>` : ''}
+    <p class="small">Set them from your phone or this screen: POST /t/wallet/policy {payees, maxCentsPerPayment}. Agents cannot.</p>
+  </section>`;
+}
+
 /** The Agent wallet window. Rendered here, so it makes no fetches and needs no token off the box. */
-export function page(s: any, list: Payment[], titleOf: (task: string) => string | undefined) {
+export function page(s: any, list: Payment[], titleOf: (task: string) => string | undefined, sales: Sale[] = []) {
   const rows = list
     .slice(0, 50)
     .map(
-      (p) => `<tr><td>${esc(when(p.at))}</td><td class="mono">$${esc(p.usdc)}</td>
-<td class="mono"><a href="${esc(explorer('address', p.payee))}" title="${esc(p.payee)}">${esc(short(p.payee))}</a></td>
+      (p) => `<tr><td>${esc(when(p.at))}</td><td class="mono">${esc(p.amount)}<div class="small">${esc(p.network)}</div></td>
+<td class="mono">${p.network === 'solana-devnet' ? `<a href="${esc(explorer('address', p.payee))}" title="${esc(p.payee)}">${esc(short(p.payee))}</a>` : `<span title="${esc(p.payee)}">${esc(short(p.payee))}</span>`}</td>
 <td>${esc(titleOf(p.task) ?? 'a task')}<div class="small mono">${esc(p.task)}</div></td>
-<td class="mono"><a href="${esc(p.explorer)}" title="${esc(p.tx)}">${esc(short(p.tx))}</a></td></tr>`,
+<td class="mono">${/^https:\/\//.test(p.explorer ?? '') ? `<a href="${esc(p.explorer)}" title="${esc(p.tx)}">${esc(short(p.tx))}</a>` : esc(short(p.tx))}</td></tr>`,
     )
+    .join('\n');
+  const sold = sales
+    .slice(0, 50)
+    .map((x) => `<tr><td>${esc(when(x.at))}</td><td class="mono">$${esc((x.cents / 100).toFixed(3))}</td><td>${esc(x.product)}</td>
+<td class="mono">${esc(short(x.payer))}</td><td class="mono"><a href="${esc(explorer('tx', x.tx))}" title="${esc(x.tx)}">${esc(short(x.tx))}</a></td></tr>`)
     .join('\n');
   const wallet = s.wallet
     ? `<p class="amount">${esc(s.usdc ?? '?')} USDC</p>
@@ -139,41 +122,19 @@ export function page(s: any, list: Payment[], titleOf: (task: string) => string 
     ${rows ? `<table><thead><tr><th scope="col">Time</th><th scope="col">Amount</th><th scope="col">Paid to</th><th scope="col">Task</th><th scope="col">Transaction</th></tr></thead>
 <tbody>${rows}</tbody></table>` : '<p class="small">No payments yet.</p>'}
   </section>
+  <section aria-labelledby="earn-h">
+    <h2 id="earn-h">Earned</h2>
+    <p class="small">This box sells its own services over x402 (audit proof, search, renting its agent). Price list: <a href="sell">/t/wallet/sell</a>.</p>
+    ${sold ? `<table><thead><tr><th scope="col">Time</th><th scope="col">Amount</th><th scope="col">Product</th><th scope="col">Paid by</th><th scope="col">Transaction</th></tr></thead>
+<tbody>${sold}</tbody></table>` : '<p class="small">No sales yet.</p>'}
+  </section>
+  ${s.wallet ? locks(s.policy) : ''}
+  ${s.wallet ? topupSection(s.wallet) : ''}
 </main>
 `;
 }
 
-/**
- * Mark a payment as started, durably, before any money moves. If the box dies mid-payment, the broker runs the
- * call again on resume; the mark makes that second run refuse instead of paying twice.
- */
-function claim(key: string) {
-  const dir = walletDir();
-  const file = path.join(dir, createHash('sha256').update(key).digest('hex').slice(0, 32));
-  let fd: number;
-  try {
-    fd = fs.openSync(file, 'wx');
-  } catch (e) {
-    if ((e as NodeJS.ErrnoException).code !== 'EEXIST') throw e;
-    throw new Error('this payment started before the box restarted and may have gone through; not paying twice. Check the wallet on the explorer.');
-  }
-  fs.fsyncSync(fd);
-  fs.closeSync(fd);
-  const d = fs.openSync(dir, 'r');
-  fs.fsyncSync(d);
-  fs.closeSync(d);
-}
-
-async function balance(owner: string): Promise<number> {
-  const r = await fetch(RPC, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'getTokenAccountsByOwner', params: [owner, { mint: USDC }, { encoding: 'jsonParsed' }] }),
-  });
-  const { result, error } = await r.json();
-  if (error) throw new Error(`devnet RPC: ${error.message}`);
-  return result.value.reduce((sum: number, a: any) => sum + Number(a.account.data.parsed.info.tokenAmount.uiAmountString), 0);
-}
+const sell = sellRoutes({ latestAudit, publicUrl: process.env.BOX_PUBLIC_URL });
 
 export default {
   name: 'wallet',
@@ -205,8 +166,8 @@ export default {
         `Leave out cents to pay the price wallet.quote last saw for this URL. Above the task's budget it waits for the owner's OK. ` +
         `You never see the wallet's key. Input: { url, cents? }.`,
       input: { type: 'object', properties: { url: { type: 'string' }, cents: { type: 'number' } }, required: ['url'] },
-      secrets: ['WALLET_SOLANA_KEY'],
-      hosts: ['api.devnet.solana.com'],
+      secrets: ['WALLET_SOLANA_KEY', ...CDP_SECRETS],
+      hosts: ['api.devnet.solana.com', 'api.cdp.coinbase.com'],
       // The agent's input is untrusted: a bad `cents`, or no `cents` and no quote, costs nothing here, and run refuses it.
       cost: (input: { url?: unknown; cents?: unknown }) => {
         if (input?.cents !== undefined) return validCents(input.cents) ? input.cents : 0;
@@ -231,11 +192,14 @@ export default {
         let offer: PaymentRequirements | undefined;
         // Pay only the devnet USDC offer at exactly the agreed price. The x402 client's own default also
         // refuses any single payment over $1.
-        const client = new x402Client().register(DEVNET, new ExactSvmScheme(await signer(ctx), { rpcUrl: RPC })).registerPolicy((_v, accepts) => {
+        // cdp mode: Coinbase holds the key and signs only inside its policy. vault-key mode: the box signs.
+        const w = await walletSigner(ctx);
+        const client = new x402Client().register(DEVNET, withTaskMemo(new ExactSvmScheme(w.signer, { rpcUrl: RPC }), ctx.task?.id ?? 'box')).registerPolicy((_v, accepts) => {
           offer = devnetOffer(accepts);
           if (!offer || offer.amount !== want) {
             throw new Error(`no ${LABEL} offer at exactly $${usdc(want)}${offer ? `; the price is $${usdc(offer.amount)}` : ''}. Quote it again.`);
           }
+          checkLocalPolicy(localPolicy(), offer); // the owner's payee list and cap; in cdp mode Coinbase checks them again
           return [offer];
         });
         claim(ctx.key);
@@ -245,11 +209,13 @@ export default {
         const header = res.headers.get('payment-response');
         const receipt = header ? decodePaymentResponseHeader(header) : undefined;
         if (!receipt?.success) throw new Error(`HTTP ${res.status} with no settled payment`);
-        const paid = { usdc: usdc(offer.amount), cents: Number(want) / 10_000, payee: offer.payTo, network: 'solana-devnet', test: true, tx: receipt.transaction, explorer: explorer('tx', receipt.transaction) };
+        const paid = { usdc: usdc(offer.amount), cents: Number(want) / 10_000, payee: offer.payTo, network: 'solana-devnet', test: true, tx: receipt.transaction, explorer: explorer('tx', receipt.transaction), mode: w.mode };
         ctx.log(`Paid $${paid.usdc} in ${LABEL} to ${paid.payee} for ${url.href}`, { payment: paid });
         return { status: res.status, content: (await res.text()).slice(0, MAX_CONTENT), paid };
       },
     },
+    discover,
+    payMetered,
   ],
 
   // Every settled payment, from the start of the log, into the wallet's ledger for the app page.
@@ -259,22 +225,27 @@ export default {
       read(e) {
         if (e.type !== 'tool.result' || !e.ok) return;
         const paid = (e.output as { paid?: any } | undefined)?.paid;
-        if (paid?.network !== 'solana-devnet' || !paid.tx) return;
-        const p: Payment = { at: e.at, task: e.task, usdc: paid.usdc, payee: paid.payee, tx: paid.tx, explorer: paid.explorer };
+        // Any payment route that reports a `paid` receipt in this shape shows here (x402 and Fetch.ai's protocol).
+        if (typeof paid?.tx !== 'string' || typeof paid.network !== 'string' || typeof paid.payee !== 'string') return;
+        const amount = paid.usdc !== undefined ? `$${paid.usdc}` : String(paid.amount ?? '?');
+        const p: Payment = { at: e.at, task: e.task, amount, network: paid.network, payee: paid.payee, tx: paid.tx, explorer: paid.explorer };
         fs.appendFileSync(path.join(walletDir(), 'payments.jsonl'), JSON.stringify(p) + '\n');
       },
     },
+    ...sell.logReaders,
   ],
+
+  triggers: [auditTrigger],
 
   // The wallet's public side, for the app page and the demo.
   modelJobs: [
     {
       name: 'wallet.status',
-      secrets: ['WALLET_SOLANA_KEY'],
+      secrets: ['WALLET_SOLANA_KEY', ...CDP_SECRETS],
       async run(_input, ctx) {
         let address: string;
         try {
-          address = (await signer(ctx)).address;
+          address = (await walletSigner(ctx)).address;
         } catch {
           return { wallet: null, label: LABEL, setup: 'the vault has no usable WALLET_SOLANA_KEY; see tracks/wallet/README.md' };
         }
@@ -283,18 +254,31 @@ export default {
         return {
           wallet: address, network: 'solana-devnet', test: true, label: LABEL, explorer: explorer('address', address),
           usdc: typeof usdc === 'number' ? usdc : undefined, error: usdc instanceof Error ? usdc.message : undefined,
+          policy: await policySummary(ctx).catch((e: Error) => ({ error: e.message })),
         };
       },
     },
+    auditJob,
   ],
 
   routes: {
     'GET /status': async (_req, box) => Response.json(await box.job('wallet.status', {})),
     'GET /': async (_req, box) => {
       const s = await box.job('wallet.status', {}).catch((e: Error) => ({ error: e.message }));
-      return new Response(page(s, payments(), (id) => box.task(id)?.title), { headers: { 'content-type': 'text/html; charset=utf-8' } });
+      return new Response(page(s, payments(), (id) => box.task(id)?.title, earnings()), { headers: { 'content-type': 'text/html; charset=utf-8' } });
     },
+    ...policyRoutes,
+    ...auditRoutes,
+    // Owner-only: write a fingerprint now instead of waiting for 03:00.
+    'POST /audit': async (_req, box) => Response.json(await box.job('wallet.audit', {})),
+    ...onrampRoutes,
+    ...sell.routes,
   },
+  // The paid x402 routes: strangers pay for them, so the payment is the credential. Nothing else is open.
+  openRoutes: sell.openRoutes,
+  // Routes read the wallet key (to be paid) and the CDP keys (to settle through Coinbase, else x402.org).
+  secrets: ['WALLET_SOLANA_KEY', ...CDP_SECRETS],
+  optionalSecrets: [...new Set([...auditOptionalSecrets, ...CDP_SECRETS])],
 
   apps: [{ name: 'wallet', title: 'Agent wallet (Solana devnet, test money)', href: '/' }],
 } satisfies Track;

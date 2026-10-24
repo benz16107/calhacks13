@@ -17,7 +17,7 @@ const tool = (name: string) => wallet.tools.find((t) => t.name === name) as Tool
 // A fresh key with no funds: every case here must stop before signing.
 const key = newKey().secret;
 const ctx = (hosts: string[], callKey: string, approvals: Partial<Approval>[] = []) =>
-  ({ key: callKey, task: { id: 't1', hosts }, box: { approvals: () => approvals }, secret: () => key, log: () => {}, cost: () => {} }) as unknown as Ctx;
+  ({ key: callKey, task: { id: 't1', hosts }, box: { approvals: () => approvals }, secret: (n: string) => { if (n !== 'WALLET_SOLANA_KEY') throw new Error(`the vault has no ${n}`); return key; }, log: () => {}, cost: () => {} }) as unknown as Ctx;
 
 const seller = await startSeller();
 const host = `api.localhost:${seller.port}`;
@@ -74,8 +74,11 @@ test('the ledger keeps each settled payment once, and the page shows it as test 
   const paid = { usdc: '0.03', cents: 3, payee: PAYEE, network: 'solana-devnet', test: true, tx: 'TX1abcdefghijk', explorer: 'https://explorer.solana.com/tx/TX1abcdefghijk?cluster=devnet' };
   const result = { seq: 1, at: '2026-10-24T17:00:00.000Z', type: 'tool.result', task: 't1', key: 'k', ok: true, output: { paid } } as LogEvent;
   const reader = wallet.logReaders[0];
-  for (const e of [result, result, { ...result, output: { status: 200 } }, { ...result, ok: false }] as LogEvent[]) await reader.read(e);
+  for (const e of [result, result, { ...result, output: { status: 200 } }, { ...result, ok: false }] as LogEvent[]) await reader.read(e, {} as any);
   assert.deepEqual(payments().map((p) => p.tx), ['TX1abcdefghijk']);
+  const fet = { ...result, output: { paid: { amount: '0.5 testnet FET', payee: 'fetch1agent', network: 'fetch-dorado', test: true, tx: 'FETTX1' } } } as LogEvent;
+  await reader.read(fet, {} as any);
+  assert.deepEqual(payments().map((p) => [p.tx, p.amount, p.network]), [['FETTX1', '0.5 testnet FET', 'fetch-dorado'], ['TX1abcdefghijk', '$0.03', 'solana-devnet']]);
 
   const fakeBox = { job: async () => ({ wallet: 'W1', usdc: 19.95 }), task: () => ({ title: 'Buy a <b>report</b>' }) } as any;
   const page = await (await wallet.routes['GET /'](new Request('http://box/t/wallet/'), fakeBox)).text();
@@ -83,6 +86,7 @@ test('the ledger keeps each settled payment once, and the page shows it as test 
   assert.match(page, /19\.95 USDC/);
   assert.match(page, /\$0\.03/);
   assert.match(page, /TX1a…hijk/);
+  assert.match(page, /0\.5 testnet FET/); // another payment route's receipt shows too, unlinked
   assert.match(page, /Buy a &#60;b&#62;report/); // a task title is the owner's text: escaped
 });
 

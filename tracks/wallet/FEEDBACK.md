@@ -68,9 +68,72 @@ Newest first within each section. Times are rough.
    `github.com/x402-foundation/x402`, and the npm packages still say Coinbase. It took a moment to trust that
    they are the same project.
 
+## Round 2: Bazaar, upto, Server Wallets, policies, faucets, Onramp (Oct 24)
+
+Kept while adding selling, Bazaar discovery, metered payments, CDP Server Wallets with the policy engine,
+Solana memos and Onramp, with `@coinbase/cdp-sdk` 1.60.0 and `@x402/*` 2.28.0.
+
+### What worked well
+
+- **The CDP faucet is a hidden gem.** `cdp.solana.requestFaucet({ address, token: 'sol' | 'usdc' })` works with
+  only an API key and any address. It fixed both our faucet problems: the devnet SOL airdrop (always 429 for
+  us) and Circle's browser-only USDC faucet. The x402 and Solana guides should point to it first.
+- **`upto` on Solana devnet works end to end.** A 2 cent cap settled for $0.002, through the CDP facilitator,
+  on the first try once the seller code was right.
+- **Bazaar search needs no key.** `searchX402Resources` answered with no auth, which is right for agents.
+- **Policy rules validate locally.** The SDK's `CreatePolicyBodySchema` let us check our rule JSON with no
+  account and no API call.
+
+### Friction
+
+11. **Policies need a scope the default key doesn't have.** `createPolicy` failed with "Missing required scope:
+    policies#manage". The portal's default Secret API Key lacks it, and the x402 and Server Wallet quickstarts
+    don't mention it. About 10 minutes. The quickstart could say "tick policies#manage" or the error could link
+    to the key's settings.
+12. **The scope is also the weak point.** For "even a compromised server can't pay outside policy" to hold, the
+    server's key must not be able to change policies. The docs don't say this. We set the policy with one key
+    and run the box on a key without the scope. A note in the policy docs would help every agent builder.
+13. **Server Wallets need a second secret, made only in the portal.** `createAccount` fails with "Wallet Secret
+    not configured". There is no API or CLI to make one, so an agent can't finish setup alone.
+14. **`splAddress` is ambiguous.** The docs say it compares "SPL token transfer recipient addresses" without
+    saying owner wallet or token account; x402 pays the token account. We listed both. Also unclear: whether
+    `in` must hold for every transfer in a transaction or any one. About 10 minutes.
+15. **A `signSolTransaction` policy leaves other operations open.** `sendSolTransaction` and `signSolMessage` are
+    not covered unless named. We added reject rules for them. Easy to miss in a security feature.
+16. **`policies.simulate` needs an existing account,** so policy JSON can't be dry-run before the wallet
+    secret exists.
+17. **No fetch-style seller adapter.** `@x402/express` and `@x402/hono` exist, but a plain WHATWG
+    `Request`/`Response` handler (what Bun, Deno, Workers and our box use) means rebuilding the flow from
+    `processHTTPRequest`, `processSettlement` and the cancellation dispatcher. About 20 minutes.
+18. **Partial settlement for `upto` is only in the types.** `processSettlement(..., { amount })` and settling
+    zero through `cancellationDispatcher.cancel` are not in the guides. A metered example would fix it.
+19. **The `upto` receipt hides the memo.** The PAYMENT-RESPONSE gives the settlement transaction, but the
+    client's memo is on the channel-open transaction, which the receipt doesn't name. We found it with
+    `getSignaturesForAddress`. About 10 minutes. An `openTransaction` field would help.
+20. **Self-payment is refused with only a code.** Testing a box buying from itself returned
+    `self_send_not_allowed`. Reasonable, but no doc mentions it, and it shapes how you test a seller.
+21. **Bazaar gives almost no feedback.** The only signal after a settled sale is `bazaar: processing` in the
+    extension response. Nothing says when or why a resource was listed or rejected (for example a private URL).
+    A listing status endpoint would help.
+22. **Bazaar search with a network filter looks broken.** `network: solana-devnet` plus a query returned
+    nothing, the same filter with no query returned items. Devnet listings are just rare; an empty-state hint
+    would avoid the confusion.
+23. **Bazaar entries carry no decimals or USD price,** so a buyer can price only assets it already knows.
+24. **Onramp's sandbox is a string prefix.** Test mode is a `partnerUserRef` starting with `sandbox-`, found in
+    a field description. Onramp has no devnet delivery, so a wallet demo can't receive test USDC through it.
+    And a project with no Onramp app gets a 404 whose text is a database error ("failed to find app ...
+    mongo: no documents in result") instead of "create an Onramp app in the Portal".
+25. **The JWT key format error is vague.** A wrongly encoded Ed25519 secret gives "Invalid keyData". Naming the
+    expected format (base64 of the 64-byte seed plus public key) would save time.
+
 ## Not Coinbase, for context
 
 - Circle's devnet USDC faucet (faucet.circle.com) worked from a headless browser: 20 USDC per address every
   2 hours, with invisible reCAPTCHA.
 - The Solana devnet SOL airdrop (`requestAirdrop`) answered "airdrop limit reached" (429) from our IP. Thanks
-  to the facilitator paying fees, we never needed SOL.
+  to the facilitator paying fees, payments never need SOL; the daily log fingerprint does, and Coinbase's CDP
+  faucet supplies it.
+- `@solana-program/memo` is not a dependency of anything we use, so the memo instruction is built by hand with
+  `@solana/kit`. Easy, but a kit-only memo example would help.
+- npm in a sparse clone of a workspace repo installs the whole workspace's packages unless run with
+  `--workspaces=false`. About 10 minutes, for the one-command installer.

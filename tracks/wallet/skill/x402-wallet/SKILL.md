@@ -1,6 +1,6 @@
 ---
 name: x402-wallet
-description: Pay for an HTTP API that answers 402 Payment Required, using the box's agent wallet (x402, USDC on Solana devnet, test money). Use when a URL returns 402, or a task says an API is paid. You never hold a key; the box pays for you within your task's budget.
+description: Pay for an HTTP API that answers 402 Payment Required, using the GurtOS agent wallet (x402, USDC on Solana devnet, test money). Use when a URL returns 402, or a task says an API is paid. You never hold a key; the wallet pays for you within a budget the human set. Works inside a GurtOS box and, through an MCP server, in any other agent.
 ---
 
 # Paying for APIs with the box's wallet
@@ -19,7 +19,8 @@ All payments are USDC on Solana devnet. That is test money, not real funds. Say 
    `content` and a `paid` receipt with the transaction.
 3. **Report.** Say what you bought, what it cost and the transaction link from `paid.explorer`.
 
-In Droid the tools appear as `wallet__quote` and `wallet__pay` (under the `box` MCP server).
+In Droid inside a box the tools appear as `wallet__quote` and `wallet__pay` (under the `box` MCP server). Outside a
+box they have the same names, under the `gurtos-wallet` server (Claude Code shows `mcp__gurtos-wallet__wallet__pay`).
 
 ## Rules
 
@@ -34,6 +35,30 @@ In Droid the tools appear as `wallet__quote` and `wallet__pay` (under the `box` 
 - **Hosts.** The wallet reaches only your task's hosts. If a URL is refused as "not one of this task's
   hosts", report it; do not try other URLs to get around it.
 
+## Outside a box (any agent)
+
+Inside GurtOS you need nothing below: the box already gives its tasks these tools, with the task's budget and
+the owner's approvals on the portal and phone. Elsewhere, one command installs the wallet as an MCP server:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/benz16107/calhacks13/main/tracks/wallet/install.sh | sh
+```
+
+It needs Node 22.18 or newer and git, makes a devnet key in `~/.gurtos-wallet/key` (mode 0600), prints the address
+to fund at https://faucet.circle.com, and registers the server with Claude Code and Factory Droid if they are
+installed. For other clients it prints a JSON config block. Run it again to update; it keeps the key.
+
+The same guards run as in a box: exact price or nothing, devnet USDC only, never pay twice for one call. The human
+sets the limits in the server's environment, and you cannot change them:
+
+- `WALLET_BUDGET_CENTS` (default 10) is the total you may spend without asking. It is counted across restarts in
+  `~/.gurtos-wallet/ledger.jsonl`.
+- `WALLET_HOSTS` is the comma list of hosts you may pay. Empty means none.
+- Above the budget the client shows the human the amount, payee and purpose and waits for a yes. A client that
+  cannot ask gets a refusal that says how to raise the budget. Do not retry, split the payment, or look for
+  another way. Report it.
+- Every call and result is logged in `~/.gurtos-wallet/actions.jsonl`.
+
 ## Without MCP
 
 Any program inside the task can call the same tools through the broker socket:
@@ -45,7 +70,7 @@ curl -s --unix-socket "$BOX_SOCKET" http://box/call -H 'content-type: applicatio
 
 Use a new `key` for each payment. The same key returns the first answer again and never pays twice.
 
-## Install
+## Install the skill
 
 - Droid: copy this folder into the workspace as `.factory/skills/x402-wallet/`.
 - Claude Code: copy it to `~/.claude/skills/x402-wallet/` or the project's `.claude/skills/`.

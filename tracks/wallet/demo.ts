@@ -5,8 +5,11 @@
 // it waits for an OK, and goes through once approved. Both payments are checked on chain. The test API settles
 // through Coinbase's CDP facilitator when the vault has CDP keys, else through x402.org.
 import fs from 'node:fs';
+import http from 'node:http';
+import type { AddressInfo } from 'node:net';
 import path from 'node:path';
-import type { Approval, DemoKit, LogEvent, Task } from '../../core/contract.ts';
+import type { Approval, Box, DemoKit, LogEvent, Task } from '../../core/contract.ts';
+import { sellRoutes } from './sell.ts';
 import { PAYEE, cdpKeys, startSeller } from './seller.ts';
 
 type Detail = { task: Task; events: LogEvent[] };
@@ -43,6 +46,17 @@ export default async function (d: DemoKit) {
     `the owner said no to "${ask.question}", so the wallet never ran and nothing was spent`,
   );
   d.check(resultOf(c)?.error?.includes('call wallet.quote first') && c.task.costCents === 0, `with no amount and no quote, it paid nothing: "${resultOf(c)?.error}"`);
+
+  // The box sells too. A stranger's agent, arriving through a public proxy with no pairing token, may read the
+  // price list (and pay for what is on it); every other wallet route stays the owner's.
+  const stranger = { 'x-forwarded-for': '203.0.113.9' };
+  const list = await fetch(`${d.url}/t/wallet/sell`, { headers: stranger });
+  const catalog = await list.json().catch(() => ({}));
+  const owner = await fetch(`${d.url}/t/wallet/audit`, { headers: stranger });
+  d.check(
+    list.status === 200 && JSON.stringify(catalog).includes('/sell/audit') && JSON.stringify(catalog).includes('/sell/search') && owner.status === 401,
+    "a stranger sees the box's price list (audit proof, metered search, rent the agent) but not its audit log or wallet",
+  );
 
   const live = (process.env.DEMO_LIVE ?? '').split(/[\s,]+/).includes('wallet');
   if (!live) {
@@ -124,4 +138,70 @@ export default async function (d: DemoKit) {
   } finally {
     seller.close();
   }
+
+  // ---------- live: box to box. A second box's shop sells to this box's agent ----------
+  // Coinbase refuses a wallet paying itself, so the other box gets the test payee's wallet, served here.
+  const vaultGet = (n: string) => {
+    const v = vault.match(new RegExp(`^${n}=(.+)$`, 'm'))?.[1];
+    if (!v) throw new Error(`no ${n}`);
+    return v;
+  };
+  const other = { secret: vaultGet, note: () => {}, tasks: () => [], workspace: () => {}, createTask: async () => ({ id: 'x' }) } as unknown as Box;
+  const otherHome = fs.mkdtempSync(path.join(d.home, 'other-box-'));
+  fs.mkdirSync(path.join(otherHome, 'public'));
+  fs.writeFileSync(path.join(otherHome, 'public', 'notes.txt'), 'Invoice 1042 is due Friday\nInvoice 1043 is due Monday\nlunch\n');
+  const shop = sellRoutes({ payTo: PAYEE, latestAudit: async () => ({ box: 'the other box', seq: 42 })});
+  const server = http.createServer(async (req, res) => {
+    const url = new URL(req.url!, `http://${req.headers.host}`);
+    const route = shop.routes[`${req.method} ${url.pathname.replace('/t/wallet', '')}`];
+    if (!route) return void res.writeHead(404).end();
+    const r = await route(new Request(url, { method: req.method, headers: req.headers as Record<string, string> }), other);
+    res.writeHead(r.status, Object.fromEntries(r.headers)).end(Buffer.from(await r.arrayBuffer()));
+  });
+  await new Promise<void>((r) => server.listen(0, '127.0.0.1', r));
+  // The stand-in box keeps its ledger and public files in its own folder, never the installed box's /var/lib/box.
+  const savedHome = process.env.BOX_HOME;
+  process.env.BOX_HOME = otherHome;
+  try {
+    const host = `other-box.localhost:${(server.address() as AddressInfo).port}`;
+    const B = await d.api<Task>('POST', '/tasks', {
+      ...spec,
+      title: "Buy from the other box: its audit proof and a metered search (devnet USDC, test money)",
+      tools: ['wallet.quote', 'wallet.pay', 'wallet.payMetered'],
+      hosts: [host],
+      budgetCents: 5,
+      prompt: [
+        `call wallet.quote {"url":"http://${host}/t/wallet/sell/audit"}`,
+        `call wallet.pay {"url":"http://${host}/t/wallet/sell/audit"}`,
+        `call wallet.payMetered {"url":"http://${host}/t/wallet/sell/search?q=invoice","maxCents":2}`,
+      ].join('\n'),
+    });
+    const [b] = await d.settled([B.id]);
+    const { events: be } = await d.api<Detail>('GET', `/tasks/${B.id}`);
+    const outs = be.flatMap((e) => (e.type === 'tool.result' && e.ok ? [e.output as any] : []));
+    const audit = outs.find((o) => o.paid && !o.paid.scheme);
+    const search = outs.find((o) => o.paid?.scheme === 'upto');
+    d.check(audit?.status === 200 && audit.content.includes('the other box'), `box to box: this box's agent paid the other box $0.01 and got its audit proof`);
+    d.check(
+      search && search.paid.cents < search.paid.capCents && search.content.includes('1042'),
+      `metered: the search was capped at $0.02 and charged $${search?.paid.usdc} for what it returned`,
+    );
+    d.check(b.costCents <= 1 + 2 && b.costCents >= 1 + search.paid.cents, `the task's cost counts both: $${(b.costCents / 100).toFixed(2)}`);
+    const tx = await (await fetch('https://api.devnet.solana.com', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'getTransaction', params: [audit.paid.tx, { encoding: 'jsonParsed', maxSupportedTransactionVersion: 0 }] }),
+    })).json();
+    const memos = JSON.stringify(tx.result?.transaction?.message?.instructions ?? []);
+    d.check(memos.includes(`gurtos task=${B.id}`), `the payment carries its task id on chain, as a memo: ${audit.paid.explorer}`);
+  } finally {
+    server.close();
+    if (savedHome === undefined) delete process.env.BOX_HOME;
+    else process.env.BOX_HOME = savedHome;
+  }
+
+  // ---------- live: the action log's fingerprint on Solana devnet ----------
+  const rec = await d.api('POST', '/t/wallet/audit');
+  const check = await d.api('GET', '/t/wallet/audit/verify');
+  d.check(rec.tx && check.ok, `the action log's fingerprint (seq ${rec.seq}) is on Solana devnet and still matches the log: ${rec.explorer}`);
 }
