@@ -2,6 +2,7 @@
 // PATCH /api/settings, the vault, apps on and off, and pairing. Only the owner may change anything: the box's own
 // screen or the owner's paired phone. Everyone else reads.
 import './settings.css';
+import { Notifications, RemoteAccess } from './remote.tsx';
 import type { ComponentChildren, JSX } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
 import qrcode from 'qrcode-generator';
@@ -22,7 +23,8 @@ const PAGES: (Page | 'sep')[] = [
   ['permissions', 'Permissions', 'security-high', 'internet hosts network folders spending budget approval quiet hours'],
   ['keys', 'Accounts & Keys', 'dialog-password', 'vault keys secrets owner replace'],
   ['apps', 'Apps', 'view-app-grid', 'apps on off app center'],
-  ['devices', 'Devices', 'phone', 'phones pair revoke qr code'],
+  ['devices', 'Devices', 'phone', 'phones pair revoke qr code notifications push'],
+  ['remote', 'Remote access', 'web-browser', 'reach from anywhere address https relay name'],
   'sep',
   ['updates', 'Updates', 'software-update-available', 'system update channel automatic go back rollback'],
   ['privacy', 'Privacy & Logs', 'preferences-system-privacy', 'action log keep retention size sharing elastic mana lock screen'],
@@ -210,6 +212,7 @@ export function SettingsApp({ page }: { page: string }) {
     keys: () => <Keys />,
     apps: () => <Apps />,
     devices: () => <Devices />,
+    remote: () => <RemoteAccess />,
     updates: () => <Updates />,
     privacy: () => <Privacy />,
     appearance: () => <Appearance />,
@@ -628,6 +631,7 @@ function Devices() {
   const paired = (d: Device) => new Date(d.pairedAt).toLocaleString('en-US', { weekday: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).replace(',', '');
   return (
     <>
+      <Notifications />
       <Group title="Paired phones" caption="A phone can approve or deny. It never holds a key. Revoking one stops its token at once.">
         {devices?.map((d) => (
           <Row icon="phone" title={d.name} sub={`${d.owner ? 'Owner' : 'Can approve'} · paired ${paired(d)}`} key={d.id}>

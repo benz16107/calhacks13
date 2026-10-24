@@ -397,6 +397,21 @@ function saveMachines(all: Machine[]) {
   if (typeof caches !== 'undefined')
     void caches.open('gurtos-pairing').then((c) => void c.put('/machines', new Response(JSON.stringify(all.map((m) => ({ ...m, url: m.url || location.origin }))))));
 }
+/** Change what is stored for a machine (its push key) without switching to it. */
+export const updateMachine = (m: Machine) => saveMachines(machines().map((x) => (x.box.id === m.box.id && x.url === m.url ? m : x)));
+/** Call one machine's API (not necessarily the one on screen), with its token. */
+export async function callMachine<T = any>(m: Machine, method: string, path: string, body?: unknown): Promise<T> {
+  const r = await fetch(`${m.url}/api${path}`, {
+    method,
+    headers: { ...(body === undefined ? {} : { 'content-type': 'application/json' }), authorization: `Bearer ${m.token}` },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  }).catch(() => {
+    throw new Error(`${m.box.name} is out of reach`);
+  });
+  const out = await r.json().catch(() => ({}));
+  if (!r.ok) throw Object.assign(new Error(out.error ?? `${m.box.name} said ${r.status}`), { status: r.status });
+  return out as T;
+}
 /** Add a machine (or renew its pairing) and show it. */
 export function addMachine(m: Machine) {
   saveMachines([...machines().filter((x) => x.box.id !== m.box.id), m]);

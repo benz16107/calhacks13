@@ -39,7 +39,9 @@ const b64 = (s: string) => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/
  * other field with the keys sorted. Anything else is not acted on.
  */
 async function trusted(p: Push): Promise<Machine | undefined> {
-  const m = (await machines()).find((x) => x.box.id === p.machine);
+  // Two test boxes can share an id, so the address picks between machines that do.
+  const same = (await machines()).filter((x) => x.box.id === p.machine);
+  const m = same.length > 1 ? same.find((x) => p.url && new URL(x.url).origin === new URL(p.url).origin) : same[0];
   if (!m?.pushKey || !p.mac) return undefined;
   const { mac, ...rest } = p;
   const json = JSON.stringify(Object.fromEntries(Object.entries(rest).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))));

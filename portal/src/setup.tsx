@@ -11,6 +11,7 @@ import { phone } from './wm.tsx';
 import { PRODUCT } from './product.ts';
 import { dollars, hhmm, plural, selfBox, useNow } from './util.ts';
 import './setup.css';
+import { RemoteAccess } from './apps/remote.tsx';
 
 interface Step {
   id: string;
@@ -151,6 +152,18 @@ const STEPS: Step[] = [
     page: (w) => <OwnerStep w={w} />,
     summary: () => "You can add more phones later. Only the owner's phone can change settings.",
     data: (w) => ({ owner: w.draft.owner, device: ownerDevice?.name ?? null }),
+  },
+  {
+    id: 'remote',
+    label: 'Remote access',
+    optional: true,
+    page: () => (
+      <div class="gos-setup-col">
+        <Intro title="Reach this box from anywhere">Optional. Off until you turn it on, and you can change it later in Settings.</Intro>
+        <RemoteAccess />
+      </div>
+    ),
+    summary: () => 'Without it, phones reach the box only on your own network.',
   },
   {
     id: 'models',

@@ -5,6 +5,7 @@ import type { ComponentChildren } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { addMachine, api, box, changed, hosted, machine, machines, pairing, patchSettings, setPairing, surface, switchMachine, undo, useBox, type Approval, type Pairing } from './live.ts';
 import { AddToHomeScreen, InstallCard, ios, standalone } from './pwa/pwa.tsx';
+import { NotificationsCard, forget } from './apps/remote.tsx';
 import { AnswerButtons } from './apps/answer.tsx';
 import { AppIcon, Badge, Button, Icon, Menu, Popover, Progress, Switch } from './kit/ui.tsx';
 import { focus, focused, minimize, open, phone, wm } from './wm.tsx';
@@ -140,7 +141,7 @@ function machineItems() {
     'sep' as const,
     { label: 'Add a machine…', icon: 'list-add', run: () => location.assign('/pair') },
     ...(now
-      ? [{ label: `Forget ${now.box.name}…`, icon: 'user-trash', destructive: true, run: () => confirm(`Forget ${now.box.name} on this device? It stays paired on the box until you revoke it there.`) && (setPairing(undefined), location.replace('/')) }]
+      ? [{ label: `Forget ${now.box.name}…`, icon: 'user-trash', destructive: true, run: () => confirm(`Forget ${now.box.name} on this device? The box stops sending it notifications, and it needs a new code to pair again.`) && void forget(now).then(() => (setPairing(undefined), location.replace('/'))) }]
       : []),
   ];
 }
@@ -652,6 +653,7 @@ export function PhoneHome() {
         </p>
       </header>
       <InstallCard />
+      <NotificationsCard />
       {shell.open === 'boxes' && <BoxMenu anchor={anchor} />}
       <section class="g-group" aria-label="Needs you">
         <div class="g-group-head">
