@@ -4,7 +4,8 @@
 #   sudo core/install.sh && sudo personal/install.sh [owner]
 # It only installs files and packages and never starts anything, so image/build can run it in a chroot.
 # What it adds, for every account on the machine:
-#   box-desktop (user service)  approvals as notifications with Approve and Deny, and the top-bar indicator
+#   the GurtOS session           GNOME with GurtOS built in (theme/install.sh): its Shell mode loads the GurtOS
+#                                extension (top bar, Agents tile, approvals as notifications), plus GurtOS defaults
 #   GurtOS (app, first in dock)  the portal in its own window
 #   Files: Ask an agent…         right-click folders; the agent works on copies until you keep or undo
 #   GurtOS Setup                 at the owner's first login, after GNOME's own setup: models, folders, permissions, apps
@@ -16,8 +17,8 @@ here=$(cd "$(dirname "$0")" && pwd)
 # The desktop itself, if this is a plain Ubuntu install, plus what the layer is built on: GTK 4, libadwaita,
 # WebKitGTK for the Box window, AppIndicator for the top bar, and Python extensions for Files.
 export DEBIAN_FRONTEND=noninteractive
-pkgs=(python3-gi gir1.2-gtk-4.0 gir1.2-adw-1 gir1.2-webkit-6.0 gir1.2-gtk-3.0 gir1.2-ayatanaappindicator3-0.1
-  gnome-shell-extension-appindicator python3-nautilus)
+pkgs=(python3-gi gir1.2-gtk-4.0 gir1.2-adw-1 gir1.2-webkit-6.0 gnome-shell-extension-appindicator python3-nautilus
+  dconf-cli librsvg2-common)
 dpkg -s gnome-shell >/dev/null 2>&1 || pkgs+=(ubuntu-desktop-minimal)
 missing=$(for p in "${pkgs[@]}"; do dpkg -s "$p" >/dev/null 2>&1 || echo "$p"; done)
 if [[ -n $missing ]]; then
@@ -41,10 +42,11 @@ install -Dm644 "$here/files/box-setup.desktop" /etc/xdg/autostart/box-setup.desk
 # The GurtOS typeface (docs/figma/system.md): Atkinson Hyperlegible Next and Mono, SIL OFL, for GurtOS's own windows.
 install -Dm644 -t /usr/share/fonts/truetype/gurtos "$here"/fonts/*.ttf "$here/fonts/OFL.txt"
 fc-cache -f /usr/share/fonts/truetype/gurtos >/dev/null 2>&1 || true
-install -Dm644 "$here/files/box-desktop.service" /etc/systemd/user/box-desktop.service
-systemctl --global enable box-desktop.service >/dev/null 2>&1
-install -Dm644 "$here/files/90_box-personal.gschema.override" /usr/share/glib-2.0/schemas/90_box-personal.gschema.override
+# The AppIndicator service and the dock override of earlier versions are gone: the Shell extension and dconf took over.
+systemctl --global disable box-desktop.service >/dev/null 2>&1 || true
+rm -f /etc/systemd/user/box-desktop.service /usr/share/glib-2.0/schemas/90_box-personal.gschema.override
 glib-compile-schemas /usr/share/glib-2.0/schemas
+"$here/theme/install.sh"
 
 # The owner: the person with sudo, whose folders agents work on. Given, or else the first human in the sudo group.
 # On an image built before anyone has an account, run this again after the first login (or set BOX_OWNER by hand).
@@ -59,4 +61,4 @@ Environment=BOX_OWNER=$owner
 EOF
   [[ -d /run/systemd/system ]] && systemctl daemon-reload && systemctl try-restart box.service # not in a chroot
 fi
-echo "personal: installed for ${owner:-no owner yet}. It starts at the next login (or: systemctl --user restart box-desktop)."
+echo "personal: installed for ${owner:-no owner yet}. The GurtOS session starts at the next login."

@@ -1,0 +1,13 @@
+{
+  "uuid": "gurtos@gurtos.dev",
+  "name": "GurtOS",
+  "description": "GurtOS in the top bar: what agents are doing, what needs your OK, and approvals as notifications.",
+  "shell-version": [
+    "46"
+  ],
+  "url": "https://github.com/benz16107/calhacks13",
+  "session-modes": [
+    "user",
+    "unlock-dialog"
+  ]
+}

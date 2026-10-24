@@ -2,7 +2,8 @@
 # The Personal edition's test machine: a Vultr VM with Ubuntu 24.04 and GNOME (see README.md). Run from the machine that reaches it over ssh.
 #   personal/vm.sh setup          once: a test owner (ana, with sudo) logged in by GDM, on Xorg so we can take screenshots
 #   personal/vm.sh install        ship this checkout, then core/install.sh and personal/install.sh, and restart the layer
-#   personal/vm.sh layer          on an installed GurtOS Personal: replace only /opt/box/personal and restart the layer
+#   personal/vm.sh layer          on an installed GurtOS Personal: replace /opt/box/personal and install it again
+#   personal/vm.sh relogin        log the session's user out and back in (needs GDM automatic login for them)
 #   personal/vm.sh as <command>   run a command as ana inside her desktop session
 #   personal/vm.sh wl <args>      input on the machine's screen, any session (personal/wl.py): click X Y, type TEXT, key Return
 #   personal/vm.sh shot <name>    screenshot of her screen into personal/screenshots/<name>.png
@@ -39,7 +40,11 @@ EOF
     ssh "$vm" "cd /opt/box-dev/personal && core/install.sh && personal/install.sh $owner && { $session; sudo -u $owner -E HOME=/home/$owner systemctl --user daemon-reload; sudo -u $owner -E HOME=/home/$owner systemctl --user restart box-desktop.service || true; }"
     ;;
   layer)
-    tar -czf - personal | ssh "$vm" "tar -xzf - -C /opt/box && pkill -u $owner -f '[b]ox-ui.py'; $session; sudo -u $owner -E systemctl --user restart box-desktop.service"
+    tar -czf - personal | ssh "$vm" "tar -xzf - -C /opt/box && pkill -u $owner -f '[b]ox-ui.py'; /opt/box/personal/install.sh $owner >/dev/null" # Shell changes take effect at the next login
+    ;;
+  relogin)
+    # Log the owner out and back in (GDM automatic login), so a new Shell extension or session loads.
+    ssh "$vm" "loginctl terminate-user $owner; sleep 2; systemctl restart gdm3"
     ;;
   as)
     shift

@@ -7,6 +7,7 @@ import atexit
 import json
 import os
 import shutil
+import subprocess
 import sys
 import tempfile
 import time
@@ -15,7 +16,31 @@ from datetime import datetime
 
 HERE = os.path.dirname(os.path.realpath(__file__))
 sys.path.insert(0, HERE)
-from boxapi import BOX, api, ask_spec, plan, quiet_now, quote, top_bar  # noqa: E402
+from boxapi import BOX, api, ask_spec, quote  # noqa: E402
+
+LOGIC = os.path.join(HERE, 'shell', 'gurtos@gurtos.dev', 'logic.js')
+NODE = shutil.which('node') or '/usr/local/bin/node'
+
+
+def js(fn, *args):
+    """Call the Shell extension's own logic.js (the code GNOME Shell runs) through Node."""
+    src = f"import({json.dumps('file://' + LOGIC)}).then(m => process.stdout.write(JSON.stringify(m[{json.dumps(fn)}](...JSON.parse(process.argv[1])))))"
+    out = subprocess.run([NODE, '--input-type=module', '-e', src, json.dumps(args)], capture_output=True, text=True, check=True).stdout
+    return json.loads(out)
+
+
+def plan(shown, tasks, pending):
+    p = js('plan', list(shown), tasks, list(pending))
+    return p['close'], p['post']
+
+
+def top_bar(tasks, pending):
+    c = js('counts', tasks, list(pending))
+    return ' · '.join([f"{c['running']} running"] * bool(c['running']) + [f"{c['needsYou']} need{'s' if c['needsYou'] == 1 else ''} you"] * bool(c['needsYou']))
+
+
+def quiet_now(settings, now):
+    return js('quietAt', settings, now.strftime('%H:%M'))
 
 WS = os.environ.get('PERSONAL_WORKSPACE', 'home')
 
@@ -48,10 +73,10 @@ atexit.register(lambda: shutil.rmtree(ROOT, ignore_errors=True))
 api('PATCH', '/api/settings', {'agentFolders': [ROOT]})
 
 
-for f in ('box-desktop.py', 'box-ui.py', 'setupwin.py', 'boxapi.py', 'files/box-nautilus.py'):
+for f in ('box-ui.py', 'setupwin.py', 'boxapi.py', 'files/box-nautilus.py'):
     with open(os.path.join(HERE, f)) as src:
         compile(src.read(), f, 'exec')  # a syntax check that writes no .pyc
-check(True, 'the notification service, the GurtOS app, GurtOS Setup and the Files extension compile under the system Python')
+check(True, 'the GurtOS app, GurtOS Setup and the Files extension compile under the system Python')
 
 with urllib.request.urlopen(f'{BOX}/api/log/stream?after=0', timeout=5) as r:
     head = [r.readline().decode() for _ in range(2)]
@@ -133,6 +158,9 @@ check('folders' in api('GET', '/api/setup')['steps'] and isinstance(setup.get('d
 
 a, b = (tempfile.mkdtemp(prefix=f'setup-{n}-', dir=ROOT) for n in 'ab')
 outside = tempfile.mkdtemp(prefix='personal-outside-')
+if os.getuid() == 0:  # the box only gives agents a person's folders
+    for d in (a, b, outside):
+        os.chown(d, OWNER, OWNER)
 try:
     api('PATCH', '/api/settings', {'agentFolders': [a, b]})  # the Folders step
     two = api('POST', '/api/tasks', {**ask_spec('Compare the two', [a, b], 0), 'worker': 'fake', 'prompt': 'write both.txt yes'})

@@ -1,0 +1,8 @@
+[Plymouth Theme]
+Name=GurtOS
+Description=GurtOS boot splash: the logo on the night background. Figma's boot screen replaces logo.png.
+ModuleName=script
+
+[script]
+ImageDir=/usr/share/plymouth/themes/gurtos
+ScriptFile=/usr/share/plymouth/themes/gurtos/gurtos.script

@@ -1,0 +1,13 @@
+/* GurtOS in GNOME Shell. These classes are the hook for the GurtOS Shell theme from Figma; the gurtos-theme
+   package can restyle any Shell element here or through the GurtOS session's own Shell theme. */
+.gurtos-panel { spacing: 6px; }
+/* The amber count: one meaning only, something waits for your OK. */
+.gurtos-badge { background-color: #F2B544; color: #1A1206; border-radius: 999px; padding: 0 7px; font-weight: bold; font-size: 0.85em; min-width: 10px; text-align: center; }
+.gurtos-running { font-feature-settings: "tnum"; }
+.gurtos-heading { font-weight: bold; font-size: 0.9em; }
+.gurtos-approval { padding: 8px 12px; }
+.gurtos-approval-title { font-weight: bold; }
+.gurtos-approval-question { opacity: 0.75; padding: 2px 0 8px; max-width: 360px; }
+.gurtos-approval-buttons { spacing: 8px; }
+.gurtos-approval-buttons .button { padding: 4px 14px; border-radius: 999px; }
+.gurtos-approval-buttons .button.default { background-color: #2F64A6; color: #FFFFFF; }

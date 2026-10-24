@@ -1,0 +1,5 @@
+[org/gnome/login-screen]
+logo='/usr/share/gurtos/gurtos-logo-gdm.png'
+
+[org/gnome/desktop/interface]
+font-name='Atkinson Hyperlegible Next 11'

@@ -1,0 +1,42 @@
+# GurtOS defaults for every account. People can change all of these; nothing here is locked (see README).
+# The theme package from Figma replaces the values marked "theme".
+
+[org/gnome/desktop/background]
+picture-uri='file:///usr/share/backgrounds/gurtos/gurtos-night.svg'
+picture-uri-dark='file:///usr/share/backgrounds/gurtos/gurtos-night.svg'
+picture-options='zoom'
+primary-color='#27313F'
+
+[org/gnome/desktop/screensaver]
+picture-uri='file:///usr/share/backgrounds/gurtos/gurtos-night.svg'
+primary-color='#27313F'
+
+[org/gnome/desktop/interface]
+# theme: GTK and icon theme, cursor, fonts
+gtk-theme='Yaru-blue'
+icon-theme='GurtOS'
+cursor-theme='Yaru'
+font-name='Atkinson Hyperlegible Next 11'
+document-font-name='Atkinson Hyperlegible Next 11'
+monospace-font-name='Atkinson Hyperlegible Mono 11'
+
+[org/gnome/shell]
+# Listed here too so it keeps running on the lock screen (the GurtOS session mode loads it either way).
+enabled-extensions=['gurtos@gurtos.dev']
+favorite-apps=['dev.box.Box.desktop', 'org.gnome.Nautilus.desktop', 'org.gnome.Epiphany.desktop', 'firefox_firefox.desktop', 'org.gnome.TextEditor.desktop', 'org.gnome.Terminal.desktop', 'dev.box.Settings.desktop']
+
+[org/gnome/shell/extensions/dash-to-dock]
+# Ubuntu's dock, restyled: a floating bar at the bottom, like the GurtOS dock
+dock-position='BOTTOM'
+extend-height=false
+dock-fixed=false
+intellihide=true
+transparency-mode='FIXED'
+background-opacity=0.8
+custom-background-color=true
+background-color='#1E2228'
+dash-max-icon-size=48
+show-mounts=false
+show-trash=false
+show-apps-at-top=false
+running-indicator-style='DOTS'

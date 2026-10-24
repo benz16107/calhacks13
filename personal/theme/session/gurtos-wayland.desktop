@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=GurtOS
+Comment=GurtOS: your desktop, with agents beside you
+Exec=env GNOME_SHELL_SESSION_MODE=gurtos XDG_CONFIG_DIRS=/etc/xdg/gurtos:/etc/xdg /usr/bin/gnome-session --session=gurtos
+TryExec=/usr/bin/gnome-shell
+Type=Application
+DesktopNames=GurtOS;ubuntu;GNOME
+X-GDM-SessionRegisters=true
+X-GDM-CanRunHeadless=true
