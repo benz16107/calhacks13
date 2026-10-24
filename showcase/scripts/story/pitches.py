@@ -1,22 +1,22 @@
 # One source for every track's "Best shown in" line and pitch. Writes them into each track page's frontmatter and
 # docs/devpost.md. Usage: python3 showcase/scripts/story/pitches.py <repo root>
 import re, json
-BIZ = "GurtOS Business is not built yet. Today's demo runs on GurtOS Server, with the credit desk's human controller seat approving from a phone."
+BIZ = "GurtOS Business is on main: people and roles, approvals routed by rules written in plain words, refusals for answering your own request or above your limit, a Waiting for me inbox, an audit with CSV export and a kill switch. Sign-in with work accounts and shadow mode are not built. The scored credit desk runs were on GurtOS Server; the Business screens are from a box seeded as the made-up Fogline Supply."
 E = {
  'anthropic': ("GurtOS Personal and GurtOS Server",
    "GurtOS turns a computer you own, even an old one, into one built for agents: each Claude task runs as its own Linux user in its own copy-on-write copy of your files, with no keys, and you approve, undo or pause it from the portal or your phone. It is light and open source. Next, a GurtOS MCP server (being built) lets Claude Desktop and Claude Code drive your box."),
  'factory': ("GurtOS Server and GurtOS Personal",
    "Droid does the work and GurtOS makes it safe. Droid never holds a key: the vault keeps it and the box's proxy swaps it in outside the task. Each task is its own Linux user with its own firewall rule and its own copy of the files, on a locked-down Linux base where task users have no sudo, and every change is reviewable in the log and undoable. Keys kept where agents can reach them keep leaking: <a href=\"https://www.bleepingcomputer.com/news/security/opencode-hack-exposes-api-keys-amid-ai-distillation-attacks/\">OpenCode Console exposed users' provider API keys</a> on Oct 17, 2026, <a href=\"https://github.com/openclaw/openclaw/issues/43794\">OpenClaw stores tokens and API keys in plaintext</a> in <code>~/.openclaw/openclaw.json</code>, and <a href=\"https://nvd.nist.gov/vuln/detail/CVE-2026-25253\">CVE-2026-25253</a> let one crafted link make OpenClaw send its token to an attacker."),
- 'hyphenate': ("GurtOS Business (preview)",
+ 'hyphenate': ("GurtOS Business",
    "A finance team needs roles, segregation of duties and an audit trail on every agent decision, which is what Business adds: who may approve what, up to how much. " + BIZ),
- 'crs': ("GurtOS Business (preview)",
+ 'crs': ("GurtOS Business",
    "Agents today run as you, with your keys and no separation of duties, so no company lets one near the books. Identity and fraud checks are team work: an analyst agent runs them, a controller signs off, and every decision keeps its CRS request ids for the audit. " + BIZ),
- 'nessie': ("GurtOS Business (preview), then GurtOS Personal",
+ 'nessie': ("GurtOS Business, then GurtOS Personal",
    "Agents today run as you, with your keys and no separation of duties, so no company lets one near the books. A collections clerk agent reconciles the ledger against the bank for a finance team, and only a controller releases a hold. On Personal the same pattern becomes a bill-paying agent for your own accounts that asks before it pays (not built). " + BIZ),
- 'microsoft': ("GurtOS Business (preview)",
+ 'microsoft': ("GurtOS Business",
    "Companies want agents on finance work, but an ordinary OS gives an agent its owner's keys, no separation of duties, no record and no undo, so pilots stay pilots. GurtOS Business gives each seat its own user, routes approvals to the right person, keeps a full audit and a kill switch, on a box the company owns. Next (being built): shadow mode, Entra ID sign-in, measured impact, a Responsible AI mapping, sourced facts and an incident drill. " + BIZ),
- 'atlassian': ("GurtOS Business (preview)",
-   "Teams already review work in Jira. With Business, every agent task is an issue a teammate can approve or roll back, and Jira's own permissions decide who may. Business is not built yet: today the Forge app drives a GurtOS Server box, and it already checks that the Jira user may edit the issue."),
+ 'atlassian': ("GurtOS Business",
+   "Teams already review work in Jira. With Business, every agent task is an issue a teammate can approve or roll back, and Jira's own permissions decide who may. Business is on main, but the Jira panel has not been tried against a Business box: today the Forge app drives a GurtOS Server box, and it already checks that the Jira user may edit the issue."),
  'visa': ("GurtOS Personal, plus GurtOS Server for routines that keep running when you close your laptop",
    "GurtOS Personal runs your shopping agents on a computer you own, even an old one: the agent never sees your card, every purchase waits for your tap, every order is signed so the store can verify it, and undo refunds it. A Server box keeps a watch running while the laptop is closed."),
  'coinbase': ('GurtOS Server, and GurtOS Business',
@@ -28,9 +28,9 @@ E = {
  'vultr': ("GurtOS Server",
    "GurtOS Server runs wherever a VM does. On Vultr it is the public, always-on box: Jira and Mana reach it, and the rest of its API stays closed."),
  'spacetime': ("All three editions, strongest in GurtOS Business",
-   "Live shared state is what each edition's screen reads: the box screen on Server, the desktop on Personal. It matters most in Business (preview, not built), where several people see the same approvals at once and the first answer wins."),
- 'elastic': ("GurtOS Business (preview) and GurtOS Server",
-   "After a week of agents working, an ordinary OS cannot tell you what they did, and anyone with root can edit its logs. GurtOS keeps one action log of every action and Elastic keeps a copy the box cannot rewrite; its agent answers and investigates, and acting still needs your OK. Business is not built yet, so today the agent answers for GurtOS Server boxes. Next (being built): a tamper-evident log with a verify tool, detection rules with phone alerts, pause, undo and stop through approvals, a fleet view, semantic search, and asking from the portal and phone."),
+   "Live shared state is what each edition's screen reads: the box screen on Server, the desktop on Personal. It matters most in Business, where several people see the same approvals at once and the first answer wins."),
+ 'elastic': ("GurtOS Business and GurtOS Server",
+   "After a week of agents working, an ordinary OS cannot tell you what they did, and anyone with root can edit its logs. GurtOS keeps one action log of every action and Elastic keeps a copy the box cannot rewrite; its agent answers and investigates, and acting still needs your OK. Business is on main, but the agent has only been run against GurtOS Server boxes and demo runs. Next (being built): a tamper-evident log with a verify tool, detection rules with phone alerts, pause, undo and stop through approvals, a fleet view, semantic search, and asking from the portal and phone."),
  'moss': ("GurtOS Personal",
    "Your photos, files and task history are personal. /find keeps its index on your own machine, and only text, never a photo, goes to Moss's cloud copy."),
  'apify': ("GurtOS Personal and GurtOS Server",

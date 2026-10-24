@@ -17,8 +17,8 @@ has not been signed off yet.
    can't see into.
 5. **The portal and phone app give live visibility and control** on any of your machines.
 6. **Open source (Apache-2.0):** anyone can run it, customise it and reuse it.
-7. **Name the edition that shows each track best.** GurtOS Business is a preview until it merges; Business-led
-   tracks say so and show today's demo on GurtOS Server.
+7. **Name the edition that shows each track best.** GurtOS Business is on main (people and roles, routed approvals, audit, kill switch);
+   sign-in with work accounts and shadow mode are not built. Say which part each Business-led page shows.
 8. **Every feature says why it is there and which criterion it serves.**
 9. **Label what comes from the OS and what from the track.**
 10. **Lightweight, and it solves security problems existing systems can't.** The box service is one Node process
@@ -50,20 +50,20 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 | Track | Edition | Story |
 |---|---|---|
 | Anthropic | GurtOS Personal and GurtOS Server | decided |
-| Atlassian | GurtOS Business (preview) | to review with Ben |
-| Hyphenate | GurtOS Business (preview) | decided |
+| Atlassian | GurtOS Business | to review with Ben |
+| Hyphenate | GurtOS Business | decided |
 | Factory | GurtOS Server and GurtOS Personal | to review with Ben |
 | Armadin | All three editions | to review with Ben |
-| Microsoft | GurtOS Business (preview) | decided |
+| Microsoft | GurtOS Business | decided |
 | Visa | GurtOS Personal, plus GurtOS Server for routines that keep running when you close your laptop | decided |
 | Coinbase | GurtOS Server, and GurtOS Business | decided |
 | Fetch.ai | GurtOS Server (always reachable), and GurtOS Personal too | decided |
 | SpacetimeDB | All three editions, strongest in GurtOS Business | to review with Ben |
-| Elastic | GurtOS Business (preview) and GurtOS Server | decided |
+| Elastic | GurtOS Business and GurtOS Server | decided |
 | Moss | GurtOS Personal | to review with Ben |
 | Apify | GurtOS Personal and GurtOS Server | decided |
-| CRS | GurtOS Business (preview) | to review with Ben |
-| Capital One | GurtOS Business (preview), then GurtOS Personal | to review with Ben |
+| CRS | GurtOS Business | to review with Ben |
+| Capital One | GurtOS Business, then GurtOS Personal | to review with Ben |
 | Solana | GurtOS Server, and GurtOS Business | decided |
 | Vultr | GurtOS Server | to review with Ben |
 | GoDaddy Registry | All three editions | to review with Ben |
@@ -113,9 +113,9 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 
 **Status:** to review with Ben. **Page:** https://calhacks.gurtos.com/tracks/atlassian/
 
-**Best shown in:** GurtOS Business (preview)
+**Best shown in:** GurtOS Business
 
-**Pitch:** Teams already review work in Jira. With Business, every agent task is an issue a teammate can approve or roll back, and Jira's own permissions decide who may. Business is not built yet: today the Forge app drives a GurtOS Server box, and it already checks that the Jira user may edit the issue.
+**Pitch:** Teams already review work in Jira. With Business, every agent task is an issue a teammate can approve or roll back, and Jira's own permissions decide who may. Business is on main, but the Jira panel has not been tried against a Business box: today the Forge app drives a GurtOS Server box, and it already checks that the Jira user may edit the issue.
 
 **The problem:** Draft: when an agent acts for you overnight, nobody can see the next morning exactly what it did and why, or roll back only the wrong part.
 
@@ -139,9 +139,9 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 
 **Status:** decided. **Page:** https://calhacks.gurtos.com/tracks/hyphenate/
 
-**Best shown in:** GurtOS Business (preview)
+**Best shown in:** GurtOS Business
 
-**Pitch:** A finance team needs roles, segregation of duties and an audit trail on every agent decision, which is what Business adds: who may approve what, up to how much. GurtOS Business is not built yet. Today's demo runs on GurtOS Server, with the credit desk's human controller seat approving from a phone.
+**Pitch:** A finance team needs roles, segregation of duties and an audit trail on every agent decision, which is what Business adds: who may approve what, up to how much. GurtOS Business is on main: people and roles, approvals routed by rules written in plain words, refusals for answering your own request or above your limit, a Waiting for me inbox, an audit with CSV export and a kill switch. Sign-in with work accounts and shadow mode are not built. The scored credit desk runs were on GurtOS Server; the Business screens are from a box seeded as the made-up Fogline Supply.
 
 **The problem:** Companies want AI employees, but today's computers and clouds weren't built for them. An agent runs as you, with your keys, on one shared filesystem, with no separation of duties, no record you can trust and no undo, so nobody lets one do real finance work.
 
@@ -157,8 +157,8 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 | One append-only record of every call, decision, rule id and approver | GurtOS (the action log) and the desk (rule ids, CRS request ids) | Shipped |
 | Undo one seat's file changes without touching the other's | GurtOS | Shipped. The log keeps the record either way |
 | A crash mid-run resumes where it was, with nothing paid or recorded twice | GurtOS | Shipped for tasks and approvals (moment 4) |
-| Pause every agent at once | GurtOS | Shipped as a setting (`paused`); the Business kill switch builds on it |
-| People, roles, policy-routed approvals, a "Waiting for me" inbox, an Audit view with CSV export | GurtOS Business | Being built; not on main yet |
+| Pause every agent at once | GurtOS (Personal's pause and Business's kill switch are one switch) | Shipped |
+| People, roles, policy-routed approvals, a "Waiting for me" inbox, an Audit view with CSV export | GurtOS Business | Shipped, shown on a Business box seeded as Fogline Supply with scripted seats and sandbox data. The scored runs below were on GurtOS Server |
 | Credit rules, the planted case, the scorer, the Credit desk window | The desk | Shipped |
 
 **Demo moment and proof:** Live Droid run 73c47b, scored from the action log against the answer key: 14 of 14 planted errors caught, 0 false alarms, 6 of 6 credit decisions right (outcome, band, limit and terms). It held APP-1043, a synthetic identity that a simple rule approves for $20,000.
@@ -166,7 +166,6 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 **Still to do:**
 
 - A video that opens with your "moment". (partly)
-- People, roles, policy-routed approvals, a "Waiting for me" inbox, an Audit view with CSV export
 
 ## Factory: Droid SDK track
 
@@ -217,9 +216,9 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 
 **Status:** decided. **Page:** https://calhacks.gurtos.com/tracks/microsoft/
 
-**Best shown in:** GurtOS Business (preview)
+**Best shown in:** GurtOS Business
 
-**Pitch:** Companies want agents on finance work, but an ordinary OS gives an agent its owner's keys, no separation of duties, no record and no undo, so pilots stay pilots. GurtOS Business gives each seat its own user, routes approvals to the right person, keeps a full audit and a kill switch, on a box the company owns. Next (being built): shadow mode, Entra ID sign-in, measured impact, a Responsible AI mapping, sourced facts and an incident drill. GurtOS Business is not built yet. Today's demo runs on GurtOS Server, with the credit desk's human controller seat approving from a phone.
+**Pitch:** Companies want agents on finance work, but an ordinary OS gives an agent its owner's keys, no separation of duties, no record and no undo, so pilots stay pilots. GurtOS Business gives each seat its own user, routes approvals to the right person, keeps a full audit and a kill switch, on a box the company owns. Next (being built): shadow mode, Entra ID sign-in, measured impact, a Responsible AI mapping, sourced facts and an incident drill. GurtOS Business is on main: people and roles, approvals routed by rules written in plain words, refusals for answering your own request or above your limit, a Waiting for me inbox, an audit with CSV export and a kill switch. Sign-in with work accounts and shadow mode are not built. The scored credit desk runs were on GurtOS Server; the Business screens are from a box seeded as the made-up Fogline Supply.
 
 **The problem:** Companies want agents doing finance work, but an ordinary OS gives an agent its owner's keys, no separation of duties, no record and no undo, so pilots never reach production.
 
@@ -230,7 +229,12 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 | Each seat is its own Linux user with its own copy of the files; keys stay in a root-only vault | A finance agent holds nothing it could leak or misuse | Path to production, Responsible design | GurtOS | Shipped. The merge gate checks no key appears in the log |
 | A seat cannot approve its own large proposal; fraud holds always go to a person, on the portal or a phone | Separation of duties for an agent | Responsible design | GurtOS (the approval pause) and the desk (where the line is) | Shipped. Above $10,000 the controller answers; the log names who |
 | One append-only record of every call, decision, rule id and approver | Something an auditor can read | Path to production | GurtOS (the log) and the desk (rule ids, CRS request ids) | Shipped |
-| Undo one seat's file changes; pause every agent at once; resume after a power cut with nothing paid twice; whole-system updates that roll back | A bad hour is recoverable | Path to production | GurtOS | Shipped (pause is a setting; Business adds the kill switch) |
+| Undo one seat's file changes; resume after a power cut with nothing paid twice; whole-system updates that roll back | A bad hour is recoverable | Path to production | GurtOS | Shipped |
+| People with roles (owner, admin, approver, requester, auditor) and agent seats, each phone paired as its person | A company has its own people, not one login | Path to production | GurtOS Business | Shipped. The merge gate's business step makes four people with paired phones and refuses a requester who tries to read the policy |
+| Rules in plain words route each approval to the right person, and answers are refused for your own request, above your limit, or by anything that is not a person | Separation of duties that a team can read and change | Responsible design | GurtOS Business | Shipped. The gate checks seven refused answers and that all five requests still wait afterwards |
+| Waiting for me and My requests on phone and desktop | Each person sees only what is theirs to answer | Path to production | GurtOS Business | Shipped. Rosa sees three requests, Sam none and his own four, Priya none |
+| An audit with filters by person, agent seat and date, and CSV export, read-only for an auditor | Something an auditor can read without asking IT | Path to production | GurtOS Business | Shipped. The gate checks the filters, the CSV header and that an auditor can change nothing |
+| One kill switch pauses every agent at once from any admin's phone or the box; requests waiting for an OK stay open | The first thing a company asks about is how to stop it | Path to production | GurtOS Business (shared with Personal's pause) | Shipped. The gate checks six tasks stopped where they were, every screen says who pulled it, and both pulls are in the log |
 | Shadow mode and a one-week pilot plan: the desk runs beside the people, changes nothing, and is compared with what they did | A company starts with a pilot it can switch off | Path to production | GurtOS Business (shadow mode) and the desk (the plan) | Being built; not on main yet |
 | Sign-in with Entra ID work accounts, roles taken from groups | Nobody makes new passwords or a second list of who may approve | Path to production | GurtOS Business | Being built; not on main yet |
 | Measured impact: human minutes saved, dollars stopped and cost per application | A controller can say what the desk is worth | Measurable usefulness | The desk | Being built; not on main yet |
@@ -352,7 +356,7 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 
 **Best shown in:** All three editions, strongest in GurtOS Business
 
-**Pitch:** Live shared state is what each edition's screen reads: the box screen on Server, the desktop on Personal. It matters most in Business (preview, not built), where several people see the same approvals at once and the first answer wins.
+**Pitch:** Live shared state is what each edition's screen reads: the box screen on Server, the desktop on Personal. It matters most in Business, where several people see the same approvals at once and the first answer wins.
 
 **The problem:** Draft: when agents run unattended, the people responsible need to see every request live, on every screen at once, and answer from wherever they are.
 
@@ -374,9 +378,9 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 
 **Status:** decided. **Page:** https://calhacks.gurtos.com/tracks/elastic/
 
-**Best shown in:** GurtOS Business (preview) and GurtOS Server
+**Best shown in:** GurtOS Business and GurtOS Server
 
-**Pitch:** After a week of agents working, an ordinary OS cannot tell you what they did, and anyone with root can edit its logs. GurtOS keeps one action log of every action and Elastic keeps a copy the box cannot rewrite; its agent answers and investigates, and acting still needs your OK. Business is not built yet, so today the agent answers for GurtOS Server boxes. Next (being built): a tamper-evident log with a verify tool, detection rules with phone alerts, pause, undo and stop through approvals, a fleet view, semantic search, and asking from the portal and phone.
+**Pitch:** After a week of agents working, an ordinary OS cannot tell you what they did, and anyone with root can edit its logs. GurtOS keeps one action log of every action and Elastic keeps a copy the box cannot rewrite; its agent answers and investigates, and acting still needs your OK. Business is on main, but the agent has only been run against GurtOS Server boxes and demo runs. Next (being built): a tamper-evident log with a verify tool, detection rules with phone alerts, pause, undo and stop through approvals, a fleet view, semantic search, and asking from the portal and phone.
 
 **The problem:** After a week of agents working, an ordinary OS cannot tell you what they did: its logs are scattered and anyone with root can edit them.
 
@@ -470,9 +474,9 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 
 **Status:** to review with Ben. **Page:** https://calhacks.gurtos.com/tracks/crs/
 
-**Best shown in:** GurtOS Business (preview)
+**Best shown in:** GurtOS Business
 
-**Pitch:** Agents today run as you, with your keys and no separation of duties, so no company lets one near the books. Identity and fraud checks are team work: an analyst agent runs them, a controller signs off, and every decision keeps its CRS request ids for the audit. GurtOS Business is not built yet. Today's demo runs on GurtOS Server, with the credit desk's human controller seat approving from a phone.
+**Pitch:** Agents today run as you, with your keys and no separation of duties, so no company lets one near the books. Identity and fraud checks are team work: an analyst agent runs them, a controller signs off, and every decision keeps its CRS request ids for the audit. GurtOS Business is on main: people and roles, approvals routed by rules written in plain words, refusals for answering your own request or above your limit, a Waiting for me inbox, an audit with CSV export and a kill switch. Sign-in with work accounts and shadow mode are not built. The scored credit desk runs were on GurtOS Server; the Business screens are from a box seeded as the made-up Fogline Supply.
 
 **The problem:** Draft: identity and fraud checks are exactly where a fooled or hijacked agent costs real money, and today the agent that runs them holds the keys and can approve its own work.
 
@@ -497,9 +501,9 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 
 **Status:** to review with Ben. **Page:** https://calhacks.gurtos.com/tracks/nessie/
 
-**Best shown in:** GurtOS Business (preview), then GurtOS Personal
+**Best shown in:** GurtOS Business, then GurtOS Personal
 
-**Pitch:** Agents today run as you, with your keys and no separation of duties, so no company lets one near the books. A collections clerk agent reconciles the ledger against the bank for a finance team, and only a controller releases a hold. On Personal the same pattern becomes a bill-paying agent for your own accounts that asks before it pays (not built). GurtOS Business is not built yet. Today's demo runs on GurtOS Server, with the credit desk's human controller seat approving from a phone.
+**Pitch:** Agents today run as you, with your keys and no separation of duties, so no company lets one near the books. A collections clerk agent reconciles the ledger against the bank for a finance team, and only a controller releases a hold. On Personal the same pattern becomes a bill-paying agent for your own accounts that asks before it pays (not built). GurtOS Business is on main: people and roles, approvals routed by rules written in plain words, refusals for answering your own request or above your limit, a Waiting for me inbox, an audit with CSV export and a kill switch. Sign-in with work accounts and shadow mode are not built. The scored credit desk runs were on GurtOS Server; the Business screens are from a box seeded as the made-up Fogline Supply.
 
 **The problem:** Draft: an agent that reconciles a company's bank against its books needs bank access, and today that means handing it the key and trusting whatever it changes.
 

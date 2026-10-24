@@ -2,8 +2,8 @@
 order: 6
 sponsor: Microsoft
 prize: Built for the Real World, and the Customer Impact Award
-editions: 'GurtOS Business (preview)'
-pitch: 'Companies want agents on finance work, but an ordinary OS gives an agent its owner''s keys, no separation of duties, no record and no undo, so pilots stay pilots. GurtOS Business gives each seat its own user, routes approvals to the right person, keeps a full audit and a kill switch, on a box the company owns. Next (being built): shadow mode, Entra ID sign-in, measured impact, a Responsible AI mapping, sourced facts and an incident drill. GurtOS Business is not built yet. Today''s demo runs on GurtOS Server, with the credit desk''s human controller seat approving from a phone.'
+editions: 'GurtOS Business'
+pitch: 'Companies want agents on finance work, but an ordinary OS gives an agent its owner''s keys, no separation of duties, no record and no undo, so pilots stay pilots. GurtOS Business gives each seat its own user, routes approvals to the right person, keeps a full audit and a kill switch, on a box the company owns. Next (being built): shadow mode, Entra ID sign-in, measured impact, a Responsible AI mapping, sourced facts and an incident drill. GurtOS Business is on main: people and roles, approvals routed by rules written in plain words, refusals for answering your own request or above your limit, a Waiting for me inbox, an audit with CSV export and a kill switch. Sign-in with work accounts and shadow mode are not built. The scored credit desk runs were on GurtOS Server; the Business screens are from a box seeded as the made-up Fogline Supply.'
 title: A finance agent with a path to production
 summary: 'Companies want agents doing finance work, but an ordinary operating system gives an agent its owner''s keys, no separation of duties, no record and no undo, so pilots never reach production. The credit desk is a small wholesaler''s credit analyst agent and collections clerk agent with a human controller, and GurtOS is its path to production: each seat is its own Linux user without keys, every action lands in an append-only log, approvals reach a phone, and the box picks up where it was after a power cut. It runs on a computer the company owns.'
 proof: 'Scored from the action log against an answer key, the latest live run caught <strong>14 of 14 planted errors with 0 false alarms</strong> and decided all 6 credit applications as the key does. A simple rule on the same CRS data approves all six for $153,000, including $20,000 to a fake applicant whose $18,500 rush order would have shipped to a freight forwarder.'
@@ -32,6 +32,29 @@ shots:
   - src: ../../assets/track/hyphenate/analyst-decision.png
     alt: 'The recorded decision: fraud hold, decided by the controller on the phone, rules FRD-1 and FRD-2, seven CRS request ids.'
     caption: 'The decision in the log: what, why (rule ids), who approved, and the data it rests on.'
+  - src: ../../assets/repo/business/3-waiting-rosa-desktop.png
+    alt: 'Waiting for me on the Business box for Rosa Delgado, Controller: three requests, a $40,000 credit line for Bright Harbor Catering open with the rule that sent it to her, the agent''s checks, and Deny and Approve.'
+    caption: 'GurtOS Business, Waiting for me. A rule sent the $40,000 request to Rosa; Sam asked for it, so he cannot approve it. The data is sandbox data for the made-up Fogline Supply.'
+  - src: ../../assets/repo/business/2-rules.png
+    alt: 'The Rules page: a tester that says a $40,000 credit line asked for by Sam Chen goes to Rosa Delgado, the plain-words rules, and the always-on rules.'
+    caption: 'Rules in plain words, with a tester that shows who a request would go to. "Nobody approves their own request" and "an agent never approves an agent" cannot be turned off.'
+  - src: ../../assets/repo/business/1a-people.png
+    alt: 'Settings, People: Rosa Delgado the Controller, Sam Chen in Sales, Priya Nair the IT admin and Owen Clarke the auditor, plus two agent seats.'
+    caption: 'People and agent seats. Each person approves only from a phone paired as them; the auditor is read-only.'
+  - src: ../../assets/repo/business/4-audit.png
+    alt: 'The Audit window for Owen Clarke, read-only, filtered to Bright Harbor Catering, showing the request routed to Rosa, her approval from her phone and the task finishing.'
+    caption: 'Audit, read-only for the auditor, with filters and Export CSV. Every row names who asked, which seat, and who approved.'
+  - src: ../../assets/repo/business/two-phones-rosa-approves.png
+    alt: 'Rosa''s phone after approving the $40,000 request.'
+    caption: 'Two phones, one request: Rosa approves $40,000 on hers.'
+    tall: true
+  - src: ../../assets/repo/business/two-phones-sam-after.png
+    alt: 'Sam''s phone afterwards, showing who answered his request.'
+    caption: 'Sam''s phone shows who answered.'
+    tall: true
+  - src: ../../assets/repo/business/5c-control-center-paused.png
+    alt: 'The box''s screen after the kill switch: All agents are paused, pulled by Priya Nair from her phone, six tasks stopped where they were, requests waiting for an OK stay open.'
+    caption: 'The kill switch: one pull from IT''s phone pauses every agent. Nothing is lost, and requests waiting for an OK stay open.'
 links:
   - label: The credit desk's code and README
     href: https://github.com/benz16107/calhacks13/tree/main/tracks/credit-desk
@@ -95,8 +118,7 @@ pilots stay pilots. This page is about whether a real company could switch the d
 on the [Hyphenate page](/tracks/hyphenate/).
 
 **GurtOS Business is the answer for a company:** seats with their own users, approvals routed to the right person, a
-full audit and a kill switch, on a box the company owns. Business is a preview: it is not on main yet, so today's
-demo runs on GurtOS Server, where the credit desk's human controller seat approves from the portal or a phone. The OS
+full audit and a kill switch, on a box the company owns. Business is on main. The screens below are from a box seeded as the made-up Fogline Supply; the scored credit desk runs were on GurtOS Server, where the controller seat approves from the portal or a phone. The OS
 is light (one Node service, 4 GB of memory) and open source under Apache-2.0, so a company can read what it runs.
 
 | Feature | Why it is there | Microsoft criterion | From | Today |
@@ -104,7 +126,12 @@ is light (one Node service, 4 GB of memory) and open source under Apache-2.0, so
 | Each seat is its own Linux user with its own copy of the files; keys stay in a root-only vault | A finance agent holds nothing it could leak or misuse | Path to production, Responsible design | GurtOS | Shipped. The merge gate checks no key appears in the log |
 | A seat cannot approve its own large proposal; fraud holds always go to a person, on the portal or a phone | Separation of duties for an agent | Responsible design | GurtOS (the approval pause) and the desk (where the line is) | Shipped. Above $10,000 the controller answers; the log names who |
 | One append-only record of every call, decision, rule id and approver | Something an auditor can read | Path to production | GurtOS (the log) and the desk (rule ids, CRS request ids) | Shipped |
-| Undo one seat's file changes; pause every agent at once; resume after a power cut with nothing paid twice; whole-system updates that roll back | A bad hour is recoverable | Path to production | GurtOS | Shipped (pause is a setting; Business adds the kill switch) |
+| Undo one seat's file changes; resume after a power cut with nothing paid twice; whole-system updates that roll back | A bad hour is recoverable | Path to production | GurtOS | Shipped |
+| People with roles (owner, admin, approver, requester, auditor) and agent seats, each phone paired as its person | A company has its own people, not one login | Path to production | GurtOS Business | Shipped. The merge gate's business step makes four people with paired phones and refuses a requester who tries to read the policy |
+| Rules in plain words route each approval to the right person, and answers are refused for your own request, above your limit, or by anything that is not a person | Separation of duties that a team can read and change | Responsible design | GurtOS Business | Shipped. The gate checks seven refused answers and that all five requests still wait afterwards |
+| Waiting for me and My requests on phone and desktop | Each person sees only what is theirs to answer | Path to production | GurtOS Business | Shipped. Rosa sees three requests, Sam none and his own four, Priya none |
+| An audit with filters by person, agent seat and date, and CSV export, read-only for an auditor | Something an auditor can read without asking IT | Path to production | GurtOS Business | Shipped. The gate checks the filters, the CSV header and that an auditor can change nothing |
+| One kill switch pauses every agent at once from any admin's phone or the box; requests waiting for an OK stay open | The first thing a company asks about is how to stop it | Path to production | GurtOS Business (shared with Personal's pause) | Shipped. The gate checks six tasks stopped where they were, every screen says who pulled it, and both pulls are in the log |
 | Shadow mode and a one-week pilot plan: the desk runs beside the people, changes nothing, and is compared with what they did | A company starts with a pilot it can switch off | Path to production | GurtOS Business (shadow mode) and the desk (the plan) | Being built; not on main yet |
 | Sign-in with Entra ID work accounts, roles taken from groups | Nobody makes new passwords or a second list of who may approve | Path to production | GurtOS Business | Being built; not on main yet |
 | Measured impact: human minutes saved, dollars stopped and cost per application | A controller can say what the desk is worth | Measurable usefulness | The desk | Being built; not on main yet |
@@ -213,4 +240,5 @@ has the steps for writing your own.
 - Two collection steps differ from the key in every run: the clerk put two over-limit customers on credit hold
   (rule COL-3) instead of the aging step the key lists.
 - The business credit file is simulated, and the bank is read, not written.
-- The controller is one role. Routing approvals by amount to different people is planned for GurtOS Business.
+- The scored runs used a single controller seat on GurtOS Server. Routing by amount to different people is in GurtOS Business, shown here on a seeded box with scripted seats and sandbox data, not in a scored run.
+- Sign-in with work accounts (Entra ID) and shadow mode are not built; the log's `who` comes from a person's paired phone.

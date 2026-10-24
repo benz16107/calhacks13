@@ -24,7 +24,7 @@ const carries = (ed: string) => tracks.filter((t) => t.data.editions.includes('A
 const strip = [
   { name: 'GurtOS Server', ed: 'Server', note: 'built: an always-on box at home or in the cloud' },
   { name: 'GurtOS Personal', ed: 'Personal', note: 'built: your own laptop, with agents beside you' },
-  { name: 'GurtOS Business', ed: 'Business', note: 'preview, not built: one box for a team, with roles and routed approvals' },
+  { name: 'GurtOS Business', ed: 'Business', note: 'built: one box for a team, with roles and routed approvals; sign-in with work accounts and shadow mode are not built' },
 ].map((e) => ({ ...e, tracks: carries(e.ed) }));
 const hasClip = (name: string) => (clips as { name: string }[]).some((c) => c.name === name);
 
@@ -198,7 +198,7 @@ const prizes = [
         <div>
           <h3>A suite, not one system</h3>
           <ul>
-            <li><strong>The OS</strong> in three editions: Server, Personal and Business (preview).</li>
+            <li><strong>The OS</strong> in three editions: Server, Personal and Business.</li>
             <li><strong>The portal and phone app</strong> at <a href="https://app.gurtos.com">app.gurtos.com</a>: every agent live, with approve, undo and pause.</li>
             <li><strong>Remote access:</strong> each box can have its own HTTPS address and push approvals to your phone.</li>
             <li><strong>The app platform</strong> every integration on this site plugs into: tools, triggers, routes and apps, with keys in the vault.</li>
@@ -322,8 +322,8 @@ const prizes = [
             </tr>
             <tr>
               <td><strong>GurtOS Business</strong></td>
-              <td>One box shared by a team, with roles for who may approve what and how much, routed approvals and per-person budgets.</td>
-              <td>Planned. Approvals already record who answered.</td>
+              <td>One box shared by a team: people with roles, rules in plain words that route each approval to the right person, a Waiting for me inbox, an audit with CSV export, and a kill switch.</td>
+              <td>Built and on main, checked by a merge-gate step. Not built: sign-in with work accounts and shadow mode.</td>
             </tr>
           </tbody>
         </table>
@@ -340,7 +340,7 @@ const prizes = [
           </li>
         ))}
       </ul>
-      <p class="measure strip-foot">The Cal Hacks prizes are best shown in all three. Business-led pages show today's demo on GurtOS Server, with the credit desk's human controller seat standing in for a team.</p>
+      <p class="measure strip-foot">The Cal Hacks prizes are best shown in all three. Business-led pages show the Business screens from a box seeded as the made-up Fogline Supply; the scored credit desk runs were on GurtOS Server.</p>
       <div class="pair">
         <figure>
           <Image src={shotPhone} alt="GurtOS on a phone: what needs you comes first, each request with Deny and Approve, then the running tasks." widths={[390, 780]} sizes="320px" />
@@ -458,7 +458,7 @@ const prizes = [
         <li>The bootable image is tested in QEMU (x86 with BIOS and UEFI, ARM64 emulated). It has not run on real Apple hardware, a real PC or Vultr's own ISO boot yet.</li>
         <li>System slots are writable ext4 without dm-verity, and updates are signed with one key with no rotation.</li>
         <li>Agents are Droid with Claude. Other agents would need a worker adapter in the core.</li>
-        <li>GurtOS Business is not built.</li>
+        <li>GurtOS Business has no sign-in with work accounts and no shadow mode yet, and its screens here are from a seeded box with scripted seats and sandbox data.</li>
       </ul>
     </section>
   </div>

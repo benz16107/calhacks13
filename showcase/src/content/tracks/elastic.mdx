@@ -2,8 +2,8 @@
 order: 11
 sponsor: Elastic
 prize: Best use of Elastic Agent Builder on Serverless
-editions: 'GurtOS Business (preview) and GurtOS Server'
-pitch: 'After a week of agents working, an ordinary OS cannot tell you what they did, and anyone with root can edit its logs. GurtOS keeps one action log of every action and Elastic keeps a copy the box cannot rewrite; its agent answers and investigates, and acting still needs your OK. Business is not built yet, so today the agent answers for GurtOS Server boxes. Next (being built): a tamper-evident log with a verify tool, detection rules with phone alerts, pause, undo and stop through approvals, a fleet view, semantic search, and asking from the portal and phone.'
+editions: 'GurtOS Business and GurtOS Server'
+pitch: 'After a week of agents working, an ordinary OS cannot tell you what they did, and anyone with root can edit its logs. GurtOS keeps one action log of every action and Elastic keeps a copy the box cannot rewrite; its agent answers and investigates, and acting still needs your OK. Business is on main, but the agent has only been run against GurtOS Server boxes and demo runs. Next (being built): a tamper-evident log with a verify tool, detection rules with phone alerts, pause, undo and stop through approvals, a fleet view, semantic search, and asking from the portal and phone.'
 title: Ask what your agents did this week
 summary: 'After a week of agents working, an ordinary operating system cannot tell you what they did: its logs are scattered across tools and files, and anyone with root can edit them. On GurtOS every step, tool call, cost, approval, blocked connection, undo and failure goes into one action log and streams into an Elasticsearch Serverless project. An Elastic Agent Builder agent named GurtOS log answers questions about it in plain words, from six ES|QL tools and an index search tool that live in the repo as code. It answers and investigates; acting on anything still needs your OK.'
 proof: 'Asked "Why did the job routine fail? Look at demo run a18523.", the agent found the failed task with <code>box.failures</code>, read its timeline and named the root cause itself: the routine was allowed to reach only boards.greenhouse.io, its plan needed www.linkedin.com, the box blocked it, and the task failed right after. A live run shipped all 156 events of a demo run to Serverless, each exactly once.'
@@ -82,8 +82,7 @@ had root.
 **GurtOS keeps one action log of every action, and Elastic keeps a copy the box cannot rewrite.** The Elastic agent
 answers and investigates from that copy. It never acts on its own: pausing, undoing or stopping a task goes through
 a GurtOS approval, so you still say yes. The Elastic key stays in the root-only vault and no agent task ever sees it.
-The box is light (one Node service, 4 GB of memory) and open source under Apache-2.0. Business is a preview: it is not
-on main yet, so today the agent answers for GurtOS Server boxes.
+The box is light (one Node service, 4 GB of memory) and open source under Apache-2.0. Business is on main, but the agent has only been run against GurtOS Server boxes and demo runs.
 
 | Feature | Why it is there | Elastic criterion | From | Today |
 |---|---|---|---|---|
