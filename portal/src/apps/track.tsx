@@ -2,7 +2,7 @@
 // it can link /kit/gurtos.css and /kit/gurtos.js to look like the rest of the OS. The window keeps it in the
 // desktop's light or dark style.
 import { useRef } from 'preact/hooks';
-import { applyTheme, base, box, tokenQuery, useBox } from '../live.ts';
+import { applyTheme, base, box, signedIn, tokenQuery, useBox } from '../live.ts';
 import { IconButton, StatusPage } from '../kit/ui.tsx';
 import { HeaderBar } from '../wm.tsx';
 
@@ -14,7 +14,8 @@ export function TrackApp({ arg }: { arg: string }) {
   const frame = useRef<HTMLIFrameElement>(null);
   const src = a ? `${base()}/t/${a.track}${a.href}` : '';
   // Off the box's own screen a track page needs the pairing token: the URL carries it, /kit/gurtos.js carries it on.
-  const load = src && src + tokenQuery(src.includes('?') ? '&' : '?');
+  // On the box's own screen a Business person may be signed in: the window gets ?person= and sends it as x-box-person.
+  const load = src && src + tokenQuery(src.includes('?') ? '&' : '?') + (signedIn() ? `${src.includes('?') || tokenQuery() ? '&' : '?'}person=${encodeURIComponent(signedIn()!)}` : '');
   return (
     <>
       <HeaderBar

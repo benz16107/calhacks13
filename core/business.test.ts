@@ -99,6 +99,8 @@ Everything else goes to any approver.`);
 test("Mana's review: the largest figure is the amount, and the owner backs up a name nobody can answer for", () => {
   assert.equal(amountOf(0, 'Raise Bright Harbor from $5,000 to $60,000?'), 6_000_000);
   assert.equal(amountOf(80_000, 'Spend $500?'), 80_000);
+  assert.equal(amountOf(0, 'approve Bright Harbor Catering Inc. (APP-1042) for $40,000, Net 30, band A? Why: verified revenue $2,150,000.'), 4_000_000, 'the explanation after the question is not the amount');
+  assert.equal(amountOf(0, 'pay $12,480.00 to Roastery Co. for bill B-3301?'), 1_248_000);
   const owner = checkPerson({ id: 'martin', name: 'Martin Hale', role: 'owner' }, []);
   const withOwner = [...people, owner];
   const own = route(rules, ask('Approve a $12,000 limit?'), withOwner, 'rosa');

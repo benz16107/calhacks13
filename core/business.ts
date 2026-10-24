@@ -262,13 +262,17 @@ function matches(r: Rule, a: Ask): boolean {
 }
 
 /**
- * The amount a request is about: the larger of its spending and the largest dollar figure in its question, so
+ * The amount a request is about: the larger of its spending and the largest dollar figure in its question (the part up
+ * to the first "?"), so
  * "Raise Bright Harbor from $5,000 to $60,000?" is checked as $60,000 (Mana's review of these rules found that).
  * shortcut: reads figures from the words when a task asks without costCents; give /ask an amount field if a
  * question ever names a big figure that isn't the request.
  */
 export function amountOf(costCents: number, question: string): number {
-  const figures = [...question.matchAll(/\$([\d,]+(?:\.\d{1,2})?)/g)].map((m) => Math.round(Number(m[1].replace(/,/g, '')) * 100));
+  // Only the question itself, up to its first "?": an agent's explanation after it ("verified revenue $2,150,000")
+  // is evidence, not the amount asked for.
+  const asked = question.includes('?') ? question.slice(0, question.indexOf('?') + 1) : question;
+  const figures = [...asked.matchAll(/\$([\d,]+(?:\.\d{1,2})?)/g)].map((m) => Math.round(Number(m[1].replace(/,/g, '')) * 100));
   return Math.max(costCents, 0, ...figures);
 }
 

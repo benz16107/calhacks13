@@ -385,7 +385,7 @@ person away never stops the work.
 **Routing.** When a task asks, the approval records `askedBy` (the person who started the task) and `route`:
 `{rule, to, amountCents, people, why}`, the rule that matched, who it goes to, the people who could approve it then,
 and one sentence such as "Over $10,000 goes to the Controller. Rosa Delgado can approve it." The amount is the
-spend or the largest dollar figure in the question, whichever is larger.
+spend or the largest dollar figure in the question up to its first "?" (not the explanation after it), whichever is larger.
 
 **Who may answer** (`POST /api/approvals/<id>`, and `box.answer` from a track), checked again at the moment of the
 answer against the people as they are now. Each refusal is a `403` with the reason and a `business` note in the log.
