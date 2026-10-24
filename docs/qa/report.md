@@ -44,10 +44,12 @@ network all work on main as of 717bc3f.
 | P2-9 undo doesn't say it refunds | Fixed, verified: "Undo and refund (test)" | portal 717bc3f, shopper |
 | P2-14 "Box" names | Store, Mana app, Jira panel renamed; Elastic open | tracks |
 | D-1 to D-4, D-7 docs | Fixed, live | docs 199dce5 |
-| Open P1s | P1-3 /find starts a Droid task at boot; P1-7 not re-tested; P1-12 ASI:One not paired; P1-13 real agent probes the proxy in moment 2; P1-14 budget and hosts not validated; D-5, D-6; showcase S-1 to S-6 | |
+| P1-7 live banner names the wrong hosts | **Still open** at 00:21 on a phone: "tm2diipf4e2 tried to reach attacker.example. It may not reach any host." (id instead of title, and its host is shop.localhost:8123) | portal |
+| Open P1s | P1-3 /find starts a Droid task at boot; P1-12 ASI:One not paired; P1-13 real agent probes the proxy in moment 2; P1-14 budget and hosts not validated; D-5, D-6; showcase S-1 to S-6 | |
 
-**Not re-tested yet:** P1-7, P2-1, P2-6, P2-7, P2-8, P2-10 (portal says fixed), and the laptop demo box, which still
-ran pre-c6f747e code at 23:58.
+**Not re-tested yet:** P2-1, P2-6, P2-7, P2-8, P2-10 (portal says fixed), and the installed boxes. **At 00:22 none
+runs current main:** linuxbox and Vultr are at 3a4e4ca (no P0-7 fix), and the laptop, Sunday's demo box, still runs
+code from before c6f747e. Core was asked to deploy all three.
 
 ## Findings
 
