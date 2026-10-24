@@ -196,8 +196,9 @@ layer further out. SpacetimeDB (port 3000) is never open to the network; the por
 stream. On Personal, `BOX_URL` is read when the box starts, so after a laptop moves to another network it shows
 the old address until the next restart. Debug builds also open ssh (22).
 
-The time zone is UTC unless the build set `BOX_TIMEZONE`. Personal's GNOME setup asks for it. On Server, change
-it with `timedatectl set-timezone` on a debug build; the setup wizard does not set it yet. Updates keep it.
+The time zone is UTC unless the build set `BOX_TIMEZONE`. Personal's GNOME setup asks for it. On Server, the setup
+wizard's step 3 (Name and time zone) sets it; until then the wizard's clock and the home screen's greeting read UTC.
+Updates keep it.
 
 ## GurtOS Personal
 
