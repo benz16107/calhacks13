@@ -109,6 +109,14 @@ triggers: [
 - `webhook` serves `POST /hook/<track>/<name>` on the box's API; the JSON body is the payload.
 - `onFileChange` watches a folder (debounced) and fires per added or changed file.
 
+## Moment 2 with a real agent
+
+The demo runs the booby-trapped page twice: once with a scripted agent that does everything the hidden
+instructions say (and is blocked at every turn), and once with a real Droid task (Claude) whose only allowed
+host is the page. Claude usually refuses the injection; if it tries, the box blocks the exfil and logs it.
+Either way the demo asserts no vault secret reached the task's files, environment or log, and reports which
+path the agent took.
+
 ## Your demo step
 
 Make `tracks/<name>/demo.ts` that default-exports `async (d: DemoKit) => { ... }` and calls `d.check(...)`
