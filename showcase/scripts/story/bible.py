@@ -106,10 +106,10 @@ for k in tracks:
         out.append("")
     else:
         out += ["**Features, by the sponsor's criteria** (no OS-vs-track table yet; to write when reviewed):", ""]
-        out += [f"- *{strip(c['ask'])}* ({c.get('status','met')}): {strip(c['how'])}" for c in fm['criteria']]
+        out += [f"- *{strip(c['ask'])}* ({c.get('status','met')}): {strip(c['how'])}" for c in fm.get('criteria', [])]
         out.append("")
     out += [f"**Demo moment and proof:** {strip(fm['proof'])}", ""]
-    todo = [f"{strip(c['ask'])} ({c['status']})" for c in fm['criteria'] if c.get('status', 'met') != 'met']
+    todo = [f"{strip(c['ask'])} ({c.get('status','met')})" for c in fm.get('criteria', []) if c.get('status', 'met') != 'met']
     todo += [f"{r['part']} (not built)" for r in fm.get('status', []) if r['state'] == 'not-built']
     if t: todo += [r[0] for r in t[1] if 'Being built' in r[-1]]
     todo += EXTRA_TODO.get(k, [])

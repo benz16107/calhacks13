@@ -21,14 +21,16 @@ const tracks = defineCollection({
       summary: z.string(),
       proof: z.string(),
       // Where the quoted criteria come from.
-      criteriaSource: z.string(),
-      criteria: z.array(
-        z.object({
-          ask: z.string(),
-          how: z.string(),
-          status: z.enum(['met', 'partly', 'open']).default('met'),
-        }),
-      ),
+      criteriaSource: z.string().default(''),
+      criteria: z
+        .array(
+          z.object({
+            ask: z.string(),
+            how: z.string(),
+            status: z.enum(['met', 'partly', 'open']).default('met'),
+          }),
+        )
+        .default([]),
       // An evidence clip from src/data/clips.json shows until a narrated YouTube video is set in src/data/videos.ts.
       clip: z.string().optional(),
       // Which narrated video in src/data/videos.ts this page shows; defaults to the page's own slug.
