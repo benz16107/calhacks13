@@ -11,9 +11,8 @@ Atlassian Agentic Workforce Challenge. This entry is for **both tracks**:
   on the issue.
 
 **Best shown in GurtOS Business**, where one box is shared by a team: the team's agents are visible in the
-team's Jira, and Jira's permissions and GurtOS's roles together decide who may approve. GurtOS Business is
-being finished on its own branch. Everything below runs today on a GurtOS Server box; the Business parts are
-marked.
+team's Jira, and Jira's permissions and GurtOS's roles together decide who may approve. GurtOS Business is on
+main. The live demo runs on a GurtOS Server box; the Business rules are checked in the merge gate.
 
 ## The problem
 
@@ -51,7 +50,7 @@ Atlassian judges the idea, usefulness to Atlassian users, and technical use of F
 | 4 | **Jira Service Management approvals** | Risky requests (production changes, spending over a limit, writes outside a task's folder) become JSM requests with approvers. The box waits for the JSM decision, then carries on or stops. On Business they map to routed approvals. | Usefulness to Atlassian users (approvals where IT already approves) |
 | 5 | **Confluence reports** | A daily "What our agents did" page, and an incident page whenever something is blocked: what was tried, from where, and what GurtOS did. | Usefulness (the record outlives the box), idea |
 | 6 | **A Jira dashboard gadget** (`jira:dashboardGadget`) | Agent tasks, blocked attempts and cost per project, on the team's dashboard. | Usefulness, technical use of Forge |
-| 7 | **People mapping for Business** | A Jira user maps to a GurtOS person. Only someone with both the Jira permission (edit the issue; Jira admin to pause) and the GurtOS role, within their limit, can approve. Nobody approves their own request, and no agent approves an agent. | Track 2 (who may act for whom), technical use of Forge (identity from Forge's context, not the browser) |
+| 7 | **People mapping for Business** | A Jira user maps to a GurtOS person. Only someone with both the Jira permission (edit the issue; Jira admin to pause) and the GurtOS role, within their limit, can approve. Nobody approves their own request, and no agent approves an agent. The merge gate checks it on a Business box: an unlinked Jira user and a requester are refused, an approver over their limit is refused, an approval within it counts as that person, and someone who started a task from Jira can't approve it in JSM. | Track 2 (who may act for whom), technical use of Forge (identity from Forge's context, not the browser) |
 
 Plus what was there before: each task's issue holds what it was asked, what it was allowed, its reasoning, its
 approvals, its blocked attempts, the diff and its log; the **GurtOS agent task** panel approves and rolls back

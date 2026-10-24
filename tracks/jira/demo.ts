@@ -184,7 +184,10 @@ export default async function (d: DemoKit) {
     const [ra, rc, rx] = bulk.results;
     d.check(ra.ok && rc.ok && !rx.ok && ra.changes.some((x: { path: string }) => x.path === 'README.md') && d.view('jira', 'README.md') === 'teh box' && d.view('jira', 'hotfix.txt') === undefined && d.view('jira', 'oncall.md') !== undefined,
       `bulk roll back of ${a.key} and ${cIssue}: both came back (${[...ra.changes, ...rc.changes].map((x: { path: string }) => x.path).join(', ')}), NOPE-1 was refused, the on-call notes stayed`);
-    console.log('  skip  a Jira user acting as their GurtOS Business person: needs GurtOS Business on main');
+    // GurtOS Business: a Jira account acts as the GurtOS person it is linked to, and Business decides by role,
+    // limit and who asked. Offline only: the live site has no Jira accounts for these people.
+    if (!stub) console.log('  skip  Business people mapping: offline only (the demo site has no accounts for these people)');
+    else await business(d, stub, call, start, opened);
   } finally {
     fs.rmSync(conf, { force: true });
     stub?.server.close();
@@ -196,6 +199,51 @@ export default async function (d: DemoKit) {
     }
   }
 }
+
+/** Business on for a moment: Dana is the Controller (approves up to $50,000), Lee is a requester. Own ids, so the Business demo's people and counts are untouched; removed at the end. */
+async function business(d: DemoKit, stub: Stub, call: (m: string, p: string, b?: unknown) => Promise<any>, start: (t: string, p: string) => Promise<Task>, opened: () => Record<string, { key: string }>) {
+  await d.api('PUT', '/business', { on: true, company: 'Fogline', policy: 'Over $10,000 goes to the Controller.\nEverything else goes to any approver.' });
+  try {
+    await d.api('POST', '/people', { id: 'jira-dana', name: 'Dana Whitfield', role: 'approver', title: 'Controller', limitCents: 5_000_000, approvesFor: ['Controller'] });
+    await d.api('POST', '/people', { id: 'jira-lee', name: 'Lee Park', role: 'requester' });
+    fs.writeFileSync(path.join(d.home, 'jira', 'people.json'), JSON.stringify({ 'acct-dana': 'jira-dana', 'acct-lee': 'jira-lee' }));
+    const waitAsk = (t: Task) => d.waitFor(`${t.title} to ask`, async () => (await d.api('GET', `/tasks/${t.id}`)).approvals.find((a: { state: string }) => a.state === 'pending'), 20000);
+    const answer = (t: Task, approval: string, account: string) => call('POST', '/answer', { task: t.id, approval, approved: true, account }).then(() => 200, (e: Error) => Number(e.message.match(/: (\d{3}) /)?.[1]));
+
+    const big = await start('Wire the supplier', 'ask Wire $60,000 to the new supplier?');
+    const bigAsk = await waitAsk(big);
+    d.check(await answer(big, bigAsk.id, 'acct-nobody') === 403, 'Business: a Jira user not linked to a GurtOS person is refused (403)');
+    d.check(await answer(big, bigAsk.id, 'acct-lee') === 403, 'Business: Lee, a requester, cannot approve from Jira (403)');
+    d.check(await answer(big, bigAsk.id, 'acct-dana') === 403, 'Business: $60,000 is over Dana\'s $50,000 limit, so her approval from Jira is refused (403)');
+    await d.api('POST', `/tasks/${big.id}/undo`);
+
+    const inv = await start('Pay the invoice', 'ask Pay the $20,000 invoice?\nwrite paid.txt yes');
+    const invAsk = await waitAsk(inv);
+    await answer(inv, invAsk.id, 'acct-dana');
+    await d.settled([inv.id]);
+    const got = (await d.api('GET', `/tasks/${inv.id}`)).approvals[0];
+    d.check(got.person === 'jira-dana' && got.by === 'Dana Whitfield', `Business: Dana's approval from Jira counts as her: by ${got.by}, person ${got.person}, within her limit`);
+
+    // Dana hands a Jira issue to the agent, so she asked for the task: she can't approve its request in JSM either.
+    stub.issue('OPS-9');
+    const own = await call('POST', '/start', { issue: { key: 'OPS-9', summary: 'Ship the hotfix', description: 'ask Push the hotfix to production?' }, account: 'acct-dana' });
+    const ownTask = (await d.api('GET', `/tasks/${own.task.id}`)).task;
+    const req = await d.waitFor('the JSM request for Dana\'s task', async () => opened()[`${own.task.id}.line1`]?.key, 40000);
+    stub.approve(req, 'acct-dana');
+    const refused = await d.waitFor('the box to refuse Dana\'s JSM approval', async () =>
+      (await d.api('GET', `/tasks/${own.task.id}`)).events.find((e: any) => e.type === 'note' && e.data?.action === 'jsm.refused'), 40000);
+    const still = (await d.api('GET', `/tasks/${own.task.id}`)).approvals[0];
+    d.check(ownTask.requestedBy === 'jira-dana' && /asked for this/.test(refused.data.why) && still.state === 'pending',
+      `Business: Dana started the task from Jira, so her approval in ${req} was refused ("${refused.data.why}") and it still waits`);
+    await d.api('POST', `/tasks/${own.task.id}/undo`);
+  } finally {
+    for (const id of ['jira-dana', 'jira-lee']) await d.api('DELETE', `/people/${id}`).catch(() => {});
+    await d.api('PUT', '/business', { on: false });
+    fs.rmSync(path.join(d.home, 'jira', 'people.json'), { force: true });
+  }
+}
+
+type Stub = Awaited<ReturnType<typeof stubJira>>;
 
 /** A stand-in for the few Jira Cloud REST calls the box makes, keeping issues in memory. */
 async function stubJira() {
@@ -232,7 +280,7 @@ async function stubJira() {
     if (req.method === 'GET' && p === '/rest/api/3/myself') return send(200, { accountId: 'acct-approver' });
     if (req.method === 'GET' && p === '/rest/api/3/user') {
       const id = new URL(req.url!, 'http://x').searchParams.get('accountId');
-      const known: Record<string, string> = { 'acct-user': 'Jira user', 'acct-approver': 'Approver' };
+      const known: Record<string, string> = { 'acct-user': 'Jira user', 'acct-approver': 'Approver', 'acct-dana': 'Dana Whitfield', 'acct-lee': 'Lee Park', 'acct-nobody': 'Nobody Linked' };
       return id && known[id] ? send(200, { accountId: id, displayName: known[id] }) : send(404, {});
     }
     const sd = p.match(/^\/rest\/servicedeskapi\/request\/([\w-]+)\/(approval|comment)$/);
@@ -240,8 +288,8 @@ async function stubJira() {
       const i = issues.get(sd[1]);
       if (!i) return send(404, {});
       if (sd[2] === 'comment') return (i.comments.push({ body: b.body }), send(201, {}));
-      const d = i.approval === 'pending' ? 'pending' : 'approved';
-      return send(200, { values: [{ id: '1', finalDecision: d, approvers: d === 'approved' ? [{ approver: { accountId: 'acct-approver', displayName: 'Approver' }, approverDecision: 'approved' }] : [] }] });
+      const by = i.approval;
+      return send(200, { values: [{ id: '1', finalDecision: by === 'pending' ? 'pending' : 'approved', approvers: by === 'pending' ? [] : [{ approver: { accountId: by, displayName: by }, approverDecision: 'approved' }] }] });
     }
     // Confluence: spaces and pages, enough for the reports.
     if (p === '/wiki/api/v2/spaces') return send(200, { results: spaces.filter((x) => x.key === new URL(req.url!, 'http://x').searchParams.get('keys')) });
@@ -278,7 +326,8 @@ async function stubJira() {
     server,
     bodies,
     url: `http://127.0.0.1:${(server.address() as { port: number }).port}`,
-    approve: (key: string) => void (issues.get(key)!.approval = 'approved'),
+    approve: (key: string, account = 'acct-approver') => void (issues.get(key)!.approval = account),
+    issue: (key: string) => void issues.set(key, { key, fields: { labels: [], summary: key, status: { name: 'To Do' } }, props: {}, comments: [] }),
     comments: (key: string) => (issues.get(key)?.comments ?? []).map((c) => JSON.stringify(c.body)),
     page: (match: (title: string) => boolean) => pages.find((x) => match(x.title)),
   };
