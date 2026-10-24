@@ -180,7 +180,8 @@ let labelled = false;
 
 export default {
   name: 'elastic',
-  description: 'Streams every action to Elastic in a copy the box cannot rewrite, and lets an Elastic agent answer questions about it and ask you to undo a task.',
+  title: 'Ask GurtOS',
+  description: 'Keeps a copy of the action log in Elastic that this computer can\'t change, and answers questions like "what did my agents do yesterday?"',
   secrets: SECRETS,
 
   logReaders: [

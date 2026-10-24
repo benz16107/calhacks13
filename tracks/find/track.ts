@@ -176,6 +176,8 @@ const summaries = new Map<string, string>(); // task id -> Droid's final message
 
 export default {
   name: 'find',
+  title: 'Find',
+  description: 'Search your photos, files and past tasks by what is in them, like "the whiteboard photo".',
   // FACTORY_API_KEY: only checked for presence before starting a Claude describe task; its value is never read here.
   secrets: [...MOSS, 'FIND_OLLAMA_URL', 'FIND_OLLAMA_MODEL', 'VULTR_INFERENCE_KEY', 'FACTORY_API_KEY'],
 

@@ -4,7 +4,7 @@ import type { Track } from '../../core/contract.ts';
 // It has no tools or routes of its own: the point is that the core's controls stop the attacks.
 const track: Track = {
   name: 'armadin',
-  title: 'Attacks on agents',
-  description: 'A poisoned npm package, a hijacked supplier payment and a scoreboard of OS-level attacks, each run against a real box with the result published, caught or missed.',
+  title: 'Attack tests',
+  description: 'Runs known attacks on AI agents against this computer, like a poisoned package or a hijacked payment, and shows which ones GurtOS stopped.',
 };
 export default track;

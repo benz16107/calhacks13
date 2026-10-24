@@ -13,6 +13,8 @@ const newest = (ts: Task[]) => ts.sort((a, b) => b.updatedAt.localeCompare(a.upd
 
 export default {
   name: 'mana',
+  title: 'Mana',
+  description: 'Plan rules and small apps in Mana, then run them here. Anything that spends waits for your OK.',
   // The public Mana apps call these through the box's public address; every other route still needs a paired phone.
   openRoutes: ['GET /status', 'OPTIONS /guest', 'POST /guest', 'GET /guest', 'OPTIONS /policy', 'POST /policy', 'GET /policy'],
   routes: {

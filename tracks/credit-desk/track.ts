@@ -32,6 +32,8 @@ import { ACTIONS, ANALYST_TOOLS, AP_TOOLS, CLERK_TOOLS, CONTROLLER_ACTIONS, OUTC
 
 export default {
   name: 'credit-desk',
+  title: 'Credit desk',
+  description: 'Agents review credit applications and supplier bills for a company, on test data. A person approves every decision.',
 
   tools: [
     {

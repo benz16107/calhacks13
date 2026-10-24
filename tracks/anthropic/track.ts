@@ -3,4 +3,8 @@
 // has no slots. See README.md.
 import type { Track } from '../../core/contract.ts';
 
-export default { name: 'anthropic' } satisfies Track;
+export default {
+  name: 'anthropic',
+  title: 'Claude',
+  description: "The AI model every agent uses. Agents reach it through Factory's Droid, with your Anthropic or Factory key.",
+} satisfies Track;

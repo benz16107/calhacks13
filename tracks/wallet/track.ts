@@ -138,6 +138,7 @@ const sell = sellRoutes({ latestAudit, publicUrl: process.env.BOX_PUBLIC_URL });
 
 export default {
   name: 'wallet',
+  description: 'Lets agents pay with test money (USDC on Solana devnet), within a limit you set, and asks you above it.',
 
   tools: [
     {

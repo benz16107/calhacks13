@@ -396,9 +396,7 @@ const publicPasskeys = () => keys().list().map(({ id, device, rpId, createdAt })
 export default {
   name: 'shopper',
   title: 'Shopper (test payments)',
-  description:
-    'An agent that shops for you on a computer you own. It never sees your card, every purchase needs your OK (with Face ID), stores can verify it, ' +
-    'and every purchase can be undone. Test payments only.',
+  description: 'Shops for you: compares stores, asks before every purchase and can undo an order. It never sees your card. Test payments only.',
   optionalSecrets: PAY_SECRETS.filter((s) => s !== 'SHOPPER_CARD'),
 
   tools: [

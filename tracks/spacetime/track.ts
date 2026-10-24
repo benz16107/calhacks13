@@ -46,8 +46,8 @@ const forbid = () => Response.json({ error: "only the box's owner can change thi
 
 export default {
   name: 'spacetime',
-  title: 'Live',
-  description: "SpacetimeDB is the box's live state: agents share a work queue through it, every screen sees tasks, requests and spending as they change, and with your OK the box shows its status on your other machines.",
+  title: 'Live status',
+  description: 'Shows tasks, requests and spending on every screen the moment they change, and lets agents share one work queue.',
 
   tools: [
     {

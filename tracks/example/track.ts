@@ -6,6 +6,8 @@ const inbox = `${process.env.BOX_HOME ?? '/var/lib/box'}/inbox/example`;
 
 export default {
   name: 'example',
+  title: 'Example',
+  description: 'A sample app for developers. It shows every way an app can add to GurtOS.',
   secrets: ['DEMO_SECRET'],
 
   // All three generic triggers, which any track reuses. A real track returns a Droid task here.

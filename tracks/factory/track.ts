@@ -103,7 +103,7 @@ async function limits(key: string) {
 export default {
   name: 'factory',
   title: 'Factory',
-  description: 'Droid as a team that plans first, works inside the box’s limits, and opens pull requests for you to review.',
+  description: 'Hand a coding job to Droid. It plans first, works inside your limits and opens a pull request for you to review.',
   secrets: ['GITHUB_TOKEN', 'FACTORY_GITHUB_REPO', 'FACTORY_API_KEY'],
   optionalSecrets: ['GITHUB_TOKEN', 'FACTORY_GITHUB_REPO', 'FACTORY_API_KEY'],
 

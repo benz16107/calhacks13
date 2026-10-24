@@ -117,6 +117,8 @@ function only(req: Request, callers: string[]) {
 
 export default {
   name: 'fetch',
+  title: 'ASI:One',
+  description: 'Give GurtOS jobs from an ASI:One chat. It can hire other agents on Fetch.ai\'s network, paid from your budget.',
   secrets: ['AGENTVERSE_API_KEY', 'ASI_ONE_API_KEY'], // handed to the agent: its mailbox, and ASI:One's model
 
   triggers: [
