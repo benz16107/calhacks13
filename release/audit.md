@@ -81,7 +81,7 @@ closed before the repository goes public.
 | The Personal test VM is the default | `personal/vm.sh` | personal | Sent |
 | The Forge app calls Ben's Vultr box | `tracks/jira/forge/manifest.yml`, `forge/src/resolvers/index.js` | jira | Sent: the box URL is a deploy-time setting, documented for people deploying their own Forge app |
 | Image descriptions use Ollama on Ben's Mac | `tracks/find/find.ts`, `record.ts` | find | Sent: say "a machine running Ollama", configurable |
-| Comments and READMEs name Ben's machines or key file | Apify, Elastic, Shopper, Wallet, find, Jira READMEs; `tracks/elastic/agent.ts`, `tracks/shopper/store.ts` | each track | Sent |
+| Comments and READMEs name Ben's machines or key file | Apify, Elastic, Shopper, Wallet, find, Jira READMEs; `tracks/elastic/agent.ts`, `tracks/shopper/store.ts` | each track | Sent; Shopper done (408ad13) |
 | Demo data names Ben as approver | `tracks/jira/demo.ts` ("Ben Zhou") | jira | Sent: a neutral name |
 | BOX_PEERS, BOX_URL, BOX_OWNER | core | core | Fine: empty or unset by default, set per machine |
 | Docs screenshots show a test machine's name as a box name | `site/src/assets/screens/box-*.png` | docs | Sent |
