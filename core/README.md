@@ -109,7 +109,12 @@ owner's home ("Pictures is not on your list. Add it in GurtOS Settings, Permissi
 **Model keys are checked.** `PUT /api/vault/ANTHROPIC_API_KEY` tries the key with a free call before saving: a
 key Anthropic refuses is a 400 ("Anthropic didn't accept this key...") and is not saved. The answer has
 `check: 'ok' | 'unchecked'` and a `message` to show ("Saved. GurtOS couldn't check it yet." when offline). A
-Factory key is saved unchecked. An empty key is a 400.
+Factory key is saved unchecked. An empty key is a 400 ("Paste a key first.").
+
+**System update.** `GET /api/update` is `{version, build, state, slot?, last?, lastAt?}`, read from what
+`box-update` leaves behind: `state` is `current`, `ready` (an update is written to the other slot and starts at the
+next restart), `trial` (running an update not yet confirmed), `rolledBack` (the last line says it rolled back or did
+not start) or `unknown` (not running from a GurtOS image). There is no update feed yet, so there is no check.
 
 **Closed at the end.** When a task reaches done, failed or undone, any approval still pending for it is
 closed, so none lingers.

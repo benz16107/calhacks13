@@ -2058,14 +2058,17 @@ class Core {
             if ('paused' in body && changed.paused.from !== next.paused) this.pauseChanged(next.paused, req); // the kill switch
             return this.settings;
           }
+          case 'GET /update':
+            // System update (Personal's Settings row): read from what box-update leaves; 'unknown' off an image.
+            return system.updateState();
           case 'GET /vault':
             this.requireOwner(req);
             // Names and when each was set. No route returns a value.
             return [...new Set([...this.vault.keys(), ...Object.keys(this.vaultMeta)])].sort().map((name) => ({ name, setAt: this.vaultMeta[name] ?? null }));
           case 'PUT /vault/:id': {
             this.requireOwner(req);
-            if (!VAULT_NAME.test(id)) throw new Error('key names are capital letters, digits and _ (like STRIPE_KEY), 2 to 64 characters');
-            if (typeof body?.value !== 'string' || !body.value.trim()) throw new Error('the key is empty');
+            if (!VAULT_NAME.test(id)) throw new Error('Key names are capital letters, digits and _ (like STRIPE_KEY), 2 to 64 characters.');
+            if (typeof body?.value !== 'string' || !body.value.trim()) throw new Error('Paste a key first.');
             const check = await checkModelKey(id, body.value.trim()); // a model key is tried before it is saved
             if (check.status === 'rejected') throw Object.assign(new Error(check.message), { status: 400 });
             writeVaultKey(id, body?.value); // validates; throws without echoing the value

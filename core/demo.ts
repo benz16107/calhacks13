@@ -979,7 +979,9 @@ await moment('setup: the wizard, settings, the vault and apps', async () => {
   const setupNote = (await api<LogEvent[]>('GET', '/log')).filter((e) => e.type === 'note' && (e as { track?: string }).track === 'setup').pop() as { text?: string } | undefined;
   check(setupNote?.text === 'Setup: network step done', `a setup step reads as a sentence in Activity ("${setupNote?.text}")`);
   const emptyKey = await api('PUT', '/api/vault/ANTHROPIC_API_KEY', { value: '  ' }).then(() => 'saved', (e: Error) => e.message);
-  check(/empty/.test(emptyKey), `an empty model key is refused, not saved ("${emptyKey}")`);
+  check(emptyKey === 'Paste a key first.', `an empty model key is refused, not saved ("${emptyKey}")`);
+  const upd = await api<{ state: string; version: string }>('GET', '/api/update');
+  check(upd.state === 'unknown' && !!upd.version, `off an image, the system update row says unknown with the version (${upd.state}, ${upd.version})`);
   const F = await api<Task>('POST', '/tasks', { title: 'Fails plainly', workspace: 'notes', worker: 'fake', source: 'demo', prompt: 'fail The report could not be found' });
   const failed = await waitFor('the failure', async () => ((await task(F.id)).state === 'failed' ? task(F.id) : undefined));
   check(failed.error === 'The report could not be found', `a failed task says why in plain words, without "worker exited with" ("${failed.error}")`);

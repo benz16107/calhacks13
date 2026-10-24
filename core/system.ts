@@ -14,6 +14,32 @@ function osRelease(): Record<string, string> {
   }
 }
 
+export type UpdateState = 'current' | 'ready' | 'trial' | 'rolledBack' | 'unknown';
+
+/**
+ * Where box-update stands, from what it leaves behind (image/rootfs/usr/local/sbin/box-update): the booted slot in
+ * the kernel command line, /data/update/trial ("<slot> <time>") and /data/update/last (its last result line).
+ */
+export function updateStateFrom(cmdline: string, trial: string, last: string, image: boolean): { state: UpdateState; slot?: string; last?: string; lastAt?: string } {
+  const slot = cmdline.match(/\bbox\.slot=([ab])\b/)?.[1];
+  if (!image || !slot) return { state: 'unknown' };
+  const t = trial.trim().split(/\s+/)[0];
+  const l = last.trim();
+  const state: UpdateState = t ? (t === slot ? 'trial' : 'ready') : /rolled back|did not start/.test(l) ? 'rolledBack' : 'current';
+  return { state, slot, ...(l ? { last: l, lastAt: l.match(/^\S+Z/)?.[0] } : {}) };
+}
+
+export function updateState() {
+  const read = (f: string) => {
+    try {
+      return fs.readFileSync(f, 'utf8');
+    } catch {
+      return '';
+    }
+  };
+  return { ...version(), ...updateStateFrom(read('/proc/cmdline'), read('/data/update/trial'), read('/data/update/last'), isImage()) };
+}
+
 /** Running from a GurtOS image (not a checkout on stock Ubuntu). */
 export const isImage = () => osRelease().ID === 'gurtos';
 

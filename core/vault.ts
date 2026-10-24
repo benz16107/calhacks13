@@ -21,10 +21,10 @@ export const VAULT_NAME = /^[A-Z][A-Z0-9_]{1,63}$/;
 
 /** Set or replace one key in the vault file, atomically, keeping the file root-only. Returns nothing: never the value. */
 export function writeVaultKey(name: string, value: string): void {
-  if (!VAULT_NAME.test(name)) throw new Error('key names are capital letters, digits and _ (like STRIPE_KEY), 2 to 64 characters');
-  if (typeof value !== 'string' || !value.trim()) throw new Error('value: send the key as text');
+  if (!VAULT_NAME.test(name)) throw new Error('Key names are capital letters, digits and _ (like STRIPE_KEY), 2 to 64 characters.');
+  if (typeof value !== 'string' || !value.trim()) throw new Error('Paste a key first.');
   const v = value.trim();
-  if (/[\r\n\0]/.test(v) || v.length > 8192) throw new Error('value: one line, at most 8192 characters');
+  if (/[\r\n\0]/.test(v) || v.length > 8192) throw new Error('A key is one line, at most 8,192 characters.');
   const lines = fs.existsSync(file) ? fs.readFileSync(file, 'utf8').split('\n') : [];
   while (lines.length && lines[lines.length - 1] === '') lines.pop();
   let replaced = false;
