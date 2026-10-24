@@ -20,7 +20,7 @@ ISO walked as a new person, on Wayland (Ubuntu's default) and Xorg.
 | The lock screen | Each approval as a card in the lock screen's notification list. Deny works while locked. Unlock to approve asks for the password, then approves, because approving can spend money | `shell/gurtos@gurtos.dev/` |
 | Activities search | Two sections in the overview: GurtOS (agent tasks by title) and Find (files and photos /find knows, by what is in them). A result opens in the GurtOS app | `search-provider.py` |
 | Files | Ask an Agent… on one folder or up to ten. While changes wait, the folder's menu has Keep Agent Changes and Undo Agent Changes… (the review asks first), and nothing is marked. After Keep, the "changed by an agent" emblem on each file an agent added or changed, and Put Files Back… on the folder and on those files | `files/box-nautilus.py` |
-| GurtOS Settings | A native libadwaita app with a view switcher: Agents (model key, updates, the action log), Permissions (folders, internet, spending, quiet hours and their hours), Apps, Keys, Phone. About is in the window menu, with the credits | `settingswin.py` |
+| GurtOS Settings | A native libadwaita app with a view switcher: Agents (model key, updates, the action log), Permissions (folders, internet, spending, quiet hours and their hours), Apps, Keys, Phone. Phone has Reach this computer from anywhere: a name under box.gurtos.com, checked as you type, then Turn on and Turn off (`/api/remote`). It shows only when the box has that API. About is in the window menu, with the credits | `settingswin.py` |
 | GurtOS Setup | At the owner's first login, after GNOME's own setup: Welcome, AI models, Folders, Permissions, Apps, Pair a phone, Done | `setupwin.py` |
 | The GurtOS app | Tasks, Activity and Time Machine: the portal in its own window, first in the dock | `box-ui.py app` |
 | Keep or Undo | The review: what changed, the diff, and Keep these changes? | `box-ui.py review` |
@@ -43,6 +43,10 @@ ISO walked as a new person, on Wayland (Ubuntu's default) and Xorg.
 ![GurtOS Settings, Keys](screenshots/os/10-settings-keys.png)
 
 ![About GurtOS](screenshots/os/09c-settings-about.png)
+
+![Reach this computer from anywhere: choosing a name](screenshots/os/17-remote-name.png)
+
+![Reach this computer from anywhere: starting](screenshots/os/18-remote-starting.png)
 
 ![Activities search: Find and GurtOS](screenshots/os/11-search.png)
 

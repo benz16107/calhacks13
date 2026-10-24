@@ -2,7 +2,9 @@
 # "GurtOS Personal OS" screen 9: a view switcher in the header bar (Agents, Permissions, Apps, Keys, Phone), boxed
 # lists, one control per row, About in the window menu. It reuses GurtOS Setup's page builders (models, folders,
 # permissions, apps, phone) so the two never disagree; a change here applies at once.
+import re
 import subprocess
+import urllib.parse
 
 import setupwin
 from gi.repository import Adw, Gio, GLib, Gtk
@@ -21,6 +23,17 @@ OLD = {'general': 'agents', 'models': 'agents', 'updates': 'agents', 'privacy': 
        'safety': 'permissions', 'folders': 'permissions', 'devices': 'phone'}  # the earlier sidebar's page names
 RETENTION = [30, 90, 365, 3650]
 HOURS = [('22:00', '07:00'), ('23:00', '07:00'), ('21:00', '06:00'), ('00:00', '08:00'), ('20:00', '08:00')]
+
+
+NAME = re.compile(r'^[a-z0-9-]{3,30}$')  # a box's name under box.gurtos.com; the relay may refuse more (reserved names)
+
+
+def remote_state():
+    """GET /api/remote, or None when this box has no remote access API or this user is not the owner: the section hides."""
+    try:
+        return api('GET', '/api/remote')
+    except Exception:  # noqa: BLE001
+        return None
 
 
 def take(scroller, into):
@@ -50,7 +63,8 @@ class SettingsWindow(SetupWindow):
         Adw.ApplicationWindow.__init__(self, application=app, title='GurtOS Settings', default_width=860, default_height=760)
         setupwin.SHOW_TITLES = False  # the view switcher names the page; Setup's big titles are for setup
         self.settings, self.vault, self.apps, self.boxes, self.taken, self.model = {}, [], [], [], {'folders': True}, None
-        self.system, self.devices = {}, []
+        self.system, self.devices, self.remote = {}, [], None
+        self.remote_poll = self.name_check = 0
         self.folder_draft = None
         self.summary = Gtk.Label(visible=False)  # Setup's footer line; Settings speaks through toasts instead
         self.at = OLD.get(start, start)
@@ -91,13 +105,13 @@ class SettingsWindow(SetupWindow):
                 holder = self.holders[self.at]
                 while (c := holder.get_first_child()) is not None:
                     holder.remove(c)
-                return holder.append(Adw.StatusPage(icon_name='dialog-error-symbolic', title="GurtOS isn't answering", description=str(err), vexpand=True))
-            setup, self.settings, self.vault, self.apps, self.boxes, self.system, self.devices = state
+                return holder.append(Adw.StatusPage(icon_name='dialog-error-symbolic', title="GurtOS isn't answering", description=GLib.markup_escape_text(str(err)), vexpand=True))
+            setup, self.settings, self.vault, self.apps, self.boxes, self.system, self.devices, self.remote = state
             self.model = setup.get('model') or ({'ready': setup['modelKey']} if 'modelKey' in setup else None)
             self.ready = True
             self.go(then or self.at)
         background(lambda: (api('GET', '/api/setup'), api('GET', '/api/settings'), api('GET', '/api/vault'), api('GET', '/api/apps?all=1'),
-                            api('GET', '/api/boxes'), api('GET', '/api/system'), api('GET', '/api/devices')), done)
+                            api('GET', '/api/boxes'), api('GET', '/api/system'), api('GET', '/api/devices'), remote_state()), done)
 
     def go(self, pid):
         if isinstance(pid, int):  # Setup's builders call go(self.at) to show a change
@@ -246,12 +260,132 @@ class SettingsWindow(SetupWindow):
         if not self.devices:
             lst.append(row('No phones yet', None, 'phone-symbolic'))
         box.append(lst)
+        if self.remote is not None:
+            self.remote_section(box)
         pair_scroller = self.phone()  # Setup's pairing step: a QR when the box has an address a phone can reach
         inner = pair_scroller.get_child().get_child().get_child()
         while (child := inner.get_first_child()) is not None:
             inner.remove(child)
             box.append(child)
         return scroller
+
+    # ---------- Reach this computer from anywhere (GET/POST/DELETE /api/remote) ----------
+
+    def remote_section(self, box):
+        r = self.remote
+        relay = r.get('relay', 'box.gurtos.com')
+        lst = section(box, 'Reach this computer from anywhere',
+                      'Your computer gets its own secure address. The relay only passes encrypted traffic along and cannot read it. '
+                      'Every phone still needs a pairing code.')
+        if r.get('enabled') or r.get('state') in ('starting', 'connected', 'error'):
+            words = {'starting': 'Starting. Getting a certificate, which takes up to a minute.', 'connected': 'On. Phones you pair can reach it from anywhere.',
+                     'error': f"Not connected: {r.get('error') or 'the relay did not answer'}", 'off': 'Off'}
+            addr = row(r.get('url') or f"https://{r.get('name')}.{relay}", words.get(r.get('state'), r.get('state', '')), 'network-server-symbolic')
+            addr.set_title_selectable(True)
+            if r.get('state') == 'starting':
+                addr.add_suffix(Gtk.Spinner(spinning=True, valign=Gtk.Align.CENTER))
+                self.follow_remote()
+            off = Gtk.Button(label='Turn off', valign=Gtk.Align.CENTER, css_classes=['destructive-action'])
+            off.connect('clicked', lambda _b: self.remote_off())
+            addr.add_suffix(off)
+            lst.append(addr)
+            return
+        entry = Adw.EntryRow(title='Name for this computer')
+        entry.add_suffix(Gtk.Label(label=f'.{relay}', css_classes=['gurt-secondary']))
+        on = Gtk.Button(label='Turn on', valign=Gtk.Align.CENTER, sensitive=False, css_classes=['suggested-action'])
+        entry.add_suffix(on)
+        status = row('Choose a name', 'Lowercase letters, digits and hyphens, 3 to 30 characters', 'dialog-information-symbolic')
+        lst.append(entry)
+        lst.append(status)
+
+        def show(title, sub, ok):
+            status.set_title(GLib.markup_escape_text(title))
+            status.set_subtitle(GLib.markup_escape_text(sub))
+            on.set_sensitive(ok)
+
+        def checked(name, out, err):
+            if name != entry.get_text().strip():
+                return  # the owner kept typing; a newer check is on its way
+            if err:
+                return show(f'{name}.{relay}', f"Could not check the name: {err}", False)
+            if out.get('available'):
+                show(f'https://{name}.{relay}', 'Available', True)
+            else:
+                show(f'{name}.{relay} is taken', out.get('reason') or 'Try another name', False)
+
+        def changed(_e):
+            name = entry.get_text().strip()
+            if self.name_check:
+                GLib.source_remove(self.name_check)
+                self.name_check = 0
+            if not NAME.match(name):
+                return show('Choose a name', 'Lowercase letters, digits and hyphens, 3 to 30 characters', False)
+            show(f'{name}.{relay}', 'Checking…', False)
+
+            def check():
+                self.name_check = 0
+                background(lambda: api('GET', '/api/remote/name/' + urllib.parse.quote(name, safe='')), lambda out, err: checked(name, out, err))
+                return False
+            self.name_check = GLib.timeout_add(400, check)  # once typing pauses, not on every key
+
+        def turn_on(*_):
+            name = entry.get_text().strip()
+            if not on.get_sensitive():
+                return
+            on.set_sensitive(False)
+
+            def done(out, err):
+                if err:
+                    return show(f'{name}.{relay}', f'Could not turn it on: {err}', True)
+                self.remote = out
+                self.go('phone')
+            background(lambda: api('POST', '/api/remote', {'name': name}), done)
+        entry.connect('changed', changed)
+        entry.connect('entry-activated', turn_on)
+        on.connect('clicked', turn_on)
+
+    def follow_remote(self):
+        """While the address is starting, read its state every 2 seconds until it connects or fails."""
+        if self.remote_poll:
+            return
+
+        def tick():
+            def done(out, _err):
+                self.remote_poll = 0
+                if out is None:
+                    return
+                changed = out.get('state') != (self.remote or {}).get('state')
+                self.remote = out
+                if changed and self.at == 'phone':
+                    self.go('phone')
+                elif out.get('state') == 'starting':
+                    self.follow_remote()
+            background(remote_state, done)
+            return False
+        self.remote_poll = GLib.timeout_add_seconds(2, tick)
+
+    def remote_off(self):
+        url = (self.remote or {}).get('url') or 'this address'
+        d = Adw.MessageDialog(transient_for=self, heading='Turn off remote access?',
+                              body=f'Phones can no longer reach this computer from outside your network, and {url} is given up. '
+                                   'Someone else could take the name.')
+        d.add_response('cancel', 'Cancel')
+        d.add_response('off', 'Turn off')
+        d.set_response_appearance('off', Adw.ResponseAppearance.DESTRUCTIVE)
+
+        def answered(_d, response):
+            if response != 'off':
+                return
+
+            def done(out, err):
+                if err:
+                    return self.toast(f'Could not turn it off: {err}')
+                self.remote = out
+                self.go('phone')
+                self.toast('Remote access is off.')
+            background(lambda: api('DELETE', '/api/remote'), done)
+        d.connect('response', answered)
+        d.present()
 
     def about(self):
         s = self.system

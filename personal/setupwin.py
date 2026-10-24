@@ -434,16 +434,18 @@ class SetupWindow(Adw.ApplicationWindow):
 
     def phone(self):
         scroller, box = page('Pair a phone (optional)', 'Approvals and running agents can come to your phone when you are away from this computer.')
-        url = next((b.get('url') for b in self.boxes if b.get('self')), '')
+        remote = getattr(self, 'remote', None) or {}  # Settings reads GET /api/remote; Setup does not offer it
+        url = next((b.get('url') for b in self.boxes if b.get('self')), '') or (remote.get('url') if remote.get('state') == 'connected' else '')
         self.summary.set_label('You can pair a phone later in GurtOS settings.')
         if not url:
             lst = boxed()
-            lst.append(row('This computer has no address your phone can reach yet', 'Skip this step. Pair later in GurtOS settings, once it has one.',
-                           'phone-symbolic'))
+            later = ('Turn on Reach this computer from anywhere above, then pair here.' if remote else
+                     'Skip this step. Pair later in GurtOS settings, once it has one.')
+            lst.append(row('This computer has no address your phone can reach yet', later, 'phone-symbolic'))
             box.append(lst)
             return scroller
         card = Gtk.Box(spacing=24, css_classes=['card'], margin_top=6)
-        steps = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10, margin_top=18, margin_bottom=18, margin_end=18, valign=Gtk.Align.START)
+        steps = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10, margin_top=18, margin_bottom=18, margin_start=18, margin_end=18, valign=Gtk.Align.START)
         for n, line in enumerate(("Point your phone's camera at the code.", 'Check that the phone shows the same code.',
                                   'Name it. It can approve and undo, and never holds a key.'), 1):
             steps.append(Gtk.Label(label=f'{n}. {line}', xalign=0, wrap=True))
