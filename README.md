@@ -18,9 +18,9 @@ Docs: [gurtos.com](https://gurtos.com). Hackathon showcase: [calhacks.gurtos.com
 |---|---|---|
 | **GurtOS Server** | An always-on box at home or in the cloud, where agents work 24/7 | The box's own full-screen screen: tasks, approvals, apps. No desktop, no login prompt, no user with sudo |
 | **GurtOS Personal** | Your own laptop or desktop | Ubuntu's GNOME desktop with your own account and sudo. Agents work beside you on copies of your folders; nothing changes until you choose Keep |
-| **GurtOS Business** | One box shared by a team, with roles and routed approvals | Planned, not built |
+| **GurtOS Business** | One box shared by a team | A setting on Server or Personal, in preview: roles, approvals routed by a plain-words policy, an audit trail, a kill switch, shadow mode and work-account sign-in. Off until the owner turns it on |
 
-Both editions are Ubuntu 24.04 underneath and update as a whole system, with automatic rollback if an update
+Server and Personal are Ubuntu 24.04 underneath and update as a whole system, with automatic rollback if an update
 does not come up healthy.
 
 ## Download

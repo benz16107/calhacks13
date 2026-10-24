@@ -28,16 +28,18 @@ Also: one action log of everything every agent did, and the cost of each task.
 
 ## Editions
 
-The same core ships in three editions. They differ in who the box belongs to and how its screen and controls
-are presented.
+The same core ships as Server and Personal, and either can run as Business. They differ in who the box belongs to
+and how its screen and controls are presented.
 
 - **Server:** an always-on box at home or in the cloud. Agents work 24/7. The screen is the box's own
   full-screen UI. There is no human user with sudo.
 - **Personal:** installed on your own laptop or desktop. Ubuntu's GNOME desktop, your own account with sudo.
   Agents work beside you as separate users without sudo, on copies of your real folders, and nothing changes in
   your folders until you choose Keep. The desktop side is in `personal/`.
-- **Business (planned):** one box shared by several people with roles, routed approvals, per-person budgets and
-  a shared audit trail. Not built. Don't design anything that blocks it: approvals already record who answered.
+- **Business (preview):** a setting on a Server or Personal box, not a separate image. One box shared by several
+  people: roles, a policy in plain words that routes each approval to who may answer it, an audit trail, a kill
+  switch, shadow mode and work-account sign-in. It is off unless turned on, and a box without it behaves exactly as
+  before. The rules are `core/business.ts`; `core/README.md` has the API.
 
 ## Decided
 
