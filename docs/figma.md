@@ -66,6 +66,8 @@ The plan for every Figma product, what it does for GurtOS and what only Ben can 
 | Landing page (Sites) | [`figma/landing/`](figma/landing/README.md) | Desktop and mobile, from the real screens; Ben pastes it into Sites and publishes |
 | Community file | [`figma/playbook.md`](figma/playbook.md), [`figma/community/`](figma/community/cover.png) | Cover and Playbook pages first in the design file; publishing is Ben's click |
 | Motion | [`figma/motion/motion.png`](figma/motion/motion.png) | Each animation's duration, curve, kit class and Reduce motion behaviour |
+| Colour check (generative plugin) | [try it](https://www.figma.com/file/new?try-tool-resource-content-id=28a2f7db-edb2-45d5-9d15-f898c55a1ca1&try-tool-resource-type=gen_tool&type=design&mode=design) | Finds colours not bound to a GurtOS variable and binds exact matches |
+| Night hills (shader fill) | [try it](https://www.figma.com/file/new?try-tool-resource-content-id=bb18c7df-c555-4919-9e47-a98162b7a654&try-tool-resource-type=gen_fill&type=design&mode=design) | The wallpaper as an animated fill: drifting hills, stars, the moon |
 
 ## Files
 
