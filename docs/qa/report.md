@@ -15,8 +15,8 @@ quota was used up; /find searched locally and the find thread is fixing the sync
 | What | ID | Notes |
 |---|---|---|
 | Vultr instance `calhacks13-qa`, vc2-4c-8gb, sjc, 149.28.206.167 | `66f6db24-2cdf-456b-8bb4-8480049d99eb` | **Delete after Sunday Oct 25.** Debug ISO plus main's core, API on 0.0.0.0:7700 for the phone tests. Its vault holds test keys. |
-| Vultr ISO `gurtos-server-x86_64.iso` (release, built 21:34 PT) | `47665f71-de20-41c1-8ba8-5f0736a937b2` | Delete with the instance |
-| Vultr ISO `gurtos-server-x86_64-debug.iso` (built 22:16 PT) | `3ab0adb1-231e-4bfb-a569-924527a24426` | Delete with the instance |
+| Vultr ISO `gurtos-server-x86_64.iso` (release, built 21:34 PT) | `47665f71-de20-41c1-8ba8-5f0736a937b2` | Deleted by the Personal thread Oct 24 (Vultr allows two custom ISOs) |
+| Vultr ISO `gurtos-server-x86_64-debug.iso` (built 22:16 PT) | `3ab0adb1-231e-4bfb-a569-924527a24426` | Mounted on the QA instance. Delete it to make room for the rebuilt release ISO, and after Sunday |
 | First QA instance, release ISO, 104.156.231.61 | `daa23705-bd86-4561-9846-c5cb8e945871` | Deleted 22:54 PT (Vultr can't reinstall an ISO instance) |
 
 ## Summary
