@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # Spike 7 (not run yet): a real power cut. `before` leaves a task's overlay copy mid-write; the Mac then kills
 # the VM process (`limactl stop --force box`) and starts it; `after` checks what survived. Root in the test VM.
-# Only run it when no other thread is using the VM. The whole sequence, from linuxbox:
-#   tar c spikes/07-powercut.sh | ssh benmac 'limactl shell box -- bash -c "mkdir -p ~/spikes && tar x -C ~/spikes --strip-components=1"'
-#   ssh benmac 'export PATH=/opt/homebrew/bin:$PATH; limactl shell box -- sudo bash ~/spikes/07-powercut.sh before;
-#     t0=$(date +%s); limactl stop --force box; t1=$(date +%s); limactl start --tty=false box >/dev/null 2>&1; t2=$(date +%s);
-#     echo "kill $((t1-t0)) s, boot $((t2-t1)) s"; limactl shell box -- sudo bash ~/spikes/07-powercut.sh after'
+# Only run it when no other thread is using the VM. The whole sequence, on the laptop, from the repo checkout:
+#   tar c spikes/07-powercut.sh | limactl shell box -- bash -c "mkdir -p ~/spikes && tar x -C ~/spikes --strip-components=1"
+#   limactl shell box -- sudo bash ~/spikes/07-powercut.sh before
+#   t0=$(date +%s); limactl stop --force box; t1=$(date +%s); limactl start --tty=false box >/dev/null 2>&1; t2=$(date +%s)
+#   echo "kill $((t1-t0)) s, boot $((t2-t1)) s"; limactl shell box -- sudo bash ~/spikes/07-powercut.sh after
 set -uo pipefail
 B=/var/lib/spike-cut
 mnt() { mount -t overlay task-x -o lowerdir=$B/lower,upperdir=$B/upper,workdir=$B/work $B/merged; }

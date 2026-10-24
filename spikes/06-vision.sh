@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # Spike 6: from inside the VM, describe a photo with the Mac's Ollama (Metal GPU). The photo never leaves the laptop.
-# Run as the normal VM user. Needs curl, jq, base64.
+# Run as the normal VM user. Needs curl, jq, base64. UA_CONTACT (optional) adds a contact to the User-Agent.
 set -euo pipefail
 OLLAMA=${OLLAMA:-http://host.lima.internal:11434}
 MODEL=${MODEL:-gemma4}
 IMG=${1:-$HOME/spike6/dog.jpg}
 mkdir -p "$(dirname "$IMG")"
-[ -f "$IMG" ] || curl -sSfL -A "calhacks-spike/0.1 (benz16107@gmail.com)" -o "$IMG" \
+[ -f "$IMG" ] || curl -sSfL -A "calhacks-spike/0.1${UA_CONTACT:+ ($UA_CONTACT)}" -o "$IMG" \
   https://upload.wikimedia.org/wikipedia/commons/2/26/YellowLabradorLooking_new.jpg
 echo "image: $(file -b "$IMG" | cut -c1-60), $(stat -c %s "$IMG") bytes"
 curl -sS "$OLLAMA/api/version"; echo

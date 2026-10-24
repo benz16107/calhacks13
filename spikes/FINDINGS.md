@@ -3,14 +3,14 @@
 Throwaway tests of the risky parts, so the core thread builds on facts. Each section says what ran, whether
 it worked, the gotchas, and one line for the core thread. The scripts in this folder are throwaway code.
 
-**Test machine:** the laptop VM (Lima `box` on benmac, `vz`, Ubuntu 24.04.5, kernel 6.8.0-142, aarch64,
+**Test machine:** the laptop VM (Lima `box` on the laptop, `vz`, Ubuntu 24.04.5, kernel 6.8.0-142, aarch64,
 systemd 255, util-linux 2.39.3, ext4 root). Lima cannot snapshot `vz` VMs (`limactl snapshot` says
 "unimplemented"), so the clean state is saved inside the VM in `/root/clean-state/` (nft ruleset, passwd,
 group, dpkg list, sysctl, unit list). The VM came with rootless containerd and Lima's own `ip nat` table
 (`LIMADNS`); leave both alone.
 
-Copy the folder in, then run one: `tar c spikes | ssh benmac 'limactl shell box -- tar x -C ~'`, then
-`ssh benmac 'limactl shell box -- sudo bash ~/spikes/01-overlay.sh'`. Scripts 01, 02, 03, 05 and 07 run as
+On the laptop, from the repo checkout, copy the folder in, then run one:
+`tar c spikes | limactl shell box -- tar x -C ~`, then `limactl shell box -- sudo bash ~/spikes/01-overlay.sh`. Scripts 01, 02, 03, 05 and 07 run as
 root, while 04 and 06 run as the normal user. 03 needs the users from 02.
 
 **Left installed in the laptop VM by the spikes:** Node 24.22.1 (NodeSource apt, `/usr/bin/node`, so
@@ -209,11 +209,11 @@ live task status and approvals, keep the action log on disk as planned, and bloc
 
 **Status: everything works up to the API key, which the VM does not have.** No real Droid task has run yet.
 
-**To finish it,** on the laptop VM, add the key to core's vault, then rerun:
+**To finish it,** add the key to core's vault in the laptop VM, then rerun. On the laptop, from the repo checkout:
 
 ```
-ssh -t benmac 'limactl shell box -- sudo bash -c "mkdir -p /etc/box; umask 077; read -rsp \"Factory key: \" k; echo; echo FACTORY_API_KEY=\$k >> /etc/box/vault.env"'
-tar c spikes/05-droid | ssh benmac 'limactl shell box -- bash -c "tar x -C ~/spikes --strip-components=1 && sudo LIST_MODELS=1 bash ~/spikes/05-droid/run.sh"'
+limactl shell box -- sudo bash -c 'mkdir -p /etc/box; umask 077; read -rsp "Factory key: " k; echo; echo FACTORY_API_KEY=$k >> /etc/box/vault.env'
+tar c spikes/05-droid | limactl shell box -- bash -c "mkdir -p ~/spikes && tar x -C ~/spikes --strip-components=1 && sudo LIST_MODELS=1 bash ~/spikes/05-droid/run.sh"
 ```
 
 It prompts for the key, so the key stays out of shell history. Get one at
