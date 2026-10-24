@@ -261,6 +261,12 @@ Owner: the Figma thread. `docs/figma-products.md` is not on main yet; its items 
   desk. The showcase still has a Nessie page and `docs/tracks.md` still lists the track; both are for the owners of
   those files to update.
 
+## Gate stability
+
+At 06:53 ET (03:53 PT) the shared test VM's load average was 31 and the host's 52, with several `tsc` runs, dev boxes
+and a `./demo` at once. Moments then fail on timeouts, not on code. Until core adds a lock to `./demo`, run one gate
+at a time and only when the load is under 8. QA's fresh-install passes run on separate Vultr VMs, not the shared one.
+
 ## Collisions
 
 Found by trial merges and by comparing what each branch edits. Each is sent to every owner involved.
