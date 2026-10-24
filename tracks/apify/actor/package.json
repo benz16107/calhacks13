@@ -1,0 +1,10 @@
+{
+  "name": "agent-safe-page-reader",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Fetch pages for an AI agent and flag instructions hidden in them.",
+  "license": "Apache-2.0",
+  "dependencies": { "apify": "^3.5.0" },
+  "scripts": { "start": "node src/main.js" }
+}

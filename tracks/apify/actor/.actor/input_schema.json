@@ -1,0 +1,29 @@
+{
+  "title": "Agent-Safe Page Reader",
+  "type": "object",
+  "schemaVersion": 1,
+  "properties": {
+    "urls": {
+      "title": "Pages to read",
+      "type": "array",
+      "description": "Web addresses (http or https) to fetch. Up to 100.",
+      "editor": "stringList",
+      "prefill": ["https://example.com"]
+    },
+    "maxPages": {
+      "title": "Most pages",
+      "type": "integer",
+      "description": "Reads at most this many addresses from the list.",
+      "default": 20,
+      "minimum": 1,
+      "maximum": 100
+    },
+    "includeText": {
+      "title": "Return the clean text",
+      "type": "boolean",
+      "description": "Turn off to get only the risk score and findings.",
+      "default": true
+    }
+  },
+  "required": ["urls"]
+}

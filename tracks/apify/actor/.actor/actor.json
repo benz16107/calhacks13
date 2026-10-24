@@ -1,0 +1,26 @@
+{
+  "actorSpecification": 1,
+  "name": "agent-safe-page-reader",
+  "title": "Agent-Safe Page Reader: clean text and prompt-injection check",
+  "description": "Fetches web pages for an AI agent and returns clean text. Finds hidden instructions aimed at AI agents (hidden text, off-screen elements, comments, aria and alt tricks, invisible characters) and returns a risk score with the evidence.",
+  "version": "1.0",
+  "buildTag": "latest",
+  "input": "./input_schema.json",
+  "storages": {
+    "dataset": {
+      "actorSpecification": 1,
+      "views": {
+        "risk": {
+          "title": "Pages by risk",
+          "transformation": { "fields": ["url", "title", "risk", "score", "removedSentences", "findings"] },
+          "display": { "component": "table" }
+        },
+        "text": {
+          "title": "Clean text",
+          "transformation": { "fields": ["url", "title", "risk", "text"] },
+          "display": { "component": "table" }
+        }
+      }
+    }
+  }
+}

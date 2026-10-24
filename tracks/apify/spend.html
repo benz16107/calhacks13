@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Apify spend</title>
+<style>
+  body { font: 15px/1.5 system-ui, sans-serif; margin: 24px; color: #1d1d1f; background: #fafaf7; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  p { margin: 0 0 16px; color: #555; max-width: 60ch; }
+  table { border-collapse: collapse; width: 100%; max-width: 640px; }
+  th, td { text-align: left; padding: 6px 12px 6px 0; border-bottom: 1px solid #ddd; font-variant-numeric: tabular-nums; }
+  th { font-weight: 600; }
+  tfoot td { font-weight: 600; border-bottom: 0; }
+</style>
+</head>
+<body>
+<h1>Apify spend</h1>
+<p>For each task, what the box counted its Apify calls at (the estimate that counts toward the task's budget) and the platform usage Apify reports for the runs. For pay-per-event Actors such as Google Maps the counted figure includes the event price and Apify's usage figure does not, so the counted one is the one to budget with.</p>
+<table>
+  <thead><tr><th>Task</th><th>Calls</th><th>Counted</th><th>Apify usage</th></tr></thead>
+  <tbody id="rows"><tr><td colspan="4">Loading</td></tr></tbody>
+  <tfoot id="total"></tfoot>
+</table>
+<script>
+  const cents = (c) => '$' + (c / 100).toFixed(2);
+  const usd = (u) => '$' + u.toFixed(4);
+  fetch('spend').then((r) => r.json()).then((d) => {
+    const body = document.getElementById('rows');
+    body.textContent = '';
+    for (const t of d.tasks) {
+      const tr = body.insertRow();
+      [t.task, t.calls, cents(t.countedCents), usd(t.actualUsd)].forEach((v) => (tr.insertCell().textContent = v));
+    }
+    if (!d.tasks.length) body.insertRow().insertCell().textContent = 'No Apify calls yet.';
+    const f = document.getElementById('total').insertRow();
+    ['All tasks', '', cents(d.totalCountedCents), usd(d.totalActualUsd)].forEach((v) => (f.insertCell().textContent = v));
+  }).catch((e) => (document.getElementById('rows').textContent = 'Could not load: ' + e.message));
+</script>
+</body>
+</html>
