@@ -19,22 +19,35 @@ release install that was deleted at 22:54 PT. Their IDs and addresses are kept o
 
 ## Summary
 
-Status at 00:08 PT Saturday. **7 P0, 20 P1 (14 product, 6 docs), 18 P2.** Fixed and verified: P0-1, P0-3, P1-1 (core
-c6f747e), P0-5 (portal 3ae539b), P0-2 and P0-6 (core 6879fb9). Open P0s: P0-4 (portal rebuild pending), P0-7 (core, found 00:05 PT). The image's
-firewall is on main (881318a); the rebuilt ISO is still to be installed on Vultr. Portal batch 1 is fixed in a rebuild not yet on
-main.
+Status at 00:20 PT Saturday. **7 P0 found, all 7 fixed and verified.** 20 P1 and 18 P2 found in the product, plus 7 in
+the docs site and 9 in the showcase. The four moments, Shopper, the wallet, the credit desk and a phone paired over the
+network all work on main as of 717bc3f.
 
-All four moments work by hand on a GurtOS Server install on Vultr running main, and so does Shopper end to end. The
-P0s are about who may answer and what a task may read once the box is reachable from other machines, which Sunday's
-phone demo needs:
+| Finding | Status | Where |
+|---|---|---|
+| P0-1 no token needed from another machine | Fixed, verified 23:30 | core c6f747e |
+| P0-2 anonymous SpacetimeDB answers, port 3000 open | Fixed, verified 23:48 and on the 00:44 release ISO | core 6879fb9, image 881318a |
+| P0-3 a folder task reads the vault | Fixed, verified 23:31 | core c6f747e |
+| P0-4 double tap approves an unseen request | Fixed, verified 00:09 (two taps 0.4 s apart approve one) | portal 3b802b9 |
+| P0-5 paired phone loses live updates and apps | Fixed, verified 23:42 | portal 3ae539b |
+| P0-6 Caddy-relayed track routes get 401 | Fixed, verified 23:47 | core 6879fb9 |
+| P0-7 one task reads another task's folder copy | Fixed, verified 00:12 (copy is 0600 and owned by its task) | core bb0ccde |
+| P1-1 undo leaves files on disk | Fixed, verified | core c6f747e |
+| P1-2 direct connections not logged | Fixed, verified 00:12 (1.1.1.1 and 169.254.169.254 logged) | core bb0ccde |
+| P1-4 stale release ISO, no firewall | Fixed, verified 00:02: GurtOS, Pacific time, 3000 and 7700 closed to the internet | image 881318a |
+| P1-5 greeting "Ben", UTC clock | Clock fixed on the release ISO; greeting fixed in portal (not on that ISO) | image, portal |
+| P1-6 no way to start a task | Fixed, verified: "Ask the box" on a phone started a real Droid task (2 cents) | portal 3b802b9 |
+| P1-8 phone doesn't notice an outage | Fixed, verified: red bar, Approve and Deny disabled | portal 3b802b9 |
+| P1-9 notices hide a waiting request | Fixed, verified: the phone home lists every waiting request first | portal 3b802b9 |
+| P1-10 credit desk and /find have no page | Credit desk fixed, verified: quick run on a phone, fraud hold approved as "controller (Judge's iPhone)". /find still has none | credit desk 7cdd64e |
+| P1-11 supplies form pays the budget | Fixed, verified: pauses at "$0.03 on a $0.02 budget", then pays | shopper b842425 |
+| P2-9 undo doesn't say it refunds | Fixed, verified: "Undo and refund (test)" | portal 717bc3f, shopper |
+| P2-14 "Box" names | Store, Mana app, Jira panel renamed; Elastic open | tracks |
+| D-1 to D-4, D-7 docs | Fixed, live | docs 199dce5 |
+| Open P1s | P1-3 /find starts a Droid task at boot; P1-7 not re-tested; P1-12 ASI:One not paired; P1-13 real agent probes the proxy in moment 2; P1-14 budget and hosts not validated; D-5, D-6; showcase S-1 to S-6 | |
 
-1. P0-1: no token needed for approve, start, undo or pairing from another machine.
-2. P0-2: SpacetimeDB's answer reducer is anonymous and open to the internet on a fresh install.
-3. P0-3: a task on `folder: /etc/box` reads the vault.
-4. P0-4: a quick second tap on the phone approves the next request, unseen.
-5. P0-5: after core's token fix, a paired phone gets no live updates and no apps.
-6. P0-6: after core's token fix, the public Mana app and the Jira panel would get 401 once deployed to Vultr.
-7. P0-7: one task can read another task's copy of the owner's private files.
+**Not re-tested yet:** P1-7, P2-1, P2-6, P2-7, P2-8, P2-10 (portal says fixed), and the laptop demo box, which still
+ran pre-c6f747e code at 23:58.
 
 ## Findings
 
@@ -235,6 +248,9 @@ long as brain.py never passes chat text into folders, hosts, tools, budgets, the
 thread. Also: CORS allows only content-type, so cross-origin clients must use `?access_token=` (core);
 image/README.md still says "most of the API takes no token" (image).
 
+**P2-18. A task started from a phone is logged as source "api".** Owner: portal. "Ask the box" on a paired phone
+made a task with `source: api`; the log and Jira would read better with the device name or "phone".
+
 ## Docs site (gurtos.com)
 
 **D-1 to D-4 and D-7 fixed in 199dce5 and live, spot-checked 00:00 PT:** real ISO names, `gurt-<id>`, the Personal ISO
@@ -262,6 +278,25 @@ dashes. Search works. Nothing scrolls sideways at 390 x 844. No form collects da
   No robots.txt.
 
 **calhacks.gurtos.com** had no DNS record at 22:46 PT (NXDOMAIN). Owner: the submission thread.
+
+## Showcase (calhacks.gurtos.com)
+
+Checked 23:45 to 23:59 PT by a helper agent. Source: `showcase/`. Owner of all: the submission thread. Nothing private
+on the pages or in OCR of all 61 images; no em dashes; every page fits 390 x 844; OpenGraph set on all 21 pages.
+
+- **S-1 (P0 until the repo is public).** Every GitHub link (nav, footer, about 40 deep links) was 404 while the repo was
+  private. The repo is public now, so recheck.
+- **S-2 (P1).** The security limits are older than c6f747e and 6879fb9: "The local API has no login", "SpacetimeDB
+  listens on every interface, and answer takes anyone's call". Both are fixed on main.
+- **S-3 (P1).** The SpacetimeDB and Figma pages say phones use SpacetimeDB; on main a phone uses the token-checked
+  API and the log stream.
+- **S-4 (P1).** "Every refusal is a net.blocked event" was false until core bb0ccde; true on main now.
+- **S-5 (P1).** Moss says the owner searches /find "from the portal"; there is no /find page (P1-10).
+- **S-6 (P1).** The Figma page disagrees with `docs/stagelog.md` (deck 14 vs 16 slides, prototyping 6 vs 26 min,
+  handoff 19 vs 4 min, a different Make file link). No narrated demo video yet.
+- **S-7 (P2).** "Box core" in diagram legends, "Box Test Store", "Box log", "Box status app"; "14 of 14" next to the
+  gate's "2 of 14" (scripted seats) without the reason; stale Solana numbers; internal notes ("Waiting for Ben's
+  review", "A step for Ben on submission day"); CRS identities labelled "test money".
 
 ## What passed
 
@@ -338,3 +373,6 @@ dashes. Search works. Nothing scrolls sideways at 390 x 844. No form collects da
 | 23:46 | core's 6879fb9 installed: proxied track routes, the vouched reducer, box screen Deny | 57, 58 |
 | 00:00 | Docs fixes spot-checked on gurtos.com | |
 | 00:05 | Cross-task read of a folder task's copy (P0-7) | |
+| 00:02 | Release ISO 20261024-0644-881318a installed fresh on Vultr: GurtOS, Pacific time, ports closed | 60 |
+| 00:09 | Main 3a4e4ca: double tap, outage bar, Ask the box, credit desk, supplies form on a paired phone | 61 to 70 |
+| 00:12 | Main 717bc3f: P0-7, firewall refusals logged, a test-store purchase and its refund Undo | 71 |
