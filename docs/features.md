@@ -15,7 +15,7 @@ Devpost text, and Ben's approved list.
 **Demo step** names the check in `./demo` (`core/demo.ts` moments, or `tracks/<name>/demo.ts`). "none" means no
 automated check yet.
 
-Checked against main `8a4cbf4`, Sat Oct 24 05:30 PT. `./demo` from a clean worktree on that tree: 29 passed, 0 failed, 1 pending.
+Checked against main `7fe6651`, Sat Oct 24 08:09 PT. `./demo` from a clean worktree on 932ec53+: 32 passed, 0 failed, 1 pending. Statuses refreshed from main at this commit.
 
 ## Freeze plan
 
@@ -32,11 +32,11 @@ Checked against main `8a4cbf4`, Sat Oct 24 05:30 PT. `./demo` from a clean workt
 |---|---|
 | verified (ISO) | 3 |
 | verified | 56 |
-| merged | 99 |
-| building | 14 |
-| planned | 20 |
+| merged | 129 |
+| building | 4 |
+| planned | 1 |
 | not pursued | 5 |
-| **Total** | **197** |
+| **Total** | **198** |
 
 **Collisions** (detail below): none open at 03:27. The three found at 02:25 are resolved and Business is on main. Still
 watched: portal/dist rebuilt from merged sources (C-4).
@@ -79,7 +79,7 @@ watched: portal/dist rebuilt from merged sources (C-4).
 | app.gurtos.com companion app and hosted portal | portal, remote access | merged (hosted mode 7aae35d, installable d05efd8); multi-machine switcher and per-edition home: building | 7aae35d, d05efd8 | none | all |
 | Web Push through the gateway, end-to-end encrypted payloads | remote access, portal | merged (gate: push decrypts only on its phone; gateway forwards ciphertext); phone side in `portal` branch | 6cdeb9a | remote access and push | all |
 | Image: install, A/B updates with rollback, firewall, Pacific time | image | verified (ISO) Oct 24 00:02 (build 881318a on Vultr) | fd537ad, 881318a | image/test (not in ./demo) | Vultr |
-| Signed release ISOs for four builds on GitHub and the Vultr mirror | release, image | building (`release` branch: notes; repo public bb4cc3e) | bb4cc3e | none | Vultr |
+| Signed release ISOs for four builds on GitHub and the Vultr mirror | release, image | building (v0.1.0-preview is published as a pre-release; all four ISOs are being rebuilt with age, voice and the theme, and the release thread will give new checksums) | bb4cc3e | none | Vultr |
 | Docs site gurtos.com | docs | verified Oct 24 01:00 (82+ pages, links, privacy scan) | 212c817 | site `npm run check` | all |
 | Showcase calhacks.gurtos.com | submission | verified Oct 24 01:30 | 52fb7f7, 213622e | showcase link checker | all |
 
@@ -144,8 +144,9 @@ answers nothing until a person is picked from the top bar.
 | Beancount books: the clerk's correction "fixes PMT-8812" is in the Books view; undoing the Collections clerk task removes it and leaves the AP payment | credit desk | verified Oct 24 05:20 (the clerk's correction "fixes PMT-8812" is in the books; undoing the Collections clerk removed it and left the AP payment) | 13b0ff5 | books.test.ts | Hyphenate |
 | Three seats: Quick run starts the Credit analyst, the Collections clerk and the AP clerk, all finishing after you approve | credit desk | verified Oct 24 05:15 (Quick run started the analyst, the clerk and the AP clerk; all finished after the two fraud referrals and the $40,000 were answered) | 13b0ff5 | credit-desk demo | Hyphenate |
 | AP limits in code (Payables view): B-3315 refer as suspected fraud and never paid; B-3311 void as a duplicate; B-3304 paid (Nessie test money); B-3316 waits for a second person | credit desk | verified Oct 24 05:18 (B-3304 paid, B-3311 void, B-3315 refer as suspected fraud and not paid, B-3316 needs the controller) | 13b0ff5 | credit-desk demo | Hyphenate |
-| Bring your own: pick a CRS test person (P12), Check it, then "Run it with Droid" (real Droid, about $0.50) | credit desk | building (pending: the credit desk thread sends the commit tonight; the Droid step needs Factory credit) | | none | Hyphenate, CRS |
-| Benchmark slice | credit desk | building (worktree bench/; subagent) | | | Hyphenate |
+| Bring your own: pick a CRS test person (P12), Check it, then "Run it with Droid" (real Droid, about $0.50) | credit desk | merged (the track and CUSTOMER.md; the Droid step needs Factory credit and was not run by QA) | 13b0ff5 | none | Hyphenate, CRS |
+| Benchmark slice | credit desk | merged (DABstep dev split run through box tasks: 7 of 10 correct, about $3.22; tracks/credit-desk/bench) | 5d34d58 | | Hyphenate |
+| Coordinated run: two analysts share the applications through a SpacetimeDB queue (opt-in; `DEMO_LIVE=droid,coordinate`) | credit desk, spacetime | merged (the credit desk thread's evidence in the README; QA has not run it) | d84970b, 5d34d58 | DEMO_LIVE=droid,coordinate | Hyphenate, SpacetimeDB |
 | Deny with a reason: a reason box whose text reaches the seat (scripted seats end on a deny, so QA tests the box) | credit desk | merged (the reason box is in the window; QA did not click it) | 13b0ff5 | credit-desk demo | Hyphenate |
 | Letters: APP-1043 says only "We need to verify some information"; APP-1044 lists reasons, bureaus and "within 60 days"; C-1013 in January lists the returned payments | credit desk | verified Oct 24 05:27 (APP-1043 says "We need to verify some information" and names no check; C-1013 in January says the limit is $7,500 and lists the returned payments; APP-1044 not decided by the scripted seats, so not checked) | 13b0ff5 | credit-desk demo | Hyphenate |
 | Impact view: minutes per application, bad credit stopped ($20,000 on a quick run), supplier payments stopped ($25,785), model cost per application, by-hand and simple-rule rows | credit desk | verified Oct 24 05:27 (bad credit stopped $20,000 on a quick run; /t/credit-desk/impact answers; the by-hand and simple-rule rows not read) | 13b0ff5 | credit-desk demo | Hyphenate, Microsoft |
@@ -173,13 +174,13 @@ controller's clear-the-flag path (FRR-5), an ASI:One chat intent for credit.
 | Undo refunds the order | Visa, portal | verified Oct 24 00:14 | b842425, 717bc3f | shopper demo | Visa |
 | Household reorder from receipts | Visa | merged | b546d34 | shopper demo | Visa |
 | Agents buying their own supplies (x402) | Visa, wallet | verified Oct 24 00:11 | b842425 | shopper demo (DEMO_LIVE) | Visa, Coinbase |
-| Passkey (Face ID) approvals | Visa | building (track-shopper worktree: passkey.ts) | | passkey.test.ts in worktree | Visa |
-| Signed mandates verified via TAP | Visa | building (worktree: mandate.ts) | | | Visa |
-| Merchant dashboard | Visa | planned | | | Visa |
-| Multi-store comparison | Visa | building (subagent "Second store + comparison") | | | Visa |
-| Post-purchase savings and subscription cleanup | Visa | planned | | | Visa |
-| Card-style spending rules | Visa | planned | | | Visa |
-| VIC and Cybersource adapters | Visa | building (subagent "Payment adapters") | | | Visa |
+| Passkey (Face ID) approvals | Visa | merged (the box verifies a WebAuthn signature bound to the exact question and amount; QA has not tried it on a real phone) | cee2d5e | passkey.test.ts in worktree | Visa |
+| Signed mandates verified via TAP | Visa | merged (the store refuses another item, a higher price, an expired or edited mandate) | cee2d5e | | Visa |
+| Merchant dashboard | Visa | merged (verified agent orders, refused bots, conversion, chargebacks) | cee2d5e | | Visa |
+| Multi-store comparison | Visa | merged (Best Buy Canada against a second store through Apify, best total with shipping) | cee2d5e | | Visa |
+| Post-purchase savings and subscription cleanup | Visa | merged (30-day price protection; unused subscriptions cancelled after the owner's OK) | cee2d5e | | Visa |
+| Card-style spending rules | Visa | merged (monthly, per-store and per-category caps, never-buy phrases) | cee2d5e | | Visa |
+| VIC and Cybersource adapters | Visa | merged (Cybersource sandbox tested live by the Visa thread; Visa Intelligent Commerce is an adapter behind one interface, not live) | cee2d5e | | Visa |
 
 ## Fetch.ai
 
@@ -191,8 +192,8 @@ controller's clear-the-flag path (FRR-5), an ASI:One chat intent for credit.
 | Safe calls to strangers' agents, a blocked hidden instruction | fetch | merged (on main; QA has not walked it; the stranger's reply is treated as untrusted) | d7f9fc1 |  | Fetch.ai |
 | Payment Protocol | fetch | merged (on main; QA has not walked it) | d7f9fc1 |  | Fetch.ai |
 | Rich cards | fetch | merged (Interactive Cards for approve and undo; richer cards in d7f9fc1) | 2b013a3, d7f9fc1 | fetch demo | Fetch.ai |
-| Reliability shown in chat | fetch | planned | | | Fetch.ai |
-| Picking a machine from chat | fetch | planned | | | Fetch.ai |
+| Reliability shown in chat | fetch | merged (the chat says when the box restarted and resumes; QA has not walked it) | d7f9fc1 | | Fetch.ai |
+| Picking a machine from chat | fetch | merged (machines link with an HMAC proof; QA has not walked it) | d7f9fc1 | | Fetch.ai |
 | Guest requests (one guest path shared with Mana: a gate task for the owner's OK, then a run in the empty guest workspace) | fetch, mana | verified Oct 24 04:25 on the Mana route (Fetch calls the same route; QA has not tried it from ASI:One) | 03bade4, 804e8d0 | tracks/mana/demo.ts | Fetch.ai, Mana |
 
 ## Coinbase and Solana (wallet)
@@ -202,16 +203,16 @@ controller's clear-the-flag path (FRR-5), an ASI:One chat intent for credit.
 | x402 payments in devnet USDC, key in the vault, CDP facilitator | wallet | verified Oct 23 23:35, Oct 24 01:00 | 0446d0f, fb51e47 | tracks/wallet/demo.ts (DEMO_LIVE=wallet) | Coinbase, Solana |
 | Over-budget pause naming payee and URL; payments page | wallet | verified Oct 24 01:00 | fb51e47 | wallet demo | Coinbase |
 | Installable x402 skill | wallet | merged | 0446d0f | none | Coinbase |
-| Earning over x402, Bazaar listing | wallet | planned | | | Coinbase |
-| Agents shopping for APIs | wallet | planned | | | Coinbase |
-| CDP Server Wallets with policies | wallet | planned | | | Coinbase |
-| The "upto" scheme | wallet | planned | | | Coinbase |
-| One-command reuse (MCP or skill) | wallet | planned (skill exists) | | | Coinbase |
-| Onramp top-up | wallet | planned | | | Coinbase |
-| Daily Solana log fingerprint | wallet | planned | | | Solana |
-| Payment memos | wallet | planned | | | Solana |
+| Earning over x402, Bazaar listing | wallet | merged (the box sells an audit proof, metered search and a rentable agent over x402; listed in the Bazaar; settled by Coinbase's CDP facilitator) | adf801a, 53c95b1 | | Coinbase |
+| Agents shopping for APIs | wallet | merged (`wallet.discover` searches the Bazaar) | adf801a | | Coinbase |
+| CDP Server Wallets with policies | wallet | merged (signer and policy rules built and unit-tested; the live run waits for a CDP Wallet Secret) | adf801a | | Coinbase |
+| The "upto" scheme | wallet | merged (`wallet.payMetered` pays upto offers with a hard cap) | adf801a | | Coinbase |
+| One-command reuse (MCP or skill) | wallet | merged (`mcp.ts` and `install.sh`: the wallet as an MCP server with a budget and an approval prompt) | adf801a | | Coinbase |
+| Onramp top-up | wallet | merged (Coinbase Onramp, sandbox only) | adf801a | | Coinbase |
+| Daily Solana log fingerprint | wallet | merged (a daily chained fingerprint of the action log written to Solana devnet, with a verify route) | adf801a, 9482cfd, 36c48d4 | | Solana |
+| Payment memos | wallet | merged (the task id on every payment) | adf801a | | Solana |
 | Box-to-box payments | wallet | planned | | | Solana, Coinbase |
-| One shared budget and approval layer with Fetch | wallet, fetch | planned | | | Coinbase, Fetch.ai |
+| One shared budget and approval layer with Fetch | wallet, fetch | merged (Fetch's payments use the same budget and approval path; "One path each") | b3c548b | | Coinbase, Fetch.ai |
 
 ## Atlassian (Jira, both tracks)
 
@@ -252,9 +253,9 @@ Owner: the Mana thread.
 | Rules planning chat, project page, the GurtOS status app | mana | verified Oct 23 23:37 (app live, signed out) | 525f630, 4631f73 | tracks/mana/demo.ts | Mana, Hyphenate |
 | Mana: guest requests (one path with Fetch): a gate task for the owner's OK, then a run in the empty `guest` workspace; deny by default, 3 per guest and 10 an hour, 30-minute expiry | mana, fetch | verified Oct 24 04:25 (one approval, no second question; no network; refusals; Deny; public status hides the words). 804e8d0 (owner's wording, price steered to checkPrice) not yet verified | 03bade4, 804e8d0 | tracks/mana/demo.ts | Mana, Fetch.ai |
 | Mana: rules from a Mana chat sync into Business policy (`POST/GET /t/mana/policy`; only an owner or admin approving applies it) | mana, business | merged (not walked by QA yet) | bc717b4 | tracks/mana/demo.ts | Mana, Hyphenate |
-| Mana: four planning chats (credit, Business, Visa, Fetch) | mana | building | | none | Mana, Visa, Fetch.ai |
-| Mana: GurtOS guide agent | mana | building (lands within the hour of 04:35 PT) | | none | Mana |
-| Mana: public home page | mana | building (lands within the hour of 04:35 PT) | | none | Mana |
+| Mana: four planning chats (credit, Business, Visa, Fetch) | mana | merged (four public chats whose findings changed code; the shared links answer 200 signed out, QA checked) | 85d7103 | none | Mana, Visa, Fetch.ai |
+| Mana: GurtOS guide agent | mana | merged (the Mana app gurtos-guide answers 200 signed out; QA has not talked to it) | 85d7103 | none | Mana |
+| Mana: public home page | mana | merged (answers 200 signed out) | 85d7103 | none | Mana |
 
 ## Apify (GurtOS Personal and Server)
 
@@ -324,11 +325,11 @@ Owner: the Figma thread. `docs/figma-products.md` is not on main yet; its items 
 | Feature | Owner | Status | Commit | Demo step | Tracks |
 |---|---|---|---|---|---|
 | Design system and screens, Make prototype, Slides deck, stage log | figma | merged (stage log totals checked Oct 24 01:20) | many | none | Figma |
-| Code Connect (Figma components mapped to portal code) | figma, portal | planned | | | Figma |
-| Token sync with a drift check | figma, portal | planned | | | Figma |
-| A Community playbook | figma | planned | | | Figma |
-| App-vs-Figma comparisons (the built screen next to its frame) | figma, portal | planned | | | Figma |
-| A Figma Sites landing page | figma | planned (named on the showcase's Figma page) | | | Figma, GoDaddy |
+| Code Connect (Figma components mapped to portal code) | figma, portal | merged (95 parserless templates in docs/figma/code-connect; publishing to Figma needs an Organization plan, so it is not published) | | | Figma |
+| Token sync with a drift check | figma, portal | merged (`node docs/figma/tokens/sync.ts --check`) | | | Figma |
+| A Community playbook | figma | building (the Cover and Playbook pages are built; publishing to Figma Community is Ben's click) | | | Figma |
+| App-vs-Figma comparisons (the built screen next to its frame) | figma, portal | merged (`node docs/figma/compare/compare.ts`) | | | Figma |
+| A Figma Sites landing page | figma | building (designed for desktop and mobile in docs/figma/landing; publishing is Ben's click) | | | Figma, GoDaddy |
 
 ## Vultr
 
@@ -338,9 +339,9 @@ QA cannot create instances.
 
 | Feature | Owner | Status | Commit | Demo step | Tracks |
 |---|---|---|---|---|---|
-| Boot the real GurtOS disc on Vultr from a script (`tracks/vultr/up.ts`): release ISO 20261024-0644-881318a on vc2-1c-1gb; installed in about 5 minutes; came back from its own disk after the disc was detached; the first-boot wizard shows | vultr | building (branch; proven live by the Vultr thread; QA also installed the disc by hand twice, Oct 23 22:29 and Oct 24 00:02) | | tracks/vultr on branch | Vultr |
-| Encrypted backup to Object Storage (age; the owner holds the key) and a restore onto a fresh Vultr box in 2.8 s: a finished task stayed done, a waiting task came back waiting and finished after an OK | vultr | building (branch; proven live; `age` is in the image from the next build, commit 016c4dc; the published v0.1.0-preview Server ISOs, built from d8620e9, do not have it and the release disc has no shell. The claim must say the backup uses `age` and the owner holds the key, available from the next build, or the release needs a Server rebuild: the release thread's call) | | tracks/vultr on branch | Vultr |
-| Vultr firewall managed from the box: a group attached to a live instance blocked ssh from a wrong address and allowed the right one (a rule can take up to about 3 minutes to apply) | vultr | building (branch; the box's own `PUT /t/vultr/firewall` route only tested against stubs) | | tracks/vultr on branch | Vultr |
+| Boot the real GurtOS disc on Vultr from a script (`tracks/vultr/up.ts`): release ISO 20261024-0644-881318a on vc2-1c-1gb; installed in about 5 minutes; came back from its own disk after the disc was detached; the first-boot wizard shows | vultr | merged (tracks/vultr on main; proven live by the Vultr thread: release disc installed in about 5 minutes on vc2-1c-1gb) | ee11781 | tracks/vultr on branch | Vultr |
+| Encrypted backup to Object Storage (age; the owner holds the key) and a restore onto a fresh Vultr box in 2.8 s: a finished task stayed done, a waiting task came back waiting and finished after an OK | vultr | merged (proven live: an encrypted restore onto a fresh instance; `age` is in the image from the next build, not in the published ISOs) | ee11781 | tracks/vultr on branch | Vultr |
+| Vultr firewall managed from the box: a group attached to a live instance blocked ssh from a wrong address and allowed the right one (a rule can take up to about 3 minutes to apply) | vultr | merged (proven on a live instance; the box's own `PUT /t/vultr/firewall` route only tested against stubs) | ee11781 | tracks/vultr on branch | Vultr |
 | Vultr Serverless Inference as a hosted model for /find | vultr, find | not pursued (needs a paid subscription; Ben's call, Oct 24) | | | Vultr, Moss |
 | gurtos.co short pairing links (the code stays in the URL fragment) | vultr | not pursued (Ben is not entering the MLH GoDaddy prize, Oct 24; the redirect code was removed from the branch) | | | GoDaddy |
 | Domain story text for the showcase | vultr, submission | not pursued as a prize entry (GoDaddy); the showcase page for it should go (submission thread) | | none | GoDaddy |
