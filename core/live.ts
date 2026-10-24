@@ -1,39 +1,42 @@
 // Mirrors tasks and approvals into SpacetimeDB for the portal and the phone, and brings answers back.
 // Best effort: the box works without it and catches up when it returns. The log on disk stays the truth.
 // Env: BOX_STDB_URL (default ws://127.0.0.1:3000), BOX_STDB_DB (default 'box'), BOX_STDB=off to skip.
-import { execFileSync } from 'node:child_process';
+import { execFile } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { promisify } from 'node:util';
 import type { Approval, Task } from './contract.ts';
 import { DbConnection } from './spacetime/bindings/index.ts';
 
 const URI = process.env.BOX_STDB_URL ?? 'ws://127.0.0.1:3000';
 export const DB = process.env.BOX_STDB_DB ?? 'box';
 const cliConfig = path.join(os.homedir(), '.config', 'spacetime', 'cli.toml');
-// One spacetime CLI at a time per machine: boxes side by side share its login.
-const run = (...args: string[]) => execFileSync('flock', ['/run/lock/box-spacetime-cli.lock', 'spacetime', ...args], { stdio: 'pipe', encoding: 'utf8' });
+const exec = promisify(execFile);
+// One spacetime CLI at a time per machine (boxes side by side share its login), and async so publishing
+// never blocks the box's boot or its event loop while the lock is held.
+const run = (...args: string[]) => exec('flock', ['/run/lock/box-spacetime-cli.lock', 'spacetime', ...args], { encoding: 'utf8' }).then((r) => r.stdout);
 
 /** Publish the module as the box. Whoever publishes owns the database, so only the box can write to it. */
-function publish(): string {
+async function publish(): Promise<string> {
   const token = () => fs.readFileSync(cliConfig, 'utf8').match(/spacetimedb_token\s*=\s*"([^"]+)"/)?.[1];
   const login = () => run('login', '--server-issued-login', 'local');
   const mod = new URL('./spacetime', import.meta.url).pathname;
-  const attempt = () => {
+  const attempt = async () => {
     try {
-      run('publish', '--server', 'local', '--module-path', mod, '-y', DB);
+      await run('publish', '--server', 'local', '--module-path', mod, '-y', DB);
     } catch {
-      run('publish', '--server', 'local', '--module-path', mod, '--delete-data', '-y', DB); // only a mirror; the box refills it
+      await run('publish', '--server', 'local', '--module-path', mod, '--delete-data', '-y', DB); // only a mirror; the box refills it
     }
   };
-  if (!fs.existsSync(cliConfig) || !token()) login();
+  if (!fs.existsSync(cliConfig) || !token()) await login();
   try {
-    attempt();
+    await attempt();
   } catch {
     // A server started fresh does not know the old identity. Get a new one and try once more.
-    run('logout');
-    login();
-    attempt();
+    await run('logout');
+    await login();
+    await attempt();
   }
   return token()!;
 }
@@ -62,16 +65,19 @@ export class Live {
     this.box = box;
   }
 
+  /** Returns at once. Publishing and connecting happen in the background, so the box's API is up straight away. */
   start() {
     if (process.env.BOX_STDB === 'off') return;
-    try {
-      this.token = publish();
-    } catch (e) {
-      const err = e as Error & { stderr?: string };
-      console.error(`spacetime: publish failed, so the portal and phone are not live: ${err.stderr || err.message}`);
-      return;
-    }
-    this.connect();
+    void (async () => {
+      try {
+        this.token = await publish();
+      } catch (e) {
+        const err = e as Error & { stderr?: string };
+        console.error(`spacetime: publish failed, so the portal and phone are not live: ${err.stderr || err.message}`);
+        return;
+      }
+      this.connect();
+    })();
   }
 
   private connect() {

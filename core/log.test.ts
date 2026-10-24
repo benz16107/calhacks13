@@ -23,6 +23,23 @@ test('replays the log after a hard kill left half a line', () => {
   assert.equal(s.tasks.get('a')?.costCents, 5);
 });
 
+test('a torn tail is trimmed by bytes, so a multi-byte character earlier survives', () => {
+  const file = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'log-')), 'log.jsonl');
+  const log = new Log(file);
+  // An earlier line with em dashes (3 bytes each in UTF-8): its byte length exceeds its character length.
+  log.append({ type: 'task.created', task: 'a', spec: { ...spec, title: 'buy milk — bread — eggs' }, user: 'box-a' });
+  log.append({ type: 'task.state', task: 'a', state: 'running', layers: [] });
+  fs.appendFileSync(file, '{"seq":3,"type":"task.st'); // power cut mid-write
+
+  const again = new Log(file);
+  assert.equal(again.events.length, 2);
+  assert.equal(again.events[0].type === 'task.created' && again.events[0].spec.title, 'buy milk — bread — eggs');
+  again.append({ type: 'cost', task: 'a', cents: 5, what: 'model' });
+  const reread = fold(new Log(file).events);
+  assert.equal(reread.tasks.get('a')?.costCents, 5);
+  assert.equal(reread.tasks.get('a')?.title, 'buy milk — bread — eggs'); // the good line was not corrupted
+});
+
 test('done layers are newest first and skip undone tasks', () => {
   const file = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'log-')), 'log.jsonl');
   const log = new Log(file);

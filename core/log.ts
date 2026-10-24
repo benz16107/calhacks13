@@ -7,13 +7,14 @@ export class Log {
   private fd: number;
 
   constructor(path: string) {
-    let text = fs.existsSync(path) ? fs.readFileSync(path, 'utf8') : '';
-    // A hard kill can leave half a line at the end. Drop it so the next append starts clean.
-    const end = text.lastIndexOf('\n') + 1;
-    if (end < text.length) {
-      fs.truncateSync(path, end);
-      text = text.slice(0, end);
-    }
+    // Work in bytes: a hard kill can leave half a line at the end, and truncate counts bytes, not
+    // characters. A multi-byte character earlier in the log (an em dash Claude wrote) would make a
+    // character count cut the file short and corrupt a good line. `\n` (0x0a) never occurs inside a
+    // UTF-8 multi-byte sequence, so the last one is always a real line boundary.
+    const buf = fs.existsSync(path) ? fs.readFileSync(path) : Buffer.alloc(0);
+    const endByte = buf.lastIndexOf(0x0a) + 1; // bytes up to and including the last newline
+    if (endByte < buf.length) fs.truncateSync(path, endByte); // drop the torn tail after it
+    const text = buf.subarray(0, endByte).toString('utf8');
     for (const line of text.split('\n')) if (line) this.events.push(JSON.parse(line));
     this.fd = fs.openSync(path, 'a', 0o600);
   }

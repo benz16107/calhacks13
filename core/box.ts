@@ -533,7 +533,6 @@ data: ${JSON.stringify(e)}
       blocked: (t, host) => this.write({ type: 'net.blocked', task: t.id, host }),
       factoryKey: () => this.vault.get('FACTORY_API_KEY'),
     }, this.relay);
-    this.live.start();
     const tracks = await this.loadTracks();
     for (const ws of fs.readdirSync(path.join(HOME, 'workspaces'))) this.refreshView(ws);
     // Resume what was going when the box went down. Approvals still pending stay pending.
@@ -561,6 +560,7 @@ data: ${JSON.stringify(e)}
           .catch((e) => console.error(`trigger ${track.name}.${trig.name} failed:`, e));
       }
     }
+    this.live.start(); // publishes and connects in the background; the API above is already serving
     console.log(`box up: ${this.state.tasks.size} tasks in the log, tracks: ${tracks.map((t) => t.name).join(', ') || 'none'}`);
   }
 }

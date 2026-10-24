@@ -49,7 +49,7 @@ async function startBox() {
     stdio: ['ignore', out, out],
     env: { ...process.env, BOX_HOME: HOME, BOX_PORT: 'auto', BOX_VAULT: path.join(HOME, 'vault.env'), BOX_STDB_DB: DB, BOX_PROXY_PORT: 'auto' },
   });
-  for (let i = 0; i < 100; i++) {
+  for (let i = 0; i < 300; i++) {
     if (await api('GET', '/health').catch(() => undefined)) {
       PORT = Number(fs.readFileSync(path.join(HOME, 'api.port'), 'utf8'));
       return;
