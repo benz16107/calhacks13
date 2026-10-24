@@ -7,7 +7,7 @@ editions: 'GurtOS Business'
 pitch: 'Teams already work in Jira and Confluence. GurtOS makes every agent task an issue a teammate can approve or roll back, answers from the log through a Rovo agent, starts agents from an issue, sends risky actions to Jira Service Management approvers and writes the record to Confluence. Business is on main; everything here ran against a GurtOS Server box, except the Jira-user-to-Business-person mapping, which the merge gate checks against offline Jira stand-ins.'
 title: See what an agent did in Jira, then roll back only that
 summary: 'Agents now act for teams, and the systems they run on were built for one person at a keyboard: the agent runs as that person, with their keys, so the next morning there is no record you can trust and no way to undo only the bad actions. On GurtOS every task an agent runs becomes a Jira issue with what it was asked, what it was allowed, its reasoning, every blocked attempt, its diff and its full action log. A Forge app adds a panel with Approve, Deny and Roll back, and Roll back removes only that task''s changes on the box. A Rovo agent answers from the log, a bulk action rolls back many issues at once, an issue can start an agent, risky actions become Jira Service Management approvals, and Confluence gets a daily page and an incident page.'
-proof: 'BOX-2, a scripted agent that misread a rule, changed three configs instead of one and tried to send the repo to a paste site. It was blocked, approved from Jira, then rolled back from Jira: its configs came back and the README fix another task made a minute earlier stayed.'
+proof: 'BOX-29, a scripted agent that misread a rule, changed three configs instead of one and tried to send a file to a paste site. The upload was blocked, the push was approved from Jira, then the task was rolled back from Jira and its three configs came back. On every merge the gate checks the same roll back leaves another task''s fix in place.'
 criteriaSource: "From Atlassian's Track 2 brief and the challenge rules, as copied into the project's track plan."
 clip: moment-1-undo
 criteria:
@@ -27,11 +27,11 @@ criteria:
   - ask: 'Repo link.'
     how: 'tracks/jira/ (box side) and tracks/jira/forge/ (the Forge app).'
 shots:
-  - src: ../../assets/repo/jira/panel-waiting.png
+  - src: ../../assets/track/atlassian/panel-waiting.png
     alt: 'The GurtOS agent task panel in Jira, waiting for an OK, with a blocked attempt to reach paste.example.net and a diff that changed three service configs.'
-    caption: 'BOX-2 waits for an OK. The agent misread a rule, changed three configs instead of one, and tried to reach a paste site, which was refused.'
+    caption: 'BOX-29 waits for an OK. The agent misread a rule, changed three configs instead of one, and tried to reach a paste site, which was refused.'
     tall: true
-  - src: ../../assets/repo/jira/panel-rolled-back.png
+  - src: ../../assets/track/atlassian/panel-rolled-back.png
     alt: 'The same panel after Roll back: the task is Rolled back and the configs are as they were.'
     caption: 'After Roll back: only this task''s changes are gone.'
     tall: true
@@ -39,13 +39,13 @@ shots:
     alt: 'The GurtOS Rovo agent answering what got blocked this week and what agents changed.'
     caption: 'The Rovo agent answers from the box''s log.'
     tall: true
-  - src: ../../assets/repo/jira/jql-search.png
-    alt: 'A JQL search on the fields the Forge app indexes, listing BOX-2, BOX-3 and BOX-4.'
+  - src: ../../assets/track/atlassian/jql-search.png
+    alt: 'A JQL search on the fields the Forge app indexes, listing 17 issues from BOX-29 down to BOX-2.'
     caption: 'JQL on the indexed fields.'
 links:
   - label: The track's code and README
     href: https://github.com/benz16107/calhacks13/tree/main/tracks/jira
-    note: 'The box side in <code>tracks/jira/</code>, the Forge app in <code>tracks/jira/forge/</code>. The Jira demo site itself is not public, so the screenshots above are from its BOX-1, BOX-2 and BOX-5 issues.'
+    note: 'The box side in <code>tracks/jira/</code>, the Forge app in <code>tracks/jira/forge/</code>. The Jira demo site itself is not public, so the screenshots on this page are from its issues, the panel ones from BOX-29 and BOX-30.'
   - label: 'Docs: connect Jira'
     href: https://gurtos.com/docs/guides/connect-jira/
 flow:
@@ -76,7 +76,7 @@ status:
     note: Installed in production on the demo site.
   - part: The agents behind the issues
     state: live
-    note: 'BOX-1 and BOX-5 are real Droid tasks running Claude. BOX-2 is a scripted agent, so the misread rule happens the same way every time.'
+    note: 'BOX-29 and BOX-30, in the panel screenshots, are scripted agents, so the misread rule and the spend request happen the same way every time. Earlier issues on the site, such as BOX-1 and BOX-5, were real Droid tasks running Claude.'
   - part: Money
     state: test
     note: 'The coffee order uses the example track''s <code>example.spend</code>, which moves no money.'
@@ -85,12 +85,12 @@ status:
     note: '<code>./demo</code> points the track at a stand-in for Jira Cloud on the test machine, so every merge runs it without touching the real site.'
 ---
 
-<Lead proof="BOX-2, a scripted agent that misread a rule, changed three configs instead of one and tried to send the repo to a paste site. It was blocked, approved from Jira, then rolled back from Jira: its configs came back and the README fix another task made a minute earlier stayed.">
+<Lead proof="BOX-29, a scripted agent that misread a rule, changed three configs instead of one and tried to send a file to a paste site. The upload was blocked, the push was approved from Jira, then the task was rolled back from Jira and its three configs came back. On every merge the gate checks the same roll back leaves another task's fix in place.">
 When an agent acts for your team overnight, the next morning you need to know exactly what it did and why, and to undo only the wrong part. On GurtOS every agent task is a Jira issue holding what it was asked, what it was allowed, its reasoning, every blocked attempt, its diff and its log. A Forge panel on the issue has Approve, Deny and Roll back, and Roll back takes out that task's file changes on the computer, leaving every other task's work alone. Best shown in GurtOS Business: Jira's permissions and the company's roles together decide who may approve.
 </Lead>
 
 <Numbers items={[
-  { value: "3 configs", label: "changed by BOX-2 instead of one; rolled back from Jira while a README fix by another task stayed", href: "https://github.com/benz16107/calhacks13/tree/main/tracks/jira", source: "tracks/jira" },
+  { value: "3 configs", label: "changed by BOX-29 instead of one, all three put back by Roll back from Jira", href: "https://github.com/benz16107/calhacks13/tree/main/tracks/jira", source: "tracks/jira" },
   { value: "1 search", label: "answers the morning-after question: project = BOX AND boxBlocked > 0", href: "https://github.com/benz16107/calhacks13/tree/main/tracks/jira/forge", source: "Forge app" },
   { value: "3 actions", label: "in the GurtOS Rovo agent: ask what got blocked, roll back, pause all agents", href: "https://github.com/benz16107/calhacks13/tree/main/tracks/jira/forge", source: "Forge app" },
   { value: "12 checks", label: "of the Jira flow pass in every merge-gate run, offline, and the same 12 against the real demo site", href: "https://github.com/benz16107/calhacks13/tree/main/tracks/jira", source: "tracks/jira/demo.ts" }
@@ -98,7 +98,7 @@ When an agent acts for your team overnight, the next morning you need to know ex
 
 Best shown in **GurtOS Business**. Everything shown ran against a GurtOS Server box and the real demo Jira site, except the Jira-user-to-Business-person mapping, which the merge gate checks against offline Jira stand-ins.
 
-## The moment: BOX-2
+## The moment: BOX-29
 
 <Compare labels={["Without per-task undo", "With GurtOS and the Forge panel"]}>
 <div slot="a">
@@ -108,14 +108,14 @@ An agent misreads "set retries to 0 for billing" and writes it to billing, searc
 </div>
 <div slot="b">
 
-The paste upload is refused, and the issue shows it. The agent asks for an OK before pushing to production, and the request lands in Jira. A teammate approves, then presses **Roll back this task**: the three configs return, and the README fix another task made a minute earlier stays.
+The paste upload is refused, and the issue shows it. The agent asks for an OK before pushing to production, and the request lands in Jira. A teammate approves, then presses **Roll back this task**: the three configs return. Only this task's layer comes out, so other tasks keep their work, which the merge gate checks on every run.
 
 </div>
 </Compare>
 
-<Shot src="repo/jira/panel-waiting.png" size="narrow" alt="The agent task panel in Jira, waiting for an OK, with a blocked attempt to reach paste.example.net and a diff that changed three service configs." caption="BOX-2 waits for an OK, with the blocked attempt and the diff. Captured before the panel was renamed, so it reads Box agent task where the installed app now says GurtOS agent task." />
+<Shot src="track/atlassian/panel-waiting.png" size="narrow" alt="The agent task panel in Jira, waiting for an OK, with a blocked attempt to reach paste.example.net and a diff that changed three service configs." caption="BOX-29 waits for an OK, with the blocked attempt, the Jira Service Management request it opened and the diff. Captured today from the installed app. Worker fake means a scripted agent." />
 
-<Shot src="repo/jira/panel-rolled-back.png" size="narrow" alt="The same panel after Roll back: the task is Rolled back and the configs are as they were." caption="After Roll back, only this task's changes are gone. Same capture date, same old panel title." />
+<Shot src="track/atlassian/panel-rolled-back.png" size="narrow" alt="The same panel after Roll back: the task is Rolled back and the configs are as they were." caption="BOX-29 after Approve, then Roll back: the audit trail names who approved and who asked for the roll back, and the diff is marked as no longer in the workspace." />
 
 ## Why this needs an operating system
 
@@ -192,17 +192,17 @@ A production request opened a JSM request with its approvers and, once approved 
 
 <Details summary="Approve from Jira: a Droid task asks to spend test money">
 
-<Shot src="repo/jira/panel-approval.png" size="narrow" alt="A Droid task asks in Jira to spend 3 dollars of test money on a 1 dollar budget." caption="BOX-5: a Droid task (Claude) asks to spend $3.00 of test money on a $1.00 budget. The box paused it and the request landed in Jira. Captured before the panel rename." />
+<Shot src="track/atlassian/panel-approval.png" size="narrow" alt="A Droid task asks in Jira to spend 3 dollars of test money on a 1 dollar budget." caption="BOX-30: a scripted agent asks to spend $3.00 of test money on a $1.00 budget. GurtOS paused it, and the request landed in the panel and as an issue comment." />
 
-<Shot src="repo/jira/panel-approved.png" size="narrow" alt="The task after approval from Jira, with its reasoning, an audit trail naming the approver, and its diff." caption="Approved from Jira, it paid, wrote the receipt and finished. The audit trail says who approved. Captured before the panel rename." />
+<Shot src="track/atlassian/panel-approved.png" size="narrow" alt="The task after approval from Jira, with its reasoning, an audit trail naming the approver, and its diff." caption="Approved from Jira, it paid $3.00 of test money, wrote the receipt and finished. The audit trail says who approved." />
 
 </Details>
 
 <Details summary="Issue description and JQL">
 
-<Shot src="repo/jira/issue-description.png" alt="A box task as a Jira issue: what it was asked, what it could use, its reasoning, files changed with the diff, and the action log." caption="BOX-1, written by the box from its append-only action log. Captured before the panel rename." />
+<Shot src="track/atlassian/issue-description.png" alt="A box task as a Jira issue: what it was asked, what it could use, its reasoning, files changed with the diff, and the action log." caption="BOX-29's issue, written from the append-only action log: what it was asked, what it was allowed, approvals, the blocked attempt and the diff, marked rolled back." />
 
-<Shot src="repo/jira/jql-search.png" alt="A JQL search on the fields the Forge app indexes, listing BOX-2, BOX-3 and BOX-4." caption="JQL on the indexed fields: every task that tried a blocked host or was rolled back." />
+<Shot src="track/atlassian/jql-search.png" alt="A JQL search on the fields the Forge app indexes, listing 17 issues from BOX-29 down to BOX-2." caption="JQL on the indexed fields: every task that tried a blocked host or was rolled back, 17 results." />
 
 </Details>
 
@@ -279,8 +279,8 @@ The full steps are in the [track README](https://github.com/benz16107/calhacks13
 - The panel polls the box every 4 seconds while it is open.
 - The Jira Service Management part relies on a request type with an approval step and sets approvers through the site's Approvers field. The project page and the Rovo agent list only tasks whose issue the user can see, and the gadget's totals count all tasks on the box.
 - Issue descriptions keep the last 40 log entries and the first 8,000 characters of the diff. The panel and the box's log have the rest.
-- BOX-2 is a scripted agent so the misread rule happens the same way every time. BOX-1 and BOX-5 are real Droid tasks running Claude. The coffee order uses an example tool that moves no money.
+- BOX-29 and BOX-30 are scripted agents, so the misread rule and the spend request happen the same way every time. The panel says Worker fake for them. The spend uses an example tool that moves no money.
 - The Jira-user-to-Business-person mapping was checked against offline Jira stand-ins and has no live run. The merge gate itself uses a stand-in for Jira Cloud so every merge runs it without touching the real site.
-- Several screenshots predate the panel rename from Box agent task to GurtOS agent task and are captioned that way.
+- The panel still says "The box refused the connection" for a blocked attempt. That is the installed app's current wording.
 
 </Limits>

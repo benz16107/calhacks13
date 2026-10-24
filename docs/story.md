@@ -129,7 +129,7 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 | A dashboard gadget with tasks, blocked attempts and cost per project | The team sees its agents on the dashboard it already uses | None | The gadget | Built |
 | A Jira user acts as their GurtOS Business person: only someone with both the Jira permission and the GurtOS role, within their limit, can approve | Jira's permissions and the company's roles together decide who may (Track 2: who may act for whom) | GurtOS Business roles and limits | The Forge resolver | Built |
 
-**Demo moment and proof:** BOX-2, a scripted agent that misread a rule, changed three configs instead of one and tried to send the repo to a paste site. It was blocked, approved from Jira, then rolled back from Jira: its configs came back and the README fix another task made a minute earlier stayed.
+**Demo moment and proof:** BOX-29, a scripted agent that misread a rule, changed three configs instead of one and tried to send a file to a paste site. The upload was blocked, the push was approved from Jira, then the task was rolled back from Jira and its three configs came back. On every merge the gate checks the same roll back leaves another task's fix in place.
 
 **Still to do:**
 
