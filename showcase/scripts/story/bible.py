@@ -30,7 +30,12 @@ def strip(t): return html.unescape(re.sub(r'<[^>]+>', '', t or '')).strip()
 FM = json.loads(subprocess.run(['node', os.path.join(HERE, 'frontmatter.mjs'), root], check=True, capture_output=True, text=True).stdout)
 def front(slug):
     return FM[slug], open(f'{root}/showcase/src/content/tracks/{slug}.mdx').read()
-def why_table(body):
+OS = json.loads(subprocess.run(['node', os.path.join(HERE, 'osvstrack.mjs'), root], check=True, capture_output=True, text=True).stdout)
+def why_table(body, slug=None, sponsor=''):
+    if slug in OS:
+        rows = OS[slug]
+        head = ['Feature', 'Serves', 'From GurtOS (the OS)', f'From {sponsor}', 'Status']
+        return head, [[strip(r.get('what')), strip(r.get('why')), strip(r.get('os')), strip(r.get('track')), strip(r.get('status'))] for r in rows]
     m = re.search(r'## Why (?:an operating system|GurtOS, and what each part is for)\n(.*?)\n## ', body, re.S)
     if not m: return None
     rows = [l for l in m.group(1).splitlines() if l.startswith('|') and not l.startswith('|---')]
@@ -93,7 +98,7 @@ for k in tracks:
             f"**Status:** {'decided' if k in DECIDED else 'to review with Ben'}. **Page:** https://calhacks.gurtos.com/tracks/{k}/", "",
             f"**Best shown in:** {E[k][0]}", "", f"**Pitch:** {strip(E[k][1])}", "",
             f"**The problem:** {PROBLEM[k]}", ""]
-    t = why_table(body)
+    t = why_table(body, k, fm['sponsor'])
     if t:
         head, rows = t
         out += ["**Features** (from the page's table):", "", "| " + " | ".join(head) + " |", "|" + "---|" * len(head)]

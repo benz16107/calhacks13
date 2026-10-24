@@ -1,0 +1,86 @@
+---
+// Log lines or measured numbers, with where they came from. Put a code block or list in the slot.
+// numbers: the headline figures, big. sources: links to the run, the file or the sponsor's page.
+import { slug } from './slug';
+
+interface Props {
+  title?: string;
+  // What was run and when (HTML ok), e.g. "Merge-gate run on the x86 test VM, Oct 24".
+  run?: string;
+  numbers?: { value: string; label: string }[];
+  sources?: { label: string; href: string }[];
+}
+const { title = 'Evidence', run, numbers = [], sources = [] } = Astro.props;
+---
+
+<section class="k-section" aria-labelledby={slug(title)}>
+  <h2 id={slug(title)}>{title}</h2>
+  {run && <p class="k-run" set:html={run} />}
+  {
+    numbers.length > 0 && (
+      <dl class="k-numbers">
+        {numbers.map((n) => (
+          <div>
+            <dt>{n.label}</dt>
+            <dd>{n.value}</dd>
+          </div>
+        ))}
+      </dl>
+    )
+  }
+  <slot />
+  {
+    sources.length > 0 && (
+      <p class="k-sources">
+        Sources:{' '}
+        {sources.map((s, i) => (
+          <>
+            {i > 0 && ', '}
+            <a href={s.href}>{s.label}</a>
+          </>
+        ))}
+      </p>
+    )
+  }
+</section>
+
+<style>
+  .k-section {
+    margin: var(--space-7) 0;
+  }
+  .k-run {
+    color: var(--color-text-secondary);
+    margin-top: var(--space-1);
+    max-width: var(--measure);
+  }
+  .k-numbers {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-5) var(--space-7);
+    margin: var(--space-5) 0;
+    padding: var(--space-4) 0;
+    border-top: 1px solid var(--color-border-strong);
+    border-bottom: 1px solid var(--color-border-default);
+  }
+  .k-numbers div {
+    display: flex;
+    flex-direction: column-reverse;
+  }
+  dt {
+    font-size: 0.85rem;
+    color: var(--color-text-secondary);
+    max-width: 14rem;
+  }
+  dd {
+    margin: 0;
+    font-size: 2rem;
+    font-weight: 600;
+    line-height: 1.1;
+    font-family: var(--font-mono);
+  }
+  .k-sources {
+    font-size: 0.9rem;
+    color: var(--color-text-secondary);
+    margin-top: var(--space-3);
+  }
+</style>

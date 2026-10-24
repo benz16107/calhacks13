@@ -1,0 +1,58 @@
+---
+// How to try it. Put a numbered markdown list in the slot (blank line after the opening tag).
+import { slug } from './slug';
+
+interface Props {
+  title?: string;
+  // How long it takes, shown under the title.
+  time?: string;
+}
+const { title = 'Try it yourself', time } = Astro.props;
+---
+
+<section class="k-section k-steps" aria-labelledby={slug(title)}>
+  <h2 id={slug(title)}>{title}</h2>
+  {time && <p class="k-time">{time}</p>}
+  <slot />
+</section>
+
+<style>
+  .k-section {
+    margin: var(--space-7) 0;
+  }
+  .k-time {
+    color: var(--color-text-secondary);
+    margin-top: var(--space-1);
+  }
+  .k-steps :global(ol) {
+    list-style: none;
+    counter-reset: step;
+    padding: 0;
+    margin: var(--space-4) 0 0;
+    max-width: var(--measure);
+  }
+  .k-steps :global(ol > li) {
+    counter-increment: step;
+    position: relative;
+    padding: var(--space-2) 0 var(--space-2) 2.6rem;
+    margin: 0;
+  }
+  .k-steps :global(ol > li::before) {
+    content: counter(step);
+    position: absolute;
+    left: 0;
+    top: var(--space-2);
+    width: 1.8rem;
+    height: 1.8rem;
+    border-radius: 50%;
+    background: var(--color-bg-sunken);
+    color: var(--color-text-primary);
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    display: grid;
+    place-items: center;
+  }
+  .k-steps :global(li > p) {
+    margin: 0;
+  }
+</style>

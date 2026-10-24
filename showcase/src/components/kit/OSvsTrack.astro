@@ -1,0 +1,71 @@
+---
+// What comes from the operating system and what comes from the sponsor's product. The rows are also read by
+// scripts/story/bible.py to write the track's section in docs/story.md, so keep one row per feature.
+// rows: { what, why? (which criterion it serves), os (what GurtOS provides), track (what the sponsor's product provides), status? }
+import { slug } from './slug';
+
+interface Props {
+  sponsor: string;
+  title?: string;
+  osLabel?: string;
+  trackLabel?: string;
+  rows: { what: string; why?: string; os: string; track: string; status?: string }[];
+}
+const { sponsor, rows } = Astro.props;
+const title = Astro.props.title ?? 'What comes from the OS and what from ' + sponsor;
+const osLabel = Astro.props.osLabel ?? 'From GurtOS (the OS)';
+const trackLabel = Astro.props.trackLabel ?? `From ${sponsor}`;
+const hasWhy = rows.some((r) => r.why);
+const hasStatus = rows.some((r) => r.status);
+---
+
+<section class="k-section" aria-labelledby={slug(title)}>
+  <h2 id={slug(title)}>{title}</h2>
+  <div class="k-table">
+    <table>
+      <thead>
+        <tr>
+          <th scope="col">Feature</th>
+          {hasWhy && <th scope="col">Serves</th>}
+          <th scope="col">{osLabel}</th>
+          <th scope="col">{trackLabel}</th>
+          {hasStatus && <th scope="col">Status</th>}
+        </tr>
+      </thead>
+      <tbody>
+        {
+          rows.map((r) => (
+            <tr>
+              <th scope="row" set:html={r.what} />
+              {hasWhy && <td set:html={r.why ?? ''} />}
+              <td set:html={r.os} />
+              <td set:html={r.track} />
+              {hasStatus && <td set:html={r.status ?? ''} />}
+            </tr>
+          ))
+        }
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<style>
+  .k-section {
+    margin: var(--space-7) 0;
+  }
+  .k-table {
+    overflow-x: auto;
+    margin-top: var(--space-4);
+  }
+  table {
+    min-width: 40rem;
+    margin: 0;
+  }
+  tbody th {
+    text-transform: none;
+    letter-spacing: 0;
+    font-size: 0.94rem;
+    color: var(--color-text-primary);
+    border-bottom-color: var(--color-border-default);
+  }
+</style>

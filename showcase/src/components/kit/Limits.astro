@@ -1,0 +1,40 @@
+---
+// What this does not cover, said honestly. Put a list in the slot. Judges trust a page that names its limits.
+import { slug } from './slug';
+
+interface Props {
+  title?: string;
+}
+const { title = 'What this does not cover' } = Astro.props;
+---
+
+<section class="k-section k-limits" aria-labelledby={slug(title)}>
+  <h2 id={slug(title)}>{title}</h2>
+  <div class="k-limits-body"><slot /></div>
+</section>
+
+<style>
+  .k-section {
+    margin: var(--space-7) 0;
+  }
+  .k-limits-body {
+    margin-top: var(--space-3);
+    padding: var(--space-3) var(--space-5);
+    background: var(--color-bg-surface);
+    border: 1px solid var(--color-border-default);
+    border-left: 4px solid var(--color-state-waiting-fg);
+    border-radius: var(--radius-md);
+    max-width: var(--measure);
+  }
+  .k-limits-body :global(ul),
+  .k-limits-body :global(ol) {
+    padding-left: 1.2em;
+    margin: 0;
+  }
+  .k-limits-body :global(li) {
+    margin: var(--space-2) 0;
+  }
+  .k-limits-body :global(p:last-child) {
+    margin-bottom: 0;
+  }
+</style>

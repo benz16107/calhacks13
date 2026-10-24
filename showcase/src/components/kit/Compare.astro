@@ -1,0 +1,50 @@
+---
+// Two things side by side: before and after, without and with GurtOS, or two screens. Put each in its own <div slot="a"> and <div slot="b">.
+// They stack on a phone. `labels` names the two sides.
+interface Props {
+  labels?: [string, string];
+}
+const { labels = ['Before', 'After'] } = Astro.props;
+---
+
+<div class="k-compare">
+  <section aria-label={labels[0]}>
+    <p class="k-side">{labels[0]}</p>
+    <slot name="a" />
+  </section>
+  <section aria-label={labels[1]}>
+    <p class="k-side">{labels[1]}</p>
+    <slot name="b" />
+  </section>
+</div>
+
+<style>
+  .k-compare {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-5);
+    margin: var(--space-5) 0 var(--space-6);
+  }
+  .k-compare > section {
+    min-width: 0;
+    border-top: 1px solid var(--color-border-strong);
+    padding-top: var(--space-2);
+  }
+  .k-side {
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--color-text-secondary);
+    margin: 0 0 var(--space-3);
+  }
+  .k-compare :global(.k-shot),
+  .k-compare :global(.k-clip) {
+    margin: 0 0 var(--space-3);
+  }
+  @media (max-width: 760px) {
+    .k-compare {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

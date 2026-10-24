@@ -7,6 +7,9 @@ import Shots from '../../components/Shots.astro';
 import LinkList from '../../components/LinkList.astro';
 import Flow from '../../components/Flow.astro';
 import Status from '../../components/Status.astro';
+import RunsOn from '../../components/RunsOn.astro';
+import TrackNav from '../../components/TrackNav.astro';
+import { kit } from '../../components/kit';
 import { LINKS } from '../../data/site';
 
 export async function getStaticPaths() {
@@ -34,7 +37,26 @@ const jumps = [
 ---
 
 <Base title={`${d.sponsor}: ${d.title} | GurtOS at Cal Hacks 13.0`} description={d.summary}>
-  <article class="wrap track">
+  <TrackNav number={number} sponsor={d.sponsor} prev={prev && { id: prev.id, sponsor: prev.data.sponsor }} next={next && { id: next.id, sponsor: next.data.sponsor }} />
+  {
+    d.design === 'kit' ? (
+      <article class="wrap track">
+        <header class="khead">
+          <p class="kicker">Track {number} · Sponsor track</p>
+          <h1>{d.title}</h1>
+          <p class="sponsor">{d.sponsor} · {d.prize}</p>
+          <p class="kbest">Best shown in <strong>{d.editions}</strong> <span aria-hidden="true">·</span> <a href={LINKS.site}>The product: gurtos.com</a></p>
+        </header>
+        <div class="kit" data-track-body>
+          <Content components={kit} />
+        </div>
+        <details class="runs-fold">
+          <summary>Runs on top of GurtOS</summary>
+          <RunsOn />
+        </details>
+      </article>
+    ) : (
+  <article class="wrap track" data-track-body>
     <nav class="crumbs" aria-label="Breadcrumb"><a href="/">All tracks</a> / {number} / {d.sponsor} <span class="to-product">· The product: <a href={LINKS.site}>gurtos.com</a></span></nav>
     <header class="head">
       <div class="head-main">
@@ -61,18 +83,7 @@ const jumps = [
 
     <VideoSlot video={d.video ?? entry.id} clip={d.clip} label={`${d.sponsor} video`} />
 
-    <aside class="runs-on" aria-label="Runs on GurtOS">
-      <p class="runs-h">Runs on top of GurtOS</p>
-      <p class="runs-why">Today's operating systems were built for one person at a keyboard: permissions per user, not per task; secrets any process can read; the network all or nothing; no approvals, budgets, trustworthy record or rollback. GurtOS is built for agents.</p>
-      <ul>
-        <li><strong>A better filesystem for agents:</strong> each task gets an instant copy-on-write copy of its files (an overlay layer). Agents work in parallel without colliding, nothing is duplicated, and undo is exact: take one layer out.</li>
-        <li><strong>Its own space for every agent:</strong> its own Linux user and its own copy of the files, like a worktree per task.</li>
-        <li><strong>Security first:</strong> keys never reach an agent, each task reaches only its allowed hosts, spending waits for your OK, and every change is logged and undoable.</li>
-        <li><strong>Light, on a computer you own:</strong> one Node service on Ubuntu, no GPU. GurtOS Server needs 4 GB of memory and 17 GB of disk on any x86_64 or arm64 machine; GurtOS Personal needs 4 GB and 29 GB.</li>
-        <li><strong>Live control:</strong> the portal and the phone app (<a href="https://app.gurtos.com">app.gurtos.com</a>) show every agent on any of your machines, and can approve, undo or pause it, from anywhere with remote access.</li>
-        <li><strong>A suite, open source:</strong> the OS in three editions, the companion app, remote access, an app platform for integrations like this one, <a href={LINKS.docs}>the docs</a>, and <a href={LINKS.repo}>the code</a> under Apache-2.0.</li>
-      </ul>
-    </aside>
+    <RunsOn />
 
     <Criteria sponsor={d.sponsor} source={d.criteriaSource} items={d.criteria} />
     <Shots shots={d.shots} />
@@ -82,6 +93,10 @@ const jumps = [
       <Content components={{ Flow, Status }} />
     </div>
 
+  </article>
+    )
+  }
+  <div class="wrap track pager-wrap">
     <nav class="pager" aria-label="More tracks">
       {prev ? <a href={`/tracks/${prev.id}/`} rel="prev">Previous: {prev.data.sponsor}</a> : <a href="/">Back to the tracks list</a>}
       {next ? <a href={`/tracks/${next.id}/`} rel="next">Next: {next.data.sponsor}</a> : <a href="/">All tracks</a>}
@@ -96,7 +111,7 @@ const jumps = [
         ))}
       </ul>
     </details>
-  </article>
+  </div>
 </Base>
 
 <style>
@@ -175,30 +190,6 @@ const jumps = [
     margin: var(--space-4) 0 var(--space-6);
     border-radius: var(--radius-md);
   }
-  .runs-on {
-    margin: var(--space-6) 0;
-    padding: var(--space-4) var(--space-5);
-    background: var(--color-bg-surface);
-    border: 1px solid var(--color-border-default);
-    border-radius: var(--radius-md);
-    max-width: var(--measure);
-    font-size: 0.93rem;
-  }
-  .runs-h {
-    font-weight: 600;
-    margin: 0 0 var(--space-2);
-  }
-  .runs-why {
-    margin: 0 0 var(--space-2);
-    color: var(--color-text-secondary);
-  }
-  .runs-on ul {
-    margin: 0;
-    padding-left: 1.2em;
-  }
-  .runs-on li {
-    margin-bottom: var(--space-1);
-  }
   .proof {
     background: var(--color-bg-surface);
     border: 1px solid var(--color-border-default);
@@ -221,6 +212,54 @@ const jumps = [
     gap: var(--space-2) var(--space-4);
     margin: var(--space-5) 0 var(--space-6);
     font-size: 0.92rem;
+  }
+  .khead {
+    margin: var(--space-6) 0 var(--space-5);
+    max-width: var(--measure);
+  }
+  .khead .kicker {
+    font-family: var(--font-mono);
+    color: var(--color-focus);
+    letter-spacing: 0.06em;
+  }
+  .khead h1 {
+    margin-bottom: var(--space-3);
+  }
+  .kbest {
+    margin: var(--space-3) 0 0;
+    font-size: 0.95rem;
+    color: var(--color-text-secondary);
+  }
+  .kit > :global(p),
+  .kit > :global(ul),
+  .kit > :global(ol),
+  .kit > :global(h3),
+  .kit > :global(blockquote) {
+    max-width: var(--measure);
+  }
+  .kit > :global(h2) {
+    margin: var(--space-7) 0 var(--space-3);
+  }
+  .kit > :global(h3) {
+    margin: var(--space-5) 0 var(--space-2);
+  }
+  .kit > :global(table) {
+    display: block;
+    overflow-x: auto;
+  }
+  .runs-fold {
+    margin: var(--space-7) 0 0;
+    max-width: var(--measure);
+  }
+  .runs-fold > summary {
+    cursor: pointer;
+    font-weight: 600;
+  }
+  .runs-fold :global(.runs-on) {
+    margin-top: var(--space-3);
+  }
+  .pager-wrap {
+    padding-bottom: 0;
   }
   .pager {
     display: flex;
@@ -249,3 +288,10 @@ const jumps = [
   }
 </style>
 
+
+<style is:global>
+  [data-track-body] h2[id],
+  .track h2[id] {
+    scroll-margin-top: 4.5rem;
+  }
+</style>

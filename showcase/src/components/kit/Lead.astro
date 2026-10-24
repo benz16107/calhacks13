@@ -1,0 +1,52 @@
+---
+// The 30-second version: what this track is, in a few sentences a judge can read standing at a table.
+// The slot is the text. `proof` is one line of evidence under it (HTML allowed).
+interface Props {
+  kicker?: string;
+  proof?: string;
+}
+const { kicker = 'In 30 seconds', proof } = Astro.props;
+---
+
+<div class="k-lead">
+  <p class="k-kicker">{kicker}</p>
+  <div class="k-lead-text"><slot /></div>
+  {proof && <p class="k-lead-proof"><span>Proof</span> <span set:html={proof} /></p>}
+</div>
+
+<style>
+  .k-lead {
+    margin: var(--space-6) 0 var(--space-7);
+    max-width: var(--measure);
+  }
+  .k-kicker {
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--color-focus);
+    margin: 0 0 var(--space-2);
+  }
+  .k-lead-text :global(p) {
+    font-size: 1.3rem;
+    line-height: 1.5;
+    margin: 0 0 var(--space-3);
+  }
+  .k-lead-proof {
+    margin: var(--space-4) 0 0;
+    padding: var(--space-3) var(--space-4);
+    background: var(--color-bg-surface);
+    border: 1px solid var(--color-border-default);
+    border-left: 4px solid var(--color-desktop-accent);
+    border-radius: var(--radius-md);
+    font-size: 1rem;
+  }
+  .k-lead-proof span:first-child {
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--color-state-waiting-fg);
+    margin-right: var(--space-2);
+  }
+</style>

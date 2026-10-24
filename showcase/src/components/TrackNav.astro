@@ -1,0 +1,178 @@
+---
+// The bar that stays at the top of every track page: back to the tracks list, the track's name, previous and next track,
+// and "On this page", a list of the page's own sections built in the browser from its h2 headings (so it fits every page).
+interface Props {
+  number: string;
+  sponsor: string;
+  prev?: { id: string; sponsor: string };
+  next?: { id: string; sponsor: string };
+}
+const { number, sponsor, prev, next } = Astro.props;
+---
+
+<div class="tn" data-tracknav>
+  <div class="wrap tn-bar">
+    <a class="tn-back" href="/">&larr; <span>Tracks</span></a>
+    <p class="tn-name"><span class="tn-num">{number}</span> {sponsor}</p>
+    <div class="tn-right">
+      {prev && <a class="tn-step" href={`/tracks/${prev.id}/`} rel="prev" aria-label={`Previous track: ${prev.sponsor}`} title={prev.sponsor}>&lsaquo;</a>}
+      {next && <a class="tn-step" href={`/tracks/${next.id}/`} rel="next" aria-label={`Next track: ${next.sponsor}`} title={next.sponsor}>&rsaquo;</a>}
+      <button type="button" class="tn-toggle" aria-expanded="false" aria-controls="tn-panel" data-tn-toggle hidden>
+        <span data-tn-current>On this page</span> <span aria-hidden="true">&#9662;</span>
+      </button>
+    </div>
+  </div>
+  <nav id="tn-panel" class="wrap tn-panel" aria-label="On this page" hidden><ol data-tn-list></ol></nav>
+</div>
+
+<style>
+  .tn {
+    position: sticky;
+    top: 0;
+    z-index: 6;
+    background: var(--color-bg-canvas);
+    border-bottom: 1px solid var(--color-border-default);
+  }
+  .tn-bar {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    min-height: 44px;
+    font-size: 0.92rem;
+  }
+  .tn-back {
+    white-space: nowrap;
+  }
+  .tn-name {
+    margin: 0 auto 0 0;
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+  }
+  .tn-num {
+    font-family: var(--font-mono);
+    color: var(--color-focus);
+    font-weight: 500;
+    margin-right: var(--space-1);
+  }
+  .tn-right {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    flex-shrink: 0;
+  }
+  .tn-step,
+  .tn-toggle {
+    min-width: 36px;
+    height: 36px;
+    display: inline-grid;
+    place-items: center;
+    padding: 0 var(--space-3);
+    border: 1px solid var(--color-border-default);
+    border-radius: var(--radius-md);
+    background: var(--color-bg-surface);
+    color: var(--color-text-primary);
+    font: inherit;
+    text-decoration: none;
+    cursor: pointer;
+  }
+  .tn-step {
+    font-size: 1.3rem;
+    line-height: 1;
+    padding: 0;
+  }
+  .tn-toggle {
+    display: inline-flex;
+    gap: var(--space-2);
+    align-items: center;
+    max-width: 14rem;
+  }
+  .tn-toggle[hidden] {
+    display: none;
+  }
+  .tn-toggle [data-tn-current] {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .tn-panel {
+    padding-top: var(--space-3);
+    padding-bottom: var(--space-3);
+    max-height: 70vh;
+    overflow-y: auto;
+  }
+  .tn-panel[hidden] {
+    display: none;
+  }
+  .tn-panel ol {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    columns: 2 16rem;
+    column-gap: var(--space-6);
+  }
+  .tn-panel li {
+    break-inside: avoid;
+  }
+  .tn-panel a {
+    display: block;
+    padding: var(--space-2) 0;
+    text-decoration: none;
+  }
+  .tn-panel a[aria-current='true'] {
+    font-weight: 600;
+    text-decoration: underline;
+  }
+  @media (max-width: 640px) {
+    .tn-bar {
+      gap: var(--space-2);
+    }
+    .tn-back span {
+      display: none;
+    }
+    .tn-toggle {
+      max-width: 9rem;
+    }
+  }
+</style>
+
+<script>
+  // Build "On this page" from the page's h2 headings, and mark the one being read.
+  const bar = document.querySelector<HTMLElement>('[data-tracknav]');
+  const heads = [...document.querySelectorAll<HTMLElement>('[data-track-body] h2[id]')];
+  if (bar && heads.length) {
+    const toggle = bar.querySelector<HTMLButtonElement>('[data-tn-toggle]')!;
+    const panel = bar.querySelector<HTMLElement>('#tn-panel')!;
+    const list = bar.querySelector('[data-tn-list]')!;
+    const current = bar.querySelector('[data-tn-current]')!;
+    const text = (h: HTMLElement) => (h.textContent ?? '').replace(/^\d+\s*/, '').trim();
+    const links = heads.map((h) => {
+      const li = document.createElement('li');
+      const a = document.createElement('a');
+      a.href = `#${h.id}`;
+      a.textContent = text(h);
+      li.append(a);
+      list.append(li);
+      return a;
+    });
+    toggle.hidden = false;
+    const set = (open: boolean) => {
+      panel.hidden = !open;
+      toggle.setAttribute('aria-expanded', String(open));
+    };
+    toggle.addEventListener('click', () => set(panel.hidden));
+    panel.addEventListener('click', (e) => (e.target as Element).closest('a') && set(false));
+    document.addEventListener('keydown', (e) => e.key === 'Escape' && !panel.hidden && (set(false), toggle.focus()));
+    const mark = () => {
+      const y = bar.offsetHeight + 24;
+      let at = -1;
+      heads.forEach((h, i) => h.getBoundingClientRect().top <= y && (at = i));
+      links.forEach((a, i) => (i === at ? a.setAttribute('aria-current', 'true') : a.removeAttribute('aria-current')));
+      current.textContent = at >= 0 ? text(heads[at]) : 'On this page';
+    };
+    addEventListener('scroll', mark, { passive: true });
+    mark();
+  }
+</script>

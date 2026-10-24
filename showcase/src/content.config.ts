@@ -8,6 +8,9 @@ const tracks = defineCollection({
   loader: glob({ base: './src/content/tracks', pattern: '*.mdx' }),
   schema: ({ image }) =>
     z.object({
+      // 'legacy' is the fixed template (criteria, screenshots, links, then the MDX body). 'kit' renders only the header and the
+      // MDX body, which the writer composes from the components in src/components/kit (see README, Writing a track page).
+      design: z.enum(['legacy', 'kit']).default('legacy'),
       order: z.number(),
       sponsor: z.string(),
       prize: z.string(),
