@@ -27,15 +27,5 @@ export function quietAt(settings, hhmm) {
 
 export const dollars = (cents) => `$${((cents ?? 0) / 100).toFixed(2)}`;
 
-/** GNOME's header capitalization for notification titles; file names, hosts and amounts stay as they are. */
-const SMALL = new Set(['a', 'an', 'and', 'as', 'at', 'but', 'by', 'for', 'in', 'of', 'on', 'or', 'the', 'to', 'up', 'via']);
-export function headerCaps(text) {
-  const words = text.split(' ');
-  return words.map((w, i) => {
-    if ((SMALL.has(w.toLowerCase()) && i > 0 && i < words.length - 1) || /[./_@:0-9]/.test(w) || !/^[a-z]/.test(w)) return w;
-    return w[0].toUpperCase() + w.slice(1);
-  }).join(' ');
-}
-
 /** A task failed only because the vault has no model key yet: the fix is GurtOS Setup. */
 export const noModelKey = (error) => /vault has no/i.test(error ?? '') && /(factory_api_key|anthropic_api_key|model key)/i.test(error ?? '');

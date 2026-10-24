@@ -408,9 +408,11 @@ class Box(Adw.Application):
         Adw.Application.do_startup(self)
         # The GurtOS system on libadwaita: light tokens always, the dark ones on top while GNOME is dark.
         display = Gdk.Display.get_default()
+        # gurtos.css styles GurtOS's own widgets; Figma's libadwaita files (theme/colors) set the named colours.
         light, self.dark_css = Gtk.CssProvider(), Gtk.CssProvider()
-        light.load_from_path(os.path.join(HERE, 'gurtos.css'))
-        self.dark_css.load_from_path(os.path.join(HERE, 'gurtos-dark.css'))
+        colors = os.path.join(HERE, 'theme', 'colors')
+        light.load_from_data((open(os.path.join(HERE, 'gurtos.css')).read() + open(os.path.join(colors, 'libadwaita-light.css')).read()).encode(), -1)
+        self.dark_css.load_from_data((open(os.path.join(HERE, 'gurtos-dark.css')).read() + open(os.path.join(colors, 'libadwaita-dark.css')).read()).encode(), -1)
         Gtk.StyleContext.add_provider_for_display(display, light, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
         style = self.get_style_manager()
 

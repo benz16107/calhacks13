@@ -14,18 +14,19 @@ ISO walked as a new person, on Wayland (Ubuntu's default) and Xorg.
 | Piece | What it does | Where |
 |---|---|---|
 | The GurtOS session | Its own GNOME session and Shell mode, like Ubuntu's own: it loads the GurtOS Shell extension, Ubuntu's dock, AppIndicator support and tiling. GDM starts it by default, on Wayland or Xorg. An extension a session mode loads cannot be switched off by accident | `theme/session/`, `theme/install.sh` |
-| The top bar | The GurtOS item: the amber count of what needs you and "1 running". Its popover: Needs your OK with Deny and Approve on each, Ready to review, Running, then Ask an Agent, Open GurtOS, GurtOS Settings | `shell/gurtos@gurtos.dev/` |
-| Quick Settings | An Agents tile: on means agents may interrupt you, off is quiet hours. Its menu: Quiet hours, Pause all agents (once the core has it), GurtOS Settings | `shell/gurtos@gurtos.dev/` |
-| Approvals as Shell notifications | Deny and Approve (Approve names the amount); clicking the body opens the task; answered anywhere else, it goes away; in quiet hours it waits in the list without a banner. GNOME shows no actions on the lock screen, so while locked one notice says how many wait: "Unlock to approve or deny" | `shell/gurtos@gurtos.dev/` |
-| Activities search | Type in the overview: agent tasks by title, and /find's files, photos and task history. A result opens in the GurtOS app | `search-provider.py` |
-| Files | Ask an Agent… on one folder or up to ten. The "changed by an agent" emblem on a folder whose agent changes wait for review or were kept. On that folder: Keep Agent Changes, Undo Agent Changes… (the review asks first), Put Files Back… | `files/box-nautilus.py` |
-| GurtOS Settings | A native libadwaita app (its own icon in the dock): General, Agents & Models, Permissions, Folders, Accounts & Keys, Apps, Devices, Updates, Privacy & Logs, About ("Based on Ubuntu 24.04 LTS") | `settingswin.py` |
+| The top bar | An amber "1 needs you" pill and "▶ 2 running". Its popover: Agents with the counts, Needs your OK as an amber card with Deny and Approve, Ready to review, Running with a working bar, then Ask an Agent…, Open GurtOS, GurtOS Settings | `shell/gurtos@gurtos.dev/` |
+| Quick Settings | An Agents tile with the flask icon, on while agents run, subtitle "1 needs you". Its menu: Pause all agents (once the core has it), Quiet hours ("Until 07:00. Requests wait without a sound"), Needs your OK and Running with counts, GurtOS Settings | `shell/gurtos@gurtos.dev/` |
+| Approvals as Shell notifications | Deny and Approve (Approve names the amount); clicking the body opens the task; answered anywhere else, it goes away; in quiet hours it waits in the list without a banner | `shell/gurtos@gurtos.dev/` |
+| The lock screen | Each approval as a card in the lock screen's notification list. Deny works while locked. Unlock to approve asks for the password, then approves, because approving can spend money | `shell/gurtos@gurtos.dev/` |
+| Activities search | Two sections in the overview: GurtOS (agent tasks by title) and Find (files and photos /find knows, by what is in them). A result opens in the GurtOS app | `search-provider.py` |
+| Files | Ask an Agent… on one folder or up to ten. While changes wait, the folder's menu has Keep Agent Changes and Undo Agent Changes… (the review asks first), and nothing is marked. After Keep, the "changed by an agent" emblem on each file an agent added or changed, and Put Files Back… on the folder and on those files | `files/box-nautilus.py` |
+| GurtOS Settings | A native libadwaita app with a view switcher: Agents (model key, updates, the action log), Permissions (folders, internet, spending, quiet hours and their hours), Apps, Keys, Phone. About is in the window menu, with the credits | `settingswin.py` |
 | GurtOS Setup | At the owner's first login, after GNOME's own setup: Welcome, AI models, Folders, Permissions, Apps, Pair a phone, Done | `setupwin.py` |
 | The GurtOS app | Tasks, Activity and Time Machine: the portal in its own window, first in the dock | `box-ui.py app` |
 | Keep or Undo | The review: what changed, the diff, and Keep these changes? | `box-ui.py review` |
-| The look | Wallpaper, the dock as a floating bottom bar, the GurtOS font, a GurtOS icon theme over Yaru (no Ubuntu logo in the dock), GTK accents for new accounts, the GDM logo, a Plymouth splash. Ubuntu's welcome tour, Pro notices and update nags are hidden in the GurtOS session | `theme/` |
+| The look | Figma's "GurtOS Personal OS" theme: the Hills wallpaper (Lake, Dunes and Strata too, each light and dark), a dark Shell with Atkinson Hyperlegible, the floating dock (Firefox, Files, Text Editor, Console, Software, GurtOS, Settings), minimize, maximize and close, Papirus icons with slate folders, the Bibata cursor, GurtOS colours for GTK 4 apps, the GDM logo and a two-step Plymouth splash. Ubuntu's welcome tour, Pro notices and update nags are hidden in the GurtOS session | `theme/` |
 
-![The GurtOS session: wallpaper, floating dock, the GurtOS item in the top bar](screenshots/os/01-desktop.png)
+![The GurtOS session: Hills, the floating dock, the GurtOS item in the top bar](screenshots/os/01-desktop.png)
 
 ![An approval as a Shell notification, with the count in the top bar](screenshots/os/02-approval.png)
 
@@ -33,39 +34,44 @@ ISO walked as a new person, on Wayland (Ubuntu's default) and Xorg.
 
 ![The Agents tile in Quick Settings](screenshots/os/06-agents-tile.png)
 
-![The lock screen: one notice, no details](screenshots/os/07-lock.png)
+![The lock screen: Deny, or Unlock to approve](screenshots/os/07-lock.png)
 
-![GurtOS Settings, Accounts & Keys](screenshots/os/10-settings-keys.png)
+![GurtOS Settings, Permissions](screenshots/os/09-settings.png)
 
-![Activities search finds agent tasks and /find results](screenshots/os/11-search.png)
+![GurtOS Settings, Agents](screenshots/os/09b-settings-agents.png)
 
-![Files: the emblem on folders agents changed](screenshots/os/13-files-emblem.png)
+![GurtOS Settings, Keys](screenshots/os/10-settings-keys.png)
 
-![Files: Keep or Undo agent changes on a folder](screenshots/os/14-files-keep.png)
+![About GurtOS](screenshots/os/09c-settings-about.png)
+
+![Activities search: Find and GurtOS](screenshots/os/11-search.png)
+
+![Files after Keep: the emblem on each file an agent changed](screenshots/os/13-files-emblem.png)
+
+![Files: Put Files Back on a changed file](screenshots/os/14-files-putback.png)
 
 ![The same session on Xorg](screenshots/os/16-xorg.png)
 
-## Waiting on Figma's theme
+## Figma's theme, and what is left
 
-Everything below is wired; the files are placeholders that the theme replaces without code changes.
+Figma's "GurtOS Personal OS" frames and assets (`docs/figma/personal-os/`) are applied: the wallpapers, colours,
+wordmark, GDM logo, Plymouth theme, emblem and folder icon are in `theme/` and `icons/`, and `theme/make-icons.py`
+builds the `GurtOS` icon theme from the installed Papirus with its folders recoloured to slate. What is left:
 
-| Hook | File today | What Figma's theme provides |
+| Part | Today | Why |
 |---|---|---|
-| GNOME Shell theme | the extension's `stylesheet.css` (styles the top-bar item, badge, popover); `theme/session/gurtos.json` points at Yaru's Shell theme | a `gnome-shell-theme.gresource`; change `themeResourceName` in `gurtos.json` |
-| GTK and libadwaita accents | `theme/gtk/gtk4.css`, `gtk3.css` (accent only), imported by new accounts' `~/.config/gtk-4.0/gtk.css` | the full colour set |
-| Icons | `theme/icons/GurtOS` inherits Yaru-blue; replaces the dock's Ubuntu-logo Show Apps icon | GurtOS's icon set, in the same folder |
-| Cursor, fonts | dconf `cursor-theme='Yaru'`; Atkinson Hyperlegible Next and Mono | a cursor theme, if any |
-| Wallpaper | `theme/backgrounds/gurtos-night.svg` (the portal's night hills) | final wallpapers, light and dark |
-| Logos | `theme/gurtos-logo.svg`, `gurtos-logo-gdm.png`, `plymouth/gurtos/logo.png`, rendered from the box glyph and the wordmark | the logo and wordmark |
-| GDM | `theme/dconf/db/gdm.d/01-gurtos` (logo, font) | a login background if wanted |
-| Plymouth | `theme/plymouth/gurtos/` (logo on the night colours) | the boot screen (Figma `Box / Boot`) |
+| Shell theme | Yaru's dark blue Shell theme, with the GurtOS tokens, font and radii from the extension's `stylesheet.css` | a full `gnome-shell-theme.gresource` (and the Hills login background in GDM) is not built yet |
+| The Files bar (Review changes, Undo, Keep changes) | the same actions in the folder's right-click menu | nautilus-python 4 on GNOME 46 has no way to add a bar to a Files window |
+| GTK 3 apps | Yaru-blue | adw-gtk3 is not in Ubuntu 24.04's archive, so it is not shipped or credited |
+| May read, Pause all agents | not shown; the Pause switch appears by itself once the core's settings have `paused` | the core has no API for them yet |
+| Software in the dock | listed, shown when installed | the test VM has no Software app; the image decides which one ships |
 
 **The design.** These windows follow the GurtOS system (`docs/figma/system.md`) and the Personal frames in
 `docs/figma/os-v2/personal/`, built from libadwaita's own widgets so they sit among GNOME apps. The system's colour
 tokens in light and dark become libadwaita's named colours (`gurtos.css`, `gurtos-dark.css`); the type is Atkinson
 Hyperlegible Next and Mono (bundled in `fonts/`, SIL OFL); app icons are the system's glyphs on coloured tiles
 (`apptiles.py`, the same paths the portal draws). GNOME's own surfaces (the top bar, notification banners, menus,
-Files) stay GNOME's, with GurtOS content: notification titles use GNOME's header capitalization, as the system says.
+Files) stay GNOME's, with GurtOS content. Notification titles are in sentence case, as Figma's frames show.
 
 ## GurtOS Setup and the redesign (Oct 24)
 
@@ -173,7 +179,8 @@ sudo core/install.sh && sudo personal/install.sh [owner]
 ```
 
 `install.sh` installs GNOME if it is missing (`ubuntu-desktop-minimal`) and what the layer uses (GTK 4, libadwaita,
-WebKitGTK 6, nautilus-python, Ubuntu's AppIndicator extension, `dconf-cli`, `librsvg2-common`). It copies this folder
+WebKitGTK 6, nautilus-python, Ubuntu's AppIndicator extension, `dconf-cli`, `librsvg2-common`, and from Figma's
+theme `papirus-icon-theme`, `bibata-cursor-theme` and `gnome-console`). It copies this folder
 to `/opt/box/personal` and installs the apps, icons, fonts, the Files extension, the search provider and GurtOS Setup's
 autostart entry. Then `theme/install.sh` installs the GurtOS session, its Shell mode and extension, the dconf defaults
 (`/etc/dconf/profile/user` and `gdm`, `/etc/dconf/db/gurtos.d`, `gdm.d`, then `dconf update`), wallpaper, icon theme,
@@ -190,7 +197,7 @@ at first boot). What the image adds itself:
 - `/etc/issue` from `theme/issue`; `os-release` with `LOGO=gurtos-logo` (the icon is installed).
 - Optional: drop Ubuntu's sessions from `/usr/share/{wayland-sessions,xsessions}/ubuntu*.desktop`, so the login
   screen offers only GurtOS.
-- Rebuild the initramfs after install.sh, for the Plymouth theme.
+- Rebuild the initramfs after install.sh (`update-initramfs -u`), for the two-step Plymouth theme.
 
 ## How it works
 
@@ -255,10 +262,8 @@ delete it afterwards.
 ## Not built yet
 
 - **One folder per task.** The core takes one `folder`, so Files offers Ask an Agent for one folder at a time.
-- **May read, the Internet switch and Pause All Agents** from the Figma frames: the core has no API for them yet.
 - **Pairing a phone** on Personal: the box has no address a phone can reach yet, so Setup's phone step says so and
   offers Skip until `GET /api/boxes` reports one. The QR path (with `qrencode`) is written but not walked.
 - **From the Personal frames, waiting on the core:** "May read" for a folder (the core has one kind of grant, may
   change), "May also read" in Ask an Agent, Pause all agents in the top-bar menu, and a per-task internet choice (the
-  dialog shows what Settings gives a new task). The amber count in the top bar is plain text, because an AppIndicator
-  label cannot be coloured.
+  dialog shows what Settings gives a new task).

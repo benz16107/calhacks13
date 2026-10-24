@@ -26,20 +26,27 @@ install -Dm644 -t /etc/dconf/db/gdm.d "$t"/dconf/db/gdm.d/*
 dconf update
 
 # Wallpaper, icons, GTK accents for new accounts, logos.
-install -Dm644 "$t/backgrounds/gurtos-night.svg" /usr/share/backgrounds/gurtos/gurtos-night.svg
-install -Dm644 "$t/backgrounds/gurtos.xml" /usr/share/gnome-background-properties/gurtos.xml
-rm -rf /usr/share/icons/GurtOS && cp -r "$t/icons/GurtOS" /usr/share/icons/GurtOS
+# Figma's wallpapers (Hills is the default), light and dark.
+rm -f /usr/share/backgrounds/gurtos/gurtos-night.svg /usr/share/gnome-background-properties/gurtos.xml
+install -Dm644 -t /usr/share/backgrounds/gurtos "$t"/backgrounds/*.svg
+install -Dm644 "$t/backgrounds/gurtos-backgrounds.xml" /usr/share/gnome-background-properties/gurtos-backgrounds.xml
+# Icons: Papirus with GurtOS slate folders (built from the installed Papirus), Adwaita for symbolic icons.
+"$t/make-icons.py" "$t/icons/GurtOS" /usr/share/icons/GurtOS
 gtk-update-icon-cache -q -f /usr/share/icons/GurtOS 2>/dev/null || true
-install -Dm644 -t /usr/share/gurtos/theme "$t"/gtk/*.css
+# Colours: libadwaita's named colours as GurtOS tokens (Figma), for GurtOS's apps and, through /etc/skel, everyone's.
+install -Dm644 -t /usr/share/gurtos/theme "$t"/colors/*.css "$t"/gtk/gtk4.css
 install -Dm644 "$t/skel/.config/gtk-4.0/gtk.css" /etc/skel/.config/gtk-4.0/gtk.css
-install -Dm644 "$t/skel/.config/gtk-3.0/gtk.css" /etc/skel/.config/gtk-3.0/gtk.css
+rm -f /etc/skel/.config/gtk-3.0/gtk.css
 install -Dm644 "$t/gurtos-logo-gdm.png" /usr/share/gurtos/gurtos-logo-gdm.png
-install -Dm644 "$t/gurtos-logo.svg" /usr/share/gurtos/gurtos-logo.svg
+install -Dm644 -t /usr/share/gurtos "$t"/wordmark/*.svg
 install -Dm644 "$t/../icons/dev.box.Box.svg" /usr/share/icons/hicolor/scalable/apps/gurtos-logo.svg # os-release LOGO=gurtos-logo
 
 # Boot splash, when Plymouth is installed. The image rebuilds the initramfs.
 install -Dm644 -t /usr/share/plymouth/themes/gurtos "$t"/plymouth/gurtos/*
-if command -v plymouth-set-default-theme >/dev/null; then plymouth-set-default-theme gurtos || true; fi
+if [[ -d /usr/share/plymouth/themes ]]; then
+  update-alternatives --install /usr/share/plymouth/themes/default.plymouth default.plymouth /usr/share/plymouth/themes/gurtos/gurtos.plymouth 200 >/dev/null
+  update-alternatives --set default.plymouth /usr/share/plymouth/themes/gurtos/gurtos.plymouth >/dev/null
+fi
 
 # GDM starts the GurtOS session by default; the owner moves to it too.
 if [[ -f /etc/gdm3/custom.conf ]] && ! grep -q '^DefaultSession=' /etc/gdm3/custom.conf; then

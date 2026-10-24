@@ -18,7 +18,7 @@ here=$(cd "$(dirname "$0")" && pwd)
 # WebKitGTK for the Box window, AppIndicator for the top bar, and Python extensions for Files.
 export DEBIAN_FRONTEND=noninteractive
 pkgs=(python3-gi gir1.2-gtk-4.0 gir1.2-adw-1 gir1.2-webkit-6.0 gnome-shell-extension-appindicator python3-nautilus
-  dconf-cli librsvg2-common)
+  dconf-cli librsvg2-common papirus-icon-theme bibata-cursor-theme gnome-console)
 dpkg -s gnome-shell >/dev/null 2>&1 || pkgs+=(ubuntu-desktop-minimal)
 missing=$(for p in "${pkgs[@]}"; do dpkg -s "$p" >/dev/null 2>&1 || echo "$p"; done)
 if [[ -n $missing ]]; then
@@ -40,8 +40,10 @@ gtk-update-icon-cache -q -t -f /usr/share/icons/hicolor 2>/dev/null || true
 install -Dm644 "$here/files/apparmor-box-ui" /etc/apparmor.d/box-ui
 apparmor_parser -r -W /etc/apparmor.d/box-ui 2>/dev/null || true # in a chroot it loads at the next boot instead
 install -Dm644 "$here/files/box-nautilus.py" /usr/share/nautilus-python/extensions/box-nautilus.py
-# GurtOS in the Activities search: agent tasks and /find results.
+# GurtOS in the Activities search: agent tasks under GurtOS, and /find results under Find.
 install -Dm644 "$here/files/dev.box.Box.search-provider.ini" /usr/share/gnome-shell/search-providers/dev.box.Box.search-provider.ini
+install -Dm644 "$here/files/dev.box.Find.search-provider.ini" /usr/share/gnome-shell/search-providers/dev.box.Find.search-provider.ini
+install -Dm644 "$here/files/dev.box.Find.desktop" /usr/share/applications/dev.box.Find.desktop
 install -Dm644 "$here/files/dev.box.Search.service" /usr/share/dbus-1/services/dev.box.Search.service
 rm -f /etc/xdg/autostart/box-welcome.desktop # GurtOS Setup took over the welcome
 install -Dm644 "$here/files/box-setup.desktop" /etc/xdg/autostart/box-setup.desktop

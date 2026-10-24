@@ -1,0 +1,26 @@
+/* GurtOS light style as libadwaita named colours (libadwaita 1.5, GNOME 46). Generated from the Figma variables. */
+@define-color accent_bg_color #2F64A6;
+@define-color accent_fg_color #FFFFFF;
+@define-color accent_color #2A5C99;
+@define-color destructive_bg_color #B3392B;
+@define-color destructive_fg_color #FFFFFF;
+@define-color destructive_color #A3322A;
+@define-color success_color #2E6B3A;
+@define-color warning_bg_color #F2B544;
+@define-color warning_fg_color #1A1206;
+@define-color warning_color #7E5200;
+@define-color error_color #A3322A;
+@define-color window_bg_color #F6F5F2;
+@define-color window_fg_color #1D2127;
+@define-color view_bg_color #FDFCFA;
+@define-color view_fg_color #1D2127;
+@define-color headerbar_bg_color #EDEBE6;
+@define-color headerbar_fg_color #1D2127;
+@define-color sidebar_bg_color #ECEAE5;
+@define-color sidebar_fg_color #1D2127;
+@define-color card_bg_color #FEFDFB;
+@define-color card_fg_color #1D2127;
+@define-color popover_bg_color #FEFDFB;
+@define-color popover_fg_color #1D2127;
+@define-color dialog_bg_color #F6F5F2;
+@define-color dialog_fg_color #1D2127;

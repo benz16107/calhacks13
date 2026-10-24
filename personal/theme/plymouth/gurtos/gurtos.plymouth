@@ -1,8 +1,22 @@
 [Plymouth Theme]
 Name=GurtOS
-Description=GurtOS boot splash: the logo on the night background. Figma's boot screen replaces logo.png.
-ModuleName=script
+Description=The GurtOS wordmark and a spinner on the night sky
+ModuleName=two-step
 
-[script]
+[two-step]
+Font=Atkinson Hyperlegible Next 12
+TitleFont=Atkinson Hyperlegible Next 16
 ImageDir=/usr/share/plymouth/themes/gurtos
-ScriptFile=/usr/share/plymouth/themes/gurtos/gurtos.script
+DialogHorizontalAlignment=.5
+DialogVerticalAlignment=.75
+TitleHorizontalAlignment=.5
+TitleVerticalAlignment=.382
+HorizontalAlignment=.5
+VerticalAlignment=.6
+WatermarkHorizontalAlignment=.5
+WatermarkVerticalAlignment=.42
+Transition=none
+TransitionDuration=0.0
+BackgroundStartColor=0x27313f
+BackgroundEndColor=0x27313f
+MessageBelowAnimation=true

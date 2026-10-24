@@ -1,7 +1,7 @@
 #!/usr/bin/python3
-# GurtOS in GNOME's Activities search (org.gnome.Shell.SearchProvider2). Type in the overview and it finds agent
-# tasks by title and what /find knows: files, photos and task history. D-Bus starts it on the first search and it
-# exits when idle. Results open in the GurtOS app.
+# GurtOS in GNOME's Activities search (org.gnome.Shell.SearchProvider2), as two providers with their own headings:
+# GurtOS (agent tasks by title) at /dev/box/Search/Tasks, and Find (what /find knows: files, photos and task history)
+# at /dev/box/Search/Find. D-Bus starts it on the first search and it exits when idle. Results open in the GurtOS app.
 import os
 import sys
 import urllib.parse
@@ -11,7 +11,7 @@ from gi.repository import Gio, GLib
 sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
 from boxapi import api, ui  # noqa: E402
 
-BUS, PATH = 'dev.box.Search', '/dev/box/Search'
+BUS, TASKS, FIND = 'dev.box.Search', '/dev/box/Search/Tasks', '/dev/box/Search/Find'
 IFACE = '''<node><interface name="org.gnome.Shell.SearchProvider2">
   <method name="GetInitialResultSet"><arg type="as" name="terms" direction="in"/><arg type="as" direction="out"/></method>
   <method name="GetSubsearchResultSet"><arg type="as" name="previous" direction="in"/><arg type="as" name="terms" direction="in"/><arg type="as" direction="out"/></method>
@@ -25,41 +25,51 @@ STATE_WORDS = {'queued': 'Queued', 'running': 'Running', 'waiting': 'Needs your 
 metas = {}  # result id -> (name, description, icon)
 
 
-def search(terms):
-    """Tasks whose title has every term, then /find's results. Ids are task:<id> or file:<workspace>/<path>."""
-    words = [t.lower() for t in terms if t.strip()]
-    if not words or sum(len(w) for w in words) < 2:
+def words(terms):
+    w = [t.lower() for t in terms if t.strip()]
+    return w if w and sum(len(x) for x in w) >= 2 else []
+
+
+def search_tasks(terms):
+    """Tasks whose title has every term, newest first. Ids are task:<id>."""
+    ws = words(terms)
+    if not ws:
         return []
     ids = []
     try:
         for t in sorted(api('GET', '/api/tasks'), key=lambda t: t.get('updatedAt', ''), reverse=True):
-            if all(w in t['title'].lower() for w in words):
+            if all(w in t['title'].lower() for w in ws):
                 key = f"task:{t['id']}"
                 metas[key] = (t['title'], f"Agent task · {STATE_WORDS.get(t['state'], t['state'])}", 'dev.box.Box')
                 ids.append(key)
     except Exception:  # noqa: BLE001 (the box is down: search shows nothing from GurtOS)
         return []
+    return ids[:5]
+
+
+def search_find(terms):
+    """What /find knows about files and photos. Ids are file:<workspace>/<path>."""
+    if not words(terms):
+        return []
     try:
-        found = api('GET', '/t/find/search?' + urllib.parse.urlencode({'q': ' '.join(terms), 'k': 6}), timeout=3).get('results', [])
+        found = api('GET', '/t/find/search?' + urllib.parse.urlencode({'q': ' '.join(terms), 'k': 12}), timeout=3).get('results', [])
     except Exception:  # noqa: BLE001 (/find is off or has no index yet)
-        found = []
+        return []
+    ids = []
     for r in found:
-        if r.get('kind') == 'task':
-            key = f"task:{r['task']}"
-            if key in metas:
-                continue
-            metas[key] = (r.get('text', '').split('"')[1] if '"' in r.get('text', '') else r['task'], 'Agent task', 'dev.box.Box')
-        else:
-            key = f"file:{r.get('workspace', '')}/{r.get('path', '')}"
-            snippet = r.get('text', '').split(': ', 1)[-1].strip().replace('\n', ' ')
-            metas[key] = (os.path.basename(r.get('path', '')) or key, snippet[:90] or r.get('path', ''), 'image-x-generic' if r.get('kind') == 'photo' else 'text-x-generic')
+        if r.get('kind') == 'task':  # tasks show under GurtOS already
+            continue
+        key = f"file:{r.get('workspace', '')}/{r.get('path', '')}"
+        snippet = r.get('text', '').split(': ', 1)[-1].strip().replace('\n', ' ')
+        metas[key] = (os.path.basename(r.get('path', '')) or key, snippet[:90] or r.get('path', ''), 'image-x-generic' if r.get('kind') == 'photo' else 'text-x-generic')
         ids.append(key)
-    return ids[:10]
+    return ids
 
 
-def handle(_conn, _sender, _path, _iface, method, params, invocation):
+def handle(_conn, _sender, path, _iface, method, params, invocation):
     reset_idle()
     args = params.unpack()
+    search = search_tasks if path == TASKS else search_find
     if method == 'GetInitialResultSet':
         invocation.return_value(GLib.Variant('(as)', (search(args[0]),)))
     elif method == 'GetSubsearchResultSet':
@@ -79,7 +89,7 @@ def handle(_conn, _sender, _path, _iface, method, params, invocation):
             ui('app', '/t/find/?' + urllib.parse.urlencode({'q': ' '.join(terms)}))
         invocation.return_value(None)
     elif method == 'LaunchSearch':
-        ui('app', '/t/find/?' + urllib.parse.urlencode({'q': ' '.join(args[0])}))
+        ui('app', 'tasks' if path == TASKS else '/t/find/?' + urllib.parse.urlencode({'q': ' '.join(args[0])}))
         invocation.return_value(None)
 
 
@@ -94,7 +104,8 @@ def reset_idle():
 
 
 def on_bus(conn, _name):
-    conn.register_object(PATH, Gio.DBusNodeInfo.new_for_xml(IFACE).interfaces[0], handle, None, None)
+    for path in (TASKS, FIND):
+        conn.register_object(path, Gio.DBusNodeInfo.new_for_xml(IFACE).interfaces[0], handle, None, None)
 
 
 Gio.bus_own_name(Gio.BusType.SESSION, BUS, Gio.BusNameOwnerFlags.NONE, on_bus, None, lambda *_: loop.quit())

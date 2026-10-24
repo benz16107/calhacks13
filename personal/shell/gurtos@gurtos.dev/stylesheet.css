@@ -1,13 +1,54 @@
-/* GurtOS in GNOME Shell. These classes are the hook for the GurtOS Shell theme from Figma; the gurtos-theme
-   package can restyle any Shell element here or through the GurtOS session's own Shell theme. */
-.gurtos-panel { spacing: 6px; }
-/* The amber count: one meaning only, something waits for your OK. */
-.gurtos-badge { background-color: #F2B544; color: #1A1206; border-radius: 999px; padding: 0 7px; font-weight: bold; font-size: 0.85em; min-width: 10px; text-align: center; }
+/* GurtOS in GNOME Shell, in the Dark mode of the GurtOS tokens (docs/figma/personal-os/assets/colors/gurtos-tokens.css).
+   GNOME 46's shell is always dark. The extension's stylesheet loads over the session's Shell theme, so the few
+   global rules here (font, popover radius, colours) restyle the whole Shell without a gresource. */
+
+/* The whole Shell: Atkinson Hyperlegible, and popovers at radius 20, Quick Settings at 24. */
+stage { font-family: "Atkinson Hyperlegible", "Ubuntu", sans-serif; }
+.popup-menu-content { background-color: #30363F; color: #EEECE7; border-radius: 20px; border: 1px solid #3B414B; }
+.popup-menu-item { border-radius: 12px; }
+.quick-settings { background-color: #30363F; border-radius: 24px; }
+.quick-toggle { border-radius: 999px; }
+.quick-toggle:checked { background-color: #78A9E6; color: #0F1B2A; }
+.message { background-color: #2C3139; border-radius: 16px; }
+.panel-button { border-radius: 999px; }
+
+/* The top bar: an amber "N needs you" pill, then "▶ N running". Amber has one meaning: something waits for your OK. */
+.gurtos-panel { spacing: 8px; }
+.gurtos-needs { spacing: 6px; color: #F2C063; font-weight: bold; }
+.gurtos-badge { background-color: #F2C063; color: #1A1206; border-radius: 999px; padding: 0 7px; font-weight: bold; font-size: 0.85em; min-width: 10px; text-align: center; }
+.gurtos-runs { spacing: 2px; }
+.gurtos-run-icon { icon-size: 12px; }
 .gurtos-running { font-feature-settings: "tnum"; }
-.gurtos-heading { font-weight: bold; font-size: 0.9em; }
-.gurtos-approval { padding: 8px 12px; }
-.gurtos-approval-title { font-weight: bold; }
-.gurtos-approval-question { opacity: 0.75; padding: 2px 0 8px; max-width: 360px; }
+
+/* The popover */
+.gurtos-menu { min-width: 380px; }
+.gurtos-head { spacing: 12px; padding: 8px 12px 10px; }
+.gurtos-head-icon { icon-size: 22px; color: #8DB8EE; }
+.gurtos-head-title { font-weight: bold; font-size: 1.15em; }
+.gurtos-subtitle { color: #AEB4BC; font-size: 0.9em; }
+.gurtos-heading { font-weight: bold; font-size: 0.78em; color: #AEB4BC; letter-spacing: 1px; padding-top: 8px; }
+.gurtos-task { spacing: 12px; }
+.gurtos-task-icon { icon-size: 16px; color: #AEB4BC; }
+.gurtos-task-title { font-weight: bold; }
+.gurtos-working { height: 4px; margin-top: 6px; border-radius: 2px; background-color: #2C4361; background-gradient-direction: horizontal; background-gradient-start: #78A9E6; background-gradient-end: #2C4361; }
+
+/* An approval: the amber-bordered card with Deny and Approve, in the popover and on the lock screen. */
+.gurtos-approval { padding: 4px 8px; }
+.gurtos-approval-card, .gurtos-lock-card { background-color: #2C3139; border: 1px solid #F2C063; border-radius: 16px; padding: 12px 14px; spacing: 6px; }
+.gurtos-approval-top { spacing: 10px; }
+.gurtos-approval-icon { icon-size: 18px; color: #F2C063; }
+.gurtos-approval-title { font-weight: bold; color: #EEECE7; }
+.gurtos-approval-question { color: #AEB4BC; padding: 2px 0 6px; max-width: 340px; }
 .gurtos-approval-buttons { spacing: 8px; }
-.gurtos-approval-buttons .button { padding: 4px 14px; border-radius: 999px; }
-.gurtos-approval-buttons .button.default { background-color: #2F64A6; color: #FFFFFF; }
+.gurtos-approval-buttons .button { padding: 6px 14px; border-radius: 999px; font-weight: bold; }
+.gurtos-deny { background-color: #3A404A; color: #EEECE7; }
+.gurtos-deny:hover { background-color: #444B56; }
+.gurtos-approve { background-color: #78A9E6; color: #0F1B2A; }
+.gurtos-approve:hover { background-color: #8DB8EE; }
+.gurtos-unlock { spacing: 6px; }
+
+/* The lock screen */
+.gurtos-lock { spacing: 10px; width: 380px; padding-bottom: 12px; }
+.gurtos-lock-card { background-color: rgba(44, 49, 57, 0.92); }
+.gurtos-lock-source { spacing: 6px; }
+.gurtos-lock-hint { color: #AEB4BC; font-size: 0.85em; text-align: center; }

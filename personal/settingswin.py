@@ -1,74 +1,97 @@
-# GurtOS Settings: a native libadwaita app (dev.box.Settings) on the box's settings APIs, in the layout of
-# docs/figma/os-v2/settings/: a sidebar of pages, boxed lists, one control per row. It reuses GurtOS Setup's page
-# builders (models, folders, permissions, apps, phone) so the two never disagree; a change here applies at once.
+# GurtOS Settings: a native libadwaita app (dev.box.Settings) on the box's settings APIs, in the layout of Figma's
+# "GurtOS Personal OS" screen 9: a view switcher in the header bar (Agents, Permissions, Apps, Keys, Phone), boxed
+# lists, one control per row, About in the window menu. It reuses GurtOS Setup's page builders (models, folders,
+# permissions, apps, phone) so the two never disagree; a change here applies at once.
 import subprocess
 
 import setupwin
-from gi.repository import Adw, GLib, Gtk
+from gi.repository import Adw, Gio, GLib, Gtk
 
 from boxapi import api, background
 from setupwin import SetupWindow, boxed, page, row
 
-PAGES = [  # (id, title, icon, group break before it)
-    ('general', 'General', 'computer-symbolic', False),
-    ('models', 'Agents & Models', 'applications-science-symbolic', False),
-    ('safety', 'Permissions', 'security-medium-symbolic', True),
-    ('folders', 'Folders', 'folder-symbolic', False),
-    ('keys', 'Accounts & Keys', 'dialog-password-symbolic', False),
-    ('apps', 'Apps', 'view-app-grid-symbolic', False),
-    ('devices', 'Devices', 'phone-symbolic', False),
-    ('updates', 'Updates', 'software-update-available-symbolic', True),
-    ('privacy', 'Privacy & Logs', 'preferences-system-privacy-symbolic', False),
-    ('about', 'About', 'help-about-symbolic', True),
+PAGES = [  # (id, title, icon)
+    ('agents', 'Agents', 'applications-science-symbolic'),
+    ('permissions', 'Permissions', 'security-medium-symbolic'),
+    ('apps', 'Apps', 'view-app-grid-symbolic'),
+    ('keys', 'Keys', 'dialog-password-symbolic'),
+    ('phone', 'Phone', 'phone-symbolic'),
 ]
+OLD = {'general': 'agents', 'models': 'agents', 'updates': 'agents', 'privacy': 'agents', 'about': 'agents',
+       'safety': 'permissions', 'folders': 'permissions', 'devices': 'phone'}  # the earlier sidebar's page names
 RETENTION = [30, 90, 365, 3650]
+HOURS = [('22:00', '07:00'), ('23:00', '07:00'), ('21:00', '06:00'), ('00:00', '08:00'), ('20:00', '08:00')]
+
+
+def take(scroller, into):
+    """Move a Setup page's content (under its title) into another page's box."""
+    inner = scroller.get_child().get_child().get_child()
+    while (child := inner.get_first_child()) is not None:
+        inner.remove(child)
+        into.append(child)
+
+
+def section(box, title, intro=None):
+    """A heading, an optional line under it, and a boxed list for the section's rows."""
+    head = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2, margin_top=6)
+    head.append(Gtk.Label(label=title, xalign=0, css_classes=['heading']))
+    if intro:
+        head.append(Gtk.Label(label=intro, xalign=0, wrap=True, css_classes=['gurt-caption', 'gurt-secondary']))
+    box.append(head)
+    lst = boxed()
+    box.append(lst)
+    return lst
 
 
 class SettingsWindow(SetupWindow):
-    """Reuses SetupWindow's step builders; its own window, sidebar and pages."""
+    """Reuses SetupWindow's step builders; its own window, view switcher and pages."""
 
-    def __init__(self, app, start='general'):
-        Adw.ApplicationWindow.__init__(self, application=app, title='GurtOS Settings', default_width=1000, default_height=700)
-        setupwin.SHOW_TITLES = False  # the header bar names the page; Setup's big titles are for setup
+    def __init__(self, app, start='agents'):
+        Adw.ApplicationWindow.__init__(self, application=app, title='GurtOS Settings', default_width=860, default_height=760)
+        setupwin.SHOW_TITLES = False  # the view switcher names the page; Setup's big titles are for setup
         self.settings, self.vault, self.apps, self.boxes, self.taken, self.model = {}, [], [], [], {'folders': True}, None
         self.system, self.devices = {}, []
         self.folder_draft = None
         self.summary = Gtk.Label(visible=False)  # Setup's footer line; Settings speaks through toasts instead
-        self.at = start
+        self.at = OLD.get(start, start)
 
-        self.sidebar = Gtk.ListBox(css_classes=['navigation-sidebar'])
-        for pid, title, icon, gap in PAGES:
-            line = Gtk.Box(spacing=12, margin_top=8, margin_bottom=8, margin_start=6)
-            line.append(Gtk.Image(icon_name=icon))
-            line.append(Gtk.Label(label=title, xalign=0))
-            r = Gtk.ListBoxRow(child=line)
-            r.pid, r.gap = pid, gap
-            self.sidebar.append(r)
-        self.sidebar.set_header_func(lambda r, _before: r.set_header(Gtk.Separator(margin_top=6, margin_bottom=6, margin_start=12, margin_end=12) if r.gap else None))
-        self.ready = False  # the sidebar selects its first row on show; ignore that until the box's data is in
-        self.sidebar.connect('row-selected', lambda _l, r: self.ready and r and self.go(r.pid))
-        side = Adw.ToolbarView(content=Gtk.ScrolledWindow(child=self.sidebar, hscrollbar_policy=Gtk.PolicyType.NEVER))
-        side.add_top_bar(Adw.HeaderBar(title_widget=Adw.WindowTitle(title='Settings'), show_end_title_buttons=False))
-
-        self.title = Adw.WindowTitle()
-        header = Adw.HeaderBar(title_widget=self.title)
-        self.stack = Gtk.Stack(transition_type=Gtk.StackTransitionType.CROSSFADE, vexpand=True)
+        self.stack = Adw.ViewStack(vexpand=True)
+        self.holders = {}
+        for pid, title, icon in PAGES:  # each page keeps its place in the switcher; its content is rebuilt inside
+            self.holders[pid] = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+            self.stack.add_titled_with_icon(self.holders[pid], pid, title, icon)
+        self.ready = False  # the stack shows its first page on start; ignore that until the box's data is in
+        self.stack.connect('notify::visible-child-name', lambda st, _p: self.ready and self.go(st.get_visible_child_name()))
+        header = Adw.HeaderBar(title_widget=Adw.ViewSwitcher(stack=self.stack, policy=Adw.ViewSwitcherPolicy.WIDE))
+        menu = Gio.Menu()
+        menu.append('Run GurtOS Setup again', 'win.setup')
+        menu.append('About GurtOS', 'win.about')
+        header.pack_end(Gtk.MenuButton(icon_name='open-menu-symbolic', menu_model=menu, tooltip_text='Main menu'))
+        for name, fn in (('setup', lambda *_: subprocess.Popen(['/opt/box/personal/box-ui.py', 'setup'], start_new_session=True)),
+                         ('about', lambda *_: self.about())):
+            act = Gio.SimpleAction.new(name, None)
+            act.connect('activate', fn)
+            self.add_action(act)
         view = Adw.ToolbarView(content=self.stack)
         view.add_top_bar(header)
+        bottom = Adw.ViewSwitcherBar(stack=self.stack)  # the switcher moves to the bottom when the window is narrow
+        view.add_bottom_bar(bottom)
         self.toasts = Adw.ToastOverlay(child=view)
-        self.set_content(Adw.NavigationSplitView(sidebar=Adw.NavigationPage(title='Settings', child=side),
-                                                 content=Adw.NavigationPage(title='GurtOS Settings', child=self.toasts),
-                                                 min_sidebar_width=240, max_sidebar_width=280))
-        self.builders = {'general': self.general, 'models': self.models, 'safety': self.safety, 'folders': self.folders,
-                         'keys': self.keys, 'apps': self.app_list, 'devices': self.devices_page, 'updates': self.updates,
-                         'privacy': self.privacy, 'about': self.about}
+        self.set_content(self.toasts)
+        self.builders = {'agents': self.agents_page, 'permissions': self.permissions, 'apps': self.app_list,
+                         'keys': self.keys, 'phone': self.devices_page}
         self.present()
         self.reload()
+        if start == 'about':
+            GLib.idle_add(self.about)
 
     def reload(self, then=None):
         def done(state, err):
             if err:
-                return self.stack.add_named(Adw.StatusPage(icon_name='dialog-error-symbolic', title="GurtOS isn't answering", description=str(err)), 'error')
+                holder = self.holders[self.at]
+                while (c := holder.get_first_child()) is not None:
+                    holder.remove(c)
+                return holder.append(Adw.StatusPage(icon_name='dialog-error-symbolic', title="GurtOS isn't answering", description=str(err), vexpand=True))
             setup, self.settings, self.vault, self.apps, self.boxes, self.system, self.devices = state
             self.model = setup.get('model') or ({'ready': setup['modelKey']} if 'modelKey' in setup else None)
             self.ready = True
@@ -79,61 +102,93 @@ class SettingsWindow(SetupWindow):
     def go(self, pid):
         if isinstance(pid, int):  # Setup's builders call go(self.at) to show a change
             pid = self.at
+        pid = OLD.get(pid, pid)
+        if pid not in self.builders:
+            pid = 'agents'
         self.at = pid
-        old = self.stack.get_child_by_name(pid)
-        if old:
-            self.stack.remove(old)
-        self.stack.add_named(self.builders[pid](), pid)
-        self.stack.set_visible_child_name(pid)
-        self.title.set_title(next(t for p, t, _i, _g in PAGES if p == pid))
-        for r in self._rows():
-            if getattr(r, 'pid', None) == pid and self.sidebar.get_selected_row() is not r:
-                self.sidebar.select_row(r)
-
-    def _rows(self):
-        r = self.sidebar.get_first_child()
-        while r:
-            yield r
-            r = r.get_next_sibling()
+        holder = self.holders[pid]
+        while (c := holder.get_first_child()) is not None:
+            holder.remove(c)
+        holder.append(self.builders[pid]())
+        if self.stack.get_visible_child_name() != pid:
+            self.stack.set_visible_child_name(pid)
 
     def folder_summary(self):  # a folder change in Settings applies at once (Setup saves it on Next)
         if self.folder_draft is not None and self.chosen_folders() != list(self.settings.get('agentFolders') or []):
             self.patch({'agentFolders': self.chosen_folders()})
             self.toast('Folders saved.')
 
-    # ---------- pages Setup does not have ----------
+    # ---------- the pages ----------
 
-    def general(self):
-        scroller, box = page('General', '')
-        s = self.system
-        lst = boxed()
-        for title, value, icon in (('Name', s.get('boxName') or s.get('hostname', ''), 'computer-symbolic'),
-                                   ('Edition', s.get('editionName', 'GurtOS Personal'), None),
-                                   ('Time zone', s.get('timezone', ''), 'preferences-system-time-symbolic')):
-            r = row(title, None, icon)
-            r.add_suffix(Gtk.Label(label=value, css_classes=['gurt-secondary']))
-            lst.append(r)
-        box.append(Gtk.Label(label='This computer', xalign=0, css_classes=['heading']))
-        box.append(lst)
-        net = boxed()
-        for i in (s.get('network') or {}).get('interfaces', []):
-            r = row(i.get('name', ''), i.get('address', ''), 'network-wired-symbolic')
-            r.add_suffix(Gtk.Label(label='Connected', css_classes=['success']))
-            net.append(r)
-        box.append(Gtk.Label(label='Network', xalign=0, css_classes=['heading'], margin_top=12))
-        box.append(net)
-        again = row('Run setup again', 'Opens GurtOS Setup', 'emblem-system-symbolic')
-        b = Gtk.Button(label='Run setup', valign=Gtk.Align.CENTER)
-        b.connect('clicked', lambda _b: subprocess.Popen(['/opt/box/personal/box-ui.py', 'setup'], start_new_session=True))
-        again.add_suffix(b)
-        sl = boxed()
-        sl.append(again)
-        box.append(Gtk.Label(label='Setup', xalign=0, css_classes=['heading'], margin_top=12))
-        box.append(sl)
+    def agents_page(self):
+        """The model key, then updates and the action log."""
+        scroller, box = page('Agents', '')
+        take(self.models(), box)
+        st = self.settings
+        lst = section(box, 'Updates', 'GurtOS updates as a whole system and rolls itself back if a new version is not healthy.')
+        auto = Adw.SwitchRow(title='Update automatically', subtitle='Installs at night; running tasks resume after the restart', active=bool(st.get('autoUpdate', True)))
+        auto.connect('notify::active', lambda r, _p: self.patch({'autoUpdate': r.get_active()}))
+        channel = Adw.ComboRow(title='Channel', model=Gtk.StringList.new(['Stable', 'Beta']), selected=1 if st.get('updateChannel') == 'beta' else 0)
+        channel.connect('notify::selected', lambda r, _p: self.patch({'updateChannel': 'beta' if r.get_selected() else 'stable'}))
+        lst.append(auto)
+        lst.append(channel)
+        lst = section(box, 'Action log', 'It records everything every agent did. It never holds a key.')
+        days = st.get('logRetentionDays', 365)
+        keep = Adw.ComboRow(title='Keep the action log for', model=Gtk.StringList.new(['30 days', '90 days', '1 year', '10 years']),
+                            selected=min(range(len(RETENTION)), key=lambda i: abs(RETENTION[i] - days)))
+        keep.connect('notify::selected', lambda r, _p: self.patch({'logRetentionDays': RETENTION[r.get_selected()]}))
+        lst.append(keep)
         return scroller
 
+    def permissions(self):
+        """Folders, internet, spending and quiet hours, from Setup's folder and safety steps."""
+        scroller, box = page('Permissions', '')
+        folders = section(box, 'Folders agents may use', 'Agents work on a copy. Nothing reaches your folder until you keep it.')
+        self.move_rows(self.first_list(self.folders()), folders)
+        rows = self.first_list(self.safety())
+        internet, hosts, threshold, budget, quiet = list(self.listed(rows))
+        for r in (internet, hosts, threshold, budget, quiet):
+            rows.remove(r)
+        for title, group in (('Internet', (internet, hosts)), ('Spending', (threshold, budget))):
+            lst = section(box, title)
+            for r in group:
+                lst.append(r)
+        lst = section(box, 'Quiet hours')
+        q = self.settings.get('quietHours') or {}
+        quiet.set_title('Quiet hours')
+        quiet.set_subtitle('Requests wait without a sound. Nothing over the limit is spent.')
+        hours = Adw.ComboRow(title='Hours', model=Gtk.StringList.new([f'{f} to {t}' for f, t in HOURS]))
+        now = (q.get('from', '22:00'), q.get('to', '07:00'))
+        if now not in HOURS:
+            HOURS.insert(0, now)
+            hours.set_model(Gtk.StringList.new([f'{f} to {t}' for f, t in HOURS]))
+        hours.set_selected(HOURS.index(now))
+        hours.connect('notify::selected', lambda r, _p: self.patch({'quietHours': {**(self.settings.get('quietHours') or {}),
+                                                                                   'from': HOURS[r.get_selected()][0], 'to': HOURS[r.get_selected()][1]}},
+                                                                   'Quiet hours saved.'))
+        lst.append(quiet)
+        lst.append(hours)
+        return scroller
+
+    def first_list(self, scroller):
+        """The boxed list in a Setup page."""
+        return next(c for c in self.listed(scroller.get_child().get_child().get_child()) if isinstance(c, Gtk.ListBox))
+
+    @staticmethod
+    def listed(lst):
+        r = lst.get_first_child()
+        while r:
+            nxt = r.get_next_sibling()
+            yield r
+            r = nxt
+
+    def move_rows(self, src, dst):
+        for r in list(self.listed(src)):
+            src.remove(r)
+            dst.append(r)
+
     def keys(self):
-        scroller, box = page('Accounts & Keys', 'Keys are write-only. You can set or replace a key. No screen, phone or log ever shows one, '
+        scroller, box = page('Keys', 'Keys are write-only. You can set or replace a key. No screen, phone or log ever shows one, '
                                                 'and agents never see them.')
         needed = {}
         for a in self.apps:
@@ -180,12 +235,12 @@ class SettingsWindow(SetupWindow):
         d.present()
 
     def devices_page(self):
-        scroller, box = page('Devices', 'Phones you paired can answer approvals and follow tasks.')
+        scroller, box = page('Phone', 'Phones you paired can answer approvals and follow tasks.')
         lst = boxed()
         for dev in self.devices:
             r = row(dev.get('name', 'Phone'), 'Owner' if dev.get('owner') else 'Can approve and undo', 'phone-symbolic')
             b = Gtk.Button(label='Remove', valign=Gtk.Align.CENTER, css_classes=['destructive-action'])
-            b.connect('clicked', lambda _b, dev=dev: background(lambda: api('DELETE', f"/api/devices/{dev['id']}"), lambda _o, e: self.reload('devices')))
+            b.connect('clicked', lambda _b, dev=dev: background(lambda: api('DELETE', f"/api/devices/{dev['id']}"), lambda _o, e: self.reload('phone')))
             r.add_suffix(b)
             lst.append(r)
         if not self.devices:
@@ -198,46 +253,15 @@ class SettingsWindow(SetupWindow):
             box.append(child)
         return scroller
 
-    def updates(self):
-        scroller, box = page('Updates', 'GurtOS updates as a whole system and rolls itself back if a new version is not healthy.')
-        s = self.settings
-        lst = boxed()
-        auto = Adw.SwitchRow(title='Update automatically', subtitle='Installs at night; running tasks resume after the restart', active=bool(s.get('autoUpdate', True)))
-        auto.connect('notify::active', lambda r, _p: self.patch({'autoUpdate': r.get_active()}))
-        channel = Adw.ComboRow(title='Channel', model=Gtk.StringList.new(['Stable', 'Beta']), selected=1 if s.get('updateChannel') == 'beta' else 0)
-        channel.connect('notify::selected', lambda r, _p: self.patch({'updateChannel': 'beta' if r.get_selected() else 'stable'}))
-        lst.append(auto)
-        lst.append(channel)
-        box.append(lst)
-        return scroller
-
-    def privacy(self):
-        scroller, box = page('Privacy & Logs', 'The action log records everything every agent did. It never holds a key.')
-        days = self.settings.get('logRetentionDays', 365)
-        keep = Adw.ComboRow(title='Keep the action log for', model=Gtk.StringList.new(['30 days', '90 days', '1 year', '10 years']),
-                            selected=min(range(len(RETENTION)), key=lambda i: abs(RETENTION[i] - days)))
-        keep.connect('notify::selected', lambda r, _p: self.patch({'logRetentionDays': RETENTION[r.get_selected()]}))
-        lst = boxed()
-        lst.append(keep)
-        box.append(lst)
-        return scroller
-
     def about(self):
-        scroller, box = page('About', '')
         s = self.system
-        lst = boxed()
-        for title, value in (('GurtOS', f"{s.get('editionName', 'GurtOS Personal')} {s.get('version', '')}".strip()),
-                             ('Build', s.get('build', '')), ('Based on', 'Ubuntu 24.04 LTS'), ('Owner', (s.get('owner') or ''))):
-            r = row(title)
-            r.add_suffix(Gtk.Label(label=value, selectable=True, css_classes=['gurt-secondary']))
-            lst.append(r)
-        box.append(lst)
-        credits = boxed()
-        for title, sub in (('Ubuntu', 'The base system, by Canonical and the Ubuntu community'),
-                           ('GNOME', 'The desktop, apps and symbolic icons, by the GNOME Project'),
-                           ('Atkinson Hyperlegible Next and Mono', 'Typeface by the Braille Institute, SIL Open Font License')):
-            credits.append(row(title, sub))
-        box.append(Gtk.Label(label='Credits', xalign=0, css_classes=['heading'], margin_top=12))
-        box.append(credits)
-        box.append(Gtk.Label(label='GurtOS is open source under the Apache License 2.0.', xalign=0, wrap=True, css_classes=['gurt-caption', 'gurt-secondary']))
-        return scroller
+        w = Adw.AboutWindow(transient_for=self, application_name='GurtOS', application_icon='dev.box.Box',
+                            version=f"{s.get('editionName', 'GurtOS Personal')} {s.get('version', '')}".strip(),
+                            license_type=Gtk.License.APACHE_2_0,
+                            comments='Based on Ubuntu 24.04 LTS.' + (f" Build {s['build']}." if s.get('build') else ''))
+        w.add_credit_section('Built on', ['Ubuntu, by Canonical and the Ubuntu community', 'GNOME, by the GNOME Project'])
+        w.add_legal_section('Papirus icon theme', 'By the Papirus Development Team. GurtOS recolours its folders.', Gtk.License.GPL_3_0, None)
+        w.add_legal_section('Bibata cursor', 'By Abdulkaiz Khatri.', Gtk.License.GPL_3_0, None)
+        w.add_legal_section('Atkinson Hyperlegible Next and Mono', 'By the Braille Institute.', Gtk.License.CUSTOM, 'SIL Open Font License 1.1')
+        w.present()
+        return False

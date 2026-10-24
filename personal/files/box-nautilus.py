@@ -1,9 +1,12 @@
 # GurtOS in Files (Nautilus 46, nautilus-python):
 #  - "Ask an Agent…" on folders: GurtOS's dialog with the folders you right-clicked (up to 10, all in one task), or the
 #    folder you are in when you right-click its background.
-#  - The "changed by an agent" emblem on a folder an agent worked on: its changes wait for your review, or you kept them.
-#  - On such a folder: Keep agent changes, Undo agent changes… (the review window asks first), and Put files back….
+#  - Before Keep, nothing in the folder is marked: the changes live in the task's copy until you keep them.
+#  - On a folder with changes waiting: Keep agent changes, and Undo agent changes… (the review window asks first).
+#  - After Keep, the "changed by an agent" emblem on each file an agent added or changed, and Put files back… on the
+#    folder and on those files (Figma "GurtOS Personal OS", screens 8a and 8b).
 import json
+import os
 import subprocess
 import time
 import urllib.parse
@@ -15,6 +18,7 @@ UI = '/opt/box/personal/box-ui.py'
 BOX = 'http://127.0.0.1:7700'
 EMBLEM = 'emblem-gurtos-agent'
 _cache = [0.0, []]  # (fetched at, tasks): Files asks per folder, so the task list is read at most every 3 seconds
+_changed = {}  # kept task id -> the real paths it added or changed (a kept task's diff does not change)
 
 
 def ui(*args):
@@ -30,6 +34,38 @@ def tasks():
             _cache[1] = []
         _cache[0] = time.monotonic()
     return _cache[1]
+
+
+def get(path):
+    with urllib.request.urlopen(BOX + path, timeout=2) as r:
+        return json.loads(r.read())
+
+
+def changed_paths(task):
+    """The real files a kept task added or modified, from its diff."""
+    if task['id'] not in _changed:
+        try:
+            d = get(f"/api/tasks/{urllib.parse.quote(task['id'], safe='')}/diff")
+        except Exception:  # noqa: BLE001 (try again on the next look)
+            return set()
+        roots, folder = d.get('roots'), task.get('folder')
+        out = set()
+        for c in d.get('changes', []):
+            if c.get('change') == 'deleted':
+                continue
+            if roots:  # several folders: each path starts with its folder's label
+                label, _, rest = c['path'].partition('/')
+                if label in roots:
+                    out.add(os.path.join(roots[label], rest))
+            elif folder:
+                out.add(os.path.join(folder, c['path']))
+        _changed[task['id']] = out
+    return _changed[task['id']]
+
+
+def kept_by(path):
+    """The kept task that changed this file, if any."""
+    return next((t for t in tasks() if t.get('review') == 'kept' and path in changed_paths(t)), None)
 
 
 def agent_tasks(path):
@@ -53,11 +89,18 @@ def keep(task, file):
 
 class GurtOSFiles(GObject.GObject, Nautilus.MenuProvider, Nautilus.InfoProvider):
     def update_file_info(self, file):
-        if file.is_directory() and file.get_uri_scheme() == 'file' and agent_tasks(file.get_location().get_path()):
+        if file.get_uri_scheme() == 'file' and kept_by(file.get_location().get_path()):
             file.add_emblem(EMBLEM)
         return Nautilus.OperationResult.COMPLETE
 
     def get_file_items(self, files):
+        if len(files) == 1 and not files[0].is_directory() and files[0].get_uri_scheme() == 'file':
+            t = kept_by(files[0].get_location().get_path())
+            if not t:
+                return []
+            back = Nautilus.MenuItem(name='Box::PutBackFile', label='Put Files Back…', tip=f"Undo what \"{t['title']}\" changed")
+            back.connect('activate', lambda _i: ui('review', t['id']))
+            return [back]
         paths = [f.get_location().get_path() for f in files if f.is_directory() and f.get_uri_scheme() == 'file']
         if not paths or len(paths) != len(files) or len(paths) > 10:  # folders only; the box takes up to 10 in one task
             return []

@@ -17,7 +17,7 @@ import * as MessageTray from 'resource:///org/gnome/shell/ui/messageTray.js';
 import * as Util from 'resource:///org/gnome/shell/misc/util.js';
 import {QuickMenuToggle, SystemIndicator} from 'resource:///org/gnome/shell/ui/quickSettings.js';
 
-import {counts, dollars, headerCaps, isRunning, needsReview, noModelKey, plan, quietAt} from './logic.js';
+import {counts, dollars, isRunning, needsReview, noModelKey, plan, quietAt} from './logic.js';
 
 Gio._promisify(Soup.Session.prototype, 'send_and_read_async');
 Gio._promisify(Soup.Session.prototype, 'send_async');
@@ -82,19 +82,50 @@ class Box {
     }
 }
 
-// ---------- the top-bar item ----------
+// ---------- the top-bar item (Figma "GurtOS Personal OS", screen 2) ----------
+
+const ago = iso => {
+    try {
+        return GLib.DateTime.new_from_iso8601(iso, null).to_local().format('%H:%M');
+    } catch (e) {
+        return '';
+    }
+};
+
+/** A labelled switch with a subtitle, for the popover and the Agents menu. */
+function switchRow(title, subtitle, on, onToggle) {
+    const item = new PopupMenu.PopupSwitchMenuItem(title, on);
+    if (subtitle) {
+        const col = new St.BoxLayout({vertical: true, x_expand: true, y_align: Clutter.ActorAlign.CENTER});
+        item.label.get_parent().remove_child(item.label);
+        col.add_child(item.label);
+        const sub = new St.Label({text: subtitle, style_class: 'gurtos-subtitle'});
+        sub.clutter_text.set({line_wrap: true, ellipsize: 0});
+        col.add_child(sub);
+        item.insert_child_at_index(col, 0);
+    }
+    item.connect('toggled', (_i, v) => onToggle(v));
+    return item;
+}
 
 const Indicator = GObject.registerClass(
 class Indicator extends PanelMenu.Button {
     _init(ext) {
         super._init(0.5, 'GurtOS');
         this.ext = ext;
+        this.menu.box.add_style_class_name('gurtos-menu');
         const box = new St.BoxLayout({style_class: 'panel-status-menu-box gurtos-panel'});
-        box.add_child(new St.Icon({gicon: ext.icon, style_class: 'system-status-icon'}));
-        this.needs = new St.Label({style_class: 'gurtos-badge', y_align: Clutter.ActorAlign.CENTER, visible: false});
-        this.runningLabel = new St.Label({style_class: 'gurtos-running', y_align: Clutter.ActorAlign.CENTER, visible: false});
-        box.add_child(this.needs);
-        box.add_child(this.runningLabel);
+        this.needsBox = new St.BoxLayout({style_class: 'gurtos-needs', visible: false});
+        this.needs = new St.Label({style_class: 'gurtos-badge', y_align: Clutter.ActorAlign.CENTER});
+        this.needsBox.add_child(this.needs);
+        this.needsBox.add_child(new St.Label({text: 'needs you', y_align: Clutter.ActorAlign.CENTER}));
+        this.runBox = new St.BoxLayout({style_class: 'gurtos-runs'});
+        this.runIcon = new St.Icon({icon_name: 'media-playback-start-symbolic', style_class: 'system-status-icon gurtos-run-icon'});
+        this.runningLabel = new St.Label({style_class: 'gurtos-running', y_align: Clutter.ActorAlign.CENTER});
+        this.runBox.add_child(this.runIcon);
+        this.runBox.add_child(this.runningLabel);
+        box.add_child(this.needsBox);
+        box.add_child(this.runBox);
         this.add_child(box);
         this.rebuild();
     }
@@ -103,105 +134,132 @@ class Indicator extends PanelMenu.Button {
         const {tasks, pending, online} = this.ext;
         const c = counts(tasks, pending);
         this.needs.text = String(c.needsYou);
-        this.needs.visible = c.needsYou > 0;
-        this.runningLabel.text = online === false ? 'offline' : `${c.running} running`;
-        this.runningLabel.visible = online === false || c.running > 0;
+        this.needsBox.visible = c.needsYou > 0;
+        this.runningLabel.text = online === false ? 'offline' : c.running ? `${c.running} running` : 'Agents';
+        this.runIcon.icon_name = online === false ? 'network-offline-symbolic' : c.running ? 'media-playback-start-symbolic' : 'applications-science-symbolic';
+        this.runBox.visible = !c.needsYou || c.running > 0 || online === false;
         this.rebuild(); // kept current, so the menu opens on what is true now
     }
 
     heading(text) {
-        const item = new PopupMenu.PopupMenuItem(text, {reactive: false, style_class: 'gurtos-heading'});
-        this.menu.addMenuItem(item);
+        this.menu.addMenuItem(new PopupMenu.PopupMenuItem(text.toUpperCase(), {reactive: false, style_class: 'gurtos-heading'}));
     }
 
     rebuild() {
         const {tasks, pending, online, settings} = this.ext;
         this.menu.removeAll();
-        const titles = Object.fromEntries(tasks.map(t => [t.id, t.title]));
-        if (online === false)
-            this.heading("GurtOS isn't answering. Retrying…");
+        const c = counts(tasks, pending);
+        const titles = Object.fromEntries(tasks.map(t => [t.id, t]));
+        // Header: Agents, and what needs you and what runs.
+        const head = new PopupMenu.PopupBaseMenuItem({activate: false, hover: false, can_focus: false, style_class: 'gurtos-head'});
+        head.add_child(new St.Icon({icon_name: 'applications-science-symbolic', style_class: 'gurtos-head-icon'}));
+        const hcol = new St.BoxLayout({vertical: true});
+        hcol.add_child(new St.Label({text: 'Agents', style_class: 'gurtos-head-title'}));
+        const parts = [c.needsYou ? `${c.needsYou} need${c.needsYou === 1 ? 's' : ''} your OK` : null, `${c.running} running`].filter(Boolean);
+        hcol.add_child(new St.Label({text: online === false ? "GurtOS isn't answering. Retrying…" : parts.join(' · '), style_class: 'gurtos-subtitle'}));
+        head.add_child(hcol);
+        this.menu.addMenuItem(head);
         if (pending.length) {
-            this.heading(`Needs your OK, ${pending.length}`);
+            this.heading('Needs your OK');
             for (const a of pending)
-                this.menu.addMenuItem(this.approvalRow(a, titles[a.task] ?? 'A task'));
-            this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
+                this.menu.addMenuItem(this.approvalCard(a, titles[a.task]));
         }
         const reviews = tasks.filter(needsReview);
         if (reviews.length) {
-            this.heading(`Ready to review, ${reviews.length}`);
+            this.heading('Ready to review');
             for (const t of reviews)
-                this.menu.addAction(`${t.title} · ${(t.folders ?? [t.folder]).filter(Boolean).map(f => GLib.path_get_basename(f)).join(', ')}`, () => ui('review', t.id));
-            this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
+                this.menu.addMenuItem(this.taskRow(t, (t.folders ?? [t.folder]).filter(Boolean).map(f => GLib.path_get_basename(f)).join(', '), () => ui('review', t.id)));
         }
         const running = tasks.filter(isRunning);
         if (running.length) {
-            this.heading(`Running, ${running.length}`);
+            this.heading('Running');
             for (const t of running)
-                this.menu.addAction(`${t.title} · ${t.step ?? t.state}`, () => ui('app', `task/${t.id}`));
-            this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
-        } else if (!pending.length && !reviews.length && online !== false) {
-            this.heading('No agents are working');
-            this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
+                this.menu.addMenuItem(this.taskRow(t, t.step ?? '', () => ui('app', `task/${t.id}`), true));
         }
-        if (settings && 'paused' in settings) { // the box's pause switch, once the core has one
-            const pause = new PopupMenu.PopupSwitchMenuItem('Pause all agents', !!settings.paused);
-            pause.connect('toggled', (_i, on) => this.ext.patch({paused: on}));
-            this.menu.addMenuItem(pause);
-        }
+        this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
+        if (settings && 'paused' in settings) // the box's pause switch, once the core has one
+            this.menu.addMenuItem(switchRow('Pause all agents', 'Running tasks stop where they are', !!settings.paused, v => this.ext.patch({paused: v})));
         this.menu.addAction('Ask an Agent…', () => ui('ask'));
         this.menu.addAction('Open GurtOS', () => ui('app'));
         this.menu.addAction('GurtOS Settings', () => ui('settings'));
     }
 
-    approvalRow(a, title) {
-        const item = new PopupMenu.PopupBaseMenuItem({activate: false, hover: false, can_focus: false, style_class: 'gurtos-approval'});
+    taskRow(t, detail, open, working = false) {
+        const item = new PopupMenu.PopupBaseMenuItem({style_class: 'gurtos-task'});
+        item.add_child(new St.Icon({icon_name: working ? 'view-list-bullet-symbolic' : 'folder-symbolic', style_class: 'gurtos-task-icon'}));
         const col = new St.BoxLayout({vertical: true, x_expand: true});
-        col.add_child(new St.Label({text: title, style_class: 'gurtos-approval-title'}));
+        const line = new St.BoxLayout();
+        line.add_child(new St.Label({text: t.title, style_class: 'gurtos-task-title', x_expand: true}));
+        const d = new St.Label({text: detail, style_class: 'gurtos-subtitle'});
+        d.clutter_text.ellipsize = 3;
+        line.add_child(d);
+        col.add_child(line);
+        if (working) // the box has no step count, so a working bar rather than a percentage
+            col.add_child(new St.Widget({style_class: 'gurtos-working'}));
+        item.add_child(col);
+        item.connect('activate', open);
+        return item;
+    }
+
+    approvalCard(a, task) {
+        const item = new PopupMenu.PopupBaseMenuItem({activate: false, hover: false, can_focus: false, style_class: 'gurtos-approval'});
+        const card = new St.BoxLayout({vertical: true, x_expand: true, style_class: 'gurtos-approval-card'});
+        const top = new St.BoxLayout({style_class: 'gurtos-approval-top'});
+        top.add_child(new St.Icon({icon_name: a.costCents ? 'wallet-symbolic' : 'dialog-question-symbolic', fallback_icon_name: 'dialog-question-symbolic', style_class: 'gurtos-approval-icon'}));
+        const tcol = new St.BoxLayout({vertical: true});
+        tcol.add_child(new St.Label({text: task?.title ?? 'A task', style_class: 'gurtos-approval-title'}));
+        tcol.add_child(new St.Label({text: [a.payee, task ? `asked ${ago(task.updatedAt)}` : null].filter(Boolean).join(' · '), style_class: 'gurtos-subtitle'}));
+        top.add_child(tcol);
+        card.add_child(top);
         const q = new St.Label({text: a.question, style_class: 'gurtos-approval-question'});
-        q.clutter_text.line_wrap = true;
-        col.add_child(q);
-        const buttons = new St.BoxLayout({style_class: 'gurtos-approval-buttons', x_align: Clutter.ActorAlign.END});
-        const deny = new St.Button({label: 'Deny', style_class: 'button', can_focus: true});
-        const approve = new St.Button({label: a.costCents ? `Approve ${dollars(a.costCents)}` : 'Approve', style_class: 'button default', can_focus: true});
+        q.clutter_text.set({line_wrap: true, ellipsize: 0});
+        card.add_child(q);
+        const buttons = new St.BoxLayout({style_class: 'gurtos-approval-buttons', x_expand: true});
+        const deny = new St.Button({label: 'Deny', style_class: 'button gurtos-deny', can_focus: true, x_expand: true});
+        const approve = new St.Button({label: a.costCents ? `Approve ${dollars(a.costCents)}` : 'Approve', style_class: 'button gurtos-approve', can_focus: true, x_expand: true});
         deny.connect('clicked', () => this.ext.answer(a.id, false));
         approve.connect('clicked', () => this.ext.answer(a.id, true));
         buttons.add_child(deny);
         buttons.add_child(approve);
-        col.add_child(buttons);
-        item.add_child(col);
+        card.add_child(buttons);
+        item.add_child(card);
         return item;
     }
 });
 
-// ---------- Quick Settings: the Agents tile ----------
+// ---------- Quick Settings: the Agents tile (screen 3) ----------
 
 const AgentsToggle = GObject.registerClass(
 class AgentsToggle extends QuickMenuToggle {
     _init(ext) {
-        super._init({title: 'Agents', gicon: ext.icon, toggleMode: true});
+        super._init({title: 'Agents', iconName: 'applications-science-symbolic', toggleMode: false});
         this.ext = ext;
-        this.menu.setHeader(ext.icon, 'Agents', 'GurtOS');
-        this.quiet = new PopupMenu.PopupSwitchMenuItem('Quiet hours', false);
-        this.quiet.connect('toggled', (_i, on) => ext.patch({quietHours: {enabled: on}}));
-        this.menu.addMenuItem(this.quiet);
-        this.pause = new PopupMenu.PopupSwitchMenuItem('Pause all agents', false);
-        this.pause.connect('toggled', (_i, on) => ext.patch({paused: on}));
-        this.menu.addMenuItem(this.pause);
-        this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
-        this.menu.addAction('GurtOS Settings', () => ui('settings'));
-        // The tile itself: on means agents may interrupt you; off is quiet hours.
-        this.connect('clicked', () => ext.patch({quietHours: {enabled: !this.checked}}));
+        this.menu.setHeader('applications-science-symbolic', 'Agents', 'GurtOS');
+        this.connect('clicked', () => ui('app', 'tasks'));
     }
 
     update() {
         const {tasks, pending, settings} = this.ext;
         const c = counts(tasks, pending);
         const quiet = !!settings?.quietHours?.enabled;
-        this.checked = !quiet;
-        this.subtitle = quiet ? 'Quiet hours' : c.needsYou ? `${c.needsYou} need${c.needsYou === 1 ? 's' : ''} you` : `${c.running} running`;
-        this.quiet.setToggleState(quiet);
-        this.pause.visible = !!settings && 'paused' in settings;
-        this.pause.setToggleState(!!settings?.paused);
+        this.checked = c.running > 0 || c.needsYou > 0; // on while agents run
+        this.subtitle = c.needsYou ? `${c.needsYou} need${c.needsYou === 1 ? 's' : ''} you` : c.running ? `${c.running} running` : quiet ? 'Quiet hours' : 'Nothing running';
+        this.menu.removeAll();
+        if (settings && 'paused' in settings)
+            this.menu.addMenuItem(switchRow('Pause all agents', 'Running tasks stop where they are', !!settings.paused, v => this.ext.patch({paused: v})));
+        const q = settings?.quietHours ?? {};
+        this.menu.addMenuItem(switchRow('Quiet hours', quiet ? `Until ${q.to ?? '07:00'}. Requests wait without a sound` : `${q.from ?? '22:00'} to ${q.to ?? '07:00'}. Requests wait without a sound`,
+            quiet, v => this.ext.patch({quietHours: {enabled: v}})));
+        this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
+        for (const [label, n, amber, open] of [['Needs your OK', c.needsYou, true, () => ui('app', 'tasks')], ['Running', c.running, false, () => ui('app', 'tasks')]]) {
+            const item = new PopupMenu.PopupMenuItem(label);
+            const count = new St.Label({text: String(n), style_class: amber && n ? 'gurtos-badge' : 'gurtos-subtitle', y_align: Clutter.ActorAlign.CENTER});
+            item.add_child(new St.Widget({x_expand: true}));
+            item.add_child(count);
+            item.connect('activate', open);
+            this.menu.addMenuItem(item);
+        }
+        this.menu.addAction('GurtOS Settings', () => ui('settings'));
     }
 });
 
@@ -245,28 +303,60 @@ export default class GurtOS extends Extension {
         this.lockNotice();
     }
 
-    /** GNOME shows no actions on the lock screen and hides private details, so while locked one plain notice says how
-     *  many requests wait, without their titles. It goes away on unlock. */
+    /** The lock screen (screen 6): each approval as a card in GNOME's lock-screen notification list. Deny works
+     *  while locked; "Unlock to approve" asks for the password first, because approving can spend money, and the
+     *  approval goes through once the screen is unlocked. GNOME gives notifications no buttons there, so GurtOS adds
+     *  its own cards to that list. */
     lockNotice() {
-        const waiting = Main.sessionMode.isLocked && !this.notOwner ? this.pending.length : 0;
-        if (!waiting) {
-            this.lockNote?.destroy();
-            this.lockNote = null;
+        const box = Main.screenShield?._dialog?._notificationsBox;
+        this.lockCards?.destroy();
+        this.lockCards = null;
+        if (!Main.sessionMode.isLocked || this.notOwner) {
+            if (this.approveAfterUnlock && !Main.sessionMode.isLocked) {
+                const id = this.approveAfterUnlock;
+                this.approveAfterUnlock = null;
+                this.answer(id, true);
+            }
             return;
         }
-        const title = `${waiting} agent request${waiting === 1 ? ' needs' : 's need'} your OK`;
-        if (this.lockNote?.title === title)
-            return;
-        this.lockNote?.destroy();
-        if (!this.lockSource) {
-            this.lockSource = new MessageTray.Source({title: 'GurtOS', icon: this.icon});
-            this.lockSource.connect('destroy', () => (this.lockSource = null));
-            Main.messageTray.add(this.lockSource);
+        if (!box?._notificationBox) // the lock screen builds its dialog a moment after locking
+            return GLib.timeout_add(GLib.PRIORITY_DEFAULT, 500, () => (Main.sessionMode.isLocked && this.lockNotice(), GLib.SOURCE_REMOVE));
+        if (!this.pending.length)
+            return box._updateVisibility?.();
+        const titles = Object.fromEntries(this.tasks.map(t => [t.id, t.title]));
+        this.lockCards = new St.BoxLayout({vertical: true, style_class: 'gurtos-lock'});
+        for (const a of this.pending.slice(0, 2)) {
+            const card = new St.BoxLayout({vertical: true, style_class: 'gurtos-lock-card'});
+            const src = new St.BoxLayout({style_class: 'gurtos-lock-source'});
+            src.add_child(new St.Icon({gicon: this.icon, icon_size: 16}));
+            src.add_child(new St.Label({text: 'GurtOS', style_class: 'gurtos-subtitle'}));
+            card.add_child(src);
+            card.add_child(new St.Label({text: `${(titles[a.task] ?? 'A task').replace(/\.$/, '')} needs your OK`, style_class: 'gurtos-approval-title'}));
+            const q = new St.Label({text: a.question, style_class: 'gurtos-approval-question'});
+            q.clutter_text.set({line_wrap: true, ellipsize: 0});
+            card.add_child(q);
+            const buttons = new St.BoxLayout({style_class: 'gurtos-approval-buttons', x_expand: true});
+            const deny = new St.Button({label: 'Deny', style_class: 'button gurtos-deny', can_focus: true, x_expand: true});
+            const unlock = new St.Button({style_class: 'button gurtos-approve', can_focus: true, x_expand: true,
+                child: new St.BoxLayout({x_align: Clutter.ActorAlign.CENTER, style_class: 'gurtos-unlock'})});
+            unlock.child.add_child(new St.Icon({icon_name: 'system-lock-screen-symbolic', icon_size: 14}));
+            unlock.child.add_child(new St.Label({text: 'Unlock to approve'}));
+            deny.connect('clicked', () => this.answer(a.id, false));
+            unlock.connect('clicked', () => {
+                this.approveAfterUnlock = a.id;
+                Main.screenShield._dialog?._showPrompt?.();
+            });
+            buttons.add_child(deny);
+            buttons.add_child(unlock);
+            card.add_child(buttons);
+            this.lockCards.add_child(card);
         }
-        this.lockNote = new MessageTray.Notification({source: this.lockSource, title, body: 'Unlock to approve or deny. Other agents keep working.',
-            urgency: MessageTray.Urgency.CRITICAL, privacyScope: MessageTray.PrivacyScope.SYSTEM});
-        this.lockNote.connect('destroy', n => this.lockNote === n && (this.lockNote = null));
-        this.lockSource.addNotification(this.lockNote);
+        const hint = new St.Label({text: 'Deny works from the lock screen. Approving can spend money, so it asks for your password first.',
+            style_class: 'gurtos-lock-hint'});
+        hint.clutter_text.set({line_wrap: true, ellipsize: 0});
+        this.lockCards.add_child(hint);
+        box._notificationBox.insert_child_at_index(this.lockCards, 0);
+        box._updateVisibility?.();
     }
 
     disable() {
@@ -277,7 +367,7 @@ export default class GurtOS extends Extension {
         for (const n of this.shown.values())
             n.destroy();
         this.source?.destroy();
-        this.lockSource?.destroy();
+        this.lockCards?.destroy();
         this.indicator.destroy();
         this.agents.quickSettingsItems.forEach(i => i.destroy());
         this.agents.destroy();
@@ -388,7 +478,7 @@ export default class GurtOS extends Extension {
                 const q = a.question.trim();
                 // Critical: the task waits for you, so the banner stays. Quiet hours: it waits in the list, no banner.
                 this.post(key, {
-                    title: headerCaps(`${title} needs your OK`),
+                    title: `${title} needs your OK`,
                     body: `${q}${/[.?!]$/.test(q) ? '' : '.'} Your other agents keep working.`,
                     urgency: quiet ? MessageTray.Urgency.LOW : MessageTray.Urgency.CRITICAL,
                     actions: [['Deny', () => this.answer(a.id, false)], [a.costCents ? `Approve ${dollars(a.costCents)}` : 'Approve', () => this.answer(a.id, true)]],
@@ -397,7 +487,7 @@ export default class GurtOS extends Extension {
             } else {
                 const t = tasks[id];
                 this.post(key, {
-                    title: headerCaps(`${t.title.replace(/\.$/, '')} is done`),
+                    title: `${t.title.replace(/\.$/, '')} is done`,
                     body: 'Nothing in your folders has changed yet. Review its changes, then keep or undo them.',
                     urgency: MessageTray.Urgency.NORMAL,
                     actions: [['Review changes', () => ui('review', t.id)]],
@@ -411,7 +501,7 @@ export default class GurtOS extends Extension {
             this.toldFailed.add(t.id);
             const setup = noModelKey(t.error);
             this.post(null, {
-                title: headerCaps(`${t.title.replace(/\.$/, '')} ${setup ? 'could not start' : 'could not finish'}`),
+                title: `${t.title.replace(/\.$/, '')} ${setup ? 'could not start' : 'could not finish'}`,
                 body: setup ? 'Add a model key (Anthropic or Factory) in GurtOS Setup.' : (t.error || 'It stopped with an error.'),
                 urgency: MessageTray.Urgency.NORMAL,
                 actions: [[setup ? 'Open GurtOS Setup' : 'Open in GurtOS', () => (setup ? ui('setup') : ui('app', `task/${t.id}`))]],
