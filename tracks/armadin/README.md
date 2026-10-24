@@ -42,14 +42,21 @@ everything it wrote.
 
 ## 2. The attack scoreboard
 
-About fifteen OS-level attacks, each with an expected result, run against a real demo box. Six are already proved
+Sixteen OS-level attacks, each with an expected result, run against a real demo box. Six are already proved
 every merge by core's own `core/demo.ts` (moments 2 and 4); this track cites them rather than repeating the work.
-The rest are new here. Full table: `tracks/armadin/SCOREBOARD.md` (built from a real run's console output).
+The rest are new here. Full table: `tracks/armadin/SCOREBOARD.md` (built from real runs' console output, two
+machines).
 
 Caught: reading another task's workspace while it runs and after it ends · reading the vault · exfiltration to a
 disallowed host · firewall bypass around the proxy (IPv4) · self-approval via the box's API or SpacetimeDB ·
 symlink to a file outside the task's copy · `/proc/<pid>/environ` of another task · ptrace · reading another
-task's leftovers in `/tmp` · DNS exfiltration (UDP 53) · firewall bypass over IPv6 · a fork bomb · a memory hog.
+task's leftovers in `/tmp` · DNS exfiltration (UDP 53) · firewall bypass over IPv6 · a fork bomb.
+
+**Host-dependent, checked and reported at runtime:** a memory hog (3 GB against a 2 GB cap). `MemoryMax=2G` is
+set; `MemorySwapMax` is not. On a swap-less host the cgroup OOM-kills the task almost instantly (caught). On a
+host with real swap (Vultr) the kernel reclaims by swapping the cgroup's own pages instead of killing it, so the
+task just runs slow and is published as not covered there, honestly, rather than assuming the swap-less result
+everywhere.
 
 **Not covered**, published as such, not as caught:
 - **A disk fill.** There is no per-task disk quota in `core/sandbox.ts`'s `HARDENING` today. Reported to the
