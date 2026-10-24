@@ -244,20 +244,6 @@ The January review (run 35c20d) caught 2 of 2 with no false alarms and cut Brigh
 
 </Details>
 
-<Details summary="Earlier runs on the first, smaller key (14 planted errors)">
-
-Two seats, Droid running Claude, live against CRS and Nessie. A script answered the controller yes.
-
-| Run | Rules | Planted errors caught | False alarms | Credit decisions | Collection steps | Time, model cost |
-|---|---|---|---|---|---|---|
-| 88d75b | 0.1 draft | 13 of 14 | 1 | 6 of 6 | 9 of 11 | 9 min, about $1.50 |
-| 6f5c0b | 0.2 (after Mana's review) | 13 of 14 | 1 | 6 of 6 | 9 of 11 | 9 min, about $3.54 |
-| 73c47b | 0.2, seats told to record follow-ups | 14 of 14 | 0 | 6 of 6 | 9 of 11 | 13 min, about $4.67 |
-
-The key later grew to 17 errors, so these numbers are not comparable with the headline. They are kept because each run's reports, score and log are in the repo under `tracks/credit-desk/runs/`.
-
-</Details>
-
 <Details summary="The moment, in the action log">
 
 From run 73c47b. The analyst's decision tool refused to record a fraud hold on its own, the box paused the task for the controller, and the decision went in only after the yes (shortened; request ids cut to 8 characters):
