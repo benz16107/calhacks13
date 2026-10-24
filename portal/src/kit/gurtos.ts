@@ -115,6 +115,24 @@ function followTheme() {
 }
 followTheme();
 
+// GurtOS Business, on the box's own screen: the person picked in the top bar answers, so this page's own calls say who
+// (x-box-person). The box honours it only from its own screen; a phone is named by its token instead.
+function carryPerson() {
+  let person: string | null = null;
+  try {
+    person = parent.localStorage.getItem('gurtos.person');
+  } catch {} // another origin
+  if (!person) return;
+  const real = window.fetch.bind(window);
+  window.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = input instanceof Request ? input.url : String(input);
+    if (new URL(url, location.href).origin !== location.origin) return real(input, init);
+    const headers = new Headers(init?.headers ?? (input instanceof Request ? input.headers : undefined));
+    if (!headers.has('x-box-person')) headers.set('x-box-person', person!);
+    return real(input, { ...init, headers });
+  };
+}
+
 // Off the box's own screen every call needs the device's pairing token. The window passes it as ?access_token=;
 // carry it on this page's own fetches, log streams and links, so a track page works on a phone unchanged.
 function carryToken() {
@@ -122,7 +140,7 @@ function carryToken() {
   try {
     token ??= JSON.parse(parent.localStorage.getItem('pairing') ?? 'null')?.token ?? null;
   } catch {} // another origin
-  if (!token) return;
+  if (!token) return carryPerson();
   const mine = (u: string | URL) => new URL(u, location.href).origin === location.origin;
   const withQuery = (u: string | URL) => {
     const url = new URL(u, location.href);
