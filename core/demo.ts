@@ -575,6 +575,23 @@ await moment("personal: an agent works on the owner's folder, then Keep or Undo"
   const back = statOf('intro.md');
   check(fs.readFileSync(path.join(folder, 'intro.md'), 'utf8').trim() === 'Draft intro.' && back.uid === OWNER.uid && back.mode === 0o640, 'undoing the other Keep restored the old content with its owner and mode');
 
+  // Two folders with the same name in different places stay separate: Keep writes into the one it started on.
+  const dirA = path.join(HOME, 'owner', 'a', 'notes');
+  const dirB = path.join(HOME, 'owner', 'b', 'notes');
+  for (const [dir, text] of [[dirA, 'A original'], [dirB, 'B original']] as const) {
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, 'n.md'), text + '\n');
+  }
+  const TA = await api<Task>('POST', '/tasks', { title: 'Edit A', worker: 'fake', source: 'demo', folder: dirA, prompt: 'append n.md edited in A' });
+  const TB = await api<Task>('POST', '/tasks', { title: 'Edit B', worker: 'fake', source: 'demo', folder: dirB, prompt: 'append n.md edited in B' });
+  await settled([TA.id, TB.id]);
+  check(TA.workspace !== TB.workspace, `same-named folders get different workspaces (${TA.workspace}, ${TB.workspace})`);
+  await api('POST', `/api/tasks/${TA.id}/keep`);
+  const readN = (dir: string) => fs.readFileSync(path.join(dir, 'n.md'), 'utf8');
+  check(readN(dirA).includes('edited in A') && !readN(dirB).includes('edited'), "Keep on A's task wrote into A and left B alone");
+  await api('POST', `/api/tasks/${TB.id}/keep`);
+  check(readN(dirB).includes('edited in B') && !readN(dirB).includes('edited in A'), "Keep on B's task wrote into B");
+
   // A task spec with a field the box doesn't know is refused, not silently run somewhere else.
   const bad = await api('POST', '/tasks', { title: 'Typo', worker: 'fake', prompt: 'x', folders: [folder] }).then(() => '', (e: Error) => e.message);
   check(/unknown task field.*folders/.test(bad), `an unknown task field is refused with a clear error ("${bad.slice(0, 60)}")`);

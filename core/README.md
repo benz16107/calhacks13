@@ -152,7 +152,8 @@ owner; the owner's files are reached only through an overlay copy, never directl
 
 A task can work on one of the owner's real folders:
 
-- `POST /api/tasks {folder: "/home/you/Documents/thesis", title, prompt}` links that folder to a workspace and
+- `POST /api/tasks {folder: "/home/you/Documents/thesis", title, prompt}` links that folder to a workspace
+  (named `owner-<name>-<hash of the full path>`, so `~/a/notes` and `~/b/notes` never share one) and
   starts the task on a writable copy of it. The real folder is untouched while the task runs.
 - `GET /api/tasks/<id>/diff` shows what the agent changed.
 - `POST /api/tasks/<id>/keep` applies the task's changes to the real folder, each file atomically. If the owner

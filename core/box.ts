@@ -402,6 +402,7 @@ class Core {
         execFileSync('setfacl', ['-R', '-m', 'u:root:rX', real]);
       } catch {} // setfacl may be absent; the mount still works when perms already allow
     }
+    if (this.links[name] && this.links[name] !== real) throw new Error(`workspace ${name} already points at ${this.links[name]}`); // never repoint: Keep would write into the wrong folder
     this.links[name] = real;
     sandbox.linkBase(name, real);
     fs.writeFileSync(this.linksPath, JSON.stringify(this.links, null, 2));
@@ -613,7 +614,9 @@ class Core {
           case 'POST /tasks': {
             // "Ask an agent on this folder" (Personal): link the real folder, then make the task on it.
             if (body.folder) {
-              const name = 'owner-' + path.basename(String(body.folder)).replace(/[^\w.-]/g, '-');
+              // The name carries a hash of the full real path: ~/a/notes and ~/b/notes must never share a workspace.
+              const real = fs.realpathSync(String(body.folder));
+              const name = `owner-${path.basename(real).replace(/[^\w.-]/g, '-')}-${createHash('sha256').update(real).digest('hex').slice(0, 6)}`;
               this.linkWorkspace(name, String(body.folder));
               body.workspace = name;
             }
