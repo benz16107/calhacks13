@@ -1,266 +1,174 @@
 ---
+design: kit
 order: 8
 sponsor: Coinbase
 prize: 'x402 Payment Agents'
 editions: 'GurtOS Server, and GurtOS Business'
-pitch: 'GurtOS is the environment that makes an agent wallet safe: the key never reaches the agent, each task has a budget on top of the x402 client''s own payment policy, anything over it waits for your tap on the phone, and every payment is on the record. It all runs on top of the OS, on an always-on box you own, and because GurtOS is open source (Apache-2.0), anyone can run it, customise it and reuse the wallet in their own agents.'
-title: Agents pay for APIs with x402, and the key never leaves the vault
-summary: 'Giving an agent money today means handing it your card or a private key, on a heavy system or a cloud with no layer built for this: no separation, no safe key handling, no record and no undo. GurtOS is that layer. Agents on a GurtOS box pay for HTTP APIs that answer 402 Payment Required, with Coinbase''s x402 SDK and the CDP facilitator. The box holds the wallet; a task only ever sees results. A payment within the task''s budget goes through, one above it pauses the task until you approve on the portal or your phone, and every payment lands in the action log with its amount, payee, task and Solana transaction. All of it is USDC on Solana devnet: test money.'
-proof: 'A real agent (Droid with Claude) was told only "buy one joke and one report". It quoted both, paid $0.01, waited for the OK on the $0.03 report, then paid it. Both payments settled through Coinbase''s CDP facilitator and are confirmed on Solana devnet, and neither the wallet key nor the CDP secret appears anywhere in the task''s log.'
-criteriaSource: "Coinbase's x402 track rules, as copied into the project's track plan. Primary track: Payment Agents."
+pitch: 'GurtOS is the environment that makes an agent wallet safe: the key never reaches the agent, each task has a budget, anything over it waits for your tap on the phone, and every payment is on the record. Agents pay for APIs with x402, shop for them in the x402 Bazaar and pay metered APIs with a hard cap, and the box earns too: its own paid routes are listed in the Bazaar. GurtOS is open source (Apache-2.0), and one command installs the same wallet for Claude Code or any MCP agent.'
+title: Agents pay and earn with x402, and never see the key
+summary: 'Giving an agent money today means handing it your card or a private key, on a computer where it can reach everything. GurtOS is the layer that was missing. Agents on a GurtOS box pay for APIs with Coinbase''s x402 SDK and the CDP facilitator, shop in the x402 Bazaar and pay metered APIs with a cap. The box holds the wallet; a task only sees results. A payment over the task''s budget waits for the owner''s tap on the phone, and every payment lands in the action log. The box also sells its own services over x402 and is listed in the Bazaar. All of it is USDC on Solana devnet: test money.'
+proof: 'A real agent (Droid with Claude) was told only "buy one joke and one report". It quoted both, paid $0.01, waited for the OK on the $0.03 report, then paid it. Both payments settled through Coinbase''s CDP facilitator and are confirmed on Solana devnet, and neither the wallet key nor the CDP secret appears anywhere in the task''s log. The box''s own paid routes are listed in Coinbase''s x402 Bazaar.'
+criteriaSource: "Coinbase's x402 track rules, as copied into the project's track plan. The full map is in the page body."
 criteria:
-  - ask: 'An agent that pays or earns using Coinbase for Agents and x402.'
-    how: 'Agents pay with the x402 v2 SDK (<code>@x402/fetch</code>, <code>@x402/core</code>, <code>@x402/svm</code>). The test API charges with <code>@x402/express</code> and settles through the CDP facilitator (<code>createCdpFacilitatorClient</code> in <code>@coinbase/cdp-sdk/x402</code>), signed in with the box''s CDP Secret API Key.'
-  - ask: 'Summary: who, what, which Coinbase tools.'
-    how: 'Below, under <a href="#summary">Summary</a>.'
-  - ask: 'Working example with setup steps.'
-    how: 'Below, under <a href="#try-it">Try it</a>: make a wallet, fund it from Circle''s faucet, add CDP keys, run <code>DEMO_LIVE=wallet ./demo</code>. The live run''s output is under <a href="#evidence">Evidence</a>.'
-  - ask: 'Architecture with controls and known limits.'
-    how: 'Below, under <a href="#how-it-works">How it works</a> (seven controls) and <a href="#limits">Limits</a>.'
-  - ask: 'Builder feedback.'
-    how: 'Below, under <a href="#builder-feedback">Builder feedback</a>: what worked, and ten points of friction with times, from <code>tracks/wallet/FEEDBACK.md</code>.'
-  - ask: 'Label simulated payments.'
-    how: 'Nothing here is simulated: the payments are real x402 payments on Solana devnet. They are labelled as devnet test money in the app, the action log, every receipt and this page.'
-  - ask: 'Ease of reuse.'
-    how: 'The wallet is two box tools, so any agent on any box uses it. <code>skill/x402-wallet/SKILL.md</code> teaches an agent to pay (quote, pay the exact price, wait when over budget, never look for a key); copy it into Droid or Claude Code''s skills folder.'
   - ask: 'Verified Coinbase account.'
-    how: "A CDP account issued the Secret API Key the box settles with, and the facilitator accepts its signed calls."
+    how: 'A CDP account issued the Secret API Key the box settles with, and the facilitator accepts its signed calls.'
     status: partly
-clip: moment-3-approval
-video: main
-shots:
-  - src: ../../assets/track/solana/explorer-urd99.png
-    alt: 'Solana Explorer showing a finalized devnet transaction: the fee payer is the facilitator, and the token section shows 0.03 USDC leaving the box wallet and arriving at the payee.'
-    caption: "One of the live run's payments on Solana Explorer: $0.03 of devnet USDC from the box's wallet to the test API, settled by Coinbase's CDP facilitator, which paid the network fee. The wallet holds no SOL."
-  - src: ../../assets/shots/app-wallet.png
-    alt: 'The Agent wallet app on the box screen, in plain text: the public devnet address, its USDC balance on Solana devnet marked test money, and a Solana Explorer link.'
-    caption: 'The Agent wallet app on the box, running: the public devnet address, its devnet USDC balance (test money), and a link to its history on Solana Explorer. The box holds the key; no task does.'
-links:
-  - label: 'The live run''s $0.03 payment, settled by the CDP facilitator'
-    href: https://explorer.solana.com/tx/Urd99HESxbkSQ4ppVCfQtJXhKNo7TteQUe1ErfnGduJRyp7dnoK6mTJfk9kGDPJKwo3QwmkonFJGBLiKaL3T2CK?cluster=devnet
-    note: 'Solana Explorer, devnet, no sign-in.'
-  - label: 'The live run''s $0.01 payment'
-    href: https://explorer.solana.com/tx/423EmHPvH9qmzABzgYL4Sp7XJdWmx6ou9N9UKhHe6e4CC1T8Yd9Pa3eTpy3VTf23t3UUnD5d2enDY2jV2CyUsxVn?cluster=devnet
-  - label: "The box's agent wallet on Solana Explorer"
-    href: https://explorer.solana.com/address/6PyiR71c9aw3e8bgnxmcLvJECL5zHE5jMSWqJoVjPTxU/tokens?cluster=devnet
-    note: 'Every payment it has made, all public. Devnet USDC has no value.'
-  - label: The wallet track's code and README
-    href: https://github.com/benz16107/calhacks13/tree/main/tracks/wallet
-  - label: Builder feedback, in full
-    href: https://github.com/benz16107/calhacks13/blob/main/tracks/wallet/FEEDBACK.md
-  - label: The installable skill
-    href: https://github.com/benz16107/calhacks13/blob/main/tracks/wallet/skill/x402-wallet/SKILL.md
-  - label: 'Docs: let agents pay for APIs'
-    href: https://gurtos.com/docs/guides/agent-payments/
-flow:
-  - zone: task
-    label: 'wallet.quote {url}'
-    detail: 'The agent asks the broker. It holds no key and has no route to the vault.'
-  - zone: core
-    label: The box fetches the URL
-    detail: 'Only a host on the task''s list, no redirects. The API answers 402 with its price and payee.'
-  - zone: task
-    label: 'wallet.pay {url, cents}'
-    detail: 'The agent names the exact price it was quoted.'
-  - zone: you
-    label: Over budget? Your OK
-    detail: 'The task waits on the portal and phone. Other tasks keep running. Denied means nothing is paid.'
-  - zone: core
-    label: 'wallet.pay signs'
-    detail: 'Reads <code>WALLET_SOLANA_KEY</code> from the vault, checks the offer is exact, devnet USDC, at the agreed price, and signs an SPL transfer.'
-  - zone: outside
-    label: CDP facilitator settles
-    detail: 'The test API passes the payment to Coinbase''s facilitator, which verifies it, pays the fee and submits it to Solana. The API returns the content.'
-  - zone: core
-    label: Logged and counted
-    detail: 'Amount, payee, task and transaction go in the log, labelled devnet test money; the cost counts toward the task once.'
 status:
-  - part: x402 payments
-    state: test
-    note: 'Real x402 payments in USDC on Solana devnet (Circle''s devnet mint), confirmed on chain. Devnet USDC has no value.'
-  - part: CDP facilitator
-    state: live
-    note: "Coinbase's facilitator verifies and settles each payment when the vault has CDP keys; the public x402.org facilitator is the fallback without them."
-  - part: The paid API
-    state: simulated
-    note: 'Our own test API (<code>seller.ts</code>): <code>GET /joke</code> costs $0.01 and <code>GET /report</code> $0.03. It stands in for a real paid API.'
-  - part: The agent
-    state: live
-    note: 'Droid with Claude Sonnet 4.6 in the live agent run. The merge gate uses a scripted agent so it gives the same result every time.'
-  - part: CDP wallets
+  - part: CDP Server Wallet run live
     state: not-built
-    note: 'They need a CDP wallet secret, which the box does not have. The box holds the wallet key itself, in its vault.'
+    note: 'Built and unit-tested; the live run needs a CDP Wallet Secret.'
 ---
 
-## Why GurtOS, and what each part is for
+<Lead proof='Try it now: the Vultr computer&apos;s <a href="https://gurt-cloud.box.gurtos.com/t/wallet/sell">price list</a> is public, and asking for a paid route without paying gets <code>402 Payment Required</code> (the commands are under Working example). Devnet USDC, test money.'>
 
-**The wallet runs on top of the OS.** Everything that makes it safe to give an agent money comes from GurtOS: separate
-users, the root-only vault, the broker, budgets, approvals and the log. The wallet app adds x402 and the Solana
-signing. A GurtOS Server box needs 4 GB of memory and 17 GB of disk on any x86_64 or arm64 machine, no GPU, so it can
-be a spare computer you own. GurtOS is open source under Apache-2.0, so anyone can run it, customise it, and reuse the wallet in their own agents.
+An agent that can pay usually holds the key, so one tricked step can drain the wallet. On GurtOS the wallet lives in the operating system, not in the agent: a task asks GurtOS to pay, and GurtOS checks the task's budget, asks your phone above it, signs, and writes the payment to the action log. Agents pay for APIs with x402 and find them in Coinbase's Bazaar, and the computer sells its own services over x402 too.
 
-| Feature | Why it is there | Coinbase criterion | From | Today |
-|---|---|---|---|---|
-| The key never reaches the agent: it lives in the root-only vault, and only `wallet.pay` in the core reads it | A prompt injection or a bad model cannot leak or spend a key it never had | Technical design | GurtOS (vault and broker) | Shipped. The merge gate checks neither the wallet key nor the CDP secret is anywhere in the log |
-| Per-task budget on top of the x402 client's own payment policy (exact price, devnet USDC only, $1 cap per payment) | Two independent limits on what an agent can spend | Technical design, usefulness | GurtOS (budget) and Coinbase's x402 SDK (policy) | Shipped |
-| Over budget, the task pauses until you approve on the portal or phone; denied means nothing is paid | You stay the one who decides on money | Usefulness | GurtOS (the approval pause) | Shipped |
-| Every payment in the append-only log with amount, payee, task and transaction | A record you can audit, matched to the chain | Technical design | GurtOS (the log) and the app (the receipt) | Shipped |
-| Settlement through Coinbase's CDP facilitator, which pays the network fee | The wallet needs no SOL, and Coinbase verifies each payment | Usefulness | The wallet app, on Coinbase CDP | Shipped |
-| An installable skill (`skill/x402-wallet/SKILL.md`) and two box tools any agent can call | Any agent on any box can pay without new code | Ease of reuse | The wallet app | Shipped |
-| Open source, Apache-2.0 | Anyone can run GurtOS, customise it, and reuse the wallet | Ease of reuse | GurtOS | Shipped |
-| The box earns over x402: it sells its audit proof ($0.01), a metered search of the owner's published files ($0.002 a result, at most $0.02) and rental of its agent ($0.25, only after the owner approves), settled by Coinbase's CDP facilitator, with a daily sales cap | A box can earn as well as spend | Usefulness, technical design | The wallet app | Shipped. The offline gate checks a stranger can read the price list but not the wallet or log. Listed in Coinbase's x402 Bazaar: after the first settled payment through the box's public address (made from a second wallet, since a wallet cannot pay itself), Coinbase's CDP facilitator cataloged both paid routes within a second, and a lookup by the box's pay-to address returns them with their Bazaar metadata. Free-text search did not find them yet, only the lookup by pay-to address did |
-| Agents shop for APIs: `wallet.discover` searches the x402 Bazaar, ranks offers payable first and cheapest first, and drops anything above the agent's limit or the task's budget | An agent finds what it needs without a human choosing | Usefulness, ease of reuse | The wallet app and Coinbase's Bazaar | Shipped |
-| Two locks on the money: a CDP Server Wallet whose Coinbase policy signs only for listed payees, under the cap, in USDC, behind GurtOS's budgets and phone approvals | One lock can be argued with, two cannot | Technical design | The wallet app, Coinbase CDP and GurtOS (budgets, approvals) | Built and unit-tested, not run live yet: it needs a CDP Wallet Secret that is pending. Live runs so far use the vault key with the owner's policy enforced by GurtOS, and the page says so. A box whose CDP key can manage policies could loosen its own policy |
-| Metered APIs: `wallet.payMetered` pays x402 upto offers, the agent authorizes a cap and the seller charges for what it used | Pay for use, not for a guess | Technical design | The wallet app | Shipped. The gate's metered step capped a search at $0.02 and charged $0.002. Until the core reads the settled amount, a metered payment counts at its cap in the task's cost |
-| Reuse in one command: `install.sh` installs the wallet as an MCP server and skill for Claude Code, Droid or any MCP client, with a budget and an approval prompt | Anyone can use it outside a GurtOS box | Ease of reuse | The wallet app | Shipped. A real Claude Code session installed it that way and paid $0.01 for a joke over MCP |
-| Top up from the phone with a Coinbase Onramp session for the wallet's address | The owner can fund the wallet from the phone | Usefulness | The wallet app and Coinbase Onramp | Built in sandbox mode only. Sandbox orders move no money and cannot deliver devnet USDC, so test money comes from Circle's faucet |
-| Builder feedback kept as each Coinbase tool was used | Coinbase asks for it | Builder feedback | The wallet thread | Shipped in `tracks/wallet/FEEDBACK.md` |
+</Lead>
+
+<Numbers items={[
+  { value: '83', label: 'agent payments settled on Solana devnet, every fee paid by the facilitator', href: 'https://explorer.solana.com/address/6PyiR71c9aw3e8bgnxmcLvJECL5zHE5jMSWqJoVjPTxU?cluster=devnet', source: 'the wallet on Explorer' },
+  { value: '2', label: "of the box's paid routes listed in the x402 Bazaar", href: '#evidence', source: 'the lookup' },
+  { value: '0', label: 'times the key or the CDP secret appeared in a task log', href: '#evidence', source: 'the live run' },
+  { value: '27', label: 'points of builder feedback, with times', href: 'https://github.com/benz16107/calhacks13/blob/main/tracks/wallet/FEEDBACK.md', source: 'FEEDBACK.md' },
+]} />
+
+<Shot src="track/coinbase/phone-request.png" dark="track/coinbase/phone-request-dark.png" size="phone" alt="GurtOS on a phone, Needs you: Buy the weekly price report. Spend $0.03 to api.localhost:4021 on wallet.pay, in devnet USDC (test money), budget $0.02, with Deny and Approve $0.03 buttons." caption="A payment over the task's budget, on the owner's phone: the amount, the payee, the URL and the budget, with <strong>Approve $0.03</strong>. Nothing is paid until someone answers. Captured Oct 24 from a test box; the payee is our test API, and the money is devnet test money." />
 
 ## Summary
 
-**Who it's for.** People who leave AI agents running unattended on a home machine and want them to buy what a job
-needs, such as an API call, without handing an agent a private key or a card.
+Coinbase asks for four parts: a summary, a working example, the architecture with its controls and limits, and builder feedback. This page follows that order.
 
-**What it does.** Agents on the box pay for HTTP APIs that answer `402 Payment Required`, using x402. The box holds
-the wallet in its vault and a task only ever sees results. Each task has a budget: a payment that fits goes through,
-and one above it pauses the task until the owner approves it on the portal or phone, while other tasks keep running.
-Every payment goes into the box's action log with its amount, payee, task and Solana transaction, and counts toward
-the task's cost.
+**Who it is for.** People who leave agents running around the clock on a home machine or a cloud VM (GurtOS Server) and want them to buy what a job needs without handing over a card. And company agents that spend under company rules, where the action log is the audit trail (GurtOS Business).
 
-**Coinbase tools.**
+**What it does.** Agents on the box pay for HTTP APIs that answer `402 Payment Required`. The box holds the wallet and a task only sees results. A payment within the task's budget goes through. One above it pauses the task until the owner approves on the portal or the phone, which shows the amount, the payee and the URL, while other tasks keep running. The box also earns: it sells three services over x402 and is listed in the Bazaar.
 
-- The x402 v2 TypeScript SDK: `@x402/fetch` and `@x402/core` to pay, `@x402/svm` for Solana, `@x402/express` for the
-  test API that charges.
-- Coinbase's CDP facilitator, through `createCdpFacilitatorClient` in `@coinbase/cdp-sdk/x402`, signed in with the
-  box's CDP Secret API Key. It checks each payment, pays the Solana network fee and submits the transaction.
-- The x402.org facilitator, Coinbase's public testnet one, as the fallback when the vault has no CDP keys.
-- Not yet: CDP wallets (see Limits).
+**Why it needs an operating system.** On an ordinary OS the agent runs as you, so it can read any key you have, reach any host, and spend with no record. GurtOS runs each task as its own Linux user with its own copy of the files and no keys, reaching only the hosts it was given. The key sits in a root-only file that only the box's payment tool opens. Budgets, the phone approval and the log are part of the OS, so every app on the box gets them, and Fetch.ai's payments use the same budget and approval path.
 
-## Real attacks on financial companies
+**Coinbase tools used.** The x402 v2 SDK (`@x402/fetch`, `@x402/core`, `@x402/svm` for Solana, `@x402/express` for the sellers), the CDP facilitator through `@coinbase/cdp-sdk/x402`, the x402 Bazaar (`listX402DiscoveryMerchant` and discovery search), the `upto` scheme, CDP Server Wallets with the policy engine, and Coinbase Onramp in sandbox mode.
 
-Coinbase's own 2025 incident is the closest one: people with legitimate access were paid to copy customer data. On an ordinary operating system an agent doing this work holds the keys, can approve its own work and can pull any report. Real attacks on financial companies show why that matters. Each row names its source and what was taken as the source states it, then says what GurtOS's controls do about that kind of attack and what they do not.
+<OSvsTrack sponsor="Coinbase" rows={[
+  { what: 'The key never reaches the agent', why: 'Technical design', os: 'A root-only key file, opened only by wallet.pay inside the box; each task is its own Linux user', track: 'None', status: 'Shipped. The live run checks neither the wallet key nor the CDP secret is in the log' },
+  { what: 'Pay for APIs with x402', why: 'Usefulness', os: "The box fetches the URL, only from the task's hosts, no redirects", track: 'x402 v2 SDK, exact scheme; settled by the CDP facilitator, which pays the fee', status: 'Shipped. 70 fixed-price payments on devnet' },
+  { what: "Budget, then the owner's OK on the phone", why: 'Usefulness, technical design', os: 'Budgets reserved before the call, so two payments at once cannot both slip through; the pause names the amount, payee and URL', track: 'The x402 client policy: exact price, devnet USDC only, at most $1 a payment', status: 'Shipped' },
+  { what: 'Every payment on the record', why: 'Technical design', os: 'The append-only action log: amount, payee, task, transaction', track: 'The settlement receipt', status: 'Shipped' },
+  { what: 'The box earns over x402: audit proof $0.01, metered search up to $0.02, renting its agent $0.25 after the owner approves', why: 'Usefulness', os: 'Only these routes open to strangers; renting starts a task only after the owner says yes', track: '@x402/express sellers, CDP facilitator, Bazaar metadata', status: 'Shipped. Live at gurt-cloud.box.gurtos.com' },
+  { what: 'Listed in the x402 Bazaar', why: 'Usefulness, reuse', os: 'A public HTTPS address for the box (remote access)', track: 'Bazaar cataloging on the first settled payment', status: 'Shipped. A lookup by pay-to address returns both paid routes; free-text search did not find them on Oct 24' },
+  { what: 'Agents shop for APIs: wallet.discover', why: 'Usefulness, reuse', os: "Drops any offer above the task's remaining budget", track: 'Bazaar discovery search', status: 'Shipped' },
+  { what: 'Metered APIs: wallet.payMetered', why: 'Technical design', os: 'The cap counts against the budget', track: 'The upto scheme', status: "Shipped. A search capped at $0.02 was charged $0.002. Until the core reads the settled amount, the task's cost counts the cap" },
+  { what: "Two locks: a CDP Server Wallet whose policy signs only for listed payees, under the cap, in USDC", why: 'Technical design', os: 'Budgets and phone approvals come first', track: 'CDP Server Wallets and the policy engine', status: 'Built and unit-tested, not run live: it needs a CDP Wallet Secret. Live runs use the root-only key with the payee list and cap checked by GurtOS' },
+  { what: 'Reuse in one command: install.sh for Claude Code, Droid or any MCP client', why: 'Ease of reuse', os: 'The same budget and approval rules, as an MCP prompt', track: 'x402 SDK', status: 'Shipped. A real Claude Code session installed it and paid $0.01 over MCP' },
+  { what: 'Top up from the phone', why: 'Usefulness', os: 'The wallet page on the portal and phone', track: 'Coinbase Onramp', status: "Sandbox only. Sandbox orders move no money, so test money comes from Circle's faucet" },
+  { what: 'Open source, Apache-2.0', why: 'Ease of reuse', os: 'The whole OS and the wallet', track: 'None', status: 'Shipped' },
+]} />
 
-| Incident | What was taken, and how | Source | What GurtOS does about this kind of attack | What it does not do |
-|---|---|---|---|---|
-| Coinbase, May 2025 | Coinbase's SEC filing says an attacker appears to have paid contractors or employees in support roles outside the United States to copy data from internal systems they could reach for their jobs. The data included names, addresses, phone numbers, emails, masked Social Security numbers and bank account numbers, government ID images, balance snapshots and transaction history. No passwords or private keys were taken and no one could reach customer funds. Coinbase estimated $180 million to $400 million to remediate and reimburse. | [Coinbase Form 8-K, May 2025](https://www.sec.gov/Archives/edgar/data/1679788/000167978825000094/coin-20250514.htm) | A seat holds only the tools its task lists, every call it makes goes in an append-only log with who asked and who approved, and an amount over a limit needs a second person. With Business, an auditor reads the whole record. | A person with root on the box can still change the log file, though a change is now caught by the log's chain and Elastic's copy when the box ships there, and an insider with a legitimate right to customer data is a people problem the OS can only record. |
-| Equifax, 2017 | About 147 million names and dates of birth, 145.5 million Social Security numbers and 209,000 payment card numbers with expiration dates. The FTC alleges Equifax did not fix a known flaw, kept administrator credentials in a plain-text file and did not segment its database servers. It agreed to pay at least $575 million. | [FTC, July 2019](https://www.ftc.gov/news-events/news/press-releases/2019/07/equifax-pay-575-million-part-settlement-ftc-cfpb-states-related-2017-data-breach) | Keys sit in a root-only vault and never in a task's files or environment, and each task has its own Linux user and its own copy of the files. A task that is compromised has no credential to steal and cannot read another task's files. | GurtOS does not patch a company's own servers or databases, and it does not keep personal data out of a database you run. |
+<Steps title="Working example: x402 on the cloud box, now" time="One minute, no account.">
 
-## Evidence
+1. Open [the price list](https://gurt-cloud.box.gurtos.com/t/wallet/sell). It lists three services in devnet USDC, marked `"test": true`.
+2. Ask for one without paying: `curl -i https://gurt-cloud.box.gurtos.com/t/wallet/sell/audit`. It answers `402 Payment Required` with a `payment-required` header: $0.01 on Solana devnet.
+3. Try the box's private API: `curl -i https://gurt-cloud.box.gurtos.com/api/tasks`. It answers 401. Only the routes the wallet opens are public.
 
-`DEMO_LIVE=wallet ./demo` runs the real flow on Solana devnet with a scripted agent, so it gives the same result each
-time. It passed on Oct 23 on the x86 test VM and on the ARM64 test VM:
+</Steps>
 
-```
-track wallet
-  ok    the box loaded wallet.quote and wallet.pay
-  ok    the wallet refused a URL outside the task's hosts: "127.0.0.1:7700 is not one of this task's hosts"
-  ok    the owner said no to "Spend $0.03 on wallet.pay? Budget $0.02, spent $0.00.", so the wallet never ran and nothing was spent
-  ok    DEMO_LIVE=wallet: WALLET_SOLANA_KEY is in /etc/box/vault.env on this test machine
-  ok    the box's agent wallet 6PyiR71c9aw3e8bgnxmcLvJECL5zHE5jMSWqJoVjPTxU holds 19.65 USDC on Solana devnet (test money)
-  note  the test API settles through Coinbase's CDP facilitator
-  ok    GET /joke answered 402 Payment Required: $0.01 devnet USDC to 39w7W3SB...
-  ok    the wallet paid $0.01 and got the joke: An agent walks into a bar. The bar answers 402.
-  ok    the $0.03 report is over the $0.02 budget, so the task waits: "Spend $0.03 on wallet.pay? Budget $0.02, spent $0.01."
-  ok    approved, it paid $0.03 and got the report
-  ok    both payments count toward the task's cost: $0.04
-  ok    the log has each payment with its amount, payee, task and transaction, labeled devnet test money
-  ok    both transactions, settled by Coinbase's CDP facilitator, are confirmed on Solana devnet: https://explorer.solana.com/tx/Urd99HES...?cluster=devnet
-  ok    neither the wallet's key nor the CDP secret is anywhere in the task's log
-```
+<Steps title="Working example: the whole flow on your own box" time="About 15 minutes with a CDP account.">
 
-The two transactions of that run are public:
-[$0.01](https://explorer.solana.com/tx/423EmHPvH9qmzABzgYL4Sp7XJdWmx6ou9N9UKhHe6e4CC1T8Yd9Pa3eTpy3VTf23t3UUnD5d2enDY2jV2CyUsxVn?cluster=devnet)
-and [$0.03](https://explorer.solana.com/tx/Urd99HESxbkSQ4ppVCfQtJXhKNo7TteQUe1ErfnGduJRyp7dnoK6mTJfk9kGDPJKwo3QwmkonFJGBLiKaL3T2CK?cluster=devnet).
-In each, the fee payer is the facilitator, not the box's wallet.
+1. **Make a wallet** on a GurtOS box (a release disc, or Ubuntu 24.04 with `core/setup.sh`). This writes the key to the root-only file and prints the address:
+   `node --experimental-strip-types tracks/wallet/keygen.ts | sudo sh -c 'cat >> /etc/box/vault.env; chmod 600 /etc/box/vault.env'`
+2. **Fund it** at faucet.circle.com: USDC, Solana Devnet, 20 USDC. Payments need no SOL.
+3. **Add CDP keys** for the facilitator: a Secret API Key from the CDP Portal as `CDP_API_KEY_ID` and `CDP_API_KEY_SECRET`. Without them it settles through x402.org.
+4. **Run it:** `DEMO_LIVE=wallet ./demo` from a checkout of the repo. It pays, pauses for an OK, pays box to box, pays a metered search and checks everything on chain.
+5. **Or reuse it outside GurtOS:** `curl -fsSL https://raw.githubusercontent.com/benz16107/calhacks13/main/tracks/wallet/install.sh | sh` installs the wallet as an MCP server and skill for Claude Code, with a budget and an approval prompt.
 
-**With a real agent.** The same flow ran with Factory's Droid and Claude Sonnet 4.6, given only "buy one joke and one
-report, then write both into answers.md". It quoted both URLs, paid $0.01, waited for the OK on the $0.03 report,
-paid it once approved, and wrote the file. The task cost 6 cents: 4 for the two payments and 2 for the model.
+</Steps>
 
-**Budgets hold under parallel calls.** The broker reserves a payment's cost before the call runs. The merge gate
-checks it in every run (Oct 24, x86 test VM, 175 checks, 0 failed):
-`only one of the two parallel $0.60 payments went through: $0.60 spent, not $1.20 (atomic budget)`.
+## Architecture, controls and limits
 
-**On chain.** The wallet's whole history is public: one faucet deposit of 20 USDC, then 36 payments of $0.01 or $0.03
-to the test API, 0.76 USDC in all. It held 19.24 devnet USDC on Oct 24 at 12:18 AM PT, after 37 transactions.
+<Flow steps={[
+  { zone: 'task', label: 'wallet.quote {url}', detail: 'The agent asks the box. It holds no key and has no way to read the key file.' },
+  { zone: 'core', label: 'The box fetches the URL', detail: "Only a host on the task's list, no redirects. The API answers 402 with its price and payee." },
+  { zone: 'task', label: 'wallet.pay {url}', detail: 'The quoted price is the amount the budget check, the owner and the signer all see.' },
+  { zone: 'you', label: 'Over budget? Your OK', detail: 'The phone shows the amount, payee and URL. Other tasks keep running. Deny and nothing is paid.' },
+  { zone: 'core', label: 'The box signs', detail: 'Exact scheme or upto, devnet USDC only, at the agreed price, with the task id in a memo.' },
+  { zone: 'outside', label: 'CDP facilitator settles', detail: 'Coinbase verifies the payment, pays the network fee and submits it to Solana.' },
+  { zone: 'core', label: 'Logged and counted', detail: 'Amount, payee, task and transaction in the action log, as test money. The cost counts toward the task once.' },
+]} />
 
-## How it works
+<Details summary="The seven controls">
 
-<Flow steps={frontmatter.flow} />
+- **The key stays in the core.** It is in `/etc/box/vault.env`, readable by root only. Only `wallet.pay` opens it, inside the box's own process. A task runs as its own Linux user and cannot read the file.
+- **The CDP key stays with the seller.** Only the seller code reads it, and no box tool declares it, so no task can get it.
+- **Budget, then the owner.** The core reserves each payment against the task's budget before the call runs. Above it, the task waits for an answer on the portal or phone. Denied means nothing is paid.
+- **Exactly the agreed price.** If the API asks for anything other than the quoted amount, the wallet pays nothing.
+- **Only devnet USDC.** It pays only the `exact` and `upto` schemes on Solana devnet in devnet USDC. The x402 client also refuses any single payment over $1.
+- **Only the task's hosts.** The wallet reaches only hosts on the task's list, by the same rule as the task's network, and refuses redirects. A task cannot point it at the box's own API.
+- **Never twice.** Before paying, the wallet writes a durable mark for that call. If the box loses power mid-payment, the resumed call refuses to pay again.
 
-**Controls.**
+</Details>
 
-- **The key stays in the core.** It lives in `/etc/box/vault.env`, readable by root only. Only `wallet.pay` can read
-  it, inside the box's own process. A task runs as its own Linux user with no way to read the vault.
-- **The CDP key stays with the test API.** It is the seller's key: only `seller.ts` reads it, and no box tool
-  declares it, so no task or tool can get it from the vault.
-- **Budget, then the owner.** The broker counts each payment toward the task's budget and reserves it before the call
-  runs. Above the budget, the task waits for an answer on the portal or phone. Denied means nothing is paid.
-- **Exactly the agreed price.** `wallet.pay` names the amount, which is what the budget check and the owner saw. If
-  the API asks for anything else, it pays nothing.
-- **Only devnet USDC.** It pays only the `exact` scheme on Solana devnet in devnet USDC. The x402 client also refuses
-  any single payment over $1, its default.
-- **Only the task's hosts.** The wallet reaches only hosts on the task's list, by the same rule as the task's
-  network, and refuses redirects. A task cannot point it at the box's own API.
-- **Never twice.** Before paying, the wallet writes a durable mark for that call. If the box loses power mid-payment,
-  the resumed call refuses to pay again instead of guessing.
+<Limits title="Known limits">
 
-## Try it
+- Devnet only, by design. Mainnet needs a different network and asset, real USDC and a review.
+- The CDP Server Wallet lock was not run live: it needs a CDP Wallet Secret. Live runs keep the key in the box's root-only file. A CDP key that can manage policies could also loosen its own policy, so the policy key should be kept off the box.
+- A metered payment counts at its cap in the task's cost until the core reads the settled amount.
+- Bazaar free-text search did not find the box's routes on Oct 24; the lookup by pay-to address did.
+- Onramp runs in sandbox mode only and cannot deliver devnet USDC.
+- After a power cut mid-payment, the call fails instead of checking the chain. The owner checks the wallet on Explorer.
+- `GET` only: APIs that want a `POST` body are not supported yet. Responses are cut at 20 KB. The paid APIs in the demo are our own test sellers.
 
-1. **Make a wallet** on a box. This prints the vault line, and the address on stderr:
-   ```sh
-   node --experimental-strip-types tracks/wallet/keygen.ts | sudo sh -c 'cat >> /etc/box/vault.env; chmod 600 /etc/box/vault.env'
-   ```
-2. **Fund it with devnet USDC** at faucet.circle.com: keep USDC, choose Solana Devnet, paste the address, press Send
-   20 USDC. The wallet needs no SOL, because the facilitator pays the fees.
-3. **Add CDP keys** for Coinbase's facilitator: in the CDP Portal, create a Secret API Key and add `CDP_API_KEY_ID`
-   and `CDP_API_KEY_SECRET` to the vault. Without them the test API settles through x402.org instead.
-4. **Run it:** `DEMO_LIVE=wallet ./demo` from the repo root. It ships the checkout to a test VM and runs every step,
-   with real devnet payments for this track.
-5. **Or by hand:** start the test API (`node --experimental-strip-types tracks/wallet/seller.ts`, port 4021), then
-   start a Droid task with the tools `wallet.quote` and `wallet.pay`, the host `api.localhost:4021`, a 2 cent budget
-   and the prompt "Buy one joke with the box wallet and write it to joke.md." The README has the exact command.
-
-<Status rows={frontmatter.status} />
-
-## Limits
-
-- Devnet only, by design. Mainnet needs a different network and asset in `track.ts`, real USDC and a review.
-- The box holds the wallet's key itself. A CDP wallet would keep the key with Coinbase so no private key is on the box
-  at all; that needs a CDP wallet secret.
-- The approval question comes from the core: "Spend $0.03 on wallet.pay? Budget $0.02, spent $0.01." It does not
-  name the payee or URL yet. The quote step just before it, in the same task's log, does.
-- `GET` only. APIs that want a `POST` body are not supported yet.
-- After a power cut in the middle of a payment, the call fails rather than checking the chain for whether the payment
-  went through. The owner checks the wallet on the explorer.
-- API responses are cut at 20 KB.
+</Limits>
 
 ## Builder feedback
 
-Kept while building, Oct 23, with `@x402/core`, `@x402/fetch`, `@x402/svm` and `@x402/express` 2.28.0 and
-`@coinbase/cdp-sdk` 1.60.0. The full notes are in
-[FEEDBACK.md](https://github.com/benz16107/calhacks13/blob/main/tracks/wallet/FEEDBACK.md).
+Kept while building, with times, in [FEEDBACK.md](https://github.com/benz16107/calhacks13/blob/main/tracks/wallet/FEEDBACK.md): 27 points across two rounds (x402 and the facilitator on Oct 23; Bazaar, `upto`, Server Wallets, policies, faucets and Onramp on Oct 24).
 
-**What worked well.** The first devnet payment settled on the first try, about 15 minutes in, and took about 1.5 s
-from the 402 to the 200. Swapping the x402.org facilitator for the CDP facilitator was one line. On Solana the
-facilitator pays the fee, so an agent wallet needs only USDC, which saved us from a devnet SOL faucet that answered
-429 all evening. `registerPolicy` was the right hook to pay only the devnet USDC offer at the approved price.
+**What worked.** The first devnet payment settled on the first try, about 15 minutes in, about 1.5 s from the 402 to the 200. Swapping the x402.org facilitator for the CDP facilitator was one line. On Solana the facilitator pays the fee, so an agent wallet needs only USDC. `registerPolicy` was the right hook to pay only the approved offer.
 
-**Friction.** The four that cost the most time come first.
+**The friction that cost the most:**
 
-1. Two Solana versions in one install: `@x402/svm` 2.28.0 pulls `@solana/*` 6.10 while its token programs want
-   `@solana/kit` ^5. We had to pin kit 5.5.1 by trial. About 30 minutes.
-2. A payee without a USDC account fails with HTTP 402 and an empty body; the cause is only in a base64 header. About
-   20 minutes. Asks: name the cause, and say in the seller quickstart that a new `payTo` needs a token account.
-3. No idempotency key for payments, so a box that dies between settle and receipt would pay again on resume. We
-   wrote our own durable mark. About 20 minutes.
-4. `@coinbase/cdp-sdk/x402` imports `@x402/evm` on load even for Solana, failing with `ERR_MODULE_NOT_FOUND`. About
-   5 minutes.
-5. Two CDP facilitator helpers, one stale: `@coinbase/x402` 2.1.0 still shows up in docs and pulls about 82 MB.
-6. `HTTPFacilitatorClient` prints `[x402] extension responses: {}` on every payment with CDP, with no way to turn it
-   off.
-7. `decodePaymentResponseHeader` on a missing header throws a bare JSON `SyntaxError`.
-8. The CDP facilitator's `/supported` answers 401 without keys, so we could not check Solana devnet support before
-   signing up.
-9. "Pay exactly this much" needs a custom policy; a built-in `expectedAmount` option would be harder to get wrong.
-10. Docs link to both `coinbase/x402` and `x402-foundation/x402`, and it took a moment to trust they are one project.
+1. Two Solana versions in one install: `@x402/svm` 2.28.0 pulls `@solana/*` 6.x while its token programs want `@solana/kit` 5. About 30 minutes to pin.
+2. A payee without a USDC account fails with HTTP 402 and an empty body; the cause is only in a base64 header. About 20 minutes.
+3. No idempotency key for payments, so a box that dies between settle and receipt would pay again on resume. We wrote our own durable mark.
+4. Policies need a scope the default CDP key does not have, and that same scope lets a compromised server rewrite its own policy.
+5. Bazaar gives almost no feedback: listing happens on the first paid call and nothing says so, and free-text search did not find a fresh listing that the merchant lookup did.
+
+<Details summary="All 27 points, short">
+
+`@coinbase/cdp-sdk/x402` imports the EVM package even for Solana · `@x402/core` prints on every CDP payment · opaque error for a payee with no USDC account · `decodePaymentResponseHeader` throws a bare `SyntaxError` · two Solana versions in one install · a stale CDP facilitator helper still in docs · `/supported` needs keys · no payment idempotency key · "pay exactly this" needs custom code · two repos for one project · policies need a missing scope · that scope is the weak point · Server Wallets need a second secret made only in the portal · `splAddress` is ambiguous · a `signSolTransaction` policy leaves other operations open · `policies.simulate` needs an existing account · no fetch-style seller adapter · partial `upto` settlement only in the types · the `upto` receipt hides the memo · self-payment refused with only a code · Bazaar gives almost no feedback · Bazaar search with a network filter looked broken · Bazaar entries carry no decimals or USD price · Onramp sandbox is a string prefix · a vague JWT key error · free-text search misses a fresh listing · listing happens silently on the first paid call.
+
+</Details>
+
+<Evidence title="Evidence" run="<code>DEMO_LIVE=wallet ./demo</code> on the x86 test VM, Oct 24, through Coinbase's CDP facilitator on Solana devnet. Scripted agent, real payments." sources={[
+  { label: '$0.03 payment after the OK', href: 'https://explorer.solana.com/tx/Urd99HESxbkSQ4ppVCfQtJXhKNo7TteQUe1ErfnGduJRyp7dnoK6mTJfk9kGDPJKwo3QwmkonFJGBLiKaL3T2CK?cluster=devnet' },
+  { label: 'A payment with its task id as a memo', href: 'https://explorer.solana.com/tx/43qZ2RkkxDzL79BSSGYGa7XgUo4vQSfPBpmyJS6uTZt2qxp2Z7DzbcMqbPoeJyGpypkji4BotEMdNeHTd3rCdo61?cluster=devnet' },
+  { label: 'The wallet code and README', href: 'https://github.com/benz16107/calhacks13/tree/main/tracks/wallet' },
+]}>
+
+```
+track wallet
+  ok    the wallet refused a URL outside the task's hosts: "127.0.0.1:7700 is not one of this task's hosts"
+  ok    the owner said no to "Spend $0.03 to api.localhost:4021 on wallet.pay (...)? Budget $0.02, spent $0.00.", so the wallet never ran and nothing was spent
+  ok    a stranger sees the box's price list (audit proof, metered search, rent the agent) but not its audit log or wallet
+  ok    GET /joke answered 402 Payment Required: $0.01 devnet USDC to 39w7W3SB...
+  ok    the wallet paid $0.01 and got the joke: An agent walks into a bar. The bar answers 402.
+  ok    the report named no amount, so the wallet took its quoted $0.03. That is over the $0.02 budget, so the task waits
+  ok    approved, it paid $0.03 and got the report
+  ok    the Agent wallet page lists both payments: time, amount, payee, task and transaction, as test money
+  ok    both transactions, settled by Coinbase's CDP facilitator, are confirmed on Solana devnet
+  ok    neither the wallet's key nor the CDP secret is anywhere in the task's log
+  ok    box to box: this box's agent paid the other box $0.01 and got its audit proof
+  ok    metered: the search was capped at $0.02 and charged $0.002 for what it returned
+  ok    the payment carries its task id on chain, as a memo
+```
+
+**With a real agent.** Factory's Droid with Claude, told only "buy one joke and one report, then write both into answers.md", quoted both, paid $0.01, waited for the OK on the $0.03 report, paid it once approved, and wrote the file. A real Claude Code session, with the wallet installed by `install.sh`, paid $0.01 for a joke over MCP.
+
+**Listed in the Bazaar.** `listX402DiscoveryMerchant({ payTo: '6PyiR71c9aw3e8bgnxmcLvJECL5zHE5jMSWqJoVjPTxU' })`, run again on Oct 24 at 1:30 PM PT, returned both paid routes: `/t/wallet/sell/audit` (exact, $0.01) and `/t/wallet/sell/search` (upto, cap $0.02), at the box's public address, cataloged at 4:14 AM PT.
+
+**Budgets hold under parallel calls.** Every merge-gate run checks it: `only one of the two parallel $0.60 payments went through: $0.60 spent, not $1.20 (atomic budget)`.
+
+</Evidence>
+
+<Sources title="Real attacks on financial companies" intro="An agent wallet is a finance system, and finance systems get attacked. Each row is from a source we read, quoted as the source states it, then what GurtOS's controls do about that kind of attack and what they do not." items={[
+  { name: 'Bybit', date: 'Feb 21, 2025', what: 'The FBI says North Korean actors it calls TraderTraitor stole about $1.5 billion in virtual assets from the exchange and spread them across thousands of addresses. The notice does not say how the wallet was breached.', href: 'https://www.ic3.gov/PSA/2025/PSA250226', source: 'FBI public service announcement, Feb 26, 2025', gurtos: "On GurtOS no agent task holds a signing key: the box signs only the exact quoted amount, to a host on the task's list, in devnet USDC, and anything over the budget waits for a person. It does not protect a company signing its own transactions on its own systems, and a person who approves a bad payment still approves it." },
+  { name: 'Coinbase', date: 'May 2025', what: 'Coinbase says an attacker appears to have paid contractors or employees in support roles outside the US to copy customer data they could reach for their jobs, including names, addresses, masked SSNs, government ID images and transaction history. No passwords or private keys were taken and no funds were reached. Coinbase estimated $180 million to $400 million in costs.', href: 'https://www.sec.gov/Archives/edgar/data/1679788/000167978825000094/coin-20250514.htm', source: 'Coinbase Form 8-K, May 15, 2025', gurtos: 'A task holds only the tools it lists, every call goes in the action log with who asked and who approved, and with Business an amount over a limit needs a second person. An insider with a legitimate right to the data is a people problem the OS can only record.' },
+  { name: 'Equifax', date: '2017', what: 'The FTC says hackers stole at least 147 million names and dates of birth, 145.5 million Social Security numbers and 209,000 payment card numbers. It alleges Equifax did not patch a known flaw, kept administrative credentials in a plain-text file and did not segment its database servers. Equifax agreed to pay at least $575 million.', href: 'https://www.ftc.gov/news-events/news/press-releases/2019/07/equifax-pay-575-million-part-settlement-ftc-cfpb-states-related-2017-data-breach', source: 'FTC press release, July 22, 2019', gurtos: "Keys sit in a root-only file, never in a task's files or environment, and each task has its own Linux user and its own copy of the files, so a compromised task has no credential to steal. GurtOS does not patch a company's servers or segment its databases." },
+]} />

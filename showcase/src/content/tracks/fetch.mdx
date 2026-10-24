@@ -1,238 +1,175 @@
 ---
+design: kit
 order: 9
 sponsor: Fetch.ai
 prize: ASI:One Agent Challenge
 editions: 'GurtOS Server (always reachable), and GurtOS Personal too'
-pitch: 'GurtOS gives ASI:One a safe body on a computer you own, even an old one: each request runs as its own sandboxed task with no keys, asks before it spends, and can be undone, and the portal and phone show it live. A team of agents on Agentverse fronts the box, strangers'' agents'' replies are treated as data (a hidden instruction is blocked and logged), and payments run in test FET through the box''s one budget path. A Server box answers at 3 AM through its Agentverse mailbox with no open port.'
-title: Give your box real work from an ASI:One chat
-summary: 'A chat agent can only act if it runs somewhere: a cloud you cannot see into, or your own computer with full access, and an agent that talks to other agents can be fed hidden instructions. Every GurtOS box is an agent on Agentverse that ASI:One can find. In a chat you say "fix the failing test in my project" or "check if the Hario V60 filters are back in stock". The box starts a task, Droid with Claude does the work in its own Linux user with no keys and no network of its own, and the chat gets the progress, an Approve or Deny card when the task wants to spend more than its budget, and the result with its diff and a Keep or Undo card. The whole flow stays in the chat.'
+pitch: 'GurtOS gives an ASI:One agent a safe body on a computer you own, even an old one: each chat request runs as its own sandboxed task with no keys, asks before it spends, and can be undone, and the portal and phone show it live. A team of agents on Agentverse fronts the box, strangers'' agents'' replies are treated as data (a hidden instruction is blocked and logged), and payments run in test FET through the box''s one budget path. A Server box answers at 3 AM through its Agentverse mailbox with no open port.'
+title: Give a computer you own real work from an ASI:One chat
+summary: 'A chat agent can only act if it runs somewhere: a cloud you cannot see into, or your own computer with full access, and an agent that talks to other agents can be fed hidden instructions. Every GurtOS box is an agent on Agentverse that ASI:One can find. You say "fix the failing test in my project" in a chat; the box runs it as a task in its own Linux user with no keys, and the chat gets progress, an Approve or Deny card when the task wants to spend more than its budget, and the result with its diff and a Keep or Undo card.'
 proof: 'In a live run through ASI:One, the box''s agent paired with the chat, a Droid task fixed the failing test in a sample repo for $0.05 and sent back the diff with Undo, and a stock check paused at a $0.50 web search over its $0.25 budget, sent an Interactive Card, and finished after Approve: "in stock on Hario''s US store at $10.25".'
-criteriaSource: "Fetch.ai's ASI:One Agent Challenge requirements, as copied into the project's track plan."
+criteriaSource: "Fetch.ai's ASI:One Agent Challenge requirements, as copied into the project's track plan. The full map is in the page body."
 criteria:
-  - ask: 'An agent ASI:One can find that takes real multi-step action.'
-    how: 'The <code>box</code> agent is registered on Agentverse, active and marked ASI Available. A request becomes a task on the box that reads code, runs tests, edits files and checks its fix, or searches the web, then reports back.'
-  - ask: 'Agent on Agentverse.'
-    how: 'Seven agents on one box, all mailbox agents: <code>GurtOS</code> <code>agent1qvuk46tnt9lnscher0pawl7pr5y525mak66ptwsrvg4kff0pfy9m2sy0us6</code>, the one to chat with, with <code>GurtOS Shopper</code>, <code>GurtOS Find</code> and <code>GurtOS Credit Desk</code> as its team, and three agents labelled TEST that stand in for strangers. Every address is in the table below and in the README.'
-  - ask: 'Agent Chat Protocol.'
-    how: '<code>agent.py</code> is a uAgent that speaks the Agent Chat Protocol (<code>ChatMessage</code>, <code>ChatAcknowledgement</code>) and publishes its manifest. It reads an Agentverse mailbox, so the box needs no open port.'
-  - ask: 'Main flow inside an ASI:One chat.'
-    how: 'Pairing, requests, progress, approvals, results and undo all happen in the chat. The portal is not needed.'
-  - ask: 'Real tool use.'
-    how: 'Droid with Claude reads the repo, runs <code>node --test</code>, edits the code and checks the fix, as its own Linux user in its own copy of the workspace. Web searches run Apify''s <code>apify/rag-web-browser</code> Actor through the box''s <code>apify.run</code> tool, with the token kept in the box''s vault.'
-  - ask: 'README with agent names, addresses and badges.'
-    how: 'In <code>tracks/fetch/README.md</code> and the agent''s Agentverse profile (<code>agent.md</code>), both with the <code>innovationlab</code> and <code>hackathon</code> badges. Also below.'
-  - ask: 'Public repo with run steps.'
-    how: 'Run steps are in the README and under <a href="#try-it">Try it</a>. The repo has been public since Oct 24.'
   - ask: '3 to 5 minute video.'
-    how: 'Produced after the build, inside ASI:One, and embedded above; until then the clip shows the real app.'
+    how: 'Produced after the build, inside ASI:One.'
     status: partly
   - ask: 'Also submit through the ASI:One Submission Agent.'
-    how: 'Sent through the ASI:One Submission Agent with the Devpost link on submission day.'
+    how: 'Sent with the Devpost link on submission day.'
     status: open
-  - ask: 'Bonus: multi-agent, the Payment Protocol, ASI:One Interactive Cards, reliability.'
-    how: 'Multi-agent: GurtOS routes a request over the chat protocol to its Shopper, Find or Credit Desk agent and relays their reply, and talks to strangers'' agents, treating every reply as data. Payment Protocol: in test FET on Fetch''s Dorado testnet, both ways, through the box''s one budget path. Cards: review cards for approvals and Keep or Undo, a live progress card and a receipt. Reliability: replies wait in a durable outbox, the agents restart within 5 seconds, tasks resume after a power cut, and the chat says so.'
-    status: met
-clip: moment-3-approval
-video: fetch
-shots:
-  - src: ../../assets/track/fetch/agentverse-profile.png
-    alt: "The box agent's public profile on Agentverse: Active and ASI Available tags, the innovationlab and hackathon badges, and its guide explaining what to ask and how to pair."
-    caption: "The box agent's public Agentverse profile, signed out, Oct 23: Active, ASI Available, the two badges, and how to pair."
-links:
-  - label: 'The GurtOS agent on Agentverse'
-    href: https://agentverse.ai/agents/details/agent1qvuk46tnt9lnscher0pawl7pr5y525mak66ptwsrvg4kff0pfy9m2sy0us6/profile
-    note: 'Public, no sign-in. "Chat with Agent" opens a chat; without a pairing code from the box''s screen, the agent only answers with the pairing step.'
-  - label: 'The README, with every agent and what each does'
-    href: https://github.com/benz16107/calhacks13/tree/main/tracks/fetch
-    note: 'Each feature is tagged GurtOS or Fetch, with the badges and addresses.'
-  - label: ASI:One
-    href: https://asi1.ai
-    note: 'Search for "box" or paste the address. Needs an ASI:One account.'
-  - label: The Fetch.ai track's code and README
-    href: https://github.com/benz16107/calhacks13/tree/main/tracks/fetch
-  - label: 'Docs: reach GurtOS from ASI:One'
-    href: https://gurtos.com/docs/guides/asi-one/
-flow:
-  - zone: you
-    label: Ask in an ASI:One chat
-    detail: '"Fix the failing test in my project." Only a chat paired with the box''s code can give work.'
-  - zone: outside
-    label: Agentverse mailbox
-    detail: 'ASI:One''s planner sends the message over the Agent Chat Protocol. The box picks it up from its mailbox.'
-  - zone: core
-    label: The box's chat agent
-    detail: '<code>agent.py</code> and <code>brain.py</code>, run as the unprivileged user <code>nobody</code>. ASI:One''s <code>asi1-mini</code> sorts the message; new work becomes <code>POST /api/tasks</code>.'
-  - zone: task
-    label: Droid with Claude does the work
-    detail: 'Its own Linux user, its own copy of the <code>project</code> workspace, no network, a 25 cent budget.'
-  - zone: you
-    label: An Interactive Card to approve
-    detail: '"Paused for your OK: Spend $0.50 on apify.run?" The same request is on the portal and phone; the first answer wins.'
-  - zone: core
-    label: The result comes back to the chat
-    detail: 'Summary, changed files, diff, cost, and a Keep or Undo card. Undo takes out that one task''s changes.'
-status:
-  - part: The agents on Agentverse
-    state: live
-    note: 'The GurtOS team (GurtOS, Shopper, Find and Credit Desk) runs on the always-on test machine. The three TEST agents are ours and stand in for strangers.'
-  - part: The chat through ASI:One
-    state: live
-    note: "ASI:One's planner, with <code>asi1-mini</code> sorting each message (a status check or new work). A keyword rule takes over if ASI:One does not answer."
-  - part: The work
-    state: live
-    note: 'Droid with Claude edits and tests code; Apify searches the web.'
-  - part: Spending
-    state: test
-    note: 'Model use is real (about 15 cents per live test). Each Apify search is counted at its $0.50 cap. The offline test uses a $3.00 spend of test money.'
-  - part: Offline merge gate
-    state: simulated
-    note: '<code>./demo</code> talks to <code>brain.py</code> over stdin and stdout instead of Agentverse, with the scripted worker in place of Droid.'
-  - part: Payment Protocol
-    state: test
-    note: 'Test FET on Fetch''s Dorado testnet, with no value, both ways: the box paid 0.5 test FET after the owner''s OK, and a test stranger paid the Shopper 0.05. Dorado''s explorer stopped indexing new blocks, so receipts link to the raw transaction on the testnet API.'
-  - part: Talking to strangers'' agents
-    state: live
-    note: 'A live run blocked our test trap''s hidden instruction and relayed the reply of Fetch.ai''s real Weather Agent.'
-  - part: A team of box agents on the SpacetimeDB queue
-    state: live
-    note: 'Live with real Droid: 3 agents shared one queue, each job went to exactly one, and 3 of 3 finished with a price. Offline, only the posting and the board are checked.'
 ---
+
+<Lead proof='Live run through ASI:One: a Droid task fixed a failing test for $0.05 and sent the diff with Undo; a stock check paused at a $0.50 search over its $0.25 budget, sent an Approve card, and after Approve answered "in stock on Hario&apos;s US store at $10.25".'>
+
+ASI:One can find the GurtOS agent on Agentverse and hand it real work. GurtOS runs each request as its own sandboxed task, with no keys and no network of its own, on a computer you own. The whole flow stays in the chat: pairing, progress, an Approve card before it spends over budget, and the result with its diff and an Undo button.
+
+</Lead>
+
+<div>
 
 ![tag:innovationlab](https://img.shields.io/badge/innovationlab-3D8BD3) ![tag:hackathon](https://img.shields.io/badge/hackathon-5F43F1)
 
-| Agent | Address | What it is |
+**Agent:** `GurtOS` · **Address:** `agent1qvuk46tnt9lnscher0pawl7pr5y525mak66ptwsrvg4kff0pfy9m2sy0us6` · [Open on Agentverse](https://agentverse.ai/agents/details/agent1qvuk46tnt9lnscher0pawl7pr5y525mak66ptwsrvg4kff0pfy9m2sy0us6/profile)
+
+</div>
+
+<Shot src="track/fetch/agentverse-profile-oct24.png" alt="The GurtOS agent's public profile on Agentverse, signed out: Active and ASI Available tags, uAgent, the innovationlab and hackathon badges, 100% uptime, and its guide listing things to ask." caption="The GurtOS agent's public Agentverse profile, signed out, Oct 24: Active, ASI Available, 100% uptime, both badges, and a guide with what to ask." />
+
+## A chat, start to finish
+
+These are the messages the agents send, shortened, from the chat the merge gate checks. `>` marks another agent's words, relayed as a quote. The Shopper's store here is our test store; the live ASI:One run above checked Hario's real store.
+
+```
+you      pair 123456
+GurtOS   Paired. This box now takes work from you here.
+
+you      fix the failing test in my project
+GurtOS   Done: Fix the failing test in my project ($0.05).   [diff card: modified split.js, Keep / Undo]
+
+you      is the Hario V60 filter back in stock?
+GurtOS   GurtOS Shopper replied:
+         > Hario V60 02 paper filters, 100 count: 8.99 USD, in stock
+
+you      ask the test weather agent for the weather in Berkeley
+GurtOS   Blocked an instruction from GurtOS test weather (trap). Its reply was hidden from people in an
+         HTML comment; told AI agents to ignore their owner; asked for keys, codes or passwords; asked for
+         money to be sent. GurtOS treats other agents' replies as data, never as orders.
+         The rest of its answer: Berkeley: 17C and clear, light wind...
+
+you      ask the test oracle for a fortune
+GurtOS   Paused for your OK: Spend $0.50 ... on fetch.pay (test FET on Fetch testnet)?   [Approve] [Deny]
+you      (Approve)
+GurtOS   Paid 0.5 test FET (tx ...).   [receipt card]
+```
+
+## Why it needs an operating system
+
+On an ordinary computer, an agent that takes orders from a chat runs as you: it can read your keys, change any file and reach any host, and nothing can take back what it did. Agents that talk to strangers' agents make it worse, because any reply can carry a hidden instruction. GurtOS runs each chat request as its own Linux user, with its own copy of the files, no keys and only the network it was given. Spending over the task's budget waits for you, in the chat and on your phone, and Undo removes exactly that task's changes. The chat agent itself runs as an unprivileged user and uses only the box's HTTP API, the same one the portal and phone use, so it has no powers the portal lacks.
+
+<CriteriaMap sponsor="Fetch.ai" source="Fetch.ai's ASI:One Agent Challenge requirements and bonuses, as copied into the project's track plan." items={[
+  { ask: 'An agent ASI:One can find that takes real multi-step action.', how: 'The <code>GurtOS</code> agent is on Agentverse, Active and ASI Available. A request becomes a task that reads code, runs tests, edits files and checks its fix, or searches the web, then reports back.', evidence: [{ label: 'Agentverse profile', href: 'https://agentverse.ai/agents/details/agent1qvuk46tnt9lnscher0pawl7pr5y525mak66ptwsrvg4kff0pfy9m2sy0us6/profile' }] },
+  { ask: 'Agent on Agentverse, speaking the Agent Chat Protocol.', how: 'A uAgent (<code>agent.py</code>) speaking <code>ChatMessage</code> and <code>ChatAcknowledgement</code>, reading an Agentverse mailbox, so the box needs no open port. Seven agents in all: GurtOS, its Shopper, Find and Credit Desk team, and three labelled TEST.', evidence: [{ label: 'The agents', href: '#the-agents' }] },
+  { ask: 'Main flow inside an ASI:One chat.', how: 'Pairing, requests, progress, approvals, results and undo all happen in the chat. The portal is not needed.', evidence: [{ label: 'The chat', href: '#a-chat-start-to-finish' }] },
+  { ask: 'Real tool use.', how: 'Droid with Claude reads the repo, runs <code>node --test</code>, edits the code and checks the fix, as its own Linux user. Web searches run Apify through a box tool, with the token kept where tasks cannot read it.', evidence: [{ label: 'Merge gate lines', href: '#evidence' }] },
+  { ask: 'Public repo with run steps; README with agent names, addresses and badges.', how: 'The repo is public under Apache-2.0. <code>tracks/fetch/README.md</code> and the agent profile carry the names, addresses and both badges.', evidence: [{ label: 'tracks/fetch/README.md', href: 'https://github.com/benz16107/calhacks13/tree/main/tracks/fetch' }] },
+  { ask: '3 to 5 minute video.', status: 'partly', how: 'Produced after the build, inside ASI:One. Until then this page shows the transcript and the live run.' },
+  { ask: 'Also submit through the ASI:One Submission Agent.', status: 'open', how: 'Sent with the Devpost link on submission day.' },
+  { ask: 'Bonus: multi-agent.', how: "GurtOS routes a request to its Shopper, Find or Credit Desk agent and relays the reply, naming who said it; a list of items becomes jobs that three box agents claim from a SpacetimeDB queue; and it talks to strangers' agents, treating every reply as data." },
+  { ask: 'Bonus: Payment Protocol.', how: "In test FET on Fetch's testnet, both ways: the box paid 0.5 test FET after the owner's OK, and a test stranger paid the Shopper 0.05. Payments go through the same budget and approval path as the Coinbase wallet." },
+  { ask: 'Bonus: ASI:One Interactive Cards.', how: 'Approve and Deny, live progress with Stop and Undo, the diff with Keep or Undo, a receipt, and a blocked card.' },
+  { ask: 'Bonus: reliability.', how: 'Replies wait in a durable outbox, the agent restarts within 5 seconds, and after a power cut the chat says GurtOS restarted and resumes the task where it stopped.' },
+]} />
+
+<OSvsTrack sponsor="Fetch.ai" rows={[
+  { what: 'Each chat request is its own task: own Linux user, own copy of the files, no keys, no network of its own', why: 'Real tool use, done safely', os: 'Task users, copy-on-write files, the key file, per-task network', track: 'The request arrives over the Agent Chat Protocol', status: 'Shipped' },
+  { what: 'The box as an agent on Agentverse, with its whole flow in the ASI:One chat', why: 'Required', os: 'The same HTTP API as the portal and phone', track: 'uAgents, the Agentverse mailbox, the Chat Protocol, ASI:One planner mode', status: 'Shipped' },
+  { what: "Only the paired owner gives work; the pairing code shows only on the box's screen or the owner's phone", why: 'Real action, safely', os: 'Pairing; at most ten wrong codes a minute', track: 'Chat sessions', status: 'Shipped' },
+  { what: 'Over budget, an Approve or Deny card; the result with its diff and Keep or Undo', why: 'Interactive Cards bonus', os: 'The approval pause and undo', track: 'ASI:One Interactive Cards', status: 'Shipped' },
+  { what: 'A team of agents: Shopper, Find and Credit Desk', why: 'Multi-agent bonus', os: 'Each app on the box stays its own task with its own limits', track: 'The Chat Protocol between agents', status: 'Shipped. Find and Credit Desk answer only their own box' },
+  { what: "Strangers' replies are data: a hidden instruction is blocked, described and logged, never quoted", why: 'Real tool use, safely', os: 'A reply cannot start a task, approve, pay or pair, and no task holds a key', track: 'The screening in guard.py, with asi1-mini as a second opinion', status: "Shipped. The live run blocked our trap and relayed Fetch.ai's real Weather Agent" },
+  { what: 'The Payment Protocol in test FET, both ways', why: 'Payment Protocol bonus', os: 'The one budget and approval path; the wallet key stays in the core', track: "RequestPayment, CommitPayment, CompletePayment on Fetch's testnet", status: 'Shipped as test money' },
+  { what: 'A team of box agents on one SpacetimeDB queue', why: 'Multi-agent bonus', os: 'The shared queue with atomic claims', track: 'The request arrives from the chat', status: 'Shipped. Live with real Droid: 3 agents, each job to exactly one, 3 of 3 finished' },
+  { what: 'Reliability: outbox, restart within 5 seconds, resume after a power cut', why: 'Reliability bonus', os: 'Resume from the action log', track: 'The outbox and the chat message saying so', status: 'Shipped' },
+  { what: 'Pick your machine from the chat', why: 'Multi-agent bonus', os: 'Each machine named by its GurtOS edition', track: 'Link another box with a code and an HMAC proof', status: 'Shipped. A linked machine only answers, never gives orders' },
+  { what: 'Guest requests from strangers', why: 'Real action, safely', os: 'One guest path shared with Mana: nothing runs before the owner says yes; then no network and a 25 cent budget', track: 'The chat', status: 'Shipped. At most 3 per guest an hour and 10 from all guests' },
+]} />
+
+## The agents
+
+Every box makes its own team the first time it starts; each address comes from a seed kept root-only on the box.
+
+| Agent | Address | What it does |
 |---|---|---|
 | `GurtOS` | `agent1qvuk46tnt9lnscher0pawl7pr5y525mak66ptwsrvg4kff0pfy9m2sy0us6` | The owner's one chat. Runs tasks, routes requests to its team, screens other agents, pays and gets paid. |
-| `GurtOS Shopper` | `agent1qdplwdgdc5ta893e22arqkc3hj00fuzh9d8k0nphlwsngxxc3kzesvrq0fj` | Price checks and price watches. Sells a live price check to anyone for 0.05 test FET. |
+| `GurtOS Shopper` | `agent1qdplwdgdc5ta893e22arqkc3hj00fuzh9d8k0nphlwsngxxc3kzesvrq0fj` | Price checks and watches. Sells a live price check for 0.05 test FET. |
 | `GurtOS Find` | `agent1qd5fhsz5a6xaqenu7em9fqsz8ucfxk7e5zmsqxwz04ufgsmm3xjek6ewztq` | Finds the owner's photos, files and past tasks by what is in them. Answers only its own box. |
 | `GurtOS Credit Desk` | `agent1q05500vet9lygyes5c0syh44ug8gdw832uenczze75dmysag6d3qcjer4q0` | A credit analyst with live CRS checks and a human controller. Answers only its own box. |
-| `GurtOS test weather (trap)` | `agent1q07mpkw7lg7awsk6dscgv28gvdkaund3jmhh0acg3h740yawscx66gtufk3` | A TEST agent whose weather reply hides an instruction, for GurtOS to block. |
-| `GurtOS test oracle (paid)` | `agent1qgtzsg7xfe8dyte2h4z879xnf9pej3ftkqkzm28ecf5zr2qqjgxng8qm9tl` | A TEST agent that sells a fortune for 0.5 test FET. |
-| `GurtOS test buyer` | `agent1qvvqqv5l8h53rljr7992uguqpwd5efsa89qyd3zmtapnfqz66dp5ctp0tmq` | A TEST agent that buys a price check from GurtOS Shopper with its own test FET. |
+| `GurtOS test weather (trap)` | `agent1q07mpkw7lg7awsk6dscgv28gvdkaund3jmhh0acg3h740yawscx66gtufk3` | TEST. Its weather reply hides an instruction for GurtOS to block. |
+| `GurtOS test oracle (paid)` | `agent1qgtzsg7xfe8dyte2h4z879xnf9pej3ftkqkzm28ecf5zr2qqjgxng8qm9tl` | TEST. Sells a fortune for 0.5 test FET. |
+| `GurtOS test buyer` | `agent1qvvqqv5l8h53rljr7992uguqpwd5efsa89qyd3zmtapnfqz66dp5ctp0tmq` | TEST. Buys a price check from GurtOS Shopper with its own test FET. |
 
-The three test agents take no Agentverse place: they listen on the box's own machine and are found through the Almanac. Fetch.ai's public Weather Agent and Stock Price Agent are the two real strangers GurtOS talks to.
+The three TEST agents listen on the box's own machine and are found through the Almanac. Fetch.ai's public Weather Agent and Stock Price Agent are the real strangers GurtOS talks to.
 
-Every box has its own team: each address comes from a seed the box makes the first time, kept root-only on the box.
+<Steps title="Try it" time="About 5 minutes at our table; needs an ASI:One account.">
 
-## Why GurtOS, and what each part is for
+1. Open the box screen's **ASI:One** window. It shows the agent's address and a pairing code, visible only there and on the owner's phone.
+2. In [ASI:One](https://asi1.ai), find the agent by its address and open a chat.
+3. Send `pair <code>` within 10 minutes, then "fix the failing test in my project".
+4. Approve the card when it comes, then press **Undo** on the result and watch the box take that one task's changes out.
 
-**A safe body for ASI:One, on a computer you own.** A GurtOS Server box is always reachable: it answers from its
-Agentverse mailbox with no open port, even when your laptop is shut. GurtOS Personal does the same on your own laptop.
-Either way, the portal and the phone show every chat task live, and you can approve, undo or pause it from there.
+Without a pairing code, the agent only answers with the pairing step. Anyone can open [its public profile](https://agentverse.ai/agents/details/agent1qvuk46tnt9lnscher0pawl7pr5y525mak66ptwsrvg4kff0pfy9m2sy0us6/profile) signed out.
 
-| Feature | Why it is there | Fetch.ai requirement or bonus | From | Today |
-|---|---|---|---|---|
-| The box is an agent on Agentverse, speaking the Agent Chat Protocol | So ASI:One can find it and hand it work | Required: agent on Agentverse, Agent Chat Protocol | The Fetch.ai app | Shipped |
-| The whole flow happens in the ASI:One chat: pairing, requests, approvals, results, undo | You never need to leave the chat | Required: main flow inside an ASI:One chat | The Fetch.ai app | Shipped |
-| Each chat request is its own task: its own Linux user, its own copy of the files, no keys, no network of its own | Work a stranger's message starts cannot reach your files or keys | Required: real tool use, done safely | GurtOS | Shipped |
-| Spending above the task's budget pauses for an Approve or Deny card in the chat (and on the portal and phone) | An agent never spends your money on its own | Bonus: ASI:One Interactive Cards | GurtOS (the approval pause) and the app (the card) | Shipped |
-| The result comes back with its diff and a Keep or Undo card | You see exactly what changed and can take it back | Bonus: Interactive Cards | GurtOS (undo) and the app (the card) | Shipped |
-| Only the paired owner gives work; strangers get the pairing step | Nobody else can start, approve or undo anything | Required: real multi-step action, safely | The Fetch.ai app | Shipped |
-| Replies wait in an outbox, the agent restarts within 5 seconds, and tasks resume after a power cut | A chat never loses its answer | Bonus: reliability | GurtOS (resume) and the app (outbox) | Shipped |
-| Live view and control on the portal and phone | You can watch and stop chat work from anywhere | Required: real action you can see | GurtOS | Shipped |
-| A team of agents: GurtOS routes a request over the chat protocol to its Shopper, Find or Credit Desk agent and relays the reply, naming who said it | An app on your box becomes something any agent can use, without one big agent holding everyone's powers | Bonus: multi-agent | The Fetch.ai app | Shipped. The Find and Credit Desk agents answer only their own box, and the controller's questions arrive as Approve and Deny cards |
-| Strangers' replies are data: a hidden instruction is blocked, described in plain words and logged, never quoted; cards from outside agents are not shown | The easiest way into an agent is another agent's reply | Required: real tool use, safely | GurtOS (a reply cannot start a task, approve, pay or pair, and no task holds a key) and the app (the screening) | Shipped. The live run blocked our test trap and relayed Fetch.ai's real Weather Agent. The rules catch common shapes, so a novel instruction might get through the screening, but it still cannot make GurtOS do anything |
-| The Payment Protocol in test FET on Fetch's testnet, both ways, through the `fetch.pay` tool and the box's one budget path | A chat agent can pay and get paid without holding a key | Bonus: Payment Protocol | GurtOS (the budget, the approval, the key in the core) and the app (the protocol) | Shipped as test money. Live: the box paid 0.5 test FET after the owner's OK, and a test stranger paid the Shopper 0.05 |
-| Richer cards: approve or deny, live progress with Stop and undo, the diff with Keep or Undo, a receipt and a blocked card | You see and control the work in the chat | Bonus: Interactive Cards | GurtOS (undo) and the app (the cards) | Shipped |
-| Reliability in the chat: after a power cut the chat says GurtOS restarted and is resuming the task where it stopped | A chat never loses its answer | Bonus: reliability | GurtOS (resume) and the app (the outbox) | Shipped |
-| Pick your machine from the chat: link another GurtOS box with a code and an HMAC proof, then run work there, with the machine named by its GurtOS edition | One chat for a server and a laptop | Bonus: multi-agent | The Fetch.ai app | Shipped. A linked machine can only answer, never give orders, and its replies are screened too |
-| Guest requests: a stranger's lookup or price check waits for the owner's OK, then runs with no network of its own and a 25 cent budget | Anyone can ask your box something, and nothing runs before you say yes | Required: real action, safely | GurtOS and the Mana app's one guest path | Shipped, with at most 3 requests per guest an hour and 10 from all guests |
-| A team of box agents on the SpacetimeDB queue: a request that lists items becomes jobs, and up to three agents each claim the next one, check its price and finish it | Several agents split one request without colliding | Bonus: multi-agent | GurtOS (the queue) | Shipped. Live with real Droid: 3 agents shared one queue, each job went to exactly one, and 3 of 3 finished with a price. The offline gate checks the posting, the board and the claiming only |
+</Steps>
 
-## Evidence
+<Details summary="Run the agent on your own box">
 
-**A chat, start to finish.** These replies are from a live run through ASI:One, shortened.
+1. Add `AGENTVERSE_API_KEY`, `ASI_ONE_API_KEY` and `FACTORY_API_KEY` (and optionally `APIFY_TOKEN`) as keys on the box.
+2. Turn the agent on: `curl -X POST http://127.0.0.1:7700/t/fetch/agent -H 'content-type: application/json' -d '{"on": true}'`. The first time it installs uAgents, about 30 seconds. It stays on across restarts.
+3. Open `http://127.0.0.1:7700/t/fetch/` for the address and the pairing code, then pair from ASI:One.
 
-1. **Pair once.** The box's screen shows a six-digit code. The chat sends `pair 123456`. The box answers "Paired. This
-   box now takes work from you here." Anyone else gets only the pairing step and cannot start, approve or undo
-   anything.
-2. **Ask for work.** "Fix the failing test in my project." The box starts a Droid task in its own copy of the `project`
-   workspace, a small sample repo whose bill-splitting function loses a cent. The task has no network of its own and
-   a 25 cent budget.
-3. **The result comes back:** "Done: Fix the failing test in my project. ($0.05)", Droid's summary, the changed files,
-   the diff, and a card with **Keep** and **Undo**.
-4. **A pause for your OK.** "Check if the Hario V60 paper filters (size 02, 100 count) are back in stock." Droid
-   searches the web through the box's Apify tool. A search counts $0.50, more than the budget, so the task stops and
-   the chat gets a card: "Paused for your OK: Spend $0.50 on apify.run? Budget $0.25, spent $0.00." with **Approve**
-   and **Deny**. After Approve: "Done: Check if the Hario V60 paper filters... ($0.57). The size 02 filters (100 count)
-   are in stock on Hario's US store at $10.25..."
-5. **Any time:** "status" lists your latest tasks with state and cost. "undo" takes back the last one.
+`DEMO_LIVE=fetch ./demo` runs the whole flow with a demo team on Agentverse: every mailbox, ASI:One's planner through its API, pairing, Fetch.ai's Weather Agent, the trap blocked, the box paying the oracle on Fetch's testnet after an OK, and the test buyer paying the Shopper. About five minutes. `DEMO_LIVE=fetch,droid` adds the Droid fix.
 
-`DEMO_LIVE=fetch ./demo` runs that whole flow with a demo team of the same agents (`GurtOS (test)` and its Shopper, Find and Credit Desk): the Agentverse mailbox, ASI:One's planner
-through its API, pairing, the Droid fix and the stock check with its card. It takes about five minutes and about 15
-cents of model use.
+</Details>
 
-**The merge gate, every run.** `./demo` runs the chat logic offline on every merge. The latest run, Oct 24 on the x86
-test VM, passed all 22 sections (175 checks, 0 failed):
+<Evidence title="Evidence" run="The offline chat check in the merge gate (<code>./demo</code>, x86 test VM, Oct 24). It talks to the chat logic over stdin instead of Agentverse, with a scripted worker. The live runs through Agentverse and ASI:One are <code>DEMO_LIVE=fetch</code>." sources={[
+  { label: 'tracks/fetch/README.md', href: 'https://github.com/benz16107/calhacks13/tree/main/tracks/fetch' },
+  { label: 'ASI:One Interactive Cards', href: 'https://innovationlab.fetch.ai/resources/docs/interactive-cards/asi-interactive-cards' },
+]}>
 
 ```
 track fetch
-  ok    the track made the "project" workspace: a small repo with a failing test
   ok    a stranger on ASI:One gets the pairing step, and no task starts
   ok    a wrong pairing code is refused; the code from the box's screen pairs the owner
-  ok    the chat started task tlyndb8f60e, with no network of its own and a 25 cent budget; spending $3.00 paused it
+  ok    the chat started a task with no network of its own and a 25 cent budget; spending $3.00 paused it
   ok    the chat got an ASI Interactive Card (review) with Approve and Deny for that approval
   ok    a stranger sending the same click approves nothing
   ok    clicking Approve in the chat answered it on the box, logged as asi1
   ok    the task finished, and its reply carries the diff
   ok    the Undo button in the result card undid the task on the box
   ok    restarted, the chat agent picked up where it was: the OK from the phone, then the result
-  ok    a click relayed in the planner's words answered the chat's last card, and the task finished
   ok    "status" lists the owner's tasks and their states
 ```
 
-## How it works
+</Evidence>
 
-<Flow steps={frontmatter.flow} />
+<Details summary="How it talks to ASI:One">
 
-**Talking to ASI:One's planner.** The planner sends the agent a message and uses its first reply, so the box replies
-within 40 seconds with the result, an approval card, or "still working" and the latest step. A later "status check"
-from the planner gets the task's next news and never starts a new task. A card click comes back as JSON in a direct
-chat, or in the planner's own words ("The user approved the card interaction..."); then it applies to the last card
-shown in that chat session.
+**The planner.** ASI:One's planner sends the agent a message and uses its first reply, so the box replies within 40 seconds with the result, a card, or "still working" and the latest step. A later status check gets the task's next news and never starts a new task.
 
-**Cards.** Approvals and results go out as `MetadataContent` in the
-[ASI:One Interactive Cards](https://innovationlab.fetch.ai/resources/docs/interactive-cards/asi-interactive-cards)
-format, `card_kind: "review"`, with **Approve** and **Deny** for a pause and **Keep** and **Undo** for a result.
+**Cards.** Approvals and results go out as `MetadataContent` in the Interactive Cards format, `card_kind: "review"`. A click comes back as JSON in a direct chat, or in the planner's own words; then it applies to the last card in that chat.
 
-**The chat agent has no powers the portal lacks.** `brain.py` uses only the box's HTTP API, the one the portal and the
-phone use. It runs as `nobody`: it can use that API, but cannot read the vault or the workspaces. Tasks hold no keys
-and have no network of their own; web work goes through box tools that run in the core.
+**The chat agent.** `agent.py` and `brain.py` run as the unprivileged user `nobody`. They can use the box's HTTP API but cannot read the keys or the workspaces. ASI:One's `asi1-mini` sorts each message (a status check or new work); a keyword rule takes over if ASI:One does not answer.
 
-**Reliability.** Replies wait in a durable outbox until they are sent, and a failed send is tried again. After a
-restart or a power cut, the agent picks up from the box's action log where it stopped, and the box's tasks resume
-too. If the agent process dies, the box starts it again within 5 seconds.
+**Payments.** `fetch.pay` is a box tool. The wallet key stays in the core, and the core's one spending check decides: within the pay task's $0.25 budget it pays on its own, above it asks you in the chat and on your phone. It pays once per request, only an agent you asked, at most 5 FET.
 
-**Safety.** Only paired owners give work and answer cards. A code works once, and the box takes at most ten wrong
-codes a minute from everyone together. Any spending above the task's budget waits for the owner's OK.
+</Details>
 
-## Try it
+<Limits>
 
-**At our table.** The box's screen shows the ASI:One app with the agent's address and a pairing code. Open ASI:One,
-find the agent `box`, send `pair <code>`, then ask "fix the failing test in my project". Approve the card when it
-comes, then press Undo on the result.
+- No screenshot of the ASI:One chat page yet: the live runs went through ASI:One's API, which returns text and card data, not the page. The transcript above is from the messages the merge gate checks.
+- A card click relayed through ASI:One's planner arrives without the selection, so it applies to the last card in that chat.
+- The screening rules catch common shapes of an instruction. A novel one may get past the rules and the model check, but it still cannot make GurtOS do anything: replies are only ever relayed.
+- All payments are test FET with no value. Fetch's Dorado explorer stopped indexing new blocks, so receipts link to the raw transaction on the testnet API.
+- The three TEST agents are ours. They stand in for strangers so a hostile reply and payments both ways can be shown on cue.
+- One team per box. To reply into a chat from a timer, `agent.py` sets a private uAgents field, so uAgents is pinned to 0.26.1.
 
-**On your own box** (Ubuntu 24.04 with GurtOS installed):
-
-1. Put `AGENTVERSE_API_KEY`, `ASI_ONE_API_KEY` and `FACTORY_API_KEY` (and optionally `APIFY_TOKEN`) in
-   `/etc/box/vault.env`.
-2. Turn the agent on:
-   ```sh
-   curl -X POST http://127.0.0.1:7700/t/fetch/agent -H 'content-type: application/json' -d '{"on": true}'
-   ```
-   The first time it installs uAgents into `/opt/box-fetch/venv`, about 30 seconds. It stays on across restarts.
-3. Open `http://127.0.0.1:7700/t/fetch/` for the agent's address and the pairing code.
-4. In ASI:One, find the agent by its address, open a chat, send `pair <code>`, then ask for work.
-
-<Status rows={frontmatter.status} />
-
-## Limits
-
-- A card click relayed through ASI:One's planner arrives in the planner's words, without the selection, so the box
-  applies it to the last card in that chat session.
-- Droid may search the web more than once, and each search above the budget asks again.
-- To reply into a chat session from a timer, `agent.py` sets a private uAgents field, so uAgents is pinned to 0.26.1.
-- One team per box. Two boxes with the same seed would split one mailbox.
-- Dorado's explorer stopped indexing new blocks, so payment receipts link to the raw transaction on Fetch's testnet API. All payments are test FET with no value.
-- The screening rules catch the common shapes of an instruction. A novel one may get through the rules and the model check, but it still cannot make GurtOS do anything.
-- The three TEST agents are ours, labelled TEST on Agentverse. They stand in for strangers so a hostile reply and payments both ways can be shown on cue.
+</Limits>

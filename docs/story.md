@@ -321,29 +321,27 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 
 **Features** (from the page's table):
 
-| Feature | Why it is there | Coinbase criterion | From | Today |
+| Feature | Serves | From GurtOS (the OS) | From Coinbase | Status |
 |---|---|---|---|---|
-| The key never reaches the agent: it lives in the root-only vault, and only `wallet.pay` in the core reads it | A prompt injection or a bad model cannot leak or spend a key it never had | Technical design | GurtOS (vault and broker) | Shipped. The merge gate checks neither the wallet key nor the CDP secret is anywhere in the log |
-| Per-task budget on top of the x402 client's own payment policy (exact price, devnet USDC only, $1 cap per payment) | Two independent limits on what an agent can spend | Technical design, usefulness | GurtOS (budget) and Coinbase's x402 SDK (policy) | Shipped |
-| Over budget, the task pauses until you approve on the portal or phone; denied means nothing is paid | You stay the one who decides on money | Usefulness | GurtOS (the approval pause) | Shipped |
-| Every payment in the append-only log with amount, payee, task and transaction | A record you can audit, matched to the chain | Technical design | GurtOS (the log) and the app (the receipt) | Shipped |
-| Settlement through Coinbase's CDP facilitator, which pays the network fee | The wallet needs no SOL, and Coinbase verifies each payment | Usefulness | The wallet app, on Coinbase CDP | Shipped |
-| An installable skill (`skill/x402-wallet/SKILL.md`) and two box tools any agent can call | Any agent on any box can pay without new code | Ease of reuse | The wallet app | Shipped |
-| Open source, Apache-2.0 | Anyone can run GurtOS, customise it, and reuse the wallet | Ease of reuse | GurtOS | Shipped |
-| The box earns over x402: it sells its audit proof ($0.01), a metered search of the owner's published files ($0.002 a result, at most $0.02) and rental of its agent ($0.25, only after the owner approves), settled by Coinbase's CDP facilitator, with a daily sales cap | A box can earn as well as spend | Usefulness, technical design | The wallet app | Shipped. The offline gate checks a stranger can read the price list but not the wallet or log. Listed in Coinbase's x402 Bazaar: after the first settled payment through the box's public address (made from a second wallet, since a wallet cannot pay itself), Coinbase's CDP facilitator cataloged both paid routes within a second, and a lookup by the box's pay-to address returns them with their Bazaar metadata. Free-text search did not find them yet, only the lookup by pay-to address did |
-| Agents shop for APIs: `wallet.discover` searches the x402 Bazaar, ranks offers payable first and cheapest first, and drops anything above the agent's limit or the task's budget | An agent finds what it needs without a human choosing | Usefulness, ease of reuse | The wallet app and Coinbase's Bazaar | Shipped |
-| Two locks on the money: a CDP Server Wallet whose Coinbase policy signs only for listed payees, under the cap, in USDC, behind GurtOS's budgets and phone approvals | One lock can be argued with, two cannot | Technical design | The wallet app, Coinbase CDP and GurtOS (budgets, approvals) | Built and unit-tested, not run live yet: it needs a CDP Wallet Secret that is pending. Live runs so far use the vault key with the owner's policy enforced by GurtOS, and the page says so. A box whose CDP key can manage policies could loosen its own policy |
-| Metered APIs: `wallet.payMetered` pays x402 upto offers, the agent authorizes a cap and the seller charges for what it used | Pay for use, not for a guess | Technical design | The wallet app | Shipped. The gate's metered step capped a search at $0.02 and charged $0.002. Until the core reads the settled amount, a metered payment counts at its cap in the task's cost |
-| Reuse in one command: `install.sh` installs the wallet as an MCP server and skill for Claude Code, Droid or any MCP client, with a budget and an approval prompt | Anyone can use it outside a GurtOS box | Ease of reuse | The wallet app | Shipped. A real Claude Code session installed it that way and paid $0.01 for a joke over MCP |
-| Top up from the phone with a Coinbase Onramp session for the wallet's address | The owner can fund the wallet from the phone | Usefulness | The wallet app and Coinbase Onramp | Built in sandbox mode only. Sandbox orders move no money and cannot deliver devnet USDC, so test money comes from Circle's faucet |
-| Builder feedback kept as each Coinbase tool was used | Coinbase asks for it | Builder feedback | The wallet thread | Shipped in `tracks/wallet/FEEDBACK.md` |
+| The key never reaches the agent | Technical design | A root-only key file, opened only by wallet.pay inside the box; each task is its own Linux user | None | Shipped. The live run checks neither the wallet key nor the CDP secret is in the log |
+| Pay for APIs with x402 | Usefulness | The box fetches the URL, only from the task's hosts, no redirects | x402 v2 SDK, exact scheme; settled by the CDP facilitator, which pays the fee | Shipped. 70 fixed-price payments on devnet |
+| Budget, then the owner's OK on the phone | Usefulness, technical design | Budgets reserved before the call, so two payments at once cannot both slip through; the pause names the amount, payee and URL | The x402 client policy: exact price, devnet USDC only, at most $1 a payment | Shipped |
+| Every payment on the record | Technical design | The append-only action log: amount, payee, task, transaction | The settlement receipt | Shipped |
+| The box earns over x402: audit proof $0.01, metered search up to $0.02, renting its agent $0.25 after the owner approves | Usefulness | Only these routes open to strangers; renting starts a task only after the owner says yes | @x402/express sellers, CDP facilitator, Bazaar metadata | Shipped. Live at gurt-cloud.box.gurtos.com |
+| Listed in the x402 Bazaar | Usefulness, reuse | A public HTTPS address for the box (remote access) | Bazaar cataloging on the first settled payment | Shipped. A lookup by pay-to address returns both paid routes; free-text search did not find them on Oct 24 |
+| Agents shop for APIs: wallet.discover | Usefulness, reuse | Drops any offer above the task's remaining budget | Bazaar discovery search | Shipped |
+| Metered APIs: wallet.payMetered | Technical design | The cap counts against the budget | The upto scheme | Shipped. A search capped at $0.02 was charged $0.002. Until the core reads the settled amount, the task's cost counts the cap |
+| Two locks: a CDP Server Wallet whose policy signs only for listed payees, under the cap, in USDC | Technical design | Budgets and phone approvals come first | CDP Server Wallets and the policy engine | Built and unit-tested, not run live: it needs a CDP Wallet Secret. Live runs use the root-only key with the payee list and cap checked by GurtOS |
+| Reuse in one command: install.sh for Claude Code, Droid or any MCP client | Ease of reuse | The same budget and approval rules, as an MCP prompt | x402 SDK | Shipped. A real Claude Code session installed it and paid $0.01 over MCP |
+| Top up from the phone | Usefulness | The wallet page on the portal and phone | Coinbase Onramp | Sandbox only. Sandbox orders move no money, so test money comes from Circle's faucet |
+| Open source, Apache-2.0 | Ease of reuse | The whole OS and the wallet | None | Shipped |
 
-**Demo moment and proof:** A real agent (Droid with Claude) was told only "buy one joke and one report". It quoted both, paid $0.01, waited for the OK on the $0.03 report, then paid it. Both payments settled through Coinbase's CDP facilitator and are confirmed on Solana devnet, and neither the wallet key nor the CDP secret appears anywhere in the task's log.
+**Demo moment and proof:** A real agent (Droid with Claude) was told only "buy one joke and one report". It quoted both, paid $0.01, waited for the OK on the $0.03 report, then paid it. Both payments settled through Coinbase's CDP facilitator and are confirmed on Solana devnet, and neither the wallet key nor the CDP secret appears anywhere in the task's log. The box's own paid routes are listed in Coinbase's x402 Bazaar.
 
 **Still to do:**
 
 - Verified Coinbase account. (partly)
-- CDP wallets (not built)
+- CDP Server Wallet run live (not built)
 
 ## Fetch.ai: ASI:One Agent Challenge
 
@@ -357,24 +355,19 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 
 **Features** (from the page's table):
 
-| Feature | Why it is there | Fetch.ai requirement or bonus | From | Today |
+| Feature | Serves | From GurtOS (the OS) | From Fetch.ai | Status |
 |---|---|---|---|---|
-| The box is an agent on Agentverse, speaking the Agent Chat Protocol | So ASI:One can find it and hand it work | Required: agent on Agentverse, Agent Chat Protocol | The Fetch.ai app | Shipped |
-| The whole flow happens in the ASI:One chat: pairing, requests, approvals, results, undo | You never need to leave the chat | Required: main flow inside an ASI:One chat | The Fetch.ai app | Shipped |
-| Each chat request is its own task: its own Linux user, its own copy of the files, no keys, no network of its own | Work a stranger's message starts cannot reach your files or keys | Required: real tool use, done safely | GurtOS | Shipped |
-| Spending above the task's budget pauses for an Approve or Deny card in the chat (and on the portal and phone) | An agent never spends your money on its own | Bonus: ASI:One Interactive Cards | GurtOS (the approval pause) and the app (the card) | Shipped |
-| The result comes back with its diff and a Keep or Undo card | You see exactly what changed and can take it back | Bonus: Interactive Cards | GurtOS (undo) and the app (the card) | Shipped |
-| Only the paired owner gives work; strangers get the pairing step | Nobody else can start, approve or undo anything | Required: real multi-step action, safely | The Fetch.ai app | Shipped |
-| Replies wait in an outbox, the agent restarts within 5 seconds, and tasks resume after a power cut | A chat never loses its answer | Bonus: reliability | GurtOS (resume) and the app (outbox) | Shipped |
-| Live view and control on the portal and phone | You can watch and stop chat work from anywhere | Required: real action you can see | GurtOS | Shipped |
-| A team of agents: GurtOS routes a request over the chat protocol to its Shopper, Find or Credit Desk agent and relays the reply, naming who said it | An app on your box becomes something any agent can use, without one big agent holding everyone's powers | Bonus: multi-agent | The Fetch.ai app | Shipped. The Find and Credit Desk agents answer only their own box, and the controller's questions arrive as Approve and Deny cards |
-| Strangers' replies are data: a hidden instruction is blocked, described in plain words and logged, never quoted; cards from outside agents are not shown | The easiest way into an agent is another agent's reply | Required: real tool use, safely | GurtOS (a reply cannot start a task, approve, pay or pair, and no task holds a key) and the app (the screening) | Shipped. The live run blocked our test trap and relayed Fetch.ai's real Weather Agent. The rules catch common shapes, so a novel instruction might get through the screening, but it still cannot make GurtOS do anything |
-| The Payment Protocol in test FET on Fetch's testnet, both ways, through the `fetch.pay` tool and the box's one budget path | A chat agent can pay and get paid without holding a key | Bonus: Payment Protocol | GurtOS (the budget, the approval, the key in the core) and the app (the protocol) | Shipped as test money. Live: the box paid 0.5 test FET after the owner's OK, and a test stranger paid the Shopper 0.05 |
-| Richer cards: approve or deny, live progress with Stop and undo, the diff with Keep or Undo, a receipt and a blocked card | You see and control the work in the chat | Bonus: Interactive Cards | GurtOS (undo) and the app (the cards) | Shipped |
-| Reliability in the chat: after a power cut the chat says GurtOS restarted and is resuming the task where it stopped | A chat never loses its answer | Bonus: reliability | GurtOS (resume) and the app (the outbox) | Shipped |
-| Pick your machine from the chat: link another GurtOS box with a code and an HMAC proof, then run work there, with the machine named by its GurtOS edition | One chat for a server and a laptop | Bonus: multi-agent | The Fetch.ai app | Shipped. A linked machine can only answer, never give orders, and its replies are screened too |
-| Guest requests: a stranger's lookup or price check waits for the owner's OK, then runs with no network of its own and a 25 cent budget | Anyone can ask your box something, and nothing runs before you say yes | Required: real action, safely | GurtOS and the Mana app's one guest path | Shipped, with at most 3 requests per guest an hour and 10 from all guests |
-| A team of box agents on the SpacetimeDB queue: a request that lists items becomes jobs, and up to three agents each claim the next one, check its price and finish it | Several agents split one request without colliding | Bonus: multi-agent | GurtOS (the queue) | Shipped. Live with real Droid: 3 agents shared one queue, each job went to exactly one, and 3 of 3 finished with a price. The offline gate checks the posting, the board and the claiming only |
+| Each chat request is its own task: own Linux user, own copy of the files, no keys, no network of its own | Real tool use, done safely | Task users, copy-on-write files, the key file, per-task network | The request arrives over the Agent Chat Protocol | Shipped |
+| The box as an agent on Agentverse, with its whole flow in the ASI:One chat | Required | The same HTTP API as the portal and phone | uAgents, the Agentverse mailbox, the Chat Protocol, ASI:One planner mode | Shipped |
+| Only the paired owner gives work; the pairing code shows only on the box's screen or the owner's phone | Real action, safely | Pairing; at most ten wrong codes a minute | Chat sessions | Shipped |
+| Over budget, an Approve or Deny card; the result with its diff and Keep or Undo | Interactive Cards bonus | The approval pause and undo | ASI:One Interactive Cards | Shipped |
+| A team of agents: Shopper, Find and Credit Desk | Multi-agent bonus | Each app on the box stays its own task with its own limits | The Chat Protocol between agents | Shipped. Find and Credit Desk answer only their own box |
+| Strangers' replies are data: a hidden instruction is blocked, described and logged, never quoted | Real tool use, safely | A reply cannot start a task, approve, pay or pair, and no task holds a key | The screening in guard.py, with asi1-mini as a second opinion | Shipped. The live run blocked our trap and relayed Fetch.ai's real Weather Agent |
+| The Payment Protocol in test FET, both ways | Payment Protocol bonus | The one budget and approval path; the wallet key stays in the core | RequestPayment, CommitPayment, CompletePayment on Fetch's testnet | Shipped as test money |
+| A team of box agents on one SpacetimeDB queue | Multi-agent bonus | The shared queue with atomic claims | The request arrives from the chat | Shipped. Live with real Droid: 3 agents, each job to exactly one, 3 of 3 finished |
+| Reliability: outbox, restart within 5 seconds, resume after a power cut | Reliability bonus | Resume from the action log | The outbox and the chat message saying so | Shipped |
+| Pick your machine from the chat | Multi-agent bonus | Each machine named by its GurtOS edition | Link another box with a code and an HMAC proof | Shipped. A linked machine only answers, never gives orders |
+| Guest requests from strangers | Real action, safely | One guest path shared with Mana: nothing runs before the owner says yes; then no network and a 25 cent budget | The chat | Shipped. At most 3 per guest an hour and 10 from all guests |
 
 **Demo moment and proof:** In a live run through ASI:One, the box's agent paired with the chat, a Droid task fixed the failing test in a sample repo for $0.05 and sent back the diff with Undo, and a stock check paused at a $0.50 web search over its $0.25 budget, sent an Interactive Card, and finished after Approve: "in stock on Hario's US store at $10.25".
 
@@ -393,19 +386,24 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 
 **The problem:** Live agent state usually needs a database, a websocket server, a cache and auth glue, which is heavy and fragile, and an ordinary OS has nothing for it.
 
-**Features, by the sponsor's criteria** (no OS-vs-track table yet; to write when reviewed):
+**Features** (from the page's table):
 
-- *SpacetimeDB as the core real-time backend.* (met): SpacetimeDB is the box screen's live view of the box. The screen reads the task and approval tables and answers through the answer reducer. The box writes through putTask and putApproval, which refuse anyone but the box, and vouches for the screen and paired phones with registerDevice.
-- *Used meaningfully, not on the side: live shared state.* (met): One shared state for every person and every task on the box: what each task is doing now (step), its cost against its budget, and every pending approval with its question, amount, payee and purpose.
-- *Instant sync.* (met): An approval appears on the box screen the moment the box writes it. Approve there and the box picks up the answer from its subscription and writes it to its log within milliseconds; a phone that approved first through the API clears the screen's banner the same way.
-- *Agents coordinating.* (met): Agents share a work queue in SpacetimeDB: a job table and a claimJob procedure that takes the oldest open job in one transaction, so two agents asking at the same instant get different jobs. They reach it through four broker tools (spacetime.claim, finish, post and team), and the box names the task, so one agent cannot claim as another. The merge gate shows 3 agents making 15 claims on 12 jobs at once: 12 distinct jobs, none twice, and 30 simultaneous claims on 10 jobs gave 10 distinct jobs. An agent whose task ends holding a job gives it back. Presence is in the agent table.
+| Feature | Serves | From GurtOS (the OS) | From SpacetimeDB | Status |
+|---|---|---|---|---|
+| Tasks and requests mirrored live; the box screens answer through the answer reducer | Live shared state, instant sync | The box writes every change through putTask and putApproval, which refuse anyone but the box, and vouches for screens with registerDevice | Tables, reducers, subscriptions | Shipped |
+| A shared work queue with atomic claims and agent presence | Agents coordinating | Four broker tools (spacetime.claim, finish, post, team); the box names the task, so one agent cannot claim as another; a task that ends holding a job gives it back | The claimJob procedure in one transaction; the agent table | Shipped. 15 claims on 12 jobs gave 12 distinct jobs. Used live by Fetch.ai (3 Droid agents) and the credit desk (two analyst agents) |
+| Each person is sent only their own requests | Meaningful use, security | GurtOS Business routes each request to the people who may answer it | Private request and routed_to tables and a per-connection my_requests view | Shipped. Rosa's client gets what is routed to her; Priya's and a stranger's get nothing |
+| No double approvals, with who is viewing | Instant sync | Every surface answers into the same row | The first answer wins in the reducer; the later one is refused with "already approved by" and the name; presence per connection | Shipped |
+| Timers in the database | Meaningful use | Phone pushes still come from the core | A scheduled reducer brings a second person into a request still pending | Shipped as the mechanism: the demo brought Priya in after 3 seconds. The Business policy has no reminder line yet |
+| Live meters: running, needs you, done, failed, spend, activity per minute | Instant sync | None | Kept by the reducers as tasks change; no screen adds anything up | Shipped. The demo checks the meter against the box's own task list |
+| One live view across machines on Maincloud, counts only | Meaningful use | Opt-in from the Computers tab | Maincloud and a per-viewer my_machines view | Being built: written, not published, not running. It waits on one sign-in to SpacetimeDB |
 
-**Demo moment and proof:** In every merge-gate run, a task stops over its budget and SpacetimeDB shows the request live with its amount, payee and purpose. Another task keeps running and finishes meanwhile. The OK goes through SpacetimeDB's answer reducer into the box's log under the name the box vouched for, a stranger's identity is refused, and the task spends its $8.00 of test money and finishes, and SpacetimeDB shows it done with its cost.
+**Demo moment and proof:** In every merge-gate run, a task stops over its budget and SpacetimeDB shows the request live with its amount, payee and purpose while another task keeps running. The OK goes through the answer reducer under the name the box vouched for, a stranger's identity is refused, and the task finishes. In the queue check, 3 agents made 15 claims on 12 jobs at once and got 12 distinct jobs, none twice.
 
 **Still to do:**
 
 - Review the story with Ben: problem, features with their why, OS vs track
-- Maincloud fleet view (not built)
+- One live view across machines on Maincloud, counts only
 
 ## Elastic: Best use of Elastic Agent Builder on Serverless
 
@@ -540,17 +538,18 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 
 **Features** (from the page's table):
 
-| Feature | Why it is there | What it shows for Solana | From | Today |
+| Feature | Serves | From GurtOS (the OS) | From Solana | Status |
 |---|---|---|---|---|
-| SPL `TransferChecked` of devnet USDC, signed in the core | Real on-chain payments an agent can make without holding the key | Use of Solana | The wallet app | Shipped. 36 payments, every one finalized |
-| The wallet holds no SOL; a facilitator pays each fee | An agent wallet needs only the asset it spends | Use of Solana | The wallet app, on Coinbase CDP | Shipped |
-| Each transfer confirmed on chain before the receipt is logged | The log never claims a payment the chain does not have | Best use of Solana | The wallet app and GurtOS's log | Shipped |
-| Key in the root-only vault, per-task budget, approval on the phone | Spending is safe enough to leave running | Best use of Solana | GurtOS | Shipped |
-| A daily fingerprint of the box's action log written to Solana, and a verify route that checks the log still matches it | Anyone can check the log was not changed after the fingerprint was written | Best use of Solana | The wallet app | Shipped. The live demo run on Oct 24 showed a fingerprint at log entry 595 on devnet that still matched. It detects a change after it was written, not one made before |
-| A memo with the task id on every payment | A payment on chain names the task that made it | Best use of Solana | The wallet app | Shipped. The gate showed the task id on chain as a memo |
-| Box-to-box payments: one box's agent pays another box's audit proof | Boxes can pay each other | Best use of Solana | The wallet app | Shipped. In the demo the second box is a second shop with its own wallet, because Coinbase's facilitator refuses a wallet paying itself |
+| SPL TransferChecked of devnet USDC, signed in the core | Use of Solana | The key in a root-only file; tasks get only results | Real on-chain payments, confirmed before the receipt is written | Shipped. 70 fixed-price payments on Oct 24, all finalized |
+| The facilitator pays every payment fee | Use of Solana | One balance to watch, in dollars, on a box nobody tends | Solana's separate fee payer, used by x402's exact scheme | Shipped. The wallet paid no payment fee |
+| Metered payments through a payment channel | Best use of Solana | The cap counts against the task budget | x402's upto scheme: the agent locks a cap, the seller takes what it used, the rest comes back | Shipped. 13 opened; 12 settled at $0.002 or $0.01 and returned the rest; 1 returned in full |
+| The task id in a memo on every payment | Best use of Solana | Each task has an id in the action log | SPL Memo | Shipped |
+| A fingerprint of the action log written to Solana, and a check that the log still matches | Best use of Solana | The append-only action log | A memo transaction with the entry count and the hash of the log | Shipped. 11 written on Oct 24 by demo runs. It shows a change made after the fingerprint, not one made before |
+| Budget, then the owner's OK on the phone | Safe to leave running | Budgets, approvals and the action log | None | Shipped |
+| Box-to-box payments | Best use of Solana | Both sides log the payment | Devnet USDC between two wallets | Shipped. In the demo the other box is a second shop with its own wallet |
+| Mainnet | Real money | Same budgets and approvals | Mainnet USDC | Not built. Devnet only, by design |
 
-**Demo moment and proof:** The wallet's whole history is public on Solana Explorer: one 20 USDC faucet deposit, then 36 x402 payments of $0.01 or $0.03 made by agents on the box, 0.76 USDC in all, every one a finalized SPL TransferChecked whose fee was paid by the facilitator, never by the wallet.
+**Demo moment and proof:** On Oct 24, 109 finalized devnet transactions named the box's wallet, none failed: 70 fixed-price x402 payments (1.32 devnet USDC), 13 metered payments through a payment channel, and 11 fingerprints of the action log. The facilitator paid the fee on every payment; the wallet paid only for its own fingerprints.
 
 **Still to do:**
 
@@ -566,19 +565,25 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 
 **The problem:** Draft: an agent box should be reachable around the clock without exposing everything on it to the internet.
 
-**Features, by the sponsor's criteria** (no OS-vs-track table yet; to write when reviewed):
+**Features** (from the page's table):
 
-- *Best use of Vultr cloud.* (met): Vultr does four jobs no other machine does: the always-on public box (the only GurtOS box with a public HTTPS address), the build machine for the bootable discs, a test machine for the merge gate on x86, and the GNOME desktop where GurtOS Personal is tested. Agents on the public box run with every safety part on, and its whole API stays closed to the internet except two paths.
-- *Use Vultr cloud well: boot the real OS on it.* (met): The real GurtOS Server release disc was installed on a Vultr Cloud Compute instance (1 vCPU, 1 GB of RAM) and ran from its own disk, state is backed up to private Vultr Object Storage encrypted so Vultr cannot read it, and Vultr's cloud firewall is set from code. Each was run live on Oct 24 for under $0.20 in all, and the test resources were destroyed.
-- *Use Vultr in the project.* (met): The Jira issues BOX-1 to BOX-5 are tasks that ran on the Vultr box. The Mana app at the link below reads the Vultr box every 5 seconds. ./demo vultr, ./deploy vultr and image/build all target it.
+| Feature | Serves | From GurtOS (the OS) | From Vultr | Status |
+|---|---|---|---|---|
+| The always-on public box, gurt-cloud.box.gurtos.com | Best use of Vultr cloud | Every task its own Linux user with no keys; only routes an app opens answer without a paired phone | Cloud Compute in San Jose with a public address | Live. Jira issues BOX-1 to BOX-5 ran here; the Mana app and x402 buyers reach it |
+| The relay for every box address, name.box.gurtos.com | Use Vultr in the project | TLS ends on the box itself, so the relay sees only encrypted traffic | A 1 vCPU, 1 GB Cloud Compute instance | Live |
+| The release build machine | Use Vultr in the project | image/build makes the discs and signs the update image | A fresh vc2-4c-8gb per release | Shipped. v0.1.0-preview x86_64 discs built here |
+| The download mirror | Use Vultr in the project | Signed checksums; a swapped file shows | Object Storage, public-read | Live. All four discs, SHA256SUMS and its signature |
+| Boot the real GurtOS disc on Vultr from a script | Boot the real OS | The installer, A and B system slots, first-boot setup | Custom ISO by URL, Cloud Compute | Shipped. Installed in about 5 minutes on vc2-1c-1gb |
+| Encrypted backups to Object Storage | Use Vultr well | The box tars its state and encrypts it to the owner key with age, so Vultr holds only ciphertext | Object Storage | Shipped. Restored onto a fresh instance in 2.8 s |
+| The Vultr cloud firewall set from code | Use Vultr well | Refuses a rule set with no ssh source, one wider than a /8, or one that opens 7700 or 3000 | Firewall groups | Shipped. Enforced on a live instance |
+| Test machines: the merge gate on x86, fresh installs, the GNOME desktop for GurtOS Personal | Use Vultr in the project | ./demo vultr runs a throwaway box beside the installed one | Cloud Compute | Live |
+| Vultr Serverless Inference | None | None | None | Not pursued: it needs a paid subscription. Nothing here depends on it |
 
-**Demo moment and proof:** ./demo vultr on Oct 24: all 22 sections, 175 checks, 0 failed in 105 seconds on the Vultr VM, including a real Droid task running Claude and a hard power cut the box came back from. The GurtOS Server and Personal install discs were built on the same VM that night.
+**Demo moment and proof:** The real GurtOS Server release disc installed on a Vultr vc2-1c-1gb (1 vCPU, 1 GB) in about 5 minutes and came back from its own disk after the disc was detached. An encrypted backup in Vultr Object Storage restored onto a fresh instance in 2.8 s with a waiting task still waiting. Three live tests cost under $0.20 in all.
 
 **Still to do:**
 
 - Review the story with Ben: problem, features with their why, OS vs track
-- Vultr Serverless Inference (not built)
-- Switching to the Vultr box from another box's portal (not built)
 
 ## Figma: Best Workflow, Stage Log, Best Design and Most Creative
 
