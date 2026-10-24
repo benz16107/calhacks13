@@ -26,6 +26,8 @@ Gio._promisify(Gio.DataInputStream.prototype, 'read_line_async');
 const BOX = 'http://127.0.0.1:7700';
 const UI = '/opt/box/personal/box-ui.py';
 const ui = (...args) => Util.spawn([UI, ...args]);
+const VOICE = '/opt/box/personal/voice.py'; // "Talk to your computer": press once to listen, press again to stop
+const VOICE_STATE = `${GLib.get_user_runtime_dir()}/gurtos-voice`; // voice.py writes "listening <pid>" here while it hears you
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 
@@ -119,6 +121,11 @@ class Indicator extends PanelMenu.Button {
         this.needs = new St.Label({style_class: 'gurtos-badge', y_align: Clutter.ActorAlign.CENTER});
         this.needsBox.add_child(this.needs);
         this.needsBox.add_child(new St.Label({text: 'needs you', y_align: Clutter.ActorAlign.CENTER}));
+        this.mic = new St.BoxLayout({style_class: 'gurtos-listening', visible: false});
+        this.micLabel = new St.Label({y_align: Clutter.ActorAlign.CENTER});
+        this.mic.add_child(new St.Icon({icon_name: 'audio-input-microphone-symbolic', style_class: 'system-status-icon'}));
+        this.mic.add_child(this.micLabel);
+        box.add_child(this.mic);
         this.runBox = new St.BoxLayout({style_class: 'gurtos-runs'});
         this.runIcon = new St.Icon({icon_name: 'media-playback-start-symbolic', style_class: 'system-status-icon gurtos-run-icon'});
         this.runningLabel = new St.Label({style_class: 'gurtos-running', y_align: Clutter.ActorAlign.CENTER});
@@ -181,6 +188,7 @@ class Indicator extends PanelMenu.Button {
         this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
         if (settings && 'paused' in settings) // the box's pause switch, once the core has one
             this.menu.addMenuItem(switchRow('Pause all agents', 'Running tasks stop where they are', !!settings.paused, v => this.ext.patch({paused: v})));
+        this.menu.addAction('Talk to your computer', () => Util.spawn([VOICE]));
         this.menu.addAction('Ask an Agent…', () => ui('ask'));
         this.menu.addAction('Open GurtOS', () => ui('app'));
         this.menu.addAction('GurtOS Settings', () => ui('settings'));
@@ -262,6 +270,7 @@ class AgentsToggle extends QuickMenuToggle {
             item.connect('activate', open);
             this.menu.addMenuItem(item);
         }
+        this.menu.addAction('Talk to your computer', () => Util.spawn([VOICE]));
         this.menu.addAction('GurtOS Settings', () => ui('settings'));
     }
 });
@@ -290,6 +299,11 @@ export default class GurtOS extends Extension {
         this.box = new Box();
         this.indicator = new Indicator(this);
         Main.panel.addToStatusArea(this.uuid, this.indicator);
+        // A red mic and "Listening…" for as long as voice.py holds the microphone, so it is never silent.
+        this.voiceFile = Gio.File.new_for_path(VOICE_STATE);
+        this.voiceMonitor = this.voiceFile.monitor_file(Gio.FileMonitorFlags.NONE, null);
+        this.voiceMonitor.connect('changed', () => this.showVoice());
+        this.showVoice();
         this.agents = new AgentsIndicator(this);
         Main.panel.statusArea.quickSettings.addExternalIndicator(this.agents);
         // Enabled on the lock screen too, so an approval that arrives while locked reaches its notification list.
@@ -297,6 +311,16 @@ export default class GurtOS extends Extension {
         this.modeId = Main.sessionMode.connect('updated', () => this.showForMode());
         this.showForMode();
         this.start();
+    }
+
+    showVoice() {
+        let state = '';
+        try {
+            state = decoder.decode(this.voiceFile.load_contents(null)[1]).split(' ')[0];
+        } catch (e) {} // no file: not listening
+        const words = {listening: 'Listening…', thinking: 'Thinking…', speaking: 'Speaking…'};
+        this.indicator.mic.visible = state in words;
+        this.indicator.micLabel.text = words[state] ?? '';
     }
 
     showForMode() {
@@ -364,6 +388,7 @@ export default class GurtOS extends Extension {
 
     disable() {
         Main.sessionMode.disconnect(this.modeId);
+        this.voiceMonitor.cancel();
         this.box.destroy();
         if (this.timer)
             GLib.source_remove(this.timer);

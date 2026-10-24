@@ -16,6 +16,7 @@ stage { font-family: "Atkinson Hyperlegible", "Ubuntu", sans-serif; }
 .gurtos-panel { spacing: 8px; }
 .gurtos-needs { spacing: 6px; color: #F2C063; font-weight: bold; }
 .gurtos-badge { background-color: #F2C063; color: #1A1206; border-radius: 999px; padding: 0 7px; font-weight: bold; font-size: 0.85em; min-width: 10px; text-align: center; }
+.gurtos-listening { spacing: 6px; color: #F08A7D; font-weight: bold; }
 .gurtos-runs { spacing: 2px; }
 .gurtos-run-icon { icon-size: 12px; }
 .gurtos-running { font-feature-settings: "tnum"; }

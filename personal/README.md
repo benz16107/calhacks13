@@ -21,6 +21,7 @@ ISO walked as a new person, on Wayland (Ubuntu's default) and Xorg.
 | Activities search | Two sections in the overview: GurtOS (agent tasks by title) and Find (files and photos /find knows, by what is in them). A result opens in the GurtOS app | `search-provider.py` |
 | Files | Ask an Agent… on one folder or up to ten. While changes wait, the folder's menu has Keep Agent Changes and Undo Agent Changes… (the review asks first), and nothing is marked. After Keep, the "changed by an agent" emblem on each file an agent added or changed, and Put Files Back… on the folder and on those files | `files/box-nautilus.py` |
 | GurtOS Settings | A native libadwaita app with a view switcher: Agents (model key, updates, the action log), Permissions (folders, internet, spending, quiet hours and their hours), Apps, Keys, Phone. Phone has Reach this computer from anywhere: a name under box.gurtos.com, checked as you type, then Turn on and Turn off (`/api/remote`). It shows only when the box has that API. About is in the window menu, with the credits | `settingswin.py` |
+| Talk to your computer | Press Super+Alt+Space or choose it in the top-bar menu or the Agents tile, then say "what did my agents do today?", "find the whiteboard photo" or "approve the grocery order". Speech becomes text on this machine (faster-whisper `base.en`, CPU, `stt.py`), the answer comes from the box and its /find (Moss) search, and it appears as a notification and is spoken by espeak-ng. The top bar shows a red mic and "Listening…" while the microphone is open, and the same shortcut ends the sentence early. It never listens in the background, and the recording is deleted once it is read. Voice can approve or deny a request that spends nothing, signed `voice:<user>`, and refuses to approve anything that moves money: that needs the passkey or the popover | `voice.py`, `stt.py`, `voice-setup.sh` |
 | GurtOS Setup | At the owner's first login, after GNOME's own setup: Welcome, AI models, Folders, Permissions, Apps, Pair a phone, Done | `setupwin.py` |
 | The GurtOS app | Tasks, Activity and Time Machine: the portal in its own window, first in the dock | `box-ui.py app` |
 | Keep or Undo | The review: what changed, the diff, and Keep these changes? | `box-ui.py review` |
@@ -175,6 +176,15 @@ Found and passed on: apport's Python hook fails on `ID=gurtos`; GNOME's setup re
 apps show Adwaita icons instead of Yaru; setup's first page shows Ubuntu's logo (image thread). A fresh install has
 an empty vault with nothing in the first run to fill it, and Personal has no `BOX_URL`, so phone pairing cannot work
 yet (core thread). The portal greets the owner as "Ben" (portal thread).
+
+## Talk to your computer: speed
+
+Measured on the 4 vCPU test VM, with a computer-voice recording of "What did my agents do today?" (2.3 s of audio):
+the model loads while you are still talking (2.7 s), speech to text takes 1.1 s after you stop, and the box answers in
+0.06 s, so **about 1.2 s from the end of the sentence to the written answer**. `tiny.en` is 0.55 s but misheard two of
+three requests; `base.en` got all three. Search itself is /find's Moss call (under a millisecond on the test index). Run
+`GURTOS_VOICE_WAV=speech.wav personal/voice.py --timing --quiet` to measure a recording. The speech model and its Python
+environment are about 600 MB, installed by `voice-setup.sh` (needs a network once; the image build runs it).
 
 ## Install
 

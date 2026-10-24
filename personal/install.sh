@@ -18,7 +18,8 @@ here=$(cd "$(dirname "$0")" && pwd)
 # WebKitGTK for the Box window, AppIndicator for the top bar, and Python extensions for Files.
 export DEBIAN_FRONTEND=noninteractive
 pkgs=(python3-gi gir1.2-gtk-4.0 gir1.2-adw-1 gir1.2-webkit-6.0 gnome-shell-extension-appindicator python3-nautilus
-  dconf-cli librsvg2-common papirus-icon-theme bibata-cursor-theme gnome-console)
+  dconf-cli librsvg2-common papirus-icon-theme bibata-cursor-theme gnome-console
+  python3-venv espeak-ng alsa-utils libnotify-bin)
 dpkg -s gnome-shell >/dev/null 2>&1 || pkgs+=(ubuntu-desktop-minimal)
 missing=$(for p in "${pkgs[@]}"; do dpkg -s "$p" >/dev/null 2>&1 || echo "$p"; done)
 if [[ -n $missing ]]; then
@@ -50,6 +51,9 @@ install -Dm644 "$here/files/box-setup.desktop" /etc/xdg/autostart/box-setup.desk
 # The GurtOS typeface (docs/figma/system.md): Atkinson Hyperlegible Next and Mono, SIL OFL, for GurtOS's own windows.
 install -Dm644 -t /usr/share/fonts/truetype/gurtos "$here"/fonts/*.ttf "$here/fonts/OFL.txt"
 fc-cache -f /usr/share/fonts/truetype/gurtos >/dev/null 2>&1 || true
+# Talk to your computer: a local speech model, fetched once. Without a network the rest of the layer still installs,
+# and the mic item says what to run.
+[[ -x /opt/box/voice-venv/bin/python && -d /opt/box/voice-models ]] || "$here/voice-setup.sh" || echo 'personal: speech model not installed (no network?). Run /opt/box/personal/voice-setup.sh later.' >&2
 # The AppIndicator service and the dock override of earlier versions are gone: the Shell extension and dconf took over.
 systemctl --global disable box-desktop.service >/dev/null 2>&1 || true
 rm -f /etc/systemd/user/box-desktop.service /usr/share/glib-2.0/schemas/90_box-personal.gschema.override

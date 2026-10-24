@@ -44,3 +44,12 @@ show-trash=false
 show-apps-at-top=false
 running-indicator-style='DOTS'
 custom-theme-shrink=true
+
+# Talk to your computer: Super+Alt+Space listens (the same press again ends the sentence early).
+[org/gnome/settings-daemon/plugins/media-keys]
+custom-keybindings=['/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/gurtos-voice/']
+
+[org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/gurtos-voice]
+name='Talk to your computer'
+command='/opt/box/personal/voice.py'
+binding='<Super><Alt>space'

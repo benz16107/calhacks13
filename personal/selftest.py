@@ -197,3 +197,31 @@ check(any(k['name'] == 'GURTOS_SETUP_TEST' and k['setAt'] for k in names) and se
 apps = api('GET', '/api/apps?all=1')
 check(apps and all('access' in x and 'enabled' in x for x in apps),
       f'the Apps step lists all {len(apps)} apps with what each reaches and the keys it needs')
+
+# Talk to your computer: what is said becomes an answer from the box, and voice alone never spends.
+import importlib.util  # noqa: E402
+
+spec = importlib.util.spec_from_file_location('gurtos_voice', os.path.join(HERE, 'voice.py'))
+voice = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(voice)
+t = api('POST', '/api/tasks', {'title': 'Order the groceries', 'worker': 'fake', 'source': 'personal-demo', 'workspace': WS,
+                               'prompt': 'ask Spend $42.10 on the grocery order at Fresh Market?\nwrite groceries.txt ordered'})
+a = wait(lambda: next((x for x in api('GET', '/api/approvals?state=pending') if x['task'] == t['id']), None))
+t0 = time.time()
+reply = voice.answer('approve the grocery order')
+check(a and 'spends money' in reply and next(x for x in api('GET', '/api/approvals') if x['id'] == a['id'])['state'] == 'pending',
+      f'"approve the grocery order" for a $42.10 order is refused by voice and the approval stays pending ({reply[:60]}...)')
+check('Order the groceries' in voice.answer('what needs my ok'), 'what needs my OK lists the waiting task')
+t1 = api('POST', '/api/tasks', {'title': 'Rename the holiday photos', 'worker': 'fake', 'source': 'personal-demo', 'workspace': WS,
+                                'prompt': 'ask Rename the holiday photos?\nwrite renamed.txt yes'})
+b = wait(lambda: next((x for x in api('GET', '/api/approvals?state=pending') if x['task'] == t1['id']), None))
+reply = voice.answer('please approve the holiday photos')
+done = wait(lambda: api('GET', f"/api/tasks/{t1['id']}")['task']['state'] == 'done')
+by = next(x for x in api('GET', '/api/approvals') if x['id'] == b['id']).get('by', '')
+check(done and by.startswith('voice:') and reply.startswith('Approved'), f'an approval that spends nothing can be approved by voice, and the log says who ({by})')
+api('POST', f"/api/approvals/{quote(a['id'])}", {'approved': False, 'by': 'desktop:demo'})
+summary = voice.answer('what did my agents do today')
+check(summary.startswith('Today your agents handled') and 'task' in summary, f'what did my agents do today answers from the box: "{summary[:70]}..."')
+check(voice.answer('mumble').startswith("I didn't understand") and voice.answer('').startswith("I didn't catch"), 'speech that is not a request gets a short help line, never an action')
+speech_to_answer = round(time.time() - t0, 2)
+print(json.dumps({'ok': True, 'what': f'voice: four requests answered from the box in {speech_to_answer} s of code (speech to text is measured on the test VM, see README)'}), flush=True)
