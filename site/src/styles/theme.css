@@ -214,3 +214,6 @@ h1#_top {
   color: var(--sl-color-orange-high);
   border-color: transparent;
 }
+
+/* The phone frame in docs pages sits at phone size, not column width. */
+.docs-phone { width: 13rem; margin: 1.25rem 0; }

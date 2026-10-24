@@ -1,6 +1,7 @@
 ---
 import { Image } from 'astro:assets';
 import Landing from '../layouts/Landing.astro';
+import PhoneFrame from '../theme/PhoneFrame.astro';
 import { NAME, REPO, LICENSE_NAME } from '../product.ts';
 import server from '../assets/home/server-screen.png';
 import personal from '../assets/home/personal-everyday.png';
@@ -48,11 +49,10 @@ const core = [
       <h2 id="editions-h" class="section-h">One core, three editions</h2>
 
       <article class="edition" id="server">
-        <figure class="media duo">
+        <figure class="media rig">
           <Image class="desk" src={server} alt="The GurtOS Server box screen: what needs you, what is running, what was spent today, and a dock of apps." widths={[720, 1440]} sizes="(max-width: 900px) 100vw, 640px" />
-          <div class="phone">
-            <Image class="t-light" src={homeLight} alt="The GurtOS iPhone app: three requests under Needs you, each with Deny and Approve." widths={[180, 360]} sizes="(max-width: 900px) 25vw, 150px" />
-            <Image class="t-dark" src={homeDark} alt="The GurtOS iPhone app in dark mode: three requests under Needs you, each with Deny and Approve." widths={[180, 360]} sizes="(max-width: 900px) 25vw, 150px" />
+          <div class="devs">
+            <div class="phone"><PhoneFrame src={homeLight} dark={homeDark} alt="The GurtOS iPhone app: three requests under Needs you, each with Deny and Approve." /></div>
           </div>
         </figure>
         <div class="text">
@@ -65,14 +65,13 @@ const core = [
       </article>
 
       <article class="edition" id="personal">
-        <figure class="media duo">
+        <figure class="media rig">
           <Image class="desk" src={personal} alt="GurtOS Personal in everyday use: mail, a browser and Files open, while the GurtOS app and a notification ask to approve a $42.10 grocery order." widths={[720, 1440]} sizes="(max-width: 900px) 100vw, 640px" />
-          <div class="watch">
-            <Image src={watch} alt="The GurtOS Apple Watch app: Buy a GPU hour, $8, with a red deny and a green approve button." widths={[140, 280]} sizes="(max-width: 900px) 18vw, 110px" />
-          </div>
-          <div class="phone">
-            <Image class="t-light" src={approvalLight} alt="A request on the iPhone: Buy a GPU hour, $8, with Deny and Approve $8." widths={[180, 360]} sizes="(max-width: 900px) 25vw, 150px" />
-            <Image class="t-dark" src={approvalDark} alt="A request on the iPhone in dark mode: Buy a GPU hour, $8, with Deny and Approve $8." widths={[180, 360]} sizes="(max-width: 900px) 25vw, 150px" />
+          <div class="devs">
+            <div class="phone"><PhoneFrame src={approvalLight} dark={approvalDark} alt="A request on the iPhone: Buy a GPU hour, $8, with Deny and Approve $8." /></div>
+            <div class="watch">
+              <Image src={watch} alt="The GurtOS Apple Watch app: Buy a GPU hour, $8, with a red deny and a green approve button." widths={[140, 280]} sizes="(max-width: 900px) 20vw, 100px" />
+            </div>
           </div>
         </figure>
         <div class="text">
@@ -85,9 +84,11 @@ const core = [
       </article>
 
       <article class="edition" id="business">
-        <figure class="media duo">
+        <figure class="media rig">
           <Image class="desk" src={businessDesktop} alt="GurtOS Business: a $40,000 credit line Sam asked for waits for Rosa, the Controller, on her desktop." widths={[720, 1440]} sizes="(max-width: 900px) 100vw, 640px" />
-          <div class="phone"><Image src={businessPhone} alt="The same $40,000 credit line on Rosa's phone, with Deny and Approve $40,000." widths={[180, 360]} sizes="(max-width: 900px) 25vw, 150px" /></div>
+          <div class="devs">
+            <div class="phone"><PhoneFrame src={businessPhone} inset edge="#edebe6" alt="The same $40,000 credit line on Rosa's phone, with Deny and Approve $40,000." /></div>
+          </div>
         </figure>
         <div class="text">
           <h3><span class="dot business" aria-hidden="true"></span>{NAME} Business</h3>
@@ -130,32 +131,27 @@ const core = [
   .section-h { font-size: var(--gw-h2); }
   .edition { display: grid; gap: 1.5rem 3rem; padding: 2rem 0; border-top: 1px solid var(--gw-rule); align-items: center; }
   .media { margin: 0; }
-  .media img { width: 100%; border: 1px solid var(--gw-rule); border-radius: 6px; }
-  .duo { position: relative; padding-bottom: 2.5rem; padding-right: 3rem; }
-  /* Device frames drawn in CSS: a black bezel with a hairline ring that shows on dark. Only the real screenshots go inside. */
-  .duo .phone { position: absolute; right: 0; bottom: 0; width: 24%; }
-  .duo .phone img { border: clamp(3px, 0.55vw, 7px) solid #0b0e12; border-radius: clamp(14px, 3.2vw, 34px); box-shadow: 0 0 0 1px #5b6672; background: #0b0e12; }
-  .duo .watch { position: absolute; right: 27%; bottom: 0; width: 17%; }
-  .duo .watch::after { content: ''; position: absolute; right: -2.5%; top: 30%; width: 3.5%; height: 18%; background: #2a2f35; border-radius: 0 3px 3px 0; }
-  .duo .watch img { border: clamp(3px, 0.5vw, 6px) solid #1d2126; border-radius: clamp(16px, 3.4vw, 38px); box-shadow: 0 0 0 1px #5b6672; background: #000; }
-  .t-dark { display: none; }
-  :global(:root[data-theme='dark']) .t-light { display: none; }
-  :global(:root[data-theme='dark']) .t-dark { display: block; }
-  @media (max-width: 600px) { .duo { padding-right: 1.5rem; } .duo .phone { width: 30%; } .duo .watch { width: 21%; right: 33%; } }
-  .text h3 { font-size: var(--gw-h3); display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.6rem; }
-  .text p { font-size: var(--gw-text-lg); color: var(--gw-ink-2); }
-  .dot { width: 0.8rem; height: 0.8rem; border-radius: 2px; flex: none; }
-  .dot.server { background: #46586b; outline: 1px solid var(--gw-rule-strong); }
-  .dot.personal { background: var(--gw-amber); }
-  .dot.business { background: var(--gw-link); }
-  .dl { display: flex; flex-wrap: wrap; gap: 0.6rem; margin-top: 1.1rem; }
+  .media .desk { width: 100%; min-width: 0; border: 1px solid var(--gw-rule); border-radius: 6px; }
+  /* The desktop screenshot and the devices sit side by side, so nothing covers any text. */
+  .rig { display: grid; grid-template-columns: 1fr; gap: 0.9rem; align-items: end; container-type: inline-size; }
+  .devs { display: flex; align-items: flex-end; gap: 3cqw; }
+  .devs .phone { width: 28cqw; }
+  .devs .watch { position: relative; width: 20cqw; }
+  .devs .watch::after { content: ''; position: absolute; right: -2.5%; top: 30%; width: 3.5%; height: 18%; background: #2a2f35; border-radius: 0 3px 3px 0; }
+  .devs .watch img { width: 100%; display: block; border: clamp(3px, 0.5vw, 6px) solid #1d2126; border-radius: clamp(16px, 3.4vw, 38px); box-shadow: 0 0 0 1px #5b6672; background: #000; }
+  @media (min-width: 640px) {
+    .rig { grid-template-columns: 1fr auto; }
+    .devs .phone { width: 15.5cqw; }
+    .devs .watch { width: 11.5cqw; }
+    .devs { gap: 1.6cqw; }
+  }
   .more { margin-top: 0.5rem; font-size: var(--gw-text-sm); }
   .core { list-style: none; padding: 0; margin: 0; color: var(--gw-ink-2); }
   .core li { padding: 0.8rem 0; border-top: 1px solid var(--gw-rule); }
   .core a { font-weight: 700; color: var(--gw-ink); margin-right: 0.4rem; }
   .closing { margin-top: 3rem; color: var(--gw-ink-2); }
   @media (min-width: 900px) {
-    .edition { grid-template-columns: 7fr 5fr; }
+    .edition { grid-template-columns: 8fr 4fr; }
     .core { display: grid; grid-template-columns: 1fr 1fr; column-gap: 3rem; }
   }
 </style>

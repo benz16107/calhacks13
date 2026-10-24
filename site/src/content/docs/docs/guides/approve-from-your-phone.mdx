@@ -6,6 +6,9 @@ sidebar:
     text: Preview
     variant: note
 ---
+import PhoneFrame from '../../../../theme/PhoneFrame.astro';
+import phoneHome from '../../../../assets/screens/phone-home.png';
+
 
 When a task asks for your OK, the request waits until someone answers. In this guide you give a phone a route to the
 box, pair it, and approve a request from it. Each phone gets its own device token, so the action log records which
@@ -85,7 +88,7 @@ a private network such as Tailscale, or use the provider's console.
    answer wins, from any device. The phone sends its device token with the answer, so the log records the phone's
    name. Anything else the phone puts in the answer's `by` field is ignored.
 
-   ![The portal on a phone: two requests under Needs you, each with Deny and Approve, running tasks below, and an Ask the box button.](../../../../assets/screens/phone-home.png)
+   <div class="docs-phone"><PhoneFrame src={phoneHome} inset edge="#f6f5f2" alt="The portal on a phone: two requests under Needs you, each with Deny and Approve, running tasks below, and an Ask the box button." /></div>
 
    *The portal on a phone, from a test box running scripted tasks. Amounts are test money.*
 

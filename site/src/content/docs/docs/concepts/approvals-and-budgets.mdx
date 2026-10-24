@@ -2,6 +2,9 @@
 title: Approvals and budgets
 description: Any GurtOS task can pause and ask for your OK, and spending over its budget always asks. Other tasks keep running, and the first answer wins.
 ---
+import PhoneFrame from '../../../../theme/PhoneFrame.astro';
+import phoneHome from '../../../../assets/screens/phone-home.png';
+
 
 import ApprovalFlow from '../../../../assets/diagrams/approval-flow.svg';
 
@@ -40,7 +43,7 @@ A task that names no budget gets the setting `defaultBudgetCents`, which is 0 un
 
 The wait limit exists because Droid gives up on a tool call after about three minutes. A shorter wait, repeated, keeps the call alive.
 
-![The portal on a phone: two requests under Needs you, each with Deny and Approve, running tasks below, and an Ask the box button.](../../../../assets/screens/phone-home.png)
+<div class="docs-phone"><PhoneFrame src={phoneHome} inset edge="#f6f5f2" alt="The portal on a phone: two requests under Needs you, each with Deny and Approve, running tasks below, and an Ask the box button." /></div>
 
 *The portal on a phone, from a test box running scripted tasks. Amounts are test money.*
 

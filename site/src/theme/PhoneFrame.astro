@@ -1,0 +1,43 @@
+---
+// The GurtOS phone frame, shared by gurtos.com, the docs and the Cal Hacks site: an iPhone Pro Max shape with thin even
+// bezels and a Dynamic Island. Only a real screenshot goes inside.
+//   src, dark   the screenshot, and the same screen in dark mode (the page theme picks one)
+//   inset       for a screenshot with no status bar of its own: adds a blank strip under the island, so the island
+//               never covers content. Native app screenshots already have a status bar, so they do not need it.
+//   edge        the colour of that strip, taken from the top of the screenshot
+// The frame fills the width of its parent and scales with it, so size it with the parent.
+import { Image } from 'astro:assets';
+import type { ImageMetadata } from 'astro';
+
+interface Props {
+  src: ImageMetadata;
+  dark?: ImageMetadata;
+  alt: string;
+  inset?: boolean;
+  edge?: string;
+  sizes?: string;
+}
+const { src, dark, alt, inset = false, edge = '#f1efe8', sizes = '(max-width: 900px) 30vw, 160px' } = Astro.props;
+---
+<div class="gw-phone">
+  <div class="gw-phone-body">
+    <div class="gw-screen" style={`--edge:${edge}`}>
+      {inset && <div class="gw-status" aria-hidden="true"></div>}
+      <Image class="gw-light" src={src} alt={alt} widths={[240, 480, 780]} sizes={sizes} />
+      {dark && <Image class="gw-dark" src={dark} alt="" aria-hidden="true" widths={[240, 480, 780]} sizes={sizes} />}
+    </div>
+    <span class="gw-island" aria-hidden="true"></span>
+  </div>
+</div>
+
+<style is:global>
+  .gw-phone { container-type: inline-size; width: 100%; }
+  .gw-phone-body { position: relative; padding: 2.1cqw; background: #0b0e12; border-radius: 15cqw; box-shadow: 0 0 0 1px #5b6672; }
+  .gw-screen { border-radius: 12.9cqw; overflow: hidden; background: var(--edge); }
+  .gw-screen img { display: block; width: 100%; height: auto; border: 0; border-radius: 0; }
+  .gw-status { height: 10cqw; background: var(--edge); }
+  .gw-island { position: absolute; top: 4.7cqw; left: 50%; width: 28.6cqw; height: 8.4cqw; transform: translateX(-50%); border-radius: 4.2cqw; background: #000; }
+  .gw-screen img.gw-dark { display: none; }
+  :root[data-theme='dark'] .gw-screen img.gw-dark { display: block; }
+  :root[data-theme='dark'] .gw-screen:has(.gw-dark) img.gw-light { display: none; }
+</style>
