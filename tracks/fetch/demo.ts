@@ -157,9 +157,10 @@ export default async function (d: DemoKit) {
     // ---------- a team of box agents coordinating through SpacetimeDB ----------
     if ((await d.api<{ tools: string[] }>('GET', '/health')).tools.includes('spacetime.claim')) {
       say(owner, 'Check the prices of these: hario v60 filters, chemex filters and airpods pro');
-      const posted = await expect(owner, 'about the queue', (m) => m.text.includes('SpacetimeDB queue'), 30_000);
+      const posted = await expect(owner, 'about the queue', (m) => m.text.includes('SpacetimeDB queue ('), 30_000);
       const queue = posted.text.match(/\((fetch:[0-9a-f]+)\)/)?.[1] ?? '';
-      const summary = await expect(owner, 'with the team summary', (m) => m.text.startsWith('The team is done'), 60_000);
+      // The first reply is the summary when the team finishes in time, else a progress line and the summary after it.
+      const summary = posted.text.startsWith('The team is done') ? posted : await expect(owner, 'with the team summary', (m) => m.text.startsWith('The team is done'), 60_000);
       const team = (await d.api<Task[]>('GET', '/tasks')).filter((t) => t.title.startsWith('Price checker') && t.prompt.includes(queue));
       const got = await Promise.all(team.map(async (t) => (await d.api<{ events: any[] }>('GET', `/tasks/${t.id}`)).events.find((e) => e.type === 'tool.result' && e.ok)?.output?.job?.id));
       d.check(queue && team.length === 3 && got.every(Boolean) && new Set(got.map(String)).size === 3 && summary.text.includes('chemex filters'),
@@ -235,7 +236,16 @@ export default async function (d: DemoKit) {
     const gate = await expect(owner, 'with the guest card', (m) => m.card?.kind === 'review' && m.text.includes('A guest'));
     d.check(waitNote && gate, "a guest's lookup waits for the owner: the request reached the owner's chat (and phone) as an Approve card, and nothing ran");
     say(owner, click(gate.card, 'approve_cta'));
-    const answered = await expect(guest, 'with the guest answer', (m) => m.text.startsWith('Done'), 30_000);
+    // With DEMO_LIVE=droid, Mana's route runs the guest's request with real Droid, which takes minutes and may stop to
+    // ask the owner again (a spend, or the core's second look). The owner approves those in the chat, as a person would.
+    const answered = await d.waitFor('the guest answer', async () => {
+      const card = got.find((m) => m.to === owner && m.card?.kind === 'review');
+      if (card) {
+        got = got.filter((m) => m !== card);
+        say(owner, click(card.card, 'approve_cta'));
+      }
+      return got.find((m) => m.to === guest && m.text.startsWith('Done'));
+    }, /\bdroid\b/.test(process.env.DEMO_LIVE ?? '') ? 300_000 : 30_000);
     const guestTask = (await d.api<Task[]>('GET', '/tasks')).find((x) => x.title === 'Guest lookup: approved');
     d.check(answered && guestTask?.source.startsWith('guest-run:') && guestTask.workspace === 'guest' && guestTask.hosts.length === 0,
       "approved, it ran through the Mana app's guest route (the box's one guest path, with one set of limits for every front door), in the empty guest workspace with no network of its own, and only the guest got the answer");

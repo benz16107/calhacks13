@@ -639,8 +639,9 @@ def web_hint(tools):
 ROUTE = ("You route a request sent to GurtOS, an AI agent on its owner's own computer. Reply with one word: "
          "shopper (prices, stock, restocks, price watches, shopping), find (finding the owner's own photos, files or past "
          "tasks by what is in them), credit (business credit: credit applications, applicants like APP-1043, collections, "
-         "the Fogline case), weather (the weather somewhere), stocks (a company's stock price), or task (anything else: "
-         "code, the owner's project, research, writing).")
+         "the Fogline case), weather (the weather somewhere), stocks (a company's stock price), or task (anything else, and always for "
+         "code, tests, the owner's project or files, research, writing).")
+CODE_WORDS = re.compile(r'\b(tests?|bugs?|code|repo|project|fix|refactor|compile|build|lint|commit|diff)\b', re.I)
 ROUTE_WORDS = [('find', r"\b(find|where is|where's|look for|search for)\b.*\b(photo|picture|image|file|note|receipt|whiteboard)\b"),
                ('credit', r'\b(credit|applicant|application|app-\d+|fogline|collections?|fraud)\b'),
                ('shopper', r'\b(price|prices|in stock|restock|back in stock|watch for|cheaper|deal|buy)\b'),
@@ -774,6 +775,8 @@ class Box(Brain):
         return SELF_WORDS | set(EDITION_WORDS.get(self.edition(), [])) | set(re.findall(r'[a-z][\w-]{1,20}', str(self.system().get('boxName', '')).lower()))
 
     def route(self, text):
+        if CODE_WORDS.search(text):  # code work is the box's own task; the model once sent "fix the test ... check" to the Shopper
+            return 'task'
         said = ask_model(ROUTE, text)
         if said:
             word = re.sub(r'[^a-z-]', '', said.split()[0]) if said.split() else ''
@@ -801,6 +804,10 @@ class Box(Brain):
         super().act(sender, session, action, ref)
 
     def status(self, sender, session, only=None):
+        last = next((t for t in sorted(self.s['teams'].values(), key=lambda t: -t['at']) if t['to'] == sender), None)
+        if last and not only:  # the planner asks again for a team's result it did not see
+            self.say(sender, session, last.get('summary') or f"A team of {len(last['tasks'])} agents is still working through "
+                                                               f"{len(last['items'])} items on SpacetimeDB.")
         waiting = [r for out, r in self.s['relays'].items() if r['to'] == sender and not r['heard'] and self.relay_for(r['agent'], out)]
         if waiting and not only:
             self.say(sender, session, 'Waiting on: ' + ', '.join(f"{r['label']} ({short(r['agent'])})" for r in waiting))
@@ -989,9 +996,7 @@ class Box(Brain):
         self.s['teams'][queue] = {'to': sender, 'session': session, 'items': items, 'tasks': ids, 'at': time.time(),
                                   'wait': time.time() + HOLD, 'closed': False}
         note({'kind': 'asi1.team.started', 'queue': queue, 'items': len(items), 'tasks': ids})
-        self.say(sender, session, f"{len(items)} items, so I put one job per item on a SpacetimeDB queue ({queue}) and started "
-                                  f"{size} agents on the box. Each claims the next open job, and SpacetimeDB gives every job to "
-                                  "exactly one of them. The Live window on the box shows the board.")
+        # No reply yet: ASI:One's planner relays only the first one, so it should carry the prices when they come in time.
 
     def team_member_ended(self, tid, chat):
         team = self.s['teams'].get(chat['team'])
@@ -1012,8 +1017,10 @@ class Box(Brain):
         left = [x for x in team['items'] if x not in {t for t, _ in claimed.values()}]
         lines += [f'- {x}: not claimed' for x in left]
         note({'kind': 'asi1.team.done', 'queue': chat['team'], 'claimed': len(claimed), 'finished': len(results)})
-        self.say(team['to'], team['session'], f"The team is done ({len(team['tasks'])} agents, queue {chat['team']}), "
-                                              f"{len(results)} of {len(team['items'])} finished:\n" + '\n'.join(lines))
+        team['summary'] = (f"The team is done: {len(team['tasks'])} agents on the box shared SpacetimeDB queue ({chat['team']}), "
+                           f"and SpacetimeDB gave each job to exactly one of them. {len(results)} of {len(team['items'])} "
+                           "finished:\n" + '\n'.join(lines))
+        self.say(team['to'], team['session'], team['summary'])
 
     def team_progress(self):
         for queue, team in self.s['teams'].items():
@@ -1025,8 +1032,11 @@ class Box(Brain):
             except (BoxError, OSError):
                 continue
             doing = '; '.join(f"{a['name']}: {a['job']['title']}" for a in b.get('agents', []) if a.get('job'))
-            self.say(team['to'], team['session'], f"The team on {queue}: {b.get('done', 0)} done, {b.get('claimed', 0)} in hand, "
-                                                  f"{b.get('open', 0)} open." + (f' Now: {doing}.' if doing else ''))
+            self.say(team['to'], team['session'], f"{len(team['items'])} items, so I put one job per item on a SpacetimeDB queue "
+                                                  f"({queue}) and started {len(team['tasks'])} agents on the box. Each claims the next "
+                                                  "open job, and SpacetimeDB gives every job to exactly one of them. So far: "
+                                                  f"{b.get('done', 0)} done, {b.get('claimed', 0)} in hand, {b.get('open', 0)} open."
+                                                  + (f' Now: {doing}.' if doing else '') + ' The Live window on the box shows the board.')
 
     # ---------- guests: anyone may ask, the owner approves first ----------
     # One path for every front door (core/README.md, "One path each"): the Mana app's guest route (tracks/mana/guest.ts)
