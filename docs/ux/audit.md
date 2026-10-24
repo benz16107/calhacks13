@@ -16,6 +16,18 @@ How it was walked:
 - Server and Personal: fresh installs of the final v0.1.0-preview ISOs in QEMU. Screenshots: `shots/server/`,
   `shots/personal/`. Everyday use against stock Ubuntu 24.04: `parity.md`.
 
+## Status
+
+**Fixed 1, open 66** (67 findings: 15 web, 20 Server, 32 Personal; parity findings join when measured). Each fixed
+finding gets a **Fixed** line with the commit and an after-screenshot in `after/`.
+
+| Owner | Open |
+|---|---|
+| portal | W1, W2, W4 to W12, W14, W15, S1, S3, S5 to S7, S11 to S14, S17 to S23, S25, S26 |
+| personal | P-2 to P-13, P-15, P-18 to P-27, P-29 to P-32 |
+| image | S2, S15, S16, S24, P-4, P-17, P-28, then P-1 with release |
+| core | W2, W13, S5 to S8, S13, P-2, P-14, P-16 |
+
 ## Top 10
 
 Ranked by how much each changes a judge's first impression. Each links to its full entry below.
@@ -91,6 +103,9 @@ tracks.", Credit desk "The problem. Companies want AI employees...", Anthropic "
 agents running...", Attacks on agents "A poisoned npm package...". Fix: one plain sentence per app saying what it
 does for the owner, for example ASI:One "Ask agents on Fetch.ai's network to do a job, and pay them from your
 budget." Owner: portal, routing each to its track thread (`tracks/*/track.ts` description).
+
+**Fixed in 217ab83** (UX thread): each app's `track.ts` has a title and one plain sentence, so nothing falls back to
+its README. ![](after/srv-app-center.png)
 
 ### W4. P1. Unfinished features shown as "not built yet"
 ![](shots/web/srv-settings-updates.png)
