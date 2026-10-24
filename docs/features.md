@@ -22,7 +22,7 @@ Checked against main `7867c1f`, Sat Oct 24 03:00 PT. `./demo` on that commit: 25
   from the release and from the Devpost and showcase text, not half-merged.
 - **Overnight:** QA installs the final ISOs fresh and walks every row of this ledger.
 - **Sun 6:00 AM PT:** the final release. **Sun 9:00 AM PT:** Devpost closes.
-- **GurtOS Business:** on the `business` branch (9886d27), not merged at 02:55 Sat. If it isn't merged and verified by
+- **GurtOS Business:** on the `business` branch, not merged at 03:05 Sat; the Business thread expects to merge within the hour. Off on a new box: turn it on with `PUT /api/business {on: true, company}` from the box screen. If it isn't merged and verified by
   the freeze, QA flags it for a clean cut: no Business rows on the showcase or Devpost, and no Business code on main.
 
 ## Summary
@@ -102,7 +102,7 @@ Checked against main `7867c1f`, Sat Oct 24 03:00 PT. `./demo` on that commit: 25
 | Feature | Owner | Status | Commit | Demo step | Tracks |
 |---|---|---|---|---|---|
 | People and roles | business | building (`business` 9886d27, rebased on main, merges clean) | 9886d27 | core/business-demo.ts on branch | Hyphenate, Microsoft, Atlassian |
-| Plain-sentence rules, with a rule tester | business | building (rules on branch; no tester found) | | | Hyphenate, Microsoft |
+| Plain-sentence rules, with a rule tester ("Who would approve this?", GET /api/business/route) | business | building (tester added after 9886d27; merge expected within the hour of 03:05 PT) | | business-demo on branch | Hyphenate, Microsoft |
 | Routed approvals | business | building | | business-demo on branch | Hyphenate, Microsoft |
 | No self-approval, no agent approving an agent | business | building | | business-demo on branch | Hyphenate, Armadin |
 | Waiting for me | business | building | | | Hyphenate |
