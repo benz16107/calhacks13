@@ -33,8 +33,8 @@ Checked against main `7fe6651`, Sat Oct 24 08:09 PT. `./demo` from a clean workt
 | verified (ISO) | 3 |
 | verified | 56 |
 | merged | 145 |
-| building | 3 |
-| planned | 2 |
+| building | 4 |
+| planned | 1 |
 | not pursued | 6 |
 | **Total** | **215** |
 
@@ -117,7 +117,7 @@ watched: portal/dist rebuilt from merged sources (C-4).
 | Faster task start on real folders: 17.7 s to 8.1 s per task on 50k files and 2.3 GB; 10 tasks 166 s to 77 s; the box API blocked at most 2.2 s (it was blocked the whole time). Numbers in `docs/perf/filesystem.md` | core | merged (deploying; gate on Vultr 35 passed, 0 failed) | 3ee6672 | Personal and multi-folder demo steps (Keep, conflicts, unkeep) | Personal |
 | Faster Keep and undo of a Keep: 14.6 s to 3.1 s and 6.5 s to 0.3 s; memory 1.2 GB to 228 MB. The conflict check uses size and mtime (older tasks' hash records still work) | core | merged | 3ee6672 | same steps | Personal |
 | A resumed task keeps its own copy after a restart | core | merged | 3ee6672 | moment 4 | Personal |
-| Zero-copy workspaces (idmapped lower, 7 ms, no disk) | core | planned (decision for Ben, after Sunday) | | | Personal |
+| Fast folders (preview): zero-copy workspaces on an idmapped lower, 7 ms and no disk. Blocked: inside a running box the first write to an existing file fails with EINVAL on copy-up from the mapped lower, while the same code passes from a standalone script on the same VM; cause not found. Nothing on main for QA to run. Showcase and docs must keep quoting today's merged numbers (8.1 s per task, Keep 3.1 s), not 7 ms. Details: last section of `docs/perf/filesystem.md` | core | building (branch `fast-folders`, blocked) | none on main | none | Personal |
 | XFS or btrfs install with reflink (installer change on both architectures) | image | planned (decision for Ben, after Sunday) | | | Personal |
 | GDM and Plymouth branding | personal, image | merged (branding hooks) | d451f8d, b0ab128 | none | Figma |
 | GurtOS Setup (first boot) | personal | merged | 96ce0cb | none | |
