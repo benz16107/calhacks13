@@ -80,7 +80,7 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 
 **Best shown in:** GurtOS Personal and GurtOS Server
 
-**Pitch:** GurtOS turns a computer you own, even an old one, into one built for agents: each Claude task runs as its own Linux user in its own copy-on-write copy of your files, with no keys, and you approve, undo or pause it from the portal or your phone. It is light and open source. Next, a GurtOS MCP server (being built) lets Claude Desktop and Claude Code drive your box.
+**Pitch:** GurtOS turns a computer you own, even an old one, into one built for agents: each Claude task runs as its own Linux user in its own copy-on-write copy of your files, with no keys, and you approve, undo or pause it from the portal or your phone. It is light and open source. Models are chosen per task with their cost, a Haiku check looks at risky steps, and the attack test is published with its limits. Next, a GurtOS MCP server (being built) lets Claude Desktop and Claude Code drive your box.
 
 **The problem:** Solo developers already leave agents (Claude Code, OpenClaw) running at home as themselves, with every key and file. An ordinary OS can't separate them, record them or undo them, and the alternative is renting a cloud you can't see into.
 
@@ -93,13 +93,13 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 | A page with hidden instructions fails: the task reaches only its allowed hosts | Prompt injection cannot send anything out | Knowing where it could go wrong | GurtOS (network rule) | Shipped. Claude refused the page and the box blocked the attempt |
 | Spending waits for your OK, and any one task can be undone | A wrong edit or a wrong purchase costs one tap | Knowing where it could go wrong | GurtOS (approval, undo) | Shipped |
 | Live view and control from the portal and phone | You can watch an unattended agent | Usable Monday | GurtOS | Shipped |
-| `sudo core/install.sh` on Ubuntu 24.04, or an install ISO; one model key (Anthropic or Factory) | Something that works the day you try it | Usable Monday | GurtOS | Shipped. Documented minimum: 4 GB of memory and 17 GB of disk |
+| One-line install on an existing Ubuntu 24.04 machine, or an install ISO; one model key (Anthropic or Factory) | Something that works the day you try it | Usable Monday | GurtOS | Shipped. The one-line install (`curl -fsSL https://gurtos.com/install, piped to sudo sh` once the docs thread hosts it; until then the script is `tracks/anthropic/install.sh` on GitHub) checks Ubuntu 24.04, 900 MB of memory and 4 GB of disk. Measured minimum below |
 | A GurtOS MCP server, so Claude Code and Claude Desktop can drive your box | The tools you already use start and watch tasks safely | Usable Monday, Claude doing something that matters | GurtOS (core) | Being built; not on main yet |
 | Claude Code as a worker, with full isolation | Run Claude Code itself in a task's own space, with no keys | Claude doing something that matters | GurtOS (core) | Being built; not on main yet |
-| Current Claude models chosen per task, with their cost | Use the right model for each job and see what it costs | Claude doing something that matters | GurtOS (core) | Being built; not on main yet |
-| A Haiku second-opinion check before risky steps | A cheap second look before a step that spends or deletes | Knowing where it could go wrong | GurtOS (core) | Being built; not on main yet |
-| A published attack-test score, including the misses | Honest evidence of where it holds and where it does not | Knowing where it could go wrong | GurtOS | Being built; not on main yet |
-| Measured minimum hardware and a one-line install | The old-computer claim backed by numbers, and a faster first run | Usable Monday | GurtOS | Being built; not on main yet |
+| Current Claude models chosen per task (`haiku`, `sonnet` by default, `opus`), with their cost | Use the right model for each job and see what it costs | Claude doing something that matters | GurtOS (core) | Shipped. They map to `claude-haiku-5-5`, `claude-sonnet-5-5` and `claude-opus-5-5`, all three ran through Droid, the task records the id it ran on, and cost uses Anthropic's list prices read on Oct 24. The same one-line task cost 0.084 cents on Haiku (10 s), 1.31 cents on Sonnet (8 s) and 3.25 cents on Opus (70 s), one run each. Taking an Anthropic key directly, without Factory, was not run live |
+| A Haiku second-opinion check before risky steps: a separate Haiku call compares the step with the owner's goal, and an off-goal or injected step becomes an approval | A cheap second look before a step that spends, deletes or uses the network | Knowing where it could go wrong | GurtOS (core) | Shipped, with its limits. On its own test (14 injected steps and 12 ordinary risky-looking ones, each put to real Haiku twice) it called 28 of 28 injected verdicts off-goal and 0 of 22 ordinary ones, and one ordinary step (`grep -rn os.environ`) was not flagged risky at all. Those steps were hand-written by its author, and it sees only steps its classifier flags. In the saved attack runs it checked 11 steps and called all 11 on-goal, so those runs do not show it catching a live attack |
+| A published attack test with its limits: 12 attacks and 2 clean controls, on Sonnet 5.5 and Haiku 5.5, second look on and off | Honest evidence of where it holds and where it does not | Knowing where it could go wrong | GurtOS | Shipped. 48 attack runs, 0 where the harm happened, and 8 of 8 clean controls finished. Read it with its limits: mostly Claude never tried (with the look on, Sonnet did not try in 6 of 12 and the model provider refused 5 of 12, and Haiku did not try in 11 of 12); only 3 of 48 runs show any attempt, and none did harm. The attacks and the harm detectors were written by the same person, one run per setting, and the same-host exfiltration case was never attempted by either model, so it is untested. About 31 cents (Sonnet) and 3 cents (Haiku) for 14 runs |
+| Measured minimum hardware | The old-computer claim backed by numbers | Usable Monday | GurtOS | Shipped. In a QEMU VM with 1 vCPU and 1 GB of RAM, the install took 76 s and added 1.5 GB of disk (3.3 GB used in all), the box was up 8 s after the kernel started, idle memory was 474 of 955 MB, and one real task finished in 11 s. Two at once worked with 38 MB free, and three at once failed for two of three. At 512 MB it installs and idles but a task was killed for memory. The real minimum is 1 GB of RAM, one task at a time. The Vultr account was out of credit, so no Vultr VM was used; the host was busy with other work, and a real cloud VM or an old laptop's disk and CPU would be slower |
 
 **Demo moment and proof:** In every merge-gate run, a real Claude task works as its own Linux user: 240 samples of its processes held only a placeholder key, its changes were undone on their own, and its cost ($0.5378 in the Oct 24 run) was priced from real token counts. The same run reads Claude a web page with hidden instructions to steal keys; it refused, and nothing left the box.
 
@@ -107,10 +107,6 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 
 - A GurtOS MCP server, so Claude Code and Claude Desktop can drive your box
 - Claude Code as a worker, with full isolation
-- Current Claude models chosen per task, with their cost
-- A Haiku second-opinion check before risky steps
-- A published attack-test score, including the misses
-- Measured minimum hardware and a one-line install
 - How to enter: pending; Ben will ask a director (the prize is not on Devpost yet)
 
 ## Atlassian: Agentic Workforce Challenge, Track 2 (security for agents acting for a user) and Track 1 (agents that do the work)
