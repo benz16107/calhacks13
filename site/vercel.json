@@ -13,23 +13,23 @@
   ],
   "redirects": [
     {
-      "source": "/project/terms",
+      "source": "/project/terms(/?)",
       "destination": "/terms/",
       "permanent": true
     },
     {
-      "source": "/project/privacy",
+      "source": "/project/privacy(/?)",
       "destination": "/privacy/",
       "permanent": true
     },
     {
-      "source": "/:section(introduction|get-started|concepts|guides|reference|security|project)/:rest*",
-      "destination": "/docs/:section/:rest*",
+      "source": "/(introduction|get-started|concepts|guides|reference|security|project)/(.*)",
+      "destination": "/docs/$1/$2",
       "permanent": true
     },
     {
-      "source": "/og/:section(introduction|get-started|concepts|guides|reference|security|project)/:rest*",
-      "destination": "/og/docs/:section/:rest*",
+      "source": "/og/(introduction|get-started|concepts|guides|reference|security|project)/(.*)",
+      "destination": "/og/docs/$1/$2",
       "permanent": true
     }
   ]
