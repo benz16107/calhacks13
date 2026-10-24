@@ -141,7 +141,7 @@ export async function api<T = any>(method: string, path: string, body?: unknown,
   const out = await r.json().catch(() => ({ error: `${r.status} ${r.statusText}` }));
   if (r.status === 401) {
     // Off the box's own screen, every call needs a paired token. A revoked one is forgotten, so this device pairs again.
-    if (token) localStorage.removeItem('pairing');
+    if (token) setPairing(undefined);
     if (!box.unpaired) ((box.unpaired = true), changed());
   }
   if (!r.ok) throw Object.assign(new Error(out.error ?? `${r.status} ${r.statusText}`), { status: r.status });
@@ -236,6 +236,8 @@ function follow() {
   es = stream;
   stream.onmessage = (m) => take(JSON.parse(m.data));
   stream.onopen = () => {
+    // Opened offline from the app's cache: read the whole log now that the box answers, so totals are whole.
+    if (!box.logLoaded) void api<LogEvent[]>('GET', '/log?after=0').then((l) => (l.forEach(take), (box.logLoaded = true), changed()), () => {});
     if (activeBeforeDrop) void cameBack(activeBeforeDrop);
     activeBeforeDrop = undefined;
     misses = 0;
@@ -362,6 +364,13 @@ function spacetime(h: Health) {
 // ---------- actions ----------
 
 export const pairing = (): Pairing | undefined => JSON.parse(localStorage.getItem('pairing') ?? 'null') ?? undefined;
+/** Pair or unpair this device. The service worker keeps its own copy (it can't read localStorage) to answer from a
+ *  notification; caches exist only on a secure page, which is also the only place a service worker runs. */
+export function setPairing(p: Pairing | undefined) {
+  if (p) localStorage.setItem('pairing', JSON.stringify(p));
+  else localStorage.removeItem('pairing');
+  if (typeof caches !== 'undefined') void caches.open('gurtos-pairing').then((c) => void (p ? c.put('/pairing', new Response(JSON.stringify(p))) : c.delete('/pairing')));
+}
 
 /**
  * Approve or deny, and only say it worked once the box has it. A paired phone answers with its device token, so the
@@ -467,8 +476,9 @@ export async function start() {
     () => false,
   );
   // The log in one answer first, so totals like today's spending are whole from the first frame; the stream picks up after it.
-  for (const e of await api<LogEvent[]>('GET', '/log?after=0').catch(() => [] as LogEvent[])) take(e);
-  box.logLoaded = true;
+  const log = await api<LogEvent[]>('GET', '/log?after=0').catch(() => undefined);
+  for (const e of log ?? []) take(e);
+  box.logLoaded = !!log;
   changed();
   follow();
   // SpacetimeDB listens on the box's loopback only (core c6f747e): the box's own screen subscribes, others follow the log.

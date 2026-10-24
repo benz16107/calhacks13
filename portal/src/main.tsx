@@ -11,6 +11,7 @@ import { Windows, open, phone, restore, wm } from './wm.tsx';
 import { SetupWizard } from './setup.tsx';
 import { StatusPage } from './kit/ui.tsx';
 import { PRODUCT } from './product.ts';
+import { registerWorker } from './pwa/pwa.tsx';
 
 /** The route in the address: #tasks, #task/<id>, #settings/devices, #app/<track>/<name>, and /pair#<code>. */
 const routeOf = () => (location.pathname === '/pair' ? `pair/${location.hash.slice(1)}` : decodeURIComponent(location.hash.slice(1)));
@@ -82,4 +83,6 @@ if (surface === 'box screen') {
   }, 180_000);
 }
 render(<App />, document.getElementById('app')!);
+// The installable app: open offline, and notifications. The box's own screen (the kiosk) stays a plain page.
+if (surface !== 'box screen') registerWorker();
 void start();

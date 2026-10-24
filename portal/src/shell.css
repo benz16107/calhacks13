@@ -339,3 +339,12 @@ html.is-dragging iframe { pointer-events: none; }
 .gos-setup-wait { width: min(560px, 100%); }
 .gos-answered { flex: 1; display: flex; align-items: center; justify-content: center; gap: var(--space-xs); min-height: var(--size-control); margin: 0; border-radius: var(--radius-sm); background: var(--color-button-bg); color: var(--color-text-secondary); font-weight: 600; animation: g-fade var(--duration-base) var(--ease-out); }
 .gos-answered.is-ok { background: var(--color-success-subtle); color: var(--color-success-fg); }
+
+/* ---------- the installable app: Add to Home Screen, Install ---------- */
+
+.gos-a2hs-icon { width: 64px; height: 64px; border-radius: 14px; box-shadow: var(--shadow-2); }
+.gos-a2hs-steps { display: flex; flex-direction: column; gap: var(--space-sm); }
+.gos-a2hs-steps li { display: flex; align-items: center; gap: var(--space-sm); }
+.gos-a2hs-n { flex: none; display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: var(--color-accent-subtle); color: var(--color-accent-fg); font-weight: 700; }
+.gos-install { flex-shrink: 0; }
+.gos-install > img { flex: none; border-radius: 10px; }

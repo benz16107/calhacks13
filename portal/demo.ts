@@ -31,6 +31,9 @@ export default async (d: DemoKit) => {
     kit.every((r) => r.ok) && kit[0].headers.get('content-type')?.includes('css') && kitCss.includes('--color-accent-bg') && kitCss.includes('.g-switch'),
     'the kit for track apps is served at /kit/gurtos.css and /kit/gurtos.js, with its style guide at /kit/index.html',
   );
+  const manifest = await (await get('/manifest.webmanifest')).json().catch(() => ({}));
+  const pwa = await Promise.all(['/sw.js', ...(manifest.icons ?? []).map((i: { src: string }) => i.src), '/icon-180.png'].map((p) => get(p).then((r) => r.ok)));
+  d.check(manifest.name === PRODUCT && manifest.display === 'standalone' && manifest.icons?.length >= 3 && pwa.every(Boolean), `the box serves it as an installable app: manifest, ${manifest.icons?.length ?? 0} icons, an iOS icon and the service worker`);
   for (const [route, what] of [['/screen', "the box's own screen (the kiosk)"], ['/pair?code=TEST', 'where a phone lands after scanning']]) {
     const r = await get(route, 'text/html');
     d.check(r.ok && (await r.text()).includes('/app.js'), `${route}, ${what}, loads the app too`);

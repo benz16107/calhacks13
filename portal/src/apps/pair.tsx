@@ -1,6 +1,6 @@
 // Where a phone lands after scanning the box's QR code: /#pair/<code>. It names itself and gets a device token.
 import { useState } from 'preact/hooks';
-import { api, pairing, type Pairing } from '../live.ts';
+import { api, pairing, setPairing, type Pairing } from '../live.ts';
 import { Button, Icon } from '../kit/ui.tsx';
 import { HeaderBar } from '../wm.tsx';
 import { PRODUCT } from '../product.ts';
@@ -16,7 +16,7 @@ export function PairApp({ code }: { code: string }) {
     e.preventDefault();
     setState('busy');
     api<Pairing>('POST', '/pair', { code, name: name.trim() || guess })
-      .then((p) => (localStorage.setItem('pairing', JSON.stringify(p)), setState(p)))
+      .then((p) => (setPairing(p), setState(p)))
       .catch((err) => setState((err as Error).message));
   };
   return (
@@ -37,7 +37,7 @@ export function PairApp({ code }: { code: string }) {
                 <Button kind="suggested" large href="/">
                   Open {PRODUCT}
                 </Button>
-                <Button large onClick={() => (localStorage.removeItem('pairing'), setState('ask'))}>
+                <Button large onClick={() => (setPairing(undefined), setState('ask'))}>
                   Pair again
                 </Button>
               </div>

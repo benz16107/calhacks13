@@ -3,7 +3,8 @@
 // and the tab bar. The wallpaper is the page's background.
 import type { ComponentChildren } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { api, box, changed, pairing, patchSettings, surface, undo, useBox, type Approval, type Pairing } from './live.ts';
+import { api, box, changed, pairing, patchSettings, setPairing, surface, undo, useBox, type Approval, type Pairing } from './live.ts';
+import { AddToHomeScreen, InstallCard, ios, standalone } from './pwa/pwa.tsx';
 import { AnswerButtons } from './apps/answer.tsx';
 import { AppIcon, Badge, Button, Icon, Menu, Popover, Progress, Switch } from './kit/ui.tsx';
 import { focus, focused, minimize, open, phone, wm } from './wm.tsx';
@@ -631,6 +632,7 @@ export function PhoneHome() {
           {b.down ? 'Out of reach' : 'Online'} · {running.length} running · {spentToday()} spent today (test money)
         </p>
       </header>
+      <InstallCard />
       {shell.open === 'boxes' && <BoxMenu anchor={anchor} />}
       <section class="g-group" aria-label="Needs you">
         <div class="g-group-head">
@@ -835,17 +837,20 @@ export function PairFirst() {
   const [name, setName] = useState(guess);
   const [state, setState] = useState<'ask' | 'busy' | string>('ask');
   const revoked = !!localStorage.getItem('gurtos.was-paired');
-  const go = (e: Event) => {
-    e.preventDefault();
+  const [inSafari, setInSafari] = useState(false);
+  const redeem = (c: string) => {
     setState('busy');
-    api<Pairing>('POST', '/pair', { code: code.replace(/[^0-9a-z]/gi, '').toLowerCase(), name: name.trim() || guess })
+    api<Pairing>('POST', '/pair', { code: c.replace(/[^0-9a-z]/gi, '').toLowerCase(), name: name.trim() || guess })
       .then((p) => {
-        localStorage.setItem('pairing', JSON.stringify(p));
+        setPairing(p);
         localStorage.setItem('gurtos.was-paired', '1');
         location.replace('/');
       })
       .catch((err) => setState((err as Error).message));
   };
+  const go = (e: Event) => (e.preventDefault(), redeem(code));
+  // An iPhone's Home Screen app keeps its own storage, so a code redeemed in Safari wouldn't carry over to it.
+  if (fromLink && ios() && !standalone() && !inSafari) return <AddToHomeScreen pairCode={decodeURIComponent(fromLink)} onSafari={() => (setInSafari(true), redeem(code))} />;
   return (
     <div class="gos-setup-layer">
       <section class="g-window gos-pair-first" aria-labelledby="pair-first-title">
@@ -854,7 +859,7 @@ export function PairFirst() {
             <Icon name="phone" size={32} />
           </span>
           <h1 class="t-title2" id="pair-first-title">
-            Pair this {surface === 'phone' ? 'phone' : 'device'} first
+            {standalone() && !fromLink ? 'Type the pairing code' : `Pair this ${surface === 'phone' ? 'phone' : 'device'} first`}
           </h1>
           <p class="t-body t-secondary">
             {revoked ? 'This device was removed from the box, so it needs a new code. ' : ''}
