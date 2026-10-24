@@ -37,7 +37,8 @@ const checks = [
   ['elastic or kibana host', /[a-z0-9-]+\.(es|kb)\.[a-z0-9.-]+\.(elastic-cloud\.com|elastic\.cloud|cloud\.es\.io)|elastic-cloud\.com/gi],
   ['base58 key', /\b[1-9A-HJ-NP-Za-km-z]{32,90}\b/g, (m, text, i) => !/[0-9]/.test(m) || /^[a-z]+$/i.test(m) || PUBLIC_BASE58.has(m) || m === SIGNING_FINGERPRINT || /explorer\.solana\.com\/(tx|address)\/$/.test(before(text, i, 40))],
   ['long hex', /\b[0-9a-f]{40,}\b/g, (m) => RELEASE_SHA256.has(m)],
-  ['uuid', /\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/gi],
+  // A document id inside a public Atradius report link is not a secret.
+  ['uuid', /\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/gi, (m, text, i) => /group\.atradius\.com\/dam\/jcr:$/.test(before(text, i, 40))],
 ];
 
 // Machine names and other private words live outside git (the repo is public), one regex per line.

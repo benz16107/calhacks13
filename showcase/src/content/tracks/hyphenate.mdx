@@ -36,6 +36,9 @@ criteria:
     status: partly
 clip: credit-desk
 shots:
+  - src: ../../assets/track/hyphenate/desk-handoff-after-reboot.png
+    alt: 'The Decisions tab after a power cut: the analyst and the AP clerk are both still waiting for the controller, with the fraud referral for APP-1043 and the held bill B-3315 still pending.'
+    caption: 'After the plug was pulled: the box rebooted, both waiting seats resumed, and the same two requests were still pending. Nothing was asked or paid twice. Scripted seats.'
   - src: ../../assets/track/hyphenate/window.png
     alt: 'The Credit desk window: 2 of 14 planted errors caught in a quick scripted run, 1 needs you, the analyst and clerk seats, and the applications table with APP-1043 highlighted amber, where the simple rule approves $20,000 and the desk asks the controller to put it on fraud hold, with Deny and Approve.'
     caption: 'The Credit desk window during a Quick run (scripted seats, live CRS and Nessie, about 10 seconds). APP-1043 waits for the controller; the simple rule beside it would approve $20,000. Approve here, on a paired phone or in Notification Center: the first answer wins, and the log names who gave it.'
@@ -61,6 +64,15 @@ shots:
     alt: 'The Bring your own tab: a form to type a credit application on one of CRS''s 20 test people, or upload case files, and a message that the case is valid.'
     caption: 'Bring your own: type an application on one of CRS''s 20 test people, or upload case files. The case is checked before anything runs.'
 links:
+  - label: 'Final live run bd5c61: October, three seats, 16 of 17'
+    href: https://github.com/benz16107/calhacks13/tree/main/tracks/credit-desk/runs/2026-10-24-live-bd5c61-rules-0.3
+    note: 'The analyst''s, clerk''s and AP clerk''s reports, the score, the books and the run''s action log.'
+  - label: 'Live run 35c20d: the January review, 2 of 2'
+    href: https://github.com/benz16107/calhacks13/tree/main/tracks/credit-desk/runs/2026-10-24-live-35c20d-january-review
+    note: 'Bright Harbor''s October $40,000 reopened after two returned payments.'
+  - label: 'Crash handoff 853015: pull the plug mid-request'
+    href: https://github.com/benz16107/calhacks13/tree/main/tracks/credit-desk/runs/2026-10-24-crash-handoff-853015
+    note: 'What was checked from the log after the reboot: each request asked once and answered once, each bill paid once.'
   - label: The credit desk's code and README
     href: https://github.com/benz16107/calhacks13/tree/main/tracks/credit-desk
     note: 'Tools, seats, scorer, the planted case and the rules.'
@@ -123,6 +135,18 @@ status:
     note: 'Fogline Supply Co. and its customers are fictional. No money moves: the desk decides credit and records collection steps.'
 ---
 
+## The story
+
+**The problem.** Companies want AI employees, but today's computers and clouds were not built for them. An agent runs as you, with your keys and access to everything, on one shared filesystem. Nothing separates its duties from anyone else's, there is no record you could hand an auditor, and nothing can be undone. So nobody can safely let an AI do finance work.
+
+**So we built GurtOS.** Each AI employee works in its own workspace: its own Linux user and its own copy of the files, like a git worktree for every task. It never holds a password. It cannot approve its own work. Everything it does goes into one log the whole company can see from the portal or a phone. Nothing reaches the real books until the right person approves.
+
+**The credit desk is the job.** Three seats at Fogline Supply, a small wholesaler: a credit analyst, a collections clerk and an accounts payable clerk. Rosa Delgado, the controller, signs off on what only a person should decide.
+
+**Efficiency.** The seats work at the same time in their own spaces without stepping on each other, and a handoff survives a crash: pull the plug while a request waits for Rosa, and after the reboot nothing is asked, answered or paid twice (run 853015, scripted seats).
+
+**The moment.** A clean-looking applicant asks for $20,000. A simple credit rule approves it. The analyst runs CRS: the owner's identity fails and the fraud score is 88. It puts the applicant on fraud hold, and the request lands on Rosa's phone: approve the hold. Behind it, an $18,500 rush order to a Florida freight forwarder never ships. The score on screen is 16 of 17 planted errors caught and 1 false alarm.
+
 ## Why an operating system
 
 Most of what makes this desk safe to run comes from GurtOS, not from the desk. The desk supplies the finance
@@ -148,6 +172,9 @@ the same for any agent on the box.
 | A no carries a reason: Deny asks for one, and the seat revises instead of asking again | A system of work handles a rejection | The desk | Shipped |
 | Bring your own: an application on one of CRS's 20 test people, or uploaded case files, checked first | A judge can try a case of their own | The desk | Shipped. The guarantor must be one of CRS's test people |
 | A public benchmark slice: the 10 public DABstep dev questions run through GurtOS tasks, 7 of 10 correct, one attempt each with no network, about $3.22 of model use | Proof beyond our own planted case | The desk (`bench/`) on GurtOS tasks | Shipped. A slice, not a leaderboard entry |
+| Pulling the plug while a request waits: after the reboot each request is asked once, answered once and each bill paid once, and no tool call repeats | GurtOS (the fsynced log, resume from it) and the desk (`pay_bill` checks the bank first, since Nessie takes no idempotency key) | Shipped, shown with scripted seats in run 853015. Each of 3 requests was asked and answered once, and the one bill was paid once |
+| Fairness by construction: the seats never see protected attributes, or the guarantor's name, SSN, date of birth or address; two applicants who differ only in those are byte-identical to the seats | The desk (`fairness.test.ts`) | Shipped |
+| A plain letter for every adverse decision, with the main reasons and the ECOA notice; a fraud hold says only "We need to verify some information" | The desk (`letters.ts`) | Shipped as model letters. Not a claim of legal compliance: the fraud-hold wording needs a lawyer's check |
 | Credit rules, the planted case, the scorer, the Credit desk window | The desk | Shipped |
 
 ## Real attacks on financial companies
