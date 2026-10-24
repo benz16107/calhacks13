@@ -45,7 +45,9 @@ const links = [
   .gw-header a:focus-visible { outline: 3px solid var(--gw-amber); outline-offset: 2px; }
   @media (max-width: 49.99rem) {
     .gw-nav-hidden { display: none; }
-    .gw-nav { gap: 1rem; font-size: 0.9rem; }
-    .gw-bar { gap: 0.3rem 1rem; padding-block: 0.4rem; }
+    /* Row one: the brand and the theme switch. Row two: the links. */
+    .gw-bar { gap: 0 1rem; padding-block: 0.4rem; }
+    .gw-bar .gw-theme { order: 1; }
+    .gw-nav { order: 2; flex-basis: 100%; gap: 1rem; font-size: 0.9rem; }
   }
 </style>
