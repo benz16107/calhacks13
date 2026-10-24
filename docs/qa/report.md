@@ -341,6 +341,8 @@ Harbor $40,000?"; check it maps to the full name.
 nobody had set `seats`, `PUT /api/business {shadow:["Collections clerk"]}` said "no seat named Collections clerk (seats:
 none yet)" although the credit desk's seats had run. Seats are the company's list (`PUT /api/business {seats}`). The
 message could name that call, or the credit desk could register its seats when Business is on.
+**Fixed in 9862d90, verified 07:25 PT:** a seat that has only run tasks is accepted; an unknown seat gets "declare one with PUT
+/api/business {seats}, or run a task with that seat". Left: the seat list in that message repeats names (14 names for 3 seats).
 
 **P2-29. The open `/api/health` tells the public internet more than "ok".** Owner: core. On the new public names
 (`gurt-cloud.box.gurtos.com`, `gurt-laptop.box.gurtos.com`) anyone can read the task count, whether the box is paused,
