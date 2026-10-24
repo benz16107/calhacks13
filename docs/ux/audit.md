@@ -18,13 +18,13 @@ How it was walked:
 
 ## Status
 
-**Fixed 38, closed 1, open 49** (88 findings: 15 web, 22 Server, 36 Personal, 15 parity). Each fixed
+**Fixed 61, closed 1, open 30** (92 findings: 19 web, 22 Server, 36 Personal, 15 parity). Each fixed
 finding gets a **Fixed** line with the commit and an after-screenshot in `after/`.
 
 | Owner | Open |
 |---|---|
-| portal | W4 to W12, W14, W15, S1, S5 to S7, S11, S14, S17 to S23, S25, S26, S27 |
-| factory track | S11 (Factory half) |
+| portal | W16, W17, W18, S27 |
+| apify track | A-1 |
 | personal | P-36; P-29 waits for Ben |
 | image | S2, S15, S16, S24, P-4, P-17, P-28, E-1 to E-11, E-15, then P-1 with release |
 | personal (parity) | E-3 (GurtOS update row), E-12, E-13, E-14 |
@@ -129,6 +129,9 @@ each one as unfinished. Fix: hide controls that do nothing; show only facts (Thi
 started 13:39). If core can expose `box-update status` and restart before the freeze, show them for real.
 Owners: portal; core for the API.
 
+
+**Fixed in d99d860** (portal): Restart, Wi-Fi joining, "The other system", Last check, Go back and the lock-screen switch are gone;
+Updates shows facts only. ![](after/srv-settings-updates.png)
 ### W5. P1. Four letter tiles and two identical bags in the dock
 ![](shots/web/srv-show-apps.png)
 The dock has 15 icons. Apify, Factory, "Live" (SpacetimeDB) and in App Center Anthropic, Attacks on agents, Ask GurtOS,
@@ -137,6 +140,9 @@ glyph from the Adwaita set the kit already uses (`portal/src/kit/icons.ts`) and 
 store; keep the dock to the five system apps plus apps that have a window the user opened. "Live" and "Apify spend"
 are unclear names: say what they show, for example "Live board" and "Apify". Owner: portal.
 
+
+**Fixed in d99d860** (portal): an Adwaita symbol on its own tile for every app, the Test Store a green house; the dock is the
+system apps plus open windows (5 icons on a new Server). ![](after/srv-desktop.png) ![](after/srv-show-apps.png)
 ### W6. P1. One machine, three words: box, machine, computer
 ![](shots/web/phone-home.png)
 The Server phone home says "Home box" and "Ask the box"; the top bar's label is "Box: Home box. Switch box"; setup
@@ -147,6 +153,9 @@ once: the computer's own name, otherwise "this computer"; "Computers" and "Switc
 task" everywhere; the audit actor becomes "GurtOS". Owners: portal;
 core for the audit actor and API messages.
 
+
+**Fixed in d99d860** (portal): "this computer" or its name everywhere, setup and aria-labels included; Computers and Add a
+computer on the phone; New task; the actor is GurtOS. ![](after/phone-home.png) ![](after/phone-machines.png)
 ### W7. P1. Phone buttons are 34 px, not 44
 ![](shots/web/biz-phone-owen-audit.png)
 The README says phone buttons are 44 px. Measured on the phone: Turn on (79x34), the notification card's close
@@ -154,28 +163,39 @@ The README says phone buttons are 44 px. Measured on the phone: Turn on (79x34),
 Fix: under `(pointer: coarse)`, `min-height: 44px` on buttons and chips and a 44x44 hit area on icon buttons.
 Owner: portal.
 
+
+**Fixed in d99d860** (portal): 44 px buttons, fields, rows, toggles, pills and window controls on phones.
+![](after/biz-phone-owen-audit.png)
 ### W8. P1. Accounts & Keys lists variable names
 ![](shots/web/srv-settings-keys.png)
 Rows are titled `ANTHROPIC_API_KEY`, `AGENTVERSE_API_KEY`, `BACKUP_AGE_RECIPIENT`, with "put there by hand"
 under them. Agents & Models already does it right ("Anthropic API key", variable name underneath). Fix: the same
 pattern here, and "put there by hand" becomes "set outside Settings". Owner: portal.
 
+
+**Fixed in d99d860** (portal): "Anthropic API key" with the variable underneath, "set outside Settings". ![](after/srv-settings-keys.png)
 ### W9. P1. Remote access suggests "rosa" on a Server box called Home box
 ![](shots/web/srv-settings-remote.png)
 The empty name field's placeholder is `rosa`, the Business demo's person, and Turn on stays disabled until the
 owner types a name. Fix: fill the field with the box's name as an address (`home-box`), so Turn on works in one
 tap. Owner: portal (`portal/src/apps/remote.tsx:203`).
 
+
+**Fixed in 4cdd461 and d99d860** (portal): the name starts from the computer's name; a disabled Turn on says why.
 ### W10. P1. "Undo task" is the red main action on tasks that changed nothing
 ![](shots/web/srv-task-waiting.png)
 A waiting task (No files changed) and a failed task both show a red Undo task in the header. Fix: show Undo only
 when the task changed files or spent money; on a waiting task the header keeps Deny and Approve, which are already
 in the body. Owner: portal.
 
+
+**Fixed in d99d860** (portal): Undo task only on a finished task that changed files or spent. ![](after/srv-task-done.png)
 ### W11. P2. "1 need you"
 The top bar reads badge "1" then "need you", and the lock screen "1 more need you". Fix: "1 needs you" (the
 `plural` helper is already imported in `shell.tsx`). Owner: portal.
 
+
+**Fixed in d99d860** (portal).
 ### W12. P2. Task ids and Linux user names on every row
 ![](shots/web/srv-tasks.png)
 Every Tasks row has "Task tmooxrnbb24", a "Runs as box-tmooxrnbb24" column, and an App column that says "Tasks"
@@ -183,6 +203,9 @@ on every row; the task window's subtitle repeats them. Fix: drop the App column 
 id line, and say it once in the task window's "What it was allowed": "Runs as its own user (box-tmoo...)". That is
 the safety story, so keep it once. Owner: portal.
 
+
+**Fixed in d99d860** (portal): no id or Runs-as column; "Runs as: Its own user (box-...)" once in What it was allowed.
+![](after/srv-tasks.png)
 ### W13. P2. Finished notifications quote the raw last step
 ![](shots/web/srv-notifications.png)
 "Find me a road bike finished: write bikes.md Two road bikes under 600 dollars." Fix: "Wrote bikes.md: two road
@@ -197,6 +220,8 @@ Pairing the same phone again adds another identical "Ben's iPhone, Owner" row (t
 mark the device you are on, show "last seen", and offer to replace an older pairing with the same name. Owner:
 portal.
 
+
+**Fixed in d99d860** (portal): "(this phone)", "seen <time>", older same-name pairings marked with Remove them.
 ### W15. P2. Phone Audit: filter chips run off the right edge
 ![](shots/web/biz-phone-owen-audit.png)
 "People", "Agents" and "Kinds" sit past 390 px with no fade or scroll hint. Fix: wrap the chips onto two lines.
@@ -208,6 +233,8 @@ Walked on a fresh install of the final `gurtos-server-x86_64.iso` (build `202610
 and BIOS, 50 screenshots in `shots/server/`. Setup and the box screen are the portal, so the web section above
 also applies; these are the findings the web walk can't see, plus the ones the fresh install shows more sharply.
 
+
+**Fixed in d99d860** (portal): the chips wrap.
 ### S2. P0. Boot: about 10 s of black, then a white rectangle flash
 ![](shots/server/08-boot-white-flash.png)
 After GRUB there is no splash: about 10 s of black with a stray mouse cursor, then a white 200x200 rectangle in the
@@ -278,12 +305,16 @@ timeout 0). Owner: image.
 "Click or press Enter to unlock", and space also unlocks. Fix: call it what it is, "Press any key to wake", or ask
 for the paired phone's OK to unlock. Owner: portal.
 
+
+**Fixed in d99d860** (portal): "Press any key or click to wake". ![](after/srv-lock.png)
 ### S18. P1. Setup's Remote access step looks unfinished
 ![](shots/server/19-remote-access.png)
 The literal `<name>.box.gurtos.com`, the heading repeated as the group title, and a greyed Turn on with no reason.
 Fix: fill the name from the box name (W9), show the real address as you type, drop the duplicate title, add
 "Type a name first" under a disabled button. Owner: portal.
 
+
+**Fixed in d99d860** (portal).
 ### S11. P1. The Factory and Live windows are unstyled and full of jargon
 ![](shots/server/36-dock-920.png)
 Native checkboxes and selects, another heading style, and text like "Droid works here as a team of custom droids",
@@ -292,8 +323,24 @@ Native checkboxes and selects, another heading style, and text like "Droid works
 
 **Live: fixed in bd87b04** (spacetime): "Live board", kit styling, "Needs you", "this computer", empty tabs that say
 what would appear, one line when it can't be reached. ![](after/srv-app-live.png)
-Factory still open (factory thread): native controls, "Droid works here as a team of custom droids... The box
+**Factory: fixed in 9c6a719** (factory) ![](after/srv-app-factory.png). Before it had native controls, "Droid works here as a team of custom droids... The box
 enforces...", "no FACTORY_GITHUB_REPO in the vault", "resets in 9008 min". ![](after/srv-app-factory.png)
+
+### W16. P2. Two key names still read like variables
+"ASI one API key" and "Backup age recipient" in Accounts & Keys (`after/srv-settings-keys.png`). Fix: "ASI:One API
+key", "Backup encryption key". Owner: portal.
+
+### W17. P2. A window for an app that is off is titled with its route
+"factory/factory" over "This app is off or not installed". Fix: the app's title ("Factory"), and a Turn on button.
+Owner: portal.
+
+### W18. P2. Setup's privacy step shows a file path
+"/var/lib/box/log.jsonl". Fix: "The action log stays on this computer." Owner: portal.
+
+### A-1. P1. The Apify page is plain HTML
+Its own H1, browser-default table, and "what the box counted" (`after/srv-app-apify.png`). Fix: the kit like
+Factory and the Live board (9c6a719, bd87b04), "No Apify calls yet. When an agent reads a page or checks a price,
+its cost shows here.", and "this computer". Owner: apify track.
 
 ### S27. P2. App windows show their URL path as a subtitle
 "/t/spacetime/", "/t/factory/" under the window title (`after/srv-app-live.png`). Fix: no subtitle, or the app's
@@ -305,30 +352,36 @@ After pulling the plug on a box with no tasks: GRUB, black, then the old windows
 works well (`shots/web/srv-restored-after-plug.png`: "Welcome back", 2 resumed, paid twice 0, "Back after a
 restart"). Fix: show "Back after a restart" even when nothing was running. Owner: portal.
 
+
+**Fixed in d99d860** (portal).
 ### S14. P1. Setup's keyboard focus
 Tab does nothing until the page is clicked; after that the first stop has no visible ring. Fix: focus the step's
 heading on each step, and `:focus-visible` rings on the step list and the accessibility button. Only the welcome
 step was tabbed. Owner: portal.
 
+
+**Fixed in d99d860** (portal).
 ### S19. P1. No screen reader switch in setup
 The approved welcome step has Larger text, High contrast, Screen reader and Reduce motion; the build has no Screen
 reader row (10). Owner: portal (and image for Orca in the kiosk, if it can run there).
 
+
+**Fixed in d99d860** (portal).
 ### P2 (Server)
-- **S20** Control Center says "Dark style: Off" while the screen is dark because it follows the system (42). Show
+- **S20** (fixed in d99d860) Control Center says "Dark style: Off" while the screen is dark because it follows the system (42). Show
   the state in effect. Owner: portal.
-- **S21** The first desktop says "Good evening" with no name and no hint what to do with zero tasks; the design has
+- **S21** (fixed in d99d860; Server has no owner name yet) The first desktop says "Good evening" with no name and no hint what to do with zero tasks; the design has
   "Good evening, Ben" (32). Fix: use the owner's name from setup and show "Start a task, or open App Center to turn
   on apps." Owner: portal.
-- **S22** Time zone reads "UTC (UTC)" and isn't detected (13). Owner: portal.
-- **S23** Permissions is titled "Safety defaults" and says "Listed hosts", "A task that names no hosts gets these";
+- **S22** (fixed in d99d860) Time zone reads "UTC (UTC)" and isn't detected (13). Owner: portal.
+- **S23** (fixed in d99d860 and baeabc5) Permissions is titled "Safety defaults" and says "Listed hosts", "A task that names no hosts gets these";
   the spend default is $100 (22). Fix: "What agents may reach and spend", "Sites any task may reach", ask over $5.
   Owner: portal (same as P-13).
 - **S24** GRUB is stock "GNU GRUB version 2.12" text (01). Fix: gfxterm with the wallpaper colour and "GurtOS".
   Owner: image.
-- **S25** The QR status "Waiting for your phone. The code changes in 4:38." is link blue and looks clickable (10).
+- **S25** (fixed in d99d860) The QR status "Waiting for your phone. The code changes in 4:38." is link blue and looks clickable (10).
   Owner: portal.
-- **S26** "PAID TWICE 0: A call that had paid kept its key, so the resume did not pay again" reads as if an agent
+- **S26** (fixed in d99d860) "PAID TWICE 0: A call that had paid kept its key, so the resume did not pay again" reads as if an agent
   held a key. Fix: "Paid twice: 0. A payment that went through before the power cut was not made again." Owner:
   portal.
 
