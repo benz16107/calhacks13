@@ -186,8 +186,14 @@ export async function startProxy(hooks: ProxyHooks, cert: { key: Buffer; cert: B
     void (res.headersSent ? res.destroy() : res.writeHead(status).end(text));
 
   /** Send the request on to `target` and stream the answer back. */
-  const forward = (req: http.IncomingMessage, res: http.ServerResponse, up: http.ClientRequest) => {
+  const forward = (req: http.IncomingMessage, res: http.ServerResponse, up: http.ClientRequest, leaks?: (text: string) => boolean) => {
     req.on('error', () => res.destroy());
+    if (leaks) {
+      // A task's plain-HTTP body is read for the decoy key before it goes on (shortcut: no backpressure, as in tunnels).
+      req.on('data', (c: Buffer) => (leaks(c.toString('latin1')) ? (up.destroy(), fail(res, 403, 'blocked by the box')) : up.write(c)));
+      req.on('end', () => up.end());
+      return void up.on('response', (r) => (res.writeHead(r.statusCode ?? 502, r.headers), r.pipe(res))).on('error', () => fail(res, 502, 'upstream failed'));
+    }
     up.on('response', (r) => {
       r.on('error', () => res.destroy());
       res.writeHead(r.statusCode ?? 502, r.headers);
@@ -240,7 +246,7 @@ export async function startProxy(hooks: ProxyHooks, cert: { key: Buffer; cert: B
         return fail(res, 403, 'blocked by the box');
       }
       const headers = { ...req.headers, host: url.host };
-      forward(req, res, http.request({ host: address, port, path: url.pathname + url.search, method: req.method, headers }));
+      forward(req, res, http.request({ host: address, port, path: url.pathname + url.search, method: req.method, headers }), (text) => hooks.leaked(t, text));
     });
   });
 

@@ -171,7 +171,7 @@ On the box itself, `BOX_URL=http://127.0.0.1:7700` and no token. Keep needs a de
 **Tripwire.** Every task's environment holds a decoy AWS key pair (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`),
 derived per task from `BOX_HOME/tripwire.key`, so it is the same each time the task starts and is never written to the
 log. It is never a real key, so it only leaves a task when an agent tries to move secrets. The box looks for it in a
-plain-HTTP request's address and headers and in a host name through the proxy, in a tool call's input, and in
+plain-HTTP request (address, headers and body, including plain HTTP inside a tunnel) and in a host name through the proxy, in a tool call's input, and in
 anything the task writes to the log. On a hit it refuses that request or call, undoes the task, writes a `note`
 (`track: 'security'`, `data: {tripwire: true, where}`, never the key) and pushes an alert to the owner's phones.
 Not covered: the model relay (an agent reading its own environment may show its model the decoy, which is not a
