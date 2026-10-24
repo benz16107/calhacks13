@@ -5,6 +5,7 @@ import type { ChildProcess } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
 import fs from 'node:fs';
 import http from 'node:http';
+import os from 'node:os';
 import path from 'node:path';
 import type { App, Approval, Box, Ctx, LogEvent, LogReader, ModelJob, NewEvent, Route, Task, TaskSpec, TaskState, Tool, Track } from './contract.ts';
 import { DB, Live } from './live.ts';
@@ -15,7 +16,7 @@ import { HOME, dirs } from './sandbox.ts';
 import { usageCents } from './pricing.ts';
 import { loadVault } from './vault.ts';
 
-type Handler = (method: string, url: URL, body: any) => unknown;
+type Handler = (method: string, url: URL, body: any, headers: http.IncomingHttpHeaders) => unknown;
 
 /** A JSON-over-HTTP server. Thrown errors become 400s. */
 function jsonServer(handler: Handler, raw?: (req: http.IncomingMessage, res: http.ServerResponse) => boolean) {
@@ -26,10 +27,11 @@ function jsonServer(handler: Handler, raw?: (req: http.IncomingMessage, res: htt
     let status = 200;
     let out: unknown;
     try {
-      out = await handler(req.method ?? 'GET', new URL(req.url ?? '/', 'http://box'), text ? JSON.parse(text) : {});
+      out = await handler(req.method ?? 'GET', new URL(req.url ?? '/', 'http://box'), text ? JSON.parse(text) : {}, req.headers);
       if (out === undefined) [status, out] = [404, { error: 'not found' }];
     } catch (e) {
-      [status, out] = [400, { error: (e as Error).message }];
+      status = (e as { status?: number }).status ?? 400;
+      out = { error: (e as Error).message };
     }
     res.writeHead(status, { 'content-type': 'application/json' }).end(JSON.stringify(out));
   });
@@ -49,6 +51,16 @@ function listenSocket(server: http.Server, file: string, owner?: { uid: number; 
 }
 
 const dollars = (cents: number) => `$${(cents / 100).toFixed(2)}`;
+const BOX_ID = process.env.BOX_ID ?? os.hostname();
+const BOX_NAME = process.env.BOX_NAME ?? BOX_ID;
+
+interface Device {
+  id: string;
+  name: string;
+  token: string;
+  pairedAt: string;
+  revoked?: boolean;
+}
 
 class Core {
   log = new Log(path.join(HOME, 'log.jsonl'));
@@ -66,6 +78,9 @@ class Core {
   reserved = new Map<string, number>(); // cents a task has in-flight tool calls committed but not yet logged
   webhooks = new Map<string, (payload: unknown, headers: Record<string, string>) => unknown>();
   trackSecrets = new Map<string, Set<string>>(); // vault keys each track's routes and triggers may read
+  devicesPath = path.join(HOME, 'devices.json');
+  devices: Device[] = fs.existsSync(this.devicesPath) ? JSON.parse(fs.readFileSync(this.devicesPath, 'utf8')) : [];
+  pairCodes = new Map<string, number>(); // one-time code -> expiry (ms)
   uidTask = new Map<number, string>();
   relay = relayCert(HOME);
   proxyPort = 0;
@@ -398,11 +413,86 @@ class Core {
 
   // ---------- the API: portal, demo, phone ----------
 
+  // ---------- pairing a phone, and listing every box ----------
+
+  /** This box plus the peer boxes in BOX_PEERS, so one portal lists and drives several (the Vultr second box). */
+  boxes() {
+    let peers: unknown[] = [];
+    try {
+      peers = JSON.parse(process.env.BOX_PEERS ?? '[]');
+    } catch (e) {
+      console.error('BOX_PEERS is not valid JSON:', e);
+    }
+    return [{ id: BOX_ID, name: BOX_NAME, stdb: DB, self: true }, ...peers];
+  }
+
+  /** Mint a one-time pairing code for the box screen's QR. Good for 5 minutes, usable once. */
+  pairNew() {
+    const code = randomBytes(4).toString('hex');
+    this.pairCodes.set(code, Date.now() + 5 * 60 * 1000);
+    return { code, url: `/pair#${code}`, box: { id: BOX_ID, name: BOX_NAME }, expiresInSec: 300 };
+  }
+
+  /** A phone redeems the code for a durable device token. */
+  pair(body: { code?: string; name?: string }) {
+    const expiry = body.code ? this.pairCodes.get(body.code) : undefined;
+    if (!expiry || expiry < Date.now()) throw Object.assign(new Error('bad or expired pairing code'), { status: 400 });
+    this.pairCodes.delete(String(body.code)); // one-time
+    const device: Device = { id: 'd' + randomBytes(5).toString('hex'), name: String(body.name || 'phone').slice(0, 40), token: randomBytes(24).toString('hex'), pairedAt: new Date().toISOString() };
+    this.devices.push(device);
+    this.saveDevices();
+    return { token: device.token, device: { id: device.id, name: device.name }, box: { id: BOX_ID, name: BOX_NAME } };
+  }
+
+  revokeDevice(id: string) {
+    const d = this.devices.find((x) => x.id === id);
+    if (!d) throw Object.assign(new Error(`no device ${id}`), { status: 404 });
+    d.revoked = true;
+    this.saveDevices();
+    return { id, revoked: true };
+  }
+
+  deviceByToken(token?: string): Device | undefined {
+    const t = (token ?? '').replace(/^Bearer /i, '');
+    return t ? this.devices.find((d) => d.token === t && !d.revoked) : undefined;
+  }
+
+  saveDevices() {
+    fs.writeFileSync(this.devicesPath, JSON.stringify(this.devices, null, 2), { mode: 0o600 });
+  }
+
+  /** Pairing and box-listing routes, served as JSON. Kept raw so they can read request headers. */
+  pairing(req: http.IncomingMessage, res: http.ServerResponse) {
+    const url = new URL(req.url ?? '/', 'http://box');
+    const p = url.pathname.replace(/^\/api/, '');
+    const m = req.method ?? 'GET';
+    const routes = new Set(['/boxes', '/pair/new', '/pair', '/pair/devices']);
+    const revoke = p.match(/^\/pair\/devices\/([\w-]+)\/revoke$/);
+    if (!routes.has(p) && !revoke) return false;
+    void (async () => {
+      const json = (status: number, obj: unknown) => res.writeHead(status, { 'content-type': 'application/json' }).end(JSON.stringify(obj));
+      try {
+        const chunks: Buffer[] = [];
+        for await (const c of req) chunks.push(c as Buffer);
+        const body = chunks.length ? JSON.parse(Buffer.concat(chunks).toString()) : {};
+        if (m === 'GET' && p === '/boxes') return json(200, this.boxes());
+        if (m === 'POST' && p === '/pair/new') return json(200, this.pairNew());
+        if (m === 'POST' && p === '/pair') return json(200, this.pair(body));
+        if (m === 'GET' && p === '/pair/devices') return json(200, this.devices.filter((d) => !d.revoked).map(({ token, ...d }) => d));
+        if (m === 'POST' && revoke) return json(200, this.revokeDevice(revoke[1]));
+        json(404, { error: 'not found' });
+      } catch (e) {
+        json((e as { status?: number }).status ?? 400, { error: (e as Error).message });
+      }
+    })();
+    return true;
+  }
+
   // ---------- the API: portal, phone, demo. Every route also answers under /api/. ----------
 
   api = () =>
     jsonServer(
-      async (method, url, body) => {
+      async (method, url, body, headers) => {
         const [, a, id, action] = url.pathname.replace(/^\/api(?=\/)/, '').split('/');
         const route = `${method} /${a ?? ''}${id ? '/:id' : ''}${action ? '/' + action : ''}`;
         const q = (name: string) => url.searchParams.get(name);
@@ -423,8 +513,16 @@ class Core {
             return this.undo(id);
           case 'GET /approvals':
             return [...this.state.approvals.values()].filter((x) => !q('state') || x.state === q('state'));
-          case 'POST /approvals/:id':
-            return this.answer(id, body.approved === true, String(body.by ?? 'api'));
+          case 'POST /approvals/:id': {
+            // A phone sends its device token; it must be a paired, un-revoked device, and `by` becomes its name.
+            let by = String(body.by ?? 'api');
+            if (headers.authorization) {
+              const device = this.deviceByToken(headers.authorization);
+              if (!device) throw Object.assign(new Error('pair this phone with the box first'), { status: 401 });
+              by = device.name;
+            }
+            return this.answer(id, body.approved === true, by);
+          }
           case 'GET /log':
             return this.log.events.slice(Number(q('after') ?? 0)).filter((e) => !q('task') || e.task === q('task'));
           case 'GET /apps':
@@ -433,7 +531,7 @@ class Core {
             return { ok: true, tasks: this.state.tasks.size, tools: [...this.tools.keys()], spacetime: { port: 3000, database: DB } };
         }
       },
-      (req, res) => this.cors(req, res) || this.logStream(req, res) || this.webhook(req, res) || this.trackRoute(req, res) || this.portal(req, res),
+      (req, res) => this.cors(req, res) || this.pairing(req, res) || this.logStream(req, res) || this.webhook(req, res) || this.trackRoute(req, res) || this.portal(req, res),
     );
 
   /** Browsers on other origins (a portal dev server) need BOX_ORIGINS, comma separated, or '*'. */

@@ -151,6 +151,10 @@ answers without `/api`, which is what the demo and tracks use.
 | `GET /api/log/stream?after=<seq>&task=<id>` | The log as Server-Sent Events: replays from `after`, then streams new events live. For Elastic and Jira to follow without polling files. |
 | `GET /api/apps` | Apps from tracks: `{name, title, href, track}`. Open `/t/<track><href>`. |
 | `GET /api/health` | `{ok, tasks, tools, spacetime: {port, database}}` |
+| `GET /api/boxes` | This box and its peers (`BOX_PEERS`), so one portal lists and drives several boxes (the Vultr second box): `[{id, name, stdb, self}, ...]` |
+| `POST /api/pair/new` | Mint a one-time pairing code for the box screen's QR: `{code, url, box, expiresInSec}` |
+| `POST /api/pair {code, name}` | A phone redeems the code for its own device token: `{token, device, box}`. One-time. |
+| `GET /api/pair/devices`, `POST /api/pair/devices/<id>/revoke` | List paired phones; revoke one |
 | `/t/<track>/...` | Track routes |
 
 What a screen needs, and where it comes from:
@@ -167,6 +171,14 @@ What a screen needs, and where it comes from:
 `GET /api/log/stream` (Server-Sent Events): each event is `id: <seq>` and `data: <json>`. On reconnect, pass
 `?after=<seq>` or the `Last-Event-ID` header and the box replays from there, then streams live. `GET /api/log?after=`
 is the same data by polling if a reader prefers a cursor.
+
+**Pairing a phone, and more than one box.** The box screen shows a QR of a one-time code (`POST /api/pair/new`);
+a phone scans it and redeems the code for its own device token (`POST /api/pair`). Any phone at the judging
+table pairs this way for the Hacker's Choice demo. A phone sends its token as `Authorization: Bearer <token>`
+when it approves, so the log records which phone said yes; revoke it with `POST /api/pair/devices/<id>/revoke`
+and that token stops working. `GET /api/boxes` lists this box plus the peers named in the `BOX_PEERS`
+environment variable (JSON array of `{id, name, stdb}`), so one portal shows and drives both the linuxbox and
+Vultr boxes.
 
 **Hosting the portal.** Build it into `portal/dist` (or point `BOX_PORTAL` at a folder) and the box serves it on
 the same address as the API: files as they are, and `index.html` for any other page load, so client-side

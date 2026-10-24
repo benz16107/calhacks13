@@ -47,7 +47,7 @@ async function startBox() {
   box = spawn(process.execPath, [...process.execArgv, new URL('./box.ts', import.meta.url).pathname], {
     detached: true,
     stdio: ['ignore', out, out],
-    env: { ...process.env, BOX_HOME: HOME, BOX_PORT: 'auto', BOX_VAULT: path.join(HOME, 'vault.env'), BOX_STDB_DB: DB, BOX_PROXY_PORT: 'auto' },
+    env: { ...process.env, BOX_HOME: HOME, BOX_PORT: 'auto', BOX_VAULT: path.join(HOME, 'vault.env'), BOX_STDB_DB: DB, BOX_PROXY_PORT: 'auto', BOX_ID: 'demo-box', BOX_NAME: 'Demo box', BOX_PEERS: JSON.stringify([{ id: 'vultr', name: 'Vultr box', stdb: 'box' }]) },
   });
   for (let i = 0; i < 300; i++) {
     if (await api('GET', '/health').catch(() => undefined)) {
@@ -92,6 +92,21 @@ function streamLog(after: number, opts: { task?: string; stopAt?: (e: LogEvent) 
     });
     req.on('error', reject);
     req.end();
+  });
+}
+
+function authApi<T = any>(token: string, method: string, p: string, body?: unknown): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const req = http.request({ socketPath: API, method, path: p, headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` } }, (res) => {
+      let t = '';
+      res.on('data', (c) => (t += c));
+      res.on('end', () => {
+        const d = t ? JSON.parse(t) : undefined;
+        (res.statusCode ?? 500) >= 400 ? reject(Object.assign(new Error(d?.error ?? `HTTP ${res.statusCode}`), { status: res.statusCode })) : resolve(d);
+      });
+    });
+    req.on('error', reject);
+    req.end(body === undefined ? undefined : JSON.stringify(body));
   });
 }
 
@@ -408,6 +423,37 @@ await moment('moment 4: pull the plug', async () => {
   await settled([W.id]);
   check(view('long', 'deployed.txt') === 'yes', 'approved after the restart, it finished');
   check(view('notes', 'b.txt') === 'made by B' && view('notes', 'a.txt') === 'original a', 'earlier work survived too: B kept, A still undone');
+});
+
+// ---------- pairing a phone, and more than one box ----------
+
+await moment('pairing and more than one box', async () => {
+  const boxes = await api<{ id: string; name: string; self?: boolean }[]>('GET', '/api/boxes');
+  check(boxes[0]?.self && boxes.some((b) => b.id === 'vultr'), `the portal lists ${boxes.length} boxes from one API, including the Vultr box`);
+
+  const { code } = await api<{ code: string }>('POST', '/api/pair/new');
+  const paired = await api<{ token: string; device: { id: string; name: string } }>('POST', '/api/pair', { code, name: "Judge's phone" });
+  check(paired.token && paired.device.name === "Judge's phone", 'a phone paired from the box-screen QR code and got its own token');
+  let reused = false;
+  await api('POST', '/api/pair', { code, name: 'another' }).catch(() => (reused = true));
+  check(reused, 'the pairing code is one-time: a second phone cannot reuse it');
+
+  workspace('pair', {});
+  const A = await api<Task>('POST', '/tasks', { title: 'Ship the build', workspace: 'pair', worker: 'fake', source: 'demo', prompt: 'ask Ship the build?\nwrite shipped.txt yes' });
+  const askA = await waitFor('A to ask for an OK', async () => (await api<{ id: string; task: string }[]>('GET', '/api/approvals?state=pending')).find((x) => x.task === A.id));
+  await authApi(paired.token, 'POST', `/api/approvals/${askA.id}`, { approved: true });
+  await settled([A.id]);
+  const answered = (await api<{ events: LogEvent[] }>('GET', `/api/tasks/${A.id}`)).events.find((e) => e.type === 'approval.answered');
+  check(answered?.type === 'approval.answered' && answered.by === "Judge's phone" && view('pair', 'shipped.txt') === 'yes', 'the paired phone approved it and the log shows which phone');
+
+  await api('POST', `/api/pair/devices/${paired.device.id}/revoke`);
+  const B = await api<Task>('POST', '/tasks', { title: 'Deploy', workspace: 'pair', worker: 'fake', source: 'demo', prompt: 'ask Deploy?\nwrite deployed.txt yes' });
+  const askB = await waitFor('B to ask for an OK', async () => (await api<{ id: string; task: string }[]>('GET', '/api/approvals?state=pending')).find((x) => x.task === B.id));
+  let status = 0;
+  await authApi(paired.token, 'POST', `/api/approvals/${askB.id}`, { approved: true }).catch((e) => (status = e.status));
+  check(status === 401, 'after it is revoked, that phone can no longer approve (401)');
+  await api('POST', `/api/approvals/${askB.id}`, { approved: true, by: 'demo' }); // let B finish
+  await settled([B.id]);
 });
 
 // ---------- each track's own steps: tracks/<name>/demo.ts ----------
