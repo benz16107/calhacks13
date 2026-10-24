@@ -216,13 +216,21 @@ class Core {
 
   /** `requestedBy` is the person who asked (Business), from their paired phone or the track route they called. */
   async createTask(spec: TaskSpec, requestedBy?: string): Promise<Task> {
-    const known = ['title', 'prompt', 'workspace', 'worker', 'tools', 'hosts', 'budgetCents', 'source', 'folder', 'folders', 'seat'];
+    const known = ['title', 'prompt', 'workspace', 'worker', 'tools', 'hosts', 'budgetCents', 'source', 'folder', 'folders', 'seat', 'droid'];
     const unknown = Object.keys(spec ?? {}).filter((k) => !known.includes(k));
     if (unknown.length) throw new Error(`unknown task field${unknown.length > 1 ? 's' : ''}: ${unknown.join(', ')} (known: ${known.join(', ')})`);
     // What a task does not name comes from the owner's settings: the budget and the network it gets.
     const dflt = { hosts: this.settings.networkDefault === 'allowlist' ? this.settings.defaultHosts : [], budgetCents: this.settings.defaultBudgetCents };
     const s: FullSpec = { workspace: 'home', worker: 'droid', tools: [], source: 'api', ...spec, hosts: spec.hosts ?? dflt.hosts, budgetCents: spec.budgetCents ?? dflt.budgetCents };
     if (!s.title || !s.prompt) throw new Error('a task needs a title and a prompt');
+    if (s.droid !== undefined) {
+      const { plan, autonomy, ...rest } = s.droid as Record<string, unknown>;
+      if (Object.keys(rest).length || (plan !== undefined && typeof plan !== 'boolean') || (autonomy !== undefined && !['low', 'medium', 'high'].includes(autonomy as string)))
+        throw new Error("droid: {plan?: true or false, autonomy?: 'low', 'medium' or 'high'}");
+      // Droid's autonomy level, enforced by the box as well: the network and the budget follow it.
+      if (autonomy === 'low') Object.assign(s, { hosts: [], budgetCents: 0 });
+      if (autonomy === 'medium') s.budgetCents = Math.min(s.budgetCents, 100);
+    }
     // Checked here, at the one door every task comes through (the API, tracks, triggers).
     if (typeof s.title !== 'string' || s.title.length > 200) throw new Error('title: text, at most 200 characters');
     if (typeof s.prompt !== 'string' || s.prompt.length > 100_000) throw new Error('prompt: text, at most 100,000 characters');

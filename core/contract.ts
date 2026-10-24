@@ -41,10 +41,23 @@ export interface TaskSpec {
   folders?: string[];
   /** The agent seat doing the work, like 'Credit analyst'. Shown in the audit. */
   seat?: string;
+  /** How Droid works on it. Leave out for high autonomy and no plan. Ignored by the fake worker. */
+  droid?: DroidOptions;
+}
+
+/**
+ * Droid's options for a task. The box enforces the autonomy level too, so it holds even if Droid ignored it:
+ * `low` gets no network beyond the model and asks before any spending, `medium` keeps its hosts and a budget of at
+ * most $1, `high` keeps what the task asked for. Droid itself also runs at that level and asks before commands above it.
+ */
+export interface DroidOptions {
+  /** Plan first: Droid writes a plan in Factory's spec mode, and starts work only once the owner approves the plan. */
+  plan?: boolean;
+  autonomy?: 'low' | 'medium' | 'high';
 }
 
 /** A TaskSpec with its defaults filled in. */
-export type FullSpec = Required<Omit<TaskSpec, 'folder' | 'folders' | 'seat'>> & { folder?: string; folders?: string[]; seat?: string };
+export type FullSpec = Required<Omit<TaskSpec, 'folder' | 'folders' | 'seat' | 'droid'>> & { folder?: string; folders?: string[]; seat?: string; droid?: DroidOptions };
 
 export interface Task extends FullSpec {
   id: string;
