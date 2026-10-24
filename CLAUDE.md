@@ -92,6 +92,13 @@ is `/etc/box/vault.env` (root, 0600). The API is `127.0.0.1:7700`. Task users ar
 All three run Ubuntu 24.04 with passwordless root, and each has the sponsor keys in `/etc/box/vault.env`.
 `./demo <name>` runs the merge gate on one; plain `./demo` uses the linuxbox VM when it is up, else the laptop.
 
+**The installed box runs origin/main only.** Each always-on machine runs one real box service (its
+`/var/lib/box`), and it must be origin/main, never a branch. Deploy it only with **`./deploy <machine>`**,
+which refuses a dirty or unpushed checkout and installs exactly origin/main. Do not run `core/install.sh`
+from a branch on an always-on machine. Track threads test on `./demo` boxes (throwaway, their own BOX_HOME),
+never on the installed one. After your change is merged to main, `./deploy linuxbox` (and `vultr`) updates
+the running boxes.
+
 - **laptop** (ARM64, Lima on Ben's MacBook): `ssh benmac 'limactl shell box -- <command>'`. It sleeps with the
   laptop, so don't rely on it overnight. This is the demo box on Sunday.
 - **linuxbox** (x86, always on, Lima on linuxbox): `limactl shell box -- <command>` on linuxbox, with

@@ -2,6 +2,7 @@
 //   write <file> <text>     append <file> <text>     rm <file>     sleep <seconds>
 //   expect <file> <text>    missing <file>           whoami <file>
 //   call <tool> <json>      ask <question>           fetch <url> <file>      fail <message>
+//   askq <question>         (asks with the question as the key, so the approval id has spaces)
 //   callpar <tool> <json>   (two different calls at once: tests the budget reservation)
 //   callsame <tool> <json>  (the same call twice at once: tests idempotent dedup)
 //   steal <file> <out>      env <out>                connect <host:port> <out>      procs <out>
@@ -73,11 +74,14 @@ for (let n = done + 1; n <= lines.length; n++) {
       note = `${line} -> ${[ra, rb].map((r) => (r.ok ? 'ok' : r.error)).join(', ')}`;
       break;
     }
-    case 'ask': {
+    case 'ask':
+    case 'askq': {
       const question = [arg, text].join(' ');
+      // 'askq' keys the approval by the question text itself, so its id contains spaces (like Droid's questions).
+      const key = cmd === 'askq' ? question : `line${n}`;
       let r;
       do {
-        r = await call(sock, 'POST', '/ask', { key: `line${n}`, question });
+        r = await call(sock, 'POST', '/ask', { key, question });
       } while (r.pending); // wait past the window, as long as it takes
       if (!r.approved) throw new Error(`not approved: ${question}`);
       break;

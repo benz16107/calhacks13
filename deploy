@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+# Install origin/main as the real box service on an always-on machine. The installed boxes run main only.
+#   ./deploy linuxbox | vultr | laptop
+# Refuses a dirty or unpushed checkout: what you deploy is exactly origin/main. Track threads test with
+# ./demo (throwaway boxes), never here.
+set -euo pipefail
+cd "$(dirname "$0")"
+
+target=${1:-}
+case $target in
+  laptop) BOX_SHELL="ssh -o ConnectTimeout=10 benmac /opt/homebrew/bin/limactl shell --workdir / box --" ;;
+  linuxbox) BOX_SHELL="/home/linuxbrew/.linuxbrew/bin/limactl shell --workdir / box --"
+    [[ $(hostname -s) == linuxbox* ]] || BOX_SHELL="ssh -o ConnectTimeout=10 linuxbox $BOX_SHELL" ;;
+  vultr) BOX_SHELL="ssh -o ConnectTimeout=10 vultrbox" ;;
+  *) echo "usage: ./deploy linuxbox|vultr|laptop" >&2; exit 2 ;;
+esac
+
+# Only origin/main goes on an always-on box.
+git fetch -q origin main
+dirty=$(git status --porcelain)
+[[ -z $dirty ]] || { echo "deploy: the checkout has uncommitted changes; the installed box runs origin/main only" >&2; exit 1; }
+[[ $(git rev-parse HEAD) == $(git rev-parse origin/main) ]] || { echo "deploy: HEAD is not origin/main (push or pull first)" >&2; exit 1; }
+
+sha=$(git rev-parse --short HEAD)
+dest=/opt/box-src/calhacks13
+echo "deploy: origin/main ($sha) -> $target:/var/lib/box"
+{
+  echo "set -e; mkdir -p $dest; find $dest -mindepth 1 -maxdepth 1 ! -name node_modules -exec rm -rf {} +"
+  echo "base64 -d <<'EOF' | tar -xzf - -C $dest"
+  git archive --format=tar HEAD | gzip | base64
+  echo EOF
+  echo "exec $dest/core/install.sh"
+} | $BOX_SHELL sudo bash -s

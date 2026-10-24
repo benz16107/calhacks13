@@ -8,6 +8,7 @@ import path from 'node:path';
 import { call } from './client.ts';
 import type { DemoKit, LogEvent, Task } from './contract.ts';
 import { PLACEHOLDER_KEY } from './net.ts';
+import { mountsUnder, reap, teardown } from './reap.ts';
 
 const run = randomBytes(3).toString('hex');
 const HOME = `/var/lib/box-demo/${run}`;
@@ -39,8 +40,21 @@ async function stdbRows(sql: string): Promise<Record<string, any>[]> {
 let box: ReturnType<typeof spawn> | undefined;
 let PORT = 0; // the box's API port, which the box picks and writes to BOX_HOME/api.port
 const WINDOW = 600; // the approval wait window; short here so a long wait is quick to act out (a fake clock)
-const mountsUnder = (dir: string) =>
-  fs.readFileSync('/proc/self/mountinfo', 'utf8').split('\n').map((l) => l.split(' ')[4]).filter((m) => m?.startsWith(dir + '/'));
+
+reap(); // clear demo boxes left by runs that crashed or were interrupted, before starting ours
+
+// Always tear this run's box down on the way out: normal end, crash, or Ctrl-C. The files stay only on failure.
+let toreDown = false;
+function stop(keepFiles: boolean) {
+  if (toreDown) return;
+  toreDown = true;
+  teardown(HOME, box?.pid);
+  spawnSync('spacetime', ['delete', '--server', 'local', '-y', DB]);
+  if (keepFiles) console.log(`\nkept ${HOME} for a look (box.log, log.jsonl, tasks/*/worker.log)`);
+  else fs.rmSync(HOME, { recursive: true, force: true });
+}
+for (const sig of ['SIGINT', 'SIGTERM'] as const) process.on(sig, () => (stop(false), process.exit(130)));
+process.on('uncaughtException', (e) => (console.error(e), stop(false), process.exit(1)));
 
 async function startBox() {
   const out = fs.openSync(path.join(HOME, 'box.log'), 'a');
@@ -454,6 +468,14 @@ await moment('approvals survive a long wait, never duplicate, and close when the
   await waitFor('its request', async () => (await api<{ task: string }[]>('GET', '/api/approvals?state=pending')).find((a) => a.task === C.id));
   await api('POST', `/api/tasks/${C.id}/undo`);
   check((await api<{ task: string; state: string }[]>('GET', '/api/approvals')).filter((a) => a.task === C.id && a.state === 'pending').length === 0, 'when the task ended, its pending approval was closed');
+
+  // An approval id with spaces (Droid's own questions make these) can still be answered over the API.
+  const Q = await api<Task>('POST', '/tasks', { workspace: 'wait', worker: 'fake', source: 'demo', title: 'Spacey id', prompt: 'askq Approve the $5.00 charge?\nwrite charged.txt yes' });
+  const qAsk = await waitFor('its request', async () => (await api<{ id: string; task: string }[]>('GET', '/api/approvals?state=pending')).find((a) => a.task === Q.id));
+  check(qAsk.id.includes(' '), `the approval id contains spaces ("${qAsk.id}")`);
+  await api('POST', `/api/approvals/${encodeURIComponent(qAsk.id)}`, { approved: true, by: 'demo' });
+  await settled([Q.id]);
+  check(view('wait', 'charged.txt') === 'yes', 'answered an approval whose id has spaces, through the encoded URL');
 });
 
 // ---------- pairing a phone, and more than one box ----------
@@ -538,21 +560,7 @@ if (fs.existsSync(portalDemo)) await moment('portal', async () => (await import(
 
 // ---------- cleanup ----------
 
-const users = fs.existsSync(path.join(HOME, 'log.jsonl'))
-  ? fs.readFileSync(path.join(HOME, 'log.jsonl'), 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l) as LogEvent)
-      .flatMap((e) => (e.type === 'task.created' ? [e.user] : []))
-  : [];
-if (box?.pid) process.kill(-box.pid, 'SIGKILL');
-for (const u of users) spawnSync('pkill', ['-KILL', '-u', u]);
-await sleep(200);
-for (const m of mountsUnder(HOME)) execFileSync('umount', ['-l', m]);
-for (const u of users) {
-  // Most are gone already. userdel can collide with another run on /etc/passwd's lock, so try a few times.
-  for (let i = 0; i < 10 && spawnSync('id', [u]).status === 0; i++) spawnSync('userdel', [u]).status === 0 || (await sleep(200));
-}
-spawnSync('spacetime', ['delete', '--server', 'local', '-y', DB]);
-if (failed) console.log(`\nkept ${HOME} for a look (box.log, log.jsonl, tasks/*/worker.log)`);
-else fs.rmSync(HOME, { recursive: true, force: true });
+stop(failed > 0); // keep the files only if something failed
 
 const secs = ((Date.now() - started) / 1000).toFixed(1);
 console.log(`\ndemo: ${passed} passed, ${failed} failed, ${pending} pending (${secs}s)`);

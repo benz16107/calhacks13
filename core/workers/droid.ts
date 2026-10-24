@@ -2,6 +2,7 @@
 // The box already limits what the task can touch (its own user, its own files, its network), so Droid
 // runs with high autonomy. Box tools and box_ask reach it through workers/mcp.ts.
 // Needs FACTORY_API_KEY, which the core passes in; it is the one secret a task holds (see core/README.md).
+import { createHash } from 'node:crypto';
 import { AutonomyLevel, DroidMessageType, ToolConfirmationOutcome, createSession, resumeSession } from '@factory/droid-sdk/node';
 import { call } from '../client.ts';
 
@@ -23,7 +24,7 @@ const handlers: Handlers = {
   askUserHandler: async ({ questions }) => ({
     answers: await Promise.all(
       questions.map(async (q) => {
-        const r = await call(sock, 'POST', '/ask', { key: `droid.ask.${q.index}.${q.question.slice(0, 40)}`, question: q.question });
+        const r = await call(sock, 'POST', '/ask', { key: `droid.ask.${q.index}.${createHash('sha256').update(q.question).digest('hex').slice(0, 12)}`, question: q.question });
         return { index: q.index, question: q.question, answer: r.approved ? (q.options[0] ?? 'yes') : 'no' };
       }),
     ),

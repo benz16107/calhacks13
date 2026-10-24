@@ -578,8 +578,9 @@ class Core {
   api = () =>
     jsonServer(
       async (method, url, body, headers) => {
-        const [, a, id, action] = url.pathname.replace(/^\/api(?=\/)/, '').split('/');
-        const route = `${method} /${a ?? ''}${id ? '/:id' : ''}${action ? '/' + action : ''}`;
+        const [, a, rawId, action] = url.pathname.replace(/^\/api(?=\/)/, '').split('/');
+        const id = rawId ? decodeURIComponent(rawId) : rawId; // ids may hold spaces (Droid's questions); the client encodes them
+        const route = `${method} /${a ?? ''}${rawId ? '/:id' : ''}${action ? '/' + action : ''}`;
         const q = (name: string) => url.searchParams.get(name);
         switch (route) {
           case 'GET /tasks':
