@@ -32,11 +32,11 @@ Checked against main `8a4cbf4`, Sat Oct 24 05:30 PT. `./demo` from a clean workt
 |---|---|
 | verified (ISO) | 3 |
 | verified | 54 |
-| merged | 60 |
-| building | 41 |
+| merged | 71 |
+| building | 37 |
 | planned | 20 |
 | not pursued | 3 |
-| **Total** | **181** |
+| **Total** | **188** |
 
 **Collisions** (detail below): none open at 03:27. The three found at 02:25 are resolved and Business is on main. Still
 watched: portal/dist rebuilt from merged sources (C-4).
@@ -230,16 +230,15 @@ Gate: 22 Jira checks against offline stand-ins for Jira, JSM and Confluence. Liv
 
 ## Armadin (Best Security Hack)
 
-Owner: the Armadin thread. On branch `armadin-push` (pushed, not merged to main). It depends on a `sh <out> <command>` line
-in `core/workers/fake.ts` that the core thread is landing; the branch won't merge before it. Until then, QA notes
-`tracks/armadin` as pending that line, not a defect.
+Owner: the Armadin thread. Merged to main as af40b1c (the `fake.ts` line is in; the Armadin thread's full `./demo` on the merged commit: 30 passed, 0
+failed, 1 pending). QA has not walked these by hand.
 
 | Feature | Owner | Status | Commit | Demo step | Tracks |
 |---|---|---|---|---|---|
-| The poisoned package: a harmless imitation of the Shai-Hulud npm worm run by a real `npm install` in a task; its postinstall's 10 attempts (env, dotfiles, vault, cloud metadata, exfil, raw connect, publish, other tasks' files, persistence) are blocked or contained; undo removes it; no canary secret in the log | armadin | building (branch `armadin-push`; the Armadin thread's demo box passed 1 of 1) | | tracks/armadin/demo.ts on branch | Armadin |
-| Attack scoreboard: 15 OS-level attacks, 13 caught, 2 published as not covered (no per-task disk quota; an allowed host's payload isn't inspected, reported to core) | armadin | building (branch) | | | Armadin |
-| Hijacked payment: a lookalike-sender bank-change invoice refused in code (AP-4) before anyone is asked; a second over-limit bill pauses for the controller, who says no | armadin, credit desk | building (branch; the credit desk's cases) | | demo on branch | Armadin, Hyphenate |
-| OWASP mapping (LLM Top 10 2025 and Agentic Top 10 2026, with a not-covered column) | armadin | building (branch) | | none | Armadin |
+| The poisoned package: a harmless imitation of the Shai-Hulud npm worm run by a real `npm install` in a task; its postinstall's 10 attempts (env, dotfiles, vault, cloud metadata, exfil, raw connect, publish, other tasks' files, persistence) are blocked or contained; undo removes it; no canary secret in the log | armadin | merged (af40b1c) | af40b1c | tracks/armadin/demo.ts | Armadin |
+| Attack scoreboard: 15 OS-level attacks, 13 caught, 2 published as not covered (no per-task disk quota; an allowed host's payload isn't inspected, reported to core) | armadin | merged (af40b1c) | af40b1c | tracks/armadin/demo.ts | Armadin |
+| Hijacked payment: a lookalike-sender bank-change invoice refused in code (AP-4) before anyone is asked; a second over-limit bill pauses for the controller, who says no | armadin, credit desk | merged (af40b1c) | af40b1c | tracks/armadin/demo.ts | Armadin, Hyphenate |
+| OWASP mapping (LLM Top 10 2025 and Agentic Top 10 2026, with a not-covered column) | armadin | merged (af40b1c) | af40b1c | none | Armadin |
 
 ## Mana
 
@@ -290,6 +289,20 @@ and `Ctx.ask`, which core is reviewing; the branch's gate passed 29 of 29 on the
 | Forget removes it from the index and the Moss cloud copy, logged without the content (the cloud half untested: the Moss cloud is over its limit) | find | building (branch) | | tracks/find/demo.ts on branch | Moss |
 | Photos stay home unless the owner opts in (no model runs without its key) | find | merged (the Find page's privacy line; the docs guide and the showcase still say Claude is an automatic backup, which is wrong) | 4351905 | tracks/find/demo.ts | Moss |
 | A small local vision model on CPU (qwen3-vl 2b: 22 to 37 s warm, minutes for a new photo) | find | building (measured by the Find thread; README on branch) | | none | Moss |
+
+
+**Elastic push** (on main: the track as 2762cce, the core change as 26e914b; deployed to the three installed boxes; gate
+29 passed offline and the live `DEMO_LIVE=elastic` run passed every Elastic check; QA has not tried them by hand).
+
+| Feature | Owner | Status | Commit | Demo step | Tracks |
+|---|---|---|---|---|---|
+| A log that can't be rewritten: each entry carries the SHA-256 of the one before; Elastic keeps a create-only copy; an edited, missing or reordered entry is named | core, elastic | merged | 26e914b, 2762cce | core/log.test.ts; tracks/elastic/demo.ts | Elastic, Armadin, Microsoft |
+| `box.verify_log` and `GET /t/elastic/verify` | elastic | merged | 2762cce | tracks/elastic/demo.ts | Elastic |
+| Alert rules on attacks (secret theft, a page that sent a task elsewhere, a spending spike, a new destination), arriving as one approval on the owner's phone | elastic | merged | 2762cce | tracks/elastic/demo.ts (live) | Elastic, Armadin |
+| The agent can ask (`box.request_undo`): the box asks its owner and acts only if they approve | elastic | merged | 2762cce | tracks/elastic/demo.ts (live) | Elastic |
+| A fleet view and who-approved-what: all three installed boxes ship; per-person Elastic keys copy the Business roles | elastic | merged | 2762cce | tracks/elastic/demo.ts (live) | Elastic, Microsoft |
+| Search by meaning (`box.search_meaning`, semantic_text) | elastic | merged | 2762cce | tracks/elastic/demo.ts (live) | Elastic |
+| Ask GurtOS (portal and phone app) and a Kibana dashboard | elastic | merged (the Ask page itself is not in the gate) | 2762cce | tracks/elastic/demo.ts covers the agent and keys | Elastic |
 
 ## Figma
 
