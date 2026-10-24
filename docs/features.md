@@ -35,8 +35,8 @@ Checked against main `8a4cbf4`, Sat Oct 24 05:30 PT. `./demo` from a clean workt
 | merged | 93 |
 | building | 19 |
 | planned | 20 |
-| not pursued | 0 |
-| **Total** | **189** |
+| not pursued | 4 |
+| **Total** | **193** |
 
 **Collisions** (detail below): none open at 03:27. The three found at 02:25 are resolved and Business is on main. Still
 watched: portal/dist rebuilt from merged sources (C-4).
@@ -338,6 +338,11 @@ QA cannot create instances.
 | Boot the real GurtOS disc on Vultr from a script (`tracks/vultr/up.ts`): release ISO 20261024-0644-881318a on vc2-1c-1gb; installed in about 5 minutes; came back from its own disk after the disc was detached; the first-boot wizard shows | vultr | building (branch; proven live by the Vultr thread; QA also installed the disc by hand twice, Oct 23 22:29 and Oct 24 00:02) | | tracks/vultr on branch | Vultr |
 | Encrypted backup to Object Storage (age; the owner holds the key) and a restore onto a fresh Vultr box in 2.8 s: a finished task stayed done, a waiting task came back waiting and finished after an OK | vultr | building (branch; proven live; the image has no `age` binary yet, it was added by hand, and the release disc has no shell) | | tracks/vultr on branch | Vultr |
 | Vultr firewall managed from the box: a group attached to a live instance blocked ssh from a wrong address and allowed the right one (a rule can take up to about 3 minutes to apply) | vultr | building (branch; the box's own `PUT /t/vultr/firewall` route only tested against stubs) | | tracks/vultr on branch | Vultr |
+| Vultr Serverless Inference as a hosted model for /find | vultr, find | not pursued (needs a paid subscription; Ben's call, Oct 24) | | | Vultr, Moss |
+| gurtos.co short pairing links (the code stays in the URL fragment) | vultr | not pursued (Ben is not entering the MLH GoDaddy prize, Oct 24; the redirect code was removed from the branch) | | | GoDaddy |
+| Domain story text for the showcase | vultr, submission | not pursued as a prize entry (GoDaddy); the showcase page for it should go (submission thread) | | none | GoDaddy |
+| Capital One (Nessie) prize track | credit desk | not pursued (Ben is not entering it, Oct 24); Nessie stays as the credit desk's bank, and its rows are checked with the credit desk | | | Nessie |
+
 
 ## Factory (Droid SDK)
 
@@ -375,7 +380,7 @@ Owner: the Spacetime thread. Merged as ed88206. `portal/dist` matches its source
 
 ## Not pursued
 
-- **MLH GoDaddy Registry prize and Vultr Serverless Inference** (Oct 24). Their rows were removed from the Vultr section: the gurtos.co redirect code is gone and Serverless Inference was not built.
+- **MLH GoDaddy Registry prize and Vultr Serverless Inference** (Oct 24). Their rows are in the Vultr section, marked "not pursued".
 - **Capital One (Nessie) prize track.** Ben is not entering it (Oct 24). No ledger row was only for it. Nessie stays as
   the credit desk's bank (payments, bills, AP payments in test money), so its rows are checked as part of the credit
   desk. The showcase still has a Nessie page and `docs/tracks.md` still lists the track; both are for the owners of
