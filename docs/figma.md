@@ -15,17 +15,18 @@ the tab. Research and the three directions are in `docs/figma/refs/` and `docs/f
 Credit desk, Shopper, Wallet, Find, pairing, and the session restore. On the phone: home, the approval as a
 notification, running tasks as Live Activities, and the task list. The clickable prototype is in Figma Design and Figma Make (below).
 
-## GurtOS system v2 (checkpoint, waiting for Ben's review)
+## GurtOS system v2 (approved by Ben, Fri Oct 23)
 
-Ben found the built UI looked like a SaaS product: each app had been designed as its own page, with no shared system.
-Version 2 puts one OS design system underneath every screen. Its rules are in [`figma/system.md`](figma/system.md),
-our HIG: tokens in Light and Dark, Atkinson Hyperlegible Next as the one system typeface, GNOME's Adwaita symbolic
-icons, window chrome, boxed-list rows, and when to use a window, a sheet, a popover, a toast or a notification. The
-research is in `figma/refs/os-system/` and on the FigJam board.
+Ben found the first build looked like a SaaS product: each app had been designed as its own page, with no shared
+system. Version 2 puts one OS design system underneath every screen. Its rules are in
+[`figma/system.md`](figma/system.md), our HIG: tokens in Light and Dark, Atkinson Hyperlegible Next as the one system
+typeface, GNOME's Adwaita symbolic icons, window chrome, boxed-list rows, and when to use a window, a sheet, a
+popover, a toast or a notification. The research is in `figma/refs/os-system/` and on the FigJam board.
 
-Four checkpoint screens, built only from the system's components, are in `figma/os-v2/` (node IDs in its README):
-setup Welcome, setup Apps, Settings on Permissions (Light and Dark), and the desktop with Tasks. The portal is not
-rebuilt yet: that follows Ben's approval, and the screens below stay the reference until then.
+**Build the portal from these.** The full list of v2 screens, with node IDs, PNGs and the API each one reads, is in
+[`figma/os-v2/README.md`](figma/os-v2/README.md). It grows in batches; each batch is merged as soon as it is done.
+Done so far: the whole Server setup wizard (12 steps), Settings on Permissions (Light and Dark), and Tasks. The
+direction A screens further down stay as the reference for anything v2 has not reached yet.
 
 ## Files
 
