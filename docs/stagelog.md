@@ -46,13 +46,19 @@ collected 15 references from GNOME, elementary OS, macOS, Windows 11, Ubuntu, Sy
 with one rule to take from it, into `docs/figma/refs/os-system/` and a new section of the board. Those rules became
 the GurtOS design system in `docs/figma/system.md`.
 
-**Prototyping (Figma Design and Figma Make, 6 minutes, 4 of 5).** Two flows wired between the real screens with
-prototype reactions: an approval arriving on the phone, Approve, the task running again; and undo one task on the
-box, with a confirm step. The same flows went into a Figma Make file as a small web page in the design's tokens,
-tested in a browser first. Links are in `docs/figma.md`.
+**Prototyping (Figma Design and Figma Make, 9 minutes, 4 of 5).** The first round wired two flows between the
+real screens: an approval arriving on the phone, and undoing one task on the box with a confirm step. After the
+redesign, Claude Code wired four flows across the 64 v2 screens with 136 prototype links: all 12 setup steps, approving
+a spend on the phone (the approval arrives on the lock screen after 1.2 s), undoing one task on the box through to an
+undone state with a toast, and the desktop with Notification Center, Control Center and every Settings page. The
+flows also went into a Figma Make file as a small web page in the design's tokens, tested in a browser before the
+import. Links are in `docs/figma.md`.
 
-**Handoff (Figma's MCP server, 4 minutes, 4 of 5).** Every color and size is a variable with CSS code syntax, every
-screen and component is named, and `docs/figma.md` lists each screen's node ID and the API data behind it. The
-portal thread reads them with `get_design_context`.
+**Handoff (Figma's MCP server, 4 minutes, 4 of 5).** Every color, size and motion value is a variable with its CSS
+name as code syntax, in Light and Dark, and every screen and component is named. `docs/figma/os-v2/README.md` lists
+each v2 screen's node ID, its PNG and the API field behind every value, matched to the core's setup, settings, apps
+and vault routes. The screens were merged to main in six batches as they were finished, so the portal thread could
+build each one with `get_design_context` while the next was drawn. `docs/figma/system.md` holds the rules, including
+guidelines for app makers.
 
 **Code generation (Figma's MCP server, 57 minutes, 4 of 5).** Claude Code read the screens with `get_design_context` (box home, phone home, Notification Center, the task window) and adapted the React and Tailwind reference into the portal's own Preact components and CSS, keeping Figma's variable names as CSS custom properties so every token stays traceable. Assets came from the same responses: both wallpapers, and the glyphs, which collapsed from 33 exports into one path set because Figma draws every size with the same 3 px stroke. Every mockup value the box can't back up changed: progress bars became "working" bars, the daily limit became "on tools and models", and Activity's spend bars are computed from the real log. The result reached the project as `portal/`: one web app the box serves as its own kiosk screen, as the portal, and on a phone, checked against the PNGs in `docs/figma/os/`, with screenshots of the real app in `portal/README.md`. Two Figma frames have no web equivalent: Live Activities and the Dynamic Island.
