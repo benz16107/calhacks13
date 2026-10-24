@@ -67,6 +67,34 @@ async function waitFor<T>(what: string, fn: () => Promise<T | undefined>, ms = 2
   throw new Error(`timed out waiting for ${what}`);
 }
 
+/** Follow the action log over SSE the way Elastic or Jira would, collecting events until stopAt or a timeout. */
+function streamLog(after: number, opts: { task?: string; stopAt?: (e: LogEvent) => boolean; ms?: number } = {}): Promise<LogEvent[]> {
+  return new Promise((resolve, reject) => {
+    const qs = new URLSearchParams({ after: String(after) });
+    if (opts.task) qs.set('task', opts.task);
+    const req = http.request({ socketPath: API, path: `/api/log/stream?${qs}`, method: 'GET' }, (res) => {
+      const events: LogEvent[] = [];
+      let buf = '';
+      const finish = () => (req.destroy(), resolve(events));
+      const timer = setTimeout(finish, opts.ms ?? 6000);
+      res.setEncoding('utf8');
+      res.on('data', (c) => {
+        buf += c;
+        for (let i; (i = buf.indexOf('\n\n')) >= 0; ) {
+          const line = buf.slice(0, i).split('\n').find((l) => l.startsWith('data:'));
+          buf = buf.slice(i + 2);
+          if (!line) continue;
+          const e = JSON.parse(line.slice(5).trim()) as LogEvent;
+          events.push(e);
+          if (opts.stopAt?.(e)) return clearTimeout(timer), finish();
+        }
+      });
+    });
+    req.on('error', reject);
+    req.end();
+  });
+}
+
 const task = async (id: string) => (await api<{ task: Task }>('GET', `/tasks/${id}`)).task;
 const settled = (ids: string[], ms?: number) =>
   waitFor('tasks to finish', async () => {
@@ -203,6 +231,20 @@ await moment(
       },
   process.env.DEMO_SKIP_DROID ? 'skipped with --skip-droid' : 'no FACTORY_API_KEY in /etc/box/vault.env on this machine',
 );
+
+// ---------- the action log, followed live ----------
+
+await moment('action log: a live stream for Elastic and Jira', async () => {
+  const after = (await api<LogEvent[]>('GET', '/log')).length;
+  workspace('stream', {});
+  const X = await api<Task>('POST', '/tasks', { title: 'Streamed', workspace: 'stream', worker: 'fake', source: 'demo', prompt: 'write s.txt yes' });
+  const live = await streamLog(after, { task: X.id, stopAt: (e) => e.type === 'task.state' && e.state === 'done', ms: 8000 });
+  check(live.some((e) => e.type === 'task.created') && live.some((e) => e.type === 'task.state' && e.state === 'done'), "a reader followed one task's events live over SSE, no file polling");
+  const seqs = live.map((e) => e.seq);
+  check(seqs.every((v, i) => i === 0 || v > seqs[i - 1]), 'events arrive in order, with resumable ids (Last-Event-ID / ?after)');
+  const replay = await streamLog(0, { ms: 1500 });
+  check(replay[0]?.seq === 1, 'a reader that reconnects can replay the whole log from the start');
+});
 
 // ---------- moments 2 to 4 ----------
 

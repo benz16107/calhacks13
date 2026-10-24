@@ -416,7 +416,7 @@ class Core {
             return { ok: true, tasks: this.state.tasks.size, tools: [...this.tools.keys()], spacetime: { port: 3000, database: DB } };
         }
       },
-      (req, res) => this.cors(req, res) || this.webhook(req, res) || this.trackRoute(req, res) || this.portal(req, res),
+      (req, res) => this.cors(req, res) || this.logStream(req, res) || this.webhook(req, res) || this.trackRoute(req, res) || this.portal(req, res),
     );
 
   /** Browsers on other origins (a portal dev server) need BOX_ORIGINS, comma separated, or '*'. */
@@ -429,6 +429,37 @@ class Core {
     res.setHeader('access-control-allow-methods', 'GET, POST, OPTIONS');
     if (req.method !== 'OPTIONS') return false;
     res.writeHead(204).end();
+    return true;
+  }
+
+  /** Follow the action log live over Server-Sent Events, so a reader (Elastic, Jira) need not poll files.
+   *  GET /api/log/stream?after=<seq>&task=<id>. Each event is `id: <seq>` + `data: <json>`. Resume with
+   *  ?after=<seq> or the Last-Event-ID header; replays from there, then streams new events. */
+  logStream(req: http.IncomingMessage, res: http.ServerResponse) {
+    const url = new URL(req.url ?? '/', 'http://box');
+    if (req.method !== 'GET' || url.pathname.replace(/^\/api/, '') !== '/log/stream') return false;
+    const task = url.searchParams.get('task');
+    let cursor = Number(req.headers['last-event-id'] ?? url.searchParams.get('after') ?? 0);
+    res.writeHead(200, { 'content-type': 'text/event-stream', 'cache-control': 'no-cache', connection: 'keep-alive' });
+    const send = (e: LogEvent) => {
+      if (task && e.task !== task) return;
+      res.write(`id: ${e.seq}
+data: ${JSON.stringify(e)}
+
+`);
+    };
+    for (const e of this.log.events.slice(cursor)) send(e); // replay from where the reader left off
+    cursor = this.log.events.length;
+    const listener = (e: LogEvent) => send(e);
+    this.listeners.add(listener);
+    const beat = setInterval(() => res.write(': beat\n\n'), 25000);
+    beat.unref();
+    const close = () => {
+      this.listeners.delete(listener);
+      clearInterval(beat);
+    };
+    req.on('close', close);
+    res.on('error', close);
     return true;
   }
 

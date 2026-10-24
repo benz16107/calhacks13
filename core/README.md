@@ -135,7 +135,8 @@ answers without `/api`, which is what the demo and tracks use.
 | `POST /api/tasks/<id>/undo` | The task, now `undone` |
 | `GET /api/approvals?state=pending` | The inbox. Leave out `state` for all of them. |
 | `POST /api/approvals/<id> {approved: true or false, by: "portal"}` | The approval. The first answer wins. |
-| `GET /api/log?after=<seq>&task=<id>` | Log events, both filters optional |
+| `GET /api/log?after=<seq>&task=<id>` | Log events, both filters optional (cursor polling) |
+| `GET /api/log/stream?after=<seq>&task=<id>` | The log as Server-Sent Events: replays from `after`, then streams new events live. For Elastic and Jira to follow without polling files. |
 | `GET /api/apps` | Apps from tracks: `{name, title, href, track}`. Open `/t/<track><href>`. |
 | `GET /api/health` | `{ok, tasks, tools, spacetime: {port, database}}` |
 | `/t/<track>/...` | Track routes |
@@ -148,6 +149,12 @@ What a screen needs, and where it comes from:
   blocked hosts. `GET /api/tasks/<id>/diff` for its changes. An Undo button posts to `/undo`.
 - **Inbox:** the SpacetimeDB `approval` table where `state` is `pending`. Approve or Deny with the `answer`
   reducer, or `POST /api/approvals/<id>`.
+
+**Following the action log** (Elastic, Jira). An in-process track uses the `logReaders` slot: the core feeds
+`read(event)` every event in order and saves a cursor, so it never polls files. An outside reader follows
+`GET /api/log/stream` (Server-Sent Events): each event is `id: <seq>` and `data: <json>`. On reconnect, pass
+`?after=<seq>` or the `Last-Event-ID` header and the box replays from there, then streams live. `GET /api/log?after=`
+is the same data by polling if a reader prefers a cursor.
 
 **Hosting the portal.** Build it into `portal/dist` (or point `BOX_PORTAL` at a folder) and the box serves it on
 the same address as the API: files as they are, and `index.html` for any other page load, so client-side
