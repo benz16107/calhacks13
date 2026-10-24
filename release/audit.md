@@ -84,7 +84,7 @@ closed before the repository goes public.
 | Comments and READMEs name Ben's machines or key file | Apify, Elastic, Shopper, Wallet, find, Jira READMEs; `tracks/elastic/agent.ts`, `tracks/shopper/store.ts` | each track | Sent; Shopper done (408ad13) |
 | Demo data names Ben as approver | `tracks/jira/demo.ts` ("Ben Zhou") | jira | Sent: a neutral name |
 | BOX_PEERS, BOX_URL, BOX_OWNER | core | core | Fine: empty or unset by default, set per machine |
-| Docs screenshots show a test machine's name as a box name | `site/src/assets/screens/box-*.png` | docs | Sent |
+| Docs screenshots show a test machine's name as a box name | `site/src/assets/screens/box-*.png` | docs | Done (1d88636): replaced with the running portal's screenshots |
 | Portal pairing screenshots show the tailnet name | `portal/screenshots/box-pair.png`, `laptop-pair.png` | portal | Done (717bc3f): retaken with a private-range address; `dev-box.sh` takes the VM and address as settings |
 | The ISOs carry the whole checkout in /opt/box | `core/install.sh` | core | Sent (optional): copy only what the box runs |
 
@@ -103,5 +103,5 @@ closed before the repository goes public.
    operations that were in CLAUDE.md now live outside git, so the threads that need them keep them.
 2. Close what the host-by-host check found open on the test VMs.
 3. Re-run the three scans above on the latest refs.
-4. Right after the flip: turn on GitHub's private vulnerability reporting and secret scanning with push
-   protection (Settings, Code security).
+4. Right after the flip: turn on GitHub's private vulnerability reporting (only possible on a public repo; the
+   docs and README point to it) and secret scanning with push protection.
