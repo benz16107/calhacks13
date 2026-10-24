@@ -14,7 +14,7 @@ Devpost text, and Ben's approved list.
 **Demo step** names the check in `./demo` (`core/demo.ts` moments, or `tracks/<name>/demo.ts`). "none" means no
 automated check yet.
 
-Checked against main `7867c1f`, Sat Oct 24 03:00 PT. `./demo` on that commit: 25 passed, 0 failed, 1 pending (real Droid, off by default).
+Checked against main `7f784ff`, Sat Oct 24 03:10 PT. `./demo` on that commit: 25 passed, 0 failed, 1 pending (real Droid, off by default).
 
 ## Freeze plan
 
@@ -30,11 +30,11 @@ Checked against main `7867c1f`, Sat Oct 24 03:00 PT. `./demo` on that commit: 25
 | Status | Count |
 |---|---|
 | verified (ISO) | 3 |
-| verified | 27 |
+| verified | 31 |
 | merged | 28 |
 | building | 23 |
 | planned | 33 |
-| **Total** | **114** |
+| **Total** | **118** |
 
 **Collisions** (detail below): none open at 02:40. The three found at 02:25 were resolved on the `business` branch
 (rebased, kill switch on core's `settings.paused`). Still watched: portal/dist rebuilt from merged sources (C-4).
@@ -65,6 +65,10 @@ Checked against main `7867c1f`, Sat Oct 24 03:00 PT. `./demo` on that commit: 25
 | "Today" is the box's day on every screen | portal | verified Oct 24 00:37 | 465fa7a | none | all |
 | Pause all agents (`settings.paused`) | core | merged | 197ebc2 | demo checks both directions | all, Personal |
 | Track routes learn who is calling (`x-box-caller`) | core | merged | 737ba97 | security step | all |
+| Wrong pairing codes limited to 10 a minute (then 429) | core | verified Oct 24 03:10 (11th and 12th tries got 429) | 80e660b | security step | Armadin |
+| A page from another site is never the box's own screen | core | verified Oct 24 03:10 (Origin evil.example and app.gurtos.com get 401 even from loopback) | 0417e8c | security step | Armadin |
+| The device list hides push subscriptions | core | verified Oct 24 03:10 (only `push: true/false`) | 7f784ff | none | all |
+| A phone's task records the phone as its source | core | verified Oct 24 03:10 (`source: "jira:BOX-1"` from a phone became `phone:qa-script`) | | none | Business, Jira |
 | Remote access at `<name>.box.gurtos.com` via the relay | remote access | merged (gate: "remote access and push", relay refuses other names and raw ports) | 6cdeb9a | remote access and push | all |
 | app.gurtos.com companion app and hosted portal | portal, remote access | merged (hosted mode 7aae35d, installable d05efd8); multi-machine switcher and per-edition home: building | 7aae35d, d05efd8 | none | all |
 | Web Push through the gateway, end-to-end encrypted payloads | remote access, portal | merged (gate: push decrypts only on its phone; gateway forwards ciphertext); phone side in `portal` branch | 6cdeb9a | remote access and push | all |
