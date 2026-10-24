@@ -32,11 +32,11 @@ Checked against main `7fe6651`, Sat Oct 24 08:09 PT. `./demo` from a clean workt
 |---|---|
 | verified (ISO) | 3 |
 | verified | 56 |
-| merged | 152 |
-| building | 6 |
+| merged | 155 |
+| building | 4 |
 | planned | 1 |
 | not pursued | 6 |
-| **Total** | **224** |
+| **Total** | **225** |
 
 **Collisions** (detail below): none open at 03:27. The three found at 02:25 are resolved and Business is on main. Still
 watched: portal/dist rebuilt from merged sources (C-4).
@@ -154,12 +154,13 @@ Owner on every row: the native thread ("Phone app: native iOS + Android download
 | Feature | Owner | Status | Commit | Demo step | Tracks |
 |---|---|---|---|---|---|
 | iPhone app (SwiftUI, iOS 26): pair by QR or code, Computers switcher, per-edition homes (Waiting for me first on Business), Approve and Deny with Face ID for money, tasks with live steps, Keep and Undo, Activity, kill switch for owner and admin | native | merged (simulator screenshots in light and dark against a real dev box; checks: GurtKit's 8 Swift tests and the notification UI test, both on the build Mac; the ./demo moment comes later; TestFlight waits for the App Store Connect record, which only Ben can create) | b95e52a | native/demo.ts ("native apps", 25 checks) | Anthropic |
-| Native push, end to end encrypted: the app's own RFC 8291 keys, the box unchanged, the relay sends Apple only ciphertext, the notification extension decrypts and checks the box's mac | native | building (app side merged in b95e52a: decrypting a `core/push.ts` payload passes GurtKit's tests, extension code shown in the simulator; relay side on branch `relay-apns`, waiting for remote access and Ben's APNs key) | b95e52a (app side) | GurtKit tests; relay/server.test.ts | Anthropic |
+| Native push, end to end encrypted: the app's own RFC 8291 keys, the box unchanged, the relay sends Apple only ciphertext, the notification extension decrypts and checks the box's mac | native | merged (app side in b95e52a; relay APNs delivery in 8253a70, deployed. The relay answers "APNs is not set up" until Ben's Apple key is installed, so no real notification has been sent) | b95e52a, 8253a70 | GurtKit tests; relay/server.test.ts | Anthropic |
 | Approve or Deny from the notification (Approve only when nothing is spent; otherwise "Approve with Face ID" opens the app); same buttons on Apple Watch | native | merged (checks: GurtKit's 8 Swift tests and the notification UI test, both on the build Mac; the ./demo moment comes later) | b95e52a | UITests/NotificationTests | Anthropic |
-| Apple Watch app: what waits, Approve on the wrist up to $25, double tap on a request's page, complications with counts only | native | merged (simulator screenshots; checks: GurtKit's 8 Swift tests on the build Mac; the ./demo moment comes later) | b95e52a | native/demo.ts (after core-native-devices) | Anthropic |
-| Watch safety enforced by the box: its own token through the iPhone, approve only with auth wrist, at most `watchLimitCents` ($25), never Business, fraud or Shopper; 403 needs iphone; Deny always works; revoking the iPhone revokes it | native | building (branch `core-native-devices`, waiting for core review) |  | native/demo.ts (after core-native-devices): "$40.00 from the Watch is refused and still waits" | Anthropic |
+| Apple Watch app: what waits, Approve on the wrist up to $25, double tap on a request's page, complications with counts only | native | merged (simulator screenshots; checks: GurtKit's 8 Swift tests on the build Mac; the box-side limits are checked by the demo steps) | b95e52a, 6596e40 | core/demo.ts "native apps: device kinds and the Apple Watch's limits, enforced by the box" (14 checks); native/demo.ts "native apps: every call the apps make" | Anthropic |
+| Watch safety enforced by the box: its own token through the iPhone, approve only with auth wrist, at most `watchLimitCents` ($25), never Business, fraud or Shopper; 403 needs iphone; Deny always works; revoking the iPhone revokes it | native | merged (gate 37 passed, 0 failed; not deployed to the installed computers yet) | 6596e40 | core/demo.ts "native apps: device kinds and the Apple Watch's limits, enforced by the box" (14 checks); native/demo.ts "native apps: every call the apps make" | Anthropic |
 | Mac menu bar app: needs-you count, Approve with Touch ID, Option-Command-G Ask, pairing, Computers, notifications from the live log | native | merged (built and rendered on the build Mac; the notarized DMG waits for a Developer ID certificate only Ben can make) | b95e52a | none (UI) | Anthropic |
-| Send to GurtOS (Mac Share menu): up to 8 files, 5 MB, into a new task's own workspace | native | building (branch `core-native-devices`, waiting for core review) |  | native/demo.ts (after core-native-devices): shared file read by the task; bad names, too big, too many refused | Anthropic |
+| Send to GurtOS (Mac Share menu): text and links | native | merged on main as text and links; files are the next row | 6596e40 | native/demo.ts: "every call the apps make" | Anthropic |
+| Send to GurtOS files: up to 8 files, 5 MB, into a new task's own workspace | native, core | building (branch `core-native-files`, waiting for core's decision) | | native/demo.ts: shared file read by the task; bad names, too big, too many refused | Anthropic |
 | Android app: signed APK (a Trusted Web Activity of app.gurtos.com) with web push, on the v0.1.0-preview release as `gurtos-android-0.1.0.apk` | native | merged (b95e52a; also on the v0.1.0-preview release as `gurtos-android-0.1.0.apk`; ran in an Android 15 emulator; full screen once app.gurtos.com serves `assetlinks.json` from `relay-apns`) | b95e52a | none | Anthropic |
 | Windows: install app.gurtos.com from Edge | native | merged (checked in Edge 156 on Linux: installable, no errors; not tried on a Windows PC) |  | none | Anthropic |
 
