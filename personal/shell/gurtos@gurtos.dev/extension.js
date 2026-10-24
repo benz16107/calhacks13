@@ -336,6 +336,11 @@ export default class GurtOS extends Extension {
         this.primed = false;
         this.started = new Date().toISOString().slice(0, 19);
         this.box = new Box();
+        // Ubuntu's Dark Style toggle switches the icon theme to Yaru along with the GTK theme; keep GurtOS's icons in both.
+        this.iface = new Gio.Settings({schema_id: 'org.gnome.desktop.interface'});
+        const keepIcons = () => this.iface.get_string('icon-theme').startsWith('Yaru') && this.iface.set_string('icon-theme', 'GurtOS');
+        this.ifaceId = this.iface.connect('changed::icon-theme', keepIcons);
+        keepIcons();
         this.indicator = new Indicator(this);
         Main.panel.addToStatusArea(this.uuid, this.indicator);
         // A red mic and "Listening…" for as long as voice.py holds the microphone, so it is never silent.
@@ -431,6 +436,7 @@ export default class GurtOS extends Extension {
 
     disable() {
         Main.sessionMode.disconnect(this.modeId);
+        this.iface.disconnect(this.ifaceId);
         this.voiceMonitor.cancel();
         this.box.destroy();
         if (this.timer)
