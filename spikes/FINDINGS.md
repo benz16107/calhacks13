@@ -291,10 +291,15 @@ Bridge, San Francisco, suspension bridge". It ran 100% on the Mac's GPU.
 `think: false` and photos resized to about 1024 px. Expect about 1.5 s a photo while warm. The photo stays on
 the laptop.
 
-## Checked against core (main at b53e1c7)
+## Checked against core (main at 0c8e9a3)
 
 The spike thread does not change `core/`. These are for the core thread.
 
+0. **The task holds the real Factory key.** `core/box.ts:111` puts the vault's `FACTORY_API_KEY` in the
+   worker's environment, and Droid can run shell commands, so the booby-trapped page can tell it to print
+   `$FACTORY_API_KEY`. That breaks moment 2's "agents never see secrets". Spike 5 removes it: give the task
+   `FACTORY_API_KEY=fk-task-placeholder` and `FACTORY_API_BASE_URL=http://127.0.0.1:<port>`, and have the
+   core answer that port by swapping in the vault's key (`05-droid/broker.mjs`, 30 lines).
 1. **A later task can rewrite a finished task's layer.** `seal()` runs `chmod -R a+rwX` on `tasks/<id>/upper`
    and leaves `tasks/<id>` at 0711. Shown in the VM: task-b ran `echo tampered >> tasks/A/upper/a.txt` and
    it worked. That change reaches every later copy and every view, and undoing B does not remove it.
