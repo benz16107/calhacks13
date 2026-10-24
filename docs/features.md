@@ -427,8 +427,12 @@ Owner: the Spacetime thread. Merged as ed88206. `portal/dist` matches its source
 ## Gate stability
 
 At 06:53 ET (03:53 PT) the shared test VM's load average was 31 and the host's 52, with several `tsc` runs, dev boxes
-and a `./demo` at once. Moments then fail on timeouts, not on code. Until core adds a lock to `./demo`, run one gate
-at a time and only when the load is under 8. QA's fresh-install passes run on separate Vultr VMs, not the shared one.
+and a `./demo` at once. Moments then failed on timeouts, not on code. Fixed on main (core, Oct 24): `./demo` takes a
+machine-wide lock on the test VM for the whole run, so runs from different checkouts queue. A second run prints "demo:
+another demo run is using this machine; waiting for it to finish" (`demo`, line 37) and then starts. Core's gate through
+it: 37 passed, 0 failed. There is no load-average refusal; the queue replaces it. A run now waits longer. Failures from
+shared-VM timing (SSE window, moment 1 settle, fraud referral) should stop; QA has not yet seen that over a full day.
+QA's fresh-install passes run on separate Vultr VMs, not the shared one.
 
 ## Gate on main
 
