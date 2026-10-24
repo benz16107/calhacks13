@@ -75,3 +75,6 @@ row .subtitle, .gurt-subtitle { font-size: 13px; color: @gurt_secondary; opacity
 .gurt-diff { background: @view_bg_color; border: 1px solid @gurt_border; border-radius: 12px; }
 .gurt-side-card button.pill { min-height: 44px; padding-top: 0; padding-bottom: 0; }
 .gurt-title-3 { font-size: 18px; font-weight: 600; }
+
+/* The GurtOS app's sidebar: the amber count beside Agents (approvals and reviews waiting). */
+.gurt-count { background-color: #F2B544; color: #1A1206; border-radius: 999px; padding: 0 7px; font-weight: bold; font-size: 0.85em; min-width: 12px; }

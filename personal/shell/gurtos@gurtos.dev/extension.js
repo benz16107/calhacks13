@@ -215,7 +215,7 @@ class Indicator extends PanelMenu.Button {
         const item = new PopupMenu.PopupBaseMenuItem({activate: false, hover: false, can_focus: false, style_class: 'gurtos-approval'});
         const card = new St.BoxLayout({vertical: true, x_expand: true, style_class: 'gurtos-approval-card'});
         const top = new St.BoxLayout({style_class: 'gurtos-approval-top'});
-        top.add_child(new St.Icon({icon_name: a.costCents ? 'wallet-symbolic' : 'dialog-question-symbolic', fallback_icon_name: 'dialog-question-symbolic', style_class: 'gurtos-approval-icon'}));
+        top.add_child(new St.Icon({icon_name: a.costCents ? 'gurtos-money-symbolic' : 'dialog-question-symbolic', fallback_icon_name: 'dialog-question-symbolic', style_class: 'gurtos-approval-icon'}));
         const tcol = new St.BoxLayout({vertical: true});
         tcol.add_child(new St.Label({text: task?.title ?? 'A task', style_class: 'gurtos-approval-title'}));
         tcol.add_child(new St.Label({text: [a.payee, task ? `asked ${ago(task.updatedAt)}` : null].filter(Boolean).join(' · '), style_class: 'gurtos-subtitle'}));

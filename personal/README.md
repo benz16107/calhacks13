@@ -23,9 +23,29 @@ ISO walked as a new person, on Wayland (Ubuntu's default) and Xorg.
 | GurtOS Settings | A native libadwaita app with a view switcher: Agents (model key, updates, the action log), Permissions (folders, internet, spending, quiet hours and their hours), Apps, Keys, Phone. Phone has Reach this computer from anywhere: a name under box.gurtos.com, checked as you type, then Turn on and Turn off (`/api/remote`). It shows only when the box has that API. About is in the window menu, with the credits | `settingswin.py` |
 | Talk to your computer | Press Super+Alt+Space or choose it in the top-bar menu or the Agents tile, then say "what did my agents do today?", "find the whiteboard photo" or "approve the grocery order". Speech becomes text on this machine (faster-whisper `base.en`, CPU, `stt.py`), the answer comes from the box and its /find (Moss) search, and it appears as a notification and is spoken by espeak-ng. The top bar shows a red mic and "Listening…" while the microphone is open, and the same shortcut ends the sentence early. It never listens in the background, and the recording is deleted once it is read. Voice can approve or deny a request that spends nothing, signed `voice:<user>`, and refuses to approve anything that moves money: that needs the passkey or the popover | `voice.py`, `stt.py`, `voice-setup.sh` |
 | GurtOS Setup | At the owner's first login, after GNOME's own setup: Welcome, AI models, Folders, Permissions, Apps, Pair a phone, Done | `setupwin.py` |
-| The GurtOS app | Tasks, Activity and Time Machine: the portal in its own window, first in the dock | `box-ui.py app` |
-| Keep or Undo | The review: what changed, the diff, and Keep these changes? | `box-ui.py review` |
+| The GurtOS app | The agent tools as a native GTK 4 and libadwaita app, like Files or Settings (not the Server screen in a window). A sidebar: Agents, Activity, Time Machine, then each installed app. **Agents**: Needs you (Approve or Deny inline, with the amount), Running (live), Ready to review, Done, a Pause all switch and New task. **A task**: what it spent against its budget, the approval if it waits, its changes with Keep, Undo or Put files back and a line-by-line diff, what it can reach (folders, internet, apps, its own user), and its steps, live. **Activity**: the action log, searchable, filtered by task or app. **Time Machine**: take out one task, or every task since 15 minutes, an hour or the start of today, newest first. **Apps**: each app's own page as a panel of this window; anything outside the app opens in the browser. It follows the log live (`/api/log/stream`). Ctrl+N is New task, Ctrl+F is Activity. The dock, the top bar, notifications, search and Files all open it | `agentsapp.py`, `tasklogic.py` |
+| New task | What to do in plain words, the folders it may change (GNOME's folder chooser), Internet on or off with the sites it may reach, and a budget. No folder: it works in a workspace of its own. Files' Ask an Agent… opens the same window | `askwin.py` |
 | The look | Figma's "GurtOS Personal OS" theme: the Hills wallpaper (Lake, Dunes and Strata too, each light and dark), a dark Shell with Atkinson Hyperlegible, the floating dock (Firefox, Files, Text Editor, Console, Software, GurtOS, Settings), minimize, maximize and close, Papirus icons with slate folders, the Bibata cursor, GurtOS colours for GTK 4 apps, the GDM logo and a two-step Plymouth splash. Ubuntu's welcome tour, Pro notices and update nags are hidden in the GurtOS session | `theme/` |
+
+![The GurtOS app: Agents](screenshots/app/1-agents.png)
+
+![A running task](screenshots/app/2-task-running.png)
+
+![A finished task: its changes, Keep or Undo, and the diff](screenshots/app/3-task-review.png)
+
+![After Keep: Put files back](screenshots/app/3c-task-kept.png)
+
+![New task](screenshots/app/4-new-task.png)
+
+![Activity](screenshots/app/5-activity.png)
+
+![Time Machine](screenshots/app/6-timemachine.png)
+
+![An app as a panel: Find](screenshots/app/7-app-find.png)
+
+![Activities search opens Find in the app](screenshots/app/7b-search-to-find.png)
+
+![Dark style](screenshots/app/8b-task-dark.png)
 
 ![The GurtOS session: Hills, the floating dock, the GurtOS item in the top bar](screenshots/os/01-desktop.png)
 
@@ -286,3 +306,8 @@ delete it afterwards.
 - **From the Personal frames, waiting on the core:** "May read" for a folder (the core has one kind of grant, may
   change), "May also read" in Ask an Agent and a per-task internet choice (the
   dialog shows what Settings gives a new task).
+
+## GurtOS Personal with Business turned on
+
+The native app covers one person's agents. With Business on, its sidebar adds Company, which opens the Business
+screens (people, rules, routed approvals, the audit trail) in the browser for now, from the same box.

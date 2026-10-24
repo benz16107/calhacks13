@@ -58,7 +58,7 @@ def ask_spec(prompt, folders, budget_dollars):
     sent as `folder`, several as `folders` (the box takes one or the other)."""
     first = prompt.strip().splitlines()[0]
     title = first if len(first) <= 60 else first[:59].rstrip() + '…'
-    where = {'folder': folders[0]} if len(folders) == 1 else {'folders': list(folders)}
+    where = {} if not folders else {'folder': folders[0]} if len(folders) == 1 else {'folders': list(folders)}
     return {'title': title, 'prompt': prompt.strip(), **where, 'budgetCents': round(budget_dollars * 100), 'source': 'files'}
 
 

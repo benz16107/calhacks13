@@ -73,10 +73,10 @@ atexit.register(lambda: shutil.rmtree(ROOT, ignore_errors=True))
 api('PATCH', '/api/settings', {'agentFolders': [ROOT]})
 
 
-for f in ('box-ui.py', 'setupwin.py', 'settingswin.py', 'search-provider.py', 'boxapi.py', 'files/box-nautilus.py'):
+for f in ('box-ui.py', 'agentsapp.py', 'askwin.py', 'tasklogic.py', 'setupwin.py', 'settingswin.py', 'search-provider.py', 'boxapi.py', 'voice.py', 'files/box-nautilus.py'):
     with open(os.path.join(HERE, f)) as src:
         compile(src.read(), f, 'exec')  # a syntax check that writes no .pyc
-check(True, 'the GurtOS app, Setup, Settings, the search provider and the Files extension compile under the system Python')
+check(True, 'the GurtOS app (native), New task, Setup, Settings, voice, the search provider and the Files extension compile under the system Python')
 ext = os.path.join(HERE, 'shell', 'gurtos@gurtos.dev', 'extension.js')
 subprocess.run([NODE, '--check', ext], check=True, capture_output=True)
 check(js('noModelKey', 'the vault has no FACTORY_API_KEY') and not js('noModelKey', 'network refused'),
@@ -225,3 +225,28 @@ check(summary.startswith('Today your agents handled') and 'task' in summary, f'w
 check(voice.answer('mumble').startswith("I didn't understand") and voice.answer('').startswith("I didn't catch"), 'speech that is not a request gets a short help line, never an action')
 speech_to_answer = round(time.time() - t0, 2)
 print(json.dumps({'ok': True, 'what': f'voice: four requests answered from the box in {speech_to_answer} s of code (speech to text is measured on the test VM, see README)'}), flush=True)
+
+# The native GurtOS app (agentsapp.py): its decisions, from tasklogic.py, on this box's real tasks and log.
+import tasklogic as tl  # noqa: E402
+
+t_app = api('POST', '/api/tasks', {'title': 'Plan the week', 'worker': 'fake', 'source': 'personal-demo', 'workspace': WS,
+                                   'prompt': 'ask Book the dentist for Tuesday?\nwrite week.txt planned'})
+a_app = wait(lambda: next((x for x in api('GET', '/api/approvals?state=pending') if x['task'] == t_app['id']), None))
+tasks, pending = state()
+s_app = tl.sections(tasks, pending)
+check(any(a['id'] == a_app['id'] for a, _t in s_app['needs']) and all(t['id'] != t_app['id'] for t in s_app['running']),
+      f"the Agents page puts a task that asks under Needs you, not Running ({tl.headline(s_app)})")
+api('POST', f"/api/approvals/{quote(a_app['id'])}", {'approved': True, 'by': 'desktop:demo'})
+wait(lambda: api('GET', f"/api/tasks/{t_app['id']}")['task']['state'] == 'done')
+log = api('GET', '/api/log?after=0')
+titles = {t['id']: t['title'] for t in api('GET', '/api/tasks')}
+mine = [e for e in log if tl.matches(e, titles, 'dentist', t_app['id'])]
+lines = [tl.event_text(e)[1] for e in log if e.get('task') == t_app['id']]
+check(mine and all(e['task'] == t_app['id'] for e in mine) and any(x.startswith('Approved by desktop:demo') for x in lines),
+      f"Activity finds a task's events by words and by task, and says who approved ({len(lines)} events)")
+detail = api('GET', f"/api/tasks/{t_app['id']}")
+r = tl.reach(detail)
+check(r['hosts'] == [] and r['user'].startswith('box-'), f"a task's page shows what it can reach: no internet, its own user {r['user']}")
+plan = tl.go_back_plan(api('GET', '/api/tasks'), tl.since(tl.SPANS[0][1]))
+check(any(t['id'] == t_app['id'] for t in plan) and [t['updatedAt'] for t in plan] == sorted((t['updatedAt'] for t in plan), reverse=True),
+      f"Time Machine's go back takes out what finished in the last 15 minutes, newest first ({len(plan)} tasks)")
