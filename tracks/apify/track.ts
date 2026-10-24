@@ -507,6 +507,6 @@ export default {
     },
   ],
 
-  apps: [{ name: 'apify', title: 'Apify spend', href: '/' }],
+  apps: [{ name: 'apify', title: 'Apify', href: '/' }],
 } satisfies Track;
 

@@ -28,7 +28,7 @@ export default async function (d: DemoKit) {
   const forbidden = await d.api('POST', '/t/apify/watch', {}).then(() => 'answered', (e: Error) => String(e.message));
   d.check(/403|forbidden/i.test(forbidden), 'the route Apify calls refuses a request without the shared secret');
   const spend = await d.api<{ tasks: { task: string; calls: number }[] }>('GET', '/t/apify/spend');
-  d.check(Array.isArray(spend.tasks), "the Apify spend page's data is served (what each task's calls counted, and the cost Apify reports for them)");
+  d.check(Array.isArray(spend.tasks), "the Apify page's data is served (what each task's calls counted, and the cost Apify reports for them)");
 
   d.workspace('web', {}); // where indexSite keeps crawled pages, and where /find looks
   const token = fs.readFileSync(path.join(d.home, 'vault.env'), 'utf8').match(/^APIFY_TOKEN=(.+)$/m)?.[1].trim();
