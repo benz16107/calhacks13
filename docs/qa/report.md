@@ -60,11 +60,14 @@ network all work on main as of 717bc3f.
 | Stage log Devpost paragraphs | Fixed, checked 01:20: paragraphs and table agree (32 sessions, 364 min; ideation 32, prototyping 26, handoff 19, code generation 162). The showcase matches since 213622e | figma 809b1bf |
 | P2-19 "spent today" shows an old total at load | Fixed, verified 01:25: three fresh loads sampled every 200 ms showed "…" then only the right total | portal 1832a59 |
 | "Today" differs between box and phone | Fixed, verified 00:37 PT with a real split: on a box set to UTC, a phone in Pacific time shows the box day's $29.82, not its own day's $11.59 (shot 80) | portal 465fa7a |
+| ASI:One page when the agent is off | Fixed, verified 00:45: "The agent is off: the vault has no AGENTVERSE_API_KEY", no pairing line | fetch 5dfd3f7 |
+| P2-17 ASI:One agent's owner rights | Mitigated: the chat answers and undoes only its own tasks, and workspace, tools, hosts and budget are fixed in code (fetch thread's offline check; not re-run by QA) | fetch 5dfd3f7 |
+| **P1-12 nobody paired with the ASI:One agent** | **Needs Ben**: on the always-on box's ASI:One page, send `pair <code>` to the `box` agent in ASI:One, try "fix the failing test in my project" and the Hario stock check, and share the chat as a backup for the table | Ben |
 | Jira through Caddy after the token gate | Fixed. The Jira thread checked Approve and Roll back from the real panel on BOX-14 through Caddy. QA confirmed from outside at 00:45: /t/jira/task 401 without the secret, /t/mana/status 200, everything else 404 | core 6879fb9, jira c82fcdb |
 | D-1 to D-4, D-6, D-7 docs | Fixed, live. D-6 spot-checked 00:52: the Elastic, Jira and Shopper guides say GurtOS log (gurtos-log), GurtOS agent task and GurtOS Test Store, with no "Box" names left | docs 199dce5, 9cc7d92 |
 | P1-7 live banner names the wrong hosts | Fixed, verified 00:54 on a phone off the box: the first banner text is "Find me a road bike (live banner 2) tried to reach attacker.example. It may only reach shop.localhost:8123." (shot 79) | portal d64cb80 |
 | P2-18 phone tasks logged as "api" | Fixed, verified: "Ask the box" on a phone logs the device name as source | portal d64cb80 |
-| Open P1s | P1-12 ASI:One not paired; P1-13 real agent probes the proxy in moment 2; D-5; showcase S-1 to S-6 | |
+| Open P1s | P1-13 real agent probes the proxy in moment 2; D-5; showcase S-1 to S-6 | |
 
 **Not re-tested yet:** P2-6, P2-7, P2-8, P2-10 (portal says fixed), and the installed boxes. **At 01:08:** the always-on x86 test box runs current main. The laptop (Sunday's demo box) and Vultr run
 current core and /find but the portal from 717bc3f, without d64cb80's QR pairing (P0-8) and live-banner (P1-7) fixes.
