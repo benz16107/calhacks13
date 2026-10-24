@@ -32,8 +32,8 @@ Checked against main `8a4cbf4`, Sat Oct 24 05:30 PT. `./demo` from a clean workt
 |---|---|
 | verified (ISO) | 3 |
 | verified | 54 |
-| merged | 75 |
-| building | 37 |
+| merged | 93 |
+| building | 19 |
 | planned | 20 |
 | not pursued | 0 |
 | **Total** | **189** |
@@ -286,20 +286,19 @@ Owner: the Anthropic thread (`anthropic-push`). The GurtOS MCP server and Claude
 | /find: search page, photos described on request, Moss local index | find | verified Oct 24 00:33 (search on a phone) | a0d6dbd, 4351905 | tracks/find/demo.ts | Moss |
 
 
-**Moss push** (memory for agents; branch `find-memory`, 5 commits, not merged: it needs two core hooks, `Track.taskContext`
-and `Ctx.ask`, which core is reviewing; the branch's gate passed 29 of 29 on the laptop VM and on the Vultr test machine).
+**Moss push** (memory for agents; on main as 932ec53 with core's two hooks, `Track.taskContext` and `Ctx.ask`, after core's five fixes; the Find thread's gate 30 of 30 on the laptop VM; QA is checking the guest and poisoning cases).
 
 | Feature | Owner | Status | Commit | Demo step | Tracks |
 |---|---|---|---|---|---|
-| Agents are handed relevant memory before a task starts (a step "Handed over N memory blocks") | find, core | building (branch `find-memory`) | | tracks/find/demo.ts on branch | Moss |
-| Each agent sees only what its permissions allow (a note goes only to a task whose workspace, tools and hosts cover it) | find | building (branch) | | find.test.ts on branch | Moss, Armadin |
-| A planted instruction cannot become a lasting memory (the owner is asked, naming the page; a no is logged and never stored) | find, core | building (branch) | | tracks/find/demo.ts on branch | Moss, Armadin |
-| A task that reached the web is untrusted: its note carries a red badge and no agent is handed it | find | building (branch) | | tracks/find/demo.ts on branch | Moss, Armadin |
-| A stranger's task gets no memory and leaves none | find | building (branch) | | find.test.ts on branch | Moss, Fetch.ai |
-| One preference works across apps | find | building (branch) | | tracks/find/demo.ts on branch | Moss |
-| Forget removes it from the index and the Moss cloud copy, logged without the content (the cloud half untested: the Moss cloud is over its limit) | find | building (branch) | | tracks/find/demo.ts on branch | Moss |
+| Agents are handed relevant memory before a task starts (a step "Handed over N memory blocks") | find, core | merged (932ec53) | 932ec53 | tracks/find/demo.ts | Moss |
+| Each agent sees only what its permissions allow (a note goes only to a task whose workspace, tools and hosts cover it) | find | merged (932ec53) | 932ec53 | find.test.ts | Moss, Armadin |
+| A planted instruction cannot become a lasting memory (the owner is asked, naming the page; a no is logged and never stored) | find, core | merged (932ec53) | 932ec53 | tracks/find/demo.ts | Moss, Armadin |
+| A task that reached the web is untrusted: its note carries a red badge and no agent is handed it | find | merged (932ec53) | 932ec53 | tracks/find/demo.ts | Moss, Armadin |
+| A stranger's task gets no memory and leaves none | find | merged (932ec53) | 932ec53 | find.test.ts | Moss, Fetch.ai |
+| One preference works across apps | find | merged (932ec53) | 932ec53 | tracks/find/demo.ts | Moss |
+| Forget removes it from the index and the Moss cloud copy, logged without the content (the cloud half untested: the Moss cloud is over its limit) | find | merged (932ec53) | 932ec53 | tracks/find/demo.ts | Moss |
 | Photos stay home unless the owner opts in (no model runs without its key) | find | merged (the Find page's privacy line; the docs guide and the showcase still say Claude is an automatic backup, which is wrong) | 4351905 | tracks/find/demo.ts | Moss |
-| A small local vision model on CPU (qwen3-vl 2b: 22 to 37 s warm, minutes for a new photo) | find | building (measured by the Find thread; README on branch) | | none | Moss |
+| A small local vision model on CPU (qwen3-vl 2b: 22 to 37 s warm, minutes for a new photo) | find | merged (measured by the Find thread; README on main) | | none | Moss |
 
 
 **Elastic push** (on main: the track as 2762cce, the core change as 26e914b; deployed to the three installed boxes; gate
@@ -358,24 +357,21 @@ the Vultr test box passed every Factory check). QA has not walked them by hand y
 
 ## SpacetimeDB
 
-Owner: the Spacetime thread. Branch `spacetime` (13 commits ahead of main, `./demo` 30 passed on the VM, in core review,
-meant to merge before the 9 PM freeze). QA's trial merge at 05:55 PT: clean onto main, and clean together with the `crs-push`
-and `armadin-push` branches. It changes the SpacetimeDB module and `core/spacetime/bindings`, so `portal/dist` must be
-rebuilt from them (the portal's gate fails on a bundle built from older bindings).
+Owner: the Spacetime thread. Merged as ed88206. `portal/dist` matches its sources after the merge (QA checked the source hash, 07:40 PT). QA has not tried the features by hand.
 
 | Feature | Owner | Status | Commit | Demo step | Tracks |
 |---|---|---|---|---|---|
 | SpacetimeDB holds live task status and approvals; a paired phone answers through the vouched reducer | core | verified Oct 24 00:09 (two phones, the reducer refusing anonymous calls) | 6879fb9 | moment 3; security | SpacetimeDB |
-| Shared work queue with atomic claims (`spacetime.claim`, `finish`, `post`, `team`): 15 claims by 3 agents on 12 jobs, none twice; 30 simultaneous claims on 10 jobs; jobs return when a task ends holding them | spacetime | building (branch `spacetime`) | | tracks/spacetime/demo.ts on branch | SpacetimeDB |
-| Live agent presence and status (agent table, the Live window's Agents view) | spacetime | building (branch) | | tracks/spacetime/demo.ts on branch | SpacetimeDB |
-| Each person is sent only their own requests (Business `my_requests` view, private tables) | spacetime, business | building (branch) | | tracks/spacetime/demo.ts on branch | SpacetimeDB, Hyphenate |
-| No double approvals: the first answer wins in the reducer, the late one gets "already approved by X" | spacetime, core | building (branch) | | tracks/spacetime/demo.ts on branch | SpacetimeDB |
-| "X is viewing" presence on a request (clears when the connection drops) | spacetime | building (branch) | | tracks/spacetime/demo.ts on branch | SpacetimeDB |
-| A reminder timer in the database ("brings Priya in after N seconds"); the Business policy line that sets the delay is not on main | spacetime, business | building (branch; module and demo only) | | tracks/spacetime/demo.ts on branch | SpacetimeDB |
-| Live meters (`meter`, `activity`) matching the box's task list | spacetime | building (branch) | | tracks/spacetime/demo.ts on branch | SpacetimeDB |
-| Paired devices reach SpacetimeDB at `/stdb/<token>/` (identity and subscription only; wrong token 401; SQL 404) | spacetime, core | building (branch; touches the token gate, so QA tests it) | | tracks/spacetime/demo.ts on branch | SpacetimeDB, Armadin |
-| Live window `/t/spacetime/` | spacetime | building (branch) | | tracks/spacetime/demo.ts on branch | SpacetimeDB |
-| Maincloud fleet view (opt-in, counts only, per-viewer visibility) | spacetime | building (module and offline demo; the live check waits on Ben signing in to SpacetimeDB once: `DEMO_LIVE=spacetime ./demo`) | | DEMO_LIVE=spacetime | SpacetimeDB |
+| Shared work queue with atomic claims (`spacetime.claim`, `finish`, `post`, `team`): 15 claims by 3 agents on 12 jobs, none twice; 30 simultaneous claims on 10 jobs; jobs return when a task ends holding them | spacetime | merged (ed88206) | ed88206 | tracks/spacetime/demo.ts | SpacetimeDB |
+| Live agent presence and status (agent table, the Live window's Agents view) | spacetime | merged (ed88206) | ed88206 | tracks/spacetime/demo.ts | SpacetimeDB |
+| Each person is sent only their own requests (Business `my_requests` view, private tables) | spacetime, business | merged (ed88206) | ed88206 | tracks/spacetime/demo.ts | SpacetimeDB, Hyphenate |
+| No double approvals: the first answer wins in the reducer, the late one gets "already approved by X" | spacetime, core | merged (ed88206) | ed88206 | tracks/spacetime/demo.ts | SpacetimeDB |
+| "X is viewing" presence on a request (clears when the connection drops) | spacetime | merged (ed88206) | ed88206 | tracks/spacetime/demo.ts | SpacetimeDB |
+| A reminder timer in the database ("brings Priya in after N seconds"); the Business policy line that sets the delay is not on main | spacetime, business | merged (ed88206; module and demo only) | ed88206 | tracks/spacetime/demo.ts | SpacetimeDB |
+| Live meters (`meter`, `activity`) matching the box's task list | spacetime | merged (ed88206) | ed88206 | tracks/spacetime/demo.ts | SpacetimeDB |
+| Paired devices reach SpacetimeDB at `/stdb/<token>/` (identity and subscription only; wrong token 401; SQL 404) | spacetime, core | merged (ed88206; touches the token gate, so QA tests it) | ed88206 | tracks/spacetime/demo.ts | SpacetimeDB, Armadin |
+| Live window `/t/spacetime/` | spacetime | merged (ed88206) | ed88206 | tracks/spacetime/demo.ts | SpacetimeDB |
+| Maincloud fleet view (opt-in, counts only, per-viewer visibility) | spacetime | merged (module and offline demo; the live check waits on Ben signing in to SpacetimeDB once: `DEMO_LIVE=spacetime ./demo`) | | DEMO_LIVE=spacetime | SpacetimeDB |
 
 ## Not pursued
 
@@ -413,7 +409,7 @@ Found by trial merges and by comparing what each branch edits. Each is sent to e
 | C-1 | Two "stop every agent" switches: core's `settings.paused` (main 197ebc2, used by Personal's Quick Settings tile) and Business's `paused.json` with `POST /api/pause` (`business` branch). Merged as is, they hold different states. | core, business, personal | Oct 24 02:25 | Resolved and verified Oct 24 03:25 on 276bb32: one state, both entry points |
 | C-2 | `business` (forked at 89f59d3) conflicts with main in core/box.ts, portal/src/shell.tsx, shell.css, dev-box.sh and the built portal/dist | business, portal, core | Oct 24 02:25 | Resolved: Business merged as 276bb32; gate 26 passed, 0 failed |
 | C-3 | core/box.ts edited at once by core (uncommitted in the main checkout), `business` and `remote-access`. Business and remote access both add fields to `interface Device` at the same lines | core, business, remote access | Oct 24 02:25 | Resolved: remote access (6cdeb9a) and Business (276bb32) are both on main; both gate sections pass |
-| C-5 | `spacetime` after `find-memory`: a trial merge conflicts in portal/dist/source.txt (the built bundle); each is clean alone and with crs-push | spacetime, find, portal | Oct 24 06:20 | Open: the second to merge rebuilds portal/dist from merged sources |
+| C-5 | `spacetime` after `find-memory`: a trial merge conflicts in portal/dist/source.txt (the built bundle) | spacetime, find, portal | Oct 24 06:20 | Resolved: both merged (932ec53, ed88206); the bundle's source hash matches its sources at 07:40 |
 | C-4 | portal/dist is a built file that both `business` and `portal` commit. A merge can keep one side's bundle and silently drop the other's screens | business, portal | Oct 24 02:25 | Watch: after 276bb32 the QA box serves the Business phone home and the Server home from one bundle; QA checks dist/source.txt after each merge |
 
 ## Fresh-install checks
