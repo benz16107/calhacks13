@@ -205,5 +205,5 @@ export default async function (d: DemoKit) {
   const check = await d.api('GET', '/t/wallet/audit/verify');
   d.check(rec.tx && check.ok, `the action log's fingerprint (seq ${rec.seq}) is on Solana devnet and still matches the log: ${rec.explorer}`);
   const logged = (await d.api<LogEvent[]>('GET', '/log')).find((e) => e.type === 'note' && (e.data as any)?.audit?.tx === rec.tx);
-  d.check(logged && (logged.type === 'note') && (logged.data as any).audit.sha256 === rec.sha256, 'the audit is itself in the action log: a note with the hash and the transaction id');
+  d.check(logged && (logged.type === 'note') && (logged.data as any).audit.sha256 === rec.sha256 && (logged.data as any).audit.cluster === 'devnet' && (logged.data as any).audit.seq === rec.seq, 'the audit is itself in the action log: a note with seq, hash, transaction id and cluster devnet');
 }

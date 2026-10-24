@@ -223,9 +223,13 @@ once from a different wallet (a wallet can't pay itself).
   checked before payment; there is a daily cap on sales and on open orders. Search reads only regular files the
   owner put in `BOX_HOME/public`. A rented task runs only after the owner approves, with no tools, no hosts and
   no budget.
-- **On the record, on chain.** Every payment and sale is in the action log and on the wallet page, and each audit fingerprint writes a note (hash and transaction id) to the log too. Every payment
+- **On the record, on chain.** Every payment and sale is in the action log and on the wallet page, and each audit fingerprint writes a note to the log too: track `wallet`, data `{audit: {seq, sha256, prev, tx, explorer, cluster: 'devnet'}}`. Every payment
   carries `gurtos task=<id>` as a Solana memo. A daily SHA-256 fingerprint of the log, chained day to day, is
-  written to Solana; `GET /audit/verify` recomputes it and compares it with the chain.
+  written to Solana (a Solana devnet test network memo, no money); `GET /audit/verify` recomputes it and compares
+  it with the chain.
+  **The hash:** SHA-256 over the raw bytes of lines 1 to N of `log.jsonl`, each with its trailing newline. An
+  auditor can check it with standard tools: `head -n N /var/lib/box/log.jsonl | sha256sum` gives the same hex.
+  `prev` is the previous fingerprint's hex (64 zeros for the first), so editing any old line breaks every later one.
 
 ### Known limits
 

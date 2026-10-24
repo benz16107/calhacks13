@@ -107,7 +107,7 @@ export async function writeAudit(secretCtx: Pick<Ctx, 'secret'>, logPath = logFi
   const done = { ...rec, tx: sig, explorer: explorer('tx', sig) };
   fs.appendFileSync(auditFile(), JSON.stringify(done) + '\n');
   // The audit is itself in the action log: hash and transaction id (a devnet network fee, no owner money).
-  note?.({ audit: { seq: done.seq, sha256: done.sha256, prev: done.prev, tx: sig, network: 'solana-devnet', test: true } });
+  note?.({ audit: { seq: done.seq, sha256: done.sha256, prev: done.prev, tx: sig, explorer: done.explorer, cluster: 'devnet' } });
   return done;
 }
 
@@ -177,7 +177,8 @@ export const auditTrigger: Trigger = {
 
 // Owner-only: leave these out of openRoutes. Secrets: SECRETS, all but WALLET_SOLANA_KEY optional.
 export const auditRoutes: Record<string, Route> = {
-  'GET /audit': async () => Response.json(await audits()),
+  // Each record says what network it is on, so no screen shows a fingerprint as if it were mainnet.
+  'GET /audit': async () => Response.json((await audits()).map((r) => ({ ...r, network: 'Solana devnet (test network)' }))),
   'GET /audit/verify': async () => Response.json(await verify()),
 };
 export const auditSecrets = SECRETS;
