@@ -163,18 +163,21 @@ the time you record.
 
 ## 6. Visa (aim for 2 to 3 minutes)
 
-Say "test payment" out loud at least once. Visa's criteria are innovation, user experience, technical execution,
-commerce impact and trust: hit each one.
+Say "test payment" out loud at least once. Open with the problem (agents need your card, stores can't tell them from
+bots, you can't see or stop them), then show GurtOS on a computer you own. Visa's criteria are innovation (25), user
+experience (25), technical execution (20), commerce impact (15) and trust (15); the last column says which shot serves
+which. If the Visa thread's Face ID approval, mandates or merchant dashboard have merged, swap them in where marked.
 
 | Time | On screen | Say |
 |---|---|---|
-| 0:00 | The Shopper app. Type "Get me the Hario V60 02 filters when they're under $7, two packs" | "Shopping as a standing instruction. I say it once." |
+| 0:00 | Title card: "Shopping agents need your card. Stores can't tell them from bots. You can't see what they do." | "Today a shopping agent needs your card or your password, stores can't tell it from a bot, and you can't watch it. GurtOS runs it on a computer you own." |
+| 0:10 | The Shopper app. Type "Get me the Hario V60 02 filters when they're under $7, two packs" | "Shopping as a standing instruction. I say it once." |
 | 0:15 | The watch appears at the GurtOS Test Store: $8.99 now, $7.00 limit. Beside it, a live Best Buy watch on Chemex filters with the price Apify read | "Claude turns it into a watch. The box checks on a schedule, and for real stores it reads live prices through Apify, here Best Buy." |
 | 0:35 | The GurtOS Test Store's demo controls: drop the Hario filters to $6.50 | "When the price drops under my limit..." |
-| 0:45 | The phone: "Buy 2 × Hario V60 02 paper filters for $13.00? TEST PAYMENT", Approve | "...my phone asks once. I tap Approve." |
-| 1:00 | The store's order page: TAP signature verified, Stripe test mode charge with the Visa test card | "The box signs the order with Visa's Trusted Agent Protocol, and the store checks it before charging. This is a test payment." |
-| 1:20 | The store refusing: unsigned order, changed order, replayed signature | "An agent without the box's key can't buy. A changed order fails. A replayed signature fails." |
-| 1:40 | Undo the purchase task: refunded | "Undo is a refund." |
+| 0:45 | The phone: "Buy 2 × Hario V60 02 paper filters for $13.00? TEST PAYMENT", Approve (Face ID here once passkey approval has merged) | "...my phone asks once. I tap Approve." (UX, trust) |
+| 1:00 | The store's order page: TAP signature verified, Stripe test mode charge with the Visa test card | "The box signs the order with Visa's Trusted Agent Protocol, and the store checks it before charging. This is a test payment." (commerce impact, technical; the merchant dashboard goes here once merged) |
+| 1:20 | The store refusing: unsigned order, changed order, replayed signature | "An agent without the box's key can't buy. A changed order fails. A replayed signature fails." (trust) |
+| 1:40 | Undo the purchase task: refunded | "Undo is a refund." (UX) |
 | 1:50 | Household reorder: receipts read, "filters and paper towels run out this week", one proposal, Approve | "It also reads the household's receipts and proposes one reorder, without ever seeing the mailbox login." |
 | 2:15 | The agent never holds the card: the log has no card, key or password | "The model never holds the card or a buy tool. Every purchase needs my tap and stays inside its budget." |
 

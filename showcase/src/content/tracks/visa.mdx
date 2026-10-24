@@ -2,10 +2,10 @@
 order: 7
 sponsor: Visa
 prize: Reimagining Shopping
-editions: 'GurtOS Personal, with GurtOS Server watching around the clock'
-pitch: 'Shopping is personal: your receipts, your card, your tap. Personal keeps the card in the vault on your own computer, and a Server box can keep watching prices while your laptop sleeps.'
+editions: 'GurtOS Personal, plus GurtOS Server for routines that keep running when you close your laptop'
+pitch: 'Shopping agents today need your card or password, stores can''t tell them from bots, and you can''t see or stop them. GurtOS Personal runs them on a computer you own, even an old one: the agent never sees your card, every purchase waits for your tap, every order is signed so the store can verify it, and undo refunds it. A Server box keeps a watch running while the laptop is closed.'
 title: Shopping by standing instruction, paid only after your tap
-summary: 'You tell the box what you want and when: "the Chemex filters when they are under $16", "keep the house stocked". An always-on box checks real stores on a schedule, reads your receipts, and when a deal or a reorder is due your phone asks one question with the price against your limit. Tap Approve and it pays, with every checkout signed by Visa''s Trusted Agent Protocol. The model never holds the card or a buy tool.'
+summary: 'Shopping agents today need your card or your password, stores cannot tell a good agent from a bot, you cannot see or stop what they do, and cloud agents run on computers you do not control. GurtOS runs your shopping agent on a computer you own. You tell it what you want and when ("the Chemex filters when they are under $16", "keep the house stocked"); it checks real stores and your receipts, and when a deal or a reorder is due your phone asks one question with the price against your limit. Tap Approve and it pays. The agent never holds the card or a buy tool, every checkout is signed with Visa''s Trusted Agent Protocol so the store can verify it, and undo refunds the order.'
 proof: 'In the live run on Oct 23, Apify read Chemex filters at Best Buy Canada for $15.36 CAD, the box asked, and after the tap it bought them at that price with a Stripe test-mode charge on a Visa test card. Undoing the household reorder refunded it in Stripe test mode. Every payment was test money.'
 criteriaSource: "Visa published weighted criteria for the track; the full brief was not published. Quoted from the project's track plan."
 criteria:
@@ -92,6 +92,24 @@ status:
     state: not-built
     note: Access needs a Visa representative, so nothing here depends on it.
 ---
+
+## Why GurtOS, and what each part is for
+
+**Security first, on a computer you own.** GurtOS Personal runs on your own laptop, even an old one (the box service
+is one Node process; no GPU, no cloud account). A GurtOS Server box keeps routines like a price watch running when
+the laptop is closed. On either, the portal and the phone show live what every agent is doing, and you can stop it.
+
+| Feature | Why it is there | Visa criterion | From | Today |
+|---|---|---|---|---|
+| The agent never sees your card: the card and the signing key stay in the root-only vault, and only the buy tool in the core reads them | A prompt injection or a bad model cannot leak what it never had | Trust (15) | GurtOS (vault and broker) | Shipped. The merge gate checks no card, key or password is anywhere in the log |
+| Every purchase waits for your tap, with the price against your limit | You stay the one who spends; the agent only proposes | Trust (15), UX (25) | GurtOS (the approval pause) | Shipped. The tap is Approve on the phone or portal; a Face ID (passkey) tap is being built |
+| Each checkout is signed with Visa's Trusted Agent Protocol, including the order body | The store can verify a real, unchanged agent order instead of blocking every bot | Commerce impact (15), Technical (20) | The Shopper app | Shipped. The store refuses unsigned, changed and replayed orders |
+| Undo refunds the order | A purchase you regret is one tap to reverse | UX (25), Trust (15) | GurtOS (undo) and the store (refund) | Shipped |
+| Standing instructions: "when it's under $16", "keep us stocked" | Shopping becomes a rule you set once, not a session you sit through | Innovation (25) | The Shopper app, with Claude in Droid | Shipped |
+| Live store prices through Apify, prices from the store not the model | A confused or hijacked model cannot invent a price | Technical (20), Trust (15) | The Shopper app and the Apify app | Shipped |
+| Each agent is its own Linux user with its own budget and network rule | One shopping agent cannot touch another task's files or spend another's money | Trust (15) | GurtOS | Shipped |
+| Live view of every agent on the portal and the phone, and Pause all agents | You can see and stop what your agents are doing | UX (25), Trust (15) | GurtOS | Shipped |
+| Signed shopping mandates the store verifies, a merchant dashboard (verified agents, conversion, chargebacks), comparison across stores, savings after purchase, card-style spending rules | Next steps for each criterion; this page adds each one with its reason when it ships | All five | The Shopper app | Being built; not on main yet |
 
 ## Evidence
 
