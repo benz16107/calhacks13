@@ -233,7 +233,7 @@ export default {
         const prompt = worker === 'fake' ? (script as Record<string, string>)[seat.key] : seat.prompt(brief);
         if (!prompt) continue;
         tasks[seat.key] = (await box.createTask({
-          title: `${seat.title}: ${meta.case_id}`, workspace: info.workspace, worker, source: `credit-desk:${run}`, tools: withBank([...seat.tools]), prompt,
+          title: `${seat.title}: ${meta.case_id}`, workspace: info.workspace, worker, seat: seat.title, source: `credit-desk:${run}`, tools: withBank([...seat.tools]), prompt,
         })).id;
       }
       return Response.json({ run, workspace: info.workspace, rules: rulesFile, tasks });

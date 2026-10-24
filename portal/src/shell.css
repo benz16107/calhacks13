@@ -350,3 +350,13 @@ html.is-dragging iframe { pointer-events: none; }
 .gos-install > img { flex: none; border-radius: 10px; }
 .gos-remote-name { display: flex; align-items: center; gap: var(--space-xs); }
 .gos-remote-name .g-field { width: 180px; }
+
+
+/* GurtOS Business: the paused top bar, the kill switch card in Control Center, and the phone's Waiting home. */
+.gos-tb-paused { color: #f08a7d; font-weight: 600; }
+.gos-kill { display: flex; align-items: center; gap: var(--space-sm); margin-top: var(--space-sm); padding: var(--space-sm) var(--space-md); border-radius: var(--radius-md); background: var(--color-destructive-subtle); }
+.gos-kill-title { color: var(--color-destructive-fg); }
+.gos-kill.is-paused .gos-kill-title { color: var(--color-destructive-fg); }
+.gos-kill .g-btn { flex: none; }
+.gos-home-business { padding: 0; }
+.gos-widget-value.t-destructive { color: #e06a5b; }

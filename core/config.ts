@@ -4,7 +4,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-function readJson<T>(file: string, fallback: T): T {
+export function readJson<T>(file: string, fallback: T): T {
   try {
     return JSON.parse(fs.readFileSync(file, 'utf8')) as T;
   } catch {
@@ -12,7 +12,7 @@ function readJson<T>(file: string, fallback: T): T {
   }
 }
 
-function writeJson(file: string, value: unknown) {
+export function writeJson(file: string, value: unknown) {
   fs.mkdirSync(path.dirname(file), { recursive: true });
   const tmp = `${file}.${process.pid}.tmp`;
   fs.writeFileSync(tmp, JSON.stringify(value, null, 2), { mode: 0o600 });

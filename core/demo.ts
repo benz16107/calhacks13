@@ -1029,6 +1029,9 @@ if (fs.existsSync(relayDemo)) await moment('remote access and push', async () =>
 const personalDemo = new URL('../personal/demo.ts', import.meta.url).pathname;
 if (fs.existsSync(personalDemo)) await moment('personal desktop layer', async () => (await import(personalDemo)).default(kit));
 
+// GurtOS Business: people, routed approvals, the audit and the kill switch. Last, because it turns Business on (and off).
+await moment('business edition', async () => (await import('./business-demo.ts')).default(kit));
+
 // ---------- cleanup ----------
 
 stop(failed > 0); // keep the files only if something failed

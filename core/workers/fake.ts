@@ -1,6 +1,6 @@
 // A worker with no model, for tests and the demo. The prompt is a script, one command per line:
 //   write <file> <text>     append <file> <text>     rm <file>     sleep <seconds>     mkdir <dir>
-//   expect <file> <text>    missing <file>           whoami <file>
+//   expect <file> <text>    missing <file>           whoami <file>         say <text> (a step in plain words)
 //   call <tool> <json>      ask <question>           fetch <url> <file>      fail <message>
 //   askq <question>         (asks with the question as the key, so the approval id has spaces)
 //   callpar <tool> <json>   (two different calls at once: tests the budget reservation)
@@ -124,6 +124,9 @@ for (let n = done + 1; n <= lines.length; n++) {
       fs.writeFileSync(arg, [...uids].join(','));
       break;
     }
+    case 'say':
+      note = [arg, text].join(' ');
+      break;
     case 'fail':
       throw new Error([arg, text].join(' '));
     default:

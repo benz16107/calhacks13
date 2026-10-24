@@ -57,6 +57,7 @@ export function apply(s: State, e: LogEvent): void {
         user: e.user,
         layers: [],
         costCents: 0,
+        ...(e.requestedBy ? { requestedBy: e.requestedBy } : {}),
         createdAt: e.at,
         updatedAt: e.at,
       });
@@ -89,7 +90,7 @@ export function apply(s: State, e: LogEvent): void {
       break;
     case 'approval.answered': {
       const a = s.approvals.get(e.id);
-      if (a) Object.assign(a, { state: e.approved ? 'approved' : 'denied', by: e.by });
+      if (a) Object.assign(a, { state: e.approved ? 'approved' : 'denied', by: e.by, ...(e.person ? { person: e.person } : {}), ...(e.via ? { via: e.via } : {}) });
       break;
     }
   }

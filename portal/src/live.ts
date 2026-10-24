@@ -2,10 +2,52 @@
 // Server-Sent Events. When SpacetimeDB's port is out of reach (a phone through a tunnel), the log stream alone keeps
 // tasks and approvals live: every change is a log event, so each one triggers a refetch.
 import { useEffect, useReducer } from 'preact/hooks';
-import type { Approval, LogEvent, Task } from '../../core/contract.ts';
+import type { Approval, ApprovalRoute, LogEvent, Task } from '../../core/contract.ts';
 import { DbConnection } from '../../core/spacetime/bindings/index.ts';
 
-export type { Approval, LogEvent, Task };
+export type { Approval, ApprovalRoute, LogEvent, Task };
+
+// ---------- GurtOS Business (core/README.md, "Business edition") ----------
+export type Role = 'owner' | 'admin' | 'approver' | 'requester' | 'auditor';
+export interface Person {
+  id: string;
+  name: string;
+  role: Role;
+  title?: string;
+  /** The most this person may approve, in US cents. null means no limit. */
+  limitCents: number | null;
+  /** The names in the rules this person approves for: 'Controller', 'Fraud reviewer'. */
+  approvesFor: string[];
+  /** Phones paired as this person (GET /api/people only, for admins). */
+  phones?: { id: string; name: string; pairedAt: string }[];
+}
+export interface Seat { name: string; about?: string; may?: string }
+export interface RuleView {
+  line: string;
+  to: string;
+  any?: boolean;
+  overCents?: number;
+  phrase?: string;
+  app?: string;
+  blocked?: boolean;
+  /** The people who approve under this rule now. */
+  approvers: string[];
+  changed: { by: string; at: string } | null;
+}
+export interface Paused { by: string; at: string; via?: string }
+export interface BusinessView { on: boolean; company: string; policy: string; rules: RuleView[]; seats: Seat[]; paused: Paused | null }
+export interface Me {
+  edition: string;
+  company: string;
+  paused: Paused | null;
+  person: Person | null;
+  /** Everyone's name, title, role, limit and what they approve for (no phones). */
+  directory: Pick<Person, 'id' | 'name' | 'title' | 'role' | 'limitCents' | 'approvesFor'>[];
+  waiting: Approval[];
+  requests: Approval[];
+}
+/** A person's name from their id, for any screen. */
+export const nameOf = (id?: string) => (id && box.business.me?.directory.find((p) => p.id === id)?.name) || id || '';
 export interface AppEntry { name: string; title: string; href: string; track: string }
 /** An installed app (a track) as the App Center sees it: GET /api/apps?all=1. Names only, never a key. */
 export interface AppInfo {
@@ -51,6 +93,9 @@ export interface System {
   boxId: string;
   boxName: string;
   owner: string | null;
+  /** GurtOS Business: the company's name. */
+  company?: string;
+  paused?: { paused: boolean; by: string | null; at: string | null; via: string | null };
   startedAt: string;
   uptimeSec: number;
 }
@@ -117,7 +162,60 @@ export const box = {
   ownerName: '',
   /** Requests that were waiting here and just got an answer, from this screen or another: shown for a moment. */
   resolved: new Map<string, { at: number; approved: boolean; by?: string; mine: boolean }>(),
+  /** GurtOS Business: who is signed in here, what waits for them, the rules and the people. Empty on Server and Personal. */
+  business: { on: false, company: '', me: undefined as Me | undefined, view: undefined as BusinessView | undefined, people: undefined as Person[] | undefined },
 };
+
+/**
+ * Who is signed in on this screen. A paired phone is the person it was paired for; the box's own screen (no
+ * pairing) says which person is using it, kept here, and sends it as x-box-person on every call.
+ */
+export const signedIn = () => (pairing() ? undefined : (localStorage.getItem('gurtos.person') ?? undefined));
+export function signIn(id: string | undefined) {
+  if (id) localStorage.setItem('gurtos.person', id);
+  else localStorage.removeItem('gurtos.person');
+  box.owner = false;
+  void loadBusiness().then(() => loadOwnerRights());
+}
+/** Whether this screen may change setup, settings, apps and keys: the box's own screen or an owner. */
+async function loadOwnerRights() {
+  box.owner = await api('GET', '/vault').then(
+    () => true,
+    () => false,
+  );
+  changed();
+}
+/** The person signed in here, on a Business box. */
+export const me = () => (box.business.on ? box.business.me?.person ?? undefined : undefined);
+/** On a Business box, whether this person approves this request now: what "Waiting for me" lists. Elsewhere, always. */
+export const forMe = (a: Approval) => !box.business.on || !!box.business.me?.waiting.some((w) => w.id === a.id);
+
+export async function loadBusiness() {
+  await loadSystem();
+  const on = box.system?.edition === 'business';
+  box.business.on = on;
+  box.business.company = box.system?.company ?? '';
+  if (!on) {
+    box.business.me = box.business.view = box.business.people = undefined;
+    return changed();
+  }
+  const [me, view] = await Promise.all([api<Me>('GET', '/me').catch(() => box.business.me), api<BusinessView>('GET', '/business').catch(() => box.business.view)]);
+  box.business.me = me;
+  box.business.view = view;
+  const role = me?.person?.role;
+  box.business.people = role === 'admin' || role === 'owner' || (!me?.person && !pairing()) ? await api<Person[]>('GET', '/people').catch(() => undefined) : undefined;
+  changed();
+}
+let meTimer = 0;
+/** Waiting for me changes with every request asked or answered: fetch it again, at most every 300 ms. */
+function loadMeSoon() {
+  if (meTimer || !box.business.on) return;
+  meTimer = setTimeout(async () => {
+    meTimer = 0;
+    box.business.me = await api<Me>('GET', '/me').catch(() => box.business.me);
+    changed();
+  }, 300);
+}
 
 // shortcut: keeps the last 5000 events in memory and replays the whole log on load; page through /api/log when logs get big.
 const KEEP = 5000;
@@ -144,7 +242,7 @@ export async function api<T = any>(method: string, path: string, body?: unknown,
   const token = pairing()?.token;
   const r = await fetch(`${base()}/api${path}`, {
     method,
-    headers: { ...(body === undefined ? {} : { 'content-type': 'application/json' }), ...(token ? { authorization: `Bearer ${token}` } : {}) },
+    headers: { ...(body === undefined ? {} : { 'content-type': 'application/json' }), ...(token ? { authorization: `Bearer ${token}` } : {}), ...(signedIn() ? { 'x-box-person': signedIn()! } : {}) },
     body: body === undefined ? undefined : JSON.stringify(body),
     signal: AbortSignal.timeout(timeoutMs),
   }).catch((e: Error) => {
@@ -215,7 +313,9 @@ function take(e: LogEvent) {
     if (e.track === 'settings') void loadSettings();
     if (e.track === 'setup') void loadSetup();
     if (e.track === 'apps') void loadApps();
+    if (e.track === 'business' || e.track === 'kill-switch') void loadBusiness();
   }
+  if (e.type === 'approval.asked' || e.type === 'approval.answered') loadMeSoon();
   for (const l of eventListeners) l(e);
   changed();
 }
@@ -439,15 +539,18 @@ export async function answer(a: Approval, approved: boolean) {
   if (box.down) throw new Error('The box is out of reach. Your answer did not go through.');
   const mine = pairing()?.device.name ?? surface;
   let got: Approval | undefined;
-  if (!pairing() && conn && box.live === 'spacetimedb') {
+  // A Business box takes answers only through the API, as the person signed in here.
+  if (!pairing() && conn && box.live === 'spacetimedb' && !box.business.on) {
     conn.reducers.answer({ id: a.id, approved, by: surface });
     for (let i = 0; i < 25 && box.approvals.get(a.id)?.state === 'pending'; i++) await new Promise((r) => setTimeout(r, 200));
     got = box.approvals.get(a.id)?.state === 'pending' ? undefined : box.approvals.get(a.id);
   }
   got ??= await api<Approval>('POST', `/approvals/${a.id}`, { approved, by: surface }, 8000).catch((e: Error) => {
-    throw new Error(`${e.message}. Your answer did not go through.`);
+    throw new Error(`${e.message.replace(/\.$/, '')}. Your answer did not go through.`);
   });
-  const theirs = got.state !== (approved ? 'approved' : 'denied') || (got.by && got.by !== mine && got.by !== surface);
+  // On GurtOS Business an answer is named by its person, so "mine" means the person signed in here gave it.
+  const meId = box.business.me?.person?.id;
+  const theirs = got.state !== (approved ? 'approved' : 'denied') || (meId ? got.person !== meId : got.by && got.by !== mine && got.by !== surface);
   box.resolved.set(a.id, { at: Date.now(), approved: got.state === 'approved', by: got.by, mine: !theirs });
   setTimeout(changed, HOLD + 50);
   box.approvals.set(a.id, got);
@@ -533,10 +636,8 @@ export async function start() {
   if (box.unpaired) return changed();
   box.boxes = await api<BoxEntry[]>('GET', '/boxes').catch(() => []);
   await loadOwner();
-  box.owner = await api('GET', '/vault').then(
-    () => true,
-    () => false,
-  );
+  await loadBusiness();
+  await loadOwnerRights();
   // The log in one answer first, so totals like today's spending are whole from the first frame; the stream picks up after it.
   const log = await api<LogEvent[]>('GET', '/log?after=0').catch(() => undefined);
   for (const e of log ?? []) take(e);

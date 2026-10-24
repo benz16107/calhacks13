@@ -314,6 +314,88 @@ is a `keep` event in the log (`result`: `pending`, `kept`, `conflict`, `reverted
 The portal is reachable on localhost without pairing: pairing only gates requests that carry a device token
 (a phone). The desktop layer in `personal/` uses these routes and the SSE log stream for approvals and events.
 
+## Business edition: people, roles and a policy
+
+GurtOS Business is one box shared by a company. People hold roles, agents hold seats, and a policy in plain words
+sends each approval to the people who may answer it. It is off unless turned on, so a Server or Personal box
+behaves exactly as before. The code is `business.ts` (pure rules, tested in `business.test.ts`) and `box.ts`.
+
+**Turning it on.** `PUT /api/business {on: true, company, policy}` from the owner (the box's own screen, or an
+owner phone), or `BOX_EDITION=business` for a new box. `GET /api/system` then says `edition: "business"`. Turning it
+off (`{on: false}`) keeps the people and the policy for next time.
+
+**People.** `GET /api/people`, `POST /api/people {id?, name, role, title?, limitCents?, approvesFor?}` (add, or change
+the fields named for an id that exists) and `DELETE /api/people/<id>` are for an admin or the owner. Roles:
+
+| Role | May |
+|---|---|
+| `owner` | Everything an admin may, plus the owner's controls (settings, keys, apps). Approves within the policy |
+| `admin` | People, the policy, pairing people's phones, the kill switch. Approves what the policy sends to them |
+| `approver` | Answers what the policy sends to them, up to `limitCents` (required) |
+| `requester` | Starts tasks and sees their own requests. Never answers one |
+| `auditor` | Reads everything, including the audit. Every request that is not a `GET` is refused |
+
+`approvesFor` holds the names the policy uses ("Controller", "IT"). **Signing in:** `POST /api/people/<id>/pair`
+returns a one-time pairing code for that person; a phone or a laptop's browser redeems it with `POST /api/pair` as
+usual, and every request with that device's token is that person. Removing a person revokes their phones. The box's
+own screen is trusted as it always was: it acts as the owner, or as a person when it sends `x-box-person: <id>`.
+
+**The policy.** One rule per line, the first match decides, `#` starts a comment:
+
+```
+Fraud referrals go to the Controller.
+Over $10,000 goes to the Controller.
+Production changes go to IT.
+Everything else goes to any approver.
+```
+
+Which requests: `Everything` (or `Everything else`), `Over $10,000` (or `above`, `more than`), words the request
+contains (`Fraud referrals`), `Requests from the credit desk` (the app), or words with an amount (`Payments over
+$500`). Who: a name people approve for (`the Controller`, `IT`), or a role (`any approver`, `an admin`, `the owner`).
+A request matching no rule goes to the owner. `PUT /api/business {policy}` refuses a line it can't read and names it.
+
+**Routing.** When a task asks, the approval records `askedBy` (the person who started the task) and `route`:
+`{rule, to, amountCents, people, why}`, the rule that matched, who it goes to, the people who could approve it then,
+and one sentence such as "Over $10,000 goes to the Controller. Rosa Delgado can approve it." The amount is the
+spend, or else the first dollar figure in the question.
+
+**Who may answer** (`POST /api/approvals/<id>`, and `box.answer` from a track), checked again at the moment of the
+answer against the people as they are now. Each refusal is a `403` with the reason and a `business` note in the log.
+
+1. Only a person. A tool, a trigger, a log reader, a helper service on the box (running as nobody or a task user) or
+   a screen that has not said who it is gets "Only a person can answer". No agent approves an agent.
+2. Never your own request: "You asked for this, so someone else has to answer it."
+3. Only an owner, admin or approver, and only what the policy sends to a name they approve for.
+4. Approving only within your limit. Denying above it is allowed.
+
+The answer records `by` (the person's name) and `person` (their id). A track route called from a person's phone
+gets a box bound to that person: its tasks are asked by them, and its answers are theirs. SpacetimeDB's `answer`
+reducer is closed on a Business box (the box vouches for no identity), so every answer goes through these checks.
+
+**Waiting for me.** `GET /api/me` returns `{person, company, edition, paused, directory, waiting, requests}`: the
+requests this person may approve now, and their own requests (the last 50, newest first, answered ones too), each with
+its route. `directory` is every person's id, name, title, role, limit and approvesFor (no phones), so any screen,
+an auditor's too, can name who asked and who may approve. `GET /api/approvals?for=me` is
+`waiting` alone. Each `approval.asked` event carries the route, so a screen following the log stream can notify only
+the people in it.
+
+**The audit.** On a Business box every event of a task carries `who: {asked, seat, approver}` (or `trigger` for a
+task no person started, like `schedule`), and a person's own actions carry `who: {by}`. `seat` comes from the task's
+`seat` field (`POST /api/tasks {seat: "Credit analyst"}`). `approver` is the person who gave an answer, and on the
+task's later events the last person who approved one of its requests. `GET /api/audit?person=&seat=&app=&from=&to=`
+returns rows `{seq, at, event, task, title, app, seat, asked, approver, by, what}`; `GET /api/audit.csv` is the same
+rows as a CSV file (a cell that starts like a formula gets a leading `'`). For an auditor, an admin or the owner.
+
+## The kill switch
+
+One switch stops every agent on the box at once: Settings' `paused`. The owner flips it with `PATCH /api/settings
+{paused}` (GurtOS Personal's top-bar and Quick Settings switch); the owner or a Business admin can also use
+`POST /api/pause` and `POST /api/resume`, which set the same setting. Either way, each running task's systemd unit is
+frozen at once (SIGSTOP to its user where the freezer is missing), a task that would ask, call a tool or log a step
+waits, a new task stays `queued`, and a reboot keeps it paused. Approvals can still be answered. Resuming thaws every
+task and starts the queued ones. Each pull is a `kill-switch` note with who pulled it and from which phone or screen.
+`GET /api/pause` (`{paused, by, at, via}`), `GET /api/system` (`paused`) and `GET /api/health` say whether it is on.
+
 ## The API for the portal and the phone
 
 Two parts. **The box's HTTP API** for lists, details and actions. **SpacetimeDB** for live updates and for

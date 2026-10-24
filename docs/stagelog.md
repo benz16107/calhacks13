@@ -84,3 +84,12 @@ round (40 minutes) turned the Personal OS frames into a Shell extension and inst
 the box can't back up was cut: no made-up greeting, no Power button without an API, no progress bar without a step
 count. The output is `portal/`, the kit at `/kit/` for track apps, and `personal/`.
 `portal/README.md` puts every Figma frame beside a screenshot of the running app.
+
+**Code generation, GurtOS Business (the approved frames as exported PNGs, about 120 minutes, 4 of 5).** Claude Code
+built the Business screens from the frames in `docs/figma/business/` once Ben approved them: People and Add a person,
+Rules with its tester, Waiting for me and one request on the phone and the desktop, My requests, Audit, the kill switch
+in Control Center and on the phone, and the paused desktop. Two helper agents built Audit and the Settings pages in
+parallel while it built the shared state and the shell. Each frame's values come from the box (`/api/me`,
+`/api/business`, `/api/audit`), so where the box says something else the screen does too: an auditor sees names and
+limits, "Needs you" counts only what the rules send to that person, and Add a person pairs a phone instead of sending
+an email the box can't send. `portal/README.md` puts each frame beside the running screen.

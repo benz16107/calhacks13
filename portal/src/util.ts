@@ -1,6 +1,6 @@
 // Small shared helpers: money, time, task states, and which app a task belongs to.
 import { useEffect, useState } from 'preact/hooks';
-import { HOLD, box, surface, type Approval, type Task } from './live.ts';
+import { HOLD, box, forMe, surface, type Approval, type Task } from './live.ts';
 
 export const dollars = (cents: number) => `$${(cents / 100).toFixed(2)}`;
 /** Today's spending, once the log has been read (before that a total would be too low). */
@@ -36,9 +36,10 @@ export const STATE: Record<Task['state'], [string, 'attention' | 'accent' | 'suc
   failed: ['Failed', 'destructive'],
 };
 
-export const pending = () => [...box.approvals.values()].filter((a) => a.state === 'pending');
+/** What waits for an answer from this screen. On a Business box, only what the rules send to the person signed in. */
+export const pending = () => [...box.approvals.values()].filter((a) => a.state === 'pending' && forMe(a));
 /** Requests to show with their buttons: the waiting ones, and one just answered, held in place for a moment. */
-export const asks = () => [...box.approvals.values()].filter((a) => a.state === 'pending' || Date.now() - (box.resolved.get(a.id)?.at ?? 0) < HOLD);
+export const asks = () => [...box.approvals.values()].filter((a) => (a.state === 'pending' && forMe(a)) || Date.now() - (box.resolved.get(a.id)?.at ?? 0) < HOLD);
 export const ofState = (...states: Task['state'][]) => [...box.tasks.values()].filter((t) => states.includes(t.state));
 export const taskTitle = (id?: string) => (id && box.tasks.get(id)?.title) || id || 'A task';
 export const approvalFor = (task: string): Approval | undefined => [...box.approvals.values()].find((a) => a.task === task && a.state === 'pending');

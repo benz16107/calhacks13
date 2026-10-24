@@ -1,0 +1,38 @@
+/* People, Rules and the Kill switch (docs/figma/business/). Everything else comes from kit.css and settings.css. */
+
+/* People: a round avatar with initials on a muted color per person, and a name with its badge. */
+.gos-co-avatar { flex: none; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; color: var(--color-app-glyph); font: 600 var(--fs-caption) / 1 var(--font); letter-spacing: 0.4px; }
+.gos-co-name { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 2px var(--space-xs); }
+
+/* Rules: a value inside a sentence is a native select laid over its own label, so the pill is as wide as the choice. */
+.gos-co-pick { position: relative; display: inline-flex; align-items: center; gap: 3px; min-height: 28px; padding: 0 5px 0 9px; border-radius: var(--radius-sm); background: var(--co-pill, var(--color-accent-subtle)); color: var(--color-accent-fg); font-weight: 500; vertical-align: middle; cursor: pointer; transition: filter var(--duration-fast); }
+.gos-co-pick:hover { filter: brightness(0.96); }
+.gos-co-pick:focus-within { outline: 2px solid var(--color-accent-fg); outline-offset: 1px; }
+.gos-co-pick > select { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; font: inherit; }
+.gos-co-pick .g-icon { width: 14px; height: 14px; }
+.gos-co-val { font-weight: 500; }
+
+/* The tester at the top of Rules. */
+.gos-co-test { display: flex; flex-direction: column; gap: var(--space-xs); padding: var(--space-md); border-radius: var(--radius-md); background: var(--color-accent-subtle); --co-pill: var(--color-card-bg); }
+.gos-co-sentence { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-xs); }
+.gos-co-answer { display: flex; flex-direction: column; margin-top: var(--space-xs); }
+
+/* Kill switch: the paused banner and the big button. */
+.gos-co-paused { flex-direction: column; align-items: stretch; gap: var(--space-sm); padding: var(--space-md); }
+.gos-co-paused-title { display: flex; align-items: center; gap: var(--space-xs); font: 700 var(--fs-body) / var(--lh-heading) var(--font); color: var(--color-destructive-fg); }
+.gos-co-clamp { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+.gos-co-stack { display: flex; flex-direction: column; gap: var(--space-xs); }
+.gos-co-big { width: 100%; }
+@media (min-width: 700px) { .gos-co-big { max-width: 360px; align-self: flex-start; } }
+
+/* On a phone the value of a person or seat moves under its subtitle, so the name keeps the row's width. */
+.gos-co-under { display: none; }
+
+/* The phone: the select under a value reaches 44 px tall without making the sentence's lines taller, and so does the rules' menu button. */
+@media (max-width: 699px) {
+  .gos-co-end { display: none; }
+  .gos-co-under { display: block; color: var(--color-text-primary); font-weight: 500; }
+  .gos-co-pick > select { inset: -8px -4px; width: calc(100% + 8px); height: calc(100% + 16px); }
+  .gos-co-sentence { gap: var(--space-xs); }
+  .g-row .g-icon-btn { width: 44px; height: 44px; margin: -6px -6px -6px 0; }
+}

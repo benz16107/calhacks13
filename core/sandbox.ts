@@ -383,6 +383,16 @@ export const flush = (task: Task) => tryRun('sync', '-f', dirs.upper(task.id));
 /** Stop everything the task's user runs. */
 export const kill = (task: Task) => tryRun('pkill', '-KILL', '-u', task.user);
 
+/**
+ * The kill switch for one task: stop every process of it at once, or let them carry on. The unit's cgroup freezer
+ * stops them all in one step; where it is missing, SIGSTOP and SIGCONT to the task's user do the same.
+ */
+export function freeze(task: Task, on: boolean): 'frozen' | 'stopped' | 'running' {
+  if (tryRun('systemctl', on ? 'freeze' : 'thaw', `box-task-${task.id}`) !== undefined) return on ? 'frozen' : 'running';
+  tryRun('pkill', on ? '-STOP' : '-CONT', '-u', task.user);
+  return on ? 'stopped' : 'running';
+}
+
 /** After a task ends: unmount its copy, open its layer to later tasks' users, remove its user. */
 export function seal(task: Task) {
   // A task that failed while being set up may have no user and no layer yet; skip what is not there.

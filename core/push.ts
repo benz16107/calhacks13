@@ -72,7 +72,7 @@ interface PushDevice { id: string; owner?: boolean; person?: string; revoked?: b
  * Who hears about an approval: on GurtOS Business, the people its route names (never the person who asked);
  * on Server and Personal, the owner's phones. Only phones that turned notifications on.
  */
-export function recipients<D extends PushDevice>(a: Approval & { route?: { people?: { id: string }[] }; askedBy?: string }, devices: D[]): D[] {
+export function recipients<D extends PushDevice>(a: { route?: { people?: { id: string }[] }; askedBy?: string }, devices: D[]): D[] {
   const people = a.route?.people?.map((p) => p.id);
   return devices.filter((d) => d.push && !d.revoked && (people ? !!d.person && people.includes(d.person) && d.person !== a.askedBy : d.owner));
 }

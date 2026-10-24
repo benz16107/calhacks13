@@ -8,14 +8,15 @@ import fs from 'node:fs';
 import http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
-import type { App, Approval, Box, FullSpec, Ctx, LogEvent, LogReader, ModelJob, NewEvent, Route, Task, TaskSpec, TaskState, Tool, Track } from './contract.ts';
+import type { App, Approval, ApprovalRoute, Box, FullSpec, Ctx, LogEvent, LogReader, ModelJob, NewEvent, Route, Task, TaskSpec, TaskState, Tool, Track, Who } from './contract.ts';
+import { DEFAULT_POLICY, amountOf, auditRows, checkPerson, checkSeats, holds, parsePolicy, refusal, route, toCsv, whoOf, type Business, type Person } from './business.ts';
 import { DB, Live } from './live.ts';
 import { Log, apply, canMove, doneLayers, fold, type State } from './log.ts';
 import { ANTHROPIC_PLACEHOLDER, PLACEHOLDER_KEY, firewall, logBlocked, stopLoggingBlocked, uidOf, relayCert, reservePort, startProxy } from './net.ts';
 import * as sandbox from './sandbox.ts';
 import { HOME, dirs } from './sandbox.ts';
 import { usageCents } from './pricing.ts';
-import { DEFAULT_SETTINGS, SETUP_STEPS, applyPatch, folderRefusal, hadHumanUse, hostProblem, insideAny, neverFolder, loadDisabled, loadSetup, loadSettings, recordStep, saveDisabled, saveSettings, saveSetup, type Settings, type SetupState } from './config.ts';
+import { DEFAULT_SETTINGS, SETUP_STEPS, applyPatch, folderRefusal, hadHumanUse, hostProblem, insideAny, neverFolder, loadDisabled, loadSetup, loadSettings, readJson, recordStep, saveDisabled, saveSettings, saveSetup, writeJson, type Settings, type SetupState } from './config.ts';
 import * as system from './system.ts';
 import { VAULT_NAME, loadVault, removeVaultKey, writeVaultKey } from './vault.ts';
 import * as push from './push.ts';
@@ -77,7 +78,13 @@ interface Device {
   identity?: string;
   /** The app's push subscription and the key it made for this box, once the phone turned notifications on. */
   push?: push.PushSub;
+  /** Business: the person this phone signs in as (paired with a code an admin made for them). */
+  person?: string;
 }
+
+const forbid = (message: string): never => {
+  throw Object.assign(new Error(message), { status: 403 });
+};
 
 class Core {
   log = new Log(path.join(HOME, 'log.jsonl'));
@@ -99,7 +106,7 @@ class Core {
   devicesPath = path.join(HOME, 'devices.json');
   devices: Device[] = fs.existsSync(this.devicesPath) ? JSON.parse(fs.readFileSync(this.devicesPath, 'utf8')) : [];
   screens = new Map<string, string>(); // SpacetimeDB identity -> name, for the box's own screen(s); lost on restart, re-sent on the next page load
-  pairCodes = new Map<string, { expiry: number; owner: boolean }>(); // one-time code -> expiry (ms), and whether it pairs an owner device
+  pairCodes = new Map<string, { expiry: number; owner: boolean; person?: string }>(); // one-time code -> expiry (ms), whether it pairs an owner device, and for whom (Business)
   ownerPath = path.join(HOME, 'owner.json');
   // The human with sudo on a Personal box: set at runtime (the image does it after the desktop's own setup
   // makes the account), else BOX_OWNER, else none (a Server box).
@@ -133,6 +140,17 @@ class Core {
     return clean;
   })();
   resumed: string[] = []; // tasks boot() restarted after a power cut, for the screen's banner
+  // GurtOS Business: people, their roles and the policy. Off unless turned on, so Server and Personal are unchanged.
+  businessPath = path.join(HOME, 'business.json');
+  business: Business = { on: process.env.BOX_EDITION === 'business', company: '', policy: DEFAULT_POLICY, people: [], seats: [], policyMeta: {}, ...readJson<Partial<Business>>(this.businessPath, {}) };
+  // The kill switch is Settings' `paused`: every agent stops until someone resumes them. Who pulled it is kept beside it.
+  pausedPath = path.join(HOME, 'paused.json');
+  pausedMeta: { by: string; at: string; via?: string } | null = readJson(this.pausedPath, null);
+  get paused(): { by: string; at: string; via?: string } | null {
+    return this.settings.paused ? (this.pausedMeta ?? { by: 'the owner', at: this.startedAt }) : null;
+  }
+  // The last person who approved one of each task's requests, for the `who` on its later events.
+  lastApprover = new Map(this.log.events.flatMap((e) => (e.type === 'approval.answered' && e.approved && e.person ? [[e.task, e.person] as [string, string]] : [])));
   linksPath = path.join(HOME, 'links.json');
   links: Record<string, string | Record<string, string>> = fs.existsSync(this.linksPath) ? JSON.parse(fs.readFileSync(this.linksPath, 'utf8')) : {};
   uidTask = new Map<number, string>();
@@ -141,13 +159,19 @@ class Core {
   live = new Live({
     tasks: () => [...this.state.tasks.values()],
     approvals: () => [...this.state.approvals.values()],
-    answer: (id, approved, by) => this.answer(id, approved, by),
+    // A Business box vouches for no SpacetimeDB identity, so its answers come only through the API as a person.
+    answer: (id, approved, by) => (this.business.on ? console.error(`spacetime: ignored an answer to ${id}; on GurtOS Business people answer through the API`) : this.answer(id, approved, by)),
     identities: () => this.identities(),
   });
 
   write(e: NewEvent): LogEvent {
+    if (this.business.on && !e.who) {
+      const who = this.whoFor(e);
+      if (who) e = { ...e, who };
+    }
     const full = this.log.append(e);
     apply(this.state, full);
+    if (full.type === 'approval.answered' && full.approved && full.person) this.lastApprover.set(full.task, full.person);
     try {
       if (['task.created', 'task.state', 'task.step', 'cost', 'tool.result'].includes(full.type)) {
         const t = full.task && this.state.tasks.get(full.task);
@@ -171,6 +195,12 @@ class Core {
     return full;
   }
 
+  /** Business: who asked for the task this event belongs to, which seat works it, and who approved. */
+  whoFor(e: NewEvent): Who | undefined {
+    const t = e.type === 'task.created' ? { source: e.spec.source, seat: e.spec.seat, requestedBy: e.requestedBy } : e.task ? this.state.tasks.get(e.task) : undefined;
+    return t ? whoOf(e as { type: string; person?: string; by?: string }, t, e.task ? this.lastApprover.get(e.task) : undefined) : undefined;
+  }
+
   must(id: string): Task {
     const t = this.state.tasks.get(id);
     if (!t) throw new Error(`no task ${id}`);
@@ -184,8 +214,9 @@ class Core {
 
   // ---------- tasks ----------
 
-  async createTask(spec: TaskSpec): Promise<Task> {
-    const known = ['title', 'prompt', 'workspace', 'worker', 'tools', 'hosts', 'budgetCents', 'source', 'folder', 'folders'];
+  /** `requestedBy` is the person who asked (Business), from their paired phone or the track route they called. */
+  async createTask(spec: TaskSpec, requestedBy?: string): Promise<Task> {
+    const known = ['title', 'prompt', 'workspace', 'worker', 'tools', 'hosts', 'budgetCents', 'source', 'folder', 'folders', 'seat'];
     const unknown = Object.keys(spec ?? {}).filter((k) => !known.includes(k));
     if (unknown.length) throw new Error(`unknown task field${unknown.length > 1 ? 's' : ''}: ${unknown.join(', ')} (known: ${known.join(', ')})`);
     // What a task does not name comes from the owner's settings: the budget and the network it gets.
@@ -205,11 +236,12 @@ class Core {
     if (!Array.isArray(s.tools) || s.tools.some((x) => typeof x !== 'string')) throw new Error('tools: a list of tool names');
     if (!/^[\w.-]+$/.test(s.workspace) || !fs.existsSync(dirs.workspace(s.workspace))) throw new Error(`no workspace ${s.workspace}`);
     if (!['droid', 'fake'].includes(s.worker)) throw new Error(`no worker ${s.worker}`);
+    if (s.seat !== undefined && (typeof s.seat !== 'string' || !s.seat.trim() || s.seat.length > 60)) throw new Error('seat: text, at most 60 characters, like "Credit analyst"');
     // A demo run spends no Factory credit unless it was asked to: a track that wants a real agent must be gated behind DEMO_LIVE=droid.
     if (s.worker === 'droid' && process.env.BOX_NO_DROID) throw new Error('real Droid is off in this demo run (it spends Factory credit); DEMO_LIVE=droid ./demo, or ./demo --live-droid, turns it on');
     for (const name of s.tools) if (!this.tools.has(name)) throw new Error(`no tool ${name}`);
     const id = 't' + Date.now().toString(36).slice(-6) + randomBytes(2).toString('hex');
-    this.write({ type: 'task.created', task: id, spec: s, user: `box-${id}` });
+    this.write({ type: 'task.created', task: id, spec: s, user: `box-${id}`, ...(requestedBy ? { requestedBy } : {}) });
     const t = this.must(id);
     if (!this.settings.paused) await this.start(t); // paused: it stays queued until the owner resumes
     return t;
@@ -217,6 +249,7 @@ class Core {
 
   /** Start a queued task, or resume a running or waiting one after a restart. */
   async start(t: Task) {
+    if (this.paused) return; // the kill switch is on: it starts when someone resumes the agents
     try {
       sandbox.kill(t); // a worker left over from a core that died without the box rebooting
       // A linked (real-folder) workspace is not layer-stacked: each task starts from the real folder, and
@@ -264,6 +297,12 @@ class Core {
       this.uidTask.set(ids.uid, t.id);
       logBlocked(ids.uid, t.id);
       await this.openBroker(t, ids);
+      if (this.paused) {
+        // Paused while this task was getting ready. Resume starts it again from the top.
+        this.brokers.get(t.id)?.close();
+        this.brokers.delete(t.id);
+        return;
+      }
       const child = sandbox.spawnWorker(t, ids, env);
       this.workers.set(t.id, child);
       child.on('exit', (code, signal) => {
@@ -340,8 +379,10 @@ class Core {
     if (t.state === 'undone') return t;
     this.move(t, 'undone');
     for (const a of this.state.approvals.values()) if (a.task === id && a.state === 'pending') this.answer(a.id, false, 'undo');
-    if (this.workers.has(id)) sandbox.kill(t); // the exit handler finishes it
-    else this.finish(t);
+    if (this.workers.has(id)) {
+      sandbox.kill(t); // the exit handler finishes it
+      if (this.paused) sandbox.freeze(t, false); // a stopped task takes the kill once it is let go
+    } else this.finish(t);
     return t;
   }
 
@@ -357,7 +398,26 @@ class Core {
   /** Pause all agents off: release every held step and start the tasks that queued meanwhile. */
   resumeAll() {
     for (const r of this.pauseWaiters.splice(0)) r();
-    for (const t of this.state.tasks.values()) if (t.state === 'queued' && !this.workers.has(t.id)) void this.start(t);
+    for (const t of this.state.tasks.values()) {
+      if (this.workers.has(t.id)) sandbox.freeze(t, false);
+      else if (t.state === 'queued' || t.state === 'running' || t.state === 'waiting') void this.start(t);
+    }
+  }
+
+  /** The kill switch changed, from Settings or /api/pause: freeze or thaw every task at once, and log who did it. */
+  pauseChanged(on: boolean, req: http.IncomingMessage) {
+    const { name, via, who } = this.actor(req);
+    const how = new Set<string>();
+    if (on) {
+      this.pausedMeta = { by: name, at: new Date().toISOString(), via };
+      writeJson(this.pausedPath, this.pausedMeta);
+      for (const t of this.state.tasks.values()) if (this.workers.has(t.id)) how.add(sandbox.freeze(t, true));
+    } else {
+      this.pausedMeta = null;
+      fs.rmSync(this.pausedPath, { force: true });
+    }
+    this.write({ type: 'note', track: 'kill-switch', data: { paused: on, by: name, via, ...(on ? { tasks: [...this.workers.keys()], how: [...how] } : {}) }, ...(who ? { who } : {}) });
+    if (!on) this.resumeAll();
   }
 
   /** Back to running once nothing of this task's is still waiting. */
@@ -376,6 +436,7 @@ class Core {
     const id = `${t.id}.${key}`;
     if (!this.state.approvals.has(id)) {
       const approval: Approval = { id, task: t.id, question: opts.question, costCents: opts.costCents ?? 0, payee: opts.payee, purpose: opts.purpose, state: 'pending' };
+      if (this.business.on) Object.assign(approval, { ...(t.requestedBy ? { askedBy: t.requestedBy } : {}), route: this.routeOf(approval, t) });
       this.write({ type: 'approval.asked', task: t.id, approval });
     }
     const a = this.state.approvals.get(id)!;
@@ -403,14 +464,242 @@ class Core {
     for (const a of this.state.approvals.values()) if (a.task === t.id && a.state === 'pending') this.answer(a.id, false, by);
   }
 
-  answer(id: string, approved: boolean, by: string): Approval {
+  answer(id: string, approved: boolean, by: string, person?: string, via?: string): Approval {
     const a = this.state.approvals.get(id);
     if (!a) throw new Error(`no approval ${id}`);
     if (a.state !== 'pending') return a; // the first answer wins
-    this.write({ type: 'approval.answered', task: a.task, id, approved, by });
+    this.write({ type: 'approval.answered', task: a.task, id, approved, by, ...(person ? { person } : {}), ...(via ? { via } : {}) });
     for (const resolve of this.waiters.get(id) ?? []) resolve(approved);
     this.waiters.delete(id);
     return a;
+  }
+
+  // ---------- GurtOS Business: people, the policy, the audit ----------
+
+  /** Where the policy sends a request. Asked before Business was turned on, it is worked out now. */
+  routeOf(a: Pick<Approval, 'question' | 'costCents' | 'payee' | 'purpose'>, t: Task): ApprovalRoute {
+    const ask = { text: [a.question, a.purpose, a.payee].filter(Boolean).join(' '), amountCents: amountOf(a.costCents, a.question), app: this.appOf(t) };
+    return route(parsePolicy(this.business.policy), ask, this.business.people, t.requestedBy);
+  }
+
+  /** The app (track) a task came from, from its source ('credit-desk:abc'), or '' for the API or a phone. */
+  appOf(t: Task): string {
+    const name = t.source.split(':')[0];
+    return this.installed.has(name) ? name : '';
+  }
+
+  /**
+   * Answer as a person, on a Business box: only a person, never their own request, only one the policy sends to
+   * them, and to approve, only within their limit. A refusal is logged and answered with 403. Off, as before.
+   */
+  answerAs(id: string, approved: boolean, p: Person | undefined, by: string): Approval {
+    if (!this.business.on) return this.answer(id, approved, by);
+    const a = this.state.approvals.get(id);
+    if (!a) throw new Error(`no approval ${id}`);
+    const t = this.must(a.task);
+    const r = a.route ?? this.routeOf(a, t);
+    const why = refusal(p, { to: r.to, amountCents: r.amountCents, askedBy: a.askedBy ?? t.requestedBy, rule: r.rule }, approved);
+    if (why) {
+      this.write({ type: 'note', track: 'business', task: a.task, data: { refused: id, approved, by: p?.id ?? by, person: !!p, why } });
+      forbid(why);
+    }
+    return this.answer(id, approved, p!.name, p!.id, by); // `by` is the phone's name, or what the box's screen says
+  }
+
+  saveBusiness() {
+    writeJson(this.businessPath, this.business);
+  }
+
+  person(id: string | undefined): Person | undefined {
+    return id ? this.business.people.find((p) => p.id === id) : undefined;
+  }
+
+  /**
+   * The person behind a request on a Business box: the person a paired phone was paired for, or, on the box's own
+   * screen, the person it says with the `x-box-person` header (the screen is trusted, as it always was). A helper
+   * service on the box (one running as nobody or as a task user) is never a person.
+   */
+  personOf(req: http.IncomingMessage): Person | undefined {
+    if (!this.business.on) return undefined;
+    const device = this.deviceOf(req);
+    if (device) return this.person(device.person);
+    const said = req.headers['x-box-person'];
+    return this.isLocal(req) && !this.serviceCaller(req) && typeof said === 'string' ? this.person(said) : undefined;
+  }
+
+  /** Who is acting, for the log: the person, else the phone, else the box's screen; and the phone or screen it came from. */
+  actor(req: http.IncomingMessage): { name: string; via: string; who?: Who } {
+    const p = this.personOf(req);
+    const via = this.deviceOf(req)?.name ?? 'box screen';
+    return p ? { name: p.name, via, who: { by: p.id } } : { name: via, via };
+  }
+
+  /** People, the policy and the kill switch: the owner (the box's screen, an owner phone) or a Business admin. */
+  requireAdmin(req: http.IncomingMessage) {
+    const role = this.personOf(req)?.role;
+    if (!this.isOwner(req) && role !== 'admin' && role !== 'owner') forbid('only an admin or the owner can do this');
+  }
+
+  /** The audit: the owner, a Business admin, or an auditor. */
+  requireAuditor(req: http.IncomingMessage) {
+    const role = this.personOf(req)?.role;
+    if (!this.isOwner(req) && role !== 'admin' && role !== 'owner' && role !== 'auditor') forbid('only an auditor, an admin or the owner can read the audit');
+  }
+
+  setBusiness(body: unknown, req: http.IncomingMessage) {
+    if (!body || typeof body !== 'object') throw new Error('send {on, company, policy}');
+    const b = body as Record<string, unknown>;
+    const unknown = Object.keys(b).filter((k) => !['on', 'company', 'policy', 'seats'].includes(k));
+    if (unknown.length) throw new Error(`unknown field: ${unknown.join(', ')} (known: on, company, policy, seats)`);
+    if ('on' in b) {
+      if (typeof b.on !== 'boolean') throw new Error('on: true or false');
+      if (!this.isOwner(req)) forbid('only the owner turns GurtOS Business on or off');
+    }
+    this.requireAdmin(req);
+    if ('company' in b && (typeof b.company !== 'string' || b.company.length > 80)) throw new Error('company: text, at most 80 characters');
+    if ('policy' in b) parsePolicy(b.policy as string); // throws naming the bad line
+    if ('seats' in b) b.seats = checkSeats(b.seats);
+    const { name, who } = this.actor(req);
+    const was = this.business.on;
+    if ('policy' in b) {
+      // Who changed each rule: a line that is new or changed gets this person and time; the others keep theirs.
+      const at = new Date().toISOString();
+      const meta: Business['policyMeta'] = {};
+      for (const r of parsePolicy(b.policy as string)) meta[r.line] = this.business.policyMeta[r.line] ?? { by: name, at };
+      this.business.policyMeta = meta;
+    }
+    Object.assign(this.business, b);
+    this.saveBusiness();
+    this.write({ type: 'note', track: 'business', data: { changed: Object.keys(b), on: this.business.on, by: name }, ...(who ? { who } : {}) });
+    // Business answers only through the API as a person, so the box stops vouching for SpacetimeDB identities.
+    if (was !== this.business.on) for (const [identity, n] of [...this.screens, ...this.devices.filter((d) => d.identity && !d.revoked).map((d) => [d.identity!, d.name] as [string, string])]) this.business.on ? this.live.unregister(identity) : this.live.register(identity, n);
+    return this.businessView();
+  }
+
+  /** The edition's settings for the screens: each rule with who approves under it and who last changed it. */
+  businessView() {
+    const rules = parsePolicy(this.business.policy).map((r) => ({
+      ...r,
+      approvers: r.blocked ? [] : this.business.people.filter((p) => p.role !== 'requester' && p.role !== 'auditor' && holds(p, r.to)).map((p) => p.name),
+      changed: this.business.policyMeta[r.line] ?? null,
+    }));
+    return { on: this.business.on, company: this.business.company, policy: this.business.policy, rules, seats: this.business.seats, paused: this.paused };
+  }
+
+  /** "Who would approve this?": where a request would go, without asking it. */
+  tryRoute(q: URLSearchParams) {
+    const text = (q.get('text') ?? '').slice(0, 500);
+    const amountCents = Math.max(0, Math.round(Number(q.get('amount') ?? 0)) || 0);
+    const asked = q.get('asked') ?? undefined;
+    return route(parsePolicy(this.business.policy), { text, amountCents, app: q.get('app') ?? undefined }, this.business.people, asked);
+  }
+
+  /** Add or change a person. Only the owner makes someone an owner. */
+  putPerson(body: unknown, req: http.IncomingMessage) {
+    const p = checkPerson(body, this.business.people);
+    const old = this.person(p.id);
+    if ((p.role === 'owner' || old?.role === 'owner') && !this.isOwner(req) && this.personOf(req)?.role !== 'owner') forbid('only the owner can add or change an owner');
+    this.business.people = old ? this.business.people.map((x) => (x.id === p.id ? p : x)) : [...this.business.people, p];
+    this.saveBusiness();
+    const { name, who } = this.actor(req);
+    this.write({ type: 'note', track: 'business', data: { person: p.id, change: old ? 'changed' : 'added', role: p.role, limitCents: p.limitCents, approvesFor: p.approvesFor, by: name }, ...(who ? { who } : {}) });
+    return p;
+  }
+
+  removePerson(id: string, req: http.IncomingMessage) {
+    const p = this.person(id);
+    if (!p) throw Object.assign(new Error(`no person ${id}`), { status: 404 });
+    if (p.role === 'owner' && !this.isOwner(req) && this.personOf(req)?.role !== 'owner') forbid('only the owner can remove an owner');
+    this.business.people = this.business.people.filter((x) => x.id !== id);
+    this.saveBusiness();
+    for (const d of this.devices) if (d.person === id && !d.revoked) this.revokeDevice(d.id); // their phones stop working at once
+    const { name, who } = this.actor(req);
+    this.write({ type: 'note', track: 'business', data: { person: id, change: 'removed', by: name }, ...(who ? { who } : {}) });
+    return { id, removed: true };
+  }
+
+  peopleView() {
+    return this.business.people.map((p) => ({ ...p, phones: this.devices.filter((d) => d.person === p.id && !d.revoked).map((d) => ({ id: d.id, name: d.name, pairedAt: d.pairedAt })) }));
+  }
+
+  /** What a person may approve now, and their own requests still waiting: "Waiting for me". */
+  me(req: http.IncomingMessage) {
+    const p = this.personOf(req);
+    const pending = [...this.state.approvals.values()].filter((a) => a.state === 'pending');
+    const withRoute = (a: Approval) => ({ ...a, route: a.route ?? this.routeOf(a, this.must(a.task)) });
+    return {
+      edition: system.edition(this.owner, this.business.on),
+      company: this.business.company,
+      paused: this.paused,
+      person: p ?? null,
+      // Names, titles and limits, so any screen (an auditor's too) can say who asked and who may approve. Phones stay with admins.
+      directory: this.business.people.map(({ id, name, title, role, limitCents, approvesFor }) => ({ id, name, title, role, limitCents, approvesFor })),
+      waiting: p ? this.waitingFor(p).map(withRoute) : [],
+      // Their own requests, newest first: waiting ones say who they wait for, answered ones who answered.
+      requests: p ? [...this.state.approvals.values()].filter((a) => (a.askedBy ?? this.state.tasks.get(a.task)?.requestedBy) === p.id).reverse().slice(0, 50).map(withRoute) : [],
+    };
+  }
+
+  /** The pending requests this person may approve now. */
+  waitingFor(p: Person): Approval[] {
+    return [...this.state.approvals.values()].filter((a) => {
+      if (a.state !== 'pending') return false;
+      const t = this.must(a.task);
+      const r = a.route ?? this.routeOf(a, t);
+      return !refusal(p, { to: r.to, amountCents: r.amountCents, askedBy: a.askedBy ?? t.requestedBy, rule: r.rule }, true);
+    });
+  }
+
+  audit(q: URLSearchParams) {
+    const name = (id: string) => this.person(id)?.name ?? id;
+    return auditRows(this.log.events, this.state.tasks, { name, app: (t) => this.appOf(t) }, { person: q.get('person'), seat: q.get('seat'), app: q.get('app'), from: q.get('from'), to: q.get('to') });
+  }
+
+  /** The audit as a CSV file: GET /api/audit.csv, with the same filters as /api/audit. */
+  auditCsv(req: http.IncomingMessage, res: http.ServerResponse) {
+    const url = new URL(req.url ?? '/', 'http://box');
+    if (req.method !== 'GET' || url.pathname.replace(/^\/api/, '') !== '/audit.csv') return false;
+    try {
+      this.requireAuditor(req);
+      res.writeHead(200, { 'content-type': 'text/csv; charset=utf-8', 'content-disposition': 'attachment; filename="gurtos-audit.csv"' }).end(toCsv(this.audit(url.searchParams)));
+    } catch (e) {
+      res.writeHead((e as { status?: number }).status ?? 400, { 'content-type': 'application/json' }).end(JSON.stringify({ error: (e as Error).message }));
+    }
+    return true;
+  }
+
+  /** An auditor reads and never changes anything, on any route. */
+  readOnly(req: http.IncomingMessage, res: http.ServerResponse) {
+    if (req.method === 'GET' || req.method === 'OPTIONS' || this.personOf(req)?.role !== 'auditor') return false;
+    res.writeHead(403, { 'content-type': 'application/json' }).end(JSON.stringify({ error: 'an auditor can read everything and change nothing' }));
+    return true;
+  }
+
+  // ---------- the kill switch: stop every agent on the box, and let them carry on ----------
+
+  /** The kill switch, for the owner or a Business admin (Settings' `paused` is the owner's way to the same switch). */
+  pause(req: http.IncomingMessage) {
+    this.requireAdmin(req);
+    return this.setPaused(true, req);
+  }
+
+  resume(req: http.IncomingMessage) {
+    this.requireAdmin(req);
+    return this.setPaused(false, req);
+  }
+
+  setPaused(on: boolean, req: http.IncomingMessage) {
+    if (this.settings.paused !== on) {
+      this.settings = applyPatch(this.settings, { paused: on });
+      saveSettings(HOME, this.settings);
+      this.write({ type: 'note', track: 'settings', data: { changed: { paused: { from: !on, to: on } } } });
+      this.pauseChanged(on, req);
+    }
+    return this.pauseView();
+  }
+
+  pauseView() {
+    return { paused: !!this.paused, by: this.paused?.by ?? null, at: this.paused?.at ?? null, via: this.paused?.via ?? null };
   }
 
   // ---------- tools and jobs ----------
@@ -618,16 +907,21 @@ class Core {
     return out;
   }
 
-  boxFor(track: string): Box {
+  /**
+   * What a track gets. A route called from a person's phone gets a box bound to that person (Business): its tasks
+   * are asked by them and its answers are theirs. Tools, triggers and log readers get one with no person, so on a
+   * Business box they can never answer a request: no agent approves an agent.
+   */
+  boxFor(track: string, person?: Person): Box {
     return {
-      createTask: (spec) => this.createTask({ source: track, ...spec }),
+      createTask: (spec) => this.createTask({ source: track, ...spec }, person?.id),
       workspace: (name, fromDir) => sandbox.workspace(name, fromDir),
       linkWorkspace: (name, realPath) => this.linkWorkspace(name, realPath),
       task: (id) => this.state.tasks.get(id),
       tasks: () => [...this.state.tasks.values()],
       undo: (id) => this.undo(id),
       approvals: () => [...this.state.approvals.values()],
-      answer: (id, approved, by) => this.answer(id, approved, by),
+      answer: (id, approved, by) => this.answerAs(id, approved, person, by),
       on: (l) => (this.listeners.add(l), () => this.listeners.delete(l)),
       job: (name, input, task) => this.job(name, input, task),
       note: (data, task) => void this.write({ type: 'note', track, task, data }),
@@ -859,6 +1153,7 @@ class Core {
 
   /** Every SpacetimeDB identity the box vouches for: the screens that said so, and the paired phones that gave theirs. */
   identities(): [string, string][] {
+    if (this.business.on) return []; // a Business box takes answers only through the API, as a person
     return [...this.screens, ...this.devices.filter((d) => d.identity && !d.revoked).map((d) => [d.identity!, d.name] as [string, string])];
   }
 
@@ -872,7 +1167,7 @@ class Core {
     if (device) device.identity = id;
     else this.screens.set(id, name);
     if (device) this.saveDevices();
-    this.live.register(id, name);
+    if (!this.business.on) this.live.register(id, name);
     return { identity: id, name };
   }
 
@@ -925,7 +1220,7 @@ class Core {
   /** Hostname, time zone, network, edition and version, for the wizard and Settings. */
   async systemFacts() {
     const v = system.version();
-    const edition = system.edition(this.owner);
+    const edition = system.edition(this.owner, this.business.on);
     return {
       product: 'GurtOS',
       edition,
@@ -939,6 +1234,8 @@ class Core {
       boxName: BOX_NAME,
       owner: this.owner,
       model: { ready: !!this.modelVia(), via: this.modelVia() },
+      ...(this.business.on ? { company: this.business.company } : {}),
+      paused: this.pauseView(),
       startedAt: this.startedAt,
       uptimeSec: Math.round(process.uptime()),
     };
@@ -969,10 +1266,10 @@ class Core {
   }
 
   /** Mint a one-time pairing code for the box screen's QR. Good for 5 minutes, usable once. */
-  pairStart(owner = false) {
+  pairStart(owner = false, person?: string) {
     const code = randomBytes(4).toString('hex');
     const expiry = Date.now() + 5 * 60 * 1000;
-    this.pairCodes.set(code, { expiry, owner });
+    this.pairCodes.set(code, { expiry, owner, ...(person ? { person } : {}) });
     // With BOX_URL set (the image sets it from the box's address) the url is absolute, so the box screen's QR
     // opens on a phone. Without it the url is a path the page prefixes with its own origin. With remote access on,
     // the QR opens the GurtOS app, which adds this box to its machines (`boxUrl` is the box's own copy).
@@ -993,11 +1290,14 @@ class Core {
       throw Object.assign(new Error('bad or expired pairing code'), { status: 400 });
     }
     this.pairCodes.delete(String(body.code)); // one-time
-    const device: Device = { id: 'd' + randomBytes(5).toString('hex'), name: String(body.name || 'phone').slice(0, 40), token: randomBytes(24).toString('hex'), pairedAt: new Date().toISOString(), ...(entry.owner ? { owner: true } : {}), ...(typeof body.identity === 'string' && /^[0-9a-f]{64}$/i.test(body.identity) ? { identity: body.identity.toLowerCase() } : {}) };
+    const person = this.person(entry.person);
+    if (entry.person && !person) throw Object.assign(new Error('the person this code was for has been removed'), { status: 400 });
+    const name = String(body.name || (person ? `${person.name}'s phone` : 'phone')).slice(0, 40);
+    const device: Device = { id: 'd' + randomBytes(5).toString('hex'), name, token: randomBytes(24).toString('hex'), pairedAt: new Date().toISOString(), ...(entry.owner ? { owner: true } : {}), ...(person ? { person: person.id } : {}), ...(typeof body.identity === 'string' && /^[0-9a-f]{64}$/i.test(body.identity) ? { identity: body.identity.toLowerCase() } : {}) };
     this.devices.push(device);
     this.saveDevices();
-    if (device.identity) this.live.register(device.identity, device.name);
-    return { token: device.token, device: { id: device.id, name: device.name }, box: { id: BOX_ID, name: BOX_NAME } };
+    if (device.identity && !this.business.on) this.live.register(device.identity, device.name);
+    return { token: device.token, device: { id: device.id, name: device.name, ...(person ? { person: person.id } : {}) }, box: { id: BOX_ID, name: BOX_NAME } };
   }
 
   // ---------- remote access and push notifications ----------
@@ -1118,7 +1418,9 @@ class Core {
 
   /** The box's own screen, or a device that was paired as the owner. */
   isOwner(req: http.IncomingMessage): boolean {
-    return (this.isLocal(req) && !this.serviceCaller(req)) || !!this.deviceOf(req)?.owner;
+    // The box's own screen is the owner, unless it says it is someone else (Business: x-box-person).
+    const p = this.personOf(req);
+    return (this.isLocal(req) && !this.serviceCaller(req) && !p) || !!this.deviceOf(req)?.owner || p?.role === 'owner';
   }
 
   /**
@@ -1207,7 +1509,7 @@ class Core {
             const device = this.deviceOf(req);
             if (device) body.source = `phone:${device.name}`;
             else if (!this.isLocal(req)) throw Object.assign(new Error('pair this phone with the box first'), { status: 401 });
-            return this.createTask(body);
+            return this.createTask(body, this.personOf(req)?.id);
           }
           case 'GET /tasks/:id':
             return {
@@ -1229,8 +1531,13 @@ class Core {
             return this.unkeep(id);
           case 'POST /tasks/:id/undo':
             return this.undo(id);
-          case 'GET /approvals':
+          case 'GET /approvals': {
+            if (q('for') === 'me') {
+              const p = this.personOf(req); // "Waiting for me": what this person may approve now
+              return p ? this.waitingFor(p) : [];
+            }
             return [...this.state.approvals.values()].filter((x) => !q('state') || x.state === q('state'));
+          }
           case 'POST /approvals/:id': {
             // A phone sends its device token; it must be a paired, un-revoked device, and `by` becomes its name.
             let by = String(body.by ?? 'api'); // the box's own screen says who it is
@@ -1238,8 +1545,39 @@ class Core {
             if (headers.authorization && !device) throw Object.assign(new Error('pair this phone with the box first'), { status: 401 });
             if (device) by = device.name; // a paired phone is named by its device, whatever it sends
             else if (!this.isLocal(req)) throw Object.assign(new Error('pair this phone with the box first'), { status: 401 });
-            return this.answer(id, body.approved === true, by);
+            return this.answerAs(id, body.approved === true, this.personOf(req), by); // Business checks who may answer
           }
+          case 'GET /business':
+            return this.businessView();
+          case 'GET /business/:id':
+            return id === 'route' ? this.tryRoute(url.searchParams) : undefined;
+          case 'PUT /business':
+            return this.setBusiness(body, req);
+          case 'GET /people':
+            this.requireAdmin(req);
+            return this.peopleView();
+          case 'POST /people':
+            this.requireAdmin(req);
+            return this.putPerson(body, req);
+          case 'DELETE /people/:id':
+            this.requireAdmin(req);
+            return this.removePerson(id, req);
+          case 'POST /people/:id/pair':
+            // A one-time code that pairs a phone (or a laptop's browser) as this person.
+            this.requireAdmin(req);
+            if (!this.person(id)) throw Object.assign(new Error(`no person ${id}`), { status: 404 });
+            return { ...this.pairStart(false, id), person: id };
+          case 'GET /me':
+            return this.me(req);
+          case 'GET /audit':
+            this.requireAuditor(req);
+            return this.audit(url.searchParams);
+          case 'GET /pause':
+            return this.pauseView();
+          case 'POST /pause':
+            return this.pause(req);
+          case 'POST /resume':
+            return this.resume(req);
           case 'GET /log':
             return this.log.events.slice(Number(q('after') ?? 0)).filter((e) => !q('task') || e.task === q('task'));
           case 'GET /owner':
@@ -1296,8 +1634,9 @@ class Core {
             const changed = Object.fromEntries(Object.keys(body).map((k) => [k, { from: (this.settings as any)[k], to: (next as any)[k] }]));
             this.settings = next;
             saveSettings(HOME, next);
-            this.write({ type: 'note', track: 'settings', data: { changed } });
-            if ('paused' in body && !next.paused) this.resumeAll();
+            const who = this.actor(req).who; // Business: the person who changed them
+            this.write({ type: 'note', track: 'settings', data: { changed }, ...(who ? { who } : {}) });
+            if ('paused' in body && changed.paused.from !== next.paused) this.pauseChanged(next.paused, req); // the kill switch
             return this.settings;
           }
           case 'GET /vault':
@@ -1311,14 +1650,15 @@ class Core {
             this.vault.set(id, String(body.value).trim());
             this.vaultMeta[id] = new Date().toISOString();
             fs.writeFileSync(this.vaultMetaPath, JSON.stringify(this.vaultMeta, null, 2), { mode: 0o600 });
-            this.write({ type: 'note', track: 'vault', data: { set: id } }); // the name only, never the value
+            const who = this.actor(req).who;
+            this.write({ type: 'note', track: 'vault', data: { set: id }, ...(who ? { who } : {}) }); // the name only, never the value
             return { name: id, setAt: this.vaultMeta[id] };
           }
           case 'GET /health':
-            return { ok: true, startedAt: this.startedAt, cleanStart: this.cleanStart, resumed: this.resumed, tasks: this.state.tasks.size, tools: [...this.tools.keys()], spacetime: { port: 3000, database: DB } };
+            return { ok: true, startedAt: this.startedAt, cleanStart: this.cleanStart, resumed: this.resumed, paused: !!this.paused, tasks: this.state.tasks.size, tools: [...this.tools.keys()], spacetime: { port: 3000, database: DB } };
         }
       },
-      (req, res) => this.cors(req, res) || this.gate(req, res) || this.pairing(req, res) || this.remoteRoutes(req, res) || this.logStream(req, res) || this.webhook(req, res) || this.trackRoute(req, res) || this.portal(req, res),
+      (req, res) => this.cors(req, res) || this.gate(req, res) || this.readOnly(req, res) || this.pairing(req, res) || this.remoteRoutes(req, res) || this.logStream(req, res) || this.auditCsv(req, res) || this.webhook(req, res) || this.trackRoute(req, res) || this.portal(req, res),
     );
 
   /** The GurtOS app (app.gurtos.com) may call the box from the browser; other origins (a portal dev server) need BOX_ORIGINS, comma separated, or '*'. Tokens are required either way. */
@@ -1398,7 +1738,7 @@ data: ${JSON.stringify(e)}
           headers: { ...(req.headers as Record<string, string>), 'x-box-caller': this.callerOf(req) }, // set by the box, never by the caller
           body: hasBody ? Buffer.concat(chunks) : undefined,
         });
-        const r = await entry.route(request, this.boxFor(entry.track));
+        const r = await entry.route(request, this.boxFor(entry.track, this.personOf(req)));
         res.writeHead(r.status, Object.fromEntries(r.headers)).end(Buffer.from(await r.arrayBuffer()));
       } catch (e) {
         res.writeHead(500, { 'content-type': 'application/json' }).end(JSON.stringify({ error: (e as Error).message }));
@@ -1468,6 +1808,10 @@ data: ${JSON.stringify(e)}
     // Resume what was going when the box went down. Approvals still pending stay pending.
     for (const t of this.state.tasks.values()) {
       if (t.state === 'queued' || t.state === 'running' || t.state === 'waiting') {
+        if (this.paused) {
+          console.log(`${t.id} (${t.state}) waits: the agents were paused by ${this.paused.by}`);
+          continue; // resuming the agents starts it
+        }
         console.log(`resuming ${t.id} (${t.state})`);
         this.resumed.push(t.id);
         if (!(this.settings.paused && t.state === 'queued')) void this.start(t);

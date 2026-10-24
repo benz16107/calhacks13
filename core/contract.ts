@@ -39,10 +39,12 @@ export interface TaskSpec {
    * `folder` is then the first of them, for readers that only know one.
    */
   folders?: string[];
+  /** The agent seat doing the work, like 'Credit analyst'. Shown in the audit. */
+  seat?: string;
 }
 
 /** A TaskSpec with its defaults filled in. */
-export type FullSpec = Required<Omit<TaskSpec, 'folder' | 'folders'>> & { folder?: string; folders?: string[] };
+export type FullSpec = Required<Omit<TaskSpec, 'folder' | 'folders' | 'seat'>> & { folder?: string; folders?: string[]; seat?: string };
 
 export interface Task extends FullSpec {
   id: string;
@@ -60,6 +62,8 @@ export interface Task extends FullSpec {
    * same files; nothing applied), undone (discarded, or a Keep was undone from Time Machine).
    */
   review?: 'pending' | 'kept' | 'conflict' | 'undone';
+  /** Business: the id of the person who asked for this task. Set by the core, never by the caller. */
+  requestedBy?: string;
   createdAt: string;
   updatedAt: string;
   error?: string;
@@ -78,7 +82,43 @@ export interface Approval {
   /** What the spend or action is for. */
   purpose?: string;
   state: 'pending' | 'approved' | 'denied';
-  /** Who answered: 'portal', 'phone', 'jira:ben'. */
+  /** Who answered: 'portal', 'phone', 'jira:ben'. On a Business box, the person's name. */
+  by?: string;
+  /** Business: the id of the person who answered. */
+  person?: string;
+  /** Business: the phone or screen the answer came from. */
+  via?: string;
+  /** Business: the id of the person who asked for the task. They may not answer it. */
+  askedBy?: string;
+  /** Business: where the policy sent this request, and why. */
+  route?: ApprovalRoute;
+}
+
+/** Business: who a request goes to. Set when it is asked; the people who may answer are checked again when they do. */
+export interface ApprovalRoute {
+  /** The policy line that matched: 'Over $10,000 goes to the Controller.' */
+  rule: string;
+  /** Who it goes to, as the policy says it: 'the Controller', 'IT', 'any approver'. */
+  to: string;
+  /** The amount the rules and limits were checked against, in US cents. */
+  amountCents: number;
+  /** The people who could approve it when it was asked. */
+  people: { id: string; name: string }[];
+  /** One sentence for people: the rule, and who can approve or why nobody can. */
+  why: string;
+}
+
+/** Business: who is behind a log event. Ids are people's ids from /api/people. */
+export interface Who {
+  /** The person who asked for the task. */
+  asked?: string;
+  /** What started the task when no person did: its source, like 'schedule' or 'jira:BOX-12'. */
+  trigger?: string;
+  /** The agent seat doing the work. */
+  seat?: string;
+  /** On an answer, the person who gave it. On the task's later events, the last person who approved one of its requests. */
+  approver?: string;
+  /** A person's own action that is not part of a task: the kill switch, a change to people or the policy. */
   by?: string;
 }
 
@@ -91,11 +131,13 @@ interface Base {
   seq: number;
   at: string;
   task?: string;
+  /** Business: who asked, which seat, who approved. Written only while the Business edition is on. */
+  who?: Who;
 }
 type Ev<T extends string, D> = Base & { type: T } & D;
 
 export type LogEvent =
-  | Ev<'task.created', { task: string; spec: FullSpec; user: string }>
+  | Ev<'task.created', { task: string; spec: FullSpec; user: string; requestedBy?: string }>
   | Ev<'task.state', { task: string; state: TaskState; layers?: string[]; error?: string; summary?: string }>
   /** Progress the worker reports: plans, steps, diffs. `data` is what the worker needs to resume. */
   | Ev<'task.step', { task: string; text: string; data?: unknown }>
@@ -105,7 +147,7 @@ export type LogEvent =
   /** `cents` is what the call spent; it counts toward the task's cost. */
   | Ev<'tool.result', { task: string; key: string; ok: boolean; output?: unknown; error?: string; cents?: number }>
   | Ev<'approval.asked', { task: string; approval: Approval }>
-  | Ev<'approval.answered', { task: string; id: string; approved: boolean; by: string }>
+  | Ev<'approval.answered', { task: string; id: string; approved: boolean; by: string; person?: string; via?: string }>
   | Ev<'cost', { cents: number; what: string; model?: string; tokens?: Tokens }>
   | Ev<'net.blocked', { task: string; host: string }>
   /** Anything a track wants in the log. */
