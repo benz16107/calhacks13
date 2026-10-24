@@ -1,0 +1,18 @@
+[Desktop Entry]
+Type=Application
+Name=GurtOS
+GenericName=AI Agents
+Comment=See what your agents are doing, approve what they ask, and undo what they changed
+Exec=/opt/box/personal/box-ui.py app
+Icon=dev.box.Box
+Terminal=false
+Categories=Utility;System;
+Keywords=agent;ai;approve;undo;tasks;
+StartupNotify=true
+StartupWMClass=dev.box.Box
+DBusActivatable=false
+Actions=ask;
+
+[Desktop Action ask]
+Name=Ask an Agent…
+Exec=/opt/box/personal/box-ui.py ask

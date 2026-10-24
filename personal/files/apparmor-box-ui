@@ -1,0 +1,12 @@
+# The Box app shows the portal in WebKitGTK, whose web process sandbox (bubblewrap) needs a user namespace.
+# Ubuntu 24.04 allows that only to programs with a profile like this one, the same as Epiphany's and Geary's.
+# It allows everything and only exists to give the app a name. Launch the script itself, not "python3 box-ui.py".
+
+abi <abi/4.0>,
+include <tunables/global>
+
+profile box-ui /opt/box/personal/box-ui.py flags=(unconfined) {
+  userns,
+
+  include if exists <local/box-ui>
+}
