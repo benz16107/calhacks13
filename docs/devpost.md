@@ -95,6 +95,17 @@ that updates as a whole and rolls back by itself (built). **GurtOS Personal** is
 work beside you on copies of your folders, with approvals as GNOME notifications and Keep or Undo (built).
 **GurtOS Business** shares one box across a team: people with roles, approvals routed by rules in plain words, a Waiting for me inbox, an audit with CSV export and a kill switch (built and on main; sign-in with a work account (Entra ID) is Entra-ready and tested with a standards test provider, and shadow mode lets a seat only suggest until a person takes it live).
 
+**On every device you carry.** Native apps for iPhone, Apple Watch and Mac, and an Android app, use the same box API and
+pairing as the web app: you scan the box's QR code and your phone is where your agents ask before they spend. A request that
+spends nothing can be approved from the notification; anything that spends money says "Approve with Face ID" and opens the
+app, and the box's log records that the answer came from the paired phone with Face ID. The iPhone app makes its own push
+keys and the box encrypts each notification for them (RFC 8291), so the relay forwards only ciphertext; native delivery
+waits on the relay getting an Apple push key. On the Watch, built and demoed on a dev box (not on main yet), the box
+approves only up to $25, only on the wrist and unlocked, and never a Business request, a fraud referral or a purchase: $8
+is approved and $40 is refused. Limits: tested in Apple's simulators and on a Mac against real GurtOS computers, not yet on
+a physical iPhone or Watch; TestFlight internal testing only, no App Store submission; Android is the web app in a Trusted
+Web Activity. Screenshots and all limits: https://calhacks.gurtos.com/evidence/#devices
+
 **Proof.** The merge gate, `./demo`, starts a fresh box on a test VM and runs the four moments and every app: on Oct 24
 it passed all 24 sections, 266 checks, 0 failed (its real-Droid section is off while Factory credit is short, and last passed earlier that day). The credit desk caught 16 of 17 planted finance errors with 1 false
 alarms. A running Droid task held only a placeholder key in 240 of 240 process samples.

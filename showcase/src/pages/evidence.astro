@@ -9,6 +9,12 @@ import clips from '../data/clips.json';
 import demoLog from '../data/demo-latest.txt?raw';
 import Architecture from '../assets/diagrams/architecture.svg';
 
+import shotNApprove from '../assets/native/iphone-approval-light.png';
+import shotNNotify from '../assets/native/iphone-notification-actions.png';
+import shotNWatch from '../assets/native/watch-small.png';
+import shotNWatchBig from '../assets/native/watch-big.png';
+import shotNMac from '../assets/native/mac-menu-light.png';
+import shotNBiz from '../assets/native/iphone-biz-request-light.png';
 import shotUndo from '../assets/repo/portal/time-machine.png';
 import shotBlocked from '../assets/repo/portal/task.png';
 import shotApproval from '../assets/repo/portal/notification-center.png';
@@ -250,6 +256,51 @@ const prizes = [
       </div>
     </section>
 
+    <section aria-labelledby="devices">
+      <h2 id="devices">GurtOS on every device you carry</h2>
+      <p class="measure-wide">
+        Native apps for iPhone, Apple Watch and Mac, and an Android app, use the same box API and pairing as the web app.
+        You scan the box's QR code, and your phone becomes the place your agents ask before they spend.
+      </p>
+      <div class="devices">
+        <figure>
+          <Image src={shotNApprove} alt="The iPhone app showing a request to buy a GPU hour for $8, with Deny and Approve $8 buttons." widths={[360, 720]} sizes="260px" />
+          <figcaption>A request that spends money. The button says what it costs, and the box asks for Face ID. Test data.</figcaption>
+        </figure>
+        <figure>
+          <Image src={shotNNotify} alt="An iPhone lock screen with a notification offering Approve and Deny." widths={[360, 720]} sizes="260px" />
+          <figcaption>A request that spends nothing gets Approve and Deny right on the notification.</figcaption>
+        </figure>
+        <figure>
+          <Image src={shotNBiz} alt="The iPhone app on a GurtOS Business box: a credit line request for $40,000, the rule that routed it and who requested it." widths={[360, 720]} sizes="260px" />
+          <figcaption>On Business, the request shows the rule that routed it and who asked. Made-up company, test data.</figcaption>
+        </figure>
+        <figure class="small">
+          <Image src={shotNWatch} alt="The Apple Watch app showing a request to buy a GPU hour for $8, with Deny and Approve." widths={[208, 416]} sizes="200px" />
+          <Image src={shotNWatchBig} alt="The Apple Watch app showing a $42 request: Approve this on your iPhone with Face ID." widths={[208, 416]} sizes="200px" />
+          <figcaption>The Watch approves $8. A larger request ($42 here) goes to the iPhone and Face ID.</figcaption>
+        </figure>
+        <figure class="small">
+          <Image src={shotNMac} alt="The Mac menu bar item listing what needs you, plus Ask Home box with the shortcut Option Command G." widths={[252, 504]} sizes="252px" />
+          <figcaption>The Mac menu bar lists what needs you. The picture is drawn from the app's own data.</figcaption>
+        </figure>
+      </div>
+      <div class="cols measure-wide">
+        <p><strong>Approve from the lock screen, with a safe default.</strong> Anything that spends money says "Approve with Face ID" and opens the app. The box's log records that the answer came from the paired phone with Face ID.</p>
+        <p><strong>Push the relay cannot read.</strong> The iPhone app makes its own push keys, and the box encrypts each notification for them as it does for the web app (RFC 8291). The relay forwards only ciphertext, and a notification extension on the phone decrypts it and checks the box's signature before showing anything. End to end encrypted by design; native delivery waits on the relay getting an Apple push key. In the simulator, the same decryption code ran on a payload the box encrypted.</p>
+        <p><strong>The Watch is limited by the box, not the app.</strong> Built and demoed on a dev box, not on main yet: the Watch gets its own token through the iPhone, and the box approves only up to $25, only while it is on the wrist and unlocked, and never a Business request, a fraud referral or a purchase. The demo approves $8 from the Watch and refuses $40, which keeps waiting for Face ID.</p>
+        <p><strong>On the Mac:</strong> a menu bar count of what needs you, Approve with Touch ID, and Option Command G from anywhere to ask your computer for a task.</p>
+      </div>
+      <h3>What this does not cover</h3>
+      <ul class="measure-wide">
+        <li>The iPhone, Watch and Mac apps were tested in Apple's simulators and on a Mac, against real GurtOS computers. They have not been run on a physical iPhone or Apple Watch yet.</li>
+        <li>The Watch approves only when watchOS reports it is on the wrist and unlocked. The simulator can't test wrist detection, so the box's refusal is what the demo checks.</li>
+        <li>Native notifications reach a phone once the relay has an Apple push key. In the simulator, the same decryption code ran on a payload the box encrypted.</li>
+        <li>The Mac menu picture is drawn from the app's own data, because macOS blocks screen capture over ssh. The Ask and Pair windows are the real views.</li>
+        <li>TestFlight internal testing only, no App Store submission. Android is the web app in a Trusted Web Activity. On Windows, GurtOS installs from Edge; that was checked in Edge on Linux, not on a Windows PC.</li>
+      </ul>
+    </section>
+
     <section aria-labelledby="prizes">
       <h2 id="prizes">Cal Hacks prizes</h2>
       <ol class="criteria-list">
@@ -310,6 +361,30 @@ const prizes = [
 
 
 <style>
+  .devices {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-5);
+    margin: var(--space-5) 0 var(--space-6);
+    align-items: flex-start;
+  }
+  .devices figure {
+    margin: 0;
+    width: 15rem;
+    max-width: 100%;
+  }
+  .devices figure.small {
+    width: 13rem;
+  }
+  .devices img {
+    border: 1px solid var(--color-border-default);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--space-2);
+  }
+  .devices figcaption {
+    font-size: 0.85rem;
+    color: var(--color-text-secondary);
+  }
   section {
     margin-top: var(--space-8);
   }
