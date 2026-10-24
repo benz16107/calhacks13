@@ -188,6 +188,6 @@ The other Vultr jobs use the same VM over ssh from the build scripts:
   the box check each call came from the Forge app and that user.
 - The Vultr box has no GPU, so /find describes photos with Claude in a sandboxed task instead of a local model.
 - The first-boot wizard was shown on Vultr but not clicked through. The three live Vultr tests (disc, backup and restore, firewall) cost under $0.20 and their instances, disc and objects were destroyed afterwards.
-- The release disc tested on Vultr has no shell and did not ship the `age` program, so the restore was run from the Server debug build of the same image. The image build on main now includes `age`; the disc published for download may predate that, so check before relying on backups from it.
+- The release disc tested on Vultr on Oct 24 had no shell and did not ship the `age` program, so the restore was run from the Server debug build of the same image. The final v0.1.0-preview discs ship `age` on both editions; the Vultr restore was not repeated on them.
 - Vultr applies a firewall change on its own schedule: a removed rule took effect within 15 s, an added one took up to about 3 minutes.
 - The update key lives on the build VM. There is one key, with no rotation.
