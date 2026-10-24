@@ -241,7 +241,37 @@ Figma's variables endpoints are Enterprise-only, so the token export runs throug
 
 </Details>
 
-## Most Creative: one design system for three editions and a phone
+### The same system in the native apps
+
+The iPhone, Apple Watch and Mac apps are native SwiftUI, not the portal in a frame. They were built against the Figma phone-app frames, and the code cites them by number: the home is frame 2a, the Approve and Deny pair is frame 3b. They use the kit's colour values (the same #2F64A6 and #78A9E6 accent) and Atkinson Hyperlegible Next, which scales with the phone's text size.
+
+<Compare labels={['Figma, phone-app frame 2a', 'The native iPhone app']}>
+<div slot="a">
+
+<Shot src="track/figma/phone-frame-home.png" alt="The Figma frame of the phone home: Home box, GurtOS Server, a Needs you list with a GPU hour and Hario filters, a Running list with progress bars, and a Pause all agents kill switch." caption="The frame, drawn in Figma with the GurtOS variables." size="phone" />
+
+</div>
+<div slot="b">
+
+<Shot src="track/figma/iphone-home-light.png" dark="track/figma/iphone-home-dark.png" alt="The native GurtOS iPhone app: Home box, GurtOS Server, Online, a Needs you list with Deploy the new build, Buy a GPU hour for $8 and Renew the domain for $13, each with Deny and Approve, and the kill switch below." caption="The native app in the iOS simulator against a test computer, light or dark with the page. Approve and Deny sit in each row; anything that spends asks for Face ID first. The requests differ from the frame because the app shows the test computer's real state." size="phone" />
+
+</div>
+</Compare>
+
+<Compare labels={['The Mac menu bar app', 'The Apple Watch app']}>
+<div slot="a">
+
+<Shot src="track/figma/mac-menu-light.png" dark="track/figma/mac-menu-dark.png" alt="The GurtOS menu on the Mac menu bar: Home box, 0 running, Needs you with three requests, Ask Home box with Option Command G, Machines, Pause all agents, Settings and Quit GurtOS." caption="The same requests in the Mac menu bar. This picture is drawn by the app's own render mode from the same model, because macOS blocks screen capture over ssh." size="narrow" />
+
+</div>
+<div slot="b">
+
+<Shot src="track/figma/watch-small.png" alt="The GurtOS Apple Watch app: Buy a GPU hour, $8, on Home box, with a red deny button and a green approve button." caption="A small request on the Watch. The computer lets a Watch approve only up to $25, and never a Business request or a Shopper purchase; anything else waits for Face ID on the iPhone." size="phone" />
+
+</div>
+</Compare>
+
+## Most Creative: one design system for three editions and four devices
 
 An operating system for agents has to feel like an operating system people trust, not another dashboard, and it has to reach people on a server screen, a GNOME desktop, a company's approval flow and a phone. We drew all of it from one system and used more of Figma than a mockup needs:
 
@@ -262,6 +292,7 @@ On an ordinary system a design stops at the mockup: the app is built once and dr
 <OSvsTrack sponsor="Figma" rows={[
   { what: 'One design system for every edition', why: 'Best Design, Most Creative', os: 'The portal and its kit (Preact and CSS tokens) that every edition and every track app uses', track: 'The variables, components and screens in Figma, with a CSS name on every variable', status: 'Built. 0 drifts across 82 tokens' },
   { what: 'The portal generated from the design', why: 'Best Workflow', os: 'The portal the computer serves, on live data', track: 'Figma Design, and the MCP server that turns frames into reference code', status: 'Built' },
+  { what: 'The native iPhone, Apple Watch and Mac apps built against the Figma phone-app frames', why: 'Best Design', os: 'The computer\'s API, and the Watch and Face ID limits it enforces', track: 'The phone-app frames and the GurtOS colour values and typeface', status: 'Built. The colour values are copied by hand into the apps\' Theme.swift; the drift check covers the web kit only' },
   { what: 'The native desktop layer for Personal', why: 'Best Design', os: 'GTK 4 and libadwaita windows in the GurtOS theme', track: 'The Personal frames, exported as PNGs with notes, not as web code', status: 'Built' },
   { what: 'Code Connect templates and Dev Mode code for every component', why: 'Best Workflow', os: 'The kit components the templates map to', track: '95 parserless templates and a Dev Mode description for each component', status: 'Built. Publishing to Figma needs an Organization plan, so not published' },
   { what: 'A drift check and an app-versus-frame comparison', why: 'Best Workflow, Best Design', os: 'The kit and the running app that are checked', track: 'Figma variables exported through the MCP, and the frames compared against screenshots', status: 'Built. 77 frames compared, with a score' },
@@ -330,6 +361,7 @@ Both flows run here, from the Figma Design file. Click through them: Approve, De
 
 <Limits>
 
+- The native apps' colour values are copied by hand into `Theme.swift`; the token drift check covers the web kit, not the Swift code. The iPhone and Watch app is on TestFlight for internal testers only and the Mac app is a notarized download from the GitHub release; neither is in the App Store.
 - The demo video is not made yet. A silent screen recording of the real app stands in.
 - The two Make files have no published URL. The Figma Sites landing page is published, but below 1440 px wide its hero screenshots are clipped on the right edge. The Make files open in a signed-out browser; whether their previews run inside Figma was not checked.
 - Code Connect templates are written but not published, because publishing needs an Organization plan.
