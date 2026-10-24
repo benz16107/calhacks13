@@ -353,6 +353,7 @@ class Core {
         const dpt = /DPT=(\d+)/.exec(line)?.[1];
         const task = this.state.tasks.get(this.uidTask.get(uid) ?? '');
         if (!task || !dst) continue; // not one of this box's tasks (another box on the machine, or a stray)
+        if (dst.startsWith('127.0.0.53') && dpt === '53') continue; // the tool's own resolver lookup: refused, but not an attack to show anyone
         const host = dpt ? `${dst}:${dpt}` : dst;
         const key = `${task.id}|${host}`;
         if (Date.now() - (lastSeen.get(key) ?? 0) < 5000) continue;
@@ -763,7 +764,10 @@ class Core {
     this.write({ type: 'tool.call', task: t.id, key, tool: name, input });
     try {
       const output = await entry.tool.run(input, this.ctx(entry.track, key, entry.tool.secrets, t));
-      return result({ ok: true, output, ...(cost ? { cents: cost } : {}) }); // result and cost in one line: counted once
+      // A metered tool (x402 "upto") is approved for its cap but may charge less: it reports spentCents, from 0 to the cap.
+      const spent = (output as { spentCents?: unknown } | null)?.spentCents;
+      const cents = typeof spent === 'number' && Number.isFinite(spent) && spent >= 0 && spent <= cost ? spent : cost;
+      return result({ ok: true, output, ...(cents ? { cents } : {}) }); // result and cost in one line: counted once
     } catch (e) {
       return result({ ok: false, error: (e as Error).message });
     } finally {

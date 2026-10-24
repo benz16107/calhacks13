@@ -21,6 +21,9 @@ export default async function (d: DemoKit) {
   const { task, events } = await d.api('GET', `/tasks/${s.id}`);
   d.check(task.costCents === 300, 'a tool call within budget ran and its cost was counted');
   d.check(!JSON.stringify(events).includes('canary'), 'the vault secret it used is not in the log');
+  const m = await d.api<Task>('POST', '/tasks', { title: 'Metered spend', workspace: 'example', worker: 'fake', tools: ['example.spend'], budgetCents: 500, prompt: 'call example.spend {"cents":300,"on":"metered"}' });
+  await d.settled([m.id]);
+  d.check((await d.api('GET', `/tasks/${m.id}`)).task.costCents === 150, 'a metered tool approved for $3.00 that charged $1.50 counts $1.50 (its spentCents)');
 
   // Webhook trigger: a POST to /hook/<track>/<name> starts a task.
   await d.api('POST', '/hook/example/start', { title: 'via webhook' });

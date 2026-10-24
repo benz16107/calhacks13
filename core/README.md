@@ -113,7 +113,9 @@ it; don't keep a second copy of the state in a track, or two apps (and two scree
 **Spending.** One budget per task, in US cents, counted by the core.
 - A task's `budgetCents` (default: Settings `defaultBudgetCents`). A tool that spends declares `cost(input)`; the
   broker reserves it before the call (so parallel calls can't overspend), asks when it would go over the budget or
-  over Settings `approvalThresholdCents`, and counts it in the same log line as the result.
+  over Settings `approvalThresholdCents`, and counts it in the same log line as the result. A metered tool (x402
+  "upto") is checked and approved on its cap but may report `spentCents` (0 to the cap) in its output; the box
+  counts that.
 - **Money only moves inside a tool** that the task calls through the broker, never from a route or a log reader.
   That is what makes the budget, the approval and the log cover every payment (wallet, x402, Stripe, Visa).
 - New spending rules (a per-merchant cap, a mandate, a daily limit) belong in this check in the core

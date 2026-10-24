@@ -25,7 +25,9 @@ export default {
       approval: (input: { on: string }) => ({ payee: 'Test Vendor', purpose: `test spend on ${input.on}` }),
       async run(input: { cents: number; on: string }, ctx) {
         ctx.secret('DEMO_SECRET'); // a real tool would call an API with it here; it never leaves the core
-        return { paid: input.cents, on: input.on, test: true, receipt: ctx.key };
+        // A metered tool reports what it really charged; the box counts that, not the cap it was approved for.
+        const spentCents = input.on === 'metered' ? Math.floor(input.cents / 2) : input.cents;
+        return { paid: spentCents, on: input.on, test: true, receipt: ctx.key, spentCents };
       },
     },
   ],
