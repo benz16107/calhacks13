@@ -99,12 +99,14 @@ test('fetch.pay checks its input, prices it at $1 per FET, and names the payee',
   assert.equal(payTool.cost!({ ...pay, amount: '0.1' }), 10);
   assert.equal(payTool.cost!({ ...pay, amount: '5' }), 500);
   assert.equal(payTool.cost!({ ...pay, amount: 'nope' }), 0);
-  assert.deepEqual(payTool.approval!(pay), { payee: TO, purpose: 'a test payment (test FET on Fetch testnet)' });
+  assert.deepEqual(payTool.approval!(pay), { payee: TO, purpose: 'a test payment (test FET on Fetch testnet, test money)' });
 });
 
 test('fetch.pay pays once per call key, even when the call runs again', async () => {
   const first = (await payTool.run(pay, ctx('k1'))) as any;
   assert.deepEqual([first.test, first.simulated, first.amount, first.to], [true, true, '0.25', TO]);
+  // The receipt shape the wallet track's Agent wallet page reads for every rail.
+  assert.deepEqual(first.paid, { amount: '0.25 FET', payee: TO, network: 'offline simulation', test: true, tx: first.tx });
   assert.deepEqual(await payTool.run(pay, ctx('k1')), first);
   const second = (await payTool.run(pay, ctx('k2'))) as any;
   assert.notEqual(second.tx, first.tx);

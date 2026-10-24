@@ -117,7 +117,7 @@ export const payTool: Tool = {
     }
   },
   approval(input) {
-    return { payee: String(input?.to ?? ''), purpose: `${String(input?.why ?? '').slice(0, 200)} (test FET on Fetch testnet)` };
+    return { payee: String(input?.to ?? ''), purpose: `${String(input?.why ?? '').slice(0, 200)} (test FET on Fetch testnet, test money)` };
   },
   async run(input, ctx: Ctx) {
     const p = check(input);
@@ -138,6 +138,8 @@ export const payTool: Tool = {
       if (sent.error) throw new Error(sent.error);
       result = clean(sent);
     }
+    // The receipt every payment rail on the box reports, so the Agent wallet page lists it beside x402 payments.
+    result.paid ??= { amount: `${p.amount} FET`, payee: p.to, network: result.simulated ? 'offline simulation' : 'fetch-dorado-testnet', test: true, tx: result.tx, ...(result.link && { explorer: result.link }) };
     append(marks, { key: ctx.key, result });
     ctx.log(`paid ${p.amount} test FET to ${p.to} on ${result.network}: ${result.tx}`);
     return result;
