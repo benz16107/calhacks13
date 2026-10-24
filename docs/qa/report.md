@@ -297,16 +297,21 @@ about eight times in one lookup, and the portal shows them as blocked attempts. 
 portal. Rosa (approver, $50,000 limit) paired and for about 2 to 5 s saw "Needs you" with Approve buttons for every
 pending request, including "Approve $60,000" for one above her limit (the box refuses it with 403). It then
 switches to "Waiting for me" with only her request. A requester or auditor should never see that flash either.
-Found on 276bb32 at 03:27 PT (shot 90).
+Found on 276bb32 at 03:27 PT (shot 90). **Partly fixed in c43a8e7, rechecked 04:55 PT:** after a reload the Business
+home shows from the first frame; on the first pairing the Server home still shows for about 1.2 s, then a placeholder
+says "Sign in to see what waits for you" for 1 to 2.4 s although she is signed in. The pair response could carry the
+edition, and the placeholder could say "Loading".
 
 **P2-22. The policy accepts a person's name that nobody approves for.** Owner: business. "Over $10,000 goes to Rosa
 Alvarez." saved without a warning; the rule tester then said "nobody approves for Rosa Alvarez" and the request would
 go to the owner. Rules name a duty ("the Controller", set per person as `approvesFor`). Saving a line whose
-target is no person's duty and no role could warn, as the tester does.
+target is no person's duty and no role could warn, as the tester does. **Fixed in c43a8e7, verified 04:55 PT:**
+`PUT /api/business` returns `warnings` ("Nobody approves for Rosa Alvarez yet...").
 
 **P2-23. A request above every approver's limit has nobody to answer it.** Owner: business. The $60,000 request went
 to the Controller, whose limit is $50,000: it left Rosa's "Waiting for me" and only the owner could answer it. Say in
-the request that it is above everyone's limit, and who can still answer.
+the request that it is above everyone's limit, and who can still answer. **Fixed in c43a8e7, verified 04:55 PT:** the $60,000 request leaves Rosa's list and sits with the
+owner, whose sentence says "Nobody there can approve it, so it goes to the owner".
 
 **P2-24. A guest run can cost more than the "25 cent budget" the owner is shown.** Owner: mana. The approved lookup
 cost 28 cents (model tokens count in `costCents`; the budget limits tool spending). The owner's question and the
@@ -315,6 +320,11 @@ README say "a $0.25 budget". Say "up to $0.25 of tools, plus the model", or cap 
 **P2-25. The guest price check found the page but no price.** Owner: mana, apify. "AirPods Pro at Best Buy Canada"
 returned the collection URL and said pricing wasn't in the results. For a judge's first guest request, a known case
 (apify.checkPrice, 1 cent) would show a real number.
+
+**Business fixes verified on main 6c85f6c (04:55 PT, QA box):** an admin cannot mint a pairing code for an owner
+person (403 "only the owner can pair a phone as the owner"), but can for a requester; the owner can. A worker frozen
+by the kill switch for 12 s finished normally on resume (the ECONNRESET is gone). The Business screens are back in
+`portal/dist` (fa30fbf).
 
 ## Docs site (gurtos.com)
 

@@ -14,7 +14,7 @@ Devpost text, and Ben's approved list.
 **Demo step** names the check in `./demo` (`core/demo.ts` moments, or `tracks/<name>/demo.ts`). "none" means no
 automated check yet.
 
-Checked against main `b418767`, Sat Oct 24 04:45 PT. `./demo` on that tree: 26 passed, 0 failed, 1 pending (real Droid, off by default).
+Checked against main `6c85f6c`, Sat Oct 24 04:55 PT. `./demo` on that tree: 26 passed, 0 failed, 1 pending (real Droid, off by default).
 
 ## Freeze plan
 
@@ -31,10 +31,10 @@ Checked against main `b418767`, Sat Oct 24 04:45 PT. `./demo` on that tree: 26 p
 |---|---|
 | verified (ISO) | 3 |
 | verified | 41 |
-| merged | 44 |
+| merged | 48 |
 | building | 26 |
-| planned | 28 |
-| **Total** | **142** |
+| planned | 26 |
+| **Total** | **144** |
 
 **Collisions** (detail below): none open at 03:27. The three found at 02:25 are resolved and Business is on main. Still
 watched: portal/dist rebuilt from merged sources (C-4).
@@ -114,13 +114,15 @@ answers nothing until a person is picked from the top bar.
 | Rule tester ("Who would approve this?", GET /api/business/route) | business | verified Oct 24 03:20 (API; the Settings > Rules screen not opened) | 276bb32 | business edition | Hyphenate, Microsoft |
 | Routed approvals (rule, who, people who could approve, why) | business | verified Oct 24 03:22 ($12,000 went to the Controller; Rosa saw it, Sam did not) | 276bb32 | business edition | Hyphenate, Microsoft |
 | No self-approval; approver limit; only a person answers (agents, tools and an unsigned box screen get 403) | business | verified Oct 24 03:23 (Sam on his own request 403, auditor 403, $60,000 over Rosa's $50,000 limit 403, unsigned box screen 403, a body name ignored) | 276bb32 | business edition | Hyphenate, Armadin |
-| Waiting for me (phone and desktop) | business | verified Oct 24 03:27 (Business phone home with Waiting, Tasks, Audit, Settings; see P2 below) | 276bb32 | business edition | Hyphenate |
+| Waiting for me (phone and desktop) | business | verified Oct 24 03:27; on first pairing the Server home flashes about 1.2 s and a "Sign in" placeholder shows 1 to 2.4 s (P2-21, partly fixed) | 276bb32 | business edition | Hyphenate |
 | My requests | business | merged (API `/api/approvals?for=me`; the screen not walked) | 276bb32 | business edition | Hyphenate |
 | Audit with CSV export (who asked, approver, seat) | business | verified Oct 24 03:24 (API and CSV as the auditor; a requester gets 403; the Audit app screen not opened) | 276bb32 | business edition | Hyphenate, Microsoft |
 | Kill switch: one switch, core's `settings.paused` | business, core | verified Oct 24 03:25 (`/api/pause` and Settings PATCH read and write one state; a running task freezes, a new one queues, release runs it; a requester and an approver get 403) | 276bb32 | business edition, moment 3 | Hyphenate |
-| Kill switch card and the paused desktop for every edition | business, portal | planned | | | Hyphenate |
-| Mana policy proposal hook | business, mana | planned | | | Mana, Hyphenate |
-| Microsoft items: shadow mode and a pilot plan, Entra ID sign-in, a measured incident drill | business | planned | | | Microsoft |
+| Kill switch on every edition (core `settings.paused`; the owner as backstop; a frozen worker resumes on a fresh broker connection) | business, core | merged (QA verified the freeze and resume Oct 24 04:55; the card and desktop screens not walked) | aa91999, 6c85f6c | business edition | Hyphenate |
+| Mana policy proposal hook (`box.policy`, `box.setPolicy`; only an owner or admin approving applies it) | business, mana | merged (not walked by QA) | aa91999, bc717b4 | tracks/mana/demo.ts | Mana, Hyphenate |
+| Incident drill (`core/drill.ts`, `POST /api/drill` for an owner or admin; numbers kept in the log) | business | merged (live numbers to follow; not run by QA) | 827f144 | none | Microsoft |
+| Work-account sign-in (Entra and Google were not reached; see its README) | business | merged (partly: provider flows not reached) | 1389b9f | none | Microsoft |
+| Shadow mode and a pilot plan | business | planned | | | Microsoft |
 | Jira-to-GurtOS people mapping | jira, business | planned | | | Atlassian, Hyphenate |
 
 ## Hyphenate (credit desk)
