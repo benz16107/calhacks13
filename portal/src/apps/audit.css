@@ -1,0 +1,81 @@
+/* Audit (docs/figma/business/4-audit.png). Kit classes do the controls; these place them. Sizes are the frame's. */
+
+.gos-au { flex: 1; min-height: 0; display: flex; flex-direction: column; background: var(--color-view-bg); }
+.gos-au > .g-status { flex: 1; }
+.gos-au-start { display: flex; align-items: center; gap: 10px; min-width: 0; white-space: nowrap; }
+.gos-au-start .g-app-icon { border-radius: 50%; }
+.gos-au-caption { color: var(--color-text-secondary); font: 400 var(--fs-caption) / var(--lh-caption) var(--font); overflow: hidden; text-overflow: ellipsis; }
+
+/* ---------- filters ---------- */
+
+.gos-au-filters { flex: none; display: flex; align-items: center; gap: 8px; padding: 10px 18px; border-bottom: 1px solid var(--color-border-default); }
+.gos-au-pill { display: inline-flex; align-items: center; gap: 6px; flex: none; height: 34px; padding: 0 12px; border: 0; border-radius: var(--radius-full); background: var(--color-button-bg); color: var(--color-text-primary); font: 400 var(--fs-body) / var(--lh-body) var(--font); white-space: nowrap; cursor: pointer; }
+.gos-au-pill:hover { background: var(--color-button-bg-hover); }
+.gos-au-search { cursor: text; padding-right: 10px; }
+.gos-au-search:focus-within { outline: 2px solid var(--color-accent-fg); outline-offset: 2px; }
+.gos-au-search input { min-width: 0; border: 0; padding: 0; background: transparent; color: inherit; font: inherit; outline: none; }
+.gos-au-search input::placeholder { color: var(--color-text-secondary); }
+.gos-au-search.is-set { background: var(--color-accent-subtle); color: var(--color-accent-fg); font-weight: 500; }
+.gos-au-search.is-set input { font-weight: 500; }
+.gos-au-x { display: grid; place-items: center; width: 22px; height: 22px; padding: 0; border: 0; border-radius: 50%; background: transparent; color: inherit; cursor: pointer; }
+.gos-au-x:hover { background: color-mix(in srgb, currentColor, transparent 85%); }
+.gos-au-count { margin-left: auto; flex: none; color: var(--color-text-secondary); font: 400 var(--fs-caption) / var(--lh-caption) var(--font); }
+.gos-au-count-m { display: none; }
+.gos-au-menu .g-menu-item:not(:has(> .g-icon)) { padding-inline-start: calc(var(--space-sm) * 2 + 16px); }
+.gos-au-dates { display: flex; flex-direction: column; gap: var(--space-xs); margin-top: var(--space-xs); padding: var(--space-sm) var(--space-sm) var(--space-xs); border-top: 1px solid var(--color-border-default); }
+.gos-au-dates label { display: grid; grid-template-columns: 44px 1fr; align-items: center; gap: var(--space-xs); color: var(--color-text-secondary); font: 400 var(--fs-caption) / var(--lh-caption) var(--font); }
+
+/* ---------- the timeline ---------- */
+
+.gos-au-body { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 420px; }
+.gos-au-main { min-height: 0; overflow: auto; }
+.gos-au-days { padding: 0 20px 18px; }
+.gos-au-day { position: sticky; top: 0; z-index: 1; padding: 18px 12px 14px; margin-bottom: -8px; background: linear-gradient(to bottom, var(--color-view-bg) 70%, transparent); font: 600 var(--fs-caption) / var(--lh-caption) var(--font); }
+.gos-au-list { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 2px; }
+.gos-au-entry { display: grid; grid-template-columns: 58px 30px minmax(0, 1fr); column-gap: 14px; align-items: start; width: 100%; padding: 10px 12px; border: 0; border-radius: 8px; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.gos-au-entry:hover { background: color-mix(in srgb, var(--color-view-bg), var(--color-text-primary) 3%); }
+.gos-au-entry[aria-current='true'] { background: var(--color-accent-subtle); }
+.gos-au-time { font: 400 var(--fs-mono) / var(--lh-body) var(--font-mono); color: var(--color-text-secondary); }
+.gos-au-text { min-width: 0; display: flex; flex-direction: column; }
+.gos-au-head { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.gos-au-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.gos-au-sub { color: var(--color-text-secondary); overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }
+.gos-au-entry[aria-current='true'] .gos-au-sub { display: block; }
+.gos-au-av { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; background: var(--color-app-settings); color: var(--color-app-glyph); font: 700 calc(12px * var(--text-scale)) / 1 var(--font); letter-spacing: 0.3px; }
+.gos-au-av.is-agent { background: var(--color-app-credit-desk); }
+.gos-au-av.is-bad { background: var(--color-destructive-bg); color: var(--color-destructive-on); }
+
+/* ---------- the table ---------- */
+
+.gos-au-table { --cols: 120px 110px 170px 150px minmax(0, 1fr); }
+.gos-au-tr { width: 100%; min-height: 44px; border-top: 0; border-inline: 0; background: transparent; font: inherit; text-align: left; cursor: pointer; }
+.gos-au-tr[aria-current='true'] { background: var(--color-accent-subtle); }
+.gos-au-tr:hover:not([aria-current='true']) { background: color-mix(in srgb, var(--color-view-bg), var(--color-text-primary) 3%); }
+.gos-au-dim { color: var(--color-text-secondary); }
+
+/* ---------- the selected entry ---------- */
+
+.gos-au-side { min-height: 0; overflow: auto; padding: 18px 20px; background: var(--color-window-bg); border-left: 1px solid var(--color-border-default); }
+.gos-au-card-head { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; font: 700 var(--fs-body) / var(--lh-heading) var(--font); }
+.gos-au-kv { margin: 0; }
+.gos-au-kv > div { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 12px; padding: 10px 14px; }
+.gos-au-kv > div + div { border-top: 1px solid var(--color-border-default); }
+.gos-au-kv dt { padding-top: 2px; font: 600 var(--fs-caption) / var(--lh-caption) var(--font); }
+.gos-au-kv dd { margin: 0; overflow-wrap: anywhere; }
+.gos-au-note { margin-top: 12px; color: var(--color-text-secondary); font: 400 var(--fs-caption) / var(--lh-caption) var(--font); }
+.gos-au-card.is-inline { margin: 4px 8px 12px; }
+
+/* ---------- the phone ---------- */
+
+@media (max-width: 699px) {
+  .gos-au-body { grid-template-columns: minmax(0, 1fr); }
+  .gos-au-side, .gos-au-count, .gos-au-caption { display: none; }
+  .gos-au-filters { overflow-x: auto; padding: 10px 12px; scrollbar-width: none; }
+  .gos-au-count-m { display: block; padding: 10px 20px 0; color: var(--color-text-secondary); font: 400 var(--fs-caption) / var(--lh-caption) var(--font); }
+  .gos-au-days { padding: 0 8px 18px; }
+  .gos-au-entry { grid-template-columns: 44px 28px minmax(0, 1fr); column-gap: 10px; padding: 10px 8px; }
+  .gos-au-av { width: 28px; height: 28px; }
+  .gos-au-head { display: block; }
+  .gos-au-head > .g-badge { margin-right: 8px; vertical-align: 1px; }
+  .gos-au-title { display: inline; white-space: normal; }
+}

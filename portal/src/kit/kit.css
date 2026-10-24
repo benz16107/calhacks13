@@ -69,6 +69,8 @@
   --color-app-jira: #2b4f7e;
   --color-app-asi-one: #3e4148;
   --color-app-other: #4f5866;
+  --color-app-waiting: #5c4a7d;
+  --color-app-audit: #47604f;
 
   --space-xxs: 3px; --space-xs: 6px; --space-sm: 12px; --space-md: 18px; --space-lg: 24px; --space-xl: 36px; --space-xxl: 48px;
   --radius-sm: 6px; --radius-md: 12px; --radius-lg: 15px; --radius-xl: 24px; --radius-full: 999px;
@@ -421,3 +423,5 @@ dialog.g-dialog::backdrop { background: var(--color-scrim); }
 }
 [data-reduce-motion] *, [data-reduce-motion] *::before, [data-reduce-motion] *::after { animation-name: g-fade !important; transition-property: opacity !important; }
 [data-reduce-motion] .g-progress[data-indeterminate] > span { animation: none !important; width: 100%; opacity: 0.5; }
+/* A group label in a sidebar: COMPANY in Settings on GurtOS Business (docs/figma/business/1a-people.png). */
+.g-sidebar-label { margin: var(--space-sm) var(--space-sm) var(--space-xxs); font-size: var(--fs-caption); line-height: var(--lh-caption); font-weight: 600; color: var(--color-text-secondary); text-transform: uppercase; letter-spacing: 0.02em; }

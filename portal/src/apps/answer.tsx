@@ -6,6 +6,9 @@ import { Button, Icon } from '../kit/ui.tsx';
 import { dollars } from '../util.ts';
 
 let lastAnswer = 0;
+/** What an Approve button names: the spend, or on GurtOS Business the amount the rules checked (not for a fraud flag). */
+const amountOf = (a: Approval) => a.costCents || (a.route && !/fraud/i.test(a.route.rule) ? a.route.amountCents : 0);
+const whole = (cents: number) => `$${Math.round(cents / 100).toLocaleString('en-US')}`;
 
 export function AnswerButtons({ a, after, large }: { a: Approval; after?: () => void; large?: boolean }) {
   useBox();
@@ -44,7 +47,7 @@ export function AnswerButtons({ a, after, large }: { a: Approval; after?: () => 
         Deny
       </Button>
       <Button large={large} kind="suggested" onClick={() => go(true)} disabled={busy || box.down}>
-        {live.costCents > 0 ? `Approve ${dollars(live.costCents)}` : 'Approve'}
+        {amountOf(live) > 0 ? `Approve ${live.costCents > 0 ? dollars(live.costCents) : whole(amountOf(live))}` : 'Approve'}
       </Button>
       {error && (
         <p class="gos-error" role="alert">

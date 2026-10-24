@@ -3,18 +3,19 @@
 // and the tab bar. The wallpaper is the page's background.
 import type { ComponentChildren } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { addMachine, api, box, changed, hosted, machine, machines, pairing, patchSettings, setPairing, surface, switchMachine, undo, useBox, type Approval, type Pairing } from './live.ts';
+import { addMachine, api, box, changed, hosted, machine, machines, pairing, patchSettings, setPairing, signIn, signedIn, surface, switchMachine, undo, useBox, type Approval, type Pairing } from './live.ts';
 import { AddToHomeScreen, InstallCard, ios, standalone } from './pwa/pwa.tsx';
 import { NotificationsCard, forget } from './apps/remote.tsx';
 import { AnswerButtons } from './apps/answer.tsx';
-import { AppIcon, Badge, Button, Icon, Menu, Popover, Progress, Switch } from './kit/ui.tsx';
+import { Avatar, WaitingList, askInfo } from './apps/business.tsx';
+import { Alert, AppIcon, Badge, Button, Icon, Menu, Popover, Progress, Switch } from './kit/ui.tsx';
 import { focus, focused, minimize, open, phone, wm } from './wm.tsx';
 import { launchable, type Launchable } from './apps/index.tsx';
 import { PRODUCT } from './product.ts';
 import { appOf, asks, boxList, dollars, hhmm, ofState, pending, plural, selfBox, taskTitle, trackOf, useNow, zone, spentToday } from './util.ts';
 
 /** Which shell overlay is open. One at a time, like a real desktop. */
-export const shell = { open: '' as '' | 'notifications' | 'control' | 'apps' | 'menu' | 'boxes', locked: false };
+export const shell = { open: '' as '' | 'notifications' | 'control' | 'apps' | 'menu' | 'boxes' | 'person', locked: false };
 export const toggle = (what: typeof shell.open) => ((shell.open = shell.open === what ? '' : what), changed());
 export const lock = () => ((shell.open = ''), (shell.locked = true), changed());
 
@@ -70,9 +71,9 @@ export function TopBar() {
             {PRODUCT}
           </span>
         </TopButton>
-        <TopButton pill label={`Box: ${selfBox().name}. Switch box`} onClick={pop('boxes')} expanded={shell.open === 'boxes'}>
+        <TopButton pill label={`Box: ${b.business.company || selfBox().name}. Switch box`} onClick={pop('boxes')} expanded={shell.open === 'boxes'}>
           <Icon name="computer" />
-          <span>{selfBox().name}</span>
+          <span>{b.business.company || selfBox().name}</span>
           <Icon name="pan-down" />
         </TopButton>
       </div>
@@ -96,10 +97,18 @@ export function TopBar() {
             </TopButton>
           )
         )}
-        <TopButton label={`${running} running. Open Tasks`} onClick={() => open('tasks/running')}>
-          <Icon name="media-playback-start" />
-          <span class="gos-tb-quiet">{running} running</span>
-        </TopButton>
+        {pausedNow() ? (
+          <TopButton label={`All agents paused by ${pausedNow()!.by}. Open the kill switch`} onClick={pop('control')}>
+            <Icon name="media-playback-pause" />
+            <span class="gos-tb-paused">All paused</span>
+          </TopButton>
+        ) : (
+          <TopButton label={`${running} running. Open Tasks`} onClick={() => open('tasks/running')}>
+            <Icon name="media-playback-start" />
+            <span class="gos-tb-quiet">{running} running</span>
+          </TopButton>
+        )}
+        {b.business.on && <PersonChip pop={pop('person')} />}
         <TopButton label="System menu" onClick={pop('control')} expanded={shell.open === 'control'}>
           <Icon name={b.system?.network.online === false || b.down ? 'network-offline' : 'network-wired'} />
           <Icon name="system-shutdown" />
@@ -124,6 +133,7 @@ export function TopBar() {
       {shell.open === 'boxes' && <BoxMenu anchor={anchor} />}
       {shell.open === 'notifications' && <NotificationCenter anchor={anchor} />}
       {shell.open === 'control' && <ControlCenter anchor={anchor} />}
+      {shell.open === 'person' && <PersonMenu anchor={anchor} />}
     </header>
   );
 }
@@ -144,6 +154,40 @@ function machineItems() {
       ? [{ label: `Forget ${now.box.name}…`, icon: 'user-trash', destructive: true, run: () => confirm(`Forget ${now.box.name} on this device? The box stops sending it notifications, and it needs a new code to pair again.`) && void forget(now).then(() => (setPairing(undefined), location.replace('/'))) }]
       : []),
   ];
+}
+
+const roleWord = (p: { title?: string; role: string }) => p.title || p.role[0].toUpperCase() + p.role.slice(1);
+
+/** GurtOS Business: who is signed in on this screen (docs/figma/business/1a-people.png, top right). */
+function PersonChip({ pop }: { pop: (e: Event) => void }) {
+  const p = box.business.me?.person;
+  return (
+    <TopButton pill label={p ? `Signed in as ${p.name}, ${roleWord(p)}. Change` : 'Sign in as a person'} onClick={pop} expanded={shell.open === 'person'}>
+      {p ? <Avatar name={p.name} size={20} /> : <Icon name="avatar-default" />}
+      <span>{p ? `${p.name} · ${roleWord(p)}` : 'Sign in'}</span>
+    </TopButton>
+  );
+}
+
+/**
+ * On the box's own screen, pick who is using it; requests, rights and the log follow that person. A paired phone is
+ * always the person it was paired for.
+ */
+function PersonMenu({ anchor }: { anchor: HTMLElement | null }) {
+  const b = useBox();
+  const me = b.business.me;
+  const close = () => toggle('person');
+  const items = pairing()
+    ? [{ label: `This phone is paired to ${me?.person?.name ?? 'nobody'}`, icon: 'phone', disabled: true, run: () => {} }]
+    : [
+        ...(me?.directory ?? []).map((p) => ({ label: `${p.name} · ${roleWord(p)}`, icon: p.id === signedIn() ? 'object-select' : 'avatar-default', run: () => signIn(p.id) })),
+        ...(signedIn() ? (['sep', { label: "Sign out: the box's own screen", icon: 'system-lock-screen', run: () => signIn(undefined) }] as const) : []),
+      ];
+  return (
+    <Popover anchor={anchor} onClose={close} align="end" label="Who is using this screen">
+      <Menu label="Who is using this screen" onClose={close} items={[...items, 'sep', { label: 'Waiting for me', icon: 'preferences-system-time', run: () => open('waiting') }]} />
+    </Popover>
+  );
 }
 
 function BoxMenu({ anchor }: { anchor: HTMLElement | null }) {
@@ -203,7 +247,8 @@ function askNotices(): Notice[] {
         appTitle: app.title,
         title: a.costCents ? `${taskTitle(a.task)} needs your OK` : a.question,
         body: a.costCents ? `${a.question}${a.question.includes('test') ? '' : ' Test money.'}` : `${taskTitle(a.task)} asks. Other tasks keep running.`,
-        open: () => open(`task/${a.task}`),
+        open: () => open(box.business.on ? `request/${a.id}` : `task/${a.task}`),
+        ...(box.business.on ? { title: askInfo(a).fraud ? `Fraud flag on ${askInfo(a).title}` : `${askInfo(a).title} needs your OK`, body: a.route?.why ?? a.question } : {}),
       };
     })
     .sort((x, y) => y.at - x.at);
@@ -246,6 +291,21 @@ function newsNotices(): Notice[] {
           </Button>
         </>
       ),
+    });
+  }
+  // GurtOS Business: the kill switch, pulled or let go.
+  const sw = box.events.findLast((e) => e.type === 'note' && e.track === 'kill-switch');
+  if (sw?.type === 'note') {
+    const d = sw.data as { paused: boolean; by: string; via?: string };
+    out.push({
+      id: `kill-${sw.seq}`,
+      at: Date.parse(sw.at),
+      app: 'settings',
+      appTitle: PRODUCT,
+      title: d.paused ? `All agents paused by ${d.by}` : `Agents resumed by ${d.by}`,
+      body: d.paused ? `${d.by} used the kill switch${d.via && d.via !== d.by ? ` on ${d.via}` : ''}. Tasks stopped where they were. Only ${resumer()} can resume.` : 'Every task carries on from where it stopped.',
+      quiet: !d.paused,
+      open: () => toggle('control'),
     });
   }
   const r = box.restored;
@@ -417,7 +477,7 @@ function ControlCenter({ anchor }: { anchor: HTMLElement | null }) {
     <Popover anchor={anchor} onClose={() => toggle('control')} align="end" class="gos-cc" label="System menu">
       <div class="gos-cc-head">
         <div class="gos-two">
-          <span class="t-heading">{selfBox().name}</span>
+          <span class="t-heading">{b.business.company || selfBox().name}</span>
           <span class="t-caption t-secondary">
             {b.system ? `${b.system.editionName} ${b.system.version} · up ${uptime(b.system.startedAt)}` : PRODUCT}
           </span>
@@ -475,7 +535,78 @@ function ControlCenter({ anchor }: { anchor: HTMLElement | null }) {
           );
         })}
       </div>
+      {(b.business.on || b.owner) && <KillSwitchCard />}
     </Popover>
+  );
+}
+
+/** The kill switch's state on any edition: Business says who pulled it; elsewhere GET /api/system does. */
+export const pausedNow = () => {
+  const p = box.business.me?.paused ?? (box.system?.paused?.paused ? box.system.paused : null);
+  return p ? { by: p.by ?? 'the owner', at: p.at ?? '', via: p.via ?? undefined } : null;
+};
+/** Who may resume: an IT admin on GurtOS Business, the owner elsewhere. */
+const resumer = () => (box.business.on ? 'an IT admin' : 'the owner');
+
+/** Who may pull the kill switch: an admin or the owner. */
+export const mayPause = () => box.owner || ['admin', 'owner'].includes(box.business.me?.person?.role ?? '');
+/** The tasks a pause stops: everything still going. */
+export const stoppable = () => ofState('running', 'waiting', 'queued');
+
+/** GurtOS Business: the kill switch in Control Center, with its alert (docs/figma/business/5a-kill-switch-box.png). */
+function KillSwitchCard() {
+  const b = useBox();
+  const [confirm, setConfirm] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const paused = pausedNow();
+  const company = b.business.company || selfBox().name;
+  const go = async (what: 'pause' | 'resume') => {
+    setBusy(true);
+    setError('');
+    try {
+      await api('POST', `/${what}`);
+      setConfirm(false);
+    } catch (e) {
+      setError((e as Error).message);
+    }
+    setBusy(false);
+  };
+  return (
+    <div class={`gos-kill${paused ? ' is-paused' : ''}`}>
+      <div class="gos-two gos-grow">
+        <span class="t-body-strong gos-kill-title">{paused ? 'All agents are paused' : 'Kill switch'}</span>
+        <span class="t-caption">
+          {paused ? `${paused.by} paused them at ${hhmm(paused.at)}. Requests waiting for an OK stay open.` : `${b.business.on ? 'IT admins only' : 'Owner only'}. Stops every agent at once.`}
+        </span>
+        {!mayPause() && <span class="t-caption t-secondary">Only {resumer()} can {paused ? 'resume' : 'pause'} the agents.</span>}
+        {error && (
+          <span class="gos-error" role="alert">
+            {error}
+          </span>
+        )}
+      </div>
+      {paused ? (
+        <Button kind="suggested" disabled={!mayPause() || busy} onClick={() => void go('resume')}>
+          Resume all agents
+        </Button>
+      ) : (
+        <Button kind="destructive" disabled={!mayPause() || busy} onClick={() => setConfirm(true)}>
+          Pause all agents
+        </Button>
+      )}
+      {confirm && (
+        <Alert
+          title={`Pause all agents at ${company}?`}
+          body={`${plural(stoppable().length, 'running task')} stop where they are, and nothing new starts. The ${plural([...b.approvals.values()].filter((a) => a.state === 'pending').length, 'request')} waiting for an OK stay open. Only ${resumer()} can resume. The pause goes in the ${b.business.on ? 'audit log' : 'action log'}.`}
+          action="Pause all agents"
+          destructive
+          busy={busy}
+          onConfirm={() => void go('pause')}
+          onCancel={() => setConfirm(false)}
+        />
+      )}
+    </div>
   );
 }
 
@@ -488,7 +619,7 @@ function paidTwice() {
   return [...seen.values()].filter((n) => n > 1).length;
 }
 
-function Widget({ label, value, tone, lines, onClick }: { label: string; value: string | number; tone?: 'attention'; lines: string[]; onClick: () => void }) {
+function Widget({ label, value, tone, lines, onClick }: { label: string; value: string | number; tone?: 'attention' | 'destructive'; lines: string[]; onClick: () => void }) {
   return (
     <button type="button" class="gos-widget-card" onClick={onClick}>
       <span class="gos-widget-label">{label}</span>
@@ -508,6 +639,7 @@ export function DesktopHome() {
   const now = useNow(60_000);
   const need = pending();
   const running = ofState('running');
+  if (pausedNow()) return <PausedHome />;
   const r = b.restored && now - b.restored.at < 15 * 60_000 ? b.restored : undefined;
   const blocked = b.today.blocked;
   const summary = r
@@ -518,7 +650,7 @@ export function DesktopHome() {
     <section class="gos-desk" aria-label="Today">
       <h1 class="t-title1 gos-desk-title">
         {r ? 'Welcome back' : greeting(now)}
-        {b.ownerName ? `, ${b.ownerName}` : ''}
+        {b.business.me?.person ? `, ${b.business.me.person.name.split(' ')[0]}` : b.ownerName ? `, ${b.ownerName}` : ''}
       </h1>
       <p class="t-body gos-desk-sub">{summary}</p>
       <div class="gos-desk-widgets">
@@ -538,6 +670,40 @@ export function DesktopHome() {
         <Button kind="suggested" large icon="list-add" onClick={() => open('tasks/new')}>
           New task
         </Button>
+      </div>
+    </section>
+  );
+}
+
+/** GurtOS Business while the kill switch is on (docs/figma/business/5c-all-agents-paused.png). */
+function PausedHome() {
+  const b = useBox();
+  const p = pausedNow()!;
+  const stopped = stoppable();
+  const waiting = [...b.approvals.values()].filter((a) => a.state === 'pending');
+  const seats = new Map<string, number>();
+  for (const t of stopped) seats.set(t.seat ?? t.title, (seats.get(t.seat ?? t.title) ?? 0) + 1);
+  const from = p.via && p.via !== p.by ? ` from ${p.via === 'box screen' ? "the box's screen" : p.via}` : '';
+  return (
+    <section class="gos-desk" aria-label="All agents are paused">
+      <h1 class="t-title1 gos-desk-title">All agents are paused</h1>
+      <p class="t-body gos-desk-sub">
+        {p.by} paused them at {hhmm(p.at)}
+        {from}. {plural(stopped.length, 'task')} stopped where they were. Requests waiting for an OK stay open.
+      </p>
+      <div class="gos-desk-widgets">
+        <Widget
+          label="Waiting for an OK"
+          value={waiting.length}
+          tone={waiting.length ? 'attention' : undefined}
+          lines={waiting.slice(0, 3).map((a) => {
+            const i = askInfo(a);
+            return `${i.id ?? short(i.title, 22)}: ${i.fraud ? 'fraud flag' : i.amount ? `$${Math.round(i.amount / 100).toLocaleString('en-US')}` : 'an OK'}${a.route ? `, for ${a.route.people.map((x) => x.name.split(' ')[0]).join(' or ') || 'nobody yet'}` : ''}`;
+          })}
+          onClick={() => open('waiting')}
+        />
+        <Widget label="Paused" value={stopped.length} tone="destructive" lines={[...seats].slice(0, 3).map(([seat, n]) => `${seat}: ${plural(n, 'task')}`)} onClick={() => open('tasks/running')} />
+        <Widget label="Spent today" value={spentToday()} lines={['on models, before the pause', `${plural(b.tasks.size, 'task')}, ${plural(b.today.blocked, 'blocked attempt')}`]} onClick={() => open('activity')} />
       </div>
     </section>
   );
@@ -638,6 +804,14 @@ export function Launcher({ home }: { home?: boolean }) {
 /** The phone's home (Figma 90:6534): the box, what needs you with its buttons, what runs, then the apps. */
 export function PhoneHome() {
   const b = useBox();
+  if (b.business.on)
+    return (
+      <main class="gos-home gos-home-business" aria-label="Waiting for me">
+        <WaitingList />
+        <InstallCard />
+        <NotificationsCard />
+      </main>
+    );
   const list = asks();
   const running = ofState('running');
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
@@ -735,9 +909,16 @@ const TABS: [string, string, string][] = [
   ['activity', 'Activity', 'utilities-terminal'],
   ['settings', 'Settings', 'emblem-system'],
 ];
+/** GurtOS Business (docs/figma/business/3): Waiting, Tasks, Audit, Settings. */
+const BUSINESS_TABS: [string, string, string][] = [
+  ['', 'Waiting', 'preferences-system-time'],
+  ['tasks', 'Tasks', 'view-app-grid'],
+  ['audit', 'Audit', 'help-about'],
+  ['settings', 'Settings', 'emblem-system'],
+];
 /** The phone's tab bar: Home, Tasks, Activity, Settings. */
 export function TabBar() {
-  useBox();
+  const b = useBox();
   const top = focused();
   const at = top ? top.route.split('/')[0] : '';
   const need = pending().length;
@@ -748,11 +929,11 @@ export function TabBar() {
   };
   return (
     <nav class="gos-tabbar" aria-label="Sections">
-      {TABS.map(([route, label, icon]) => (
-        <button type="button" class="gos-tab" aria-current={at === route || (route === 'tasks' && at === 'task') ? 'page' : undefined} onClick={() => go(route)} key={label}>
+      {(b.business.on ? BUSINESS_TABS : TABS).map(([route, label, icon]) => (
+        <button type="button" class="gos-tab" aria-current={at === route || (route === 'tasks' && at === 'task') || (route === '' && (at === 'request' || at === 'waiting')) ? 'page' : undefined} onClick={() => go(route)} key={label}>
           <span class="gos-tab-icon">
             <Icon name={icon} size={22} />
-            {route === 'tasks' && need > 0 && <Badge>{need}</Badge>}
+            {route === (b.business.on ? '' : 'tasks') && need > 0 && <Badge>{need}</Badge>}
           </span>
           {label}
         </button>

@@ -12,14 +12,24 @@ import { HeaderBar, InWindow, open, phone, useWin } from '../wm.tsx';
 import { access } from '../shell.tsx';
 import { PRODUCT } from '../product.ts';
 import { dollars, plural, selfBox, useNow } from '../util.ts';
+import { KillSwitchPage, PeoplePage, RulesPage } from './company.tsx';
 /** One model key lets agents think: an Anthropic key or a Factory key. */
 const MODEL_KEYS = ['ANTHROPIC_API_KEY', 'FACTORY_API_KEY'];
 
 type Page = [id: string, title: string, icon: string, words: string];
-const PAGES: (Page | 'sep')[] = [
+/** GurtOS Business adds a COMPANY group (docs/figma/business/1a-people.png): people, rules and the kill switch. */
+const COMPANY: (Page | 'sep' | 'company')[] = [
+  'company',
+  ['people', 'People', 'avatar-default', 'people roles approvers limits phones pair add a person agent seats'],
+  ['rules', 'Rules', 'help-about', 'rules policy who approves controller limits fraud always on'],
+  ['kill-switch', 'Kill switch', 'process-stop', 'kill switch pause all agents resume stop'],
+  'sep',
+];
+const ALL_PAGES: (Page | 'sep' | 'company')[] = [
   ['general', 'General', 'computer', 'name address time zone network ethernet wi-fi restart run setup again'],
   ['agents', 'Agents & Models', 'applications-science', 'worker droid claude model keys spend today'],
   'sep',
+  ...COMPANY,
   ['permissions', 'Permissions', 'security-high', 'internet hosts network folders spending budget approval quiet hours'],
   ['keys', 'Accounts & Keys', 'dialog-password', 'vault keys secrets owner replace'],
   ['apps', 'Apps', 'view-app-grid', 'apps on off app center'],
@@ -32,7 +42,9 @@ const PAGES: (Page | 'sep')[] = [
   'sep',
   ['about', 'About', 'help-about', 'version build edition box id uptime credits icons typeface'],
 ];
-const pages = PAGES.filter((p): p is Page => p !== 'sep');
+/** The pages this box shows: COMPANY only on GurtOS Business. */
+const pageList = () => (box.business.on ? ALL_PAGES : ALL_PAGES.filter((p) => !COMPANY.includes(p)));
+const pagesNow = () => pageList().filter((p): p is Page => typeof p !== 'string');
 
 /** The app title without its note in brackets: "Shopper (test payments)" is Shopper. A track with no title of its own shows its id as words. */
 export function appTitle(a: Pick<AppInfo, 'title' | 'id'>) {
@@ -160,10 +172,11 @@ export function SettingsApp({ page }: { page: string }) {
   const win = useWin();
   const [q, setQ] = useState('');
   const mobile = phone();
+  const pages = pagesNow();
   const current = pages.find((p) => p[0] === page) ?? (mobile ? undefined : pages[0]);
   const needle = q.trim().toLowerCase();
   const go = (id: string) => win?.navigate(`settings/${id}`);
-  const shown = PAGES.filter((p) => !needle || (p !== 'sep' && `${p[1]} ${p[3]}`.toLowerCase().includes(needle)));
+  const shown = pageList().filter((p) => !needle || (typeof p !== 'string' && `${p[1]} ${p[3]}`.toLowerCase().includes(needle)));
 
   const sidebar = (
     <nav class="g-sidebar" aria-label="Settings pages">
@@ -179,7 +192,7 @@ export function SettingsApp({ page }: { page: string }) {
             value={q}
             onInput={(e) => setQ((e.target as HTMLInputElement).value)}
             onKeyDown={(e) => {
-              const first = shown.find((p): p is Page => p !== 'sep');
+              const first = shown.find((p): p is Page => typeof p !== 'string');
               if (e.key === 'Enter' && first) go(first[0]);
             }}
           />
@@ -187,6 +200,12 @@ export function SettingsApp({ page }: { page: string }) {
         {shown.map((p, i) =>
           p === 'sep' ? (
             !needle && <div class="g-sidebar-sep" role="separator" key={i} />
+          ) : p === 'company' ? (
+            !needle && (
+              <h3 class="g-sidebar-label" key={i}>
+                Company
+              </h3>
+            )
           ) : (
             <button type="button" class="g-sidebar-item" aria-current={p === current ? 'page' : undefined} onClick={() => go(p[0])} key={p[0]}>
               <Icon name={p[2]} />
@@ -195,7 +214,7 @@ export function SettingsApp({ page }: { page: string }) {
             </button>
           ),
         )}
-        {needle && !shown.some((p) => p !== 'sep') && <p class="gos-set-none">No setting matches "{q}".</p>}
+        {needle && !shown.some((p) => typeof p !== 'string') && <p class="gos-set-none">No setting matches "{q}".</p>}
       </div>
     </nav>
   );
@@ -217,7 +236,11 @@ export function SettingsApp({ page }: { page: string }) {
     privacy: () => <Privacy />,
     appearance: () => <Appearance />,
     about: () => <About />,
+    people: () => <PeoplePage />,
+    rules: () => <RulesPage />,
+    'kill-switch': () => <KillSwitchPage />,
   };
+  const company = ['people', 'rules', 'kill-switch'].includes(current![0]);
   return (
     <div class="g-split">
       {!mobile && sidebar}
@@ -225,7 +248,7 @@ export function SettingsApp({ page }: { page: string }) {
         <HeaderBar title={current![1]} start={mobile && <IconButton icon="go-previous" label="All settings" onClick={() => win?.navigate('settings')} />} />
         <div class="g-window-content">
           <div class="g-prefs" key={current![0]}>
-            {!b.owner && <ReadOnly />}
+            {!b.owner && !company && <ReadOnly />}
             {body[current![0]]()}
           </div>
         </div>
@@ -570,10 +593,10 @@ interface PairCode {
   url: string;
   expiresAt: string;
 }
-const formatCode = (c: string) => c.toUpperCase().match(/.{1,4}/g)?.join('-') ?? c;
+export const formatCode = (c: string) => c.toUpperCase().match(/.{1,4}/g)?.join('-') ?? c;
 const loopback = ['127.0.0.1', 'localhost'].includes(location.hostname);
 
-function Qr({ text, label }: { text: string; label: string }) {
+export function Qr({ text, label }: { text: string; label: string }) {
   const q = qrcode(0, 'M');
   q.addData(text);
   q.make();

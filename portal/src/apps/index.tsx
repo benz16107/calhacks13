@@ -10,6 +10,8 @@ import { SettingsApp } from './settings.tsx';
 import { AppCenterApp } from './appcenter.tsx';
 import { TrackApp, trackEntry } from './track.tsx';
 import { PairApp } from './pair.tsx';
+import { AuditApp } from './audit.tsx';
+import { RequestApp, WaitingApp } from './business.tsx';
 
 wm.apps = {
   tasks: { title: () => 'Tasks', icon: 'tasks', size: [1480, 689], render: (arg) => <TasksApp view={arg} />, single: true },
@@ -20,6 +22,10 @@ wm.apps = {
   'app-center': { title: () => 'App Center', icon: 'app-center', size: [1240, 860], render: (id) => <AppCenterApp id={id} />, single: true },
   app: { title: (arg) => trackEntry(arg)?.title.replace(/\s*\(.*\)$/, '') ?? arg, icon: '', size: [1280, 820], render: (arg) => <TrackApp arg={arg} key={arg} /> },
   pair: { title: () => 'Pair this phone', icon: 'settings', size: [560, 560], render: (code) => <PairApp code={code} /> },
+  // GurtOS Business
+  waiting: { title: () => 'Waiting for me', icon: 'waiting', size: [1240, 820], render: () => <WaitingApp />, single: true },
+  request: { title: () => 'Request', icon: 'waiting', size: [760, 820], render: (id) => <RequestApp id={id} key={id} /> },
+  audit: { title: () => 'Audit', icon: 'audit', size: [1500, 860], render: () => <AuditApp />, single: true },
 };
 
 export interface Launchable {
@@ -36,9 +42,11 @@ export interface Launchable {
 /** What the dock and Show Apps list: GurtOS's own apps, every enabled track app, then the system apps. */
 export function launchable(): Launchable[] {
   const own: Launchable[] = [
+    ...(box.business.on ? [{ id: 'waiting', route: 'waiting', title: 'Waiting for me', icon: 'waiting' }] : []),
     { id: 'tasks', route: 'tasks', title: 'Tasks', icon: 'tasks' },
     { id: 'activity', route: 'activity', title: 'Activity', icon: 'activity' },
     { id: 'time-machine', route: 'time-machine', title: 'Time Machine', icon: 'time-machine' },
+    ...(box.business.on ? [{ id: 'audit', route: 'audit', title: 'Audit', icon: 'audit' }] : []),
   ];
   const tracks = box.apps.map((a) => ({
     id: `${a.track}/${a.name}`,
