@@ -6,27 +6,29 @@
 #   portal/dev-box.sh dist       ship portal/dist only (the box serves files from disk, no restart)
 #   portal/dev-box.sh restart    pull the plug: kill the box and its tasks at once, then boot it on the same data
 #   portal/dev-box.sh stop       stop it and delete its data
+# DEV=<name> DEV_PORT=<port> runs a second one beside it (another thread's checkout), with its own data and database.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 vm() { /home/linuxbrew/.linuxbrew/bin/limactl shell --workdir / box -- "$@"; }
-dest=/opt/box-dev/portal-dev
-home=/var/lib/box-portal-dev
-port=7790
+name=${DEV:-portal-dev}
+dest=/opt/box-dev/$name
+home=/var/lib/box-$name
+port=${DEV_PORT:-7790}
 
 # The plug: the box's process group, every task user's processes, and the task mounts, all at once.
-kill="kill -9 -\$(cat /run/box-portal-dev.pid 2>/dev/null || echo 0) 2>/dev/null || true
+kill="pid=\$(cat /run/box-$name.pid 2>/dev/null || true); [ -n \"\$pid\" ] && kill -9 -\$pid 2>/dev/null; true
   for u in \$(awk -F: '\$3>=30000 && \$3<40000 {print \$1}' /etc/passwd); do [ -d $home/tasks/\${u#box-} ] && pkill -KILL -u \$u || true; done
   sleep 0.5; grep -o \" $home/[^ ]*\" /proc/mounts | sort -r | xargs -r -n1 umount -l; true"
 wipe="$kill
   for u in \$(awk -F: '\$3>=30000 && \$3<40000 {print \$1}' /etc/passwd); do [ -d $home/tasks/\${u#box-} ] && userdel \$u || true; done 2>/dev/null
   rm -rf $home
-  flock /run/lock/box-spacetime-cli.lock spacetime delete --server local -y box-portal-dev >/dev/null 2>&1 || true"
+  flock /run/lock/box-spacetime-cli.lock spacetime delete --server local -y box-$name >/dev/null 2>&1 || true"
 start="cd $dest
-  BOX_ID=dev-box BOX_NAME='dev box' BOX_URL=http://linuxbox.tailb51682.ts.net:7791 BOX_PEERS='[{\"id\":\"vultr\",\"name\":\"vultr box\",\"stdb\":\"box\"}]' \
-  BOX_HOME=$home BOX_PORT=$port BOX_VAULT=$home/vault.env BOX_STDB_DB=box-portal-dev BOX_PROXY_PORT=auto \
+  BOX_ID=dev-box BOX_NAME='dev box' BOX_URL=http://linuxbox.tailb51682.ts.net:$((port + 1)) BOX_PEERS='[{\"id\":\"vultr\",\"name\":\"vultr box\",\"stdb\":\"box\"}]' \
+  BOX_HOME=$home BOX_PORT=$port BOX_VAULT=$home/vault.env BOX_STDB_DB=box-$name BOX_PROXY_PORT=auto \
   BOX_PORTAL=$dest/portal/dist setsid nohup node --experimental-strip-types --disable-warning=ExperimentalWarning core/box.ts \
   >> $home/box.log 2>&1 < /dev/null &
-  echo \$! > /run/box-portal-dev.pid
+  echo \$! > /run/box-$name.pid
   for i in \$(seq 50); do curl -fs 127.0.0.1:$port/health >/dev/null && break; sleep 0.3; done"
 
 case ${1:-} in

@@ -1,0 +1,89 @@
+/* Settings and App Center (Figma 76:2071 to 77:4131, 79:4011, 79:4398). Everything else comes from kit.css. */
+
+.gos-set-sidebar-body { gap: 2px; }
+.gos-set-search { margin-bottom: 10px; }
+.gos-set-search .g-field { height: var(--size-control); }
+.gos-set-none { padding: var(--space-xs) var(--space-sm); color: var(--color-text-secondary); font-size: var(--fs-caption); }
+.gos-set-banner .g-icon { color: var(--color-accent-fg); }
+.gos-set-value { flex: none; color: var(--color-text-secondary); white-space: nowrap; }
+.gos-set-value.t-success { color: var(--color-success-fg); }
+.gos-set-mono { font-family: var(--font-mono); font-size: var(--fs-mono); line-height: var(--lh-mono); letter-spacing: 0.4px; }
+.gos-set-row-off { opacity: 0.6; }
+.g-row .g-btn { flex: none; }
+
+/* Updates: the two systems, the running one ringed in accent. */
+.gos-set-slots { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.gos-set-slot { display: flex; flex-direction: column; gap: 6px; padding: 18px; background: var(--color-card-bg); border: 1px solid var(--color-border-default); border-radius: var(--radius-md); }
+.gos-set-slot.is-current { border: 2px solid var(--color-accent-fg); padding: 17px; }
+.gos-set-slot-head { display: flex; align-items: center; gap: 10px; font: 700 var(--fs-body) / var(--lh-heading) var(--font); }
+.gos-set-slot p { font: 400 var(--fs-caption) / var(--lh-caption) var(--font); color: var(--color-text-secondary); }
+
+/* Appearance: three style previews drawn in both palettes, whatever the window's own theme is. */
+.gos-set-themes { display: flex; gap: 18px; }
+.gos-set-theme { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 0; border: 0; background: none; color: var(--color-text-primary); cursor: pointer; font: 400 var(--fs-body) / var(--lh-body) var(--font); }
+.gos-set-theme[aria-checked='true'] { font-weight: 700; }
+.gos-set-preview { position: relative; width: 100%; max-width: 220px; aspect-ratio: 220 / 132; border-radius: 12px; overflow: hidden; background: var(--color-desktop-sky); border: 1px solid var(--color-border-default); }
+.gos-set-theme[aria-checked='true'] .gos-set-preview { border: 3px solid var(--color-accent-fg); }
+.gos-set-theme:focus-visible { outline: none; }
+.gos-set-theme:focus-visible .gos-set-preview { outline: 2px solid var(--color-accent-fg); outline-offset: 2px; }
+.gos-set-mini { --w: #f6f5f2; --s: #eceae5; --h: #edebe6; --c: #fefdfb; --a: #2f64a6; position: absolute; left: 16%; top: 20%; width: 68%; height: 68%; border-radius: 8px; overflow: hidden; background: var(--w); }
+.gos-set-mini.is-dark { --w: #1e2228; --s: #181b20; --h: #2b3038; --c: #2c3139; --a: #78a9e6; }
+.gos-set-mini.is-half { left: 50%; width: 34%; }
+.gos-set-mini::before { content: ''; position: absolute; inset: 0 auto 0 0; width: 27%; background: var(--s); }
+.gos-set-mini::after { content: ''; position: absolute; left: 27%; right: 0; top: 0; height: 16%; background: var(--h); }
+.gos-set-mini > i { position: absolute; left: 33%; width: 60%; height: 16%; border-radius: 3px; background: var(--c); }
+.gos-set-mini > i:nth-child(1) { top: 27%; } .gos-set-mini > i:nth-child(2) { top: 49%; } .gos-set-mini > i:nth-child(3) { top: 71%; }
+.gos-set-mini > b { position: absolute; left: 80%; top: 30%; width: 10.7%; height: 9%; border-radius: 4px; background: var(--a); }
+.gos-set-mini.is-half::before { width: 54%; } .gos-set-mini.is-half::after { left: 54%; }
+.gos-set-mini.is-half > i, .gos-set-mini.is-half > b { display: none; }
+.gos-set-accent { display: flex; flex-direction: column; gap: 10px; }
+.gos-set-swatches { display: flex; gap: 12px; }
+.gos-set-swatch { width: 32px; height: 32px; padding: 0; border: 0; border-radius: 50%; background: var(--swatch); cursor: pointer; }
+.gos-set-swatch[aria-checked='true'] { box-shadow: 0 0 0 2px var(--color-window-bg), 0 0 0 4px var(--color-text-primary); }
+.gos-set-swatch:focus-visible { outline: 2px solid var(--color-accent-fg); outline-offset: 4px; }
+
+/* Devices: the pairing card. The QR sits on white in both themes so any camera reads it. */
+.gos-set-pair { display: flex; gap: 24px; padding: 18px; background: var(--color-card-bg); border: 1px solid var(--color-border-default); border-radius: var(--radius-md); box-shadow: var(--shadow-1); }
+.gos-set-qr { flex: none; width: 168px; height: 168px; padding: 6px; background: #fff; border-radius: var(--radius-sm); display: grid; place-items: center; color: #565c64; font: 400 var(--fs-caption) / var(--lh-caption) var(--font); text-align: center; }
+.gos-set-qr svg { width: 100%; height: 100%; }
+.gos-set-pair-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+.gos-set-code { font: 400 calc(22px * var(--text-scale)) / 1.2 var(--font-mono); letter-spacing: 2px; margin-top: 2px; }
+.gos-set-pair-text label { display: flex; align-items: center; gap: var(--space-sm); margin-top: var(--space-xs); }
+
+/* About */
+.gos-set-about-head { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: var(--space-lg) 0 var(--space-xs); }
+.gos-set-wordmark { font: 700 calc(56px * var(--text-scale)) / 1.1 var(--font); letter-spacing: -1px; }
+.gos-set-wordmark span { font-weight: 400; }
+
+/* App Center */
+.gos-ac-page { display: flex; flex-direction: column; gap: var(--space-lg); padding: var(--space-md) var(--space-lg) var(--space-lg); }
+.gos-ac-intro { display: flex; flex-direction: column; gap: 4px; }
+.gos-ac-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 16px; align-items: start; }
+.gos-ac-card { position: relative; display: flex; align-items: flex-start; gap: 14px; padding: 16px; background: var(--color-card-bg); border: 1px solid var(--color-border-default); border-radius: var(--radius-md); box-shadow: var(--shadow-1); transition: border-color var(--duration-fast); }
+.gos-ac-card:hover { border-color: var(--color-border-strong); }
+.gos-ac-card .g-app-icon { --size: 52px; }
+.gos-ac-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; font: 400 var(--fs-caption) / var(--lh-caption) var(--font); color: var(--color-text-secondary); }
+.gos-ac-name { display: flex; align-items: center; gap: 8px; }
+.gos-ac-desc { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.gos-ac-open { padding: 0; border: 0; background: none; cursor: pointer; color: var(--color-text-primary); font: 700 var(--fs-body) / var(--lh-heading) var(--font); text-align: left; }
+.gos-ac-open::after { content: ''; position: absolute; inset: 0; border-radius: inherit; }
+.gos-ac-open:focus-visible { outline: none; }
+.gos-ac-card:has(.gos-ac-open:focus-visible) { outline: 2px solid var(--color-accent-fg); outline-offset: 2px; }
+.gos-ac-card .g-btn { position: relative; z-index: 1; flex: none; }
+.gos-ac-detail { display: flex; flex-direction: column; gap: 22px; width: min(720px, 100%); margin: 0 auto; padding: var(--space-sm) var(--space-lg) var(--space-xl); }
+.gos-ac-head { display: flex; gap: 18px; align-items: flex-start; }
+.gos-ac-head .g-app-icon { --size: 80px; border-radius: 20px; }
+.gos-ac-head > div { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--space-xs); }
+.gos-ac-head .gos-actions { margin-top: var(--space-xs); }
+
+/* The phone: the sidebar is the first screen, and a page opens over it with Back. */
+.gos-set-mobile .g-sidebar { width: 100%; max-height: none; flex: 1; border: 0; }
+.gos-set-mobile .g-sidebar .g-headerbar { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); }
+@media (max-width: 699px) {
+  .gos-set-slots { grid-template-columns: 1fr; }
+  .gos-set-themes { gap: var(--space-sm); }
+  .gos-set-pair { flex-direction: column; align-items: center; }
+  .gos-ac-grid { grid-template-columns: 1fr; }
+  .gos-ac-page, .gos-ac-detail { padding: var(--space-sm) var(--space-md) var(--space-lg); }
+  .g-prefs { padding: var(--space-sm) var(--space-md) var(--space-xl); }
+}

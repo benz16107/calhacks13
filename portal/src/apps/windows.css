@@ -1,0 +1,108 @@
+/* Activity (Figma 84:5312), Time Machine (85:5256) and the task window (84:4845). Kit classes do the controls;
+   these place them. Sizes are the frames'. */
+
+/* These windows' main header bars are solid, unlike Settings' flat ones. */
+:is(.gos-w-activity, .gos-w-tm) .g-split-main > .g-headerbar { background: var(--color-headerbar-bg); border-bottom-color: var(--color-border-default); }
+
+/* ---------- Activity: an event viewer ---------- */
+
+.gos-w-activity .g-sidebar { width: 240px; }
+.gos-w-activity .g-sidebar-body { padding: 6px 10px; }
+.gos-w-live { display: flex; align-items: center; gap: 8px; color: var(--color-text-secondary); white-space: nowrap; overflow: hidden; }
+.gos-w-live .g-icon { color: var(--color-success-fg); }
+.gos-w-live.is-down .g-icon { color: var(--color-destructive-fg); }
+.gos-w-filter { width: 160px; }
+.gos-w-log { flex: 1; min-height: 0; display: flex; flex-direction: column; background: var(--color-view-bg); }
+.gos-w-cols, .gos-w-ev { display: grid; grid-template-columns: 70px 110px 230px 170px minmax(0, 1fr); align-items: center; padding: 0 16px; }
+.gos-w-cols { flex: none; padding-block: 7px; background: var(--color-window-bg); border-bottom: 1px solid var(--color-border-default); font: 600 var(--fs-caption) / var(--lh-caption) var(--font); color: var(--color-text-secondary); }
+.gos-w-list { flex: 1; min-height: 0; overflow: auto; outline: none; }
+.gos-w-list:focus-visible { box-shadow: inset 0 0 0 2px var(--color-accent-fg); }
+.gos-w-ev { height: 36px; border-bottom: 1px solid var(--color-border-default); cursor: default; }
+.gos-w-ev:hover { background: color-mix(in srgb, var(--color-view-bg), var(--color-text-primary) 3%); }
+.gos-w-ev[aria-selected='true'] { background: var(--color-accent-subtle); }
+.gos-w-ev > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gos-w-mono { font: 400 var(--fs-caption) / 20px var(--font-mono); color: var(--color-text-secondary); }
+.gos-w-ev.is-blocked .gos-w-what { color: var(--color-destructive-fg); }
+.gos-w-kind { display: inline-block; max-width: 100%; padding: 2px 8px; border-radius: var(--radius-full); background: var(--color-button-bg); color: var(--color-text-secondary); font: 400 calc(12px * var(--text-scale)) / 16px var(--font-mono); overflow: hidden; text-overflow: ellipsis; vertical-align: middle; }
+.gos-w-kind.is-blocked { background: var(--color-destructive-subtle); color: var(--color-destructive-fg); }
+.gos-w-kind.is-ask { background: var(--color-attention-subtle); color: var(--color-attention-fg); }
+.gos-w-kind.is-undone { color: var(--color-text-primary); }
+.gos-w-detail { flex: none; display: flex; flex-direction: column; gap: 8px; padding: 14px 20px; background: var(--color-window-bg); border-top: 1px solid var(--color-border-default); }
+.gos-w-fields { display: flex; flex-wrap: wrap; gap: 6px 36px; margin: 0; font: 400 var(--fs-caption) / 20px var(--font-mono); }
+.gos-w-fields > div { display: flex; gap: 8px; min-width: 0; }
+.gos-w-fields dt { color: var(--color-text-secondary); }
+.gos-w-fields dd { margin: 0; color: var(--color-text-primary); overflow-wrap: anywhere; }
+.gos-w-empty { padding: var(--space-lg); color: var(--color-text-secondary); }
+
+/* ---------- Time Machine: the layer stack ---------- */
+
+.gos-w-tm .g-sidebar { width: 260px; }
+.gos-w-tm .g-sidebar-body { padding: 6px 10px; }
+.gos-w-label { padding: 6px 12px 4px; font: 600 var(--fs-caption) / var(--lh-caption) var(--font); color: var(--color-text-secondary); text-transform: uppercase; }
+.gos-w-tm-body { flex: 1; min-height: 0; overflow: auto; display: flex; gap: 24px; align-items: flex-start; padding: 20px 24px 24px; }
+.gos-w-stack { flex: none; width: 440px; display: flex; flex-direction: column; align-items: center; gap: 10px; padding-top: 16px; }
+.gos-w-layer {
+  height: 92px; padding: 16px 15px; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; text-align: left;
+  background: var(--color-card-bg); border: 1px solid var(--color-border-default); border-radius: var(--radius-md); box-shadow: var(--shadow-1);
+  color: var(--color-text-primary); font: inherit; cursor: pointer; transition: opacity var(--duration-fast);
+}
+.gos-w-layer > span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gos-w-layer:hover { opacity: 1 !important; }
+.gos-w-layer[aria-pressed='true'] { background: var(--color-accent-subtle); border: 2px solid var(--color-accent-fg); padding: 15px 14px; }
+.gos-w-layer:disabled { cursor: default; }
+.gos-w-base { width: 400px; height: 44px; margin-top: -6px; padding: 13px 16px; border-radius: var(--radius-md); background: var(--color-button-bg); font: 600 var(--fs-caption) / var(--lh-caption) var(--font); color: var(--color-text-secondary); }
+.gos-w-preview { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 16px; }
+.gos-w-preview-cols { display: flex; gap: 16px; align-items: flex-start; }
+.gos-w-box { flex: 1; min-width: 0; display: flex; flex-direction: column; background: var(--color-card-bg); border: 1px solid var(--color-border-default); border-radius: var(--radius-md); overflow: hidden; }
+.gos-w-box > h4 { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-bottom: 1px solid var(--color-border-default); font: 700 var(--fs-body) / var(--lh-heading) var(--font); }
+.gos-w-box > ul > li { padding: 8px 14px; overflow-wrap: anywhere; }
+.gos-w-box > p { padding: 4px 14px 12px; font: 400 var(--fs-caption) / var(--lh-caption) var(--font); color: var(--color-text-secondary); }
+.gos-w-box > ul > li.gos-w-out { font: 400 var(--fs-mono) / var(--lh-mono) var(--font-mono); color: var(--color-destructive-fg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gos-w-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding-top: 4px; }
+
+/* ---------- the task window ---------- */
+
+.gos-w-task-head { display: flex; align-items: center; gap: 8px; min-width: 0; color: var(--color-text-secondary); }
+.gos-w-task-head .g-app-icon { border-radius: 7px; }
+.gos-w-task-head .g-app-icon::after { box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.14), inset 0 -1.5px 0 rgb(0 0 0 / 0.24); }
+.gos-w-task { display: flex; gap: 24px; align-items: flex-start; padding: 20px 24px 24px; }
+.gos-w-task-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 16px; }
+.gos-w-task-side { flex: none; width: 400px; display: flex; flex-direction: column; gap: 16px; }
+.gos-w-state { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; color: var(--color-text-secondary); }
+.gos-w-alert { display: flex; gap: 14px; align-items: flex-start; padding: 14px 18px; border-radius: var(--radius-md); background: var(--color-destructive-subtle); }
+.gos-w-alert > .g-icon { margin-top: 2px; color: var(--color-destructive-fg); }
+.gos-w-alert > div { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.gos-w-alert strong { font: 700 var(--fs-body) / var(--lh-heading) var(--font); color: var(--color-destructive-fg); }
+.gos-w-steps { display: flex; flex-direction: column; background: var(--color-view-bg); border: 1px solid var(--color-border-default); border-radius: var(--radius-md); overflow: hidden; }
+.gos-w-step { display: flex; align-items: center; gap: 14px; padding: 11px 14px; }
+.gos-w-step + .gos-w-step { border-top: 1px solid var(--color-border-default); }
+.gos-w-step > :last-child { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.gos-w-step.is-blocked { background: var(--color-destructive-subtle); }
+.gos-w-step.is-blocked > :last-child, .gos-w-step.is-blocked > .g-icon { color: var(--color-destructive-fg); }
+.gos-w-card { display: flex; flex-direction: column; background: var(--color-card-bg); border: 1px solid var(--color-border-default); border-radius: var(--radius-md); box-shadow: var(--shadow-1); overflow: hidden; }
+.gos-w-file, .gos-w-fact { display: flex; align-items: center; gap: 10px; padding: 10px 14px; }
+.gos-w-file + .gos-w-file, .gos-w-fact + .gos-w-fact { border-top: 1px solid var(--color-border-default); }
+.gos-w-file > .t-mono { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.gos-w-fact { justify-content: space-between; }
+.gos-w-fact > :last-child { color: var(--color-text-secondary); text-align: right; overflow-wrap: anywhere; }
+.gos-w-diff > summary { cursor: pointer; color: var(--color-accent-fg); font: 500 var(--fs-caption) / var(--lh-caption) var(--font); padding: 2px 0 8px; }
+
+/* ---------- narrow windows and the phone ---------- */
+
+@media (max-width: 1100px) {
+  .gos-w-cols, .gos-w-ev { grid-template-columns: 56px 90px 170px 140px minmax(0, 1fr); }
+  .gos-w-stack { width: 340px; }
+  .gos-w-task-side { width: 320px; }
+}
+@media (max-width: 699px) {
+  .gos-w-cols, .gos-w-ev { grid-template-columns: 70px minmax(0, 1fr); padding: 0 12px; }
+  .gos-w-cols > :nth-child(1), .gos-w-ev > :nth-child(1), .gos-w-cols > :nth-child(4), .gos-w-ev > :nth-child(4), .gos-w-cols > :nth-child(3), .gos-w-ev > :nth-child(3) { display: none; }
+  .gos-w-filter { width: 120px; }
+  .gos-w-live { display: none; }
+  .gos-w-tm-body, .gos-w-task, .gos-w-preview-cols { flex-direction: column; padding: 16px; }
+  .gos-w-preview-cols { padding: 0; }
+  .gos-w-stack, .gos-w-task-side, .gos-w-preview, .gos-w-preview-cols, .gos-w-box { width: 100%; }
+  .gos-w-stack .gos-w-layer, .gos-w-base { max-width: 100%; }
+  .gos-w-task-head > span { display: none; }
+  .gos-w-activity .g-sidebar, .gos-w-tm .g-sidebar { width: auto; }
+}

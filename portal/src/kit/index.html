@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>The %PRODUCT% kit</title>
+    <link rel="stylesheet" href="/kit/gurtos.css" />
+    <script type="module" src="/kit/gurtos.js"></script>
+    <style>
+      main { max-width: 920px; margin: 0 auto; padding: 36px 24px 72px; display: flex; flex-direction: column; gap: 36px; }
+      section { display: flex; flex-direction: column; gap: 12px; }
+      .row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+      pre { margin: 0; padding: 12px; border-radius: 12px; background: var(--color-view-bg); border: 1px solid var(--color-border-default); overflow: auto; }
+      .demo-window { height: 320px; }
+    </style>
+  </head>
+  <body class="g-page">
+    <main>
+      <header class="row" style="justify-content: space-between">
+        <div>
+          <h1 class="t-display">The %PRODUCT% kit</h1>
+          <p class="t-body t-secondary">Every control in %PRODUCT%, for track apps. Plain HTML with g-* classes. Guide: portal/KIT.md.</p>
+        </div>
+        <div class="g-toggle-group" role="radiogroup" aria-label="Style">
+          <button class="g-toggle" role="radio" aria-checked="true" onclick="setTheme(this, 'light')">Light</button>
+          <button class="g-toggle" role="radio" aria-checked="false" onclick="setTheme(this, 'dark')">Dark</button>
+        </div>
+      </header>
+
+      <section>
+        <h2 class="t-title2">Use it</h2>
+        <pre class="t-mono">&lt;link rel="stylesheet" href="/kit/gurtos.css"&gt;
+&lt;script type="module" src="/kit/gurtos.js"&gt;&lt;/script&gt;
+&lt;body class="g-page"&gt;</pre>
+      </section>
+
+      <section>
+        <h2 class="t-title2">Type</h2>
+        <p class="t-title1">Title 1, 28 px</p>
+        <p class="t-title2">Title 2, 22 px</p>
+        <p class="t-title3">Title 3, 18 px</p>
+        <p class="t-heading">Heading, 15 px bold</p>
+        <p class="t-body">Body, 15 px. Atkinson Hyperlegible Next, made to be read.</p>
+        <p class="t-caption t-secondary">Caption, 13 px, secondary</p>
+        <p class="t-mono">box-tq3x8k2m1v · Mono, 14 px</p>
+      </section>
+
+      <section>
+        <h2 class="t-title2">Buttons</h2>
+        <div class="row">
+          <button class="g-btn g-btn-suggested">Approve $8.00</button>
+          <button class="g-btn">Deny</button>
+          <button class="g-btn g-btn-flat"><g-icon name="list-add"></g-icon>New task</button>
+          <button class="g-btn g-btn-destructive">Undo task</button>
+          <button class="g-btn" disabled>Disabled</button>
+          <button class="g-icon-btn" aria-label="Search" title="Search"><g-icon name="system-search"></g-icon></button>
+          <button class="g-btn g-btn-suggested g-btn-large">Large, for phones</button>
+        </div>
+        <p class="t-caption t-secondary">One suggested button per view. Destructive only for what removes or undoes.</p>
+      </section>
+
+      <section>
+        <h2 class="t-title2">Badges, chips, progress</h2>
+        <div class="row">
+          <span class="g-badge">Needs you</span>
+          <span class="g-badge g-badge-accent">Running</span>
+          <span class="g-badge g-badge-success">Done</span>
+          <span class="g-badge g-badge-neutral">Undone</span>
+          <span class="g-badge g-badge-destructive">Failed</span>
+          <span class="g-chip"><g-icon name="web-browser"></g-icon>api.example.com</span>
+          <span class="g-chip"><g-icon name="dialog-password"></g-icon>SHOP_KEY</span>
+        </div>
+        <span class="g-progress" role="progressbar" aria-label="Step 4 of 7" aria-valuenow="57" style="--value: 57%"><span></span></span>
+        <span class="g-progress" role="progressbar" aria-label="Working" data-indeterminate><span></span></span>
+      </section>
+
+      <section>
+        <h2 class="t-title2">Boxed lists</h2>
+        <div class="g-group">
+          <div class="g-group-head">
+            <div>
+              <h3 class="g-group-title">Spending</h3>
+              <p class="g-group-caption">Test money only.</p>
+            </div>
+          </div>
+          <div class="g-list">
+            <label class="g-row">
+              <span class="g-row-text"><span class="g-row-title">Ask before paying</span><span class="g-row-sub">Every payment waits for your OK</span></span>
+              <input type="checkbox" role="switch" class="g-switch" checked />
+            </label>
+            <div class="g-row">
+              <span class="g-row-text"><label class="g-row-title" for="limit">Daily limit</label></span>
+              <span class="g-combo-wrap">
+                <select id="limit" class="g-combo"><option>$5.00</option><option>$20.00</option><option>No limit</option></select>
+                <g-icon name="pan-down"></g-icon>
+              </span>
+            </div>
+            <button class="g-row" onclick="gurtos.toast('Opened the payee list')">
+              <g-icon name="avatar-default"></g-icon>
+              <span class="g-row-text"><span class="g-row-title">Payees</span></span>
+              <span class="g-row-trail">3<g-icon name="pan-end"></g-icon></span>
+            </button>
+            <button class="g-row g-row-add"><g-icon name="list-add"></g-icon><span class="g-row-text"><span class="g-row-title">Add a payee</span></span></button>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2 class="t-title2">Fields</h2>
+        <div class="g-search"><g-icon name="system-search"></g-icon><input class="g-field" type="search" placeholder="Search" aria-label="Search" /></div>
+        <input class="g-field" placeholder="Box name" aria-label="Box name" />
+        <input class="g-field" type="password" placeholder="Paste the key" aria-label="Key" />
+      </section>
+
+      <section>
+        <h2 class="t-title2">An app row</h2>
+        <div class="g-list">
+          <div class="g-approw">
+            <g-app-icon app="shopper" size="44"></g-app-icon>
+            <div class="g-approw-text">
+              <span class="g-approw-name">Shopper</span>
+              <span class="g-approw-desc">Buys what you ask for, from stores you allow. Test payments.</span>
+              <div class="g-chip-set"><span class="g-chip"><g-icon name="web-browser"></g-icon>store.example</span></div>
+            </div>
+            <input type="checkbox" role="switch" class="g-switch" checked aria-label="Shopper on" />
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2 class="t-title2">Banners, notifications, status pages</h2>
+        <div class="g-banner"><g-icon name="dialog-question"></g-icon><div><p class="t-body-strong">Buy a GPU hour asks for your OK</p><p class="t-caption t-secondary">$8.00 test money, over its $5.00 budget</p></div><button class="g-btn">Deny</button><button class="g-btn g-btn-suggested">Approve</button></div>
+        <div class="g-banner g-banner-destructive"><g-icon name="security-high"></g-icon><div><p class="t-body-strong">Blocked: it tried to reach attacker.example</p></div></div>
+        <article class="g-notification">
+          <div class="g-notification-head">
+            <g-app-icon app="wallet" size="32"></g-app-icon>
+            <div class="g-notification-meta"><span class="g-notification-app">Wallet · now</span><span class="g-notification-title">Pay $13.00 to Hario (test payment)?</span></div>
+          </div>
+          <p class="g-notification-body">Buy 2 packs of V60 filters asks for your OK.</p>
+          <div class="g-notification-actions"><button class="g-btn">Deny</button><button class="g-btn g-btn-suggested">Approve</button></div>
+        </article>
+        <div class="g-card"><div class="g-status"><g-icon name="folder" size="64"></g-icon><h2 class="g-status-title">Nothing here yet</h2><p class="g-status-body">An empty state: one icon, a title, one sentence, at most one button.</p><button class="g-btn">Start one</button></div></div>
+      </section>
+
+      <section>
+        <h2 class="t-title2">A window, a menu, a toast</h2>
+        <div class="g-window demo-window">
+          <header class="g-headerbar">
+            <div class="g-headerbar-start"><button class="g-btn g-btn-flat"><g-icon name="list-add"></g-icon>New</button></div>
+            <h2 class="g-headerbar-title">Window title<span class="g-headerbar-subtitle">A subtitle</span></h2>
+            <div class="g-headerbar-end"><button class="g-icon-btn" aria-label="Main menu"><g-icon name="open-menu"></g-icon></button></div>
+          </header>
+          <div class="g-window-content" style="display: flex; gap: 24px; padding: 24px; align-items: flex-start">
+            <div class="g-popover" style="animation: none">
+              <div class="g-menu" role="menu" aria-label="Example">
+                <button class="g-menu-item" role="menuitem"><g-icon name="document-open-recent"></g-icon><span>Open</span></button>
+                <button class="g-menu-item" role="menuitem"><g-icon name="edit-copy"></g-icon><span>Copy task ID</span></button>
+                <div class="g-menu-sep" role="separator"></div>
+                <button class="g-menu-item g-destructive" role="menuitem"><g-icon name="edit-undo"></g-icon><span>Undo task…</span></button>
+              </div>
+            </div>
+            <button class="g-btn g-btn-suggested" onclick="gurtos.toast('Saved. This is a toast.', { label: 'Undo', run: () => {} })">Show a toast</button>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2 class="t-title2">Icons</h2>
+        <p class="t-caption t-secondary">Adwaita symbolic icons (GNOME Project, CC BY-SA 3.0 or LGPL 3). Use the name: &lt;g-icon name="…"&gt;.</p>
+        <div class="row" id="icons"></div>
+      </section>
+    </main>
+    <script type="module">
+      window.setTheme = (el, t) => {
+        document.documentElement.dataset.theme = t;
+        for (const b of el.parentElement.children) b.setAttribute('aria-checked', String(b === el));
+      };
+      await customElements.whenDefined('g-icon');
+      document.getElementById('icons').innerHTML = gurtos.icons.map((n) => `<span class="g-chip" title="${n}"><g-icon name="${n}"></g-icon>${n}</span>`).join('');
+    </script>
+  </body>
+</html>
