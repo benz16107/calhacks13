@@ -2,12 +2,22 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<!-- The Mac app outside the App Store: signed with Developer ID (Xcode's cloud-managed certificate), then notarized. -->
+	<!-- The Mac app outside the App Store: Developer ID, signed here with the certificate scripts/devid.py imports and
+	     the profiles scripts/devid-profiles.py makes, then notarized. -->
 	<key>method</key>
 	<string>developer-id</string>
 	<key>signingStyle</key>
-	<string>automatic</string>
+	<string>manual</string>
+	<key>signingCertificate</key>
+	<string>Developer ID Application</string>
 	<key>teamID</key>
 	<string>744282DWSN</string>
+	<key>provisioningProfiles</key>
+	<dict>
+		<key>com.benzhou.gurtos.mac</key>
+		<string>GurtOS Mac Developer ID</string>
+		<key>com.benzhou.gurtos.mac.share</key>
+		<string>GurtOS Share Developer ID</string>
+	</dict>
 </dict>
 </plist>

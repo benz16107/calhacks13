@@ -5,9 +5,9 @@ pairing token of their own. The web app stays the option that needs no install.
 
 | | What it is | Where it comes from |
 |---|---|---|
-| iPhone | Native SwiftUI app, iOS 26 | TestFlight (internal testing) |
+| iPhone | Native SwiftUI app, iOS 26 | TestFlight, internal testing (build 1, 0.1.0) |
 | Apple Watch | Native watchOS app, inside the iPhone app | Installs with the iPhone app |
-| Mac | Menu bar app with a Share extension, macOS 26 | Signed, notarized DMG on the GitHub release |
+| Mac | Menu bar app with a Share extension, macOS 26 | `gurtos-mac-0.1.0.dmg` on the GitHub release: Developer ID, notarized and stapled |
 | Android | The web app as a Trusted Web Activity APK | `gurtos-android-0.1.0.apk` on the GitHub release |
 | Windows | No app: install app.gurtos.com from Edge | gurtos.com Download page |
 
@@ -114,9 +114,12 @@ native/apple/scripts/build.sh dmg       # Developer ID, notarized and stapled DM
 native/apple/scripts/testflight.py group   # internal group "GurtOS team", Ben as tester, newest build
 ```
 
-Signing uses the App Store Connect API key on the build Mac with Xcode's automatic signing. Two things only a
-person can do were done once on the web: the App Store Connect app record and the Developer ID certificate. The
-APNs key also comes from developer.apple.com, and lives on the relay. No key, profile or certificate is in git.
+Signing uses the App Store Connect API key on the build Mac: automatic signing for TestFlight; for the DMG,
+`scripts/devid.py` imports the Developer ID certificate and `scripts/devid-profiles.py` makes its profiles, because
+Xcode's cloud Developer ID signing refuses an API key. Three things only the Account Holder can do were done once
+on the web: the App Store Connect app record, the Developer ID certificate (from a request made on the build Mac,
+whose private key never left it) and the APNs key, which lives on the relay. No key, profile or certificate is in
+git.
 
 Simulator checks: `scripts/shots.sh` and `scripts/watch-shots.sh` take the screenshots above against a test box.
 `UITests/NotificationTests` allows notifications, receives a push the box's own code encrypted

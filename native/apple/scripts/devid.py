@@ -26,6 +26,7 @@ for c in certs:
         pw = open(f"{D}/pw").read().strip()
         kc = os.path.expanduser("~/Library/Keychains/gurtos-signing.keychain-db")
         subprocess.run(f"openssl x509 -inform der -in devid.cer -out devid.pem && openssl pkcs12 -export -legacy -inkey devid.key -in devid.pem -out devid.p12 -passout pass:{pw} && chmod 600 devid.p12", shell=True, cwd=D, check=True)
+        subprocess.run(["security", "unlock-keychain", "-p", pw, kc], check=True)
         subprocess.run(["security", "import", f"{D}/devid.p12", "-k", kc, "-P", pw, "-T", "/usr/bin/codesign"], check=False)
         subprocess.run(["security", "set-key-partition-list", "-S", "apple-tool:,apple:,codesign:", "-s", "-k", pw, kc], check=True, capture_output=True)
         print("imported", c["attributes"]["name"])

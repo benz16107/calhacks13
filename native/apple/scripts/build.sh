@@ -32,6 +32,7 @@ case ${1:-sim} in
   dmg)
     # The Mac app, signed with Developer ID, notarized and stapled, in a DMG: build/GurtOS.dmg
     uv run -q --with pyjwt --with cryptography scripts/devid.py
+    uv run -q --with pyjwt --with cryptography scripts/devid-profiles.py
     rm -rf build/GurtOSMac.xcarchive build/mac
     # shellcheck disable=SC2086
     xcodebuild archive -project GurtOS.xcodeproj -scheme GurtOSMac -configuration Release -destination 'generic/platform=macOS' -archivePath build/GurtOSMac.xcarchive $AUTH -quiet
@@ -39,6 +40,7 @@ case ${1:-sim} in
     xcodebuild -exportArchive -archivePath build/GurtOSMac.xcarchive -exportOptionsPlist scripts/ExportDeveloperID.plist -exportPath build/mac $AUTH
     rm -f build/GurtOS.dmg
     hdiutil create -volname GurtOS -srcfolder build/mac/GurtOS.app -ov -format UDZO build/GurtOS.dmg
+    codesign --sign "Developer ID Application" --timestamp --keychain "$KC" build/GurtOS.dmg
     xcrun notarytool submit build/GurtOS.dmg --key "$KEY" --key-id "$KID" --issuer "$ISS" --wait
     xcrun stapler staple build/GurtOS.dmg
     ;;
