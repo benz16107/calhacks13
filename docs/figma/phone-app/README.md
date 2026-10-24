@@ -16,7 +16,7 @@ phone app" in the [design file](https://www.figma.com/design/oppzH621OOOMA31rgLb
 | `2a-home-server.png` | `130:87` | Home, GurtOS Server ("Home box"): what needs you, what runs, and the kill switch (Pause all agents) |
 | `2b-home-personal.png` | `130:174` | Home, GurtOS Personal ("Ben's laptop"): a finished folder task with what changed in the copy, Review changes, Undo and Keep changes; what runs; what was kept, with Put back |
 | `2c-home-business-rosa.png` | `130:295` | Home, GurtOS Business ("Fogline Supply"), signed in as Rosa: Waiting for me, with the Business tabs (Waiting, Tasks, Audit, Settings) |
-| `3a-lock-screen-notification.png` | `133:324` | The lock-screen notification. iOS shows the app (GurtOS); the title is the machine, "Fogline Supply", and the body is the question: "Approve a $40,000 credit line? Bright Harbor Catering, asked by Sam Ortiz. Over $10,000 goes to the Controller." |
+| `3a-lock-screen-notification.png` | `133:324` | The lock-screen notification. iOS shows the app (GurtOS); the title is the machine, "Fogline Supply", and the body is the question: "Approve a $40,000 credit line? Bright Harbor Catering, asked by Sam Chen." |
 | `3b-approval-from-notification.png` | `133:381` | What tapping it opens: the request on Fogline Supply, with a chip saying which machine and who you are, the agent's checks, and Deny and Approve $40,000 |
 | `4a-install-scan.png` | `133:445` | Install, step 1: the Camera app reads the QR code on the machine's screen and offers app.gurtos.com |
 | `4b-install-safari.png` | `133:469` | Step 2: app.gurtos.com in Safari explains the four steps and points at Safari's Page Menu button |
