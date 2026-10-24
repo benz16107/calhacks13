@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import type { FullSpec } from './contract.ts';
-import { Log, canMove, doneLayers, fold } from './log.ts';
+import { Log, canMove, chainBreaks, doneLayers, fold, hashLine } from './log.ts';
 
 const spec: FullSpec = { title: 't', prompt: 'p', workspace: 'w', worker: 'fake', tools: [], hosts: [], budgetCents: 0, source: 'test' };
 
@@ -69,4 +69,48 @@ test('a worker\'s closing step becomes the task summary', () => {
   const t = fold(new Log(file).events).tasks.get('a');
   assert.equal(t?.summary, 'Summarized the listing: a used road bike.');
   assert.equal(t?.step, 'Summarized the listing: a used road bike.');
+});
+
+test('each entry carries the hash of the line before it, across restarts, and an edit breaks the chain', () => {
+  const file = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'log-')), 'log.jsonl');
+  const log = new Log(file);
+  log.append({ type: 'task.created', task: 'a', spec, user: 'box-a' });
+  log.append({ type: 'task.state', task: 'a', state: 'running', layers: [] });
+  new Log(file).append({ type: 'cost', task: 'a', cents: 5, what: 'model' }); // a restart carries the chain on
+  const lines = () => fs.readFileSync(file, 'utf8').split('\n').filter(Boolean);
+  assert.equal(JSON.parse(lines()[0]).prev, '0'.repeat(64));
+  assert.equal(JSON.parse(lines()[2]).prev, hashLine(lines()[1]));
+  assert.deepEqual(chainBreaks(lines()), []);
+
+  const edited = lines();
+  edited[1] = edited[1].replace('running', 'done'); // root rewrites the middle of the record
+  assert.deepEqual(chainBreaks(edited), [3]);
+  assert.deepEqual(chainBreaks([lines()[0], lines()[2]]), [2]); // a removed entry
+  assert.deepEqual(chainBreaks([lines()[1], lines()[0], lines()[2]]), [1, 2, 3]); // a reordered one
+});
+
+test('a log from before the chain still loads, and the chain starts at its first new entry', () => {
+  const file = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'log-')), 'log.jsonl');
+  const old = JSON.stringify({ seq: 1, at: '2026-10-01T00:00:00.000Z', type: 'task.created', task: 'a', spec, user: 'box-a' });
+  fs.writeFileSync(file, old + '\n');
+  new Log(file).append({ type: 'task.state', task: 'a', state: 'running', layers: [] });
+  const lines = fs.readFileSync(file, 'utf8').split('\n').filter(Boolean);
+  assert.equal(JSON.parse(lines[1]).prev, hashLine(old));
+  assert.deepEqual(chainBreaks(lines), []);
+});
+
+test('an event cannot bring its own prev, and stripping prev from the lines after an edit still shows the edit', () => {
+  const file = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'log-')), 'log.jsonl');
+  const log = new Log(file);
+  log.append({ type: 'task.created', task: 'a', spec, user: 'box-a' });
+  log.append({ type: 'cost', task: 'a', cents: 5, what: 'model', prev: 'forged' } as any); // a caller tries to set the link
+  log.append({ type: 'task.state', task: 'a', state: 'running', layers: [] });
+  const lines = () => fs.readFileSync(file, 'utf8').split('\n').filter(Boolean);
+  assert.equal(JSON.parse(lines()[1]).prev, hashLine(lines()[0]));
+  assert.deepEqual(chainBreaks(lines()), []);
+
+  const edited = lines();
+  edited[0] = edited[0].replace('"t"', '"edited"');
+  const stripped = edited.map((l, i) => (i === 0 ? l : JSON.stringify({ ...JSON.parse(l), prev: undefined })));
+  assert.deepEqual(chainBreaks(stripped), [2, 3], 'lines without prev after the chain began are breaks');
 });
