@@ -1765,6 +1765,13 @@ class Core {
             return this.pause(req);
           case 'POST /resume':
             return this.resume(req);
+          case 'POST /drill': {
+            // The incident drill's numbers (core/drill.ts), kept in the log beside the pause they measured.
+            this.requireAdmin(req);
+            if (!body || typeof body !== 'object' || JSON.stringify(body).length > 2048) throw new Error('send the drill numbers as a small JSON object');
+            const { name, who } = this.actor(req);
+            return this.write({ type: 'note', track: 'kill-switch', data: { drill: body, by: name }, ...(who ? { who } : {}) });
+          }
           case 'GET /log':
             return this.log.events.slice(Number(q('after') ?? 0)).filter((e) => !q('task') || e.task === q('task'));
           case 'GET /owner':
