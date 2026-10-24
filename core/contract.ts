@@ -130,6 +130,8 @@ interface Base {
   /** Line number, from 1. */
   seq: number;
   at: string;
+  /** SHA-256 of the previous log line, so an edited, removed or reordered entry breaks the chain after it. */
+  prev?: string;
   task?: string;
   /** Business: who asked, which seat, who approved. Written only while the Business edition is on. */
   who?: Who;

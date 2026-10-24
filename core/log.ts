@@ -1,10 +1,26 @@
 // The action log: append-only JSONL, fsynced per line, and the fold that rebuilds tasks from it.
+import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import type { Approval, LogEvent, NewEvent, Task, TaskState } from './contract.ts';
+
+/** SHA-256 of one log line exactly as written (no newline). Each entry's `prev` is this hash of the line before it. */
+export const hashLine = (line: string) => createHash('sha256').update(line).digest('hex');
+const ZERO = '0'.repeat(64);
+
+/** The seqs whose `prev` does not match the line before them. Entries without a `prev` (a log from before the chain) are skipped. */
+export function chainBreaks(lines: string[]): number[] {
+  const bad: number[] = [];
+  lines.forEach((line, i) => {
+    const prev = JSON.parse(line).prev;
+    if (prev !== undefined && prev !== (i ? hashLine(lines[i - 1]) : ZERO)) bad.push(i + 1);
+  });
+  return bad;
+}
 
 export class Log {
   readonly events: LogEvent[] = [];
   private fd: number;
+  private last = ZERO; // hash of the last line written
 
   constructor(path: string) {
     // Work in bytes: a hard kill can leave half a line at the end, and truncate counts bytes, not
@@ -15,14 +31,16 @@ export class Log {
     const endByte = buf.lastIndexOf(0x0a) + 1; // bytes up to and including the last newline
     if (endByte < buf.length) fs.truncateSync(path, endByte); // drop the torn tail after it
     const text = buf.subarray(0, endByte).toString('utf8');
-    for (const line of text.split('\n')) if (line) this.events.push(JSON.parse(line));
+    for (const line of text.split('\n')) if (line) (this.events.push(JSON.parse(line)), (this.last = hashLine(line)));
     this.fd = fs.openSync(path, 'a', 0o600);
   }
 
   append(e: NewEvent): LogEvent {
-    const full = { seq: this.events.length + 1, at: new Date().toISOString(), ...e } as LogEvent;
-    fs.writeSync(this.fd, JSON.stringify(full) + '\n');
+    const full = { seq: this.events.length + 1, at: new Date().toISOString(), prev: this.last, ...e } as LogEvent;
+    const line = JSON.stringify(full);
+    fs.writeSync(this.fd, line + '\n');
     fs.fsyncSync(this.fd);
+    this.last = hashLine(line);
     this.events.push(full);
     return full;
   }
