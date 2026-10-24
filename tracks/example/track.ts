@@ -1,8 +1,18 @@
 // The example track: one of each slot, small enough to copy. The demo uses `example.spend`.
 import type { Track } from '../../core/contract.ts';
+import { onFileChange, schedule, webhook } from '../../core/triggers.ts';
+
+const inbox = `${process.env.BOX_HOME ?? '/var/lib/box'}/inbox/example`;
 
 export default {
   name: 'example',
+
+  // All three generic triggers, which any track reuses. A real track returns a Droid task here.
+  triggers: [
+    webhook({ name: 'start', task: (p: { title?: string }) => ({ title: p.title ?? 'From a webhook', workspace: 'home', worker: 'fake', prompt: 'write hook.txt yes', source: 'webhook' }) }),
+    onFileChange({ name: 'inbox', dir: inbox, task: (file) => ({ title: `Saw ${file}`, workspace: 'home', worker: 'fake', prompt: `write seen-${file} yes`, source: 'file' }) }),
+    schedule({ name: 'hourly', everyMs: 3600_000, task: () => ({ title: 'Hourly check', workspace: 'home', worker: 'fake', prompt: 'write tick.txt yes', source: 'schedule' }) }),
+  ],
 
   tools: [
     {

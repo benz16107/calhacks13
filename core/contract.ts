@@ -110,6 +110,8 @@ export interface Box {
   job(name: string, input: unknown, task?: string): Promise<unknown>;
   /** Write a 'note' event from this track into the log. */
   note(data: unknown, task?: string): void;
+  /** Serve POST /hook/<track>/<name>: the handler gets the JSON body and headers and returns JSON. Used by the webhook trigger. */
+  onWebhook(name: string, handler: (payload: any, headers: Record<string, string>) => unknown): void;
 }
 
 /** Given to tools and model jobs. They run inside the core, never inside a task. */

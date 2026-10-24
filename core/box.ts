@@ -63,6 +63,7 @@ class Core {
   workers = new Map<string, ChildProcess>();
   brokers = new Map<string, http.Server>();
   waiters = new Map<string, ((approved: boolean) => void)[]>();
+  webhooks = new Map<string, (payload: unknown, headers: Record<string, string>) => unknown>();
   uidTask = new Map<number, string>();
   relay = relayCert(HOME);
   proxyPort = 0;
@@ -318,6 +319,10 @@ class Core {
       on: (l) => (this.listeners.add(l), () => this.listeners.delete(l)),
       job: (name, input, task) => this.job(name, input, task),
       note: (data, task) => void this.write({ type: 'note', track, task, data }),
+      onWebhook: (name, handler) => {
+        if (!/^[\w-]+$/.test(name)) throw new Error(`bad webhook name ${name}`);
+        this.webhooks.set(`/hook/${track}/${name}`, handler);
+      },
     };
   }
 
@@ -411,7 +416,7 @@ class Core {
             return { ok: true, tasks: this.state.tasks.size, tools: [...this.tools.keys()], spacetime: { port: 3000, database: DB } };
         }
       },
-      (req, res) => this.cors(req, res) || this.trackRoute(req, res) || this.portal(req, res),
+      (req, res) => this.cors(req, res) || this.webhook(req, res) || this.trackRoute(req, res) || this.portal(req, res),
     );
 
   /** Browsers on other origins (a portal dev server) need BOX_ORIGINS, comma separated, or '*'. */
@@ -424,6 +429,24 @@ class Core {
     res.setHeader('access-control-allow-methods', 'GET, POST, OPTIONS');
     if (req.method !== 'OPTIONS') return false;
     res.writeHead(204).end();
+    return true;
+  }
+
+  webhook(req: http.IncomingMessage, res: http.ServerResponse) {
+    const url = new URL(req.url ?? '/', 'http://box');
+    const handler = this.webhooks.get(url.pathname);
+    if (req.method !== 'POST' || !handler) return false;
+    void (async () => {
+      try {
+        const chunks: Buffer[] = [];
+        for await (const c of req) chunks.push(c as Buffer);
+        const text = Buffer.concat(chunks).toString();
+        const out = await handler(text ? JSON.parse(text) : {}, req.headers as Record<string, string>);
+        res.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify(out ?? { ok: true }));
+      } catch (e) {
+        res.writeHead(400, { 'content-type': 'application/json' }).end(JSON.stringify({ error: (e as Error).message }));
+      }
+    })();
     return true;
   }
 

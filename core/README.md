@@ -74,7 +74,7 @@ Make `tracks/<name>/track.ts` and default-export a `Track` with any of these slo
 
 | Slot | What the core does with it |
 |---|---|
-| `triggers` | Calls `start(box)` once at boot. Call `box.createTask(...)` whenever you like. |
+| `triggers` | Calls `start(box)` once at boot. Call `box.createTask(...)` whenever you like, or reuse a generic trigger (below). |
 | `tools` | Tasks that list the tool's name can call it through the broker. It runs in the core with its `secrets`. |
 | `logReaders` | Feeds `read(event)` every log event in order, from the start, and resumes after restarts. Throw to retry. |
 | `modelJobs` | Anyone with the box can run it with `box.job(name, input)`. |
@@ -88,6 +88,26 @@ Rules:
   namespaces or constructor parameter properties.
 - Need npm packages? Add `tracks/<name>/package.json`; the root is an npm workspace.
 - A track that throws at load is skipped and logged. It cannot stop the box.
+
+## Triggers: start a task on a schedule, a webhook or a file
+
+`core/triggers.ts` has three generic triggers. Put one in a track's `triggers`; each turns its event into a
+`TaskSpec` (return nothing to skip) and the box starts the task. Factory scores "Droid runs on a trigger you
+designed", so a real track returns a Droid task here.
+
+```ts
+import { schedule, webhook, onFileChange } from '../../core/triggers.ts';
+
+triggers: [
+  schedule({ name: 'nightly', dailyAt: '02:00', task: () => ({ title: 'Nightly report', prompt: '...' }) }),
+  webhook({ name: 'jira', task: (payload) => ({ title: payload.issue, prompt: `Fix ${payload.issue}` }) }),
+  onFileChange({ name: 'inbox', dir: '/var/lib/box/inbox/mytrack', task: (file) => ({ title: file, prompt: `Process ${file}` }) }),
+]
+```
+
+- `schedule` takes `everyMs` or `dailyAt: 'HH:MM'` (the box's local time). It re-arms after a restart.
+- `webhook` serves `POST /hook/<track>/<name>` on the box's API; the JSON body is the payload.
+- `onFileChange` watches a folder (debounced) and fires per added or changed file.
 
 ## Your demo step
 
