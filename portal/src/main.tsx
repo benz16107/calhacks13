@@ -2,13 +2,13 @@
 // browser, and the phone. The box serves it on the same address as its API, so every call is same-origin.
 import { render } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
-import { Banners, Home } from './home.tsx';
-import { start, surface } from './live.ts';
+import { Banners, Desktop, Dock, MenuBar, NotificationCenter, ui } from './home.tsx';
+import { start, surface, useBox } from './live.ts';
 import { Window } from './windows.tsx';
 import './style.css';
 
-/** The open window, from the address: #tasks, #task/<id>, #activity, #app/<track>/<name>. /pair?code= opens pairing. */
-const routeOf = () => location.hash.slice(1) || (location.pathname === '/pair' ? 'pair' : '');
+/** The open window, from the address: #tasks, #task/<id>, #activity, #app/<track>/<name>, and /pair#<code>. */
+const routeOf = () => (location.pathname === '/pair' ? `pair/${location.hash.slice(1)}` : location.hash.slice(1));
 
 let opener: HTMLElement | null = null;
 addEventListener('click', (e) => {
@@ -17,11 +17,13 @@ addEventListener('click', (e) => {
 });
 
 function App() {
+  useBox();
   const [route, setRoute] = useState(routeOf());
   useEffect(() => {
     const on = () => setRoute(routeOf());
     addEventListener('hashchange', on);
-    return () => removeEventListener('hashchange', on);
+    addEventListener('popstate', on);
+    return () => (removeEventListener('hashchange', on), removeEventListener('popstate', on));
   }, []);
   const close = () => {
     history.pushState(null, '', location.pathname === '/pair' ? '/' : location.pathname);
@@ -30,17 +32,18 @@ function App() {
   };
   useEffect(() => {
     if (!route) return;
-    const esc = (e: KeyboardEvent) => e.key === 'Escape' && close();
+    const esc = (e: KeyboardEvent) => e.key === 'Escape' && !ui.notifications && close();
     addEventListener('keydown', esc);
     return () => removeEventListener('keydown', esc);
   }, [route]);
   return (
     <>
       <Banners />
-      <div class="home" inert={!!route}>
-        <Home />
-      </div>
+      <MenuBar />
+      <Desktop covered={!!route || ui.notifications} />
+      <Dock />
       {route && <Window route={route} onClose={close} />}
+      {ui.notifications && <NotificationCenter />}
     </>
   );
 }

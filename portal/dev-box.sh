@@ -4,7 +4,8 @@
 # on linuxbox. It starts with tasks in every state the portal shows (all scripted, no model, test money only).
 #   portal/dev-box.sh            ship this checkout, start the box fresh and seed it
 #   portal/dev-box.sh dist       ship portal/dist only (the box serves files from disk, no restart)
-#   portal/dev-box.sh stop
+#   portal/dev-box.sh restart    pull the plug: kill the box and its tasks at once, then boot it on the same data
+#   portal/dev-box.sh stop       stop it and delete its data
 set -euo pipefail
 cd "$(dirname "$0")/.."
 vm() { /home/linuxbrew/.linuxbrew/bin/limactl shell --workdir / box -- "$@"; }
@@ -12,21 +13,33 @@ dest=/opt/box-dev/portal-dev
 home=/var/lib/box-portal-dev
 port=7790
 
-stop="[ -f /run/box-portal-dev.pid ] && kill -9 -\$(cat /run/box-portal-dev.pid) 2>/dev/null; sleep 1; for u in \$(awk -F: '\$3>=30000 && \$3<40000 {print \$1}' /etc/passwd); do
-  [ -d $home/tasks/\${u#box-} ] && { pkill -KILL -u \$u; userdel \$u; } ; done 2>/dev/null || true
-  grep -o \" $home/[^ ]*\" /proc/mounts | sort -r | xargs -r -n1 umount -l; rm -rf $home
+# The plug: the box's process group, every task user's processes, and the task mounts, all at once.
+kill="kill -9 -\$(cat /run/box-portal-dev.pid 2>/dev/null || echo 0) 2>/dev/null || true
+  for u in \$(awk -F: '\$3>=30000 && \$3<40000 {print \$1}' /etc/passwd); do [ -d $home/tasks/\${u#box-} ] && pkill -KILL -u \$u || true; done
+  sleep 0.5; grep -o \" $home/[^ ]*\" /proc/mounts | sort -r | xargs -r -n1 umount -l; true"
+wipe="$kill
+  for u in \$(awk -F: '\$3>=30000 && \$3<40000 {print \$1}' /etc/passwd); do [ -d $home/tasks/\${u#box-} ] && userdel \$u || true; done 2>/dev/null
+  rm -rf $home
   flock /run/lock/box-spacetime-cli.lock spacetime delete --server local -y box-portal-dev >/dev/null 2>&1 || true"
+start="cd $dest
+  BOX_ID=dev-box BOX_NAME='dev box' BOX_PEERS='[{\"id\":\"vultr\",\"name\":\"vultr box\",\"stdb\":\"box\"}]' \
+  BOX_HOME=$home BOX_PORT=$port BOX_VAULT=$home/vault.env BOX_STDB_DB=box-portal-dev BOX_PROXY_PORT=auto \
+  BOX_PORTAL=$dest/portal/dist setsid nohup node --experimental-strip-types --disable-warning=ExperimentalWarning core/box.ts \
+  >> $home/box.log 2>&1 < /dev/null &
+  echo \$! > /run/box-portal-dev.pid
+  for i in \$(seq 50); do curl -fs 127.0.0.1:$port/health >/dev/null && break; sleep 0.3; done"
 
 case ${1:-} in
-  stop) vm sudo bash -c "$stop"; exit ;;
+  stop) vm sudo bash -c "$wipe"; exit ;;
   dist) tar -czf - portal/dist | vm sudo bash -c "rm -rf $dest/portal/dist && tar -xzf - -C $dest"; exit ;;
+  restart) vm sudo bash -c "$kill; sleep 3; $start; echo 'dev box restarted'"; exit ;;
 esac
 
 git ls-files -co --exclude-standard | while IFS= read -r f; do [[ -e $f ]] && printf '%s\n' "$f"; done |
   tar -czf - -T - | vm sudo bash -c "mkdir -p $dest && find $dest -mindepth 1 -maxdepth 1 ! -name node_modules -exec rm -rf {} + && tar -xzf - -C $dest"
 vm sudo bash -s <<EOF
 set -e
-$stop
+$wipe
 cd $dest
 lock=\$(sha256sum package-lock.json | cut -c1-16)
 [ -f node_modules/.lock-\$lock ] || { npm ci --omit=dev --no-audit --no-fund --loglevel=error && touch node_modules/.lock-\$lock; }
@@ -35,11 +48,7 @@ printf 'Groceries: 42.10\nPower: 61.00\n' > $home/workspaces/home/budget.csv
 printf '# Notes\n\nNothing yet.\n' > $home/workspaces/notes/notes.md
 chmod -R a+rwX $home/workspaces
 cp /etc/box/vault.env $home/vault.env && echo DEMO_SECRET=portal-dev-test >> $home/vault.env && chmod 600 $home/vault.env
-BOX_HOME=$home BOX_PORT=$port BOX_VAULT=$home/vault.env BOX_STDB_DB=box-portal-dev BOX_PROXY_PORT=auto \
-  BOX_PORTAL=$dest/portal/dist setsid nohup node --experimental-strip-types --disable-warning=ExperimentalWarning core/box.ts \
-  > $home/box.log 2>&1 < /dev/null &
-echo \$! > /run/box-portal-dev.pid
-for i in \$(seq 50); do curl -fs 127.0.0.1:$port/health >/dev/null && break; sleep 0.3; done
+$start
 task() { curl -fs 127.0.0.1:$port/api/tasks -H 'content-type: application/json' -d "\$1" | sed 's/.*"id":"\([^"]*\)".*/\1/'; }
 f='"worker":"fake","source":"portal-dev"'
 task '{"title":"Write the weekly notes",'"\$f"',"workspace":"notes","prompt":"write notes.md # Notes\nappend notes.md Groceries came in under budget.\nappend notes.md The deploy went out on Tuesday."}' >/dev/null

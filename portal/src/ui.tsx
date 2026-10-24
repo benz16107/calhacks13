@@ -1,9 +1,10 @@
-// Small shared pieces: app glyphs, words for states, money, time, and the approval card's buttons.
+// Small shared pieces: app glyphs, words for states, money, time, the banner, and the approval buttons.
+import type { ComponentChildren } from 'preact';
 import { useState } from 'preact/hooks';
 import { answer, box, type Approval, type Task } from './live.ts';
 
-// Path data from the Figma glyphs (direction A, 48 px frames). Figma draws every size with a 3 px stroke,
-// so one copy drawn with a non-scaling stroke matches the 48, 32, 28, 18 and 16 px exports exactly.
+// Path data from the Figma glyphs (direction A, 48 px grid, 3 px stroke). Figma draws every size with a 3 px
+// stroke, so one copy drawn with a non-scaling stroke matches its 48, 32, 20 and 14 px exports.
 const GLYPHS: Record<string, string[]> = {
   tasks: ['M12 16H36M12 24H30M12 32H33'],
   activity: ['M14 34V24M22 34V14M30 34V20M38 34V28'],
@@ -31,7 +32,16 @@ const GLYPHS: Record<string, string[]> = {
     'M30 27C31.6569 27 33 25.6569 33 24C33 22.3431 31.6569 21 30 21C28.3431 21 27 22.3431 27 24C27 25.6569 28.3431 27 30 27Z',
     'M22 35C23.6569 35 25 33.6569 25 32C25 30.3431 23.6569 29 22 29C20.3431 29 19 30.3431 19 32C19 33.6569 20.3431 35 22 35Z',
   ],
+  // Glyph/Box (21:59): two server units, from the 32 px export scaled to the 48 px grid.
+  box: [
+    'M13 12H35C36.1 12 37 12.9 37 14V20C37 21.1 36.1 22 35 22H13C11.9 22 11 21.1 11 20V14C11 12.9 11.9 12 13 12Z',
+    'M13 26H35C36.1 26 37 26.9 37 28V34C37 35.1 36.1 36 35 36H13C11.9 36 11 35.1 11 34V28C11 26.9 11.9 26 13 26Z',
+    'M16 17H18M16 31H18',
+  ],
+  // Glyph/Pair (21:54): a phone.
+  pair: ['M19 10H29C30.6569 10 32 11.3431 32 13V35C32 36.6569 30.6569 38 29 38H19C17.3431 38 16 36.6569 16 35V13C16 11.3431 17.3431 10 19 10Z', 'M22 33H26'],
 };
+export const hasGlyph = (name: string) => name in GLYPHS;
 
 /** An app's glyph. Apps without one (a new track) show their first letter. */
 export function Glyph({ name, title }: { name: string; title?: string }) {
@@ -45,6 +55,12 @@ export function Glyph({ name, title }: { name: string; title?: string }) {
     </svg>
   );
 }
+
+export const CloseIcon = () => (
+  <svg viewBox="0 0 12 12" class="close-icon" aria-hidden="true">
+    <path d="M2.5 2.5l7 7M9.5 2.5l-7 7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+  </svg>
+);
 
 export const dollars = (cents: number) => `$${(cents / 100).toFixed(2)}`;
 export const plural = (n: number, one: string, many = one + 's') => `${n} ${n === 1 ? one : many}`;
@@ -64,7 +80,8 @@ export function ago(iso: string | number) {
   if (s < 86400) return `${Math.round(s / 3600)} h ago`;
   return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
-export const clock = (iso: string | number) => new Date(iso).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+export const clock = (iso: string | number) => new Date(iso).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+export const hhmm = (iso: string | number) => new Date(iso).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
 
 /** The color says the state, and the word always says it too. */
 export function StatePill({ state }: { state: Task['state'] }) {
@@ -75,8 +92,67 @@ export function StatePill({ state }: { state: Task['state'] }) {
 export const trackOf = (t: Pick<Task, 'source'>) => t.source.split(':')[0];
 export const taskTitle = (id?: string) => (id && box.tasks.get(id)?.title) || id || 'A task';
 
+/** A notification (Figma Banner 22:67): floating on the desktop, or flat in Notification Center. */
+export function Banner(props: {
+  kind: 'approval' | 'blocked' | 'info';
+  glyph: string;
+  kicker: string;
+  meta: string;
+  body: string;
+  /** Opens when the body is clicked. */
+  open?: string;
+  onHide?: () => void;
+  flat?: boolean;
+  children?: ComponentChildren;
+}) {
+  return (
+    <section class={`banner banner-${props.kind}${props.flat ? ' banner-flat' : ''}`} aria-label={props.kicker.toLowerCase()}>
+      <div class="banner-head">
+        <span class="banner-icon" aria-hidden="true">
+          <Glyph name={props.glyph} />
+        </span>
+        <span class="banner-meta">
+          <span class="banner-kicker">{props.kicker}</span>
+          <span class="banner-sub">{props.meta}</span>
+        </span>
+        {props.onHide && (
+          <button class="banner-hide" aria-label="Hide for now" onClick={props.onHide}>
+            <CloseIcon />
+          </button>
+        )}
+      </div>
+      {props.open ? (
+        <a class="banner-text" href={props.open}>
+          {props.body}
+        </a>
+      ) : (
+        <p class="banner-text">{props.body}</p>
+      )}
+      {props.children && <div class="actions">{props.children}</div>}
+    </section>
+  );
+}
+
+/** The approval as a banner: the task's name, the question, and Approve and Deny. */
+export function ApprovalBanner({ a, at, flat, onHide }: { a: Approval; at: number; flat?: boolean; onHide?: () => void }) {
+  return (
+    <Banner
+      kind="approval"
+      glyph="tasks"
+      kicker={`${taskTitle(a.task).toUpperCase()} WANTS YOUR OK`}
+      meta={`${at ? ago(at) : 'waiting'} · task ${a.task}`}
+      body={a.question}
+      open={`#task/${a.task}`}
+      flat={flat}
+      onHide={onHide}
+    >
+      <AnswerButtons a={a} />
+    </Banner>
+  );
+}
+
 /** Approve and Deny, with the amount on the button when there is one. */
-export function AnswerButtons({ a, big }: { a: Approval; big?: boolean }) {
+export function AnswerButtons({ a }: { a: Approval }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const go = async (approved: boolean) => {
@@ -90,14 +166,24 @@ export function AnswerButtons({ a, big }: { a: Approval; big?: boolean }) {
     setBusy(false);
   };
   return (
-    <div class={`answer${big ? ' answer-big' : ''}`}>
+    <>
       <button class="btn btn-primary" disabled={busy} onClick={() => go(true)}>
         {a.costCents > 0 ? `Approve ${dollars(a.costCents)}` : 'Approve'}
       </button>
       <button class="btn btn-secondary" disabled={busy} onClick={() => go(false)}>
         Deny
       </button>
-      {error && <p class="error" role="alert">Could not send that: {error}</p>}
-    </div>
+      {error && (
+        <p class="error" role="alert">
+          Could not send that: {error}
+        </p>
+      )}
+    </>
   );
+}
+
+/** When an approval was asked, from the log. 0 if the log is not loaded that far back. */
+export function askedAt(id: string) {
+  const e = box.events.findLast((e) => e.type === 'approval.asked' && e.approval.id === id);
+  return e ? Date.parse(e.at) : 0;
 }

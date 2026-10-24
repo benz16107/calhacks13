@@ -1,0 +1,18 @@
+<svg width="390" height="844" viewBox="0 0 390 844" fill="none" xmlns="http://www.w3.org/2000/svg">
+<rect width="390" height="844" fill="#E5E5E5"/>
+<g id="Wallpaper">
+<g id="Size=Phone" clip-path="url(#clip0_0_1)">
+<rect width="390" height="844" fill="#27313F"/>
+<path id="hill-far" d="M0 470C80 440 150 455 230 445C310 435 340 430 390 450V844H0V470Z" fill="#46586B"/>
+<path id="crescent moon" d="M321.522 66C319.363 69.1718 318.1 73.0033 318.1 77.1299C318.1 88.0651 326.965 96.9297 337.9 96.9297C342.027 96.9296 345.858 95.6664 349.029 93.5068C346.264 102.496 337.896 109.03 328 109.03C315.85 109.03 306 99.1804 306 87.0303C306 77.1346 312.534 68.7654 321.522 66Z" fill="#E9DFC8"/>
+<path id="hill-mid" d="M0 520C90 490 180 515 270 495C360 475 360 505 390 495V844H0V520Z" fill="#36475A"/>
+<path id="hill-near" d="M0 600C120 570 230 600 390 575V844H0V600Z" fill="#28343F"/>
+<path id="hill-front" d="M0 690C140 660 260 700 390 670V844H0V690Z" fill="#1C252D"/>
+</g>
+</g>
+<defs>
+<clipPath id="clip0_0_1">
+<rect width="390" height="844" fill="white"/>
+</clipPath>
+</defs>
+</svg>

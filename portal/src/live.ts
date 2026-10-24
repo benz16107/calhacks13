@@ -16,7 +16,11 @@ export interface Health {
   startedAt?: string;
   resumed?: string[];
 }
-export interface Restored { at: number; tasks: string[]; restarted: boolean }
+export interface Restored { at: number; tasks: string[]; restarted: boolean; lostAt?: number }
+/** A box the portal can show: this one, and peers from BOX_PEERS (GET /api/boxes). */
+export interface BoxEntry { id: string; name: string; stdb?: string; self?: boolean; url?: string }
+/** This phone's pairing with this box (POST /api/pair), kept in the browser. */
+export interface Pairing { token: string; device: { id: string; name: string }; box: { id: string; name: string } }
 
 /** Who answers from this screen. It goes into the log as `by`. */
 export const surface: 'box screen' | 'phone' | 'portal' =
@@ -28,9 +32,14 @@ export const box = {
   /** The newest events of the log, oldest first. */
   events: [] as LogEvent[],
   apps: [] as AppEntry[],
+  boxes: [] as BoxEntry[],
   health: undefined as Health | undefined,
-  /** How tasks and approvals stay live. 'offline' means the box is out of reach. */
+  /** When tasks or approvals last changed, for "updated 19:04:22". */
+  updatedAt: Date.now(),
+  /** How tasks and approvals stay live. */
   live: 'connecting' as 'connecting' | 'spacetimedb' | 'log stream' | 'offline',
+  /** The box's API stopped answering (a power cut, or this device lost the network). */
+  down: false,
   today: { day: '', cents: 0, blocked: 0 },
   restored: undefined as Restored | undefined,
   /** net.blocked events seen live, newest last. */
@@ -42,6 +51,7 @@ const KEEP = 5000;
 const subs = new Set<() => void>();
 let frame = 0;
 export function changed() {
+  box.updatedAt = Date.now();
   frame ||= requestAnimationFrame(() => {
     frame = 0;
     for (const s of subs) s();
@@ -84,6 +94,7 @@ function refreshSoon() {
 
 const dayOf = (iso: string) => new Date(iso).toLocaleDateString('en-CA');
 function take(e: LogEvent) {
+  if (e.seq <= (box.events.at(-1)?.seq ?? 0)) return; // already have it (a reconnect replays one line)
   box.events.push(e);
   if (box.events.length > KEEP) box.events.splice(0, box.events.length - KEEP);
   const day = dayOf(e.at);
@@ -109,11 +120,13 @@ export function onEvent(l: (e: LogEvent) => void) {
 let activeBeforeDrop: string[] | undefined;
 let dropAt = 0;
 function follow() {
-  const es = new EventSource(`/api/log/stream?after=${box.events.at(-1)?.seq ?? 0}`);
+  // Start one line back: the box sends the stream's headers with its first event, so a replayed line opens it at once.
+  const es = new EventSource(`/api/log/stream?after=${Math.max(0, (box.events.at(-1)?.seq ?? 0) - 1)}`);
   es.onmessage = (m) => take(JSON.parse(m.data));
   es.onopen = () => {
     if (activeBeforeDrop) void cameBack(activeBeforeDrop);
     activeBeforeDrop = undefined;
+    box.down = false;
     if (box.live === 'offline') box.live = 'log stream';
     changed();
   };
@@ -122,9 +135,12 @@ function follow() {
       activeBeforeDrop = [...box.tasks.values()].filter((t) => ['queued', 'running', 'waiting'].includes(t.state)).map((t) => t.id);
       dropAt = Date.now();
     }
+    box.down = true;
     if (box.live !== 'spacetimedb') box.live = 'offline';
     changed();
-    if (es.readyState === EventSource.CLOSED) setTimeout(follow, 2000); // the browser gave up; start again
+    // Retry every second ourselves: the browser's own retry backs off, which is slow after a power cut.
+    es.close();
+    setTimeout(follow, 1000);
   };
 }
 
@@ -134,7 +150,7 @@ async function cameBack(before: string[]) {
   await Promise.all([refresh(), loadHealth()]).catch(() => {});
   const restarted = !!box.health?.startedAt && box.health.startedAt !== started;
   const tasks = before.filter((id) => ['running', 'waiting', 'done', 'queued'].includes(box.tasks.get(id)?.state ?? ''));
-  if (tasks.length && (restarted || Date.now() - dropAt > 3000)) box.restored = { at: Date.now(), tasks, restarted };
+  if (tasks.length && (restarted || Date.now() - dropAt > 3000)) box.restored = { at: Date.now(), tasks, restarted, lostAt: dropAt };
   changed();
 }
 
@@ -143,7 +159,9 @@ async function loadHealth() {
   // A box that started in the last ten minutes and resumed tasks: say so, even on a screen that just booted.
   const h = box.health;
   if (h.resumed?.length && h.startedAt && Date.now() - Date.parse(h.startedAt) < 600_000 && !box.restored) {
-    box.restored = { at: Date.parse(h.startedAt), tasks: h.resumed, restarted: true };
+    const boot = Date.parse(h.startedAt);
+    const before = box.events.findLast((e) => Date.parse(e.at) < boot);
+    box.restored = { at: boot, tasks: h.resumed, restarted: true, lostAt: before && Date.parse(before.at) };
   }
 }
 
@@ -164,6 +182,14 @@ function approvalRow(r: ApprovalRow) {
   changed();
 }
 
+/** One reconnect at a time, backing off to a minute: a failed connect fires both callbacks below. */
+let retryTimer = 0;
+let failures = 0;
+function retry(h: Health) {
+  if (retryTimer) return;
+  retryTimer = setTimeout(() => ((retryTimer = 0), spacetime(h)), Math.min(60_000, 2000 * 2 ** failures++));
+}
+
 function spacetime(h: Health) {
   const scheme = location.protocol === 'https:' ? 'wss' : 'ws';
   DbConnection.builder()
@@ -177,6 +203,7 @@ function spacetime(h: Health) {
       c.subscriptionBuilder()
         .onApplied(() => {
           conn = c;
+          failures = 0;
           box.live = 'spacetimedb';
           for (const r of c.db.task.iter()) taskRow(r as TaskRow);
           for (const r of c.db.approval.iter()) approvalRow(r as ApprovalRow);
@@ -185,25 +212,41 @@ function spacetime(h: Health) {
     })
     .onDisconnect(() => {
       conn = undefined;
-      box.live = 'log stream';
+      if (box.live !== 'offline') box.live = 'log stream';
       changed();
-      setTimeout(() => spacetime(h), 3000);
+      retry(h);
     })
     .onConnectError(() => {
-      if (box.live === 'connecting') box.live = 'log stream';
+      if (box.live === 'connecting' || box.live === 'spacetimedb') box.live = 'log stream';
       changed();
-      setTimeout(() => spacetime(h), 15000);
+      retry(h);
     })
     .build();
 }
 
 // ---------- actions ----------
 
-/** Approve or deny. Through SpacetimeDB when it's connected (the box hears it live), else the HTTP API. */
+export const pairing = (): Pairing | undefined => JSON.parse(localStorage.getItem('pairing') ?? 'null') ?? undefined;
+
+/**
+ * Approve or deny. A paired phone answers with its device token, so the log names the phone. Otherwise through
+ * SpacetimeDB when it's connected (the box hears it live), else the HTTP API.
+ */
 export async function answer(a: Approval, approved: boolean) {
-  if (conn) conn.reducers.answer({ id: a.id, approved, by: surface });
-  else await api('POST', `/approvals/${a.id}`, { approved, by: surface });
-  box.approvals.set(a.id, { ...a, state: approved ? 'approved' : 'denied', by: surface });
+  const p = pairing();
+  let by: string = surface;
+  if (p) {
+    const r = await fetch(`/api/approvals/${a.id}`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${p.token}` },
+      body: JSON.stringify({ approved }),
+    });
+    if (r.status === 401) localStorage.removeItem('pairing'); // revoked on the box: pair again
+    if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error ?? r.statusText);
+    by = p.device.name;
+  } else if (conn) conn.reducers.answer({ id: a.id, approved, by });
+  else await api('POST', `/approvals/${a.id}`, { approved, by });
+  box.approvals.set(a.id, { ...a, state: approved ? 'approved' : 'denied', by });
   changed();
 }
 
@@ -217,7 +260,9 @@ export async function undo(id: string) {
 export async function start() {
   await Promise.all([refresh(), loadHealth(), api<AppEntry[]>('GET', '/apps').then((a) => (box.apps = a))]).catch(() => {
     box.live = 'offline';
+    box.down = true;
   });
+  box.boxes = await api<BoxEntry[]>('GET', '/boxes').catch(() => []);
   changed();
   follow();
   if (box.health) spacetime(box.health);
