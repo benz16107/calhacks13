@@ -386,7 +386,8 @@ const json = (data: unknown, status = 200) => Response.json(data, { status });
 const body = async (req: Request) => req.json().catch(() => ({}));
 const fail = (e: unknown, status = 400) => json({ error: (e as Error).message }, status);
 const file = (name: string, type: string) => () =>
-  new Response(fs.readFileSync(new URL(`./${name}`, import.meta.url), 'utf8'), { headers: { 'content-type': `${type}; charset=utf-8`, 'cache-control': 'no-store' } });
+  // no-referrer: these pages can open with the device token in their address, and it must never leave in a Referer.
+  new Response(fs.readFileSync(new URL(`./${name}`, import.meta.url), 'utf8'), { headers: { 'content-type': `${type}; charset=utf-8`, 'cache-control': 'no-store', 'referrer-policy': 'no-referrer' } });
 const origin = (req: Request) => req.headers.get('origin') ?? '';
 /** What a passkey signs for an approval: its exact question and amount, so one OK can't be used for another. */
 const approvalPayload = (a: Approval) => ({ id: a.id, question: a.question, costCents: a.costCents, task: a.task });

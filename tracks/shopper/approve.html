@@ -22,6 +22,10 @@
   const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
   const q = new URLSearchParams(location.search);
   const id = q.get('approval');
+  // Keep the device token for this page's own requests, then take it out of the address so it doesn't stay in history.
+  const token = q.get('access_token');
+  const f = (url, init = {}) => fetch(url, { ...init, headers: { ...(init.headers ?? {}), ...(token ? { authorization: `Bearer ${token}` } : {}) } });
+  history.replaceState(null, '', location.pathname + (id ? `?approval=${encodeURIComponent(id)}` : q.get('enroll') ? '?enroll=1' : ''));
   const done = (text) => {
     $('card').innerHTML = `<div class="g-card"><p class="t-body-strong">${esc(text)}</p><p class="t-caption t-secondary">You can close this and go back to the GurtOS app.</p><button class="g-btn" id="close">Close</button></div>`;
     $('close').onclick = () => window.close();
@@ -37,13 +41,13 @@
       <button class="g-btn g-btn-suggested g-btn-large" id="go">Set up Face ID</button></div>`;
     $('go').onclick = async () => {
       try {
-        const status = await (await fetch(`/t/shopper/passkey/status?origin=${encodeURIComponent(location.origin)}`)).json();
-        await pk.enroll($('name').value, { existing: status.enrolled });
+        const status = await (await f(`/t/shopper/passkey/status?origin=${encodeURIComponent(location.origin)}`)).json();
+        await pk.enroll($('name').value, { existing: status.enrolled, fetch: f });
         done('Face ID is set up on this device.');
       } catch (e) { fail(e); }
     };
   } else {
-    const list = await (await fetch('/api/approvals?state=pending')).json().catch(() => []);
+    const list = await (await f('/api/approvals?state=pending')).json().catch(() => []);
     const a = Array.isArray(list) ? list.find((x) => x.id === id) : undefined;
     if (!a) done('Nothing is waiting for you: it was already answered.');
     else {
@@ -55,9 +59,9 @@
         <p class="t-caption t-secondary">The box checks your Face ID signature before it pays. The card stays in the vault; the agent never sees it.</p>
         <div class="g-notification-actions"><button class="g-btn g-btn-large" id="no">Deny</button><button class="g-btn g-btn-suggested g-btn-large" id="yes"><g-icon name="security-high"></g-icon>Approve${amount ? ' ' + esc(amount) : ''} with Face ID</button></div>
       </article>`;
-      $('yes').onclick = async () => { try { await pk.approve(a.id); done('Approved with Face ID.'); } catch (e) { fail(e); } };
+      $('yes').onclick = async () => { try { await pk.approve(a.id, { fetch: f }); done('Approved with Face ID.'); } catch (e) { fail(e); } };
       $('no').onclick = async () => {
-        const r = await fetch(`/api/approvals/${encodeURIComponent(a.id)}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ approved: false, by: 'phone' }) });
+        const r = await f(`/api/approvals/${encodeURIComponent(a.id)}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ approved: false, by: 'phone' }) });
         r.ok ? done('Denied. Nothing was bought.') : fail(new Error(`The box answered ${r.status}.`));
       };
     }
