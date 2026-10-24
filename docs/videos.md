@@ -101,7 +101,7 @@ asks.
 
 ## 3. Atlassian (3 minutes or less)
 
-Shoot in Jira on the demo site (one-atlas-tyfk.atlassian.net), signed in. Use BOX-2 for the roll back and BOX-5 for
+Shoot in Jira on the demo site, signed in. Use BOX-2 for the roll back and BOX-5 for
 the approval, or run `DEMO_LIVE=jira ./demo` just before to make fresh issues (it deletes them at the end, so pause it
 or make new ones by hand).
 

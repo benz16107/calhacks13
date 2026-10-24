@@ -39,7 +39,7 @@ Upload as Unlisted on YouTube, put the id into `src/data/videos.ts`, then build,
 ## Update the merge gate output
 
 ```sh
-./demo linuxbox > /tmp/demo.txt 2>&1      # from the repo root
+./demo <test VM> > /tmp/demo.txt 2>&1     # from the repo root; the x86 test VM gave the published run
 grep -v '^demo: /\|^added \|^$' /tmp/demo.txt > showcase/src/data/demo-latest.txt
 ```
 
@@ -47,15 +47,15 @@ The overview counts the `ok` lines itself.
 
 ## Deploy
 
-Static files on Vercel, project `gurtos-calhacks`, domain `calhacks.gurtos.com` (a CNAME at GoDaddy). Vercel's CLI is
-signed in on the laptop, so build here, then deploy from there with the built folder, outside any git checkout so
-Vercel does not connect the repository:
+Static files on Vercel, project `gurtos-calhacks`, domain `calhacks.gurtos.com` (a CNAME at GoDaddy). Build here, then
+deploy the built folder from a machine signed in to Vercel (`$VERCEL_HOST`), outside any git checkout so Vercel does
+not connect the repository:
 
 ```sh
 npm run build && npm run check
 rm -rf /tmp/gurtos-calhacks && cp -r dist /tmp/gurtos-calhacks && cp vercel.json /tmp/gurtos-calhacks/
-rsync -a --delete --exclude .vercel --exclude .vercelignore /tmp/gurtos-calhacks/ benmac:/tmp/gurtos-calhacks/
-ssh benmac 'cd /tmp/gurtos-calhacks && rm -f .env.local .gitignore && vercel deploy --prod --yes'
+rsync -a --delete --exclude .vercel --exclude .vercelignore /tmp/gurtos-calhacks/ "$VERCEL_HOST:/tmp/gurtos-calhacks/"
+ssh "$VERCEL_HOST" 'cd /tmp/gurtos-calhacks && rm -f .env.local .gitignore && vercel deploy --prod --yes'
 ```
 
 The first deploy ran `vercel link --yes --project gurtos-calhacks` there, which also wrote a `.env.local`; the

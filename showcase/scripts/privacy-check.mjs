@@ -4,6 +4,7 @@
 // Usage: node scripts/privacy-check.mjs dist
 import fs from 'node:fs';
 import path from 'node:path';
+import os from 'node:os';
 
 const root = process.argv[2] ?? 'dist';
 const walk = (d) => fs.readdirSync(d, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? walk(path.join(d, e.name)) : [path.join(d, e.name)]));
@@ -18,8 +19,8 @@ const PUBLIC_BASE58 = new Set([
 const before = (text, i, n = 60) => text.slice(Math.max(0, i - n), i);
 
 const checks = [
-  ['machine name', /linuxbox|macserver|benmac|vultrbox|personalbox|dellserver|gx10|estella/gi],
-  ['tailnet', /tailb51682|\.ts\.net\b|tailscale funnel/gi],
+  ['tailnet', /\.ts\.net\b|tailscale funnel/gi],
+  ['jira site', /[a-z0-9-]+\.atlassian\.net/gi, (m) => /^(your-site|your-org|example)\.atlassian\.net$/i.test(m)],
   ['email', /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g, (m) => /@example\.(com|org|net)$/.test(m) || /@\d+x\./.test(m) || /@(fontsource|astrojs)\//.test(m)],
   ['sslip or lima', /sslip\.io|lima\.internal|limactl|\.lima\b/gi],
   ['ipv4', /(?<![\d.\w])(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})(?![\d.])/g, (m) => m.split('.').some((o) => +o > 255) || /^(127\.0\.0\.1|0\.0\.0\.0|192\.0\.2\.\d+|198\.51\.100\.\d+|203\.0\.113\.\d+|1\.1\.1\.1)$/.test(m)],
@@ -32,6 +33,13 @@ const checks = [
   ['long hex', /\b[0-9a-f]{40,}\b/g],
   ['uuid', /\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/gi],
 ];
+
+// Machine names and other private words live outside git (the repo is public), one regex per line.
+const privateFile = path.join(os.homedir(), '.config/calhacks13/private-names');
+if (fs.existsSync(privateFile)) {
+  const words = fs.readFileSync(privateFile, 'utf8').split('\n').filter((l) => l.trim() && !l.startsWith('#'));
+  checks.push(['private name', new RegExp(words.join('|'), 'gi')]);
+} else console.log(`warning: ${privateFile} not found, so machine names are not checked`);
 
 let hits = 0;
 for (const f of files) {

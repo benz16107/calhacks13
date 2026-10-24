@@ -5,6 +5,7 @@ import Base from '../layouts/Base.astro';
 import VideoSlot from '../components/VideoSlot.astro';
 import { LINKS, repoTree } from '../data/site';
 import { VIDEOS } from '../data/videos';
+import { DOWNLOADS, RELEASE } from '../data/downloads';
 import clips from '../data/clips.json';
 import demoLog from '../data/demo-latest.txt?raw';
 import Architecture from '../assets/diagrams/architecture.svg';
@@ -287,6 +288,37 @@ const prizes = [
       </div>
     </section>
 
+    <section id="download" aria-labelledby="download-h">
+      <h2 id="download-h">Download</h2>
+      {
+        DOWNLOADS.length > 0 && (
+          <div class="table-wrap">
+            <table>
+              <caption class="dl-cap">GurtOS {RELEASE}: install discs, signed. Each SHA-256 is the file's checksum.</caption>
+              <thead>
+                <tr><th scope="col">File</th><th scope="col">For</th><th scope="col">Size</th><th scope="col">SHA-256</th></tr>
+              </thead>
+              <tbody>
+                {DOWNLOADS.map((d) => (
+                  <tr>
+                    <td><a href={d.url}>{d.file}</a>{d.mirror && <> (<a href={d.mirror}>mirror</a>)</>}</td>
+                    <td>{d.edition}, {d.arch}: {d.machine}</td>
+                    <td>{d.size}</td>
+                    <td class="mono sha">{d.sha256}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )
+      }
+      <ul class="measure">
+        <li><strong>On an Ubuntu 24.04 machine you already have:</strong> <code>sudo core/install.sh</code> installs the box service, Droid and SpacetimeDB. <a href={`${LINKS.docs}/get-started/install-on-ubuntu/`}>Install on Ubuntu</a>.</li>
+        <li><strong>Build the install discs from source:</strong> <code>image/build</code> makes GurtOS Server and <code>image/build personal</code> makes GurtOS Personal, for x86_64 or arm64, on any Ubuntu 24.04 VM with root. <a href={repoTree('image')}>How to build and test them</a>.</li>
+        <li><strong>The source:</strong> <a href={LINKS.repo}>github.com/benz16107/calhacks13</a>, Apache License 2.0.</li>
+      </ul>
+    </section>
+
     <section aria-labelledby="prizes">
       <h2 id="prizes">Cal Hacks prizes</h2>
       <ol class="criteria-list">
@@ -560,6 +592,18 @@ const prizes = [
     margin-top: var(--space-2);
     font-size: 0.88rem;
     color: var(--color-text-secondary);
+  }
+  .dl-cap {
+    caption-side: top;
+    text-align: left;
+    color: var(--color-text-secondary);
+    font-size: 0.9rem;
+    padding-bottom: var(--space-3);
+  }
+  .sha {
+    font-size: 0.72rem;
+    overflow-wrap: anywhere;
+    max-width: 22rem;
   }
   .criteria-list {
     list-style: none;

@@ -29,7 +29,7 @@ The thumbnail is image 1.
 
 - https://calhacks.gurtos.com (the showcase: one page per sponsor track, with evidence)
 - https://gurtos.com (the product docs)
-- https://github.com/benz16107/calhacks13 (the code; **TODO (Ben):** make the repo public)
+- https://github.com/benz16107/calhacks13 (the code, Apache License 2.0; **TODO (Ben):** say go on making it public)
 - https://www.figma.com/slides/SBrJtJiY20k88X3IGzKwZW (the pitch deck, Figma Slides)
 
 ## Built with
@@ -92,7 +92,7 @@ alarms. A running Droid task held only a placeholder key in 240 of 240 process s
 **Every sponsor track has its own page, with the criteria, video, screenshots, live links and evidence:
 https://calhacks.gurtos.com**
 
-Built solo by Ben Zhou. All payments are test money: Stripe test mode with a Visa test card, or USDC on Solana devnet.
+Built solo by Ben Zhou. Open source under the Apache License 2.0. All payments are test money: Stripe test mode with a Visa test card, or USDC on Solana devnet.
 
 <!-- SUMMARY END -->
 
@@ -324,13 +324,13 @@ Public links: chat https://www.mana.space/shared-chats/x5CqxyjcOgVCAyrvUBqK2LNRc
 1. **Six videos.** Record and upload as Unlisted on YouTube (shot lists in `docs/videos.md`): main, Fetch.ai, Atlassian,
    Figma, Hyphenate, Visa. Put each id in `showcase/src/data/videos.ts` and redeploy; paste the main video's link in
    Devpost's video field. Until then every page shows a silent screen recording of the real app.
-2. **Make the repo public** (after scanning every ref, including `refs/pull/*`, for secrets). The site and this text
-   link to files in it, and judges get a 404 until then. The link checker verifies those paths against main.
-3. **Root `README.md`** is still three lines that say "Working name". Factory ("the README says where and how"),
-   Fetch.ai (agent names, addresses and badges in the README) and Coinbase (setup steps) read the README. The track
-   READMEs have all of it; a root README that points to them and to https://calhacks.gurtos.com would help.
-4. **Jira demo site is private.** The BOX issue links ask for a sign-in. Add the Atlassian judges as users, or rely on
-   the screenshots and the video.
+2. **Say go on making the repo public** (Apache-2.0, full history; the release thread does it). The site and this
+   text link to files in it, and judges get a 404 until then. The link checker verifies those paths against main.
+3. **Root `README.md`** still says "Working name"; the release thread owns it. Factory ("the README says where and
+   how"), Fetch.ai (agent names, addresses and badges) and Coinbase (setup steps) read it, so it should point to the
+   track READMEs and to https://calhacks.gurtos.com.
+4. **Jira.** The demo site is not public, so the showcase shows the BOX issues as screenshots and links no Jira
+   URLs. The Atlassian video is where judges see Jira live.
 5. **Figma Make.** The file opens signed out but its preview says "Couldn't load Make". Open it, check the preview
    runs, then Publish. The board, the design file, the deck and both prototypes open signed out.
 6. **Fetch.ai.** Submit through the ASI:One Submission Agent and share the ASI:One chat link.

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# A throwaway box for recording the showcase clips, on the linuxbox Lima VM, beside the installed box and the
+# A throwaway box for recording the showcase clips, on the x86 test VM (Lima), beside the installed box and the
 # portal's dev box: its own BOX_HOME, API port 7795 and SpacetimeDB database. Modeled on portal/dev-box.sh.
 # Its identity is neutral (gurtos.local, "home box") so nothing private shows on screen.
 #   showcase/scripts/clips/clip-box.sh          ship this checkout, start the box fresh and seed a lived-in desktop

@@ -9,7 +9,6 @@ export const LINKS = {
   figmaMake: 'https://www.figma.com/make/PuKKW48akjbEKogpI59pdL',
   protoPhone: 'https://www.figma.com/proto/oppzH621OOOMA31rgLbxbM/?node-id=23-304&starting-point-node-id=23%3A304',
   protoServer: 'https://www.figma.com/proto/oppzH621OOOMA31rgLbxbM/?node-id=24-454&starting-point-node-id=24%3A454',
-  jiraSearch: 'https://one-atlas-tyfk.atlassian.net/issues/?jql=project%20%3D%20BOX%20ORDER%20BY%20created%20ASC',
   manaChat: 'https://www.mana.space/shared-chats/x5CqxyjcOgVCAyrvUBqK2LNRcMJ2/001792810018092cc50381027f1410c8fcb',
   manaPage: 'https://www.mana.space/home/x5CqxyjcOgVCAyrvUBqK2LNRcMJ2/documents/cal-hacks-13-a-computer-where-ai-agents-work-safely',
   manaApp: 'https://www.mana.space/home/x5CqxyjcOgVCAyrvUBqK2LNRcMJ2/apps/box-status',
