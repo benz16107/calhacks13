@@ -852,7 +852,8 @@ class Core {
   ownerInfo() {
     if (!this.owner) return null;
     const f = this.passwd(this.owner);
-    return { user: this.owner, uid: f ? Number(f[2]) : null, home: f?.[5] ?? `/home/${this.owner}` };
+    // name: the account's full name (the first part of the GECOS field), for the screen's greeting; '' when unset.
+    return { user: this.owner, name: (f?.[4] ?? '').split(',')[0].trim(), uid: f ? Number(f[2]) : null, home: f?.[5] ?? `/home/${this.owner}` };
   }
 
   passwd(user: string): string[] | undefined {

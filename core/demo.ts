@@ -709,7 +709,7 @@ await moment('personal: one task on several folders, and a runtime owner', async
 
   // The owner, set after the account exists (the image does this once GNOME's own setup has made it).
   const user = `gurtown${run}`;
-  spawnSync('useradd', ['-M', '-N', '-u', String(2500 + Math.floor(Math.random() * 500)), '-s', '/usr/sbin/nologin', user]); // a person's uid, not in the task range
+  spawnSync('useradd', ['-M', '-N', '-u', String(2500 + Math.floor(Math.random() * 500)), '-c', 'Maya Chen,,,', '-s', '/usr/sbin/nologin', user]); // a person's uid, not in the task range
   try {
     const before = await api<any>('GET', '/api/owner');
     const refusals = await Promise.all(['root', 'nosuchuser99', 'Bad Name'].map((u) => api('PUT', '/api/owner', { user: u }).then(() => '', (e: Error) => e.message)));
@@ -718,7 +718,7 @@ await moment('personal: one task on several folders, and a runtime owner', async
     check((await viaTcp('PUT', '/api/owner', { user })).status === 403, 'with an owner already set, a plain local process cannot replace it either (403)');
     const set = await api<any>('PUT', '/api/owner', { user });
     const sys = await api<any>('GET', '/api/system');
-    check(set.user === user && set.uid >= 1000 && set.home === `/home/${user}` && sys.owner === user && sys.edition === 'personal', `the owner is now ${user} (uid ${set.uid}), and the box reports ${sys.editionName}`);
+    check(set.user === user && set.name === 'Maya Chen' && set.uid >= 1000 && set.home === `/home/${user}` && sys.owner === user && sys.edition === 'personal', `the owner is now ${user} (uid ${set.uid}), and the box reports ${sys.editionName}`);
     check(JSON.parse(fs.readFileSync(path.join(HOME, 'owner.json'), 'utf8')).user === user, 'it is saved, so it survives a restart');
     check((await api<any>('DELETE', '/api/owner')).user === 'owner', 'clearing it falls back to the BOX_OWNER the service started with');
   } finally {

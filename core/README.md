@@ -283,7 +283,7 @@ answers without `/api`, which is what the demo and tracks use.
 | `GET /api/tasks/<id>/diff` | `{changes: [{path, change}], diff}`: what it added, modified or deleted, and a unified diff |
 | `POST /api/tasks/<id>/undo` | The task, now `undone`. For a real-folder task, discards its changes. |
 | `POST /api/tasks/<id>/keep` | Personal: apply a done task's changes to its real folder. `{kept}` or `{conflicts}`. |
-| `GET /api/owner` | Personal: `{user, uid, home}`, or null on a Server box |
+| `GET /api/owner` | Personal: `{user, name, uid, home}` (`name` is the account's full name, empty when unset), or null on a Server box |
 | `PUT /api/owner {user}` | Make an existing account the owner. For the image: run it once GNOME's own setup has created the account, e.g. `curl --unix-socket /var/lib/box/api.sock -X PUT -H 'content-type: application/json' -d '{"user":"alice"}' http://box/api/owner`. The account must exist and be a person's (uid 1000 to 29999 or 40000 and up; not root, not a system or task account). Saved in `owner.json`, so it survives a restart, and the box then reports itself as GurtOS Personal. Once an owner is set, changing it takes the box's socket (root) or an owner-paired phone, not any local process. |
 | `DELETE /api/owner` | Forget the saved owner and go back to `BOX_OWNER` (or none) |
 | `GET /api/approvals?state=pending` | The inbox. Leave out `state` for all of them. |
