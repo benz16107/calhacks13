@@ -134,6 +134,11 @@ Solana memos and Onramp, with `@coinbase/cdp-sdk` 1.60.0 and `@x402/*` 2.28.0.
     `bazaar: processing` in the settle response. It took one successful call through a public URL, from a
     second wallet. A "how to get listed" checklist (public HTTPS URL, extension declared, one settled payment,
     where to verify) would have saved us the guessing.
+28. **The sandbox flag is a prefix, and the link still points at the live host.** A session made with
+    `partnerUserRef: sandbox-...` returns a `pay.coinbase.com` link; a `pay-sandbox.coinbase.com` host exists
+    and redirects, but no doc says to use it with sessions, or whether a session token works there. A builder
+    can't tell if opening the link is safe without trying. A `sandbox: true` field or a sandbox `onrampUrl`
+    would remove the doubt.
 
 ## Not Coinbase, for context
 

@@ -238,8 +238,12 @@ once from a different wallet (a wallet can't pay itself).
   loosen its own policy. Set the policy, then remove that scope from the box's key (step 4 above).
 - **CDP Server Wallet mode is built and unit-tested but not yet run live**: it needs a CDP Wallet Secret in the
   vault, which is pending. Live runs so far use vault-key mode, with the owner policy enforced by GurtOS.
-- **Onramp is sandbox only.** Sandbox orders move no money, and Onramp can't deliver devnet USDC, so test
-  money comes from Circle's faucet. Onramp also needs an app set up in the CDP Portal.
+- **Onramp is sandbox only, and only the session step is verified.** On 2026-10-24, with Onramp enabled on the
+  CDP project (display name and domains set, test access of 25 transactions up to $5), `POST /topup` created a
+  session: a $5 USDC quote on Solana, with the link marked `partnerUserRef=sandbox-...`. We did not open the
+  checkout or complete an order. Coinbase documents that a `sandbox-` prefix means no card is charged, but the
+  link it returns points at the live `pay.coinbase.com`, so treat the button as a flow test, not a purchase.
+  Onramp can't deliver devnet USDC, so test money comes from Circle's faucet.
 - No refunds: if the owner declines a paid "rent the agent" request, the buyer keeps nothing back.
 - Metered payments are counted at their cap in the task's cost until the core reads the settled amount.
 - `GET` only for paid APIs; responses are cut at 20 KB. Quoted prices are kept in memory.
