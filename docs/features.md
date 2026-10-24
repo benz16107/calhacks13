@@ -79,7 +79,7 @@ watched: portal/dist rebuilt from merged sources (C-4).
 | app.gurtos.com companion app and hosted portal | portal, remote access | merged (hosted mode 7aae35d, installable d05efd8); multi-machine switcher and per-edition home: building | 7aae35d, d05efd8 | none | all |
 | Web Push through the gateway, end-to-end encrypted payloads | remote access, portal | merged (gate: push decrypts only on its phone; gateway forwards ciphertext); phone side in `portal` branch | 6cdeb9a | remote access and push | all |
 | Image: install, A/B updates with rollback, firewall, Pacific time | image | verified (ISO) Oct 24 00:02 (build 881318a on Vultr) | fd537ad, 881318a | image/test (not in ./demo) | Vultr |
-| Signed release ISOs for four builds on GitHub and the Vultr mirror | release, image | building (v0.1.0-preview is published as a pre-release; all four ISOs are being rebuilt with age, voice and the theme, and the release thread will give new checksums) | bb4cc3e | none | Vultr |
+| Signed release ISOs for four builds on GitHub and the Vultr mirror | release, image | merged; QA checked Oct 24: the signature on `SHA256SUMS` verifies against `release/allowed_signers`, the mirror's `SHA256SUMS` is identical, all four checksums in `release/notes/v0.1.0-preview.md` match. ISO contents not yet installed by QA (release thread's own Server x86_64 install passed) | fb3b922, built from e36a6cc | none | Vultr |
 | Elastic hash-chained log, plus the add-only Elastic copy and the verify tool (branch `elastic-hash-chain` is not merged) | core | building | | | Elastic |
 | Tripwire keys | core | building | | | Armadin |
 | The per-task sandbox (seccomp, Landlock, cgroup caps) | core | building | | | Armadin |
