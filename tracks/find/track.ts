@@ -3,7 +3,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import type { Box, Track } from '../../core/contract.ts';
-import { HOME, MODELS, OFFLINE, PROMPT, describeAny, docs, mossIndex, photoType, put, root, scan, use, wordIndex, type Index } from './find.ts';
+import { HOME, MODELS, OFFLINE, PROMPT, cloudStatus, describeAny, docs, isUsageLimit, mossIndex, photoType, put, root, scan, use, wordIndex, type Index } from './find.ts';
 
 const MOSS = ['MOSS_PROJECT_ID', 'MOSS_PROJECT_KEY'];
 const KINDS = ['photo', 'file', 'task'];
@@ -26,9 +26,10 @@ function open(secret: Secret) {
     try {
       return await use(await mossIndex(id, key));
     } catch (e) {
-      // No network at boot, or Moss is down: search by words meanwhile, and try Moss again in a minute.
+      // No network at boot, or Moss is down: search by words meanwhile. Try Moss again in a minute, or in an
+      // hour when the project is over its usage limit, so a limited project is not called every minute.
       console.error(`find: Moss did not open, using the word index for now: ${(e as Error).message}`);
-      setTimeout(() => (opening = undefined), 60_000).unref();
+      setTimeout(() => (opening = undefined), isUsageLimit(e) ? 3600_000 : 60_000).unref();
       return use(wordIndex());
     }
   })();
@@ -41,13 +42,27 @@ async function search(secret: Secret, input: { query?: unknown; kind?: unknown; 
   const kind = input.kind ? String(input.kind) : undefined;
   if (kind && !KINDS.includes(kind)) throw new Error(`kind must be one of ${KINDS.join(', ')}`);
   const index = await open(secret);
+  const topK = Math.min(Math.max(Number(input.topK) || 5, 1), 20);
   const t0 = performance.now();
-  const { hits, ms } = await index.query(query, Math.min(Math.max(Number(input.topK) || 5, 1), 20), kind);
+  let used: string = index.kind;
+  let found: Awaited<ReturnType<Index['query']>>;
+  try {
+    found = await index.query(query, topK, kind);
+  } catch (e) {
+    if (index.kind !== 'moss') throw e;
+    // Moss could not open a session (no network, usage limit): answer from the same docs by words.
+    const words = wordIndex();
+    await words.add([...docs.values()]);
+    found = await words.query(query, topK, kind);
+    used = `words (Moss unavailable: ${(e as Error).message.slice(0, 120)})`;
+  }
+  const { hits, ms } = found;
   return {
     query,
-    index: index.kind,
+    index: used,
     ms: round(ms),
     wallMs: round(performance.now() - t0),
+    cloud: cloudStatus(),
     results: hits.map((h) => ({ ...h.metadata, score: round(h.score), text: h.text.slice(0, 400) })),
   };
 }
@@ -214,7 +229,7 @@ export default {
     'GET /status': () => {
       const count: Record<string, number> = {};
       for (const d of docs.values()) count[d.metadata.kind] = (count[d.metadata.kind] ?? 0) + 1;
-      return Response.json({ offline: OFFLINE, docs: count, models: MODELS.map((m) => `${m.model} at ${m.base}`).concat('Claude via a Droid task') });
+      return Response.json({ offline: OFFLINE, cloud: cloudStatus(), docs: count, models: MODELS.map((m) => `${m.model} at ${m.base}`).concat('Claude via a Droid task') });
     },
   },
 } satisfies Track;

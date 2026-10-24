@@ -22,12 +22,13 @@ export default async function (d: DemoKit) {
   const status = await d.waitFor(
     'the four test photos to be described',
     async () => {
-      const s = await d.api<{ docs: Record<string, number> }>('GET', '/t/find/status');
+      const s = await d.api<{ docs: Record<string, number>; cloud: string }>('GET', '/t/find/status');
       return (s.docs.photo ?? 0) >= 4 ? s : undefined;
     },
     live ? 300_000 : 20_000, // live, Claude through a Droid task can take a few minutes
   );
   d.check(status, 'the box described the four test photos in the photos workspace');
+  d.check(status.cloud.startsWith('cloud copy off'), 'a demo box never pushes to Moss\'s cloud: search stays local');
 
   // Ben, from the portal.
   const r = await search('find the whiteboard photo', 'photo');

@@ -9,7 +9,8 @@ import { test } from 'node:test';
 
 const home = fs.mkdtempSync(path.join(os.tmpdir(), 'find-'));
 process.env.BOX_HOME = home;
-const { describe, describeAny, wordIndex, use, scan, docs } = await import('./find.ts');
+process.env.FIND_CLOUD_SYNC = '1';
+const { describe, describeAny, wordIndex, use, scan, docs, put, syncCloud, cloudStatus } = await import('./find.ts');
 const photo = new URL('./photos/IMG_2041.jpg', import.meta.url).pathname;
 
 test('describe sends the photo to an OpenAI-style API and reads the reply', async () => {
@@ -80,4 +81,40 @@ test('scan describes new photos once, reads text files, skips binaries and drops
   assert.deepEqual(failed.map((f) => f.path), ['other.jpg'], 'a photo no model could describe is reported');
   assert.ok(!docs.has('file:w/notes.md') && (await index.query('tahoe', 5)).hits.length === 0, 'a deleted file leaves the index');
   assert.ok(JSON.parse(fs.readFileSync(path.join(home, 'find', 'docs.json'), 'utf8')).length === 1, 'docs.json is saved');
+});
+
+test('the cloud copy: only when the index changed, at most every 10 minutes, and an hour off after a usage limit', async (t) => {
+  t.mock.timers.enable({ apis: ['Date'], now: Date.now() });
+  const min = 60_000;
+  let pushes = 0;
+  const push = async () => void pushes++;
+  const limited = async () => {
+    pushes++;
+    throw new Error("The project's usage limit has been reached; billing must be updated before it can be used.");
+  };
+  await put({ id: 'task:a', text: 'Task "a" (done)', metadata: { kind: 'task' } });
+  await syncCloud(push);
+  assert.equal(pushes, 1);
+  assert.match(cloudStatus(), /cloud copy on, last pushed/);
+  await put({ id: 'task:b', text: 'Task "b" (done)', metadata: { kind: 'task' } });
+  await syncCloud(push);
+  assert.equal(pushes, 1, 'changed, but within 10 minutes of the last push');
+  t.mock.timers.tick(11 * min);
+  await syncCloud(push);
+  assert.equal(pushes, 2);
+  t.mock.timers.tick(11 * min);
+  await syncCloud(push);
+  assert.equal(pushes, 2, 'an unchanged index is not pushed again');
+
+  await put({ id: 'task:c', text: 'Task "c" (done)', metadata: { kind: 'task' } });
+  await syncCloud(limited);
+  assert.equal(pushes, 3);
+  assert.match(cloudStatus(), /cloud copy paused: Moss usage limit/);
+  t.mock.timers.tick(30 * min);
+  await syncCloud(push);
+  assert.equal(pushes, 3, 'within the hour after a usage limit, Moss is not called');
+  t.mock.timers.tick(31 * min);
+  await syncCloud(push);
+  assert.equal(pushes, 4);
+  assert.match(cloudStatus(), /cloud copy on/);
 });

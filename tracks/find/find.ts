@@ -107,27 +107,122 @@ export interface Index {
   query(q: string, topK: number, kind?: string): Promise<{ hits: Hit[]; ms: number }>;
 }
 
-/** Moss, run inside the box: it embeds and searches in memory, and keeps a copy of the index in Moss's cloud. */
+export const isUsageLimit = (e: unknown) => /usage limit/i.test((e as Error)?.message ?? '');
+
+// ---------- Moss bills an open session by the minute ("session minutes", $0.05 each past the free credit) ----------
+// So the box holds no session while idle. Indexing only updates docs.json. A search opens a session, restores the
+// last one from disk, embeds only the docs that changed since (embedding is the slow part: 100 docs took 15 s on
+// the laptop VM, the snapshot 5 ms), answers, and the session saves itself and closes after 2 quiet minutes.
+// Queries on an open session are local and take a few ms.
+
+const IDLE_MS = 2 * 60_000;
+const paused = { until: 0 }; // after a usage-limit error, Moss is not called again for an hour
+const SNAPSHOT = path.join(DIR, 'moss-snapshot');
+const SNAPSHOT_DOCS = path.join(DIR, 'moss-snapshot.json'); // id -> hash of each doc in the snapshot
+const hashes = () => Object.fromEntries([...docs.values()].map((d) => [d.id, createHash('sha256').update(JSON.stringify(plain(d))).digest('base64')]));
+
+/** Moss, run inside the box: it embeds and searches in memory. Opt-in boxes also keep a copy in Moss's cloud. */
 export async function mossIndex(projectId: string, projectKey: string, name = INDEX): Promise<Index> {
   const { MossClient } = await import('@moss-js/moss'); // loaded only when used, so the offline demo never needs it
   // Moss's own cache (~/.moss, ~/.cache/moss) keeps one device id and one model download per machine, across demo runs.
   const client = new MossClient(projectId, projectKey);
-  const session = await client.session(name);
-  let timer: NodeJS.Timeout | undefined;
-  // Push to the cloud a few seconds after the last change. Only text goes: descriptions, never photos.
-  const push = () => {
-    clearTimeout(timer);
-    timer = setTimeout(() => session.pushIndex().catch((e: Error) => console.error(`find: Moss push failed: ${e.message}`)), 5000);
+  type Session = Awaited<ReturnType<typeof client.session>>;
+  let session: Promise<Session> | undefined;
+  let idle: NodeJS.Timeout | undefined;
+  let inFlight: Promise<unknown> = Promise.resolve(); // adds and removes still running on the open session
+  /** Apply a change to the open session, if one is open. A closed one catches up from docs.json when it opens. */
+  const change = (fn: (s: Session) => Promise<unknown>) => {
+    if (!session) return;
+    const done = session.then(fn, () => {});
+    inFlight = inFlight.then(() => done);
+    return done;
   };
+
+  const close = async () => {
+    const opened = session;
+    const held = hashes(); // every add and remove reached the open session, so it holds exactly docs.json now
+    session = undefined;
+    const s = await opened?.catch(() => undefined);
+    if (!s) return;
+    await inFlight.catch(() => {});
+    try {
+      await s.saveToDisk(SNAPSHOT);
+      fs.writeFileSync(SNAPSHOT_DOCS, JSON.stringify(held));
+    } catch (e) {
+      fs.rmSync(SNAPSHOT_DOCS, { force: true }); // the next session embeds everything again
+      console.error(`find: could not save the Moss session: ${(e as Error).message}`);
+    }
+    if (CLOUD_SYNC) await syncCloud(() => s.pushIndex()); // while it is open anyway: opening one only to push costs minutes
+    await s.close().catch(() => {});
+  };
+  const open = () => {
+    clearTimeout(idle);
+    idle = setTimeout(close, IDLE_MS).unref();
+    session ??= (async () => {
+      const s = await client.session(name);
+      let had: Record<string, string> = fs.existsSync(SNAPSHOT_DOCS) ? JSON.parse(fs.readFileSync(SNAPSHOT_DOCS, 'utf8')) : {};
+      if (Object.keys(had).length) await s.loadFromDisk(SNAPSHOT).catch(() => (had = {}));
+      const now = hashes();
+      const gone = Object.keys(had).filter((id) => !(id in now));
+      const changed = [...docs.values()].filter((d) => had[d.id] !== now[d.id]).map(plain);
+      if (gone.length) await s.deleteDocs(gone);
+      if (changed.length) await s.addDocs(changed);
+      return s;
+    })().catch((e) => {
+      session = undefined;
+      throw e;
+    });
+    return session;
+  };
+
   return {
     kind: 'moss',
-    add: async (docs) => (await session.addDocs(docs), push()),
-    remove: async (ids) => (await session.deleteDocs(ids), push()),
+    // While no session is open there is nothing to update: the next one loads docs.json.
+    add: async (list) => change((s) => s.addDocs(list)),
+    remove: async (ids) => change((s) => s.deleteDocs(ids)),
     async query(q, topK, kind) {
-      const r = await session.query(q, { topK, ...(kind && { filter: { field: 'kind', condition: { $eq: kind } } }) });
-      return { hits: r.docs.map((d) => ({ id: d.id, text: d.text, metadata: d.metadata ?? {}, score: d.score })), ms: r.timeTakenInMs ?? 0 };
+      if (Date.now() < paused.until) throw new Error('Moss usage limit reached; trying Moss again after an hour');
+      try {
+        const r = await (await open()).query(q, { topK, ...(kind && { filter: { field: 'kind', condition: { $eq: kind } } }) });
+        return { hits: r.docs.map((d) => ({ id: d.id, text: d.text, metadata: d.metadata ?? {}, score: d.score })), ms: r.timeTakenInMs ?? 0 };
+      } catch (e) {
+        if (isUsageLimit(e)) paused.until = Date.now() + 3600_000;
+        throw e;
+      }
     },
   };
+}
+
+// ---------- the cloud copy: a backup of the index in Moss's cloud. Search never needs it. ----------
+// Every push re-embeds the whole index on Moss's side and counts against one shared project, so it is opt-in
+// per box (FIND_CLOUD_SYNC=1), at most every 10 minutes, only when the index changed, and only while a session
+// is open for searching anyway.
+
+export const CLOUD_SYNC = process.env.FIND_CLOUD_SYNC === '1' && !OFFLINE;
+const PUSHED = path.join(DIR, 'cloud.sha256'); // what the last push held, so a restart does not push the same index again
+const cloud = { pushedAt: '', nextTry: 0, limited: false };
+
+export function cloudStatus() {
+  if (!CLOUD_SYNC) return 'cloud copy off: search is local (FIND_CLOUD_SYNC=1 turns the copy on)';
+  if (cloud.limited) return `cloud copy paused: Moss usage limit. Search still works. Next try after ${new Date(cloud.nextTry).toISOString()}`;
+  return cloud.pushedAt ? `cloud copy on, last pushed ${cloud.pushedAt}` : 'cloud copy on, nothing pushed since boot';
+}
+
+/** Push if the index changed since the last push, at most every 10 minutes. A usage-limit error waits an hour, logged once. */
+export async function syncCloud(push: () => Promise<unknown>) {
+  if (Date.now() < cloud.nextTry || docs.size === 0) return;
+  const hash = createHash('sha256').update(JSON.stringify([...docs.values()].map(plain).sort((a, b) => (a.id < b.id ? -1 : 1)))).digest('hex');
+  if (fs.existsSync(PUSHED) && fs.readFileSync(PUSHED, 'utf8') === hash) return;
+  cloud.nextTry = Date.now() + 10 * 60_000;
+  try {
+    await push();
+    fs.writeFileSync(PUSHED, hash);
+    Object.assign(cloud, { pushedAt: new Date().toISOString(), limited: false });
+  } catch (e) {
+    if (!isUsageLimit(e)) return console.error(`find: Moss push failed: ${(e as Error).message}`);
+    if (!cloud.limited) console.error('find: cloud copy paused: Moss usage limit reached. Local search keeps working; trying again in an hour.');
+    Object.assign(cloud, { limited: true, nextTry: Date.now() + 3600_000 });
+  }
 }
 
 /** For offline demo runs and a box with no Moss keys: rank by how many of the query's words a doc has. */

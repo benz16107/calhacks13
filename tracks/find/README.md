@@ -19,12 +19,22 @@ How the box uses Moss:
 
 - **Moss runs inside the box.** `@moss-js/moss` 1.21 opens a session index: it embeds documents and answers
   queries in the box's own memory with `moss-minilm`, so a search never waits on the network.
-- **Moss's cloud keeps a copy.** A few seconds after the index changes, the session pushes it to the project's
-  cloud index `find-<hostname>`. Only text goes there: descriptions, file text and task summaries,
-  never a photo.
+- **A session is open only while someone searches.** Moss bills an open session by the minute ("session
+  minutes", $0.05 each past the free plan's $5 monthly credit), and an always-on box holding one open used up the
+  project's credit on Oct 24. Now indexing only updates `docs.json` on the box. A search opens a session,
+  restores the last one from disk (`loadFromDisk`) and embeds only the docs that changed since, so it answers in
+  under a second; later searches take a few ms. After 2 quiet minutes the session saves itself (`saveToDisk`)
+  and closes. A doc added while it is open goes straight in.
+- **Moss's cloud can keep a copy, on one box only.** Search never needs the cloud. A box with
+  `FIND_CLOUD_SYNC=1` in its environment pushes its index to the cloud index `find-<hostname>` when a session
+  closes, at most every 10 minutes and only when the index changed (a hash of its contents, kept across
+  restarts). It never opens a session just to push. Only the linuxbox demo box has it on (a systemd drop-in,
+  below). Only text goes there: descriptions, file text and task summaries, never a photo.
+- **If Moss cannot answer** (no network, or the project is over its usage limit), the search is answered by
+  matching words, and the result's `index` says so. After a usage-limit error the box does not call Moss for an
+  hour and logs it once. `/t/find/status` and
+  every search result also say `cloud copy paused: Moss usage limit` on the opt-in box.
 - **Metadata filters** narrow a search to photos, files or tasks (`kind`).
-- **If Moss cannot open** (no network at boot), search falls back to matching words and the box tries Moss
-  again every minute. Results say which index answered.
 - **Instant updates.** A task finishes, its files and its summary are searchable a moment later. Undo the task
   and its files leave the index.
 
@@ -35,10 +45,12 @@ Measured on the test VMs on Oct 23 with `DEMO_LIVE=find ./demo laptop` and `./de
 | Step | Where | Time |
 |---|---|---|
 | A search through the box (`/t/find/search`), the demo box's whole index | laptop VM (ARM64) and linuxbox VM (x86) | median 3.1 ms wall time; under 1 ms inside Moss (it reports 0 ms) |
+| The first search after 2 quiet minutes (opens a session, restores it from disk, embeds 1 changed doc) | linuxbox VM | 0.7 s |
+| The very first search on a box (no saved session yet: embeds every doc) | linuxbox VM; laptop VM | 9.7 s for 61 docs; 14.6 s for 100 docs |
 | A Moss query, SDK alone, 5 docs | linuxbox VM | 2 to 4 ms wall time |
 | Add a document to the index | linuxbox VM | 6 ms for one, 28 ms for four |
-| Open the Moss session (loads the embedding model) | linuxbox VM | 3.8 s, once at boot |
-| Push the index to Moss's cloud | linuxbox VM | 1.6 s, in the background |
+| Open a Moss session, first time on a machine (downloads the embedding model) | linuxbox VM | 3.8 s, once |
+| Push the index to Moss's cloud (opt-in box only) | linuxbox VM | 1.6 s, as a session closes, at most every 10 minutes |
 | Describe a photo: gemma4 in Ollama on Ben's Mac | laptop VM | 1.1 to 2.8 s with the model loaded; 6 to 7 s for the first photo after Ollama loads it |
 | Describe photos: Claude (`claude-sonnet-4-6`) through one Droid task | linuxbox VM | 34 to 36 s for all four, about 9 s a photo |
 
@@ -91,7 +103,7 @@ personal photos. Their names are camera-style (`IMG_2041.jpg`) so a search has t
 { "query": "find the whiteboard photo", "kind": "photo", "topK": 3 }
 ```
 
-Returns `{ query, index, ms, wallMs, results: [{ kind, workspace, path, task, state, model, score, text }] }`,
+Returns `{ query, index, ms, wallMs, cloud, results: [{ kind, workspace, path, task, state, model, score, text }] }`,
 best first. `index` is `moss`, or `words` on an offline run or a box with no Moss keys.
 
 A task lists `find.search` in its tools. It holds no Moss key: the tool runs in the core.
@@ -102,13 +114,16 @@ A task lists `find.search` in its tools. It holds no Moss key: the tool runs in 
 |---|---|
 | `GET /search?q=<words>&kind=photo\|file\|task&k=5` | The same as `find.search` |
 | `GET /file?workspace=photos&path=IMG_2041.jpg` | The file a result points at, to show it. Only inside a workspace; symlinks are refused |
-| `GET /status` | How many photos, files and tasks are indexed, and the models in order |
+| `GET /status` | How many photos, files and tasks are indexed, the models in order, and the cloud copy's state (`cloud`) |
 
 Other tracks can describe a photo with `box.job('find.describe', { file })`.
 
 ## Setup
 
 - **Moss:** `MOSS_PROJECT_ID` and `MOSS_PROJECT_KEY` in `/etc/box/vault.env`. All three test VMs have them.
+- **Moss cloud copy:** off unless the box's environment has `FIND_CLOUD_SYNC=1`. On the linuxbox VM it is a
+  drop-in that `./deploy` leaves alone: `/etc/systemd/system/box.service.d/find.conf` with
+  `[Service]` and `Environment=FIND_CLOUD_SYNC=1`. Turn it on for one box only: they share one Moss project.
 - **Ollama:** nothing on the box. The laptop's Ollama listens on the Mac's localhost and Lima forwards
   `host.lima.internal` to it (spike 6). The Mac must be awake.
 - **Vultr:** `VULTR_INFERENCE_KEY`, a Serverless Inference key. Not set anywhere yet.
@@ -129,7 +144,8 @@ no network and costs nothing. It shows:
 6. Undo the task: its file leaves the index, the photos stay.
 
 `DEMO_LIVE=find ./demo laptop` describes the photos live with gemma4 and searches with Moss.
-`DEMO_LIVE=find ./demo linuxbox` does the same with the Claude backup, since that VM has no Ollama. Both print
+`DEMO_LIVE=find,droid ./demo linuxbox` does the same with the Claude backup, since that VM has no Ollama
+(a demo box refuses Droid tasks unless the run names `droid`; they spend Factory credit). Both print
 each photo's model and time and Moss's query times.
 
 ## Limits
