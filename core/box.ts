@@ -965,9 +965,16 @@ class Core {
   }
 
   /** A phone redeems the code for a durable device token. */
+  wrongCodes: number[] = [];
   pair(body: { code?: string; name?: string; identity?: string }) {
+    // Pairing is reachable from outside the box, so guessing codes is limited: 10 wrong ones a minute, from everyone together.
+    this.wrongCodes = this.wrongCodes.filter((at) => Date.now() - at < 60_000);
+    if (this.wrongCodes.length >= 10) throw Object.assign(new Error('too many wrong pairing codes; wait a minute and ask the box\'s screen for a new one'), { status: 429 });
     const entry = body.code ? this.pairCodes.get(body.code) : undefined;
-    if (!entry || entry.expiry < Date.now()) throw Object.assign(new Error('bad or expired pairing code'), { status: 400 });
+    if (!entry || entry.expiry < Date.now()) {
+      this.wrongCodes.push(Date.now());
+      throw Object.assign(new Error('bad or expired pairing code'), { status: 400 });
+    }
     this.pairCodes.delete(String(body.code)); // one-time
     const device: Device = { id: 'd' + randomBytes(5).toString('hex'), name: String(body.name || 'phone').slice(0, 40), token: randomBytes(24).toString('hex'), pairedAt: new Date().toISOString(), ...(entry.owner ? { owner: true } : {}), ...(typeof body.identity === 'string' && /^[0-9a-f]{64}$/i.test(body.identity) ? { identity: body.identity.toLowerCase() } : {}) };
     this.devices.push(device);
