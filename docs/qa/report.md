@@ -296,7 +296,9 @@ about eight times in one lookup, and the portal shows them as blocked attempts. 
 **P2-21. A Business approver's phone shows the ordinary Server home for the first few seconds after pairing.** Owner:
 portal. Rosa (approver, $50,000 limit) paired and for about 2 to 5 s saw "Needs you" with Approve buttons for every
 pending request, including "Approve $60,000" for one above her limit (the box refuses it with 403). It then
-switches to "Waiting for me" with only her request. A requester or auditor should never see that flash either.
+switches to "Waiting for me" with only her request. **Rechecked on d1201ed, 05:45 PT:** `POST /api/pair` returns the edition,
+the "Sign in" placeholder is gone, and the phone lands on "Waiting for me" at about 2 s; the ordinary home still shows for
+about 1.3 s during the reload after pairing. Cosmetic. A requester or auditor should never see that flash either.
 Found on 276bb32 at 03:27 PT (shot 90). **Partly fixed in c43a8e7, rechecked 04:55 PT:** after a reload the Business
 home shows from the first frame; on the first pairing the Server home still shows for about 1.2 s, then a placeholder
 says "Sign in to see what waits for you" for 1 to 2.4 s although she is signed in. The pair response could carry the
