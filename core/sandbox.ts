@@ -98,6 +98,9 @@ export function spawnWorker(task: Task, ids: { uid: number; gid: number }, extra
   return child;
 }
 
+/** Put the task's file changes on disk, so a step the log calls done survives a power cut. */
+export const flush = (task: Task) => tryRun('sync', '-f', dirs.upper(task.id));
+
 /** Stop everything the task's user runs. */
 export const kill = (task: Task) => tryRun('pkill', '-KILL', '-u', task.user);
 

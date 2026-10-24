@@ -12,7 +12,7 @@ import path from 'node:path';
 import type { Task } from './contract.ts';
 
 export const PROXY_PORT = Number(process.env.BOX_PROXY_PORT ?? 8888);
-const PROXY_PORTS = '8800-8899'; // demo runs pick their own port in this range
+const PROXY_PORTS = '8800-8899'; // the installed box uses 8888; demo runs pick from 8800-8887
 export const TASK_UIDS = '30000-39999'; // the range sandbox.ts gives task users
 
 /** Load the firewall rule. Same rule for every box on the machine, so loading it again is harmless. */

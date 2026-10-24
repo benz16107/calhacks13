@@ -36,6 +36,7 @@ async function stdbRows(sql: string): Promise<Record<string, any>[]> {
 }
 
 let box: ReturnType<typeof spawn> | undefined;
+const PORT = 17000 + Math.floor(Math.random() * 1000);
 const mountsUnder = (dir: string) =>
   fs.readFileSync('/proc/self/mountinfo', 'utf8').split('\n').map((l) => l.split(' ')[4]).filter((m) => m?.startsWith(dir + '/'));
 
@@ -45,7 +46,7 @@ async function startBox() {
   box = spawn(process.execPath, [...process.execArgv, new URL('./box.ts', import.meta.url).pathname], {
     detached: true,
     stdio: ['ignore', out, out],
-    env: { ...process.env, BOX_HOME: HOME, BOX_PORT: '0', BOX_VAULT: path.join(HOME, 'vault.env'), BOX_STDB_DB: DB, BOX_PROXY_PORT: String(8800 + Math.floor(Math.random() * 99)) },
+    env: { ...process.env, BOX_HOME: HOME, BOX_PORT: String(PORT), BOX_VAULT: path.join(HOME, 'vault.env'), BOX_STDB_DB: DB, BOX_PROXY_PORT: String(8800 + Math.floor(Math.random() * 88)) },
   });
   for (let i = 0; i < 100; i++) {
     if (await api('GET', '/health').catch(() => undefined)) return;
@@ -112,6 +113,8 @@ workspace('notes', { 'a.txt': 'original a\n' });
 const machineVault = fs.existsSync('/etc/box/vault.env') ? fs.readFileSync('/etc/box/vault.env', 'utf8') : '';
 fs.writeFileSync(path.join(HOME, 'vault.env'), `DEMO_SECRET=sk_test_canary_never_leaves_the_vault\n${machineVault}`, { mode: 0o600 });
 await startBox();
+const tcp = await fetch(`http://127.0.0.1:${PORT}/health`).then((r) => r.json()).catch(() => undefined);
+if (!tcp?.ok) throw new Error(`the box's API did not answer on port ${PORT}`);
 
 // ---------- moment 1 ----------
 

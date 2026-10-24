@@ -269,7 +269,10 @@ class Core {
           return { name, description, input: input ?? { type: 'object' } };
         });
       }
-      if (route === 'POST /step') return this.write({ type: 'task.step', task: t.id, text: String(body.text), data: body.data });
+      if (route === 'POST /step') {
+        sandbox.flush(t);
+        return this.write({ type: 'task.step', task: t.id, text: String(body.text), data: body.data });
+      }
       if (route === 'POST /cost') return this.write({ type: 'cost', task: t.id, cents: Number(body.cents), what: String(body.what) });
       if (route === 'POST /call') return this.callTool(t, String(body.key), String(body.tool), body.input);
       if (route === 'POST /ask') return { approved: await this.ask(t, String(body.key), String(body.question), Number(body.costCents ?? 0)) };
@@ -349,54 +352,55 @@ class Core {
 
   // ---------- the API: portal, demo, phone ----------
 
-  api = jsonServer(
-    async (method, url, body) => {
-      const [, a, id, action] = url.pathname.split('/');
-      const route = `${method} /${a ?? ''}${id ? '/:id' : ''}${action ? '/' + action : ''}`;
-      switch (route) {
-        case 'GET /tasks':
-          return [...this.state.tasks.values()];
-        case 'POST /tasks':
-          return this.createTask(body);
-        case 'GET /tasks/:id':
-          return { task: this.must(id), events: this.log.events.filter((e) => e.task === id) };
-        case 'POST /tasks/:id/undo':
-          return this.undo(id);
-        case 'GET /approvals':
-          return [...this.state.approvals.values()];
-        case 'POST /approvals/:id':
-          return this.answer(id, body.approved === true, String(body.by ?? 'api'));
-        case 'GET /log':
-          return this.log.events.slice(Number(url.searchParams.get('after') ?? 0));
-        case 'GET /apps':
-          return this.apps;
-        case 'GET /health':
-          return { ok: true, tasks: this.state.tasks.size, tools: [...this.tools.keys()] };
-      }
-    },
-    (req, res) => {
-      const url = new URL(req.url ?? '/', 'http://box');
-      const entry = this.routes.get(`${req.method} ${url.pathname}`);
-      if (!entry) return false;
-      void (async () => {
-        try {
-          const chunks: Buffer[] = [];
-          for await (const c of req) chunks.push(c as Buffer);
-          const hasBody = req.method !== 'GET' && req.method !== 'HEAD';
-          const request = new Request(url, {
-            method: req.method,
-            headers: req.headers as Record<string, string>,
-            body: hasBody ? Buffer.concat(chunks) : undefined,
-          });
-          const r = await entry.route(request, this.boxFor(entry.track));
-          res.writeHead(r.status, Object.fromEntries(r.headers)).end(Buffer.from(await r.arrayBuffer()));
-        } catch (e) {
-          res.writeHead(500, { 'content-type': 'application/json' }).end(JSON.stringify({ error: (e as Error).message }));
+  api = () =>
+    jsonServer(
+      async (method, url, body) => {
+        const [, a, id, action] = url.pathname.split('/');
+        const route = `${method} /${a ?? ''}${id ? '/:id' : ''}${action ? '/' + action : ''}`;
+        switch (route) {
+          case 'GET /tasks':
+            return [...this.state.tasks.values()];
+          case 'POST /tasks':
+            return this.createTask(body);
+          case 'GET /tasks/:id':
+            return { task: this.must(id), events: this.log.events.filter((e) => e.task === id) };
+          case 'POST /tasks/:id/undo':
+            return this.undo(id);
+          case 'GET /approvals':
+            return [...this.state.approvals.values()];
+          case 'POST /approvals/:id':
+            return this.answer(id, body.approved === true, String(body.by ?? 'api'));
+          case 'GET /log':
+            return this.log.events.slice(Number(url.searchParams.get('after') ?? 0));
+          case 'GET /apps':
+            return this.apps;
+          case 'GET /health':
+            return { ok: true, tasks: this.state.tasks.size, tools: [...this.tools.keys()] };
         }
-      })();
-      return true;
-    },
-  );
+      },
+      (req, res) => {
+        const url = new URL(req.url ?? '/', 'http://box');
+        const entry = this.routes.get(`${req.method} ${url.pathname}`);
+        if (!entry) return false;
+        void (async () => {
+          try {
+            const chunks: Buffer[] = [];
+            for await (const c of req) chunks.push(c as Buffer);
+            const hasBody = req.method !== 'GET' && req.method !== 'HEAD';
+            const request = new Request(url, {
+              method: req.method,
+              headers: req.headers as Record<string, string>,
+              body: hasBody ? Buffer.concat(chunks) : undefined,
+            });
+            const r = await entry.route(request, this.boxFor(entry.track));
+            res.writeHead(r.status, Object.fromEntries(r.headers)).end(Buffer.from(await r.arrayBuffer()));
+          } catch (e) {
+            res.writeHead(500, { 'content-type': 'application/json' }).end(JSON.stringify({ error: (e as Error).message }));
+          }
+        })();
+        return true;
+      },
+    );
 
   async boot() {
     try {
@@ -423,9 +427,9 @@ class Core {
       }
     }
     for (const pump of this.readers) pump();
-    await listenSocket(this.api, path.join(HOME, 'api.sock'));
+    await listenSocket(this.api(), path.join(HOME, 'api.sock'));
     const port = Number(process.env.BOX_PORT ?? 7700);
-    if (port) this.api.listen(port, process.env.BOX_LISTEN ?? '127.0.0.1');
+    if (port) this.api().listen(port, process.env.BOX_LISTEN ?? '127.0.0.1');
     for (const track of tracks) {
       for (const trig of track.triggers ?? []) {
         Promise.resolve()
