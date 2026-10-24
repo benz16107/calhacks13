@@ -357,6 +357,11 @@ types the address, rather than scanning the QR (which goes through app.gurtos.co
 `/t/mana/status` is open as designed; app.gurtos.com answers 200. Not tested: pairing and an approval push through the
 relay on a real phone.
 
+**P1-17. Any paired phone can open the ASI:One page and its pairing code.** Owner: fetch. `/t/fetch/` never reads
+`x-box-caller`. On main 4536aac a paired Business requester gets 200 (a stranger gets 401). With the agent on, the page
+shows the pairing code and opens pairing for 10 minutes, so a requester or an auditor could pair their own ASI:One
+account as the agent's owner. QA read the code and saw the agent off on its box; not exploited. Filed with Fetch at 06:50 PT.
+
 ## Docs site (gurtos.com)
 
 **D-1 to D-4 and D-7 fixed in 199dce5 and live, spot-checked 00:00 PT:** real ISO names, `gurt-<id>`, the Personal ISO
