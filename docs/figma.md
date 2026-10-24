@@ -8,9 +8,9 @@ like umbrelOS. Apps open as windows, approvals arrive as notification banners, a
 pocket. The box's screen and the portal are the same desktop: on the box it fills the display, in a browser it fills
 the tab. Research and the three directions are in `docs/figma/refs/` and `docs/figma/directions/`.
 
-**Built so far:** the box home, the phone home, Tasks, Notification Center, task detail, Activity, Time Machine and
-Credit desk. Still to come, each merged as it lands: Shopper, Wallet, Find, pairing, the session restore, and the
-phone screens.
+**Built so far:** every box screen (home, Tasks, Notification Center, task detail, Activity, Time Machine, Credit
+desk, Shopper, Wallet, Find, pairing, the session restore) and the phone home. Still to come: the phone's
+approval notification, live activity and task list.
 
 ## Files
 
@@ -48,6 +48,11 @@ The box screen is 1920 x 1080. Phone screens are 390 x 844.
 | Box / Activity | `26:1123` (window `26:1223`) | `docs/figma/os/box-activity.png` | The action log as an activity monitor. Top: one row per task (like processes): runs as, state, steps (`task.step` events), tool calls (`tool.call`), blocked (`net.blocked`), cost, budget. Bottom: the log live over SSE (`GET /api/log?after=<seq>`), blocked lines in the failed color, and today's spend. The spend-per-hour bars are illustrative |
 | Box / Time Machine | `27:1063` (window `27:1163`) | `docs/figma/os/box-time-machine.png` | Undo one task. One workspace's layers, newest first (finished tasks: `task.state done` with `layers`), shown as a receding stack and a list. The selected layer's preview: what comes back (its diff, reversed) and what stays (other tasks' files). Undo is `POST /api/tasks/<id>/undo` |
 | Box / Credit desk | `26:827` (window `26:927`) | `docs/figma/os/box-credit-desk.png` | The credit desk track's app. `GET /t/credit-desk/runs` and `POST /t/credit-desk/score {run}` (`caught`, `total`, `false_alarms`, `decisions.applications`, `simple_rule`, `moment`). Each row's rule ids come from its `credit-desk.credit_decision` tool call; rules 0.2 |
+| Box / Shopper | `30:1183` (window `30:1283`, banner `30:1353`) | `docs/figma/os/box-shopper.png` | The Shopper track's app (`/t/shopper/`) with its purchase banner. Watch list (rules, store, price now, state), orders, and a standing TEST PAYMENTS notice. The banner is an Approval with "Approve $13.00 test payment" |
+| Box / Wallet | `30:1369` (window `30:1469`) | `docs/figma/os/box-wallet.png` | The wallet track's app: balance in devnet USDC (test money), the address, how x402 payments work, and each payment with its task, API, amount, status and Solana transaction |
+| Box / Find | `31:1407` (panel `31:1583`) | `docs/figma/os/box-find.png` | A Spotlight-style search over tasks, the action log, workspace files and photos. Photos come from the planned Moss index, described on the box's GPU. The two photo thumbnails are AI-generated stand-ins, labeled as such in the layer names |
+| Box / Pair a phone | `31:1636` (window `31:1736`) | `docs/figma/os/box-pair.png` | Settings: a QR code, the code to compare, and paired phones. The QR encodes the example `https://box.local/pair?code=7Q4M-2KXD`; the core has no pairing route yet |
+| Box / Home after a power cut | `31:1765` | `docs/figma/os/box-after-power-cut.png` | Moment 4 as a session restore: "Welcome back", the running widget says "resumed", and an Info banner lists what picked up where it stopped. Data: the `task.state` events after boot and the boot time |
 | Phone / Home | `23:304` | `docs/figma/os/phone-home.png` | The same OS on a phone: the Dynamic Island shows how many tasks run, two widgets, the app grid with badges, the dock |
 
 Apps and where they come from: Tasks, Activity and Time Machine are the core's own. Credit desk, Shopper and Wallet
