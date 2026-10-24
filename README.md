@@ -32,11 +32,12 @@ GitHub Releases and on a mirror; both have the same checksums and signature.
 |---|---|---|---|
 | Server on a PC, server or cloud VM (Intel or AMD) | `gurtos-server-x86_64.iso` | [download](https://github.com/benz16107/calhacks13/releases/download/v0.1.0-preview/gurtos-server-x86_64.iso) | [download](https://sjc1.vultrobjects.com/gurtos/v0.1.0-preview/gurtos-server-x86_64.iso) |
 | Server on an Apple silicon Mac (UTM or Parallels) or an arm64 server | `gurtos-server-arm64.iso` | [download](https://github.com/benz16107/calhacks13/releases/download/v0.1.0-preview/gurtos-server-arm64.iso) | [download](https://sjc1.vultrobjects.com/gurtos/v0.1.0-preview/gurtos-server-arm64.iso) |
-| Personal on a PC or laptop (Intel or AMD) | `gurtos-personal-x86_64.iso` | [download](https://github.com/benz16107/calhacks13/releases/download/v0.1.0-preview/gurtos-personal-x86_64.iso) | [download](https://sjc1.vultrobjects.com/gurtos/v0.1.0-preview/gurtos-personal-x86_64.iso) |
-| Personal on an Apple silicon Mac (UTM or Parallels) | `gurtos-personal-arm64.iso` | [download](https://github.com/benz16107/calhacks13/releases/download/v0.1.0-preview/gurtos-personal-arm64.iso) | [download](https://sjc1.vultrobjects.com/gurtos/v0.1.0-preview/gurtos-personal-arm64.iso) |
+| Personal on a PC or laptop (Intel or AMD) | `gurtos-personal-x86_64.iso` | coming soon | coming soon |
+| Personal on an Apple silicon Mac (UTM or Parallels) | `gurtos-personal-arm64.iso` | coming soon | coming soon |
 | Checksums, signature, public key | `SHA256SUMS`, `SHA256SUMS.sig`, `allowed_signers` | [release page](https://github.com/benz16107/calhacks13/releases/tag/v0.1.0-preview) | [SHA256SUMS](https://sjc1.vultrobjects.com/gurtos/v0.1.0-preview/SHA256SUMS), [.sig](https://sjc1.vultrobjects.com/gurtos/v0.1.0-preview/SHA256SUMS.sig), [allowed_signers](https://sjc1.vultrobjects.com/gurtos/v0.1.0-preview/allowed_signers) |
 
-Sizes and checksums are in the [release notes](release/notes/v0.1.0-preview.md).
+Each Server ISO is 1.34 GB. Checksums are in the [release notes](release/notes/v0.1.0-preview.md). The Personal ISOs
+are added to the same release when their build is final; until then, build Personal from source (below).
 
 ### Minimum hardware
 
