@@ -112,6 +112,9 @@ function requests() {
   const routed = [...local.db.myRequests.iter()].filter((r) => r.state === 'pending').map((r) => ({ ...r, routed: r.why, business: true }));
   const all = [...routed, ...plain];
   const viewers = [...local.db.viewers.iter()];
+  if (!all.length && (local.db as { scoped?: boolean }).scoped)
+    return `<div class="g-status"><g-icon name="emblem-ok-symbolic" size="64"></g-icon><div class="g-status-title t-title2">Your requests are in Waiting for me</div>
+      <div class="g-status-body t-body t-secondary">On GurtOS Business each person sees only the requests routed to them, in Waiting for me on the home screen.</div></div>`;
   if (!all.length)
     return `<div class="g-status"><g-icon name="emblem-ok-symbolic" size="64"></g-icon><div class="g-status-title t-title2">Nothing waits for an OK</div>
       <div class="g-status-body t-body t-secondary">A request shows here on every screen at once. Whoever opens it shows as viewing, and the first answer wins: the database refuses the second.</div></div>`;
@@ -254,6 +257,7 @@ async function poll() {
         agent: list(s.agents.map((a: any) => ({ ...a, job: BigInt(a.job), at: us(a.at) }))),
         activity: list(s.activity),
         approval: list(s.approvals),
+        scoped: s.scoped,
         myRequests: list([]),
         viewers: list([]),
         meter: { id: { find: () => (s.meter ? { ...s.meter, spentCents: BigInt(s.meter.spentCents) } : undefined) } },

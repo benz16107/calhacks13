@@ -190,7 +190,7 @@ async function business(d: DemoKit, connect: (token: string | undefined, q: stri
     return r.json() as Promise<T>;
   };
   const added: string[] = [];
-  await d.api('PUT', '/api/business', { on: true, company: 'Fogline Supply', policy: 'Requests over $10,000 go to the Controller for approval.\nEverything else goes to any approver.' });
+  await d.api('PUT', '/api/business', { on: true, company: 'Fogline Supply', policy: "Requests over $50,000 can't be approved in GurtOS.\nRequests over $10,000 go to the Controller for approval.\nEverything else goes to any approver." });
   try {
     // Their own ids, removed at the end, so the Business step's own people and counts are untouched.
     const people = [
@@ -223,6 +223,18 @@ async function business(d: DemoKit, connect: (token: string | undefined, q: stri
     const { events } = await d.api<Detail>('GET', `/tasks/${T.id}`);
     const answer = events.find((e) => e.type === 'approval.answered') as { by: string; person?: string } | undefined;
     d.check(/not routed to you/.test(priyaTry) && answer?.by === 'Rosa Delgado' && answer.person === 'rosa-live' && done.state === 'done', `Priya's answer was refused ("${priyaTry}"); Rosa approved in SpacetimeDB, the box checked it with its Business rules and logged it as hers, and the task finished`);
+    // Over the ceiling nobody can approve it: the people who may deny it are sent it, with Approve refused by the database.
+    const big = await call['sam-live']<Task>('POST', '/api/tasks', { title: 'Open a $75,000 credit line', workspace: 'spacetime', worker: 'fake', prompt: 'ask Approve a $75,000 credit line for Northwind Traders?' });
+    const stuck = await d.waitFor('the over-the-ceiling request to reach the people who may deny it', async () => [...live['rosa-live'].db.myRequests.iter()].find((r) => r.task === big.id && r.state === 'pending'));
+    const approveTry = await live['rosa-live'].reducers.answerRequest({ id: stuck.id, approved: true }).then(() => 'answered', (e: Error) => e.message ?? String(e));
+    await live['rosa-live'].reducers.answerRequest({ id: stuck.id, approved: false });
+    const [denied] = await d.waitFor('the box to stop the denied task', async () => {
+      const { task } = await d.api<Detail>('GET', `/tasks/${big.id}`);
+      return task.state === 'failed' ? [task] : undefined;
+    });
+    const samSnap = await call['sam-live']<{ approvals: unknown[]; scoped?: boolean }>('GET', '/t/spacetime/snapshot');
+    d.check(samSnap.scoped === true && samSnap.approvals.length === 0, "the Live window's snapshot is scoped on Business: a requester's phone is sent no one else's approvals");
+    d.check(!stuck.canApprove && /above your limit|deny/i.test(approveTry) && denied.state === 'failed', `a $75,000 request nobody can approve reached the people who may deny it: Approve was refused ("${approveTry}"), Rosa's denial stopped the task`);
   } finally {
     for (const id of added) await d.api('DELETE', `/api/people/${id}`).catch(() => {});
     await d.api('PUT', '/api/business', { on: false });

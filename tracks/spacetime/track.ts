@@ -14,8 +14,9 @@ const checkQueue = (q: unknown) => {
 };
 type NewJob = { title: string; payload?: unknown };
 const checkJobs = (jobs: unknown) => {
-  if (!Array.isArray(jobs) || !jobs.length || jobs.length > 200) throw new Error('jobs: a list of 1 to 200 {title, payload?}');
-  return (jobs as NewJob[]).map((j, i) => {
+  if (!Array.isArray(jobs) || !jobs.length || jobs.length > 200) throw new Error('jobs: a list of 1 to 200 titles, or {title, payload?}');
+  return (jobs as (NewJob | string)[]).map((j, i) => {
+    if (typeof j === 'string') j = { title: j }; // a bare string is a job with just a title
     if (!j || typeof j.title !== 'string' || !j.title.trim() || j.title.length > 200) throw new Error(`jobs[${i}].title: text, 1 to 200 characters`);
     const payload = j.payload === undefined ? '' : typeof j.payload === 'string' ? j.payload : JSON.stringify(j.payload);
     if (payload.length > 8000) throw new Error(`jobs[${i}].payload: at most 8,000 characters`);
@@ -128,8 +129,10 @@ export default {
     /** The queues and agents as JSON, for a screen that is not connected to SpacetimeDB. */
     'GET /team': async (req) => Response.json(await team(new URL(req.url).searchParams.get('queue') ?? undefined)),
     /** Everything the Live window shows, as JSON, for a screen that cannot reach SpacetimeDB (it listens on the box only). */
-    'GET /snapshot': async () => {
+    'GET /snapshot': async (req) => {
       const c = await local();
+      // On a Business box a person's phone is not sent the box's approvals (their own are in Waiting for me).
+      const scoped = !!req.headers.get('x-box-person');
       const ts = (t: { microsSinceUnixEpoch: bigint }) => String(t.microsSinceUnixEpoch);
       const m = c.db.meter.id.find(0);
       return Response.json({
@@ -137,7 +140,8 @@ export default {
         agents: [...c.db.agent.iter()].map((a) => ({ ...a, job: String(a.job), at: ts(a.at) })),
         meter: m ? { ...m, spentCents: String(m.spentCents), at: ts(m.at) } : null,
         activity: [...c.db.activity.iter()],
-        approvals: [...c.db.approval.iter()].filter((a) => a.state === 'pending'),
+        approvals: scoped ? [] : [...c.db.approval.iter()].filter((a) => a.state === 'pending'),
+        scoped,
       });
     },
     /** Put jobs on a queue from the box's screen or a helper on the box. */

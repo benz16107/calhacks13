@@ -9,7 +9,7 @@ import http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
 import type { App, Approval, ApprovalRoute, Box, FullSpec, Ctx, LogEvent, LogReader, ModelJob, NewEvent, Route, Task, TaskSpec, TaskState, Tool, Track, Who } from './contract.ts';
-import { DEFAULT_POLICY, amountOf, approversFor, notifyPeople, auditRows, checkPerson, checkSeats, checkShadow, goLiveRules, holds, parsePolicy, pilot, refusal, route, toCsv, whoOf, type Business, type Person } from './business.ts';
+import { DEFAULT_POLICY, amountOf, approversFor, auditRows, checkPerson, checkSeats, checkShadow, goLiveRules, holds, notifyPeople, parsePolicy, pilot, refusal, route, toCsv, whoOf, type Business, type Person } from './business.ts';
 import { DB, Live } from './live.ts';
 import { Log, apply, canMove, doneLayers, fold, type State } from './log.ts';
 import { ANTHROPIC_PLACEHOLDER, PLACEHOLDER_KEY, firewall, logBlocked, stopLoggingBlocked, uidOf, relayCert, reservePort, startProxy } from './net.ts';
@@ -565,16 +565,27 @@ class Core {
     });
   }
 
-  /** Business: who SpacetimeDB sends a routed request to, and whether each may approve it (or only deny). */
+  /**
+   * Business: who SpacetimeDB sends a routed request to. `notifyPeople` is the one definition, shared with push and
+   * Waiting for me: the people who can approve it now, or, when nobody can, everyone who may deny it and every owner
+   * (`canApprove: false`). The route's own list is only who could approve it when it was asked.
+   */
   routing(a: Approval) {
     if (!this.business.on || !a.route) return undefined;
     const r = a.route;
     const t = this.state.tasks.get(a.task);
-    const may = (id: string) => !refusal(this.person(id), { to: r.to, amountCents: r.amountCents, askedBy: a.askedBy ?? t?.requestedBy, rule: r.rule }, true);
-    const people = r.people.map((p) => ({ person: p.id, name: p.name, canApprove: may(p.id) }));
+    const { ids, stuck } = notifyPeople({ to: r.to, amountCents: r.amountCents, askedBy: a.askedBy ?? t?.requestedBy, rule: r.rule }, this.business.people);
+    const row = (id: string, canApprove: boolean) => {
+      const p = this.person(id);
+      return p ? [{ person: p.id, name: p.name, canApprove }] : [];
+    };
     // A route may name people to remind when nobody has answered in time; SpacetimeDB's timer brings them in.
     const remind = (r as { remind?: { afterMs: number; people: { id: string; name: string }[] } }).remind;
-    return { people, remind: (remind?.people ?? []).map((p) => ({ person: p.id, name: p.name, canApprove: may(p.id) })), remindAfterSec: Math.round((remind?.afterMs ?? 0) / 1000) };
+    return {
+      people: ids.flatMap((id) => row(id, !stuck)),
+      remind: (remind?.people ?? []).flatMap((p) => row(p.id, !stuck && ids.includes(p.id))),
+      remindAfterSec: Math.round((remind?.afterMs ?? 0) / 1000),
+    };
   }
 
   saveBusiness() {

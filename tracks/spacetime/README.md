@@ -44,7 +44,7 @@ audit see them. The job and agent tables are a mirror: the log is the record.
 
 Another app posts jobs without any code of ours: it writes a note to the action log,
 `box.note({ jobs: { queue: 'credit-desk:apps', items: [{ title, payload }] } })`, and this app turns it into live jobs.
-The box's screen can also post with `POST /t/spacetime/jobs {queue, jobs}`.
+The box's screen can also post with `POST /t/spacetime/jobs {queue, jobs}` (each job a title string or `{title, payload?}`).
 
 ## The Live window
 
