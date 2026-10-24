@@ -4,7 +4,7 @@
 import { execFileSync, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 
-const DOC_IPS = /^(127\.0\.0\.1|0\.0\.0\.0|1\.1\.1\.1|127\.0\.0\.53|8\.8\.8\.8|169\.254\.169\.254|192\.0\.2\.\d+|198\.51\.100\.\d+|203\.0\.113\.\d+|(10|192\.168|172\.(1[6-9]|2\d|3[01]))\.[\d.]+)$/;
+const DOC_IPS = /^(127\.\d+\.\d+\.\d+|0\.0\.0\.0|1\.1\.1\.1|127\.0\.0\.53|8\.8\.8\.8|169\.254\.169\.254|192\.0\.2\.\d+|198\.51\.100\.\d+|203\.0\.113\.\d+|(10|192\.168|172\.(1[6-9]|2\d|3[01]))\.[\d.]+)$/;
 const checks: [string, RegExp, ((m: string) => boolean)?][] = [
   ['machine name', /\b(linuxbox|macserver|benmac|vultrbox|personalbox|dellserver|gx10-\w+)\b/gi],
   ['tailnet', /tailb51682|\b[\w-]+\.ts\.net\b/gi],
@@ -12,8 +12,8 @@ const checks: [string, RegExp, ((m: string) => boolean)?][] = [
   ['jira site', /\b[a-z0-9-]+\.atlassian\.net\b/gi, (m) => /^(your-site|your-org|example|api)\.atlassian\.net$/i.test(m)],
   ['email', /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/g, (m) => /@(example\.(com|org|net)|[\w.-]+\.(example|test|invalid)|users\.noreply\.github\.com|anthropic\.com)$/i.test(m) || /^(git|noreply)@/.test(m) || /\.(png|svg|jpg|webp|js|ts)$/.test(m)],
   ['home folder', /\/home\/ben\b|\/Users\/ben\w*/g],
-  ['ipv4', /(?<![\d.])\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}(?![\d.])/g, (m) => m.split('.').some((o) => +o > 255) || DOC_IPS.test(m)],
-  ['cgnat or tailnet ip', /(?<![\d.])100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\.\d{1,3}\.\d{1,3}(?![\d.])/g],
+  ['ipv4', /(?<![\d.])\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}(?![\d./])/g, (m) => m.split('.').some((o) => +o > 255) || DOC_IPS.test(m)],
+  ['cgnat or tailnet ip', /(?<![\d.])100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\.\d{1,3}\.\d{1,3}(?![\d./])/g],
   // A uuid on a line about a cloud instance or ISO; other uuids (record ids in sample data) are fine.
   ['cloud instance id', /^.*(instance|vultr|\biso\b).*$/gim, (m) => !/\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/i.test(m)],
   ['private key', /-----BEGIN [A-Z ]*PRIVATE KEY-----/g],
