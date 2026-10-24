@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # Install or update the relay on an Ubuntu 24.04 machine with a public address, over ssh as root.
-#   relay/deploy [ssh-host]      (default: relaybox, an ssh config name; keep real hosts out of the repo)
+#   relay/deploy <ssh-host>      (an ssh config name; keep real hosts out of the repo)
 # Safe to run again: keys, names and certificates already there are kept.
 # DNS must already point <domain> and *.<domain> at the machine (RELAY_DOMAIN, default box.gurtos.com).
 set -euo pipefail
 cd "$(dirname "$0")"
-HOST=${1:-relaybox}
+HOST=${1:?usage: relay/deploy <ssh-host>}
 DOMAIN=${RELAY_DOMAIN:-box.gurtos.com}
 
 ssh "$HOST" 'mkdir -p /opt/gurtos-relay'

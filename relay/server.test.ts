@@ -18,24 +18,24 @@ test('names: lowercase, 3 to 30 characters, reserved and look-alike names refuse
 
 test('enroll, check a secret, refuse a second claim, release with the secret only', async () => {
   const r = fresh();
-  const a = await api(r, 'POST', u('/v1/names'), { name: 'rosa' }, undefined, '1.2.3.4');
+  const a = await api(r, 'POST', u('/v1/names'), { name: 'rosa' }, undefined, '203.0.113.4');
   assert.equal(a.status, 200);
   const { secret, host } = a.body as any;
   assert.equal(host, `rosa.${DOMAIN}`);
   assert.ok(r.names.check('rosa', secret));
   assert.ok(!r.names.check('rosa', secret + 'x'));
   assert.ok(!r.names.all.rosa.hash.includes(secret), 'only a hash is stored');
-  assert.equal((await api(r, 'POST', u('/v1/names'), { name: 'rosa' }, undefined, '1.2.3.5')).status, 409);
-  assert.deepEqual((await api(r, 'GET', u('/v1/names/rosa'), {}, undefined, '1.2.3.4')).body, { name: 'rosa', available: false, reason: 'that name is taken' });
-  assert.equal((await api(r, 'DELETE', u('/v1/names/rosa'), {}, 'Bearer rosa.wrong', '1.2.3.4')).status, 403);
-  assert.equal((await api(r, 'DELETE', u('/v1/names/rosa'), {}, `Bearer rosa.${secret}`, '1.2.3.4')).status, 200);
-  assert.equal(((await api(r, 'GET', u('/v1/names/rosa'), {}, undefined, '1.2.3.4')).body as any).available, true);
+  assert.equal((await api(r, 'POST', u('/v1/names'), { name: 'rosa' }, undefined, '203.0.113.5')).status, 409);
+  assert.deepEqual((await api(r, 'GET', u('/v1/names/rosa'), {}, undefined, '203.0.113.4')).body, { name: 'rosa', available: false, reason: 'that name is taken' });
+  assert.equal((await api(r, 'DELETE', u('/v1/names/rosa'), {}, 'Bearer rosa.wrong', '203.0.113.4')).status, 403);
+  assert.equal((await api(r, 'DELETE', u('/v1/names/rosa'), {}, `Bearer rosa.${secret}`, '203.0.113.4')).status, 200);
+  assert.equal(((await api(r, 'GET', u('/v1/names/rosa'), {}, undefined, '203.0.113.4')).body as any).available, true);
 });
 
 test('enrollment is rate limited per address', async () => {
   const r = fresh();
   const codes = [];
-  for (let i = 0; i < 7; i++) codes.push((await api(r, 'POST', u('/v1/names'), { name: `box-${i}x` }, undefined, '9.9.9.9')).status);
+  for (let i = 0; i < 7; i++) codes.push((await api(r, 'POST', u('/v1/names'), { name: `box-${i}x` }, undefined, '198.51.100.9')).status);
   assert.deepEqual(codes, [200, 200, 200, 200, 200, 429, 429]);
 });
 
@@ -91,8 +91,8 @@ test('push gateway: only known push services, signed with the app key, payload p
   let seen: { url: string; init: any } | undefined;
   const send = (async (url: string, init: any) => ((seen = { url, init }), new Response('', { status: 201 }))) as typeof fetch;
   const body = { endpoint: 'https://web.push.apple.com/QWxpY2U', payload: payload.toString('base64url'), ttl: 600, urgency: 'high', topic: 'rosa:t1.k1' };
-  assert.equal((await api(r, 'POST', u('/v1/push'), body, 'Bearer rosa.bad', '1.1.1.1', send)).status, 403);
-  const a = await api(r, 'POST', u('/v1/push'), body, `Bearer rosa.${secret}`, '1.1.1.1', send);
+  assert.equal((await api(r, 'POST', u('/v1/push'), body, 'Bearer rosa.bad', '203.0.113.1', send)).status, 403);
+  const a = await api(r, 'POST', u('/v1/push'), body, `Bearer rosa.${secret}`, '203.0.113.1', send);
   assert.deepEqual(a.body, { status: 201, gone: false });
   assert.ok(Buffer.from(seen!.init.body).equals(payload), 'the gateway forwards the bytes it got');
   assert.equal(seen!.init.headers['content-encoding'], 'aes128gcm');
@@ -108,5 +108,5 @@ test('push gateway: only known push services, signed with the app key, payload p
   assert.ok(vapidHeader(r.vapid, 'https://fcm.googleapis.com/x').startsWith('vapid t='));
   // A push service that forgot the subscription: the box is told to drop it.
   const gone = (async () => new Response('gone', { status: 410 })) as typeof fetch;
-  assert.equal(((await api(r, 'POST', u('/v1/push'), body, `Bearer rosa.${secret}`, '1.1.1.1', gone)).body as any).gone, true);
+  assert.equal(((await api(r, 'POST', u('/v1/push'), body, `Bearer rosa.${secret}`, '203.0.113.1', gone)).body as any).gone, true);
 });

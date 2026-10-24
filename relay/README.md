@@ -115,7 +115,7 @@ What someone who controlled the relay **could** do, and what limits it:
 ## Run and test
 
 ```
-relay/deploy [ssh-host]           # install or update on the relay machine (default: the ssh name relaybox)
+relay/deploy <ssh-host>           # install or update on the relay machine, over ssh as root
 npm test                          # includes relay/server.test.ts and core/push.test.ts
 ./demo                            # relay/demo.ts: the protocol and push payloads, offline
 DEMO_LIVE=remote ./demo           # plus the real relay: a real name, certificate and push, then released
