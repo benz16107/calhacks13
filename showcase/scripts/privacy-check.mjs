@@ -16,6 +16,12 @@ const PUBLIC_BASE58 = new Set([
   '39w7W3SBxE62zsS7VQY5dgZQXGWko2EkBXMfHg2sLtKV',
   '4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU',
 ]);
+// Public on purpose: the release signing key's fingerprint, and the SHA-256 of each published disc (read from
+// src/data/downloads.ts, so only the checksums the release thread filed in are allowed).
+const SIGNING_FINGERPRINT = 'FWKFb1eAvEBmMhVJwMwTnLnhrmZ5yQZ5947pDvFKcpY';
+const RELEASE_SHA256 = new Set(
+  [...fs.readFileSync(path.join(path.dirname(new URL(import.meta.url).pathname), '../src/data/downloads.ts'), 'utf8').matchAll(/sha256: '([0-9a-f]{64})'/g)].map((m) => m[1]),
+);
 const before = (text, i, n = 60) => text.slice(Math.max(0, i - n), i);
 
 const checks = [
@@ -29,8 +35,8 @@ const checks = [
   ['secret prefix', /sk_(live|test)_[A-Za-z0-9]{6,}|\bpi_[A-Za-z0-9]{12,}|\bre_[A-Za-z0-9]{12,}|AKIA[0-9A-Z]{12,}|ghp_[A-Za-z0-9]{10,}|xox[bp]-[A-Za-z0-9-]+|apify_api_[A-Za-z0-9]+|-----BEGIN [A-Z ]*PRIVATE/g],
   ['key assignment', /\b[A-Z][A-Z0-9_]*(KEY|TOKEN|SECRET|PASSWORD)=[^\s'"<]{6,}/g, (m) => /=(\.\.\.|<|sk_test_\.\.\.|apify_api_\.\.\.)/.test(m)],
   ['elastic or kibana host', /[a-z0-9-]+\.(es|kb)\.[a-z0-9.-]+\.(elastic-cloud\.com|elastic\.cloud|cloud\.es\.io)|elastic-cloud\.com/gi],
-  ['base58 key', /\b[1-9A-HJ-NP-Za-km-z]{32,90}\b/g, (m, text, i) => !/[0-9]/.test(m) || /^[a-z]+$/i.test(m) || PUBLIC_BASE58.has(m) || /explorer\.solana\.com\/(tx|address)\/$/.test(before(text, i, 40))],
-  ['long hex', /\b[0-9a-f]{40,}\b/g],
+  ['base58 key', /\b[1-9A-HJ-NP-Za-km-z]{32,90}\b/g, (m, text, i) => !/[0-9]/.test(m) || /^[a-z]+$/i.test(m) || PUBLIC_BASE58.has(m) || m === SIGNING_FINGERPRINT || /explorer\.solana\.com\/(tx|address)\/$/.test(before(text, i, 40))],
+  ['long hex', /\b[0-9a-f]{40,}\b/g, (m) => RELEASE_SHA256.has(m)],
   ['uuid', /\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/gi],
 ];
 

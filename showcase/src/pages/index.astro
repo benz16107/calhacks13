@@ -381,6 +381,13 @@ const prizes = [
           </div>
         )
       }
+      {
+        DOWNLOADS.length > 0 && (
+          <p class="measure">
+            <strong>Check a download.</strong> The release is signed with an SSH key whose fingerprint is <code>SHA256:FWKFb1eAvEBmMhVJwMwTnLnhrmZ5yQZ5947pDvFKcpY</code>. From the folder with <code>SHA256SUMS</code>, <code>SHA256SUMS.sig</code> and <code>allowed_signers</code> (all in the <a href="https://sjc1.vultrobjects.com/gurtos/v0.1.0-preview/">mirror folder</a>), run <code>ssh-keygen -Y verify -f allowed_signers -I gurtos -n gurtos-release -s SHA256SUMS.sig &lt; SHA256SUMS</code>, then <code>sha256sum -c SHA256SUMS --ignore-missing</code>. The GurtOS Personal discs are not published yet.
+          </p>
+        )
+      }
       <ul class="measure">
         <li><strong>On an Ubuntu 24.04 machine you already have:</strong> <code>sudo core/install.sh</code> installs the box service, Droid and SpacetimeDB. <a href={`${LINKS.docs}/get-started/install-on-ubuntu/`}>Install on Ubuntu</a>.</li>
         <li><strong>Build the install discs from source:</strong> <code>image/build</code> makes GurtOS Server and <code>image/build personal</code> makes GurtOS Personal, for x86_64 or arm64, on any Ubuntu 24.04 VM with root. <a href={repoTree('image')}>How to build and test them</a>.</li>
