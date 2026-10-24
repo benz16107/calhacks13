@@ -2,6 +2,8 @@
 order: 8
 sponsor: Coinbase
 prize: 'x402 Payment Agents'
+editions: 'GurtOS Server'
+pitch: 'An agent wallet belongs on an always-on box you control. The key stays in the root-only vault, tasks pay per call within a budget, and anything over it waits for your phone.'
 title: Agents pay for APIs with x402, and the key never leaves the vault
 summary: 'Agents on a GurtOS box pay for HTTP APIs that answer 402 Payment Required, with Coinbase''s x402 SDK and the CDP facilitator. The box holds the wallet; a task only ever sees results. A payment within the task''s budget goes through, one above it pauses the task until you approve on the portal or your phone, and every payment lands in the action log with its amount, payee, task and Solana transaction. All of it is USDC on Solana devnet: test money.'
 proof: 'A real agent (Droid with Claude) was told only "buy one joke and one report". It quoted both, paid $0.01, waited for the OK on the $0.03 report, then paid it. Both payments settled through Coinbase''s CDP facilitator and are confirmed on Solana devnet, and neither the wallet key nor the CDP secret appears anywhere in the task''s log.'

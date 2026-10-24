@@ -2,6 +2,8 @@
 order: 12
 sponsor: Moss
 prize: A personal agent that remembers you
+editions: 'GurtOS Personal'
+pitch: 'Your photos, files and task history are personal. /find keeps its index on your own machine, and only text, never a photo, goes to Moss''s cloud copy.'
 title: The box remembers what is in your photos, files and past tasks
 summary: Say "find the whiteboard photo" and the box answers photos/IMG_2041.jpg, a file whose name says nothing about a whiteboard. A vision model described the photo when it arrived, and Moss indexes that description together with every text file and finished task on the box. Agents search the same index through a box tool, with no network and no keys of their own.
 proof: 'A search through the box takes a median of 3.1 ms on both test VMs (ARM64 and x86), under 1 ms of it inside Moss, because Moss runs in the box''s own memory. In every merge-gate run, an agent with no network asks find.search through the broker and gets the same whiteboard photo; undo a task and its files leave the index while the photos stay.'

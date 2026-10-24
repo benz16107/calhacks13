@@ -2,6 +2,8 @@
 order: 11
 sponsor: Elastic
 prize: Best use of Elastic Agent Builder on Serverless
+editions: 'GurtOS Business (preview) and GurtOS Server'
+pitch: '"What did every agent do this week?" is an audit question. A Server owner asks it the morning after; a Business team would ask it across everyone''s tasks. Business is not built yet, so today the agent answers for GurtOS Server boxes.'
 title: Ask what your agents did this week
 summary: Every step, tool call, cost, approval, blocked connection, undo and failure on a GurtOS box streams into an Elasticsearch Serverless project. An Elastic Agent Builder agent named GurtOS log answers questions about it in plain words, from six ES|QL tools and an index search tool that live in the repo as code.
 proof: 'Asked "Why did the job routine fail? Look at demo run a18523.", the agent found the failed task with <code>box.failures</code>, read its timeline and named the root cause itself: the routine was allowed to reach only boards.greenhouse.io, its plan needed www.linkedin.com, the box blocked it, and the task failed right after. A live run shipped all 156 events of a demo run to Serverless, each exactly once.'

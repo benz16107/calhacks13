@@ -37,6 +37,10 @@ const jumps = [
     <header class="head">
       <p class="kicker">{d.prize}</p>
       <h1>{d.title}</h1>
+      <div class="best measure">
+        <p class="best-line"><span class="label">Best shown in</span> {d.editions}</p>
+        <p class="pitch" set:html={d.pitch} />
+      </div>
       <p class="lead measure">{d.summary}</p>
       <p class="proof measure"><span class="label">Proof</span> <span set:html={d.proof} /></p>
       <nav class="jumps" aria-label="On this page">
@@ -83,6 +87,39 @@ const jumps = [
   }
   .head h1 {
     margin-bottom: var(--space-4);
+  }
+  .best {
+    margin: 0 0 var(--space-5);
+    padding: var(--space-3) var(--space-4);
+    background: var(--color-desktop-sky);
+    color: var(--color-desktop-text);
+    border-radius: var(--radius-md);
+  }
+  .best p {
+    margin: 0;
+  }
+  .best-line {
+    font-weight: 600;
+    font-size: 1.05rem;
+  }
+  .best .label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--color-desktop-accent);
+    margin-right: var(--space-2);
+  }
+  .pitch {
+    margin-top: var(--space-2) !important;
+    color: var(--color-desktop-text-secondary);
+    font-size: 0.97rem;
+  }
+  .pitch :global(a) {
+    color: var(--color-desktop-text);
+  }
+  .pitch :global(code) {
+    background: rgb(255 255 255 / 0.1);
   }
   .proof {
     background: var(--color-bg-surface);

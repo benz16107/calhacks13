@@ -19,6 +19,13 @@ import shotPersonal from '../assets/repo/personal/12-approval.png';
 import shotPersonalReview from '../assets/repo/personal/14-review.png';
 
 const tracks = (await getCollection('tracks')).sort((a, b) => a.data.order - b.data.order);
+// Which tracks each edition carries, from each page's "Best shown in" line.
+const carries = (ed: string) => tracks.filter((t) => t.data.editions.includes('All three') || t.data.editions.includes(ed));
+const strip = [
+  { name: 'GurtOS Server', ed: 'Server', note: 'built: an always-on box at home or in the cloud' },
+  { name: 'GurtOS Personal', ed: 'Personal', note: 'built: your own laptop, with agents beside you' },
+  { name: 'GurtOS Business', ed: 'Business', note: 'preview, not built: one box for a team, with roles and routed approvals' },
+].map((e) => ({ ...e, tracks: carries(e.ed) }));
 const hasClip = (name: string) => (clips as { name: string }[]).some((c) => c.name === name);
 
 // The merge gate's own words for each moment, from the Oct 24 run in src/data/demo-latest.txt.
@@ -272,6 +279,19 @@ const prizes = [
           </tbody>
         </table>
       </div>
+      <h3 class="strip-h">Which edition shows each track best</h3>
+      <ul class="strip">
+        {strip.map((e) => (
+          <li>
+            <span class="strip-name">{e.name}</span> <span class="strip-note">({e.note})</span>:{' '}
+            {e.tracks.map((t, i) => (
+              <>{i > 0 && ', '}<a href={`/tracks/${t.id}/`}>{t.data.sponsor}</a></>
+            ))}
+            {e.ed !== 'Business' && ', and the Cal Hacks prizes'}.
+          </li>
+        ))}
+      </ul>
+      <p class="measure strip-foot">The Cal Hacks prizes are best shown in all three. Business-led pages show today's demo on GurtOS Server, with the credit desk's human controller seat standing in for a team.</p>
       <div class="pair">
         <figure>
           <Image src={shotPhone} alt="GurtOS on a phone: what needs you comes first, each request with Deny and Approve, then the running tasks." widths={[390, 780]} sizes="320px" />
@@ -574,6 +594,31 @@ const prizes = [
     grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));
     gap: 0 var(--space-6);
     max-width: 64rem;
+  }
+  .strip-h {
+    margin: var(--space-6) 0 var(--space-3);
+  }
+  .strip {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 var(--space-3);
+    border-top: 1px solid var(--color-border-strong);
+  }
+  .strip li {
+    padding: var(--space-3) 0;
+    border-bottom: 1px solid var(--color-border-default);
+  }
+  .strip-name {
+    font-weight: 600;
+  }
+  .strip-note {
+    color: var(--color-text-secondary);
+    font-size: 0.92rem;
+  }
+  .strip-foot {
+    font-size: 0.9rem;
+    color: var(--color-text-secondary);
+    margin-bottom: var(--space-6);
   }
   .pair {
     display: grid;

@@ -2,6 +2,8 @@
 order: 4
 sponsor: Factory
 prize: Droid SDK track
+editions: 'GurtOS Server and GurtOS Personal'
+pitch: 'Droid does the work and GurtOS makes it safe. Droid never holds a key: the vault keeps it and the box''s proxy swaps it in outside the task. Each task is its own Linux user with its own firewall rule and its own copy of the files, on a locked-down Linux base where task users have no sudo, and every change is reviewable in the log and undoable. Keys kept where agents can reach them keep leaking: <a href="https://www.bleepingcomputer.com/news/security/opencode-hack-exposes-api-keys-amid-ai-distillation-attacks/">OpenCode Console exposed users'' provider API keys</a> on Oct 17, 2026, <a href="https://github.com/openclaw/openclaw/issues/43794">OpenClaw stores tokens and API keys in plaintext</a> in <code>~/.openclaw/openclaw.json</code>, and <a href="https://nvd.nist.gov/vuln/detail/CVE-2026-25253">CVE-2026-25253</a> let one crafted link make OpenClaw send its token to an attacker.'
 title: Droid is the worker inside every task
 summary: Every agent task on a GurtOS box is a Droid session, started through the TypeScript Droid SDK and running Claude. The box decides what each Droid may touch (its own Linux user, its own copy of the files, only the hosts and tools its task lists), turns each Droid tool call into a step in the action log, and resumes the same Droid session after a power cut.
 proof: 'In every merge-gate run, a Droid task (Claude) edits a file as its own Linux user while the box samples its processes: all 240 samples held only a placeholder Factory key, because the box''s proxy adds the real key on the way to Factory. Its cost, $0.5378 in the Oct 24 run, is priced from the token counts Droid reports.'

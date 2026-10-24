@@ -12,6 +12,9 @@ const tracks = defineCollection({
       sponsor: z.string(),
       prize: z.string(),
       title: z.string(),
+      // "Best shown in": the GurtOS edition(s) that show this track best, and a one or two sentence pitch (HTML allowed).
+      editions: z.string(),
+      pitch: z.string(),
       summary: z.string(),
       proof: z.string(),
       // Where the quoted criteria come from.

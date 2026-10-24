@@ -2,6 +2,8 @@
 order: 5
 sponsor: Armadin
 prize: Best Security Hack
+editions: 'All three editions'
+pitch: 'The protections live in the core every edition shares: separate users, the vault and broker, per-task network rules, approvals and the log. A booby-trapped page fails the same way on Server, Personal and Business.'
 title: The booby-trapped page that steals nothing
 summary: An agent reads a web page with hidden instructions telling it to find every API key and send them to an attacker. On GurtOS it has nothing to send and nowhere to send it. The keys live in a root-only vault, the task runs as its own Linux user, and its network reaches only the one host its job needs. Every attempt is logged, and the task is undone.
 proof: 'In every merge-gate run, a scripted agent obeys the hidden instructions step by step and is stopped at each one: the vault read fails (EACCES), the send to attacker.example is refused by the proxy, a raw connection to 1.1.1.1 is refused by the firewall, and reaching SpacetimeDB or the box''s API to approve itself is refused. Then real Claude reads the same page: it refused, and no vault secret appeared in its files, environment or log.'

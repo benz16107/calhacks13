@@ -2,6 +2,8 @@
 order: 16
 sponsor: Solana
 prize: 'MLH: Best use of Solana'
+editions: 'GurtOS Server'
+pitch: 'An always-on box holds the wallet, so agents can pay for APIs at any hour. The key never leaves the vault, and every payment is a devnet transaction anyone can check.'
 title: Agents pay in USDC on Solana devnet, without ever holding the key
 summary: 'GurtOS gives every box an agent wallet on Solana. When an agent needs a paid API, the box signs an SPL token transfer of devnet USDC from a wallet in its root-only vault, a facilitator pays the network fee and submits it, and the box checks the transaction is confirmed on chain before it records the receipt. Agents only ever see results. All of it is devnet USDC, which has no value.'
 proof: 'The wallet''s whole history is public on Solana Explorer: one 20 USDC faucet deposit, then 36 x402 payments of $0.01 or $0.03 made by agents on the box, 0.76 USDC in all, every one a finalized SPL TransferChecked whose fee was paid by the facilitator, never by the wallet.'

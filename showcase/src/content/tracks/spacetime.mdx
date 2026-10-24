@@ -2,6 +2,8 @@
 order: 10
 sponsor: SpacetimeDB
 prize: SpacetimeDB as the core real-time backend
+editions: 'All three editions, strongest in GurtOS Business'
+pitch: 'Live shared state is what each edition''s screen reads: the box screen on Server, the desktop on Personal. It matters most in Business (preview, not built), where several people see the same approvals at once and the first answer wins.'
 title: Live tasks and approvals on every screen at once
 summary: Each GurtOS box runs its own SpacetimeDB, with a TypeScript module the box publishes at boot. It holds the live state of every task and every approval. The box's own screen subscribes to it, so an agent's request for an OK lands the moment it is asked, and the screen answers through a reducer that takes calls only from connections the box has vouched for. The first answer wins, whether it comes from the screen, a paired phone or a chat.
 proof: 'In every merge-gate run, a task stops over its budget and SpacetimeDB shows the request live with its amount, payee and purpose. Another task keeps running and finishes meanwhile. The OK goes through SpacetimeDB''s answer reducer into the box''s log under the name the box vouched for, a stranger''s identity is refused, and the task spends its $8.00 of test money and finishes, and SpacetimeDB shows it done with its cost.'
