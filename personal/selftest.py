@@ -242,8 +242,8 @@ log = api('GET', '/api/log?after=0')
 titles = {t['id']: t['title'] for t in api('GET', '/api/tasks')}
 mine = [e for e in log if tl.matches(e, titles, 'dentist', t_app['id'])]
 lines = [tl.event_text(e)[1] for e in log if e.get('task') == t_app['id']]
-check(mine and all(e['task'] == t_app['id'] for e in mine) and any(x.startswith('Approved by desktop:demo') for x in lines),
-      f"Activity finds a task's events by words and by task, and says who approved ({len(lines)} events)")
+check(mine and all(e['task'] == t_app['id'] for e in mine) and any(x == 'Approved by you' for x in lines),
+      f"Activity finds a task's events by words and by task, and says who approved in plain words ({len(lines)} events)")
 detail = api('GET', f"/api/tasks/{t_app['id']}")
 r = tl.reach(detail)
 check(r['hosts'] == [] and r['user'].startswith('box-'), f"a task's page shows what it can reach: no internet, its own user {r['user']}")
