@@ -287,18 +287,18 @@ const prizes = [
       </div>
       <div class="cols measure-wide">
         <p><strong>Approve from the lock screen, with a safe default.</strong> Anything that spends money says "Approve with Face ID" and opens the app. The box's log records that the answer came from the paired phone with Face ID.</p>
-        <p><strong>Push the relay cannot read.</strong> The iPhone app makes its own push keys, and the box encrypts each notification for them as it does for the web app (RFC 8291). The relay forwards only ciphertext, and a notification extension on the phone decrypts it and checks the box's signature before showing anything. End to end encrypted by design; native delivery waits on the relay getting an Apple push key. In the simulator, the same decryption code ran on a payload the box encrypted.</p>
+        <p><strong>Push the relay cannot read.</strong> The iPhone app makes its own push keys, and the box encrypts each notification for them as it does for the web app (RFC 8291). The relay forwards only ciphertext, and a notification extension on the phone decrypts it and checks the box's signature before showing anything. End to end encrypted by design; native delivery waits on the relay confirming it has the Apple push key, which is installed. In the simulator, the same decryption code ran on a payload the box encrypted.</p>
         <p><strong>The Watch is limited by the box, not the app.</strong> On main, with the merge gate's two native-app moments passing: the Watch gets its own token through the iPhone, and the box lets it approve up to $25, never a Business request and never a Shopper purchase, and only when it reports being on the wrist, recorded as "(on the wrist, reported)". That check is what the Watch reports, not proof. Deny always works, and revoking the iPhone revokes its Watch. The demo approves $8 from the Watch and refuses $40, which keeps waiting for Face ID. Installed computers get it with the next deploy.</p>
         <p><strong>On the Mac:</strong> a menu bar count of what needs you, Approve with Touch ID, and Option Command G from anywhere to ask your computer for a task. Send to GurtOS in the Share menu sends up to 8 files, 5 MB in all, or text and links, to a new task. The files go to a workspace of their own, never your folders.</p>
       </div>
       <h3>What this does not cover</h3>
       <ul class="measure-wide">
-        <li>The iPhone, Watch and Mac apps were tested in Apple's simulators and on a Mac, against real GurtOS computers. They have not been run on a physical iPhone or Apple Watch yet.</li>
+        <li>The iPhone, Watch and Mac apps were tested in Apple's simulators and on a Mac, against real GurtOS computers. The iPhone app is installed on a physical iPhone through TestFlight. The Watch app has not been tried on a physical Apple Watch yet.</li>
         <li>The Watch approves only when watchOS reports it is on the wrist and unlocked. The simulator can't test wrist detection, so the box's refusal is what the demo checks.</li>
-        <li>Native notifications reach a phone once the relay has an Apple push key. In the simulator, the same decryption code ran on a payload the box encrypted.</li>
+        <li>Native notifications reach a phone once the relay confirms it has the Apple push key (installed, not yet confirmed). In the simulator, the same decryption code ran on a payload the box encrypted.</li>
         <li>The Mac menu picture is drawn from the app's own data, because macOS blocks screen capture over ssh. The Ask and Pair windows are the real views.</li>
-        <li>The Mac app is built but not downloadable yet: the notarized download waits on a Developer ID certificate. Installed computers get the box side of Send to GurtOS with the next deploy.</li>
-        <li>TestFlight internal testing only, no App Store submission. Android is the web app in a Trusted Web Activity. On Windows, GurtOS installs from Edge; that was checked in Edge on Linux, not on a Windows PC.</li>
+        <li>The Mac app is a notarized, signed download (gurtos-mac-0.1.0.dmg, 1.3 MB) on the v0.1.0-preview release. Installed computers get the box side of Send to GurtOS with the next deploy.</li>
+        <li>The iPhone app is on TestFlight for internal testing only, and nothing is submitted to the App Store. Android is the web app in a Trusted Web Activity. On Windows, GurtOS installs from Edge; that was checked in Edge on Linux, not on a Windows PC.</li>
       </ul>
     </section>
 
