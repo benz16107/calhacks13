@@ -19,6 +19,9 @@ files are never written.
 The worker inside a task is Droid with Claude (`worker: 'droid'`), or a scripted fake for tests
 (`worker: 'fake'`, see `workers/fake.ts`).
 
+Workspaces are folders in `BOX_HOME/workspaces`. `home` always exists and is the default. A track makes its
+own with `box.workspace(name, fromDir)`, for example from a git clone or its case files.
+
 ## The action log
 
 `BOX_HOME/log.jsonl`, one JSON event per line, append-only, fsynced per line. Every state change, step, tool

@@ -109,7 +109,7 @@ class Core {
   // ---------- tasks ----------
 
   async createTask(spec: TaskSpec): Promise<Task> {
-    const s: Required<TaskSpec> = { worker: 'droid', tools: [], hosts: [], budgetCents: 0, source: 'api', ...spec };
+    const s: Required<TaskSpec> = { workspace: 'home', worker: 'droid', tools: [], hosts: [], budgetCents: 0, source: 'api', ...spec };
     if (!s.title || !s.prompt) throw new Error('a task needs a title and a prompt');
     if (!/^[\w.-]+$/.test(s.workspace) || !fs.existsSync(dirs.workspace(s.workspace))) throw new Error(`no workspace ${s.workspace}`);
     if (!['droid', 'fake'].includes(s.worker)) throw new Error(`no worker ${s.worker}`);
@@ -303,6 +303,7 @@ class Core {
   boxFor(track: string): Box {
     return {
       createTask: (spec) => this.createTask({ source: track, ...spec }),
+      workspace: (name, fromDir) => sandbox.workspace(name, fromDir),
       task: (id) => this.state.tasks.get(id),
       tasks: () => [...this.state.tasks.values()],
       undo: (id) => this.undo(id),
@@ -422,6 +423,7 @@ class Core {
     );
 
   async boot() {
+    sandbox.workspace('home');
     try {
       firewall();
     } catch (e) {

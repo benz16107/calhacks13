@@ -41,6 +41,16 @@ export function init() {
   fs.mkdirSync(path.join(HOME, 'empty'), { recursive: true });
 }
 
+/** Make a workspace, empty or copied from a folder. An existing one is left alone. */
+export function workspace(name: string, fromDir?: string) {
+  if (!/^[\w.-]+$/.test(name)) throw new Error(`bad workspace name ${name}`);
+  const dir = dirs.workspace(name);
+  if (fs.existsSync(dir)) return;
+  if (fromDir) fs.cpSync(fromDir, dir, { recursive: true });
+  else fs.mkdirSync(dir);
+  run('chmod', '-R', 'a+rwX', dir); // any task's user may change its own copy
+}
+
 const mounted = (dir: string) => fs.readFileSync('/proc/self/mountinfo', 'utf8').includes(` ${dir} `);
 
 function mountOverlay(target: string, lowers: string[], upper?: string) {

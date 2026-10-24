@@ -17,8 +17,8 @@ export interface TaskSpec {
   title: string;
   /** What the worker should do. For the fake worker, one command per line (see core/workers/fake.ts). */
   prompt: string;
-  /** Name of a folder in BOX_HOME/workspaces. The task works on its own copy of it. */
-  workspace: string;
+  /** Name of a folder in BOX_HOME/workspaces. The task works on its own copy of it. Default 'home'. */
+  workspace?: string;
   /** Default 'droid'. 'fake' runs scripted steps with no model, for tests. */
   worker?: 'droid' | 'fake';
   /** Tool names the task may call through the broker. Default none. */
@@ -92,6 +92,8 @@ export type NewEvent = LogEvent extends infer E ? (E extends unknown ? Omit<E, '
 export interface Box {
   /** Start a task. Rejects an unknown workspace or tool. */
   createTask(spec: TaskSpec): Promise<Task>;
+  /** Make a workspace, empty or as a copy of a folder (a git clone, a track's case files). Leaves an existing one alone. */
+  workspace(name: string, fromDir?: string): void;
   task(id: string): Task | undefined;
   tasks(): Task[];
   /** Stop the task if it is still going and remove its file changes. Other tasks keep theirs. */

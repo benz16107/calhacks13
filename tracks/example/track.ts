@@ -22,7 +22,8 @@ export default {
   routes: {
     'GET /': () => new Response('<h1>Example app</h1>', { headers: { 'content-type': 'text/html' } }),
     'POST /start': async (req, box) => {
-      const { title = 'Example task', prompt = 'write hello.txt hi', workspace = 'notes' } = await req.json();
+      const { title = 'Example task', prompt = 'write hello.txt hi', workspace = 'example' } = await req.json();
+      box.workspace(workspace); // makes it the first time, then leaves it alone
       const task = await box.createTask({ title, prompt, workspace, worker: 'fake' });
       return Response.json(task);
     },
