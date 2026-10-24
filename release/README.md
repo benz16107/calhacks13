@@ -29,10 +29,10 @@ both editions:
 
 | Build | Time | Peak memory | Disk used |
 |---|---|---|---|
-| Server x86_64 | 6 min 16 s from a fresh `git clone` of the release commit; 4 min 24 s earlier | 1.0 to 1.5 GB | 7 GB (4.4 GB cached base, 2.5 GB output) |
-| Personal x86_64 | 6 min | 1.7 GB | 11 GB (7 GB cached base, 3.6 GB output) |
-| Server arm64, native | 4 min 42 s (on an Apple M2 Max VM, 6 cores, 8 GB) | | |
-| Personal arm64, native | 10 min 41 s (same VM; an earlier build) | | |
+| Server x86_64 | 5 min 34 s from a fresh `git clone` of the release commit (4 min 24 s earlier) | 1.0 to 1.5 GB | 7 GB (4.4 GB cached base, 2.5 GB output) |
+| Personal x86_64 | 6 min 45 s, from a fresh `git clone` of the release commit | 1.7 GB | 11 GB (7 GB cached base, 3.6 GB output) |
+| Server arm64, native | 4 min 37 s (Apple M2 Max VM, 6 cores, 8 GB) | | |
+| Personal arm64, native | 5 min (same VM, base cached) | | |
 
 A second build of the same edition reuses the cached Ubuntu base in `/var/lib/box-image/<arch>/` and takes a
 few minutes. To start clean, delete `/var/lib/box-image`.
