@@ -284,6 +284,16 @@ At 06:53 ET (03:53 PT) the shared test VM's load average was 31 and the host's 5
 and a `./demo` at once. Moments then fail on timeouts, not on code. Until core adds a lock to `./demo`, run one gate
 at a time and only when the load is under 8. QA's fresh-install passes run on separate Vultr VMs, not the shared one.
 
+## Gate on main
+
+| When (PT) | Main | Result |
+|---|---|---|
+| Sat 00:27 | c359ed6 | 25 passed, 0 failed, 1 pending |
+| Sat 03:12 | 276bb32 (Business) | 26 passed, 0 failed, 1 pending |
+| Sat 04:20 | 984f4b1 | 21 passed, 5 failed: QA changed its checkout during the run (a missing wallet file), not main |
+| Sat 04:40 | 3799b74, clean worktree, load about 9 | 26 passed, 1 failed, 1 pending. The failure is Fetch's "restarted, the chat agent picked up where it was". Sent to the Fetch thread |
+
+
 ## Collisions
 
 Found by trial merges and by comparing what each branch edits. Each is sent to every owner involved.
