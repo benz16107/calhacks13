@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Factory</title>
+<style>
+  :root {
+    --bg: #F3F1EA; --surface: #FBFAF6; --sunken: #E6E7E1; --border: #D3D6CF; --strong: #6B726C;
+    --text: #1C201D; --text2: #535A54; --action: #1C201D; --on-action: #FBFAF6; --focus: #2D5784;
+    --run-fg: #2D5784; --run-bg: #DDE8F2; --wait-fg: #7F4C00; --wait-bg: #F8EBD0;
+    --done-fg: #2E6338; --done-bg: #DFEDDC; --fail-fg: #9C3326; --fail-bg: #F6E0DA; --neutral-fg: #535A54; --neutral-bg: #E6E7E1;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 16px/24px "IBM Plex Sans", system-ui, sans-serif; }
+  main { max-width: 1040px; margin: 0 auto; padding: 24px 16px 64px; }
+  h1 { font-size: 40px; line-height: 48px; font-weight: 600; letter-spacing: -0.5px; margin: 0 0 8px; }
+  h2 { font-size: 17px; line-height: 24px; font-weight: 600; margin: 32px 0 12px; }
+  .mono { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 14px; line-height: 20px; }
+  .small { font-size: 13px; line-height: 18px; color: var(--text2); }
+  .label { font-size: 12px; line-height: 16px; font-weight: 500; letter-spacing: 0.4px; text-transform: uppercase; color: var(--text2); }
+  .test { background: var(--sunken); border: 1px solid var(--strong); border-radius: 4px; padding: 8px 12px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 16px; }
+  .stack > * + * { margin-top: 12px; }
+  .grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); }
+  section { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; }
+  th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-top: 1px solid var(--border); }
+  th { border-top: 0; }
+  button { font: inherit; font-weight: 500; min-height: 44px; padding: 6px 16px; border-radius: 4px; cursor: pointer;
+    border: 1px solid var(--strong); background: var(--surface); color: var(--text); }
+  button.primary { background: var(--action); color: var(--on-action); border-color: var(--action); }
+  button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+  input, select { font: inherit; min-height: 44px; padding: 6px 10px; border: 1px solid var(--strong); border-radius: 4px; background: var(--surface); color: var(--text); }
+  form.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; }
+  form.row label { display: flex; flex-direction: column; gap: 4px; }
+  .pill { display: inline-block; font-size: 12px; line-height: 16px; font-weight: 500; letter-spacing: 0.4px; padding: 2px 8px; border-radius: 4px; white-space: nowrap; }
+  .watching, .buying, .running, .queued { color: var(--run-fg); background: var(--run-bg); }
+  .needs, .waiting { color: var(--wait-fg); background: var(--wait-bg); }
+  .bought, .done { color: var(--done-fg); background: var(--done-bg); }
+  .not, .failed { color: var(--fail-fg); background: var(--fail-bg); }
+  pre { white-space: pre-wrap; margin: 8px 0 0; max-height: 360px; overflow: auto; background: var(--sunken); border-radius: 4px; padding: 12px; }
+  .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .meter { height: 8px; background: var(--sunken); border-radius: 4px; overflow: hidden; width: 160px; }
+  .meter > i { display: block; height: 100%; background: var(--strong); }
+  a { color: var(--focus); }
+</style>
+<main class="stack">
+  <h1>Factory</h1>
+  <p class="small">Droid works here as a team of custom droids: a coder, a reviewer, a credit analyst and a shopper. It plans first, and nothing runs until you approve the plan. The box enforces each task's autonomy level with its own firewall rule, budget and copy of the files. Droid never holds a key.</p>
+
+  <h2>Factory plan</h2>
+  <div id="limits" class="card small">Loading…</div>
+
+  <h2>Start a Droid job</h2>
+  <form id="run" class="card row">
+    <label style="flex:1 1 320px">What should Droid do<input name="prompt" required placeholder="Add a --json flag to the CLI and a test for it"></label>
+    <label style="flex:1 1 240px">Git repo (https, optional)<input name="repo" placeholder="https://github.com/you/project.git"></label>
+    <label>Autonomy<select name="autonomy"><option value="low">Low: no network, every spend asks</option><option value="medium" selected>Medium: budget at most $1</option><option value="high">High: the task's own limits</option></select></label>
+    <label class="row" style="flex-direction:row"><input type="checkbox" name="plan" checked> Plan first</label>
+    <label class="row" style="flex-direction:row"><input type="checkbox" name="team" checked> Coder and reviewer</label>
+    <button class="primary">Start</button>
+  </form>
+
+  <h2>GitHub</h2>
+  <div class="card row"><span id="gh" class="small">Loading…</span><button id="check" type="button">Check now</button></div>
+
+  <h2>Droid tasks</h2>
+  <div id="tasks" class="stack"><p class="small">Loading…</p></div>
+</main>
+<script>
+  // Off the box's own screen the core needs the paired token; the portal puts it in this window's URL.
+  const token = new URLSearchParams(location.search).get('access_token');
+  const auth = token ? { authorization: 'Bearer ' + token } : {};
+  const api = async (method, url, body) => {
+    const r = await fetch(url, { method, headers: { ...auth, ...(body ? { 'content-type': 'application/json' } : {}) }, body: body ? JSON.stringify(body) : undefined });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.error || r.status);
+    return j;
+  };
+  const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+  const meter = (label, l) => `<div class="row"><span style="width:96px">${label}</span><span class="meter"><i style="width:${Math.min(100, l.usedPercent)}%"></i></span><span>${l.usedPercent}% used, resets in ${l.resetsInMin} min</span></div>`;
+
+  async function taskCard(t) {
+    const { events, approvals } = await api('GET', `/api/tasks/${t.id}`);
+    const steps = events.filter((e) => e.type === 'task.step');
+    const plan = steps.findLast((s) => s.data?.plan);
+    const review = steps.findLast((s) => s.data?.droid === 'reviewer');
+    const verdict = review && /VERDICT:\s*(APPROVE|CHANGES)/.exec(review.data.result || review.text)?.[1];
+    const pr = steps.findLast((s) => s.data?.pr)?.data.pr;
+    const pending = approvals.filter((a) => a.state === 'pending');
+    const team = [...new Set(steps.map((s) => s.data?.droid).filter(Boolean))];
+    const d = t.droid || {};
+    return `<div class="card stack">
+      <div class="row"><strong style="flex:1">${esc(t.title)}</strong><span class="pill ${t.state}">${t.state}</span></div>
+      <div class="small">${esc(t.source)} · ${d.autonomy || 'high'} autonomy${d.plan ? ' · plan first' : ''} · ${t.credits.toLocaleString()} Factory credits · $${(t.costCents / 100).toFixed(2)} of a $${(t.budgetCents / 100).toFixed(2)} budget${team.length ? ' · droids: ' + team.map(esc).join(', ') : ''}</div>
+      ${pending.map((a) => `<div class="card"><div class="label">Waiting for your OK</div><pre>${esc(a.question)}</pre><div class="row" style="margin-top:8px"><button class="primary" data-a="${a.id}" data-ok="1">Approve</button><button data-a="${a.id}" data-ok="">Deny</button></div></div>`).join('')}
+      ${plan && !pending.length ? `<details><summary>Plan the owner approved</summary><pre>${esc(plan.data.plan)}</pre></details>` : ''}
+      ${verdict ? `<div><span class="pill ${verdict === 'APPROVE' ? 'done' : 'waiting'}">Reviewer: ${verdict}</span></div>` : ''}
+      ${pr ? `<div>Pull request <a href="${esc(pr.url)}" target="_blank" rel="noopener">#${pr.number}</a> on ${esc(pr.branch)} (${pr.files.length} files)</div>` : ''}
+      <details><summary>${steps.length} steps</summary><pre>${steps.map((s) => esc(s.text)).join('\n')}</pre></details>
+    </div>`;
+  }
+
+  async function load() {
+    const [usage, gh] = await Promise.all([api('GET', './usage'), api('GET', './github')]);
+    const l = usage.limits;
+    document.getElementById('limits').innerHTML = l.error ? esc(l.error) : meter('5 hours', l.fiveHour) + meter('Week', l.weekly) + '<p>Read from Factory\'s billing limits with the vault\'s key. The key never leaves the box.</p>';
+    document.getElementById('gh').textContent = gh.error ? gh.error : `Watching ${gh.repo} for open issues labelled “${gh.label}”: ${gh.found} open, checked ${new Date(gh.at).toLocaleTimeString()}.`;
+    const list = usage.tasks.slice().reverse().slice(0, 20);
+    document.getElementById('tasks').innerHTML = list.length ? (await Promise.all(list.map(taskCard))).join('') : '<p class="small">No Droid tasks yet.</p>';
+  }
+
+  document.addEventListener('click', async (e) => {
+    const b = e.target.closest('button[data-a]');
+    if (!b) return;
+    b.disabled = true;
+    await api('POST', `/api/approvals/${b.dataset.a}`, { approved: !!b.dataset.ok, by: 'factory app' });
+    load();
+  });
+  document.getElementById('check').onclick = () => api('POST', './github/check').then(load);
+  document.getElementById('run').onsubmit = async (e) => {
+    e.preventDefault();
+    const f = new FormData(e.target);
+    await api('POST', './run', { prompt: f.get('prompt'), repo: f.get('repo') || undefined, autonomy: f.get('autonomy'), plan: f.get('plan') === 'on', team: f.get('team') === 'on' });
+    e.target.reset();
+    load();
+  };
+  load().catch((e) => (document.getElementById('tasks').textContent = 'Could not load: ' + e.message));
+  setInterval(() => load().catch(() => {}), 4000);
+</script>
