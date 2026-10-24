@@ -33,6 +33,7 @@ One line per Figma step: stage, Figma tool, minutes, rating 1 to 5, how the outp
 | Fri Oct 23, 11:23 to 11:27 PM | Design: v2 batch 6, Personal on GNOME | Figma Design via Claude Code and Figma's MCP server (`use_figma`, `get_screenshot`) | 4 | 4 | The indicator menu and the notification restyled in GNOME Shell's look with GurtOS content; the review window (Keep or Undo), Ask an Agent, and a seven-step GurtOS Setup window in the GurtOS system, all on the existing GNOME desktop frames. PNGs in `docs/figma/os-v2/personal/`. |
 | Fri Oct 23, 11:27 to 11:30 PM | Prototyping: v2 flows | Figma Design prototype, wired by Claude Code through Figma's MCP server (`use_figma`: `setReactionsAsync`, flow starting points) | 3 | 4 | Four flows on "GurtOS screens v2" with 136 links: all 12 setup steps, approving a spend on the phone, undoing one task on the box (with a new undone end state), and the desktop with every Settings page. Links in `docs/figma.md`. |
 | Fri Oct 23, 11:30 to 11:32 PM | Pitch deck: v2 | Figma Slides via Claude Code and Figma's MCP server (`use_figma`, `upload_assets`) | 2 | 4 | The deck switched to Atkinson Hyperlegible, every screen image replaced with v2 (16 slots), a setup-wizard slide and a design-system slide added, and the Figma workflow slide retold with the research, system and screen batches. 16 slides. |
+| Fri Oct 23, 11:27 to 11:44 PM | Prototyping: Figma Make v2 | Figma Make, imported with `send_code_to_figma` into a new file in the School team; the page was rewritten in the v2 system by a Claude Code helper agent and checked in a browser with Playwright | 17 | 4 | [Make file](https://www.figma.com/make/udWOO0nK4qggSCOIMqKjCZ): both flows in Atkinson Hyperlegible with the v2 tokens and Adwaita icons, matched to the v2 PNGs. One fix before the import: a "2 more" pill overlapped the home list. The preview inside Figma was not verified by the import. |
 
 ## For Devpost (up to 200 words per stage)
 
@@ -46,12 +47,12 @@ collected 15 references from GNOME, elementary OS, macOS, Windows 11, Ubuntu, Sy
 with one rule to take from it, into `docs/figma/refs/os-system/` and a new section of the board. Those rules became
 the GurtOS design system in `docs/figma/system.md`.
 
-**Prototyping (Figma Design and Figma Make, 9 minutes, 4 of 5).** The first round wired two flows between the
+**Prototyping (Figma Design and Figma Make, 26 minutes, 4 of 5).** The first round wired two flows between the
 real screens: an approval arriving on the phone, and undoing one task on the box with a confirm step. After the
 redesign, Claude Code wired four flows across the 64 v2 screens with 136 prototype links: all 12 setup steps, approving
 a spend on the phone (the approval arrives on the lock screen after 1.2 s), undoing one task on the box through to an
-undone state with a toast, and the desktop with Notification Center, Control Center and every Settings page. The
-flows also went into a Figma Make file as a small web page in the design's tokens, tested in a browser before the
+undone state with a toast, and the desktop with Notification Center, Control Center and every Settings page. Both
+rounds also went into Figma Make as a small working web page in the design's tokens, tested in a browser before each
 import. Links are in `docs/figma.md`.
 
 **Handoff (Figma's MCP server, 4 minutes, 4 of 5).** Every color, size and motion value is a variable with its CSS

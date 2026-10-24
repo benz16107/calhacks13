@@ -35,7 +35,7 @@ direction A screens further down stay as the reference for anything v2 has not r
 | Design system and screens | https://www.figma.com/design/oppzH621OOOMA31rgLbxbM | Pages "GurtOS system" and "GurtOS screens v2": the OS design system and every v2 screen (index in `figma/os-v2/README.md`). Page "OS screens": the direction A screens. Page "Design system": the first tokens and components. Page "Directions": the three OS directions. Page "Screens": the first, dashboard-style screens (superseded) |
 | Ideation board (FigJam) | https://www.figma.com/board/KvHiDv5HIJuGYOZDDkp8VG | Architecture, the four demo moments, the 25 tracks by slot, the moodboard |
 | Prototype (Figma Design) | Setup: https://www.figma.com/proto/oppzH621OOOMA31rgLbxbM/?node-id=54-86&starting-point-node-id=54%3A86 · Phone: https://www.figma.com/proto/oppzH621OOOMA31rgLbxbM/?node-id=90-6534&starting-point-node-id=90%3A6534 · Box, undo: https://www.figma.com/proto/oppzH621OOOMA31rgLbxbM/?node-id=57-722&starting-point-node-id=57%3A722 · Desktop and Settings: https://www.figma.com/proto/oppzH621OOOMA31rgLbxbM/?node-id=83-4401&starting-point-node-id=83%3A4401 | Four flows wired between the v2 screens on "GurtOS screens v2" (136 links). The direction A prototype is still on "OS screens" |
-| Prototype (Figma Make) | https://www.figma.com/make/PuKKW48akjbEKogpI59pdL | The same two flows as a small working web page, in direction A's tokens. It replaces the first Make file (`19hhCgh3CFsgfi1eBienAS`), which still says Box |
+| Prototype (Figma Make) | https://www.figma.com/make/udWOO0nK4qggSCOIMqKjCZ | v2: the two flows (approve from the phone, undo one task on the box) as a small working web page in the GurtOS system: Atkinson Hyperlegible, the v2 tokens and Adwaita icons. Tested in a browser before the import. It replaces `PuKKW48akjbEKogpI59pdL` (direction A, GurtOS name) and `19hhCgh3CFsgfi1eBienAS` (direction A, Box name) |
 | Pitch deck (Figma Slides) | https://www.figma.com/slides/SBrJtJiY20k88X3IGzKwZW | 16 slides in Atkinson Hyperlegible with the v2 screens: the GurtOS wordmark, OpenClaw's demand and security record (sourced), doing it by hand, the box, the three editions, the setup wizard, the four moments, architecture, tracks, the design system, the Figma workflow |
 
 File key for MCP calls: `oppzH621OOOMA31rgLbxbM`. Open a node with
@@ -244,6 +244,10 @@ on the phone and in Personal, the name is plain text in the surrounding style.
 
 ## Personal edition (GNOME), page "Personal (GNOME)", node `35:86`
 
+**Superseded by v2:** the restyled indicator menu, notification, review window, Ask an Agent dialog and the
+seven-step Personal setup are in `figma/os-v2/personal/` (page "GurtOS screens v2"). The frames below are the first
+round, kept for the record.
+
 Personal is installed on your own laptop and used as a normal computer: Ubuntu's GNOME desktop with your own account.
 Agents work beside you as separate users, on copies of folders you pick, and you can undo them. GurtOS adds a thin layer
 to that desktop; it does not reskin it.
@@ -298,7 +302,7 @@ The Figma connector cannot change who can open a file, so Ben does this by hand.
 |---|---|---|
 | Ideation board (FigJam) | https://www.figma.com/board/KvHiDv5HIJuGYOZDDkp8VG | |
 | Design system and screens | https://www.figma.com/design/oppzH621OOOMA31rgLbxbM | The Design prototype links follow this file's access |
-| Prototype (Figma Make) | https://www.figma.com/make/PuKKW48akjbEKogpI59pdL | Open it once and check the preview runs (the import could not verify it). Click **Publish** for a public URL to embed on Devpost |
+| Prototype (Figma Make) | https://www.figma.com/make/udWOO0nK4qggSCOIMqKjCZ | Open it once and check the preview runs (the import could not verify it). Click **Publish** for a public URL to embed on Devpost |
 | Pitch deck (Figma Slides) | https://www.figma.com/slides/SBrJtJiY20k88X3IGzKwZW | |
 
 Optional: to add Weave art, link the Figma account to Weave at https://app.weavy.ai/settings?section=profile. Each
