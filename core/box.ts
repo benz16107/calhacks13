@@ -55,7 +55,6 @@ function listenSocket(server: http.Server, file: string, owner?: { uid: number; 
 
 const dollars = (cents: number) => `$${(cents / 100).toFixed(2)}`;
 const BOX_ID = process.env.BOX_ID ?? os.hostname();
-const BOX_OWNER = process.env.BOX_OWNER; // the human (with sudo) on a Personal box; unset on a Server box
 const BOX_NAME = process.env.BOX_NAME ?? BOX_ID;
 
 interface Device {
@@ -88,6 +87,16 @@ class Core {
   devicesPath = path.join(HOME, 'devices.json');
   devices: Device[] = fs.existsSync(this.devicesPath) ? JSON.parse(fs.readFileSync(this.devicesPath, 'utf8')) : [];
   pairCodes = new Map<string, { expiry: number; owner: boolean }>(); // one-time code -> expiry (ms), and whether it pairs an owner device
+  ownerPath = path.join(HOME, 'owner.json');
+  // The human with sudo on a Personal box: set at runtime (the image does it after the desktop's own setup
+  // makes the account), else BOX_OWNER, else none (a Server box).
+  owner: string | null = (() => {
+    try {
+      return JSON.parse(fs.readFileSync(this.ownerPath, 'utf8')).user ?? null;
+    } catch {
+      return process.env.BOX_OWNER ?? null;
+    }
+  })();
   settings: Settings = loadSettings(HOME);
   setup: SetupState = loadSetup(HOME, this.log.events.some((e) => e.type === 'task.created'));
   vaultMetaPath = path.join(HOME, 'vault-meta.json');
@@ -95,7 +104,7 @@ class Core {
   startedAt = new Date().toISOString();
   resumed: string[] = []; // tasks boot() restarted after a power cut, for the screen's banner
   linksPath = path.join(HOME, 'links.json');
-  links: Record<string, string> = fs.existsSync(this.linksPath) ? JSON.parse(fs.readFileSync(this.linksPath, 'utf8')) : {};
+  links: Record<string, string | Record<string, string>> = fs.existsSync(this.linksPath) ? JSON.parse(fs.readFileSync(this.linksPath, 'utf8')) : {};
   uidTask = new Map<number, string>();
   relay = relayCert(HOME);
   proxyPort = 0;
@@ -144,7 +153,7 @@ class Core {
   // ---------- tasks ----------
 
   async createTask(spec: TaskSpec): Promise<Task> {
-    const known = ['title', 'prompt', 'workspace', 'worker', 'tools', 'hosts', 'budgetCents', 'source', 'folder'];
+    const known = ['title', 'prompt', 'workspace', 'worker', 'tools', 'hosts', 'budgetCents', 'source', 'folder', 'folders'];
     const unknown = Object.keys(spec ?? {}).filter((k) => !known.includes(k));
     if (unknown.length) throw new Error(`unknown task field${unknown.length > 1 ? 's' : ''}: ${unknown.join(', ')} (known: ${known.join(', ')})`);
     // What a task does not name comes from the owner's settings: the budget and the network it gets.
@@ -411,7 +420,7 @@ class Core {
     if (!/^[\w.-]+$/.test(name)) throw new Error(`bad workspace name ${name}`);
     const real = path.resolve(realPath);
     if (!fs.existsSync(real) || !fs.statSync(real).isDirectory()) throw new Error(`no folder ${real}`);
-    if (BOX_OWNER) {
+    if (this.owner) {
       // The owner's folder may be 0700; let task users read it through their overlay copies.
       try {
         execFileSync('setfacl', ['-R', '-m', 'u:root:rX', real]);
@@ -421,7 +430,51 @@ class Core {
     this.links[name] = real;
     sandbox.linkBase(name, real);
     fs.writeFileSync(this.linksPath, JSON.stringify(this.links, null, 2));
-    if (!fs.existsSync(dirs.view(name)) && !sandbox.isLinked(name)) return;
+  }
+
+  /** Link several of the owner's folders as one workspace. Each shows up as a top-level folder named by its label. */
+  linkWorkspaces(name: string, folders: Record<string, string>) {
+    if (!/^[\w.-]+$/.test(name)) throw new Error(`bad workspace name ${name}`);
+    for (const real of Object.values(folders)) if (!fs.existsSync(real) || !fs.statSync(real).isDirectory()) throw new Error(`no folder ${real}`);
+    const had = this.links[name];
+    if (had && JSON.stringify(had) !== JSON.stringify(folders)) throw new Error(`workspace ${name} already points somewhere else`); // never repoint
+    fs.mkdirSync(dirs.workspace(name), { recursive: true }); // a marker, so the workspace exists; the folders are the real ones
+    this.links[name] = folders;
+    sandbox.linkMulti(name, folders);
+    fs.writeFileSync(this.linksPath, JSON.stringify(this.links, null, 2));
+  }
+
+  /**
+   * Link the folder(s) a Personal task works on and return its workspace. The name carries a hash of the full
+   * real paths, so same-named folders in different places never share a workspace.
+   */
+  linkFolders(given: unknown): string {
+    if (!Array.isArray(given) || !given.length || given.length > 10 || given.some((f) => typeof f !== 'string' || !f)) throw new Error('folders: a list of 1 to 10 folders');
+    const reals = [...new Set((given as string[]).map((f) => fs.realpathSync(f)))].sort();
+    for (const r of reals) {
+      if (this.settings.agentFolders.length && !insideAny(r, this.settings.agentFolders)) {
+        throw new Error(`${r} is not one of the folders agents may use (Settings > agentFolders: ${this.settings.agentFolders.join(', ')})`);
+      }
+    }
+    for (const a of reals) for (const b of reals) if (a !== b && b.startsWith(a + '/')) throw new Error(`${b} is inside ${a}; pick one of them, or the same file would be changed twice`);
+    const hash = (x: string) => createHash('sha256').update(x).digest('hex').slice(0, 6);
+    if (reals.length === 1) {
+      const name = `owner-${path.basename(reals[0]).replace(/[^\w.-]/g, '-')}-${hash(reals[0])}`;
+      this.linkWorkspace(name, reals[0]);
+      return name;
+    }
+    const used = new Set<string>();
+    const labels: Record<string, string> = {};
+    for (const r of reals) {
+      const base = path.basename(r).replace(/[^\w.-]/g, '-') || 'folder';
+      let label = base;
+      for (let i = 2; used.has(label); i++) label = `${base}-${i}`;
+      used.add(label);
+      labels[label] = r;
+    }
+    const name = `owner-${reals.length}folders-${hash(reals.join('\n'))}`;
+    this.linkWorkspaces(name, labels);
+    return name;
   }
 
   /** Apply a done task's changes to its linked real folder (owner's Keep), or report a conflict. */
@@ -679,10 +732,55 @@ class Core {
     return loaded;
   }
 
+  /** The owner, with the account's id and home folder when it is a real account. */
+  ownerInfo() {
+    if (!this.owner) return null;
+    const f = this.passwd(this.owner);
+    return { user: this.owner, uid: f ? Number(f[2]) : null, home: f?.[5] ?? `/home/${this.owner}` };
+  }
+
+  passwd(user: string): string[] | undefined {
+    if (!/^[a-z_][a-z0-9_-]{0,31}$/.test(user)) return undefined;
+    try {
+      return execFileSync('getent', ['passwd', user], { encoding: 'utf8' }).trim().split(':');
+    } catch {
+      return undefined; // no such account
+    }
+  }
+
+  /**
+   * Make an existing account the owner, or with no user go back to BOX_OWNER (or none). The account must be a
+   * person's: not root, not a system account, not one of the box's own task users.
+   */
+  setOwner(user: unknown) {
+    if (user === undefined) {
+      fs.rmSync(this.ownerPath, { force: true });
+      this.owner = process.env.BOX_OWNER ?? null;
+    } else {
+      if (typeof user !== 'string') throw new Error('user: the account name of the owner');
+      const f = this.passwd(user);
+      if (!f) throw new Error(`user: no account named "${String(user).slice(0, 40)}" on this machine (create it first)`);
+      const uid = Number(f[2]);
+      if (!((uid >= 1000 && uid < 30000) || (uid >= 40000 && uid < 65534))) throw new Error(`user: "${user}" is a system account (uid ${uid}); the owner is a person's account`);
+      fs.writeFileSync(this.ownerPath, JSON.stringify({ user, setAt: new Date().toISOString() }), { mode: 0o600 });
+      this.owner = user;
+    }
+    this.write({ type: 'note', track: 'owner', data: { owner: this.owner } });
+    return this.ownerInfo();
+  }
+
+  /** Changing an owner that already exists takes the box's socket (root) or an owner-paired phone, not any local process. */
+  requireOwnerChange(req: http.IncomingMessage) {
+    this.requireOwner(req);
+    if (this.owner && req.socket.remoteAddress !== undefined && !this.deviceByToken(req.headers.authorization)?.owner) {
+      throw Object.assign(new Error('the owner is already set; change it from the box service or the owner\'s phone'), { status: 403 });
+    }
+  }
+
   /** Hostname, time zone, network, edition and version, for the wizard and Settings. */
   async systemFacts() {
     const v = system.version();
-    const edition = system.edition();
+    const edition = system.edition(this.owner);
     return {
       product: 'GurtOS',
       edition,
@@ -694,7 +792,7 @@ class Core {
       network: { online: await system.online(), interfaces: system.interfaces() },
       boxId: BOX_ID,
       boxName: BOX_NAME,
-      owner: BOX_OWNER ?? null,
+      owner: this.owner,
       startedAt: this.startedAt,
       uptimeSec: Math.round(process.uptime()),
     };
@@ -823,16 +921,12 @@ class Core {
           case 'GET /tasks':
             return [...this.state.tasks.values()];
           case 'POST /tasks': {
-            // "Ask an agent on this folder" (Personal): link the real folder, then make the task on it.
-            if (body.folder) {
-              // The name carries a hash of the full real path: ~/a/notes and ~/b/notes must never share a workspace.
-              const real = fs.realpathSync(String(body.folder));
-              if (this.settings.agentFolders.length && !insideAny(real, this.settings.agentFolders)) {
-                throw new Error(`${real} is not one of the folders agents may use (Settings > agentFolders: ${this.settings.agentFolders.join(', ')})`);
-              }
-              const name = `owner-${path.basename(real).replace(/[^\w.-]/g, '-')}-${createHash('sha256').update(real).digest('hex').slice(0, 6)}`;
-              this.linkWorkspace(name, String(body.folder));
-              body.workspace = name;
+            // "Ask an agent on this folder" (Personal): link the real folder(s), then make the task on them.
+            if (body.folder && body.folders) throw new Error('send folder or folders, not both');
+            const given = body.folders ?? (body.folder ? [body.folder] : undefined);
+            if (given) {
+              body.workspace = this.linkFolders(given);
+              if (body.folders) body.folder = String(body.folders[0]); // readers that know one folder see the first
             }
             return this.createTask(body);
           }
@@ -842,8 +936,11 @@ class Core {
               approvals: [...this.state.approvals.values()].filter((x) => x.task === id),
               events: this.log.events.filter((e) => e.task === id),
             };
-          case 'GET /tasks/:id/diff':
-            return sandbox.diff(this.must(id));
+          case 'GET /tasks/:id/diff': {
+            const t = this.must(id);
+            const roots = sandbox.multiRoots(t.workspace); // several folders: each change path starts with its label
+            return { ...sandbox.diff(t), ...(roots ? { roots } : {}) };
+          }
           case 'POST /tasks/:id/keep':
             return this.keep(id);
           case 'POST /tasks/:id/unkeep':
@@ -865,7 +962,13 @@ class Core {
           case 'GET /log':
             return this.log.events.slice(Number(q('after') ?? 0)).filter((e) => !q('task') || e.task === q('task'));
           case 'GET /owner':
-            return BOX_OWNER ? { user: BOX_OWNER, home: os.homedir() === '/root' ? `/home/${BOX_OWNER}` : os.homedir() } : null;
+            return this.ownerInfo();
+          case 'PUT /owner':
+            this.requireOwnerChange(req);
+            return this.setOwner(body?.user);
+          case 'DELETE /owner':
+            this.requireOwnerChange(req);
+            return this.setOwner(undefined);
           case 'GET /apps': {
             // Default: the apps that have a window, enabled ones only, in the shape the portal reads
             // ({name, title, href, track}) plus what the App Center shows. ?all=1: every installed app, on or off.
@@ -1049,7 +1152,7 @@ data: ${JSON.stringify(e)}
       factoryKey: () => this.vault.get('FACTORY_API_KEY'),
     }, this.relay);
     const tracks = await this.loadTracks();
-    for (const [name, real] of Object.entries(this.links)) sandbox.linkBase(name, real);
+    for (const [name, real] of Object.entries(this.links)) typeof real === 'string' ? sandbox.linkBase(name, real) : sandbox.linkMulti(name, real);
     for (const ws of fs.readdirSync(path.join(HOME, 'workspaces'))) this.refreshView(ws);
     // Resume what was going when the box went down. Approvals still pending stay pending.
     for (const t of this.state.tasks.values()) {

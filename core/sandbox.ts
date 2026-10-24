@@ -20,8 +20,28 @@ export const HOME = process.env.BOX_HOME ?? '/var/lib/box';
 // A workspace's base is BOX_HOME/workspaces/<ws>, unless it is linked to a real folder (Personal edition):
 // then the base is that folder, so Keep writes the task's changes straight into the owner's files.
 const bases = new Map<string, string>();
+// A workspace over several real folders: its top-level folders are named by a label for each real folder.
+const multis = new Map<string, Record<string, string>>();
 export const linkBase = (ws: string, realPath: string) => bases.set(ws, realPath);
-export const isLinked = (ws: string) => bases.has(ws);
+export const linkMulti = (ws: string, folders: Record<string, string>) => multis.set(ws, folders);
+export const isLinked = (ws: string) => bases.has(ws) || multis.has(ws);
+/** For a workspace over several folders: the label of each and the real folder behind it. */
+export const multiRoots = (ws: string) => multis.get(ws);
+
+/** The real folders behind a linked workspace, as [label, path]. A single folder has the empty label. */
+const rootsOf = (ws: string): [string, string][] => (multis.has(ws) ? Object.entries(multis.get(ws)!) : [['', bases.get(ws)!]]);
+
+/** The real file a change path (relative to the task's workspace) belongs to. */
+function realOf(ws: string, rel: string): string {
+  const folders = multis.get(ws);
+  if (!folders) return path.join(dirs.workspace(ws), rel);
+  const [label, ...rest] = rel.split('/');
+  if (!(label in folders)) throw new Error(`${rel} is not inside any of this task's folders`);
+  return path.join(folders[label], ...rest);
+}
+
+/** The clean copy a linked task works on, taken when it started. */
+const taskBase = (id: string) => path.join(HOME, 'tasks', id, 'base');
 
 export const dirs = {
   workspace: (ws: string) => bases.get(ws) ?? path.join(HOME, 'workspaces', ws),
@@ -105,7 +125,9 @@ export function prepare(task: Task): { uid: number; gid: number } {
   if (isLinked(task.workspace)) {
     base = path.join(t, 'base');
     fs.rmSync(base, { recursive: true, force: true });
-    fs.cpSync(dirs.workspace(task.workspace), base, { recursive: true }); // shortcut: whole-folder copy; fine for a document folder, chunk it for huge trees
+    fs.mkdirSync(base, { recursive: true });
+    // shortcut: whole-folder copies; fine for document folders, chunk it for huge trees
+    for (const [label, real] of rootsOf(task.workspace)) fs.cpSync(real, label ? path.join(base, label) : base, { recursive: true });
     run('chmod', '-R', 'a+rwX', base);
   }
   mountOverlay(dirs.root(task.id), [...task.layers.map(dirs.upper), base], dirs.upper(task.id));
@@ -166,7 +188,7 @@ export type Change = { path: string; change: 'added' | 'modified' | 'deleted' };
 /** The files a task changed, from its own layer only. Cost: the number of changes, not the workspace size. */
 export function changes(task: Task): Change[] {
   const upper = dirs.upper(task.id);
-  const lowers = [...task.layers.map(dirs.upper), dirs.workspace(task.workspace)];
+  const lowers = [...task.layers.map(dirs.upper), isLinked(task.workspace) && fs.existsSync(taskBase(task.id)) ? taskBase(task.id) : dirs.workspace(task.workspace)];
   const below = (rel: string) => lowers.map((l) => path.join(l, rel)).find((f) => fs.existsSync(f));
   const out: Change[] = [];
   const walk = (rel: string) => {
@@ -185,7 +207,7 @@ export function changes(task: Task): Change[] {
 /** What a task changed, from its own layer only, and a unified diff of it. */
 export function diff(task: Task, maxBytes = 200_000): { changes: Change[]; diff: string } {
   const upper = dirs.upper(task.id);
-  const lowers = [...task.layers.map(dirs.upper), dirs.workspace(task.workspace)];
+  const lowers = [...task.layers.map(dirs.upper), isLinked(task.workspace) && fs.existsSync(taskBase(task.id)) ? taskBase(task.id) : dirs.workspace(task.workspace)];
   const below = (rel: string) => lowers.map((l) => path.join(l, rel)).find((f) => fs.existsSync(f));
   const changes = changesOf(task);
   let text = '';
@@ -202,11 +224,11 @@ const changesOf = changes;
 
 const sha = (file: string) => createHash('sha256').update(fs.readFileSync(file)).digest('hex');
 
-/** Record a hash of every file in a linked workspace's real folder when a task starts, to catch later
- *  owner edits at Keep time. Only for linked (real-folder) workspaces. */
+/** Record a hash of every file the task started with (its own clean copy), to catch owner edits at Keep time.
+ *  Only for linked (real-folder) workspaces. */
 export function snapshotBase(task: Task) {
   if (!isLinked(task.workspace)) return;
-  const base = dirs.workspace(task.workspace);
+  const base = taskBase(task.id);
   const manifest: Record<string, string> = {};
   const walk = (rel: string) => {
     for (const name of fs.readdirSync(path.join(base, rel))) {
@@ -249,7 +271,6 @@ export interface KeepMeta {
  */
 export function keep(task: Task): { kept?: Change[]; conflicts?: string[] } {
   if (!isLinked(task.workspace)) throw new Error(`workspace ${task.workspace} is not a real folder; nothing to keep`);
-  const base = dirs.workspace(task.workspace);
   const upper = dirs.upper(task.id);
   const manifestPath = path.join(dirs.task(task.id), 'manifest.json');
   const manifest: Record<string, string> = fs.existsSync(manifestPath) ? JSON.parse(fs.readFileSync(manifestPath, 'utf8')) : {};
@@ -258,7 +279,7 @@ export function keep(task: Task): { kept?: Change[]; conflicts?: string[] } {
   // Conflict: the owner touched a file this task also touched, since the task started.
   const conflicts: string[] = [];
   for (const c of cs) {
-    const real = path.join(base, c.path);
+    const real = realOf(task.workspace, c.path);
     const now = fs.existsSync(real) && fs.statSync(real).isFile() ? sha(real) : undefined;
     if (c.change === 'added' && now !== undefined) conflicts.push(c.path); // the owner created it too
     if ((c.change === 'modified' || c.change === 'deleted') && now !== manifest[c.path]) conflicts.push(c.path);
@@ -269,7 +290,7 @@ export function keep(task: Task): { kept?: Change[]; conflicts?: string[] } {
   fs.mkdirSync(saveDir, { recursive: true });
   const meta: KeepMeta[] = [];
   for (const c of cs) {
-    const real = path.join(base, c.path);
+    const real = realOf(task.workspace, c.path);
     const m: KeepMeta = { path: c.path, change: c.change };
     if (fs.existsSync(real)) {
       const st = fs.statSync(real);
@@ -305,7 +326,6 @@ export function keep(task: Task): { kept?: Change[]; conflicts?: string[] } {
  * the files Keep added. If the owner has edited a kept file since, nothing is changed and the clash is reported.
  */
 export function unkeep(task: Task): { reverted?: Change[]; conflicts?: string[] } {
-  const base = dirs.workspace(task.workspace);
   const saveDir = path.join(HOME, 'timemachine', task.id);
   const file = path.join(saveDir, 'kept.json');
   if (!fs.existsSync(file) || fs.existsSync(path.join(saveDir, 'reverted.json'))) throw new Error(`task ${task.id} has no Keep to undo`);
@@ -313,13 +333,13 @@ export function unkeep(task: Task): { reverted?: Change[]; conflicts?: string[] 
   const conflicts = changes
     .filter((m) => m.after !== undefined)
     .filter((m) => {
-      const real = path.join(base, m.path);
+      const real = realOf(task.workspace, m.path);
       return !fs.existsSync(real) || sha(real) !== m.after;
     })
     .map((m) => m.path);
   if (conflicts.length) return { conflicts };
   for (const m of changes) {
-    const real = path.join(base, m.path);
+    const real = realOf(task.workspace, m.path);
     if (m.before) {
       mkdirOwned(path.dirname(real));
       const tmp = `${real}.box-${process.pid}`;

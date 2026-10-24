@@ -25,7 +25,7 @@ export function timezone() {
   return Intl.DateTimeFormat().resolvedOptions().timeZone;
 }
 
-export const edition = () => (process.env.BOX_EDITION ?? (process.env.BOX_OWNER ? 'personal' : 'server')) as 'server' | 'personal' | 'business';
+export const edition = (owner: string | null) => (process.env.BOX_EDITION ?? (owner ? 'personal' : 'server')) as 'server' | 'personal' | 'business';
 
 let cached: { at: number; online: boolean } | undefined;
 /** Can this box open an outside connection? A quick TCP connect, remembered for 15 seconds. */

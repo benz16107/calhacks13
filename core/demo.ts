@@ -634,8 +634,79 @@ await moment("personal: an agent works on the owner's folder, then Keep or Undo"
   check(readN(dirB).includes('edited in B') && !readN(dirB).includes('edited in A'), "Keep on B's task wrote into B");
 
   // A task spec with a field the box doesn't know is refused, not silently run somewhere else.
-  const bad = await api('POST', '/tasks', { title: 'Typo', worker: 'fake', prompt: 'x', folders: [folder] }).then(() => '', (e: Error) => e.message);
-  check(/unknown task field.*folders/.test(bad), `an unknown task field is refused with a clear error ("${bad.slice(0, 60)}")`);
+  const bad = await api('POST', '/tasks', { title: 'Typo', worker: 'fake', prompt: 'x', folderz: [folder] }).then(() => '', (e: Error) => e.message);
+  check(/unknown task field.*folderz/.test(bad), `an unknown task field is refused with a clear error ("${bad.slice(0, 60)}")`);
+});
+
+
+// ---------- Personal: several folders in one task, and setting the owner at runtime ----------
+
+await moment('personal: one task on several folders, and a runtime owner', async () => {
+  const OWNER = { uid: 4242, gid: 4343 };
+  const root = path.join(HOME, 'owner', 'proj');
+  const [a, b, c] = ['a/notes', 'b/notes', 'c'].map((x) => path.join(root, x));
+  for (const [dir, text] of [[a, 'A original'], [b, 'B original'], [c, 'C original']] as const) {
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, 'n.md'), text + '\n');
+    for (const f of [dir, path.join(dir, 'n.md')]) fs.chownSync(f, OWNER.uid, OWNER.gid);
+  }
+  fs.chmodSync(path.join(a, 'n.md'), 0o640);
+  const read = (dir: string) => fs.readFileSync(path.join(dir, 'n.md'), 'utf8');
+
+  const T = await api<Task>('POST', '/tasks', { title: 'Tidy three folders', worker: 'fake', source: 'demo', folders: [c, b, a],
+    prompt: 'append notes/n.md edited in A\nappend notes-2/n.md edited in B\nmkdir c/sub\nwrite c/sub/deep.md deep' });
+  await settled([T.id]);
+  check(T.folder === c && T.folders?.length === 3, 'the task names its folders (folder is the first, for readers that know one)');
+  check([a, b, c].every((d) => read(d).trim().endsWith('original')), 'none of the three real folders changed while the agent worked');
+  const d = await api<{ changes: { path: string; change: string }[]; roots?: Record<string, string> }>('GET', `/api/tasks/${T.id}/diff`);
+  const listed = d.changes.map((x) => `${x.change} ${x.path}`).sort().join(', ');
+  check(d.roots?.notes === a && d.roots?.['notes-2'] === b && d.roots?.c === c, `same-named folders get distinct labels (${Object.keys(d.roots ?? {}).join(', ')}), and the diff says where each is`);
+  check(listed === 'added c/sub/deep.md, modified notes-2/n.md, modified notes/n.md', `the diff lists changes under each folder's label: ${listed}`);
+
+  // The owner edits one of the three meanwhile: Keep applies nothing anywhere, rather than half.
+  fs.appendFileSync(path.join(b, 'n.md'), 'the owner edited B\n');
+  const clash = await api<{ conflicts?: string[]; kept?: unknown }>('POST', `/api/tasks/${T.id}/keep`);
+  check(clash.conflicts?.join() === 'notes-2/n.md' && !clash.kept && !read(a).includes('edited in A') && !fs.existsSync(path.join(c, 'sub')), 'a conflict in one folder stops Keep in all of them');
+
+  // A second try, with the owner's edit not in the way, applies to each real folder with its ownership.
+  const T2 = await api<Task>('POST', '/tasks', { title: 'Tidy again', worker: 'fake', source: 'demo', folders: [a, c],
+    prompt: 'append notes/n.md second pass\nmkdir c/sub\nwrite c/sub/deep.md deep' });
+  await settled([T2.id]);
+  const kept = await api<{ kept?: unknown[] }>('POST', `/api/tasks/${T2.id}/keep`);
+  const st = (f: string) => ({ uid: fs.statSync(f).uid, gid: fs.statSync(f).gid, mode: fs.statSync(f).mode & 0o777 });
+  const nA = st(path.join(a, 'n.md'));
+  const deep = st(path.join(c, 'sub', 'deep.md'));
+  check(kept.kept?.length === 2 && read(a).includes('second pass') && fs.readFileSync(path.join(c, 'sub', 'deep.md'), 'utf8').trim() === 'deep', 'Keep wrote each change into its own real folder');
+  check(nA.uid === OWNER.uid && nA.mode === 0o640 && deep.uid === OWNER.uid && deep.mode === 0o644, 'and kept the owner\'s ownership and modes in every folder');
+  await api('POST', `/api/tasks/${T2.id}/unkeep`);
+  check(!read(a).includes('second pass') && !fs.existsSync(path.join(c, 'sub', 'deep.md')), 'undoing the Keep puts every folder back');
+
+  // Odd requests are refused with a reason.
+  const nested = await api('POST', '/tasks', { title: 'x', worker: 'fake', prompt: 'x', folders: [root, a] }).then(() => '', (e: Error) => e.message);
+  const both = await api('POST', '/tasks', { title: 'x', worker: 'fake', prompt: 'x', folder: a, folders: [b] }).then(() => '', (e: Error) => e.message);
+  await api('PATCH', '/api/settings', { agentFolders: [a] });
+  const outside = await api('POST', '/tasks', { title: 'x', worker: 'fake', prompt: 'x', folders: [a, b] }).then(() => '', (e: Error) => e.message);
+  await api('PATCH', '/api/settings', { agentFolders: [] });
+  check(/is inside/.test(nested) && /not both/.test(both) && /not one of the folders agents may use/.test(outside), 'a folder inside another, folder and folders together, and a folder outside the chosen ones are all refused');
+  await api('POST', `/api/tasks/${T.id}/undo`);
+
+  // The owner, set after the account exists (the image does this once GNOME's own setup has made it).
+  const user = `gurtown${run}`;
+  spawnSync('useradd', ['-M', '-N', '-u', String(2500 + Math.floor(Math.random() * 500)), '-s', '/usr/sbin/nologin', user]); // a person's uid, not in the task range
+  try {
+    const before = await api<any>('GET', '/api/owner');
+    const refusals = await Promise.all(['root', 'nosuchuser99', 'Bad Name'].map((u) => api('PUT', '/api/owner', { user: u }).then(() => '', (e: Error) => e.message)));
+    check(before?.user === 'owner' && refusals.every((m) => m.startsWith('user:')), `root, a missing account and a bad name are refused ("${refusals[0].slice(0, 60)}")`);
+    check((await viaTcp('PUT', '/api/owner', { user }, RELAYED)).status === 403, 'from outside the box it is refused (403)');
+    check((await viaTcp('PUT', '/api/owner', { user })).status === 403, 'with an owner already set, a plain local process cannot replace it either (403)');
+    const set = await api<any>('PUT', '/api/owner', { user });
+    const sys = await api<any>('GET', '/api/system');
+    check(set.user === user && set.uid >= 1000 && set.home === `/home/${user}` && sys.owner === user && sys.edition === 'personal', `the owner is now ${user} (uid ${set.uid}), and the box reports ${sys.editionName}`);
+    check(JSON.parse(fs.readFileSync(path.join(HOME, 'owner.json'), 'utf8')).user === user, 'it is saved, so it survives a restart');
+    check((await api<any>('DELETE', '/api/owner')).user === 'owner', 'clearing it falls back to the BOX_OWNER the service started with');
+  } finally {
+    spawnSync('userdel', [user]);
+  }
 });
 
 // A task that fails says why, in its own words.

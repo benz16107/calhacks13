@@ -33,10 +33,16 @@ export interface TaskSpec {
   source?: string;
   /** Personal: a real folder of the owner's to work on (a copy; Keep applies it). The API links it to a workspace. */
   folder?: string;
+  /**
+   * Personal: several real folders in one task (Files' multi-folder selection). The task sees them side by
+   * side, each as a top-level folder named after the real one; Keep and Undo apply to each real folder.
+   * `folder` is then the first of them, for readers that only know one.
+   */
+  folders?: string[];
 }
 
 /** A TaskSpec with its defaults filled in. */
-export type FullSpec = Required<Omit<TaskSpec, 'folder'>> & { folder?: string };
+export type FullSpec = Required<Omit<TaskSpec, 'folder' | 'folders'>> & { folder?: string; folders?: string[] };
 
 export interface Task extends FullSpec {
   id: string;

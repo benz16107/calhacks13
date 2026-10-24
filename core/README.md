@@ -199,7 +199,14 @@ A task can work on one of the owner's real folders:
 - `POST /api/tasks {folder: "/home/you/Documents/thesis", title, prompt}` links that folder to a workspace
   (named `owner-<name>-<hash of the full path>`, so `~/a/notes` and `~/b/notes` never share one) and
   starts the task on a writable copy of it. The real folder is untouched while the task runs.
-- `GET /api/tasks/<id>/diff` shows what the agent changed.
+- `POST /api/tasks {folders: ["/home/you/a", "/home/you/b"], ...}` puts **several folders in one task** (Files'
+  multi-folder selection). The task sees them side by side, each as a top-level folder named after the real one
+  (`notes`, and `notes-2` for a second folder with the same name). `task.folders` lists them and `task.folder` is
+  the first. Send `folder` or `folders`, not both; a folder inside another one in the list is refused (the same
+  file would be changed twice); at most 10. `agentFolders` applies to every one.
+- `GET /api/tasks/<id>/diff` shows what the agent changed. For several folders each change path starts with its
+  label and the answer carries `roots: {label: real folder}`. Keep is all or nothing across every folder: a
+  conflict in any one of them applies nothing anywhere, and ownership and modes are kept per file as above.
 - `POST /api/tasks/<id>/keep` applies the task's changes to the real folder, each file atomically. If the owner
   changed any of the same files since the task started, it applies nothing and returns `{conflicts: [paths]}`.
   Otherwise it returns `{kept: changes}` and saves before-images under `BOX_HOME/timemachine/<id>` so the
@@ -239,7 +246,9 @@ answers without `/api`, which is what the demo and tracks use.
 | `GET /api/tasks/<id>/diff` | `{changes: [{path, change}], diff}`: what it added, modified or deleted, and a unified diff |
 | `POST /api/tasks/<id>/undo` | The task, now `undone`. For a real-folder task, discards its changes. |
 | `POST /api/tasks/<id>/keep` | Personal: apply a done task's changes to its real folder. `{kept}` or `{conflicts}`. |
-| `GET /api/owner` | Personal: `{user, home}`, or null on a Server box |
+| `GET /api/owner` | Personal: `{user, uid, home}`, or null on a Server box |
+| `PUT /api/owner {user}` | Make an existing account the owner. For the image: run it once GNOME's own setup has created the account, e.g. `curl --unix-socket /var/lib/box/api.sock -X PUT -H 'content-type: application/json' -d '{"user":"alice"}' http://box/api/owner`. The account must exist and be a person's (uid 1000 to 29999 or 40000 and up; not root, not a system or task account). Saved in `owner.json`, so it survives a restart, and the box then reports itself as GurtOS Personal. Once an owner is set, changing it takes the box's socket (root) or an owner-paired phone, not any local process. |
+| `DELETE /api/owner` | Forget the saved owner and go back to `BOX_OWNER` (or none) |
 | `GET /api/approvals?state=pending` | The inbox. Leave out `state` for all of them. |
 | `POST /api/approvals/<id> {approved: true or false, by: "portal"}` | The approval. The first answer wins. |
 | `GET /api/log?after=<seq>&task=<id>` | Log events, both filters optional (cursor polling) |
