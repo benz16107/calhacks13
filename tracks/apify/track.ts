@@ -109,7 +109,8 @@ const tools: Tool[] = [
     },
     secrets: ['APIFY_TOKEN'],
     hosts: ['api.apify.com'],
-    // The box cannot know an arbitrary Actor's price, so it counts the cap, which Apify enforces.
+    // The box cannot know an arbitrary Actor's price, so approval and the budget check use the cap, which Apify
+    // enforces. The result's spentCents then counts what the run really cost.
     cost: (i) => capUsd(i) * 100,
     approval: (i) => ({ payee: 'Apify', purpose: `run ${String(i?.actor ?? 'an Actor').slice(0, 60)}` }),
     async run(i, ctx) {
@@ -120,7 +121,10 @@ const tools: Tool[] = [
         run: { maxItems, maxTotalChargeUsd: capUsd(i) },
         items: { clean: 1, limit: maxItems, ...(fields && { fields }) },
       });
-      return { actor, costUsd: reportCost(ctx, `run ${actor}`, ran), ...fit(ran.items) };
+      const costUsd = reportCost(ctx, `run ${actor}`, ran);
+      // Apify's own number, never above the cap the box approved. Without one the box counts the cap.
+      const spentCents = ran.usd === undefined ? undefined : Math.min(capUsd(i) * 100, ran.usd * 100);
+      return { actor, costUsd, ...(spentCents !== undefined && { spentCents }), ...fit(ran.items) };
     },
   },
 

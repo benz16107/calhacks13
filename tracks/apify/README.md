@@ -68,7 +68,8 @@ Apify CLI and SDK).
 
 A task can use a tool only if its spec lists it. Droid sees them as MCP tools (`apify__readPage` and so on)
 through the box's own relay. Counted costs are estimates from the Actors' list prices, set above a real run:
-in the live demo, pages and prices cost well under a cent and Maps about 0.4 cents a place. The default cap for
+in the live demo, pages and prices cost well under a cent and Maps about 0.4 cents a place. `apify.run` is charged
+what Apify reports for the run. The default cap for
 `apify.run` is $0.10, not the $0.50 it started with, so a task with a small budget is not asked twice.
 
 ### Reading pages: `apify.readPage` and the Actor
@@ -99,9 +100,9 @@ phone's token, the only other way in, can also answer approvals, and Apify shoul
 the run's dataset, drops anything that is not a product row with a real price, and makes the same decision as the
 core's webhook trigger (`POST /hook/apify/watch` with `{ "rows": [...] }`, for callers on the box). A first
 sighting is only remembered. A price drop or a restock starts a task that has `apify.checkPrice` and no way to
-buy. It needs two optional vault keys: `APIFY_WEBHOOK_URL` (the box's public address, for example its
-remote-access name) and `APIFY_WEBHOOK_SECRET`. Without them the rest of the track works and `apify.watch` says
-which one is missing.
+buy. It needs two vault keys: `APIFY_WEBHOOK_URL` (the box's public address, for example its remote-access
+name) and `APIFY_WEBHOOK_SECRET`. Without the secret the route refuses every call, so nobody on the internet can
+start a task; the rest of the track works, and `apify.watch` says which key is missing.
 
 ### The credit desk and /find
 
@@ -215,8 +216,9 @@ if (!live) { /* offline checks */ console.log('  skip  live calls: DEMO_LIVE=<yo
 - The detector reads inline styles and attributes, not stylesheets, and does not run JavaScript. A page that hides
   text with a class defined in a stylesheet can pass, and a rephrased attack can avoid the phrase list. `none`
   means nothing found, not safe. The agent should still run with no secrets and a limited network.
-- Counted costs are estimates. The usage Apify reports is platform usage only; for pay-per-event Actors such as
-  Google Maps it leaves out the event price, so use the counted figure for budgets.
+- Approval and the budget check use a call's estimate. `apify.run` then reports the run's real cost from Apify
+  (`spentCents`, never above the cap), and that is what the task is charged. The other tools are charged their
+  estimate, which is set above a real run.
 - `apify.mcp` cannot cap a call's spend on Apify's side (its tools take no cap); the call's estimate and a
   45-second wait limit bound it.
 - Apify's run endpoint takes no idempotency key. A call cut off by a power cut starts a new run when the task

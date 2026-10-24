@@ -28,7 +28,7 @@ export default async function (d: DemoKit) {
   const forbidden = await d.api('POST', '/t/apify/watch', {}).then(() => 'answered', (e: Error) => String(e.message));
   d.check(/403|forbidden/i.test(forbidden), 'the route Apify calls refuses a request without the shared secret');
   const spend = await d.api<{ tasks: { task: string; calls: number }[] }>('GET', '/t/apify/spend');
-  d.check(Array.isArray(spend.tasks), "the Apify spend page's data is served (what each task's calls counted, and the usage Apify reports for them)");
+  d.check(Array.isArray(spend.tasks), "the Apify spend page's data is served (what each task's calls counted, and the cost Apify reports for them)");
 
   d.workspace('web', {}); // where indexSite keeps crawled pages, and where /find looks
   const token = fs.readFileSync(path.join(d.home, 'vault.env'), 'utf8').match(/^APIFY_TOKEN=(.+)$/m)?.[1].trim();
@@ -92,5 +92,5 @@ export default async function (d: DemoKit) {
   d.check(![p, m, r, x, c].some((t) => JSON.stringify(t).includes(token!)), 'the Apify token is nowhere in their logs or results');
   d.check(p.task.costCents === 1 && m.task.costCents === 0.8, `each task's Apify cost was counted: 1 cent and 0.8 cents`);
   const after = await d.api<{ tasks: { task: string; actualUsd: number }[]; totalActualUsd: number }>('GET', '/t/apify/spend');
-  d.check(after.totalActualUsd > 0 && after.tasks.find((t) => t.task === p.task.id)!.actualUsd > 0, `the spend page has Apify's reported usage: $${after.totalActualUsd.toFixed(4)} across these tasks`);
+  d.check(after.totalActualUsd > 0 && after.tasks.find((t) => t.task === p.task.id)!.actualUsd > 0, `the spend page has Apify's reported cost: $${after.totalActualUsd.toFixed(4)} across these tasks`);
 }

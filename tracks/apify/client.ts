@@ -70,10 +70,10 @@ export async function runActor(ctx: Ctx, actor: string, input: unknown, o: { run
   return { items, runId: r.id, usd: typeof r.usageTotalUsd === 'number' ? r.usageTotalUsd : undefined };
 }
 
-/** What Apify reports for the runs, for the log and the portal. The box counts the call's estimate; this is Apify's own usage number, which for pay-per-event Actors leaves out the event price. */
+/** What Apify reports for the runs, for the log and the portal. The box counts the call's estimate; this  is Apify's own number.  */
 export function reportCost(ctx: Ctx, what: string, ...runs: Ran[]) {
   const usd = runs.reduce((a, r) => a + (r.usd ?? 0), 0);
-  ctx.log(`Apify ${what}: ${runs.some((r) => r.usd !== undefined) ? `$${usd.toFixed(4)} platform usage` : 'usage not reported yet'}`, { apify: { what, runs: runs.map((r) => r.runId), usd } });
+  ctx.log(`Apify ${what}: ${runs.some((r) => r.usd !== undefined) ? `$${usd.toFixed(4)} reported` : 'usage not reported yet'}`, { apify: { what, runs: runs.map((r) => r.runId), usd } });
   return usd;
 }
 

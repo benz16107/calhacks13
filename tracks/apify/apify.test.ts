@@ -100,12 +100,14 @@ test('apify.run caps spending (default 10 cents) and result count, and reports t
   assert.equal(run.cost!({ actor: 'a/b', maxUsd: 0.5 }), 50);
   assert.deepEqual(run.approval!({ actor: 'a/b' }), { payee: 'Apify', purpose: 'run a/b' });
   const out = await run.run({ actor: 'a/b', input: { q: 1 }, fields: ['title', 'url'], maxItems: 500, maxUsd: 0.1 }, ctx);
-  assert.deepEqual(out, { actor: 'a/b', costUsd: 0.0016, count: 1, items: [{ title: 'a' }] });
+  assert.deepEqual(out, { actor: 'a/b', costUsd: 0.0016, spentCents: 0.16, count: 1, items: [{ title: 'a' }] });
   const q = calls[0].url.searchParams;
   assert.deepEqual([q.get('maxItems'), q.get('maxTotalChargeUsd')], ['100', '0.1']);
   assert.deepEqual([calls.at(-1)!.url.searchParams.get('fields'), calls.at(-1)!.url.searchParams.get('clean')], ['title,url', '1']);
   assert.equal(logs[0].data.apify.usd, 0.0016);
   await assert.rejects(run.run({}, ctx), /actor is required/);
+  const capped = (await run.run({ actor: 'a/b', maxUsd: 0.001 }, ctx)) as { spentCents: number };
+  assert.equal(capped.spentCents, 0.1); // never above the approved cap
 });
 
 test('apify.checkPrice turns a SKU, a link or words into the right Best Buy request', async () => {
@@ -254,6 +256,12 @@ test('the open route for Apify checks the shared secret, reads the dataset, and 
   assert.deepEqual(track.openRoutes, ['POST /watch']);
   assert.equal((await send(undefined, {})).status, 403);
   assert.equal((await send('wrong', {})).status, 403);
+  SECRETS.APIFY_WEBHOOK_SECRET = '';
+  assert.equal((await send('', {})).status, 403); // no secret in the vault: refuse every call, even one with an empty header
+  assert.equal((await send('hook-secret-1', {})).status, 403);
+  delete SECRETS.APIFY_WEBHOOK_SECRET;
+  assert.equal((await send('hook-secret-1', {})).status, 403);
+  SECRETS.APIFY_WEBHOOK_SECRET = 'hook-secret-1';
   assert.equal((await send('hook-secret-1', { resource: { defaultDatasetId: '../x' } })).status, 400);
   const dataset = (price: number) => ((items = [{ sku: '19451577', name: 'AirPods', price, inStock: true }]), { resource: { defaultDatasetId: 'dsetAAAAAAAA1' } });
   assert.deepEqual(await (await send('hook-secret-1', dataset(299.99))).json(), { started: null }); // first sight is only remembered
