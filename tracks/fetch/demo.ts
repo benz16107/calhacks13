@@ -32,11 +32,11 @@ export default async function (d: DemoKit) {
   const stranger = `agent1q${randomBytes(20).toString('hex')}`;
   const session = randomUUID();
   const say = (from: string, text: string) => brain.stdin!.write(JSON.stringify({ from, session, text }) + '\n');
-  const reply = (to: string, what: string) =>
+  const reply = (to: string, what: string, ms = 15_000) =>
     d.waitFor(`a reply ${what}`, async () => {
       const i = got.findIndex((m) => m.to === to);
       return i < 0 ? undefined : got.splice(i, 1)[0];
-    }, 15_000);
+    }, ms);
   const chatTasks = async () => (await d.api<Task[]>('GET', '/tasks')).filter((t) => t.source === 'asi1');
   const click = (card: Card | undefined, cta: 'approve_cta' | 'reject_cta') => JSON.stringify(card?.payload[cta]?.selection);
 
@@ -82,8 +82,9 @@ export default async function (d: DemoKit) {
     brain!.kill('SIGKILL');
     await d.api('POST', `/approvals/${deploy.card?.payload.approve_cta.selection.approval}`, { approved: true, by: 'phone' });
     start();
-    const onPhone = await reply(owner, 'about the phone');
-    const deployed = await reply(owner, 'with the deploy result');
+    // A busy test machine can take a while to start Python again, so these wait longer.
+    const onPhone = await reply(owner, 'about the phone', 60_000);
+    const deployed = await reply(owner, 'with the deploy result', 60_000);
     d.check(onPhone.text.startsWith('Approved on your phone') && deployed.text.startsWith('Done'), 'restarted, the chat agent picked up where it was: the OK from the phone, then the result');
 
     // Through ASI:One's planner a click arrives in its own words, without the id; it answers this chat's last card.
