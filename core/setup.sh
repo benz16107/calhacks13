@@ -3,6 +3,10 @@
 set -euo pipefail
 NODE_MAJOR=24
 
+# nftables limits task networks; ripgrep is for Droid (it would try to download one otherwise).
+missing=$(for p in nftables ripgrep; do dpkg -s $p >/dev/null 2>&1 || echo $p; done)
+[ -z "$missing" ] || { apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq $missing >/dev/null 2>&1; }
+
 have_node() { command -v node >/dev/null && [ "$(node -p 'process.versions.node.split(".")[0]')" -ge 22 ]; }
 
 if ! have_node; then

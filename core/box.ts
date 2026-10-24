@@ -9,6 +9,7 @@ import path from 'node:path';
 import type { App, Approval, Box, Ctx, LogEvent, LogReader, ModelJob, NewEvent, Route, Task, TaskSpec, TaskState, Tool, Track } from './contract.ts';
 import { Live } from './live.ts';
 import { Log, apply, canMove, doneLayers, fold, type State } from './log.ts';
+import { PROXY_PORT, firewall, startProxy } from './net.ts';
 import * as sandbox from './sandbox.ts';
 import { HOME, dirs } from './sandbox.ts';
 import { loadVault } from './vault.ts';
@@ -61,6 +62,7 @@ class Core {
   workers = new Map<string, ChildProcess>();
   brokers = new Map<string, http.Server>();
   waiters = new Map<string, ((approved: boolean) => void)[]>();
+  uidTask = new Map<number, string>();
   live = new Live({
     tasks: () => [...this.state.tasks.values()],
     approvals: () => [...this.state.approvals.values()],
@@ -119,12 +121,23 @@ class Core {
     try {
       sandbox.kill(t); // a worker left over from a core that died without the box rebooting
       if (t.state === 'queued') this.move(t, 'running', { layers: doneLayers(this.log.events, this.state, t.workspace) });
-      const env: Record<string, string> = {};
+      // Everything goes through the box's proxy. Its own address stays direct, for Droid's Factory calls.
+      const proxy = `http://127.0.0.1:${PROXY_PORT}`;
+      const env: Record<string, string> = {
+        HTTP_PROXY: proxy,
+        HTTPS_PROXY: proxy,
+        http_proxy: proxy,
+        https_proxy: proxy,
+        NO_PROXY: '127.0.0.1',
+        NODE_USE_ENV_PROXY: '1',
+      };
       if (t.worker === 'droid') {
-        env.FACTORY_API_KEY = this.vault.get('FACTORY_API_KEY') ?? '';
-        if (!env.FACTORY_API_KEY) throw new Error('the vault has no FACTORY_API_KEY, which Droid needs');
+        if (!this.vault.get('FACTORY_API_KEY')) throw new Error('the vault has no FACTORY_API_KEY, which Droid needs');
+        // The task holds a placeholder. The proxy swaps in the real key on the way to Factory.
+        Object.assign(env, { FACTORY_API_KEY: 'fk-placeholder-the-box-adds-the-key', FACTORY_API_BASE_URL: proxy, FACTORY_RIPGREP_PATH: '/usr/bin/rg' });
       }
       const ids = sandbox.prepare(t);
+      this.uidTask.set(ids.uid, t.id);
       await this.openBroker(t, ids);
       const child = sandbox.spawnWorker(t, ids, env);
       this.workers.set(t.id, child);
@@ -386,6 +399,19 @@ class Core {
   );
 
   async boot() {
+    try {
+      firewall();
+    } catch (e) {
+      console.error(`WARNING: the firewall rule did not load, so tasks are not network-limited: ${(e as Error).message}`);
+    }
+    startProxy({
+      taskOf: (uid) => {
+        const t = this.state.tasks.get(this.uidTask.get(uid) ?? '');
+        return t?.state === 'running' || t?.state === 'waiting' ? t : undefined;
+      },
+      blocked: (t, host) => this.write({ type: 'net.blocked', task: t.id, host }),
+      factoryKey: () => this.vault.get('FACTORY_API_KEY'),
+    });
     this.live.start();
     const tracks = await this.loadTracks();
     for (const ws of fs.readdirSync(path.join(HOME, 'workspaces'))) this.refreshView(ws);

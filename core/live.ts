@@ -16,12 +16,23 @@ const run = (...args: string[]) => execFileSync('spacetime', args, { stdio: 'pip
 /** Publish the module as the box. Whoever publishes owns the database, so only the box can write to it. */
 function publish(): string {
   const token = () => fs.readFileSync(cliConfig, 'utf8').match(/spacetimedb_token\s*=\s*"([^"]+)"/)?.[1];
-  if (!fs.existsSync(cliConfig) || !token()) run('login', '--server-issued-login', 'local');
+  const login = () => run('login', '--server-issued-login', 'local');
   const mod = new URL('./spacetime', import.meta.url).pathname;
+  const attempt = () => {
+    try {
+      run('publish', '--server', 'local', '--module-path', mod, '-y', DB);
+    } catch {
+      run('publish', '--server', 'local', '--module-path', mod, '--delete-data', '-y', DB); // only a mirror; the box refills it
+    }
+  };
+  if (!fs.existsSync(cliConfig) || !token()) login();
   try {
-    run('publish', '--server', 'local', '--module-path', mod, '-y', DB);
+    attempt();
   } catch {
-    run('publish', '--server', 'local', '--module-path', mod, '--delete-data', '-y', DB); // only a mirror; the box refills it
+    // A server started fresh does not know the old identity. Get a new one and try once more.
+    run('logout');
+    login();
+    attempt();
   }
   return token()!;
 }
@@ -54,7 +65,8 @@ export class Live {
     try {
       this.token = publish();
     } catch (e) {
-      console.error(`spacetime: publish failed, so the portal and phone are not live: ${(e as Error).message}`);
+      const err = e as Error & { stderr?: string };
+      console.error(`spacetime: publish failed, so the portal and phone are not live: ${err.stderr || err.message}`);
       return;
     }
     this.connect();

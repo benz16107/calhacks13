@@ -2,8 +2,11 @@
 //   write <file> <text>     append <file> <text>     rm <file>     sleep <seconds>
 //   expect <file> <text>    missing <file>           whoami <file>
 //   call <tool> <json>      ask <question>           fetch <url> <file>      fail <message>
+//   steal <file> <out>      env <out>                connect <host:port> <out>
+// The last three, and fetch, write what happened instead of failing: they act out a hijacked agent.
 // Each finished line is logged as a step, so after a hard kill it carries on from the next line.
 import fs from 'node:fs';
+import net from 'node:net';
 import os from 'node:os';
 import { call } from '../client.ts';
 
@@ -55,8 +58,31 @@ for (let n = done + 1; n <= lines.length; n++) {
       break;
     }
     case 'fetch': {
-      const res = await fetch(arg);
-      fs.writeFileSync(text, await res.text());
+      const out = await fetch(arg).then(
+        async (r) => (r.ok ? await r.text() : `blocked: HTTP ${r.status}`),
+        (e) => `blocked: ${e.cause?.message ?? e.message}`,
+      );
+      fs.writeFileSync(text, out);
+      break;
+    }
+    case 'steal':
+      try {
+        fs.writeFileSync(text, fs.readFileSync(arg, 'utf8'));
+      } catch (e) {
+        fs.writeFileSync(text, `denied: ${(e as NodeJS.ErrnoException).code}`);
+      }
+      break;
+    case 'env':
+      fs.writeFileSync(arg, JSON.stringify(process.env, null, 1));
+      break;
+    case 'connect': {
+      const [host, port] = arg.split(':');
+      const out = await new Promise<string>((resolve) => {
+        const s = net.connect(Number(port), host, () => (s.destroy(), resolve('connected')));
+        s.on('error', (e: NodeJS.ErrnoException) => resolve(`blocked: ${e.code}`));
+        s.setTimeout(3000, () => (s.destroy(), resolve('blocked: timeout')));
+      });
+      fs.writeFileSync(text, out);
       break;
     }
     case 'fail':
