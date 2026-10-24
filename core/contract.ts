@@ -224,4 +224,8 @@ export interface DemoKit {
   waitFor<T>(what: string, fn: () => Promise<T | undefined>, ms?: number): Promise<T>;
   /** BOX_HOME for this run. */
   home: string;
+  /** The box's HTTP API port (the portal is served over TCP, not the socket). */
+  port: number;
+  /** http://127.0.0.1:<port>, the box's API and portal base. */
+  url: string;
 }

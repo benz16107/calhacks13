@@ -185,11 +185,11 @@ answers without `/api`, which is what the demo and tracks use.
 | `GET /api/log?after=<seq>&task=<id>` | Log events, both filters optional (cursor polling) |
 | `GET /api/log/stream?after=<seq>&task=<id>` | The log as Server-Sent Events: replays from `after`, then streams new events live. For Elastic and Jira to follow without polling files. |
 | `GET /api/apps` | Apps from tracks: `{name, title, href, track}`. Open `/t/<track><href>`. |
-| `GET /api/health` | `{ok, tasks, tools, spacetime: {port, database}}` |
+| `GET /api/health` | `{ok, startedAt, resumed: [taskId...], tasks, tools, spacetime: {port, database}}`. `resumed` is the tasks boot restarted after a power cut, for the screen's session-restore banner. |
 | `GET /api/boxes` | This box and its peers (`BOX_PEERS`), so one portal lists and drives several boxes (the Vultr second box): `[{id, name, stdb, self}, ...]` |
-| `POST /api/pair/new` | Mint a one-time pairing code for the box screen's QR: `{code, url, box, expiresInSec}` |
-| `POST /api/pair {code, name}` | A phone redeems the code for its own device token: `{token, device, box}`. One-time. |
-| `GET /api/pair/devices`, `POST /api/pair/devices/<id>/revoke` | List paired phones; revoke one |
+| `POST /api/pair/start` | Mint a one-time pairing code for the box screen's QR: `{code, url, expiresAt, box}` (localhost) |
+| `POST /api/pair {code, name}` | A phone redeems the code for its own device token: `{token, box:{id,name}, device}`. One-time. |
+| `GET /api/devices`, `DELETE /api/devices/<id>` | List paired phones; revoke one |
 | `/t/<track>/...` | Track routes |
 
 What a screen needs, and where it comes from:
@@ -212,8 +212,8 @@ a phone scans it and redeems the code for its own device token (`POST /api/pair`
 table pairs this way for the Hacker's Choice demo. A phone sends its token as `Authorization: Bearer <token>`
 when it approves, so the log records which phone said yes; revoke it with `POST /api/pair/devices/<id>/revoke`
 and that token stops working. `GET /api/boxes` lists this box plus the peers named in the `BOX_PEERS`
-environment variable (JSON array of `{id, name, stdb}`), so one portal shows and drives both the linuxbox and
-Vultr boxes.
+environment variable (JSON array of `{id, name, url, stdb}`), so one portal shows and drives both the linuxbox
+and Vultr boxes. Each entry is `{id, name, url, stdb, self?}`; this box's own `url` comes from `BOX_URL`.
 
 **Hosting the portal.** Build it into `portal/dist` (or point `BOX_PORTAL` at a folder) and the box serves it on
 the same address as the API: files as they are, and `index.html` for any other page load, so client-side

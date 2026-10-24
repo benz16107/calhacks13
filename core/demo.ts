@@ -462,7 +462,7 @@ await moment('pairing and more than one box', async () => {
   const boxes = await api<{ id: string; name: string; self?: boolean }[]>('GET', '/api/boxes');
   check(boxes[0]?.self && boxes.some((b) => b.id === 'vultr'), `the portal lists ${boxes.length} boxes from one API, including the Vultr box`);
 
-  const { code } = await api<{ code: string }>('POST', '/api/pair/new');
+  const { code } = await api<{ code: string }>('POST', '/api/pair/start');
   const paired = await api<{ token: string; device: { id: string; name: string } }>('POST', '/api/pair', { code, name: "Judge's phone" });
   check(paired.token && paired.device.name === "Judge's phone", 'a phone paired from the box-screen QR code and got its own token');
   let reused = false;
@@ -477,7 +477,7 @@ await moment('pairing and more than one box', async () => {
   const answered = (await api<{ events: LogEvent[] }>('GET', `/api/tasks/${A.id}`)).events.find((e) => e.type === 'approval.answered');
   check(answered?.type === 'approval.answered' && answered.by === "Judge's phone" && view('pair', 'shipped.txt') === 'yes', 'the paired phone approved it and the log shows which phone');
 
-  await api('POST', `/api/pair/devices/${paired.device.id}/revoke`);
+  await api('DELETE', `/api/devices/${paired.device.id}`);
   const B = await api<Task>('POST', '/tasks', { title: 'Deploy', workspace: 'pair', worker: 'fake', source: 'demo', prompt: 'ask Deploy?\nwrite deployed.txt yes' });
   const askB = await waitFor('B to ask for an OK', async () => (await api<{ id: string; task: string }[]>('GET', '/api/approvals?state=pending')).find((x) => x.task === B.id));
   let status = 0;
@@ -525,12 +525,16 @@ await moment("personal: an agent works on the owner's folder, then Keep or Undo"
 
 // ---------- each track's own steps: tracks/<name>/demo.ts ----------
 
-const kit: DemoKit = { api, check, workspace, view, settled, waitFor, home: HOME };
+const kit: DemoKit = { api, check, workspace, view, settled, waitFor, home: HOME, port: PORT, url: `http://127.0.0.1:${PORT}` };
 const tracks = new URL('../tracks/', import.meta.url).pathname;
 for (const name of fs.existsSync(tracks) ? fs.readdirSync(tracks).sort() : []) {
   const file = path.join(tracks, name, 'demo.ts');
   if (fs.existsSync(file)) await moment(`track ${name}`, async () => (await import(file)).default(kit));
 }
+
+// The portal's own demo step, if there is one.
+const portalDemo = new URL('../portal/demo.ts', import.meta.url).pathname;
+if (fs.existsSync(portalDemo)) await moment('portal', async () => (await import(portalDemo)).default(kit));
 
 // ---------- cleanup ----------
 

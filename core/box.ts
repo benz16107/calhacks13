@@ -84,6 +84,8 @@ class Core {
   devicesPath = path.join(HOME, 'devices.json');
   devices: Device[] = fs.existsSync(this.devicesPath) ? JSON.parse(fs.readFileSync(this.devicesPath, 'utf8')) : [];
   pairCodes = new Map<string, number>(); // one-time code -> expiry (ms)
+  startedAt = new Date().toISOString();
+  resumed: string[] = []; // tasks boot() restarted after a power cut, for the screen's banner
   linksPath = path.join(HOME, 'links.json');
   links: Record<string, string> = fs.existsSync(this.linksPath) ? JSON.parse(fs.readFileSync(this.linksPath, 'utf8')) : {};
   uidTask = new Map<number, string>();
@@ -502,14 +504,16 @@ class Core {
     } catch (e) {
       console.error('BOX_PEERS is not valid JSON:', e);
     }
-    return [{ id: BOX_ID, name: BOX_NAME, stdb: DB, self: true }, ...peers];
+    const self = { id: BOX_ID, name: BOX_NAME, url: process.env.BOX_URL ?? '', stdb: DB, self: true };
+    return [self, ...peers];
   }
 
   /** Mint a one-time pairing code for the box screen's QR. Good for 5 minutes, usable once. */
-  pairNew() {
+  pairStart() {
     const code = randomBytes(4).toString('hex');
-    this.pairCodes.set(code, Date.now() + 5 * 60 * 1000);
-    return { code, url: `/pair#${code}`, box: { id: BOX_ID, name: BOX_NAME }, expiresInSec: 300 };
+    const expiry = Date.now() + 5 * 60 * 1000;
+    this.pairCodes.set(code, expiry);
+    return { code, url: `/pair#${code}`, expiresAt: new Date(expiry).toISOString(), box: { id: BOX_ID, name: BOX_NAME } };
   }
 
   /** A phone redeems the code for a durable device token. */
@@ -545,21 +549,23 @@ class Core {
     const url = new URL(req.url ?? '/', 'http://box');
     const p = url.pathname.replace(/^\/api/, '');
     const m = req.method ?? 'GET';
-    const routes = new Set(['/boxes', '/pair/new', '/pair', '/pair/devices']);
-    const revoke = p.match(/^\/pair\/devices\/([\w-]+)\/revoke$/);
-    if (!routes.has(p) && !revoke) return false;
+    const del = (p.match(/^\/devices\/([\w-]+)$/) || p.match(/^\/pair\/devices\/([\w-]+)\/revoke$/))?.[1];
+    // Match the exact method and path. Anything else (a GET of /pair, which is a portal page route) is not
+    // ours, so return false and let the static portal handler serve the app.
+    let act: (() => unknown) | undefined;
+    if (m === 'GET' && p === '/boxes') act = () => this.boxes();
+    else if (m === 'POST' && (p === '/pair/start' || p === '/pair/new')) act = () => this.pairStart();
+    else if (m === 'GET' && (p === '/devices' || p === '/pair/devices')) act = () => this.devices.filter((d) => !d.revoked).map(({ token, ...d }) => d);
+    else if ((m === 'DELETE' || m === 'POST') && del) act = () => this.revokeDevice(del);
+    const needsBody = m === 'POST' && p === '/pair';
+    if (!act && !needsBody) return false;
     void (async () => {
       const json = (status: number, obj: unknown) => res.writeHead(status, { 'content-type': 'application/json' }).end(JSON.stringify(obj));
       try {
         const chunks: Buffer[] = [];
         for await (const c of req) chunks.push(c as Buffer);
         const body = chunks.length ? JSON.parse(Buffer.concat(chunks).toString()) : {};
-        if (m === 'GET' && p === '/boxes') return json(200, this.boxes());
-        if (m === 'POST' && p === '/pair/new') return json(200, this.pairNew());
-        if (m === 'POST' && p === '/pair') return json(200, this.pair(body));
-        if (m === 'GET' && p === '/pair/devices') return json(200, this.devices.filter((d) => !d.revoked).map(({ token, ...d }) => d));
-        if (m === 'POST' && revoke) return json(200, this.revokeDevice(revoke[1]));
-        json(404, { error: 'not found' });
+        json(200, act ? act() : this.pair(body));
       } catch (e) {
         json((e as { status?: number }).status ?? 400, { error: (e as Error).message });
       }
@@ -618,7 +624,7 @@ class Core {
           case 'GET /apps':
             return this.apps;
           case 'GET /health':
-            return { ok: true, tasks: this.state.tasks.size, tools: [...this.tools.keys()], spacetime: { port: 3000, database: DB } };
+            return { ok: true, startedAt: this.startedAt, resumed: this.resumed, tasks: this.state.tasks.size, tools: [...this.tools.keys()], spacetime: { port: 3000, database: DB } };
         }
       },
       (req, res) => this.cors(req, res) || this.pairing(req, res) || this.logStream(req, res) || this.webhook(req, res) || this.trackRoute(req, res) || this.portal(req, res),
@@ -745,6 +751,7 @@ data: ${JSON.stringify(e)}
     for (const t of this.state.tasks.values()) {
       if (t.state === 'queued' || t.state === 'running' || t.state === 'waiting') {
         console.log(`resuming ${t.id} (${t.state})`);
+        this.resumed.push(t.id);
         void this.start(t);
       }
     }
