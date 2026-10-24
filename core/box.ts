@@ -1040,6 +1040,10 @@ class Core {
               body.workspace = this.linkFolders(given);
               if (body.folders) body.folder = String(body.folders[0]); // readers that know one folder see the first
             }
+            // Who started it: an off-box caller is named by its paired device, never by what it sends.
+            const device = this.deviceOf(req);
+            if (device) body.source = `phone:${device.name}`;
+            else if (!this.isLocal(req)) throw Object.assign(new Error('pair this phone with the box first'), { status: 401 });
             return this.createTask(body);
           }
           case 'GET /tasks/:id':

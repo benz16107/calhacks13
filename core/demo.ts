@@ -768,6 +768,8 @@ await moment('security: an outside caller gets nothing, and a folder cannot be t
   check((await out('GET', '/api/log', undefined, auth)).status === 200 && (await out('GET', `/api/log/stream?access_token=${phone.token}&after=999999`, undefined, {})).status === 200, 'with its token the phone can read the log, and follow the stream with ?access_token= (an EventSource cannot set headers)');
   const ownerOnly = await Promise.all([out('POST', '/api/pair/start', {}, auth), out('GET', '/api/devices', undefined, auth), out('DELETE', `/api/devices/${phone.device.id}`, undefined, auth), out('POST', '/api/setup/finish', {}, auth), out('POST', `/api/tasks/${mine.id}/keep`, {}, auth)]);
   check(ownerOnly.every((r) => r.status === 403), "but it cannot mint pairing codes, list or remove devices, finish setup or Keep: those are the owner's (403)");
+  const started = await out('POST', '/api/tasks', { title: 'From the phone', prompt: 'write x.txt y', worker: 'fake', workspace: 'guarded', source: 'schedule' }, auth);
+  check(started.status === 200 && started.body.source === 'phone:Judge phone', `a task a phone starts says who started it ("${started.body.source}"), not the "schedule" it sent`);
   const approved = await out('POST', `/api/approvals/${encodeURIComponent(ask.id)}`, { approved: true, by: "Ben's iPhone" }, auth);
   await settled([mine.id]);
   const answered = (await api<{ events: LogEvent[] }>('GET', `/api/tasks/${mine.id}`)).events.find((e) => e.type === 'approval.answered');
