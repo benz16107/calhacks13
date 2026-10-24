@@ -22,7 +22,10 @@ if [[ ${1:-} != --here ]]; then
   dest=/opt/box-image-src/${edition:+$edition-}${1:-x86_64}${key:+-debug}
   echo "build: $BUILD_SHELL, in $dest"
   {
-    echo "set -e; rm -rf $dest; mkdir -p $dest"
+    # One build per source folder at a time: a second one waits instead of deleting the first one's files.
+    echo "set -e; mkdir -p /var/lib/box-image; exec 9>/var/lib/box-image/src-${dest##*/}.lock"
+    echo "flock -n 9 || { echo 'build: another build uses $dest; waiting for it'; flock 9; }"
+    echo "rm -rf $dest; mkdir -p $dest"
     echo "base64 -d <<'EOF' | tar -xzf - -C $dest"
     git ls-files -co --exclude-standard | while IFS= read -r f; do [[ -e $f ]] && printf '%s\n' "$f"; done |
       tar -czf - -T - | base64
@@ -56,6 +59,9 @@ out=$top/out
 root=$work/root
 mkdir -p "$work" "$out"
 say() { echo "build $name: $*"; }
+# One build per work folder at a time. Two at once would delete each other's roots while they are mounted.
+exec 8>"$work.lock"
+flock -n 8 || { say "another build of $name is running; waiting for it"; flock 8; }
 
 # The whole OS. Everything else on the image comes from core/setup.sh, core/install.sh and image/rootfs/.
 base_packages="systemd systemd-sysv systemd-resolved systemd-timesyncd libpam-systemd dbus udev kmod passwd
@@ -85,6 +91,21 @@ host_tools="mmdebstrap squashfs-tools xorriso mtools grub-common"
 missing=$(for p in $host_tools; do dpkg -s "$p" >/dev/null 2>&1 || echo "$p"; done)
 [[ -z $missing ]] || { apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq $missing >/dev/null; }
 
+mounts_under() { awk -v d="$1" '$5 == d || index($5, d "/") == 1 { print $5 }' /proc/self/mountinfo; }
+# Unmount everything at or under $1, or stop the build. A chroot's /dev is the host's own /dev, bind-mounted: an
+# rm -rf or rsync --delete through a mount left behind deletes the build machine's device nodes.
+unmount_under() {
+  for p in /proc/[0-9]*; do # processes a chroot step left running keep its mounts busy
+    if [[ $(readlink "$p/root" 2>/dev/null) == "$1" ]]; then kill -9 "${p#/proc/}" 2>/dev/null || true; fi
+  done
+  mounts_under "$1" | sort -r | while read -r m; do umount "$m" 2>/dev/null || umount -l "$m"; done
+  if [[ -n $(mounts_under "$1") ]]; then
+    echo "build: still mounted under $1, so nothing there is deleted or copied:" >&2
+    mounts_under "$1" >&2
+    exit 1
+  fi
+}
+
 mounted=()
 mount_root() {
   mount -t proc proc "$1/proc"; mount -t sysfs sys "$1/sys"; mount -t tmpfs tmpfs "$1/run"
@@ -92,7 +113,7 @@ mount_root() {
   mounted+=("$1")
   rm -f "$1/etc/resolv.conf"; cp -L /etc/resolv.conf "$1/etc/resolv.conf"
 }
-umount_all() { for r in "${mounted[@]}"; do umount -R "$r/dev" "$r/run" "$r/sys" "$r/proc" 2>/dev/null || true; done; mounted=(); }
+umount_all() { for r in "${mounted[@]}"; do unmount_under "$r"; done; mounted=(); }
 trap umount_all EXIT
 in_root() {
   chroot "$root" /usr/bin/env -i PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
@@ -104,6 +125,7 @@ stamp=$(printf '%s\n' "$packages" | cat - core/setup.sh | sha256sum | cut -c1-12
 base=$work/base-$stamp
 if [[ ! -d $base ]]; then
   say "base $stamp: Ubuntu 24.04 from $mirror"
+  unmount_under "$work/base.tmp"
   rm -rf "$work/base.tmp"
   mmdebstrap --arch=$deb --variant=minbase --include="$(echo $packages | tr ' ' ,)" \
     --dpkgopt='path-exclude=/usr/share/doc/*' --dpkgopt='path-include=/usr/share/doc/*/copyright' \
@@ -123,6 +145,8 @@ fi
 say "root"
 root=$work/root
 mkdir -p "$root"
+unmount_under "$base"
+unmount_under "$root"
 rsync -aHAX --delete "$base/" "$root/"
 mount_root "$root"
 rsync -a --exclude node_modules --exclude .git "$src/" "$root/tmp/src/"
@@ -219,6 +243,7 @@ ln -sf ../run/systemd/resolve/stub-resolv.conf "$root/etc/resolv.conf"
 # 3. The update image: the whole root as one squashfs, hashed and signed.
 say "$product.sqfs"
 sq=$out/$product.sqfs
+unmount_under "$root"
 mksquashfs "$root" "$sq" -noappend -comp zstd -quiet
 (cd "$out" && sha256sum "$product.sqfs" > "$product.sqfs.sha256")
 openssl pkeyutl -sign -inkey "$key" -rawin -in "$sq.sha256" -out "$sq.sig"

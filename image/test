@@ -100,6 +100,9 @@ if [[ $edition == personal- ]]; then
     sleep 2 && mkdir -p /home/ana && echo kept > /home/ana/note && chown -R ana: /home/ana && id ana'
   vm 'id ana | grep -q "(sudo)"' || { echo "test: FAILED, ana is not in the sudo group"; exit 1; }
   vm 'getent group sudo | cut -d: -f4' | grep -q box- && { echo "test: FAILED, a task user has sudo"; exit 1; }
+  owner() { for _ in $(seq 30); do vm 'grep -q BOX_OWNER=ana /etc/systemd/system/box.service.d/personal.conf' 2>/dev/null && return; sleep 2; done
+    echo "test: FAILED, the box did not learn its owner ($1)"; exit 1; }
+  owner "after the first account" && echo "test: the box knows its owner: ana"
 fi
 
 echo "test: system update to slot B"
@@ -112,6 +115,7 @@ vm 'box-update status'
 if [[ $edition == personal- ]]; then
   vm 'id ana | grep -q "(sudo)" && grep -qx kept /home/ana/note' || { echo "test: FAILED, ana or her files did not survive the update"; exit 1; }
   echo "test: ana, her sudo and her files survived the update"
+  owner "after the update" && echo "test: and the new system knows its owner too"
 fi
 shot screen-2
 
