@@ -34,9 +34,9 @@ Checked against main `8a4cbf4`, Sat Oct 24 05:30 PT. `./demo` from a clean workt
 | verified | 51 |
 | merged | 56 |
 | building | 24 |
-| planned | 25 |
+| planned | 24 |
 | not pursued | 3 |
-| **Total** | **162** |
+| **Total** | **161** |
 
 **Collisions** (detail below): none open at 03:27. The three found at 02:25 are resolved and Business is on main. Still
 watched: portal/dist rebuilt from merged sources (C-4).
@@ -125,7 +125,6 @@ answers nothing until a person is picked from the top bar.
 | Incident drill (`core/drill.ts`, `docs/drill.md`, `POST /api/drill` for an owner or admin; numbers kept in the log): on the Business thread's live run, 10 agents including 3 live Droid seats, pause returned in 137 ms, every unit frozen within 271 ms, 0 agent events in 10 s paused, the bad batch undone in 48 ms, the first step 48.8 s after resume | business | merged (QA ran the route on an idle box: it answers and writes a `kill-switch` note; the measured numbers are the Business thread's) | 827f144, 0c65072 | business edition ("stop mid-task in 193 ms") | Microsoft |
 | Work-account sign-in (Entra and Google were not reached; see its README) | business | merged (partly: provider flows not reached) | 1389b9f | none | Microsoft |
 | Shadow mode and a pilot plan | business | planned | | | Microsoft |
-| Jira-to-GurtOS people mapping in Business (accountId to a person, acting through `x-box-person`) | jira, business | merged (the gate checks it against offline Jira stand-ins: an unlinked user 403, a requester 403, $60,000 over a $50,000 limit 403, an approver counts as her, the starter can't approve their own task; the real Jira site has no accounts for these people, so no live run) | b380c61 | tracks/jira/demo.ts | Atlassian, Hyphenate |
 
 ## Hyphenate (credit desk)
 
@@ -227,7 +226,7 @@ Gate: 22 Jira checks against offline stand-ins for Jira, JSM and Confluence. Liv
 | JSM approvals for risky actions (SECOPS ticket; the box logs "approved by jira:<user> via JSM") | jira | merged (live: SECOPS-168 approved in JSM) | 21dad13, 7cf9701 | tracks/jira/demo.ts | Atlassian Track 2 |
 | Confluence daily and incident reports (space AGENTS: an incident page per blocked attempt, "What our agents did, <date>") | jira | merged (live by the Jira thread) | 21dad13, 7cf9701 | tracks/jira/demo.ts | Atlassian Track 1 and 2 |
 | Jira dashboard gadget ("GurtOS agents") | jira | merged (live: dashboard 10100) | 21dad13, 7cf9701 | tracks/jira/demo.ts | Atlassian Track 2 |
-| Jira-to-GurtOS people mapping in Business (accountId to a Business person, acting through `x-box-person`) | jira, business | merged (built; the gate skips it; Business is on main since 276bb32, so it can be tested now) | 7cf9701 | skip in tracks/jira/demo.ts | Atlassian, Hyphenate |
+| Jira-to-GurtOS people mapping in Business (accountId to a person, acting through `x-box-person`) | jira, business | merged (the gate checks it against offline Jira stand-ins: an unlinked user 403, a requester 403, $60,000 over a $50,000 limit 403, an approver counts as her, the starter can't approve their own task; no live run, the real Jira site has no accounts for these people) | b380c61 | tracks/jira/demo.ts | Atlassian, Hyphenate |
 
 ## Armadin (Best Security Hack)
 
