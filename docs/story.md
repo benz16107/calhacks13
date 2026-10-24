@@ -626,6 +626,7 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 
 - Review the story with Ben: problem, features with their why, OS vs track
 - Register a domain through GoDaddy Registry (MLH code). (partly)
+- gurtos.co and short pairing links (not built)
 
 ## Figma: Best Workflow, Stage Log, Best Design and Most Creative
 

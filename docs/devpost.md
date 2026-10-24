@@ -501,6 +501,10 @@ A Vultr Cloud Compute VM in San Jose is the GurtOS box the internet can reach: J
 
 **gurtos.com.** *Gurt* is German for seatbelt, and GurtOS is a seatbelt for AI agents: real access, but each agent is strapped in (its own Linux user, its own copy of the files, no keys, undo). The name is the domain, the boot-screen wordmark, slide 1 of the deck, the docs, and what the OS calls itself (`NAME="GurtOS"`, hostname `gurt-<id>`).
 
+**One name for the whole product.** GurtOS is the same word in the OS, the portal, the docs and the domain. gurtos.com is the docs, calhacks.gurtos.com is this showcase, and app.gurtos.com is the phone app. Every box that turns on remote access gets its own address, `<name>.box.gurtos.com` (for example `rosa.box.gurtos.com`), with its own Let's Encrypt certificate, and the encryption ends on the box itself.
+
+**Not yet:** gurtos.co, the short domain for pairing, is not registered. GoDaddy's command line says it is available at $8.99 for the first year, and the team will register it with MLH's code. The plan is that a box's QR opens `gurtos.co/p/<name>#<code>`, which forwards to the pairing page on app.gurtos.com; the one-time code sits after the `#`, which a browser never sends to a server, and a shorter link makes a smaller QR code (39 characters instead of 66). Until it resolves, nothing in the repo or in a box's QR code points at gurtos.co.
+
 **Proof:** Registered at GoDaddy.com, LLC on Fri Oct 23 at 9:29 PM PT, during the rename, and live that night on GoDaddy DNS: gurtos.com serves the product docs, calhacks.gurtos.com this write-up.
 
 [Full write-up, video and evidence →](https://calhacks.gurtos.com/tracks/godaddy/)
@@ -611,7 +615,7 @@ Public links: chat https://www.mana.space/shared-chats/x5CqxyjcOgVCAyrvUBqK2LNRc
 6. **Fetch.ai.** Submit through the ASI:One Submission Agent and share the ASI:One chat link.
 7. **Anthropic: how to enter** is pending. The prize is not on Devpost yet; Ben will ask a director.
 8. **GoDaddy.** Confirm whether gurtos.com was registered with the MLH GoDaddy Registry code (and that a .com
-   counts). If yes, change the "through GoDaddy Registry" row in `showcase/src/content/tracks/godaddy.mdx` to `met`.
+   counts). gurtos.co is not registered yet; the conductor registers it with the MLH code, then the "Short pairing links" lines on the GoDaddy page and here change. If yes, change the "through GoDaddy Registry" row in `showcase/src/content/tracks/godaddy.mdx` to `met`.
 9. **Coinbase.** Their track asks for a verified Coinbase account. Confirm it is verified.
 10. **Devpost link.** Once the project page exists, set `LINKS.devpost` in `showcase/src/data/site.ts`.
 11. **Stage log.** The showcase, this text and `docs/stagelog.md` now agree: 32 sessions, 364 minutes.
