@@ -27,12 +27,11 @@ finding gets a **Fixed** line with the commit and an after-screenshot in `after/
 | apify track | A-1 |
 | personal | P-29 waits for Ben |
 | image | S2, S15, S16, S24, P-4, P-17, P-28, E-1 to E-11, E-15, then P-1 with release |
-| personal (parity) | E-3 (GurtOS update row), E-12, E-13, E-14 |
+| personal (parity) | E-3 (GurtOS update row; core's `GET /api/update` is in, d66bf5f), E-12, E-13, E-14 |
 
 Release (P-1): one rebuild of all four ISOs from one main commit, about 75 minutes to a verified release plus 20 for
 the download pages. The UX thread sends the commit once the Personal, image and core P0 and P1 fixes are in. Target
 before midnight PT, hard cutoff 6:30 AM PT Sunday (at 5:30 AM the best demo-ready commit goes regardless).
-| core | S5 empty-key wording (P2) |
 
 ## Top 10
 
@@ -265,7 +264,7 @@ accepted. Anthropic keys start with sk-ant-."; offline, "Saved. GurtOS couldn't 
 
 **Fixed in baeabc5** (core): `PUT /api/vault/ANTHROPIC_API_KEY` tries the key; a refused key is a 400 reading
 "Anthropic didn't accept this key. Check that you copied all of it."; offline it saves and says so. The empty-key
-message still reads "the key is empty" (P2, core: "Paste a key first.").
+message reads "Paste a key first." (d66bf5f).
 ### S6. P1. Privacy says nothing leaves, but the public status page is on
 ![](shots/server/29-privacy-and-logs.png)
 The step says "Nothing leaves the box unless you turn it on here" while "Public status page" (Mana) is on. Fix:
