@@ -12,12 +12,10 @@ quota was used up; /find searched locally and the find thread is fixing the sync
 
 ## Machines
 
-| What | ID | Notes |
-|---|---|---|
-| Vultr instance `calhacks13-qa`, vc2-4c-8gb, sjc, 149.28.206.167 | `66f6db24-2cdf-456b-8bb4-8480049d99eb` | **Delete after Sunday Oct 25.** Debug ISO plus main's core, API on 0.0.0.0:7700 for the phone tests. Its vault holds test keys. |
-| Vultr ISO `gurtos-server-x86_64.iso` (release, built 21:34 PT) | `47665f71-de20-41c1-8ba8-5f0736a937b2` | Deleted by the Personal thread Oct 24 (Vultr allows two custom ISOs) |
-| Vultr ISO `gurtos-server-x86_64-debug.iso` (built 22:16 PT) | `3ab0adb1-231e-4bfb-a569-924527a24426` | Mounted on the QA instance. Delete it to make room for the rebuilt release ISO, and after Sunday |
-| First QA instance, release ISO, 104.156.231.61 | `daa23705-bd86-4561-9846-c5cb8e945871` | Deleted 22:54 PT (Vultr can't reinstall an ISO instance) |
+The QA run used three Vultr instances labelled `calhacks13-qa` (the debug ISO, then main's core on top, with test keys
+in its vault and its box ports open only to linuxbox), `calhacks13-qa-release` (the 00:44 PT release ISO) and a first
+release install that was deleted at 22:54 PT. Their IDs and addresses are kept out of this repo, in
+`~/.config/calhacks13/qa-instances.md` on linuxbox. **Delete them and their custom ISOs after Sunday Oct 25.**
 
 ## Summary
 
@@ -46,7 +44,7 @@ phone demo needs:
 - Steps: on a box reachable from another machine (BOX_LISTEN=0.0.0.0, a port forward or a funnel), from that
   machine with no Authorization header: `GET /api/log`, `POST /api/tasks`, `POST /api/approvals/<id>
   {"approved":true,"by":"Ben's iPhone"}`, `POST /api/tasks/<id>/undo`, `POST /api/pair/start` then `POST /api/pair`,
-  `DELETE /api/devices/<id>`. Script: `/tmp/qa-scripts/stranger.py` on linuxbox.
+  `DELETE /api/devices/<id>`. Script: `the QA thread's `stranger.py`` on linuxbox.
 - Expected: every route except redeeming a pairing code needs a paired device's token when the request isn't from
   the box itself. `by` comes from the device, not the body.
 - Actual: all of them return 200. A bogus token gets 401, but no token at all passes. The log says the $500
@@ -70,7 +68,7 @@ to the internet.** Owners: core (reducer), image (firewall).
 
 **P0-3. A task on `folder: "/etc/box"` reads the whole vault and the box's private key.** Owner: core. **Fixed in c6f747e, verified 23:31 PT:** from the box itself /etc/box, /var/lib/box, /root, /etc, /opt/box and /var/lib/spacetimedb are refused, a Server box refuses folders altogether, and a paired non-owner phone gets 403.
 - Steps: `POST /api/tasks {"title":"x","worker":"fake","folder":"/etc/box","prompt":"steal vault.env out.txt"}` on
-  a Server box, then `GET /api/tasks/<id>/diff`. Script: `/tmp/qa-scripts/escape.py`.
+  a Server box, then `GET /api/tasks/<id>/diff`. Script: `the QA thread's `escape.py``.
 - Expected: refused. A folder task belongs on a Personal box, inside the owner's home or Settings agentFolders.
 - Actual: done. The diff holds every vault line (Factory, CRS, Stripe...) and `identity.key`. With P0-1 anyone
   who reaches the API can read the vault. Undo does not remove it (P1-1). The values are not in this report.
