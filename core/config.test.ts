@@ -12,7 +12,7 @@ test('settings: valid changes apply, nested ones merge, bad ones name the field'
   assert.equal(s.defaultBudgetCents, 250);
   assert.deepEqual(s.quietHours, { enabled: true, from: '22:00', to: '07:00' });
   assert.deepEqual(s.defaultHosts, ['example.com', '*.cdn.example.com:443']); // lower-cased, no duplicates
-  assert.equal(DEFAULT_SETTINGS.defaultBudgetCents, 0, 'the defaults are not changed in place');
+  assert.equal(DEFAULT_SETTINGS.defaultBudgetCents, 100, 'the defaults are not changed in place');
   for (const [bad, field] of [
     [{ approvalThresholdCents: 1.5 }, 'approvalThresholdCents'],
     [{ networkDefault: 'everything' }, 'networkDefault'],
