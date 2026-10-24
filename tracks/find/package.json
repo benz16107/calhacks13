@@ -1,0 +1,8 @@
+{
+  "name": "find",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@moss-js/moss": "1.21.0"
+  }
+}

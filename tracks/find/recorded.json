@@ -1,0 +1,26 @@
+{
+  "89c0fc537db8b8c8c5adb4fc895c28f20dd3773f76cf24cac5533b7775a77cd5": {
+    "file": "IMG_2041.jpg",
+    "text": "This is a whiteboard diagram illustrating a \"Sprint plan: box OS\" workflow. The diagram shows a sequential flow from \"Portal\" to \"Box core\" to \"Vault,\" with a note indicating \"Tasks (undo!)\" below, followed by a list of numbered items: \"1. undo 2. booby-trap 3. approvals 4. pull the plug.\"\n\nSearch Keywords: Sprint plan, box OS, software architecture, workflow diagram, portal, box core, vault, agile planning.",
+    "model": "gemma4",
+    "ms": 3431
+  },
+  "e4f79c9c420b16ec22f0512567359610403d9a922a48c6caf247c4464cce54e3": {
+    "file": "IMG_2042.jpg",
+    "text": "This is a document displaying a store receipt from the Corner Market dated 10/22/2026, showing itemized costs for groceries including Oat Milk, Bananas, Coffee Beans, and Sourdough Loaf, with a final total of $37.15.\n\nSearch Keywords: receipt, Corner Market, grocery, checkout, bill, Berkeley, transaction, 2026",
+    "model": "gemma4",
+    "ms": 2487
+  },
+  "c5c5043b2f48b84f5affadb611a5c2f2843afb3d14f187c2c6408affe469cd9f": {
+    "file": "IMG_2043.jpg",
+    "text": "Product: An illustration of a box containing batteries labeled \"PowerCell.\" The packaging reads \"AA ALKALINE,\" \"8 PACK,\" and \"1.5V,\" set against a yellow background.\n\nSearch Keywords: batteries, power cells, AA, alkaline, 8 pack, 1.5V, illustration, power",
+    "model": "gemma4",
+    "ms": 2863
+  },
+  "445b974fa6f583644f92e4396027ff95b530943f7f5a698c5c7beeeb857368fd": {
+    "file": "IMG_2044.jpg",
+    "text": "This is a bar graph titled \"Monthly sign-ups, 2026,\" illustrating an increasing trend across the months of May, June, July, August, September, and October. The blue bars show progressively taller levels from May to October, indicating growth over the measured months.\n\nKeywords: bar graph, monthly sign-ups, 2026, data visualization, trends, May, June, October",
+    "model": "gemma4",
+    "ms": 2524
+  }
+}
