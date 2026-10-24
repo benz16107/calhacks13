@@ -72,7 +72,7 @@ closed before the repository goes public.
 
 | Assumption | Where | Owner | Status |
 |---|---|---|---|
-| The screen greets "Ben" | `portal/src/home.tsx` (`const OWNER = 'Ben'`) and 12 screenshots | portal | Sent: use the owner's name from `GET /api/owner`, else no name |
+| The screen greets "Ben" | `portal/src/home.tsx` (`const OWNER = 'Ben'`) and 12 screenshots | portal | Done (0f5fd1c): the owner's first name from `GET /api/owner` when core returns one, else no name |
 | Test and deploy machines are Ben's | `demo`, `deploy` | core | Sent: machines come from an untracked file; with none, `--here` or `BOX_SHELL` |
 | Builds go to Ben's Vultr box by default | `image/build` | image | Sent: build on this machine by default |
 | The clock is Pacific time | `image/build` (pending commit) | image | Sent: default UTC |
@@ -85,7 +85,7 @@ closed before the repository goes public.
 | Demo data names Ben as approver | `tracks/jira/demo.ts` ("Ben Zhou") | jira | Sent: a neutral name |
 | BOX_PEERS, BOX_URL, BOX_OWNER | core | core | Fine: empty or unset by default, set per machine |
 | Docs screenshots show a test machine's name as a box name | `site/src/assets/screens/box-*.png` | docs | Sent |
-| Portal pairing screenshots show the tailnet name | `portal/screenshots/box-pair.png`, `laptop-pair.png` | portal | Sent (the showcase already avoids them) |
+| Portal pairing screenshots show the tailnet name | `portal/screenshots/box-pair.png`, `laptop-pair.png` | portal | Done (717bc3f): retaken with a private-range address; `dev-box.sh` takes the VM and address as settings |
 | The ISOs carry the whole checkout in /opt/box | `core/install.sh` | core | Sent (optional): copy only what the box runs |
 
 ## Licensing found on the way
