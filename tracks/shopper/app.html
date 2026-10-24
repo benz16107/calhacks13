@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shopper</title>
+<style>
+  :root {
+    --bg: #F3F1EA; --surface: #FBFAF6; --sunken: #E6E7E1; --border: #D3D6CF; --strong: #6B726C;
+    --text: #1C201D; --text2: #535A54; --action: #1C201D; --on-action: #FBFAF6; --focus: #2D5784;
+    --run-fg: #2D5784; --run-bg: #DDE8F2; --wait-fg: #7F4C00; --wait-bg: #F8EBD0;
+    --done-fg: #2E6338; --done-bg: #DFEDDC; --fail-fg: #9C3326; --fail-bg: #F6E0DA; --neutral-fg: #535A54; --neutral-bg: #E6E7E1;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 16px/24px "IBM Plex Sans", system-ui, sans-serif; }
+  main { max-width: 1040px; margin: 0 auto; padding: 24px 16px 64px; }
+  h1 { font-size: 40px; line-height: 48px; font-weight: 600; letter-spacing: -0.5px; margin: 0 0 8px; }
+  h2 { font-size: 17px; line-height: 24px; font-weight: 600; margin: 32px 0 12px; }
+  .mono { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 14px; line-height: 20px; }
+  .small { font-size: 13px; line-height: 18px; color: var(--text2); }
+  .label { font-size: 12px; line-height: 16px; font-weight: 500; letter-spacing: 0.4px; text-transform: uppercase; color: var(--text2); }
+  .test { background: var(--sunken); border: 1px solid var(--strong); border-radius: 4px; padding: 8px 12px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 16px; }
+  .stack > * + * { margin-top: 12px; }
+  .grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); }
+  section { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; }
+  th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-top: 1px solid var(--border); }
+  th { border-top: 0; }
+  button { font: inherit; font-weight: 500; min-height: 44px; padding: 6px 16px; border-radius: 4px; cursor: pointer;
+    border: 1px solid var(--strong); background: var(--surface); color: var(--text); }
+  button.primary { background: var(--action); color: var(--on-action); border-color: var(--action); }
+  button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+  input, select { font: inherit; min-height: 44px; padding: 6px 10px; border: 1px solid var(--strong); border-radius: 4px; background: var(--surface); color: var(--text); }
+  form.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; }
+  form.row label { display: flex; flex-direction: column; gap: 4px; }
+  .pill { display: inline-block; font-size: 12px; line-height: 16px; font-weight: 500; letter-spacing: 0.4px; padding: 2px 8px; border-radius: 4px; white-space: nowrap; }
+  .watching, .buying, .running, .queued { color: var(--run-fg); background: var(--run-bg); }
+  .needs, .waiting { color: var(--wait-fg); background: var(--wait-bg); }
+  .bought, .done { color: var(--done-fg); background: var(--done-bg); }
+  .not, .failed { color: var(--fail-fg); background: var(--fail-bg); }
+  .refunded, .cancelled, .undone { color: var(--neutral-fg); background: var(--neutral-bg); }
+  .amount { font-size: 40px; line-height: 48px; font-weight: 600; letter-spacing: -0.5px; }
+  .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .err { color: var(--fail-fg); }
+</style>
+<main>
+  <h1>Shopper</h1>
+  <p class="test"><b>TEST PAYMENTS ONLY.</b> Purchases are Stripe test-mode payments with a Visa test card held in the box's vault. No real money moves, and no real store accepts this card, so checkout happens at the <a href="/t/shopper/store">Box Test Store</a>.</p>
+  <p class="small" id="setup" role="status">Loading…</p>
+
+  <section aria-labelledby="ok-h">
+    <h2 id="ok-h">Needs your OK</h2>
+    <div id="approvals" class="grid"></div>
+  </section>
+
+  <section aria-labelledby="watch-h">
+    <h2 id="watch-h">Watch a product</h2>
+    <div class="card stack">
+      <form class="row" id="ask">
+        <label style="flex:1 1 360px">Say it in words (Claude finds the product and sets the watch; it cannot buy)
+          <input name="text" required placeholder="Get me the Chemex filters when they're under $16"></label>
+        <button class="primary">Set up watch</button>
+      </form>
+      <form class="row" id="watch">
+        <label>Store <select name="store"><option value="test">Box Test Store (USD)</option><option value="bestbuy.ca">Best Buy Canada, live (CAD)</option></select></label>
+        <label>Product (SKU or words) <input name="product" required value="HV60-100" size="14"></label>
+        <label>Buy when <select name="when"><option value="price">it drops under</option><option value="restock">it's back in stock, up to</option></select></label>
+        <label>Price per item <input name="max" required inputmode="decimal" value="7.00" size="6"></label>
+        <label>Quantity <input name="qty" type="number" min="1" max="10" value="2" style="width:5em"></label>
+        <label>Check every <select name="every"><option value="1">minute</option><option value="15">15 minutes</option><option value="60" selected>hour</option></select></label>
+        <button>Watch</button>
+      </form>
+      <p class="small err" id="formerr" role="alert"></p>
+    </div>
+  </section>
+
+  <section aria-labelledby="watches-h">
+    <h2 id="watches-h">Watches</h2>
+    <table><thead><tr><th>Product</th><th>Rule</th><th>Last check</th><th>Status</th><th></th></tr></thead><tbody id="watches"></tbody></table>
+  </section>
+
+  <section aria-labelledby="home-h">
+    <h2 id="home-h">Household reorder</h2>
+    <div class="card row actions">
+      <p style="margin:0;flex:1 1 360px">Claude reads the receipts in the household's mailbox, works out what runs out this week, and proposes a reorder. It sees the receipts, never the mailbox login or any other email. This is a demo inbox of sample receipts.</p>
+      <button id="reorder">Check the receipts</button>
+    </div>
+  </section>
+
+  <section aria-labelledby="supplies-h">
+    <h2 id="supplies-h">Agents buying their own supplies</h2>
+    <form class="card row" id="supplies">
+      <p style="margin:0;flex:1 1 100%">An agent pays for an API it needs with x402, from the box's wallet, in USDC on Solana devnet (test money). The task reaches only that API and may spend only its budget.</p>
+      <label style="flex:1 1 320px">Paid API <input name="url" required value="http://api.localhost:4021/report"></label>
+      <label>Budget, cents <input name="cents" type="number" min="1" max="500" value="3" style="width:6em"></label>
+      <button>Buy it</button>
+    </form>
+  </section>
+
+  <section aria-labelledby="orders-h">
+    <h2 id="orders-h">Orders (test payments)</h2>
+    <table><thead><tr><th>Order</th><th>Items</th><th>Total</th><th>Payment</th><th>Visa TAP</th></tr></thead><tbody id="orders"></tbody></table>
+  </section>
+
+  <section aria-labelledby="tasks-h">
+    <h2 id="tasks-h">What the agents did</h2>
+    <table><thead><tr><th>Task</th><th>State</th><th>Cost</th></tr></thead><tbody id="tasks"></tbody></table>
+  </section>
+</main>
+<script>
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+  const money = (c, cur = 'USD') => `$${(c / 100).toFixed(2)}${cur === 'USD' ? '' : ' ' + cur}`;
+  const cur = (w) => (w.store === 'bestbuy.ca' ? 'CAD' : 'USD');
+  const pill = (s) => `<span class="pill ${esc(s.split(' ')[0])}">${esc({ waiting: 'Waiting for OK', running: 'Running', queued: 'Queued', done: 'Done', failed: 'Failed', undone: 'Undone' }[s] ?? s[0].toUpperCase() + s.slice(1))}</span>`;
+  const ago = (t) => { const s = Math.round((Date.now() - Date.parse(t)) / 1000); return s < 60 ? `${s}s ago` : s < 3600 ? `${Math.round(s / 60)} min ago` : new Date(t).toLocaleString(); };
+  const post = async (url, body) => {
+    const r = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body ?? {}) });
+    const out = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(out.error ?? `HTTP ${r.status}`);
+    return out;
+  };
+  const act = (fn) => async (e) => { e.preventDefault(); $('formerr').textContent = ''; try { await fn(e); await load(); } catch (err) { $('formerr').textContent = err.message; } };
+
+  function render(s) {
+    const st = s.setup;
+    $('setup').textContent = `Payments: ${st.payments}. Visa test card in the vault: ${st.card ? 'yes' : 'no'}. Agent signing key (Visa TAP): ${st.agentKey ? 'yes' : 'no'}. Demo inbox login in the vault: ${st.inbox ? 'yes' : 'no'}.`;
+    $('approvals').innerHTML = s.approvals.map((a) => `<div class="card stack">
+        <p class="test small" style="margin:0">TEST PAYMENT. No real money moves.</p>
+        <div class="label">Buy this?</div>
+        <div style="font-size:17px;font-weight:600">${esc(a.question.split('? ')[0])}?</div>
+        <p style="margin:0">${esc(a.question.split('? ').slice(1).join('? '))}</p>
+        <p class="small" style="margin:0">The card stays in the vault; the agent never sees it. The checkout request is signed with Visa Trusted Agent Protocol.</p>
+        <div class="actions"><button class="primary" data-ok="${esc(a.id)}">Approve</button><button data-no="${esc(a.id)}">Deny</button></div>
+      </div>`).join('') || '<p class="small">Nothing is waiting for you.</p>';
+    $('watches').innerHTML = s.watches.map((w) => `<tr>
+        <td>${esc(w.name || w.product)}<div class="small mono">${esc(w.store)} ${esc(w.product)}</div></td>
+        <td>${w.qty} × ${w.when === 'restock' ? 'when back in stock, up to' : 'under'} <span class="mono">${money(w.maxCents, cur(w))}</span><div class="small">checks every ${w.everyMinutes === 1 ? 'minute' : w.everyMinutes + ' min'}</div></td>
+        <td>${w.last ? `<span class="mono">${money(w.last.priceCents, cur(w))}</span>${w.last.regularCents > w.last.priceCents ? ` <s class="small">${money(w.last.regularCents, cur(w))}</s>` : ''}, ${w.last.inStock ? 'in stock' : 'sold out'}<div class="small">${ago(w.last.checkedAt)}, ${w.checks} checks</div>` : w.lastError ? `<span class="err">${esc(w.lastError)}</span>` : '<span class="small">checking…</span>'}</td>
+        <td>${pill(w.status)}${w.note ? `<div class="small">${esc(w.note)}</div>` : ''}</td>
+        <td>${w.status === 'watching' ? `<div class="actions"><button data-check="${esc(w.id)}">Check now</button><button data-cancel="${esc(w.id)}">Stop</button></div>` : ''}</td>
+      </tr>`).join('') || '<tr><td colspan="5" class="small">No watches yet.</td></tr>';
+    $('orders').innerHTML = s.orders.map((o) => `<tr>
+        <td class="mono">${esc(o.id)}<div class="small">${ago(o.at)}</div></td>
+        <td>${o.items.map((l) => `${l.qty} × ${esc(l.name)}${l.from ? ` <span class="small">(${esc(l.from)} price)</span>` : ''}`).join('<br>')}</td>
+        <td class="mono">${money(o.totalCents, o.currency)}</td>
+        <td>TEST: ${esc(o.payment.card)}<div class="small">${esc(o.payment.provider)} <span class="mono">${esc(o.payment.id)}</span>${o.refund ? '<br><b>Refunded</b> (the purchase task was undone)' : ''}</div></td>
+        <td>Signed by <span class="mono">${esc(o.agent.keyId)}</span>, verified by the store</td>
+      </tr>`).join('') || '<tr><td colspan="5" class="small">No orders yet.</td></tr>';
+    $('tasks').innerHTML = s.tasks.map((t) => `<tr><td>${esc(t.title)}<div class="small">${esc(t.error || t.step || '')}</div></td><td>${pill(t.state)}</td><td class="mono">${money(t.costCents)} of ${money(t.budgetCents)}</td></tr>`).join('') || '<tr><td colspan="3" class="small">Nothing yet.</td></tr>';
+  }
+
+  async function load() {
+    try { render(await (await fetch('/t/shopper/state')).json()); } catch (e) { $('setup').textContent = `The box did not answer: ${e.message}`; }
+  }
+  document.addEventListener('click', (e) => {
+    if (e.target.closest('[data-ok],[data-no],[data-check],[data-cancel],#reorder')) onButton(e);
+  });
+  const onButton = act(async (e) => {
+    const b = e.target.closest('button');
+    if (b.dataset.ok) await post(`/api/approvals/${encodeURIComponent(b.dataset.ok)}`, { approved: true, by: 'portal' });
+    if (b.dataset.no) await post(`/api/approvals/${encodeURIComponent(b.dataset.no)}`, { approved: false, by: 'portal' });
+    if (b.dataset.check) await post('/t/shopper/watches/check', { id: b.dataset.check });
+    if (b.dataset.cancel) await post('/t/shopper/watches/cancel', { id: b.dataset.cancel });
+    if (b.id === 'reorder') await post('/t/shopper/reorder');
+  });
+  $('ask').addEventListener('submit', act(async (e) => { await post('/t/shopper/ask', { text: e.target.text.value }); e.target.reset(); }));
+  $('supplies').addEventListener('submit', act(async (e) => { await post('/t/shopper/supplies', { url: e.target.url.value, cents: Number(e.target.cents.value) }); }));
+  $('watch').addEventListener('submit', act(async (e) => {
+    const f = e.target;
+    await post('/t/shopper/watches', { store: f.store.value, product: f.product.value, when: f.when.value, maxCents: Math.round(parseFloat(f.max.value.replace('$', '')) * 100), qty: Number(f.qty.value), everyMinutes: Number(f.every.value) });
+  }));
+  load();
+  setInterval(load, 3000);
+</script>
+</html>
