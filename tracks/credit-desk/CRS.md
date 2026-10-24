@@ -47,6 +47,10 @@ Test identities only: every person in every case and demo is one of CRS's 20 san
 - A guest's credit request waits in memory between the identity check and the owner's OK. A restart loses it and the guest asks
   again. After the OK the application, with the SSN, is a file in the box's own folder, because CRS needs it; the seats get the
   redacted copy.
+- **A real deployment must not keep a guest's SSN in a file.** After the owner's OK the application, with the SSN, is written
+  to the run's case folder under the box's own root-only folder, because the CRS tool reads it there. That is acceptable here
+  only because `kya.ts` refuses everyone but CRS's 20 sandbox test people before any CRS call. With real people, keep the
+  SSN in a vault or a tokenised store and pass CRS a reference, or delete the file when the run ends.
 - Failed identity checks make no task, so they are counted in memory: 3 an hour per guest and 6 overall.
 - The payment half of "credit or payment" is not wired: wallet and Shopper payments do not yet ask for a verified guest.
 - The ASI:One front door needs a chat intent that collects the identity and calls the guest route; the box side is done.
