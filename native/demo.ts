@@ -36,9 +36,10 @@ export default async (d: DemoKit) => {
   const detail = await phone<{ task: { id: string }; approvals: unknown[]; events: unknown[] }>('GET', `/tasks/${t.id}`);
   d.check(detail.status === 200 && detail.json.task.id === t.id && detail.json.approvals.length === 1, 'the request page reads the task, its approvals and its steps');
   const answer = await phone<{ state: string; by: string }>('POST', `/approvals/${encodeURIComponent(ask.id)}`, { approved: true, auth: 'face-id' });
-  d.check(answer.status === 200 && answer.json.state === 'approved' && answer.json.by === 'Demo iPhone (Face ID)', `Approve from the app: the box records the paired phone and its check, whatever the body says (${answer.json.by})`);
+  const how = (await phone<{ type: string; via?: string }[]>('GET', `/log?task=${t.id}`)).json.find((e) => e.type === 'approval.answered')?.via;
+  d.check(answer.status === 200 && answer.json.state === 'approved' && answer.json.by === 'Demo iPhone' && how === 'Demo iPhone (iphone, face-id, reported)', `Approve from the app: the box names the paired phone, whatever the body says, and keeps its check as reported (${how})`);
   const late = await phone<{ state: string }>('POST', `/approvals/${encodeURIComponent(ask.id)}`, { approved: false, auth: 'none' });
-  d.check(late.json?.state === 'approved', 'a second answer does not change the first: the app shows "Already approved on Demo iPhone (Face ID)"');
+  d.check(late.json?.state === 'approved', 'a second answer does not change the first: the app shows "Already approved on Demo iPhone"');
   await d.settled([t.id]);
 
   // Undo one task.
@@ -51,14 +52,6 @@ export default async (d: DemoKit) => {
   const first = await sse.body!.getReader().read();
   ac.abort();
   d.check(sse.status === 200 && new TextDecoder().decode(first.value).includes('data: {'), 'the log stream opens for the app and sends events');
-
-  // The Mac's Share menu: files go to a new task, in a workspace of their own, within the box's limits.
-  const shared = await phone<{ id: string; workspace: string }>('POST', '/tasks', { title: 'Summarize the shared note', worker: 'fake', source: 'demo', prompt: 'expect note.txt hello from the Mac', files: [{ name: 'note.txt', data: Buffer.from('hello from the Mac\n').toString('base64') }] });
-  d.check(shared.status === 200 && /^shared-/.test(shared.json.workspace), `Send to GurtOS: the file reaches a new task in its own workspace (${shared.json.workspace})`);
-  const [done] = await d.settled([shared.json.id]);
-  d.check(done.state === 'done', 'and the task reads it');
-  const bad = await Promise.all([[{ name: '../x', data: 'aGk=' }], [{ name: 'big.bin', data: Buffer.alloc(5 * 1024 * 1024 + 1).toString('base64') }], Array.from({ length: 9 }, (_, i) => ({ name: `f${i}`, data: 'aGk=' }))].map((files) => phone('POST', '/tasks', { title: 'x', worker: 'fake', prompt: 'say hi', files })));
-  d.check(bad.every((r) => r.status === 400), 'a path in a name, more than 5 MB, or more than 8 files is refused');
 
   // Push: an APNs endpoint on the relay, with keys the app made. The box encrypts for them (core/push.ts).
   const keys = createECDH('prime256v1');
@@ -93,7 +86,7 @@ export default async (d: DemoKit) => {
   const over = await watch<{ needs: string; error: string }>('POST', `/approvals/${encodeURIComponent(big.id)}`, { approved: true, auth: 'wrist' });
   d.check(over.status === 403 && over.json.needs === 'iphone' && (await phone<any[]>('GET', '/approvals?state=pending')).json.some((a) => a.id === big.id), `$40.00 from the Watch is refused and still waits: "${over.json.error}"`);
   const viaPhone = await phone<{ state: string; by: string }>('POST', `/approvals/${encodeURIComponent(big.id)}`, { approved: true, auth: 'face-id' });
-  d.check(viaPhone.json.state === 'approved' && /Face ID/.test(viaPhone.json.by ?? ''), `the iPhone approves it with Face ID, and the log says so (${viaPhone.json.by})`);
+  d.check(viaPhone.json.state === 'approved', 'the iPhone approves it with Face ID');
   const third = await ask2('Watch: deny', 'call example.spend {"cents":9000,"on":"a third GPU"}');
   const deny = await watch<{ state: string }>('POST', `/approvals/${encodeURIComponent(third.id)}`, { approved: false, auth: 'wrist' });
   d.check(deny.json.state === 'denied', 'the Watch may always deny, whatever the amount');

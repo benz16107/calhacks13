@@ -28,7 +28,7 @@ pairing token of their own. The web app stays the option that needs no install.
 - **Homes per edition**: Needs you, Running and the kill switch on Server; Ready for you with Keep changes and Undo
   on Personal; Waiting for me first on Business, with the rule that routed each request and who asked.
 - **Approve and Deny** sit right in each row. Anything that spends money asks for Face ID first, and the answer
-  tells the box how it was checked ("Ben's iPhone (Face ID)" in the log). A Shopper purchase opens the box's own
+  tells the box how it was checked, which the log keeps as reported by the device ("<phone> (iphone, face-id, reported)"). A Shopper purchase opens the box's own
   passkey page, as on the web.
 - **Tasks** show their steps live (the box's log stream), what was blocked, Undo with its confirmation, and Keep.
 - **Activity** is the action log in plain words. **Settings** has the machine, Machines, notifications and Forget.
@@ -56,10 +56,12 @@ closed needs push-to-update through the relay. The widget and the notification c
   The list sets no double-tap action, because the HIG reserves double tap there for scrolling.
 - **The safety rule is the box's.** The iPhone asks each machine for a separate Watch token
   (`POST /api/devices/self/watch`). With that token the box approves only when the Watch says it is on the wrist and
-  unlocked (watchOS's wrist-detection check), up to Settings `watchLimitCents` ($25 by default). It never approves a
-  Business request, a fraud referral or a Shopper purchase that way. Anything else returns a 403 with
-  `needs: "iphone"`, and the request keeps waiting for Face ID on the phone. Deny always works. Revoking the iPhone
-  revokes its Watch.
+  unlocked (watchOS's wrist-detection check), up to Settings `watchLimitCents` ($25 by default), and never for a
+  Business request or a Shopper purchase. So a Watch can approve any small request outside those two. Anything else
+  returns a 403 with `needs: "iphone"`, and the request keeps waiting for Face ID on the phone. Deny always works.
+  Revoking the iPhone, or removing its person on Business, revokes its Watch. The wrist check is what the Watch
+  reports, not proof: the box logs it as "Demo Watch (watch, wrist, reported)". The Watch app itself also leaves
+  fraud referrals to the iPhone; the box has no fraud flag to check.
 - Complications and Smart Stack: circular, corner, rectangular and inline, with counts only, because the Always-On
   display is visible to others. The complication picture above is drawn by the app's debug gallery: the simulator
   can't put a complication on a watch face from a script.
@@ -76,9 +78,8 @@ closed needs push-to-update through the relay. The widget and the notification c
 - ⌥⌘G anywhere opens "Ask your machine" for a new task. Carbon hot keys need no Accessibility permission.
 - New requests become Mac notifications, made on the Mac from the live log. Nothing goes through a push service.
 - Pairing: drop a screenshot of the QR code, paste its link, or type the address and code.
-- **Send to GurtOS** in the Share menu sends up to 8 files (5 MB) to a new task. The box writes them into a
-  workspace of their own (`POST /api/tasks {files}`), so the task's copy holds only those files and keeps the box's
-  usual limits.
+- **Send to GurtOS** in the Share menu sends the chosen text or link to a new task. Files wait for the box to take
+  them: core plans that after Sunday, written into the task's own layer and never into a linked real folder.
 - The menu picture is drawn by the app's `--render-shots` mode from the same model: macOS blocks screen capture
   over ssh. The Ask and Pair pictures are the real views.
 
@@ -126,8 +127,9 @@ decrypt code (`Shared/PushContent.swift`) on that payload.
 `native/demo.ts` runs in `./demo` (core/demo.ts loads it). It makes every call the apps make, as a paired iPhone
 off the box: pair with a code, read every home, approve with Face ID recorded, the second answer losing, Undo, the
 log stream, an APNs push subscription, the Watch token and its limits ($8 approved on the wrist, $40 refused and
-still waiting, the iPhone approving it, Deny always allowed), shared files reaching a task and bad ones refused,
-and Forget revoking the phone and its Watch. 25 checks.
+still waiting, the iPhone approving it, Deny always allowed), and Forget revoking the phone and its Watch.
+core/demo.ts has its own checks for the Watch rules (device kinds, the token, the limit, 0 meaning deny only, the
+rate limit, revocation).
 
 ## Limits
 

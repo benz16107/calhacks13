@@ -103,11 +103,9 @@ public struct BoxClient: Sendable {
   /** The kill switch. Owner or Business admin; anyone else gets 403. */
   public func setPaused(_ on: Bool) async throws { _ = try await call("POST", on ? "/pause" : "/resume", as: Ignored.self) }
 
-  /** A new task. `files` are attached to its copy of the workspace (the Mac's Share extension). */
-  public func newTask(title: String, prompt: String, files: [(name: String, data: Data)] = []) async throws -> BoxTask {
-    var body: [String: Any] = ["title": title, "prompt": prompt]
-    if !files.isEmpty { body["files"] = files.map { ["name": $0.name, "data": $0.data.base64EncodedString()] } }
-    return try await call("POST", "/tasks", body: body)
+  /** A new task, in plain words. */
+  public func newTask(title: String, prompt: String) async throws -> BoxTask {
+    try await call("POST", "/tasks", body: ["title": title, "prompt": prompt])
   }
 
   // MARK: Push

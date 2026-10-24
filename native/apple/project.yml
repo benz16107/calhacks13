@@ -234,7 +234,6 @@ targets:
       properties:
         com.apple.security.app-sandbox: true
         com.apple.security.network.client: true
-        com.apple.security.files.user-selected.read-only: true
         keychain-access-groups: [$(AppIdentifierPrefix)com.benzhou.gurtos.shared]
     info:
       path: Share/Info.plist
@@ -247,7 +246,8 @@ targets:
           NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).ShareViewController
           NSExtensionAttributes:
             NSExtensionActivationRule:
-              NSExtensionActivationSupportsFileWithMaxCount: 8
+              NSExtensionActivationSupportsText: true
+              NSExtensionActivationSupportsWebURLWithMaxCount: 1
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.benzhou.gurtos.mac.share
