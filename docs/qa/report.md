@@ -19,7 +19,7 @@ a private notes file outside the repo. **Delete them and their custom ISOs after
 
 ## Summary
 
-Status at 01:02 PT Saturday. **8 P0 found, all 8 fixed and verified.** 20 P1 and 18 P2 found in the product, plus 7 in
+Status at 02:35 PT Saturday. The feature ledger and merge collisions are tracked in `docs/features.md`. **8 P0 found, all 8 fixed and verified.** 20 P1 and 18 P2 found in the product, plus 7 in
 the docs site and 9 in the showcase. The four moments, Shopper, the wallet, the credit desk and a phone paired over the
 network all work on main as of 717bc3f.
 
@@ -56,7 +56,7 @@ network all work on main as of 717bc3f.
 | P2-11 wallet page shows only the balance | Fixed, verified 01:00: "TEST MONEY" once, balance, then a Payments table with time, amount, payee, task and transaction | wallet fb51e47 |
 | Wallet approvals don't name the payee | Fixed, verified: "Spend $0.03 to 39w7... on wallet.pay (.../report in devnet USDC (test money))? Budget $0.02" | wallet fb51e47 |
 | Showcase S-2, S-3, S-5, S-6, S-7 | Fixed, rechecked 01:00 on all 22 pages and 01:30 on Elastic and Figma: "GurtOS log", and 32 sessions, 364 min, code generation 162 | showcase ab8e509, 213622e |
-| Showcase S-1 GitHub links 404 | **Ben's call**: the repo is still private at 01:00 PT | Ben |
+| Showcase S-1 GitHub links 404 | Fixed: the repo is public (bb4cc3e); repo and deep links answer 200 at 02:35 | release |
 | Stage log Devpost paragraphs | Fixed, checked 01:20: paragraphs and table agree (32 sessions, 364 min; ideation 32, prototyping 26, handoff 19, code generation 162). The showcase matches since 213622e | figma 809b1bf |
 | P2-19 "spent today" shows an old total at load | Fixed, verified 01:25: three fresh loads sampled every 200 ms showed "…" then only the right total | portal 1832a59 |
 | "Today" differs between box and phone | Fixed, verified 00:37 PT with a real split: on a box set to UTC, a phone in Pacific time shows the box day's $29.82, not its own day's $11.59 (shot 80) | portal 465fa7a |
