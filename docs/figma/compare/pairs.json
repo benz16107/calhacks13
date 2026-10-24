@@ -1,0 +1,464 @@
+[
+ {
+  "section": "GurtOS Server: the desktop",
+  "name": "desktop",
+  "figma": "docs/figma/os-v2/desktop/home-approval-banner.png",
+  "app": "portal/screenshots/desktop.png"
+ },
+ {
+  "section": "GurtOS Server: the desktop",
+  "name": "notification-center",
+  "figma": "docs/figma/os-v2/desktop/notification-center.png",
+  "app": "portal/screenshots/notification-center.png"
+ },
+ {
+  "section": "GurtOS Server: the desktop",
+  "name": "control-center",
+  "figma": "docs/figma/os-v2/desktop/control-center.png",
+  "app": "portal/screenshots/control-center.png"
+ },
+ {
+  "section": "GurtOS Server: the desktop",
+  "name": "lock-screen",
+  "figma": "docs/figma/os-v2/desktop/lock-screen.png",
+  "app": "portal/screenshots/lock.png"
+ },
+ {
+  "section": "GurtOS Server: the desktop",
+  "name": "boot",
+  "figma": "docs/figma/os-v2/desktop/boot-after-power-cut.png",
+  "app": "portal/screenshots/boot.png"
+ },
+ {
+  "section": "GurtOS Server: the desktop",
+  "name": "restored",
+  "figma": "docs/figma/os-v2/desktop/restored-after-power-cut.png",
+  "app": "portal/screenshots/restored.png"
+ },
+ {
+  "section": "GurtOS Server: the desktop",
+  "name": "tasks",
+  "figma": "docs/figma/os-v2/windows/tasks.png",
+  "app": "portal/screenshots/tasks.png"
+ },
+ {
+  "section": "GurtOS Server: the desktop",
+  "name": "task-detail",
+  "figma": "docs/figma/os-v2/windows/task-detail.png",
+  "app": "portal/screenshots/task.png"
+ },
+ {
+  "section": "GurtOS Server: the desktop",
+  "name": "task-undo-confirm",
+  "figma": "docs/figma/os-v2/windows/task-detail-undo-confirm.png",
+  "app": "portal/screenshots/task-undo.png"
+ },
+ {
+  "section": "GurtOS Server: the desktop",
+  "name": "activity",
+  "figma": "docs/figma/os-v2/windows/activity.png",
+  "app": "portal/screenshots/activity.png"
+ },
+ {
+  "section": "GurtOS Server: the desktop",
+  "name": "time-machine",
+  "figma": "docs/figma/os-v2/windows/time-machine.png",
+  "app": "portal/screenshots/time-machine.png"
+ },
+ {
+  "section": "GurtOS Server: the desktop",
+  "name": "app-center",
+  "figma": "docs/figma/os-v2/windows/app-center.png",
+  "app": "portal/screenshots/app-center.png"
+ },
+ {
+  "section": "GurtOS Server: the desktop",
+  "name": "app-center-detail",
+  "figma": "docs/figma/os-v2/windows/app-center-shopper-detail.png",
+  "app": "portal/screenshots/app-center-detail.png"
+ },
+ {
+  "section": "GurtOS Server: setup",
+  "name": "setup-01-welcome",
+  "figma": "docs/figma/os-v2/setup/01-welcome.png",
+  "app": "portal/screenshots/setup/01-welcome.png"
+ },
+ {
+  "section": "GurtOS Server: setup",
+  "name": "setup-02-network",
+  "figma": "docs/figma/os-v2/setup/02-network.png",
+  "app": "portal/screenshots/setup/02-network.png"
+ },
+ {
+  "section": "GurtOS Server: setup",
+  "name": "setup-03-name-and-time-zone",
+  "figma": "docs/figma/os-v2/setup/03-name-and-time-zone.png",
+  "app": "portal/screenshots/setup/03-name-and-time-zone.png"
+ },
+ {
+  "section": "GurtOS Server: setup",
+  "name": "setup-04-owner",
+  "figma": "docs/figma/os-v2/setup/04-owner.png",
+  "app": "portal/screenshots/setup/04-owner.png"
+ },
+ {
+  "section": "GurtOS Server: setup",
+  "name": "setup-05-ai-models",
+  "figma": "docs/figma/os-v2/setup/05-ai-models.png",
+  "app": "portal/screenshots/setup/05-ai-models.png"
+ },
+ {
+  "section": "GurtOS Server: setup",
+  "name": "setup-06-permissions",
+  "figma": "docs/figma/os-v2/setup/06-permissions.png",
+  "app": "portal/screenshots/setup/06-permissions.png"
+ },
+ {
+  "section": "GurtOS Server: setup",
+  "name": "setup-07-apps",
+  "figma": "docs/figma/os-v2/setup/07-apps.png",
+  "app": "portal/screenshots/setup/07-apps.png"
+ },
+ {
+  "section": "GurtOS Server: setup",
+  "name": "setup-08-keys-for-apps",
+  "figma": "docs/figma/os-v2/setup/08-keys-for-apps.png",
+  "app": "portal/screenshots/setup/08-keys-for-apps.png"
+ },
+ {
+  "section": "GurtOS Server: setup",
+  "name": "setup-09-updates",
+  "figma": "docs/figma/os-v2/setup/09-updates.png",
+  "app": "portal/screenshots/setup/09-updates.png"
+ },
+ {
+  "section": "GurtOS Server: setup",
+  "name": "setup-10-privacy-and-logs",
+  "figma": "docs/figma/os-v2/setup/10-privacy-and-logs.png",
+  "app": "portal/screenshots/setup/10-privacy-and-logs.png"
+ },
+ {
+  "section": "GurtOS Server: setup",
+  "name": "setup-11-appearance",
+  "figma": "docs/figma/os-v2/setup/11-appearance.png",
+  "app": "portal/screenshots/setup/11-appearance.png"
+ },
+ {
+  "section": "GurtOS Server: setup",
+  "name": "setup-12-done",
+  "figma": "docs/figma/os-v2/setup/12-done.png",
+  "app": "portal/screenshots/setup/12-done.png"
+ },
+ {
+  "section": "GurtOS Server: Settings",
+  "name": "settings-01-general",
+  "figma": "docs/figma/os-v2/settings/01-general.png",
+  "app": "portal/screenshots/settings/01-general.png"
+ },
+ {
+  "section": "GurtOS Server: Settings",
+  "name": "settings-02-agents-and-models",
+  "figma": "docs/figma/os-v2/settings/02-agents-and-models.png",
+  "app": "portal/screenshots/settings/02-agents.png"
+ },
+ {
+  "section": "GurtOS Server: Settings",
+  "name": "settings-03-permissions",
+  "figma": "docs/figma/os-v2/settings/03-permissions.png",
+  "app": "portal/screenshots/settings/03-permissions.png"
+ },
+ {
+  "section": "GurtOS Server: Settings",
+  "name": "settings-03-permissions-dark",
+  "figma": "docs/figma/os-v2/settings/03-permissions-dark.png",
+  "app": "portal/screenshots/settings/03-permissions-dark.png"
+ },
+ {
+  "section": "GurtOS Server: Settings",
+  "name": "settings-04-accounts-and-keys",
+  "figma": "docs/figma/os-v2/settings/04-accounts-and-keys.png",
+  "app": "portal/screenshots/settings/04-keys.png"
+ },
+ {
+  "section": "GurtOS Server: Settings",
+  "name": "settings-04-accounts-and-keys-replace-sheet",
+  "figma": "docs/figma/os-v2/settings/04-accounts-and-keys-replace-sheet.png",
+  "app": "portal/screenshots/settings/04-keys-replace-sheet.png"
+ },
+ {
+  "section": "GurtOS Server: Settings",
+  "name": "settings-05-apps",
+  "figma": "docs/figma/os-v2/settings/05-apps.png",
+  "app": "portal/screenshots/settings/05-apps.png"
+ },
+ {
+  "section": "GurtOS Server: Settings",
+  "name": "settings-06-devices",
+  "figma": "docs/figma/os-v2/settings/06-devices.png",
+  "app": "portal/screenshots/settings/06-devices.png"
+ },
+ {
+  "section": "GurtOS Server: Settings",
+  "name": "settings-07-updates",
+  "figma": "docs/figma/os-v2/settings/07-updates.png",
+  "app": "portal/screenshots/settings/07-updates.png"
+ },
+ {
+  "section": "GurtOS Server: Settings",
+  "name": "settings-08-privacy-and-logs",
+  "figma": "docs/figma/os-v2/settings/08-privacy-and-logs.png",
+  "app": "portal/screenshots/settings/08-privacy.png"
+ },
+ {
+  "section": "GurtOS Server: Settings",
+  "name": "settings-09-appearance",
+  "figma": "docs/figma/os-v2/settings/09-appearance.png",
+  "app": "portal/screenshots/settings/09-appearance.png"
+ },
+ {
+  "section": "GurtOS Server: Settings",
+  "name": "settings-10-about",
+  "figma": "docs/figma/os-v2/settings/10-about.png",
+  "app": "portal/screenshots/settings/10-about.png"
+ },
+ {
+  "section": "GurtOS Server: the phone",
+  "name": "phone-home",
+  "figma": "docs/figma/os-v2/phone/1-home.png",
+  "app": "portal/screenshots/phone-home.png"
+ },
+ {
+  "section": "GurtOS Server: the phone",
+  "name": "phone-tasks",
+  "figma": "docs/figma/os-v2/phone/4-tasks.png",
+  "app": "portal/screenshots/phone-tasks.png"
+ },
+ {
+  "section": "GurtOS Server: the phone",
+  "name": "phone-task-detail",
+  "figma": "docs/figma/os-v2/phone/5-task-detail.png",
+  "app": "portal/screenshots/phone-task.png"
+ },
+ {
+  "section": "GurtOS Server: the phone",
+  "name": "phone-setup",
+  "figma": "docs/figma/os-v2/phone/7-setup-step-5.png",
+  "app": "portal/screenshots/setup/phone.png"
+ },
+ {
+  "section": "Track apps",
+  "name": "credit-desk",
+  "figma": "docs/figma/os-v2/tracks/credit-desk.png",
+  "app": "tracks/credit-desk/window.png"
+ },
+ {
+  "section": "Track apps",
+  "name": "elastic",
+  "figma": "docs/figma/os-v2/tracks/elastic-insights.png",
+  "app": "tracks/elastic/screenshots/1-changes.png"
+ },
+ {
+  "section": "GurtOS Personal: the OS",
+  "name": "personal-desktop",
+  "figma": "docs/figma/personal-os/1-desktop-at-rest.png",
+  "app": "personal/screenshots/os/01-desktop.png"
+ },
+ {
+  "section": "GurtOS Personal: the OS",
+  "name": "personal-popover",
+  "figma": "docs/figma/personal-os/2-agents-popover-approval.png",
+  "app": "personal/screenshots/os/03-popover.png"
+ },
+ {
+  "section": "GurtOS Personal: the OS",
+  "name": "personal-quick-settings",
+  "figma": "docs/figma/personal-os/3-quick-settings-agents.png",
+  "app": "personal/screenshots/os/06-agents-tile.png"
+ },
+ {
+  "section": "GurtOS Personal: the OS",
+  "name": "personal-notification",
+  "figma": "docs/figma/personal-os/5-approval-notification.png",
+  "app": "personal/screenshots/os/02-approval.png"
+ },
+ {
+  "section": "GurtOS Personal: the OS",
+  "name": "personal-lock-screen",
+  "figma": "docs/figma/personal-os/6-lock-screen-approval.png",
+  "app": "personal/screenshots/os/07-lock.png"
+ },
+ {
+  "section": "GurtOS Personal: the OS",
+  "name": "personal-search",
+  "figma": "docs/figma/personal-os/7-activities-search.png",
+  "app": "personal/screenshots/os/11-search.png"
+ },
+ {
+  "section": "GurtOS Personal: the OS",
+  "name": "personal-files-emblem",
+  "figma": "docs/figma/personal-os/8b-files-changed-by-an-agent.png",
+  "app": "personal/screenshots/os/13-files-emblem.png"
+ },
+ {
+  "section": "GurtOS Personal: the OS",
+  "name": "personal-settings",
+  "figma": "docs/figma/personal-os/9-gurtos-settings.png",
+  "app": "personal/screenshots/os/09-settings.png"
+ },
+ {
+  "section": "GurtOS Personal: setup and the GNOME layer",
+  "name": "personal-setup-welcome",
+  "figma": "docs/figma/os-v2/personal/setup-1-welcome.png",
+  "app": "personal/screenshots/setup/00-first-login.png"
+ },
+ {
+  "section": "GurtOS Personal: setup and the GNOME layer",
+  "name": "personal-setup-models",
+  "figma": "docs/figma/os-v2/personal/setup-2-ai-models.png",
+  "app": "personal/screenshots/setup/02-models.png"
+ },
+ {
+  "section": "GurtOS Personal: setup and the GNOME layer",
+  "name": "personal-setup-folders",
+  "figma": "docs/figma/os-v2/personal/setup-3-folders.png",
+  "app": "personal/screenshots/setup/03-folders.png"
+ },
+ {
+  "section": "GurtOS Personal: setup and the GNOME layer",
+  "name": "personal-setup-permissions",
+  "figma": "docs/figma/os-v2/personal/setup-4-permissions.png",
+  "app": "personal/screenshots/setup/04-permissions.png"
+ },
+ {
+  "section": "GurtOS Personal: setup and the GNOME layer",
+  "name": "personal-setup-apps",
+  "figma": "docs/figma/os-v2/personal/setup-5-apps.png",
+  "app": "personal/screenshots/setup/05-apps.png"
+ },
+ {
+  "section": "GurtOS Personal: setup and the GNOME layer",
+  "name": "personal-setup-phone",
+  "figma": "docs/figma/os-v2/personal/setup-6-pair-a-phone.png",
+  "app": "personal/screenshots/setup/06-phone.png"
+ },
+ {
+  "section": "GurtOS Personal: setup and the GNOME layer",
+  "name": "personal-setup-done",
+  "figma": "docs/figma/os-v2/personal/setup-7-done.png",
+  "app": "personal/screenshots/setup/07-done.png"
+ },
+ {
+  "section": "GurtOS Personal: setup and the GNOME layer",
+  "name": "personal-ask",
+  "figma": "docs/figma/os-v2/personal/ask-an-agent-dialog.png",
+  "app": "personal/screenshots/setup/11-ask.png"
+ },
+ {
+  "section": "GurtOS Personal: setup and the GNOME layer",
+  "name": "personal-approval",
+  "figma": "docs/figma/os-v2/personal/approval-notification.png",
+  "app": "personal/screenshots/setup/12-approval.png"
+ },
+ {
+  "section": "GurtOS Personal: setup and the GNOME layer",
+  "name": "personal-indicator",
+  "figma": "docs/figma/os-v2/personal/indicator-menu.png",
+  "app": "personal/screenshots/setup/13-indicator.png"
+ },
+ {
+  "section": "GurtOS Personal: setup and the GNOME layer",
+  "name": "personal-review",
+  "figma": "docs/figma/os-v2/personal/review-keep-or-undo.png",
+  "app": "personal/screenshots/setup/14-review.png"
+ },
+ {
+  "section": "GurtOS Business",
+  "name": "business-1a-people",
+  "figma": "docs/figma/business/1a-people.png",
+  "app": "portal/screenshots/business/1a-people.png"
+ },
+ {
+  "section": "GurtOS Business",
+  "name": "business-1b-add-a-person",
+  "figma": "docs/figma/business/1b-add-a-person.png",
+  "app": "portal/screenshots/business/1b-add-a-person.png"
+ },
+ {
+  "section": "GurtOS Business",
+  "name": "business-2-rules",
+  "figma": "docs/figma/business/2-rules.png",
+  "app": "portal/screenshots/business/2-rules.png"
+ },
+ {
+  "section": "GurtOS Business",
+  "name": "business-4-audit",
+  "figma": "docs/figma/business/4-audit.png",
+  "app": "portal/screenshots/business/4-audit.png"
+ },
+ {
+  "section": "GurtOS Business",
+  "name": "business-5a-kill-switch-box",
+  "figma": "docs/figma/business/5a-kill-switch-box.png",
+  "app": "portal/screenshots/business/5a-kill-switch-box.png"
+ },
+ {
+  "section": "GurtOS Business",
+  "name": "business-5c-all-agents-paused",
+  "figma": "docs/figma/business/5c-all-agents-paused.png",
+  "app": "portal/screenshots/business/5c-all-agents-paused.png"
+ },
+ {
+  "section": "The phone app",
+  "name": "phone-app-1a-switch-machine",
+  "figma": "docs/figma/phone-app/1a-switch-machine.png",
+  "app": "portal/screenshots/phone-app/1a-switch-machine.png"
+ },
+ {
+  "section": "The phone app",
+  "name": "phone-app-1b-add-a-machine",
+  "figma": "docs/figma/phone-app/1b-add-a-machine.png",
+  "app": "portal/screenshots/phone-app/1b-add-a-machine.png"
+ },
+ {
+  "section": "The phone app",
+  "name": "phone-app-2a-home-server",
+  "figma": "docs/figma/phone-app/2a-home-server.png",
+  "app": "portal/screenshots/phone-app/2a-home-server.png"
+ },
+ {
+  "section": "The phone app",
+  "name": "phone-app-2b-home-personal",
+  "figma": "docs/figma/phone-app/2b-home-personal.png",
+  "app": "portal/screenshots/phone-app/2b-home-personal.png"
+ },
+ {
+  "section": "The phone app",
+  "name": "phone-app-2c-home-business-rosa",
+  "figma": "docs/figma/phone-app/2c-home-business-rosa.png",
+  "app": "portal/screenshots/phone-app/2c-home-business-rosa.png"
+ },
+ {
+  "section": "The phone app",
+  "name": "phone-app-3b-approval-from-notification",
+  "figma": "docs/figma/phone-app/3b-approval-from-notification.png",
+  "app": "portal/screenshots/phone-app/3b-approval-from-notification.png"
+ },
+ {
+  "section": "The phone app",
+  "name": "phone-app-4b-install-safari",
+  "figma": "docs/figma/phone-app/4b-install-safari.png",
+  "app": "portal/screenshots/phone-app/4b-install-safari.png"
+ },
+ {
+  "section": "The phone app",
+  "name": "phone-app-4d-install-allow-notifications",
+  "figma": "docs/figma/phone-app/4d-install-allow-notifications.png",
+  "app": "portal/screenshots/phone-app/4d-install-allow-notifications.png"
+ },
+ {
+  "section": "The phone app",
+  "name": "phone-app-4e-install-pair",
+  "figma": "docs/figma/phone-app/4e-install-pair.png",
+  "app": "portal/screenshots/phone-app/4e-install-pair.png"
+ }
+]
