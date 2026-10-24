@@ -1,0 +1,21 @@
+# Caddy on the relay, for the relay's own API only (https://@DOMAIN@). It never sees a box's traffic.
+# frps hands it connections through the local frpc with a PROXY header, so the API learns the caller's address.
+{
+	admin off
+	http_port 8080
+	https_port 8443
+	default_bind 127.0.0.1
+	servers {
+		listener_wrappers {
+			proxy_protocol {
+				allow 127.0.0.1/32
+			}
+			tls
+		}
+	}
+}
+
+@DOMAIN@ {
+	header Strict-Transport-Security "max-age=31536000"
+	reverse_proxy 127.0.0.1:7401
+}

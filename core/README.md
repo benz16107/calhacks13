@@ -107,7 +107,6 @@ Make `tracks/<name>/track.ts` and default-export a `Track` with any of these slo
 | `routes` | `'POST /hook': (req, box) => Response`, served at `/t/<name>/hook` on the box's API. Webhooks go here. |
 | `secrets` | Vault keys this track's routes and triggers may read with `box.secret(name)`. Tools and jobs declare their own. |
 | `optionalSecrets` | Keys among the app's declared secrets it can run without (it falls back to test mode). A new box turns the app on when only these are missing; the App Center marks them `optional: true`. |
-| `x-box-caller` | Not a slot: a header on the Request every route gets, set by the box (a copy the caller sends is replaced): `screen` (the box's own screen), `owner` (a phone paired as the owner), `device:<id>` (another paired phone), `service` (a helper on the box) or `none` (an open route reached through a proxy with no token). |
 | `openRoutes` | Route keys (like `'GET /status'`) that need no paired-phone token, even for a request that arrives through a public proxy. For a route that is public on purpose, or checks its own secret (the Jira panel's routes). Every other route needs a phone. An open route must return nothing private unless its own check passes. |
 
 Rules:
@@ -301,6 +300,7 @@ answers without `/api`, which is what the demo and tracks use.
 | `POST /api/pair/start` | Mint a one-time pairing code for the box screen's QR: `{code, url, expiresAt, box}` (localhost) |
 | `POST /api/pair {code, name}` | A phone redeems the code for its own device token: `{token, box:{id,name}, device}`. One-time. |
 | `GET /api/devices`, `DELETE /api/devices/<id>` | List paired phones; revoke one |
+| `DELETE /api/pair/self` | A paired device revokes itself (the app's Forget): its token and push subscription stop working |
 | `/t/<track>/...` | Track routes |
 
 What a screen needs, and where it comes from:
@@ -374,8 +374,44 @@ DbConnection.builder()
 
 Column names are camelCase in the TypeScript client and snake_case in SQL (`cost_cents`).
 
-Reaching the box from a phone is not set up yet: the API listens on `127.0.0.1:7700` and SpacetimeDB on port
-3000 of every interface of the box. Tailscale or a port forward comes with the portal.
+## Remote access and push notifications
+
+**Reach this box from anywhere** (opt in, owner only) gives the box its own address, `https://<name>.box.gurtos.com`,
+through the GurtOS relay (`relay/README.md`). The box opens an outbound tunnel (frpc), so nothing is forwarded at
+home, and gets its own Let's Encrypt certificate (Caddy on 127.0.0.1). TLS ends on the box: the relay passes the
+encrypted bytes by name and cannot read them. Requests through it carry `X-Forwarded-For`, so they need a paired
+device's token like any other off-box request. Code: `core/remote.ts`. State: `BOX_HOME/remote.json`,
+`BOX_HOME/remote/`, and the box's relay secret in the vault as `BOX_RELAY_SECRET`.
+
+| Request | Does |
+|---|---|
+| `GET /api/remote` | `{enabled, name, url, state: off, starting, connected or error, error?, relay}`. Checks the address again at most every 30 s. |
+| `GET /api/remote/name/<name>` | Owner. Asks the relay: `{name, available, reason?}` |
+| `POST /api/remote {name}` | Owner. Enrolls the name, starts the tunnel and TLS, returns `state: starting`; poll until `connected` (5 to 60 s for a new certificate). Names: lowercase letters, digits and hyphens, 3 to 30 characters, some reserved. |
+| `DELETE /api/remote` | Owner. Stops both, releases the name at the relay (`released`), removes the secret. The certificate is kept for next time. |
+
+While it is on, `POST /api/pair/start` returns `url: https://app.gurtos.com/pair?box=<name>.box.gurtos.com#<code>` (the
+GurtOS app adds the box to its machines) and `boxUrl`, the box's own `https://.../pair#<code>`; `GET /api/boxes`
+reports the https address. The API allows CORS from `https://app.gurtos.com` (always) and `BOX_ORIGINS`.
+
+**Push notifications** reach the GurtOS app on a phone. The app subscribes once with the relay gateway's VAPID key
+and gives each box the subscription plus a 32-byte key it made for that box. On `approval.asked`, the box pushes to
+the phones that should answer: on Business, the people in `approval.route.people` (never `askedBy`); on Server and
+Personal, phones paired as the owner. Settings `quietHours` hold pushes back (the request still waits in the inbox).
+Pushes need remote access on: they go through the relay's gateway, authenticated with the box's secret. The box
+encrypts each one for the phone (RFC 8291), so the gateway forwards bytes it cannot read. Code: `core/push.ts`.
+
+| Request | Does |
+|---|---|
+| `GET /api/push` | `{subscribed, remote}` for the calling device |
+| `PUT /api/push {subscription, key}` | A paired device only (the box's own screen gets `403`). `subscription` is `pushManager.subscribe().toJSON()`; `key` is 32 random bytes, base64url, for this box. |
+| `DELETE /api/push` | Turn notifications off for this device |
+| `POST /api/push/test` | Send this device a test push: `{sent: 1}`, or `409` when remote access or notifications are off |
+
+The decrypted push is JSON: `{v: 1, type: 'approval' or 'test', machine: <box id>, box: <box name>, url: <box https
+origin>, id, task, source, title, body, costCents, mac}` (`source` is the task's, like `shopper:...`). `mac` is base64url HMAC-SHA256 with the device's key for this box
+over the JSON of every other field, keys sorted. The app checks it before it shows a push as this box's or acts on
+Approve or Deny.
 
 ## Running it
 

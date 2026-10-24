@@ -1019,6 +1019,10 @@ for (const name of fs.existsSync(tracks) ? fs.readdirSync(tracks).sort() : []) {
 const portalDemo = new URL('../portal/demo.ts', import.meta.url).pathname;
 if (fs.existsSync(portalDemo)) await moment('portal', async () => (await import(portalDemo)).default(kit));
 
+// Remote access and push: the relay protocol and push payloads (relay/demo.ts). DEMO_LIVE=remote uses the real relay.
+const relayDemo = new URL('../relay/demo.ts', import.meta.url).pathname;
+if (fs.existsSync(relayDemo)) await moment('remote access and push', async () => (await import(relayDemo)).default(kit));
+
 // The Personal desktop layer's own demo step, if there is one (it only needs python3).
 const personalDemo = new URL('../personal/demo.ts', import.meta.url).pathname;
 if (fs.existsSync(personalDemo)) await moment('personal desktop layer', async () => (await import(personalDemo)).default(kit));

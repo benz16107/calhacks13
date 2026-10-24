@@ -1,0 +1,27 @@
+# The relay's own frpc: it publishes the relay's API at @DOMAIN@ through frps, the same way a box publishes
+# itself. Filled in by relay/deploy; the secret is the relay's own (self.secret), never a box's.
+serverAddr = "127.0.0.1"
+serverPort = 7000
+user = "relay"
+metadatas.secret = "@SECRET@"
+loginFailExit = false
+transport.tls.enable = true
+transport.tls.trustedCaFile = "{{ .Envs.CREDENTIALS_DIRECTORY }}/tunnel-ca.pem"
+transport.tls.serverName = "@DOMAIN@"
+transport.heartbeatInterval = 30
+log.to = "console"
+
+[[proxies]]
+name = "api"
+type = "https"
+customDomains = ["@DOMAIN@"]
+localIP = "127.0.0.1"
+localPort = 8443
+transport.proxyProtocolVersion = "v2"
+
+[[proxies]]
+name = "api-http"
+type = "http"
+customDomains = ["@DOMAIN@"]
+localIP = "127.0.0.1"
+localPort = 8080

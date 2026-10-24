@@ -40,3 +40,12 @@ export function writeVaultKey(name: string, value: string): void {
   fs.writeFileSync(tmp, out.join('\n') + '\n', { mode: 0o600 });
   fs.renameSync(tmp, file);
 }
+
+/** Remove one key from the vault file, atomically. Nothing happens if it is not there. */
+export function removeVaultKey(name: string): void {
+  if (!VAULT_NAME.test(name) || !fs.existsSync(file)) return;
+  const lines = fs.readFileSync(file, 'utf8').split('\n').filter((l) => l.match(/^\s*([A-Z0-9_]+)\s*=/)?.[1] !== name);
+  const tmp = `${file}.${process.pid}.tmp`;
+  fs.writeFileSync(tmp, lines.join('\n'), { mode: 0o600 });
+  fs.renameSync(tmp, file);
+}

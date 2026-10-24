@@ -1,0 +1,23 @@
+# frps on the relay. @DOMAIN@ is filled in by relay/deploy.
+# Port 443: HTTPS for every box, routed by the name in the TLS hello (SNI) and passed through still encrypted.
+# Port 80: plain HTTP by Host, so each box answers its own certificate's HTTP-01 challenge and redirects.
+# Port 7000: boxes' tunnels, TLS with a certificate the boxes pin. Every login and route is checked by the
+# relay's plugin (relay/server.ts) against that box's secret.
+bindAddr = "0.0.0.0"
+bindPort = 7000
+vhostHTTPPort = 80
+vhostHTTPSPort = 443
+detailedErrorsToClient = false
+transport.tls.force = true
+transport.tls.certFile = "{{ .Envs.CREDENTIALS_DIRECTORY }}/tunnel.pem"
+transport.tls.keyFile = "{{ .Envs.CREDENTIALS_DIRECTORY }}/tunnel.key"
+transport.maxPoolCount = 5
+transport.heartbeatTimeout = 90
+log.to = "console"
+log.level = "info"
+
+[[httpPlugins]]
+name = "gurtos"
+addr = "127.0.0.1:7400"
+path = "/frp"
+ops = ["Login", "NewProxy", "Ping"]

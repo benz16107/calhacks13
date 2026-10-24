@@ -1,22 +1,11 @@
 ---
 title: What is GurtOS?
-description: GurtOS is a suite for running AI agents safely, built around an operating system where each task runs as its own user, in its own copy of your files, without your keys.
+description: GurtOS is an operating system where AI agents do real work as separate users, in copies of your files, with no keys, limited network access and an undo.
 ---
 
-GurtOS is a suite for running AI agents safely. At its center is an operating system for a computer whose main users
-are AI agents. You give it tasks in plain words. An agent does each task, and GurtOS decides what that agent can
-touch, what it can reach, and what it must ask you about first. Everything that happens goes into one log, and you
-can undo any single task.
-
-## The suite
-
-| Part | What it is | Status |
-|---|---|---|
-| **The OS, in three editions** | [GurtOS Server](/get-started/install-server/) for an always-on box, [GurtOS Personal](/get-started/install-personal/) for your own computer, and GurtOS Business for a company's agents. See [Editions](/introduction/editions/). | Server and Personal: Preview. Business: Planned |
-| **The portal and phone app** | One web app on the box's own screen, in a browser and on your phone. A phone can install it to its home screen. It shows tasks, their steps and diffs, and the requests waiting for you. | Preview |
-| **Remote access** | Reach your box from your phone when you are away from its network, through a GurtOS relay. | In development |
-| **An app platform** | Apps add tools, triggers, windows and log readers through a small [app SDK](/reference/app-sdk/). Jira, Elastic, Stripe test mode, x402 payments, ASI:One, Apify and Moss are connected this way. See [Apps](/reference/apps/). | Preview |
-| **Docs and open source** | These docs, and the [source code](https://github.com/benz16107/calhacks13) under the Apache License 2.0. | Public |
+GurtOS is an operating system for a computer whose main users are AI agents. You give it tasks in plain words.
+An agent does each task, and GurtOS decides what that agent can touch, what it can reach, and what it must ask
+you about first. Everything that happens goes into one log, and you can undo any single task.
 
 ## GurtOS and "the box"
 
@@ -27,43 +16,24 @@ Darwin. You will see the internal name in commands and paths: the `box.service` 
 The name comes from the German word *Gurt*, a belt or strap. A *Sicherheitsgurt* is a seatbelt. That is the idea:
 agents get real access, with a seatbelt on.
 
-## Why a new OS for agents
+## The problem
 
-Today's operating systems were built for one person at a keyboard. Agents need real access to do real work, and
-handing it to them through an OS designed for a person leaves gaps:
+Agents are useful when they can act: edit files, read the web, call APIs, buy what a job needs.
+To let them act today, you usually hand them your machine and your keys.
 
-- **Permissions are per user, not per task.** An agent in your terminal runs as you. It can read everything you can
-  read, including your SSH keys, browser data and every `.env` file in your home folder, and so can every other
-  agent you run.
-- **Secrets sit where any process can read them.** API keys live in environment variables and files. Anything
-  running as that user can take them: the agent after it reads a page with hidden instructions, a malicious plugin,
-  or ordinary malware. See [why keys never reach an agent](/security/model/#why-keys-never-reach-an-agent).
-- **The network is all or nothing.** A program can usually reach any host. Nothing says "this job may talk to this
-  one site and nothing else".
-- **No approval, budget or spending limit.** An API key in an agent's environment has no budget. A loop or a wrong
-  guess can spend real money before anyone notices.
-- **No trustworthy record.** When something goes wrong overnight, you rebuild what happened from scattered terminal
-  output, if it still exists.
-- **No rollback of an agent's work.** When two agents and you all edit the same folder, there is no clean way to
-  take back one agent's changes without losing the rest.
-
-Organisations have more gaps on top: no separation of duties between agents, no approvals routed to the person who
-owns a decision, and no audit across many machines.
+- **They run as you.** An agent in your terminal can read everything you can read, including your SSH keys,
+  browser data and every `.env` file in your home folder.
+- **They read untrusted text.** A web page, an email or a document can hold instructions written for the agent.
+  If the agent follows them, it can send your secrets somewhere else.
+- **Their changes mix with yours.** When two agents and you all edit the same folder, there is no clean way to
+  take back one agent's work without losing the rest.
+- **They spend without asking.** An API key in an agent's environment has no budget. A loop or a wrong guess
+  can spend real money before anyone notices.
+- **Nobody keeps the record.** When something goes wrong overnight, you rebuild what happened from scattered
+  terminal output, if it still exists.
 
 Running agents in a container or a virtual machine helps with the first point. It does not give you an undo per
 task, a budget, an approval on your phone, or a single record of what every agent did.
-
-GurtOS closes these gaps in the operating system itself:
-
-- **It is lightweight.** GurtOS Server is built from about 40 named Ubuntu 24.04 packages, with no desktop and no
-  package manager. Each task is a Linux user and a systemd unit, not a virtual machine.
-- **Security is built in.** Separate users, a vault, a per-task network allow-list, budgets and approvals are part of
-  the OS, not add-ons. See the [security model](/security/model/).
-- **Its filesystem is made for agents.** Each task gets an instant copy-on-write copy of its workspace, built from
-  overlay layers. Agents work in parallel on the same files without colliding. Nothing is copied up front: only the
-  files a task changes are written, to its own layer. Undo removes exactly that layer. (On GurtOS Personal, a task
-  on one of your own folders currently starts from a snapshot copy of that folder.)
-  See [Workspaces and layers](/concepts/workspaces-and-layers/).
 
 ## What GurtOS does about it
 

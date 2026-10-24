@@ -2,10 +2,10 @@
 order: 8
 sponsor: Coinbase
 prize: 'x402 Payment Agents'
-editions: 'GurtOS Server, and GurtOS Business'
-pitch: 'GurtOS is the environment that makes an agent wallet safe: the key never reaches the agent, each task has a budget on top of the x402 client''s own payment policy, anything over it waits for your tap on the phone, and every payment is on the record. It all runs on top of the OS, on an always-on box you own, and because GurtOS is open source (Apache-2.0), anyone can run it, customise it and reuse the wallet in their own agents.'
+editions: 'GurtOS Server'
+pitch: 'An agent wallet belongs on an always-on box you control. The key stays in the root-only vault, tasks pay per call within a budget, and anything over it waits for your phone.'
 title: Agents pay for APIs with x402, and the key never leaves the vault
-summary: 'Giving an agent money today means handing it your card or a private key, on a heavy system or a cloud with no layer built for this: no separation, no safe key handling, no record and no undo. GurtOS is that layer. Agents on a GurtOS box pay for HTTP APIs that answer 402 Payment Required, with Coinbase''s x402 SDK and the CDP facilitator. The box holds the wallet; a task only ever sees results. A payment within the task''s budget goes through, one above it pauses the task until you approve on the portal or your phone, and every payment lands in the action log with its amount, payee, task and Solana transaction. All of it is USDC on Solana devnet: test money.'
+summary: 'Agents on a GurtOS box pay for HTTP APIs that answer 402 Payment Required, with Coinbase''s x402 SDK and the CDP facilitator. The box holds the wallet; a task only ever sees results. A payment within the task''s budget goes through, one above it pauses the task until you approve on the portal or your phone, and every payment lands in the action log with its amount, payee, task and Solana transaction. All of it is USDC on Solana devnet: test money.'
 proof: 'A real agent (Droid with Claude) was told only "buy one joke and one report". It quoted both, paid $0.01, waited for the OK on the $0.03 report, then paid it. Both payments settled through Coinbase''s CDP facilitator and are confirmed on Solana devnet, and neither the wallet key nor the CDP secret appears anywhere in the task''s log.'
 criteriaSource: "Coinbase's x402 track rules, as copied into the project's track plan. Primary track: Payment Agents."
 criteria:
@@ -91,24 +91,6 @@ status:
     state: not-built
     note: 'They need a CDP wallet secret, which the box does not have. The box holds the wallet key itself, in its vault.'
 ---
-
-## Why GurtOS, and what each part is for
-
-**The wallet runs on top of the OS.** Everything that makes it safe to give an agent money comes from GurtOS: separate
-users, the root-only vault, the broker, budgets, approvals and the log. The wallet app adds x402 and the Solana
-signing. A GurtOS Server box needs 4 GB of memory and 17 GB of disk on any x86_64 or arm64 machine, no GPU, so it can
-be a spare computer you own. GurtOS is open source under Apache-2.0, so anyone can run it, customise it, and reuse the wallet in their own agents.
-
-| Feature | Why it is there | Coinbase criterion | From | Today |
-|---|---|---|---|---|
-| The key never reaches the agent: it lives in the root-only vault, and only `wallet.pay` in the core reads it | A prompt injection or a bad model cannot leak or spend a key it never had | Technical design | GurtOS (vault and broker) | Shipped. The merge gate checks neither the wallet key nor the CDP secret is anywhere in the log |
-| Per-task budget on top of the x402 client's own payment policy (exact price, devnet USDC only, $1 cap per payment) | Two independent limits on what an agent can spend | Technical design, usefulness | GurtOS (budget) and Coinbase's x402 SDK (policy) | Shipped |
-| Over budget, the task pauses until you approve on the portal or phone; denied means nothing is paid | You stay the one who decides on money | Usefulness | GurtOS (the approval pause) | Shipped |
-| Every payment in the append-only log with amount, payee, task and transaction | A record you can audit, matched to the chain | Technical design | GurtOS (the log) and the app (the receipt) | Shipped |
-| Settlement through Coinbase's CDP facilitator, which pays the network fee | The wallet needs no SOL, and Coinbase verifies each payment | Usefulness | The wallet app, on Coinbase CDP | Shipped |
-| An installable skill (`skill/x402-wallet/SKILL.md`) and two box tools any agent can call | Any agent on any box can pay without new code | Ease of reuse | The wallet app | Shipped |
-| Open source, Apache-2.0 | Anyone can run GurtOS, customise it, and reuse the wallet | Ease of reuse | GurtOS | Shipped |
-| The box earning over x402 and listed in the Bazaar, agents shopping for APIs, CDP Server Wallets with Coinbase policies, metered "upto" payments, one-command reuse, Onramp top-up, a tamper-evident Solana log fingerprint | Next steps for each criterion; this page adds each one with its reason when it ships | All four | The wallet app | Being built; not on main yet |
 
 ## Summary
 

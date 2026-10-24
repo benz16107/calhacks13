@@ -1,0 +1,156 @@
+#!/usr/bin/env bash
+# Install or update the relay on an Ubuntu 24.04 machine with a public address, over ssh as root.
+#   relay/deploy [ssh-host]      (default: relaybox, an ssh config name; keep real hosts out of the repo)
+# Safe to run again: keys, names and certificates already there are kept.
+# DNS must already point <domain> and *.<domain> at the machine (RELAY_DOMAIN, default box.gurtos.com).
+set -euo pipefail
+cd "$(dirname "$0")"
+HOST=${1:-relaybox}
+DOMAIN=${RELAY_DOMAIN:-box.gurtos.com}
+
+ssh "$HOST" 'mkdir -p /opt/gurtos-relay'
+rsync -a --delete --chown=root:root --chmod=D755,F644 --exclude '*.test.ts' --exclude demo.ts ./ "$HOST:/opt/gurtos-relay/"
+
+ssh "$HOST" DOMAIN="$DOMAIN" bash -s <<'REMOTE'
+set -euo pipefail
+FRP=0.71.1 CADDY=2.11.7 NODE_MAJOR=24
+arch=$(dpkg --print-architecture) # amd64 or arm64
+declare -A FRP_SHA=([amd64]=1d9875210972a5d1a62b2dc4c48df45ab0af05d3ca1b5e494a014428259df803 [arm64]=8edf590b0c396fa42f9c147121a76af83cfc2002b08f5aef0ea1008c43482019)
+declare -A CADDY_SHA=([amd64]=727b91701a392de6ebc5027509f548bf39979e5216340d0faed8fa5e69c84f8b [arm64]=d8fc6d179a5d283028a472a5618564f6ad8a86fed513e64f032b3b0b7cc45e42)
+tmp=$(mktemp -d); trap 'rm -rf "$tmp"' EXIT
+fetch() { curl -fsSL "$1" -o "$tmp/f" && echo "$2  $tmp/f" | sha256sum -c --quiet - && echo "$tmp/f"; }
+
+if ! /usr/local/bin/frps --version 2>/dev/null | grep -qx "$FRP"; then
+  f=$(fetch "https://github.com/fatedier/frp/releases/download/v$FRP/frp_${FRP}_linux_$arch.tar.gz" "${FRP_SHA[$arch]}")
+  tar -xzf "$f" -C "$tmp" && install -m 755 "$tmp/frp_${FRP}_linux_$arch/frps" "$tmp/frp_${FRP}_linux_$arch/frpc" /usr/local/bin/
+fi
+if ! /usr/local/bin/caddy version 2>/dev/null | grep -q "^v$CADDY "; then
+  f=$(fetch "https://github.com/caddyserver/caddy/releases/download/v$CADDY/caddy_${CADDY}_linux_$arch.tar.gz" "${CADDY_SHA[$arch]}")
+  tar -xzf "$f" -C "$tmp" caddy && install -m 755 "$tmp/caddy" /usr/local/bin/caddy
+fi
+if ! /usr/local/bin/node --version 2>/dev/null | grep -q "^v$NODE_MAJOR\."; then
+  base=https://nodejs.org/dist/latest-v$NODE_MAJOR.x; a=$([ "$arch" = amd64 ] && echo x64 || echo arm64)
+  file=$(curl -fsSL "$base/SHASUMS256.txt" | grep -o "node-v[0-9.]*-linux-$a.tar.xz" | head -1)
+  curl -fsSL "$base/$file" -o "$tmp/$file" && (cd "$tmp" && curl -fsSL "$base/SHASUMS256.txt" | grep " $file\$" | sha256sum -c --quiet -)
+  tar -xJf "$tmp/$file" -C /usr/local --strip-components=1 --exclude CHANGELOG.md --exclude README.md --exclude LICENSE
+fi
+
+id gurtos-relay >/dev/null 2>&1 || useradd --system --home /var/lib/gurtos-relay --shell /usr/sbin/nologin gurtos-relay
+install -d -m 700 -o gurtos-relay -g gurtos-relay /var/lib/gurtos-relay
+install -d -m 700 /etc/gurtos-relay
+
+# The tunnel port's certificate, from a CA made here. Boxes fetch the CA over HTTPS (Let's Encrypt) and pin it.
+# The CA's key is deleted once it has signed, so nothing here can sign another.
+if [ ! -f /etc/gurtos-relay/tunnel.pem ]; then
+  cd /etc/gurtos-relay
+  openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:prime256v1 -nodes -keyout ca.key -out tunnel-ca.pem -days 3650 -subj "/CN=GurtOS relay tunnel CA" 2>/dev/null
+  openssl req -newkey ec -pkeyopt ec_paramgen_curve:prime256v1 -nodes -keyout tunnel.key -out tunnel.csr -subj "/CN=$DOMAIN" 2>/dev/null
+  printf 'subjectAltName=DNS:%s\nbasicConstraints=critical,CA:FALSE\nkeyUsage=critical,digitalSignature\nextendedKeyUsage=serverAuth\n' "$DOMAIN" > ext.cnf
+  openssl x509 -req -in tunnel.csr -CA tunnel-ca.pem -CAkey ca.key -CAcreateserial -out tunnel.pem -days 3650 -extfile ext.cnf 2>/dev/null
+  shred -u ca.key; rm -f tunnel.csr ext.cnf tunnel-ca.srl
+  chmod 600 tunnel.key
+  cd - >/dev/null
+fi
+install -m 644 -o gurtos-relay /etc/gurtos-relay/tunnel-ca.pem /var/lib/gurtos-relay/tunnel-ca.pem
+
+# The relay's own API runs as its own user, and makes its secret for the local frpc on first start.
+cat > /etc/systemd/system/gurtos-relay.service <<UNIT
+[Unit]
+Description=GurtOS relay: names, the frps plugin and the push gateway
+After=network-online.target
+[Service]
+User=gurtos-relay
+Environment=RELAY_DOMAIN=$DOMAIN
+ExecStart=/usr/local/bin/node --experimental-strip-types --disable-warning=ExperimentalWarning /opt/gurtos-relay/server.ts
+Restart=always
+RestartSec=1
+NoNewPrivileges=yes
+ProtectSystem=strict
+ReadWritePaths=/var/lib/gurtos-relay
+ProtectHome=yes
+PrivateTmp=yes
+CapabilityBoundingSet=
+[Install]
+WantedBy=multi-user.target
+UNIT
+systemctl daemon-reload
+systemctl enable --now gurtos-relay.service
+for i in $(seq 20); do [ -f /var/lib/gurtos-relay/self.secret ] && break; sleep 0.5; done
+systemctl restart gurtos-relay.service
+
+sed "s/@DOMAIN@/$DOMAIN/g" /opt/gurtos-relay/frps.toml > /etc/gurtos-relay/frps.toml
+sed -e "s/@DOMAIN@/$DOMAIN/g" -e "s|@SECRET@|$(cat /var/lib/gurtos-relay/self.secret)|" /opt/gurtos-relay/frpc-self.toml > /etc/gurtos-relay/frpc-self.toml
+sed "s/@DOMAIN@/$DOMAIN/g" /opt/gurtos-relay/Caddyfile > /etc/gurtos-relay/Caddyfile
+chmod 600 /etc/gurtos-relay/frpc-self.toml
+
+# frps holds the public ports. It routes HTTPS by the name the browser asks for and never decrypts it.
+cat > /etc/systemd/system/gurtos-frps.service <<'UNIT'
+[Unit]
+Description=GurtOS relay: frps, the tunnel server (TLS passthrough by SNI)
+After=network-online.target gurtos-relay.service
+Wants=gurtos-relay.service
+[Service]
+DynamicUser=yes
+LoadCredential=frps.toml:/etc/gurtos-relay/frps.toml
+LoadCredential=tunnel.pem:/etc/gurtos-relay/tunnel.pem
+LoadCredential=tunnel.key:/etc/gurtos-relay/tunnel.key
+ExecStart=/usr/local/bin/frps -c ${CREDENTIALS_DIRECTORY}/frps.toml
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+Restart=always
+RestartSec=1
+LimitNOFILE=65536
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+[Install]
+WantedBy=multi-user.target
+UNIT
+# Caddy serves only the relay's own API, on loopback, behind frps like any box.
+cat > /etc/systemd/system/gurtos-relay-caddy.service <<'UNIT'
+[Unit]
+Description=GurtOS relay: Caddy for the relay's own API (box.gurtos.com)
+After=network-online.target
+[Service]
+DynamicUser=yes
+StateDirectory=gurtos-relay-caddy
+Environment=XDG_DATA_HOME=/var/lib/gurtos-relay-caddy XDG_CONFIG_HOME=/var/lib/gurtos-relay-caddy
+LoadCredential=Caddyfile:/etc/gurtos-relay/Caddyfile
+ExecStart=/usr/local/bin/caddy run --adapter caddyfile --config ${CREDENTIALS_DIRECTORY}/Caddyfile
+Restart=always
+RestartSec=2
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+[Install]
+WantedBy=multi-user.target
+UNIT
+cat > /etc/systemd/system/gurtos-relay-frpc.service <<'UNIT'
+[Unit]
+Description=GurtOS relay: publishes the relay's own API through frps
+After=gurtos-frps.service gurtos-relay-caddy.service
+Wants=gurtos-frps.service
+[Service]
+DynamicUser=yes
+LoadCredential=frpc.toml:/etc/gurtos-relay/frpc-self.toml
+LoadCredential=tunnel-ca.pem:/etc/gurtos-relay/tunnel-ca.pem
+ExecStart=/usr/local/bin/frpc -c ${CREDENTIALS_DIRECTORY}/frpc.toml
+Restart=always
+RestartSec=2
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+[Install]
+WantedBy=multi-user.target
+UNIT
+systemctl daemon-reload
+systemctl enable gurtos-frps gurtos-relay-caddy gurtos-relay-frpc >/dev/null 2>&1
+systemctl restart gurtos-frps gurtos-relay-caddy gurtos-relay-frpc
+
+ufw allow 80/tcp >/dev/null; ufw allow 443/tcp >/dev/null; ufw allow 7000/tcp >/dev/null
+sleep 3
+systemctl is-active gurtos-relay gurtos-frps gurtos-relay-caddy gurtos-relay-frpc
+REMOTE

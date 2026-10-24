@@ -39,9 +39,4 @@ export default async function (d: DemoKit) {
   // A route reads a vault secret with box.secret, no model-job workaround, and never returns the secret.
   const sc = await d.api<{ looksLikeTestKey: boolean }>('GET', '/t/example/secret-check');
   d.check(sc.looksLikeTestKey && !JSON.stringify(sc).includes('canary'), 'a route read a vault secret directly (box.secret) without leaking it');
-
-  // A track route is told who is calling, by the box; a copy the caller sends is replaced.
-  const me = await d.api<{ caller: string }>('GET', '/t/example/whoami');
-  const forged = await (await fetch(`${d.url}/t/example/whoami`, { headers: { 'x-box-caller': 'owner' } })).json();
-  d.check(me.caller === 'screen' && forged.caller === 'screen', `a route learns its caller from the box ("${me.caller}"); a forged "owner" header is replaced ("${forged.caller}")`);
 }

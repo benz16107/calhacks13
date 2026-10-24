@@ -43,6 +43,28 @@ node -v
 
 [ "${BOX_NO_DROID:-}" = 1 ] || install_droid
 
+# Remote access (opt in, core/remote.ts): frpc for the tunnel to the GurtOS relay, Caddy for the box's own
+# certificate. Pinned release binaries, checked against their sha256.
+FRP=0.71.1 CADDY=2.11.7
+case $(uname -m) in
+  aarch64) a=arm64 frp_sha=8edf590b0c396fa42f9c147121a76af83cfc2002b08f5aef0ea1008c43482019 caddy_sha=d8fc6d179a5d283028a472a5618564f6ad8a86fed513e64f032b3b0b7cc45e42;;
+  *) a=amd64 frp_sha=1d9875210972a5d1a62b2dc4c48df45ab0af05d3ca1b5e494a014428259df803 caddy_sha=727b91701a392de6ebc5027509f548bf39979e5216340d0faed8fa5e69c84f8b;;
+esac
+if ! /usr/local/bin/frpc --version 2>/dev/null | grep -qx "$FRP"; then
+  tmp=$(mktemp -d)
+  curl -fsSL "https://github.com/fatedier/frp/releases/download/v$FRP/frp_${FRP}_linux_$a.tar.gz" -o "$tmp/frp.tgz"
+  echo "$frp_sha  $tmp/frp.tgz" | sha256sum -c --quiet -
+  tar -xzf "$tmp/frp.tgz" -C "$tmp" && install -m 0755 "$tmp/frp_${FRP}_linux_$a/frpc" /usr/local/bin/frpc
+  rm -rf "$tmp"
+fi
+if ! /usr/local/bin/caddy version 2>/dev/null | grep -q "^v$CADDY "; then
+  tmp=$(mktemp -d)
+  curl -fsSL "https://github.com/caddyserver/caddy/releases/download/v$CADDY/caddy_${CADDY}_linux_$a.tar.gz" -o "$tmp/caddy.tgz"
+  echo "$caddy_sha  $tmp/caddy.tgz" | sha256sum -c --quiet -
+  tar -xzf "$tmp/caddy.tgz" -C "$tmp" caddy && install -m 0755 "$tmp/caddy" /usr/local/bin/caddy
+  rm -rf "$tmp"
+fi
+
 
 # SpacetimeDB: live task status and approvals for the portal and phone. The box publishes its module at boot.
 if ! command -v spacetime >/dev/null; then

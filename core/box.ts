@@ -17,7 +17,9 @@ import { HOME, dirs } from './sandbox.ts';
 import { usageCents } from './pricing.ts';
 import { DEFAULT_SETTINGS, SETUP_STEPS, applyPatch, folderRefusal, hadHumanUse, hostProblem, insideAny, neverFolder, loadDisabled, loadSetup, loadSettings, recordStep, saveDisabled, saveSettings, saveSetup, type Settings, type SetupState } from './config.ts';
 import * as system from './system.ts';
-import { VAULT_NAME, loadVault, writeVaultKey } from './vault.ts';
+import { VAULT_NAME, loadVault, removeVaultKey, writeVaultKey } from './vault.ts';
+import * as push from './push.ts';
+import { APP, RELAY, Remote, SECRET_KEY } from './remote.ts';
 
 type Handler = (method: string, url: URL, body: any, headers: http.IncomingHttpHeaders, req: http.IncomingMessage) => unknown;
 
@@ -73,6 +75,8 @@ interface Device {
   owner?: boolean;
   /** The phone's SpacetimeDB identity, if it gave one: the box vouches for it so its answers there are accepted. */
   identity?: string;
+  /** The app's push subscription and the key it made for this box, once the phone turned notifications on. */
+  push?: push.PushSub;
 }
 
 class Core {
@@ -111,6 +115,16 @@ class Core {
   vaultMetaPath = path.join(HOME, 'vault-meta.json');
   vaultMeta: Record<string, string> = fs.existsSync(this.vaultMetaPath) ? JSON.parse(fs.readFileSync(this.vaultMetaPath, 'utf8')) : {};
   startedAt = new Date().toISOString();
+  apiPort = 0;
+  /** This box's own https address through the GurtOS relay, when the owner turned it on. */
+  remote = new Remote(HOME, {
+    secret: () => this.vault.get(SECRET_KEY),
+    setSecret: (v) => (writeVaultKey(SECRET_KEY, v), this.vault.set(SECRET_KEY, v)),
+    dropSecret: () => (removeVaultKey(SECRET_KEY), this.vault.delete(SECRET_KEY)),
+    apiPort: () => this.apiPort,
+    startedAt: () => this.startedAt,
+    note: (data) => this.write({ type: 'note', track: 'remote', data }),
+  });
   // Was the last stop clean (a restart or deploy), so the screen should not say it came back from a power cut?
   cleanStart = (() => {
     const marker = path.join(HOME, 'clean-stop');
@@ -153,6 +167,7 @@ class Core {
       }
     }
     for (const pump of this.readers) pump();
+    if (full.type === 'approval.asked') void this.pushApproval(full.approval);
     return full;
   }
 
@@ -949,7 +964,7 @@ class Core {
     } catch (e) {
       console.error('BOX_PEERS is not valid JSON:', e);
     }
-    const self = { id: BOX_ID, name: BOX_NAME, url: process.env.BOX_URL ?? '', stdb: DB, self: true };
+    const self = { id: BOX_ID, name: BOX_NAME, url: this.boxUrl(), stdb: DB, self: true };
     return [self, ...peers];
   }
 
@@ -959,9 +974,11 @@ class Core {
     const expiry = Date.now() + 5 * 60 * 1000;
     this.pairCodes.set(code, { expiry, owner });
     // With BOX_URL set (the image sets it from the box's address) the url is absolute, so the box screen's QR
-    // opens on a phone. Without it the url is a path the page prefixes with its own origin.
-    const base = (process.env.BOX_URL ?? '').replace(/\/+$/, '');
-    return { code, url: `${base}/pair#${code}`, expiresAt: new Date(expiry).toISOString(), box: { id: BOX_ID, name: BOX_NAME } };
+    // opens on a phone. Without it the url is a path the page prefixes with its own origin. With remote access on,
+    // the QR opens the GurtOS app, which adds this box to its machines (`boxUrl` is the box's own copy).
+    const remote = this.remote.saved;
+    const url = remote ? `${APP}/pair?box=${remote.host}#${code}` : `${this.boxUrl()}/pair#${code}`;
+    return { code, url, ...(remote ? { boxUrl: `${remote.url}/pair#${code}` } : {}), expiresAt: new Date(expiry).toISOString(), box: { id: BOX_ID, name: BOX_NAME } };
   }
 
   /** A phone redeems the code for a durable device token. */
@@ -981,6 +998,77 @@ class Core {
     this.saveDevices();
     if (device.identity) this.live.register(device.identity, device.name);
     return { token: device.token, device: { id: device.id, name: device.name }, box: { id: BOX_ID, name: BOX_NAME } };
+  }
+
+  // ---------- remote access and push notifications ----------
+
+  /** Where phones reach this box: its https address when remote access is on, else BOX_URL. */
+  boxUrl() {
+    return this.remote.saved?.url ?? (process.env.BOX_URL ?? '').replace(/\/+$/, '');
+  }
+
+  /** Tell the phones that should answer this approval. Quiet hours hold it back; the request still waits in the inbox. */
+  async pushApproval(a: Approval) {
+    const to = push.recipients(a, this.devices);
+    if (!to.length || !this.remote.saved) return;
+    if (push.quiet(this.settings.quietHours, system.timezone())) return void console.log(`push for ${a.id} held for quiet hours`);
+    const t = this.state.tasks.get(a.task);
+    const text = push.approvalText(a, t?.title ?? '');
+    // `source` lets the app hold back one-tap Approve where the approval needs a ceremony in the app (Shopper's Face ID).
+    await Promise.allSettled(to.map((d) => this.pushTo(d, { type: 'approval', id: a.id, task: a.task, source: t?.source ?? '', costCents: a.costCents, ...text }, a.id)));
+  }
+
+  /** One push to one device, through the relay's gateway, encrypted for that phone and signed with its key for this box. */
+  async pushTo(d: Device, fields: Record<string, string | number>, topic: string) {
+    const s = this.remote.saved;
+    const secret = this.vault.get(SECRET_KEY);
+    if (!d.push) throw Object.assign(new Error('turn on notifications on this phone first'), { status: 409 });
+    if (!s || !secret) throw Object.assign(new Error('notifications go through the relay: turn on "Reach this box from anywhere" first'), { status: 409 });
+    try {
+      const r = await push.send(RELAY, s.name, secret, d.push, { v: 1, machine: BOX_ID, box: BOX_NAME, url: s.url, ...fields }, topic);
+      if (r.gone) delete d.push, this.saveDevices(); // the phone dropped the subscription
+      return r;
+    } catch (e) {
+      console.error(`push to ${d.name} failed: ${(e as Error).message}`);
+      throw e;
+    }
+  }
+
+  /** GET, POST and DELETE /api/remote, GET /api/remote/name/<name>; GET, PUT and DELETE /api/push, POST /api/push/test. */
+  remoteRoutes(req: http.IncomingMessage, res: http.ServerResponse) {
+    const p = new URL(req.url ?? '/', 'http://box').pathname.replace(/^\/api(?=\/)/, '');
+    const m = req.method ?? 'GET';
+    const name = p.match(/^\/remote\/name\/([^/]+)$/)?.[1];
+    const d = this.deviceOf(req);
+    const phone = () => d ?? (() => { throw Object.assign(new Error('only a paired phone gets notifications'), { status: 403 }); })();
+    let act: ((body: any) => unknown) | undefined;
+    if (p === '/remote' && m === 'GET') act = () => this.remote.refresh();
+    else if (p === '/remote' && m === 'POST') act = (b) => (this.requireOwner(req), this.remote.enable(b?.name));
+    else if (p === '/remote' && m === 'DELETE') act = () => (this.requireOwner(req), this.remote.disable());
+    else if (name && m === 'GET') act = () => (this.requireOwner(req), this.remote.available(decodeURIComponent(name)));
+    else if (p === '/push' && m === 'GET') act = () => ({ subscribed: !!d?.push, remote: !!this.remote.saved });
+    else if (p === '/push' && m === 'PUT') act = (b) => ((phone().push = push.parseSub(b)), this.saveDevices(), { subscribed: true });
+    else if (p === '/push' && m === 'DELETE') act = () => (delete phone().push, this.saveDevices(), { subscribed: false });
+    else if (p === '/push/test' && m === 'POST')
+      act = async () => (await this.pushTo(phone(), { type: 'test', id: `test-${Date.now()}`, task: '', title: 'Notifications work', body: `${BOX_NAME} will tell this phone when a task needs your OK.` }, 'test'), { sent: 1 });
+    if (!act) return false;
+    void (async () => {
+      const json = (status: number, obj: unknown) => res.writeHead(status, { 'content-type': 'application/json' }).end(JSON.stringify(obj));
+      try {
+        const chunks: Buffer[] = [];
+        for await (const c of req) chunks.push(c as Buffer);
+        let body = {};
+        try {
+          body = chunks.length ? JSON.parse(Buffer.concat(chunks).toString()) : {};
+        } catch {
+          throw new Error("the request body isn't valid JSON");
+        }
+        json(200, await act(body));
+      } catch (e) {
+        json((e as { status?: number }).status ?? 400, { error: (e as Error).message });
+      }
+    })();
+    return true;
   }
 
   revokeDevice(id: string) {
@@ -1007,18 +1095,6 @@ class Core {
     const origin = h.origin;
     const foreign = !!origin && !/^https?:\/\/(127\.0\.0\.1|localhost|\[::1\])(:\d+)?$/.test(origin);
     return loopback && !relayed && !foreign;
-  }
-
-  /**
-   * Who is calling, for a track route (the x-box-caller header): 'screen' (the box's own screen), 'owner' (a phone
-   * paired as the owner), 'device:<id>' (another paired phone), 'service' (a helper on the box, like the ASI:One
-   * agent) or 'none' (an open route reached through a proxy with no token).
-   */
-  callerOf(req: http.IncomingMessage): string {
-    const device = this.deviceOf(req);
-    if (device) return device.owner ? 'owner' : `device:${device.id}`;
-    if (this.isLocal(req)) return this.serviceCaller(req) ? 'service' : 'screen';
-    return 'none';
   }
 
   /** The box's own screen, or a device that was paired as the owner. */
@@ -1069,6 +1145,7 @@ class Core {
     if (m === 'GET' && p === '/boxes') act = () => this.boxes();
     else if (m === 'POST' && (p === '/pair/start' || p === '/pair/new')) act = (body) => (this.requireOwner(req), this.pairStart(body?.owner === true));
     else if (m === 'GET' && (p === '/devices' || p === '/pair/devices')) act = () => (this.requireOwner(req), this.devices).filter((d) => !d.revoked).map(({ token, ...d }) => d);
+    else if (m === 'DELETE' && p === '/pair/self') act = () => this.revokeDevice((this.deviceOf(req) ?? (() => { throw Object.assign(new Error('this request carries no paired device token'), { status: 403 }); })()).id); // a phone forgets itself
     else if ((m === 'DELETE' || m === 'POST') && del) act = () => (this.requireOwner(req), this.revokeDevice(del));
     const needsBody = m === 'POST' && p === '/pair';
     if (!act && !needsBody) return false;
@@ -1222,13 +1299,13 @@ class Core {
             return { ok: true, startedAt: this.startedAt, cleanStart: this.cleanStart, resumed: this.resumed, tasks: this.state.tasks.size, tools: [...this.tools.keys()], spacetime: { port: 3000, database: DB } };
         }
       },
-      (req, res) => this.cors(req, res) || this.gate(req, res) || this.pairing(req, res) || this.logStream(req, res) || this.webhook(req, res) || this.trackRoute(req, res) || this.portal(req, res),
+      (req, res) => this.cors(req, res) || this.gate(req, res) || this.pairing(req, res) || this.remoteRoutes(req, res) || this.logStream(req, res) || this.webhook(req, res) || this.trackRoute(req, res) || this.portal(req, res),
     );
 
-  /** Browsers on other origins (a portal dev server) need BOX_ORIGINS, comma separated, or '*'. */
+  /** The GurtOS app (app.gurtos.com) may call the box from the browser; other origins (a portal dev server) need BOX_ORIGINS, comma separated, or '*'. Tokens are required either way. */
   cors(req: http.IncomingMessage, res: http.ServerResponse) {
     const origin = req.headers.origin;
-    const allowed = (process.env.BOX_ORIGINS ?? '').split(',').map((o) => o.trim());
+    const allowed = [APP, ...(process.env.BOX_ORIGINS ?? '').split(',').map((o) => o.trim())];
     if (!origin || !(allowed.includes(origin) || allowed.includes('*'))) return false;
     res.setHeader('access-control-allow-origin', origin);
     res.setHeader('access-control-allow-headers', 'content-type, authorization');
@@ -1299,7 +1376,7 @@ data: ${JSON.stringify(e)}
         const hasBody = req.method !== 'GET' && req.method !== 'HEAD';
         const request = new Request(url, {
           method: req.method,
-          headers: { ...(req.headers as Record<string, string>), 'x-box-caller': this.callerOf(req) }, // set by the box, never by the caller
+          headers: req.headers as Record<string, string>,
           body: hasBody ? Buffer.concat(chunks) : undefined,
         });
         const r = await entry.route(request, this.boxFor(entry.track));
@@ -1326,7 +1403,7 @@ data: ${JSON.stringify(e)}
   portal(req: http.IncomingMessage, res: http.ServerResponse) {
     const target = this.portalTarget(req);
     if (!target) return false;
-    const types: Record<string, string> = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png', '.json': 'application/json', '.woff2': 'font/woff2', '.ico': 'image/x-icon' };
+    const types: Record<string, string> = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png', '.json': 'application/json', '.woff2': 'font/woff2', '.ico': 'image/x-icon', '.webmanifest': 'application/manifest+json' };
     res.writeHead(200, { 'content-type': types[path.extname(target)] ?? 'application/octet-stream' }).end(fs.readFileSync(target));
     return true;
   }
@@ -1388,6 +1465,8 @@ data: ${JSON.stringify(e)}
       const port = (server.address() as { port: number }).port;
       reservePort(port);
       fs.writeFileSync(path.join(HOME, 'api.port'), String(port));
+      this.apiPort = port;
+      this.remote.boot(); // the box's https address, if the owner turned it on
     }
     for (const track of tracks) this.startTriggers(track.name);
     this.live.start(); // publishes and connects in the background; the API above is already serving
