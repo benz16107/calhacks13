@@ -18,7 +18,7 @@ How it was walked:
 
 ## Status
 
-**Fixed 66, closed 1, open 25** (92 findings: 19 web, 22 Server, 36 Personal, 15 parity). Each fixed
+**Fixed 67, closed 1, open 24** (92 findings: 19 web, 22 Server, 36 Personal, 15 parity). Each fixed
 finding gets a **Fixed** line with the commit and an after-screenshot in `after/`.
 
 | Owner | Open |
@@ -26,7 +26,7 @@ finding gets a **Fixed** line with the commit and an after-screenshot in `after/
 | apify track | A-1 |
 | personal | P-29 waits for Ben |
 | image | S2, S15, S16, S24, P-4, P-17, P-28, E-1 to E-11, E-15, then P-1 with release |
-| personal (parity) | E-3 (GurtOS update row; core's `GET /api/update` is in, d66bf5f), E-12, E-13, E-14 |
+| personal (parity) | E-14 (re-measuring) |
 
 Release (P-1): one rebuild of all four ISOs from one main commit, about 75 minutes to a verified release plus 20 for
 the download pages. The UX thread sends the commit once the Personal, image and core P0 and P1 fixes are in. Target
@@ -635,10 +635,16 @@ released ISO, both in QEMU with KVM, 4 GB, 4 vCPUs, 1080p, two clean boots each.
 - **E-10** H.264 and AAC won't play in GNOME Web; apt has no `restricted` or `multiverse`.
 - **E-11** kernel 6.8, where stock installs 7.0 (HWE): newer laptops' Wi-Fi, GPU and audio need it.
 
-**P1:** E-12 (personal, image) no Wi-Fi page in first-run setup; E-14 (personal) warm launches about 0.2 s slower,
+**P1:** E-12 (personal, image) no Wi-Fi page in first-run setup (**fixed in 7f8e452** for Personal: Setup's Welcome
+offers Choose Wi-Fi when offline; check on the rebuilt ISO); E-14 (personal) warm launches about 0.2 s slower,
 look at the session's window-open hook, dock blur and window animation; E-15 (image) no language, keyboard or disk
 choice before install, so say "erases the disk" on the download page.
-**P2:** E-13 (personal) About shows the Ubuntu logo and "Ubuntu Desktop"; search lists both Terminal and Console.
+**P2:** E-13 About shows the Ubuntu logo and "Ubuntu Desktop" (image, open); search lists both Terminal and Console
+(**fixed in 7f8e452**, ![](after/personal-search-term.png)).
+
+E-3's GurtOS side is in 7f8e452 (Settings, Agents, Updates: "System update"), reading core's `GET /api/update`
+(d66bf5f); it shows once both are on the image. E-14 is being re-measured on one image with only the session mode
+switched: the Personal thread measured 10 to 40 ms to the window mapping, not 0.2 s.
 
 **Release risk:** E-1, E-4, E-5 and E-7 to E-11 add about 540 MB of packages. The Personal ISOs are 1.78 GB against
 GitHub's 2 GiB limit per file, so image and release must check the size, and decide what goes to the mirror only.
