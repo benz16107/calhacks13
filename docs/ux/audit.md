@@ -26,6 +26,10 @@ finding gets a **Fixed** line with the commit and an after-screenshot in `after/
 | portal | W1, W2, W4 to W12, W14, W15, S1, S3, S5 to S7, S11 to S14, S17 to S23, S25, S26 |
 | personal | P-2 to P-13, P-15, P-18 to P-27, P-29 to P-32 |
 | image | S2, S15, S16, S24, P-4, P-17, P-28, then P-1 with release |
+
+Release (P-1): one rebuild of all four ISOs from one main commit, about 75 minutes to a verified release plus 20 for
+the download pages. The UX thread sends the commit once the Personal, image and core P0 and P1 fixes are in. Target
+before midnight PT, hard cutoff 6:30 AM PT Sunday (at 5:30 AM the best demo-ready commit goes regardless).
 | core | W2, W13, S5 to S8, S13, P-2, P-14, P-16 |
 
 ## Top 10
