@@ -1,19 +1,31 @@
 // The Jira track. Every box task becomes a Jira issue holding its prompt, steps, tool calls, the agent's own
-// account of its reasoning, cost, approvals, blocked attempts and the diff of the files it changed. A Forge app
-// on the issue (forge/) answers the task's approvals and rolls back just that task, through this track's
-// routes. See README.md.
+// account of its reasoning, cost, approvals, blocked attempts and the diff of the files it changed. The Forge app
+// (forge/) is the control room: an issue panel, a Rovo agent, bulk roll back, a dashboard gadget, and starting
+// tasks from Jira issues, all through this track's routes. See README.md.
 import { createHash, timingSafeEqual } from 'node:crypto';
 import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
 import type { Approval, Box, LogEvent, Task, Track } from '../../core/contract.ts';
+import { dailyPage, ensureSpace, incidentPage, type DayTask } from './confluence.ts';
+import { decision, isRisky, openRequest, settle, type JsmConfig } from './jsm.ts';
 
 const HOME = process.env.BOX_HOME ?? '/var/lib/box';
 const DIR = path.join(HOME, 'jira');
 
 /** BOX_HOME/jira/config.json turns syncing on for one box. No file, no sync, so test runs never touch Jira.
  *  skipSources leaves out tasks whose source starts with any of them, such as a watcher's periodic checks. */
-type Config = { project: string; site?: string; skipSources?: string[] };
+type Config = {
+  project: string;
+  site?: string;
+  skipSources?: string[];
+  /** What a task started from a Jira issue gets. Untrusted issue text becomes its prompt, so keep it narrow. */
+  start?: { workspace?: string; worker?: 'droid' | 'fake'; budgetCents?: number; hosts?: string[]; tools?: string[] };
+  /** Risky approvals (over a limit, production, outside a task's folder) become JSM requests with approvers. */
+  jsm?: JsmConfig;
+  /** Confluence reports: a daily page and an incident page per blocked attempt, in `space` (by Jira project in `projects`). */
+  confluence?: { space: string; name?: string; projects?: Record<string, string> };
+};
 const config = (): Config | undefined => {
   try {
     return JSON.parse(fs.readFileSync(path.join(DIR, 'config.json'), 'utf8'));
@@ -39,25 +51,27 @@ const saveSynced = (id: string, s: Synced) => {
 
 // ---------- reading the box ----------
 
-/** The box's own API, on its root-only socket. Tracks get no events or diffs in-process, so we ask it. */
-const boxApi = <T = any>(p: string) =>
+/** The box's own API, on its root-only socket. Tracks get no events or diffs in-process, so we ask it. Its errors
+ *  keep their status, so a Business refusal (403, with the reason) reaches the person in Jira as it is. */
+const boxCall = <T = any>(method: string, p: string, body?: unknown, headers: Record<string, string> = {}) =>
   new Promise<T>((resolve, reject) => {
-    http
-      .get({ socketPath: path.join(HOME, 'api.sock'), path: p }, (res) => {
-        let text = '';
-        res.setEncoding('utf8');
-        res.on('data', (c) => (text += c));
-        res.on('end', () => {
-          try {
-            const data = JSON.parse(text);
-            (res.statusCode ?? 500) < 400 ? resolve(data) : reject(new Error(data.error ?? `box API ${res.statusCode}`));
-          } catch (e) {
-            reject(e);
-          }
-        });
-      })
-      .on('error', reject);
+    const req = http.request({ socketPath: path.join(HOME, 'api.sock'), method, path: p, headers: { 'content-type': 'application/json', ...headers } }, (res) => {
+      let text = '';
+      res.setEncoding('utf8');
+      res.on('data', (c) => (text += c));
+      res.on('end', () => {
+        try {
+          const data = text ? JSON.parse(text) : {};
+          (res.statusCode ?? 500) < 400 ? resolve(data) : reject(Object.assign(new Error(data.error ?? `box API ${res.statusCode}`), { status: res.statusCode }));
+        } catch (e) {
+          reject(e);
+        }
+      });
+    });
+    req.on('error', reject);
+    req.end(body === undefined ? undefined : JSON.stringify(body));
   });
+const boxApi = <T = any>(p: string) => boxCall<T>('GET', p);
 
 type Diff = { changes: { path: string; change: string }[]; diff: string };
 type View = { task: Task; approvals: Approval[]; events: LogEvent[] } & Diff;
@@ -168,6 +182,27 @@ function comment(e: LogEvent, v: View) {
   }
 }
 
+/** The issue a task was started from, when someone assigned it to the GurtOS agent or ran the Automation action. */
+const startedFrom = (t: Task) => t.source.match(/^jira:([A-Z][A-Z0-9_]+-\d+)$/)?.[1];
+
+/** On a teammate's issue, the comments are the whole record: when it starts, what it found, and the diff. */
+function report(e: LogEvent, v: View): object[] | undefined {
+  const { task } = v;
+  if (e.type === 'task.created') {
+    return [panel('info', `GurtOS started task ${task.id} from this issue: worker ${task.worker}, in its own copy of workspace ${task.workspace}, allowed hosts: ${task.hosts.join(', ') || 'none'}, budget ${dollars(task.budgetCents)}. Results, approvals and the diff come back here. The GurtOS agent task panel has Approve and Roll back.`)];
+  }
+  if (e.type === 'task.state' && e.state === 'done') {
+    const said = v.events.filter(isSummary).map((x) => (x as { text: string }).text).at(-1) ?? task.summary ?? '';
+    return [
+      panel('success', `Done. ${spent(task)}.`),
+      ...(said ? [heading("What the agent says it did"), para(text(clip(said, 3000)))] : []),
+      heading('Files changed'),
+      ...(v.changes.length ? [capped(v.changes.map((c) => `${c.path} (${c.change})`), 30), code(clip(v.diff, 8000), 'diff')] : [para(text('No file changes.'))]),
+      para(text('Keep it, or roll it back from the GurtOS agent task panel. Roll back removes only this task\'s changes.', [{ type: 'em' }])),
+    ];
+  }
+}
+
 /** Where each box state sits on the project's board. The label keeps the exact state. */
 const STATUS: Record<Task['state'], string> = { queued: 'To Do', running: 'In Progress', waiting: 'In Review', done: 'Done', failed: 'Done', undone: 'Done' };
 
@@ -214,7 +249,15 @@ async function sync(id: string, e: LogEvent, box: Box) {
     labels: ['box', `box-${v.task.id}`, `box-${v.task.state}`],
     description: describe(v),
   };
-  if (!s.issue) {
+  const from = startedFrom(v.task);
+  if (from) {
+    // Started from a teammate's issue: report back on it in comments, and leave its summary, text and status alone.
+    if (!s.issue) {
+      s.issue = from;
+      saveSynced(id, s);
+      await jira('PUT', `/rest/api/3/issue/${from}`, { update: { labels: [{ add: 'gurtos' }] } });
+    }
+  } else if (!s.issue) {
     // A crash between creating the issue and saving its key must not make a second issue.
     const found = await jira('POST', '/rest/api/3/search/jql', { jql: `project = "${c.project}" AND labels = "box-${v.task.id}"`, fields: ['key'], maxResults: 1 });
     s.issue = found?.issues?.[0]?.key ?? (await jira('POST', '/rest/api/3/issue', { fields: { project: { key: c.project }, issuetype: { name: 'Task' }, ...fields } })).key;
@@ -228,15 +271,15 @@ async function sync(id: string, e: LogEvent, box: Box) {
   await jira('PUT', `/rest/api/3/issue/${s.issue}/properties/box.task`, {
     id: v.task.id, state: v.task.state, costCents: v.task.costCents, budgetCents: v.task.budgetCents, blocked, pending, source: v.task.source, workspace: v.task.workspace,
   });
-  const issue = await jira('GET', `/rest/api/3/issue/${s.issue}?fields=status`);
-  if (issue.fields.status.name !== STATUS[v.task.state]) {
+  const issue = from ? undefined : await jira('GET', `/rest/api/3/issue/${s.issue}?fields=status`);
+  if (issue && issue.fields.status.name !== STATUS[v.task.state]) {
     const { transitions } = await jira('GET', `/rest/api/3/issue/${s.issue}/transitions`);
     const t = transitions.find((x: { to: { name: string } }) => x.to.name === STATUS[v.task.state]);
     if (t) await jira('POST', `/rest/api/3/issue/${s.issue}/transitions`, { transition: { id: t.id } });
   }
-  const note = e.seq > s.commented ? comment(e, v) : undefined;
-  if (note) {
-    await jira('POST', `/rest/api/3/issue/${s.issue}/comment`, { body: doc([note]) });
+  const note = e.seq > s.commented ? ((from && report(e, v)) || [comment(e, v)].filter((n) => n !== undefined)) : [];
+  if (note.length) {
+    await jira('POST', `/rest/api/3/issue/${s.issue}/comment`, { body: doc(note) });
     s.commented = e.seq;
     saveSynced(id, s);
   }
@@ -254,11 +297,267 @@ function allowed(req: Request, box: Box) {
   const h = (s: string) => createHash('sha256').update(s).digest();
   return token.length > 0 && secret.length >= 32 && timingSafeEqual(h(token), h(secret));
 }
-const deny = () => Response.json({ error: 'unauthorized' }, { status: 401 });
 const who = (by: unknown) => `jira:${String(by ?? 'someone').replace(/[^\w .@'-]/g, '').slice(0, 80) || 'someone'}`;
+const refuse = (status: number, error: string) => Object.assign(new Error(error), { status });
+
+/** A route that checks the shared secret, and turns a thrown error into {error} with its status. */
+const guarded = (fn: (req: Request, box: Box) => Promise<unknown>) => async (req: Request, box: Box) => {
+  if (!allowed(req, box)) return Response.json({ error: 'unauthorized' }, { status: 401 });
+  try {
+    return Response.json(await fn(req, box));
+  } catch (e) {
+    const status = (e as { status?: number }).status;
+    return Response.json({ error: (e as Error).message }, { status: status && status >= 400 && status < 500 ? status : 500 });
+  }
+};
+
+// ---------- who is acting: on GurtOS Business, a Jira user acts as the GurtOS person they are linked to ----------
+
+const readJson = <T>(file: string, fallback: T): T => {
+  try {
+    return JSON.parse(fs.readFileSync(file, 'utf8'));
+  } catch {
+    return fallback;
+  }
+};
+/** BOX_HOME/jira/people.json links a Jira accountId to a GurtOS Business person id. Roles and limits stay in Business. */
+const linkedPerson = (account: unknown) => (typeof account === 'string' ? readJson<Record<string, string>>(path.join(DIR, 'people.json'), {})[account] : undefined);
+const isBusiness = async () => ((await boxCall<{ on?: boolean }>('GET', '/api/business').catch(() => ({}))) as { on?: boolean }).on === true;
+
+type Actor = { by: string; person?: string };
+/**
+ * Who is acting. The Forge app sends the Jira accountId from Atlassian's own context, after Jira's permission check.
+ * On a Business box that account must be linked to a person, and Business then decides by role, limit and who
+ * asked. On a Server box, the Jira permission is the whole check.
+ */
+async function actor(body: { by?: unknown; account?: unknown }): Promise<Actor> {
+  if (!(await isBusiness())) return { by: who(body.by) };
+  const person = linkedPerson(body.account);
+  if (!person) throw refuse(403, 'Your Jira account is not linked to a GurtOS person, so GurtOS Business cannot let you act. Ask an admin to link it.');
+  return { by: who(body.by), person };
+}
+const asPerson = (a: Actor) => ({ 'x-box-person': a.person! });
+
+async function answerAs(box: Box, a: Actor, id: string, approved: boolean) {
+  if (!a.person) return box.answer(id, approved, a.by);
+  return boxCall('POST', `/api/approvals/${encodeURIComponent(id)}`, { approved, by: 'Jira' }, asPerson(a));
+}
+
+/** Roll back one task and say what came back: the files it had changed are as they were before it. */
+async function undoAs(box: Box, a: Actor, id: string) {
+  const t = box.task(id);
+  if (!t) throw refuse(404, `no task ${id}`);
+  const issue = loadSynced(id).issue;
+  if (t.state === 'undone') return { task: id, issue, title: t.title, ok: true, alreadyUndone: true, changes: [] };
+  const { changes } = await view(id); // read before the undo deletes them; view() keeps a copy for the issue too
+  box.note({ action: 'rollback', by: a.by }, id); // who asked goes into the log before the undo
+  if (a.person) await boxCall('POST', `/api/tasks/${encodeURIComponent(id)}/undo`, {}, asPerson(a));
+  else await box.undo(id);
+  return { task: id, issue, title: t.title, ok: true, changes };
+}
+
+/** Which task wrote each issue, from what this box synced. */
+function taskOfIssue(): Map<string, string> {
+  const out = new Map<string, string>();
+  for (const f of fs.existsSync(DIR) ? fs.readdirSync(DIR) : []) {
+    if (!/^t[\w-]+\.json$/.test(f) || f.endsWith('.diff.json')) continue;
+    const issue = readJson<Synced>(path.join(DIR, f), { commented: 0 }).issue;
+    if (issue) out.set(issue, f.slice(0, -5));
+  }
+  return out;
+}
+
+/** Tasks and what they did in a period, from the box's log: for the Rovo agent, the gadget and the reports. */
+async function activity(box: Box, q: URLSearchParams) {
+  const since = q.get('since') ?? new Date(Date.now() - 7 * 86400_000).toISOString();
+  const until = q.get('until') ?? new Date(Date.now() + 60_000).toISOString();
+  const [project, source, text, state] = ['project', 'source', 'q', 'state'].map((k) => q.get(k)?.toLowerCase());
+  const events = await boxApi<LogEvent[]>(`/api/log`);
+  const blocked = new Map<string, string[]>();
+  for (const e of events) if (e.type === 'net.blocked' && e.at >= since && e.at <= until) blocked.set(e.task, [...(blocked.get(e.task) ?? []), e.host]);
+  const rows: { id: string; title: string; state: string; source: string; issue?: string; project?: string; costCents: number; blocked: string[]; changes: number; createdAt: string; updatedAt: string }[] = [];
+  for (const t of box.tasks()) {
+    if (t.updatedAt < since || t.createdAt > until) continue;
+    const issue = loadSynced(t.id).issue;
+    const proj = issue?.split('-')[0];
+    if (project && proj?.toLowerCase() !== project) continue;
+    if (source && !t.source.toLowerCase().includes(source)) continue;
+    if (text && !`${t.title} ${t.source} ${issue ?? ''}`.toLowerCase().includes(text)) continue;
+    if (state && t.state !== state) continue;
+    const kept = readJson<Diff | undefined>(syncedFile(t.id).replace(/\.json$/, '.diff.json'), undefined);
+    rows.push({
+      id: t.id, title: t.title, state: t.state, source: t.source, issue, project: proj, costCents: t.costCents,
+      blocked: blocked.get(t.id) ?? [], changes: kept?.changes.length ?? 0, createdAt: t.createdAt, updatedAt: t.updatedAt,
+    });
+  }
+  rows.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  const count = (s: string) => rows.filter((r) => r.state === s).length;
+  const byProject = new Map<string, { project: string; tasks: number; blocked: number; costCents: number }>();
+  for (const r of rows) {
+    const p = byProject.get(r.project ?? '') ?? { project: r.project ?? 'Not in Jira', tasks: 0, blocked: 0, costCents: 0 };
+    p.tasks++;
+    p.blocked += r.blocked.length;
+    p.costCents += r.costCents;
+    byProject.set(r.project ?? '', p);
+  }
+  const settings = await boxApi<{ paused?: boolean }>('/api/settings').catch(() => ({ paused: false }));
+  return {
+    since, until,
+    tasks: rows.slice(0, 200),
+    totals: { tasks: rows.length, done: count('done'), undone: count('undone'), failed: count('failed'), waiting: count('waiting'), blocked: rows.reduce((n, r) => n + r.blocked.length, 0), costCents: rows.reduce((n, r) => n + r.costCents, 0) },
+    byProject: [...byProject.values()],
+    paused: settings.paused === true,
+  };
+}
+
+/** A box task from a teammate's Jira issue. Its text is untrusted, so the task gets the narrow spec in config.start. */
+async function start(box: Box, a: Actor, issue: { key?: unknown; summary?: unknown; description?: unknown }) {
+  const c = config();
+  if (!c) throw refuse(409, 'Jira is not connected on this box (no jira/config.json).');
+  const key = String(issue.key ?? '');
+  if (!/^[A-Z][A-Z0-9_]+-\d+$/.test(key)) throw refuse(400, 'issue.key: a Jira issue key like OPS-12');
+  const source = `jira:${key}`;
+  const going = box.tasks().find((t) => t.source === source && ['queued', 'running', 'waiting'].includes(t.state));
+  if (going) return { task: { id: going.id, title: going.title, state: going.state }, already: true };
+  const summary = clip(String(issue.summary ?? '').replace(/\s+/g, ' ').trim(), 150) || key;
+  const st = c.start ?? {};
+  // The scripted test worker runs its prompt line by line, so it gets the issue's text as it is.
+  const prompt = st.worker === 'fake' ? String(issue.description ?? '') : `A teammate asked for this in Jira issue ${key}. Do what it asks in this workspace, then say in a few sentences what you did.\n\n${summary}\n\n${clip(String(issue.description ?? ''), 6000)}`;
+  const spec = { title: `${key}: ${summary}`, prompt, source, workspace: st.workspace ?? 'home', worker: st.worker ?? 'droid', budgetCents: st.budgetCents ?? 25, hosts: st.hosts ?? [], tools: st.tools ?? [] };
+  // On Business the linked person is who asked, so they cannot approve their own task's requests.
+  const t: Task = a.person ? await boxCall('POST', '/api/tasks', spec, asPerson(a)) : await box.createTask(spec);
+  box.note({ action: 'start', issue: key, by: a.by }, t.id);
+  return { task: { id: t.id, title: t.title, state: t.state } };
+}
+
+
+// ---------- Jira Service Management: a risky approval waits for its JSM approvers ----------
+
+type Opened = Record<string, { key: string; done?: boolean }>;
+const jsmFile = () => path.join(DIR, 'jsm.json');
+
+/** Ask the JSM approvers for each risky approval still waiting, and answer the box from their decision. */
+async function jsmTick(box: Box) {
+  const c = config();
+  if (!c?.jsm) return;
+  const jira = jiraClient(box, c);
+  const opened = readJson<Opened>(jsmFile(), {});
+  const save = () => (fs.mkdirSync(DIR, { recursive: true, mode: 0o700 }), fs.writeFileSync(jsmFile(), JSON.stringify(opened)));
+  for (const a of box.approvals()) {
+    const t = box.task(a.task);
+    if (opened[a.id] || a.state !== 'pending' || !t || !['running', 'waiting'].includes(t.state) || !isRisky(c.jsm, a)) continue;
+    opened[a.id] = await openRequest(jira, c.jsm, { approvalId: a.id, task: t.id, title: t.title, question: a.question, costCents: a.costCents, issue: loadSynced(t.id).issue });
+    save();
+    box.note({ action: 'jsm.opened', approval: a.id, request: opened[a.id].key }, t.id);
+  }
+  for (const [id, o] of Object.entries(opened)) {
+    if (o.done) continue;
+    const a = box.approvals().find((x) => x.id === id);
+    if (!a || a.state !== 'pending') {
+      // Answered somewhere else first (portal, phone, the Jira panel): close the request so nobody decides it twice.
+      await settle(jira, o.key, `Answered in GurtOS (${a?.state ?? 'gone'}${a?.by ? ` by ${a.by}` : ''}). Nothing to decide here.`).catch(() => {});
+      o.done = true;
+      save();
+      continue;
+    }
+    const d = await decision(jira, o.key);
+    if (d.state === 'pending') continue;
+    try {
+      // The JSM approver acts as themselves: on Business, the GurtOS person their Jira account is linked to.
+      const a = await actor({ by: d.by ? `${d.by.name} via JSM ${o.key}` : `JSM ${o.key}`, account: d.by?.accountId });
+      await answerAs(box, a, id, d.state === 'approved');
+      o.done = true;
+    } catch (e) {
+      // Business refused this approver (not linked, wrong role, over their limit): it stays waiting, and the log says why.
+      box.note({ action: 'jsm.refused', approval: id, request: o.key, why: (e as Error).message }, a.task);
+      o.done = true;
+    }
+    save();
+  }
+}
+
+// ---------- Confluence: a daily "What our agents did" page per space, and an incident page per blocked attempt ----------
+
+const spaceFor = (c: Config, project?: string) => c.confluence!.projects?.[project ?? ''] ?? c.confluence!.space;
+const spaces = new Map<string, { id: string; key: string }>();
+async function space(api: Jira, key: string) {
+  if (!spaces.has(key)) spaces.set(key, await ensureSpace(api, key, key === 'AGENTS' ? 'Agent reports' : key));
+  return spaces.get(key)!;
+}
+const siteOf = (box: Box, c: Config) => c.site ?? vaultKey(box, 'ATLASSIAN_SITE');
+
+async function incident(box: Box, c: Config, e: Extract<LogEvent, { type: 'net.blocked' }>) {
+  const jira = jiraClient(box, c);
+  const v = await view(e.task);
+  const issue = loadSynced(e.task).issue;
+  const before = lines(v.events.filter((x) => x.seq < e.seq)).slice(-8).map((l) => `${time(l.at)} ${l.text}`);
+  const by = v.events.map(rollbackBy).filter(Boolean).at(-1);
+  const outcome = v.task.state === 'undone' ? `The task was rolled back${by ? ` by ${by}` : ''}. Its file changes are gone; other tasks kept theirs.`
+    : v.task.state === 'failed' ? `The task stopped: ${clip(v.task.error ?? '', 300)}`
+    : `The box refused the connection at its proxy and the task carried on without it (now ${v.task.state}). Review it and roll it back from Jira if it was wrong.`;
+  return incidentPage(jira, await space(jira, spaceFor(c, issue?.split('-')[0])), {
+    task: v.task.id, title: v.task.title, issue, source: v.task.source, at: e.at, host: e.host, worker: v.task.worker,
+    workspace: v.task.workspace, allowedHosts: v.task.hosts, prompt: clip(v.task.prompt, 3000), steps: before, outcome,
+  }, siteOf(box, c));
+}
+
+/** Rewrite today's page, and yesterday's until it has been written after the day ended. */
+async function dailyTick(box: Box) {
+  const c = config();
+  if (!c?.confluence) return;
+  const jira = jiraClient(box, c);
+  const doneFile = path.join(DIR, 'daily.json');
+  const final = readJson<Record<string, boolean>>(doneFile, {});
+  const today = new Date().toISOString().slice(0, 10);
+  const yesterday = new Date(Date.now() - 86400_000).toISOString().slice(0, 10);
+  for (const day of [yesterday, today]) {
+    if (final[day]) continue;
+    const q = new URLSearchParams({ since: `${day}T00:00:00.000Z`, until: `${day}T23:59:59.999Z` });
+    const rows = (await activity(box, q)).tasks.slice(0, 60);
+    const bySpace = new Map<string, DayTask[]>();
+    for (const r of rows) {
+      const v = await view(r.id);
+      const list = bySpace.get(spaceFor(c, r.project)) ?? [];
+      list.push({ id: r.id, title: r.title, state: r.state, source: r.source, issue: r.issue, costCents: r.costCents, blocked: r.blocked, changes: v.changes, approvals: v.approvals.map((a) => ({ question: a.question, state: a.state, by: a.by })) });
+      bySpace.set(spaceFor(c, r.project), list);
+    }
+    for (const [key, tasks] of bySpace) await dailyPage(jira, await space(jira, key), day, tasks, siteOf(box, c));
+    if (day === yesterday) {
+      final[day] = true;
+      fs.mkdirSync(DIR, { recursive: true, mode: 0o700 });
+      fs.writeFileSync(doneFile, JSON.stringify(final));
+    }
+  }
+}
+
+/** Run a tick now and every `ms`, one at a time; a failure is logged and the next tick tries again. Returns a
+ *  function that runs it now (or right after the one in progress), for events that should not wait for the timer. */
+function every(name: string, ms: number, tick: () => Promise<void>) {
+  let busy = false;
+  let again = false;
+  const run = (): void => {
+    if (busy) return void (again = true);
+    busy = true;
+    tick()
+      .catch((e) => console.error(`jira: ${name} failed:`, (e as Error).message))
+      .finally(() => {
+        busy = false;
+        if (again) (again = false), run();
+      });
+  };
+  setInterval(run, ms).unref();
+  run();
+  return run;
+}
+let jsmNow = () => {};
 
 export default {
   name: 'jira',
+
+  triggers: [
+    { name: 'jsm', start: (box) => void (jsmNow = every('JSM approvals', 10_000, () => jsmTick(box))) },
+    { name: 'confluence', start: (box) => every('daily Confluence page', 15 * 60_000, () => dailyTick(box)) },
+  ],
 
   logReaders: [
     {
@@ -279,6 +578,24 @@ export default {
         }
       },
     },
+    {
+      // A new approval opens its JSM request now, and an answer closes it, instead of waiting for the next tick.
+      name: 'jsm',
+      read(e) {
+        if (e.type === 'approval.asked' || e.type === 'approval.answered') jsmNow();
+      },
+    },
+    {
+      // A blocked attempt gets an incident page while it is news: replaying an old log does not page anyone.
+      name: 'incidents',
+      async read(e, box) {
+        const c = config();
+        if (e.type !== 'net.blocked' || !c?.confluence || Date.now() - Date.parse(e.at) > 86400_000) return;
+        const t = box.task(e.task);
+        if (!t || c.skipSources?.some((p) => t.source.startsWith(p))) return;
+        await incident(box, c, e);
+      },
+    },
   ],
 
   // Jira's address and API token for the reader; the shared secret the Forge app sends to the routes.
@@ -286,14 +603,13 @@ export default {
 
   // Served at /t/jira/... The box's public HTTPS address (Caddy in front of the box) forwards only these. Each one
   // checks the shared secret itself (allowed()), so they are open to the paired-phone rule.
-  openRoutes: ['GET /task', 'POST /answer', 'POST /undo'],
+  openRoutes: ['GET /task', 'POST /answer', 'POST /undo', 'POST /undo-many', 'GET /activity', 'POST /pause', 'POST /start', 'POST /report'],
   routes: {
-    'GET /task': async (req, box) => {
-      if (!allowed(req, box)) return deny();
+    'GET /task': guarded(async (req, box) => {
       const id = new URL(req.url).searchParams.get('id') ?? '';
-      if (!box.task(id)) return Response.json({ error: `no task ${id}` }, { status: 404 });
+      if (!box.task(id)) throw refuse(404, `no task ${id}`);
       const v = await view(id);
-      return Response.json({
+      return {
         task: v.task,
         pending: answerable(v),
         audit: lines(v.events).slice(-30),
@@ -301,23 +617,59 @@ export default {
         reasoning: v.events.filter(isSummary).map((e) => clip((e as { text: string }).text, 1500)).at(-1) ?? v.task.summary ?? '',
         changes: v.changes,
         diff: clip(v.diff, 6000),
-      });
-    },
-    'POST /answer': async (req, box) => {
-      if (!allowed(req, box)) return deny();
-      const { task, approval, approved, by } = await req.json();
-      const a = box.approvals().find((x) => x.id === approval);
-      if (!a || a.task !== task) return Response.json({ error: `no approval ${approval} on task ${task}` }, { status: 404 });
-      return Response.json(box.answer(a.id, approved === true, who(by)));
-    },
-    'POST /undo': async (req, box) => {
-      if (!allowed(req, box)) return deny();
-      const { task, by } = await req.json();
-      const t = box.task(task);
-      if (!t) return Response.json({ error: `no task ${task}` }, { status: 404 });
-      if (t.state === 'undone') return Response.json(t);
-      box.note({ action: 'rollback', by: who(by) }, task); // who asked goes into the log before the undo
-      return Response.json(await box.undo(task));
-    },
+      };
+    }),
+    'POST /answer': guarded(async (req, box) => {
+      const body = await req.json();
+      const a = box.approvals().find((x) => x.id === body.approval);
+      if (!a || a.task !== body.task) throw refuse(404, `no approval ${body.approval} on task ${body.task}`);
+      return answerAs(box, await actor(body), a.id, body.approved === true);
+    }),
+    'POST /undo': guarded(async (req, box) => {
+      const body = await req.json();
+      if (!box.task(body.task)) throw refuse(404, `no task ${body.task}`);
+      await undoAs(box, await actor(body), body.task);
+      return box.task(body.task);
+    }),
+    // Several at once: picked in a JQL list or by the Rovo agent. Each is reported on its own; one failure stops none.
+    'POST /undo-many': guarded(async (req, box) => {
+      const body = await req.json();
+      const a = await actor(body);
+      const byIssue = taskOfIssue();
+      const ids: { task?: string; issue?: string }[] = [
+        ...(Array.isArray(body.tasks) ? body.tasks : []).map((t: unknown) => ({ task: String(t) })),
+        ...(Array.isArray(body.issues) ? body.issues : []).map((k: unknown) => ({ task: byIssue.get(String(k)), issue: String(k) })),
+      ];
+      if (!ids.length || ids.length > 100) throw refuse(400, 'send tasks or issues: 1 to 100 of them');
+      const results = [];
+      for (const x of ids) {
+        if (!x.task) {
+          results.push({ issue: x.issue, ok: false, error: 'not a GurtOS task on this box', changes: [] });
+          continue;
+        }
+        results.push(await undoAs(box, a, x.task).catch((e) => ({ task: x.task, issue: x.issue, ok: false, error: (e as Error).message, changes: [] })));
+      }
+      return { results };
+    }),
+    'GET /activity': guarded(async (req, box) => activity(box, new URL(req.url).searchParams)),
+    // Every agent on the box stops starting new work; running tasks hold where they are. Logged with who did it.
+    'POST /pause': guarded(async (req, box) => {
+      const body = await req.json();
+      const a = await actor(body);
+      const paused = body.paused === true;
+      box.note({ action: paused ? 'pause' : 'resume', by: a.by });
+      const out = await boxCall<{ paused?: boolean }>('PATCH', '/api/settings', { paused }, a.person ? asPerson(a) : {});
+      return { paused: out.paused === true };
+    }),
+    // Write today's "What our agents did" page now, instead of at the next quarter hour.
+    'POST /report': guarded(async (_req, box) => {
+      if (!config()?.confluence) throw refuse(409, 'Confluence reports are off on this box (no confluence in jira/config.json).');
+      await dailyTick(box);
+      return { ok: true };
+    }),
+    'POST /start': guarded(async (req, box) => {
+      const body = await req.json();
+      return start(box, await actor(body), body.issue ?? {});
+    }),
   },
 } satisfies Track;

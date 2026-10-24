@@ -1,4 +1,4 @@
-// The GurtOS agent task panel on a BOX issue: the task's live state, its pending approvals with Approve and Deny, its blocked
+// The GurtOS agent task panel on an issue a box task runs for: the task's live state, its pending approvals with Approve and Deny, its blocked
 // attempts, a short audit trail, the files it changed, and Roll back. Everything comes from the resolver, which
 // asks the box; this page holds no secret.
 import React, { useEffect, useState } from 'react';

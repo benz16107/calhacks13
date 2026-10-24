@@ -1,5 +1,6 @@
-# Box audit: the Jira side of the box. Each box task is an issue in the BOX project; this panel shows the task
-# live from the box and calls the box back to approve or roll it back. See ../README.md.
+# GurtOS for Jira: the control room for the box's agents. Each box task is a Jira issue; this app shows it live,
+# approves and rolls it back, rolls back many at once, pauses every agent, starts agents from issues, and lets
+# the Rovo agent answer from the box's log. See ../README.md.
 modules:
   jira:issuePanel:
     - key: box-task-panel
@@ -9,8 +10,172 @@ modules:
       render: native
       title: GurtOS agent task
       icon: https://developer.atlassian.com/platform/forge/images/icons/issue-panel-icon.svg
+      # Why: show it on any issue a task runs for, in BOX or in the project it was started from.
       displayConditions:
-        projectKey: BOX
+        entityPropertyExists:
+          entity: issue
+          propertyKey: box.task
+  # Why: one place per project to see its agent tasks, roll back a chosen few and pause every agent.
+  jira:projectPage:
+    - key: box-tasks-page
+      resource: tasks
+      resolver:
+        function: resolver
+      render: native
+      title: GurtOS agent tasks
+      layout: native
+  # Why: roll back exactly the issues picked in a list or JQL search, the morning-after clean up.
+  jira:issueNavigatorAction:
+    - key: box-bulk-rollback
+      resource: bulk
+      resolver:
+        function: resolver
+      render: native
+      title: Roll back with GurtOS
+      viewportSize: large
+  # Why: agent activity, blocked attempts and cost per project on a team's dashboard.
+  jira:dashboardGadget:
+    - key: box-activity-gadget
+      title: GurtOS agent activity
+      description: Agent tasks, blocked attempts and cost per project, from the GurtOS box's log.
+      thumbnail: https://developer.atlassian.com/platform/forge/images/icons/issue-panel-icon.svg
+      resource: gadget
+      resolver:
+        function: resolver
+      render: native
+      edit:
+        resource: gadget
+        render: native
+  # Why: ask in plain words what agents did, then roll back or pause, with Rovo asking before it acts.
+  rovo:agent:
+    - key: gurtos-agent
+      name: GurtOS
+      description: Answers what the GurtOS box's agents did, from the box's action log, and rolls back or pauses them when you confirm.
+      prompt: |
+        You are GurtOS, the control room for AI agents that run on a GurtOS box. Each agent task runs as its own
+        Linux user in its own copy of the files, never sees secrets, and reaches only the hosts it is allowed.
+        Each task is a Jira issue. The box keeps an append-only action log of everything every agent did.
+
+        Your only source of truth is what your actions return. They read the box's log.
+        - To answer what agents did, changed, spent or tried, call get-gurtos-activity. Use since and until as ISO
+          dates when the user names a period (today is the current date; "yesterday" is the day before). Use
+          project for a Jira project key, source for what started the task (for example "shopper", "jira:",
+          "schedule"), q for words in the title, and state for one of queued, running, waiting, done, failed,
+          undone.
+        - Summarise with issue keys, titles, states, blocked hosts and cost. Say plainly when nothing matched.
+        - To roll back, first find the tasks with get-gurtos-activity and show the user the issue keys and titles
+          you would roll back. Then call rollback-gurtos-tasks with those issue keys, comma separated. Then report
+          each result exactly as returned: rolled back, already rolled back, or not rolled back with its reason,
+          and the files restored.
+        - To pause or resume every agent, call pause-gurtos-agents with paused true or false. Only Jira admins may.
+        - Never say you did something unless the action's result says it happened. If an action fails, say so and
+          give its error. Never guess task ids, costs or results.
+        - Roll back removes a task's file changes on the box. It cannot recall money or messages already sent;
+          say so if the user asks.
+        Write short, plain sentences.
+      conversationStarters:
+        - What did agents change this week?
+        - What got blocked in the last 7 days?
+        - Roll back everything the shopper did yesterday
+        - Pause all agents
+      actions:
+        - get-gurtos-activity
+        - rollback-gurtos-tasks
+        - pause-gurtos-agents
+  action:
+    - key: get-gurtos-activity
+      name: Get GurtOS agent activity
+      function: activity
+      actionVerb: GET
+      description: Lists GurtOS agent tasks from the box's action log with issue key, title, state, starter, cost, blocked hosts and files changed, plus totals per project. Inputs optional; default is the last 7 days.
+      inputs:
+        since:
+          title: Since
+          type: string
+          required: false
+          description: Start of the period, an ISO date or date-time. Defaults to 7 days ago.
+        until:
+          title: Until
+          type: string
+          required: false
+          description: End of the period, an ISO date or date-time. Defaults to now.
+        days:
+          title: Days
+          type: integer
+          required: false
+          description: Instead of since, the number of days back from now.
+        project:
+          title: Project key
+          type: string
+          required: false
+          description: The Jira project key of the task's issue, such as BOX.
+        source:
+          title: Started by
+          type: string
+          required: false
+          description: Part of what started the task, such as shopper, jira or schedule.
+        q:
+          title: Words
+          type: string
+          required: false
+          description: Words to find in the task's title.
+        state:
+          title: State
+          type: string
+          required: false
+          description: One of queued, running, waiting, done, failed, undone.
+    - key: rollback-gurtos-tasks
+      name: Roll back GurtOS tasks
+      function: rollback
+      # DELETE, not GET: Rovo asks the user to confirm before it runs.
+      actionVerb: DELETE
+      description: Rolls back the GurtOS tasks behind the given Jira issues, removing only their file changes. Find the keys with get-gurtos-activity first. Returns per issue whether it rolled back and the files restored.
+      inputs:
+        issueKeys:
+          title: Issue keys
+          type: string
+          # Not required: Rovo does not reliably call non-GET actions with required inputs (FRGE-1601).
+          required: false
+          description: The Jira issue keys of the tasks to roll back, comma separated, such as BOX-12, BOX-14.
+    - key: pause-gurtos-agents
+      name: Pause or resume all GurtOS agents
+      function: pause
+      actionVerb: UPDATE
+      description: Pauses every agent on the GurtOS box (paused true) or lets them carry on (paused false). Jira admins only.
+      inputs:
+        paused:
+          title: Paused
+          type: boolean
+          required: false
+          description: true to pause every agent, false to resume them.
+    # Why: Jira Automation rules can hand an issue to a GurtOS agent ("Run in GurtOS").
+    - key: run-in-gurtos
+      name: Run in GurtOS
+      function: runInGurtos
+      actionVerb: TRIGGER
+      description: Starts a GurtOS agent task from the rule's issue. Results, file changes and requests for an OK come back on the issue.
+      config:
+        resource: automation
+        render: native
+      inputs:
+        issueKey:
+          title: Issue key
+          type: string
+          required: true
+          description: The issue to run, the smart value {{issue.key}}.
+  automation:actionProvider:
+    - key: gurtos-automation
+      actions:
+        - run-in-gurtos
+  # Why: assigning an issue to the GurtOS agent (or labelling it gurtos-agent) starts a box task for it.
+  trigger:
+    - key: start-on-handoff
+      function: onIssueChange
+      events:
+        - avi:jira:assigned:issue
+        - avi:jira:updated:issue
+      filter:
+        ignoreSelf: true
   # Indexes the issue property the box writes, so JQL can search tasks: boxState = undone, boxBlocked > 0.
   jira:entityProperty:
     - key: box-task-index
@@ -35,9 +200,27 @@ modules:
   function:
     - key: resolver
       handler: index.handler
+    - key: activity
+      handler: index.activity
+    - key: rollback
+      handler: index.rollback
+    - key: pause
+      handler: index.pause
+    - key: runInGurtos
+      handler: index.runInGurtos
+    - key: onIssueChange
+      handler: index.onIssueChange
 resources:
   - key: main
     path: src/frontend/index.jsx
+  - key: tasks
+    path: src/frontend/tasks.jsx
+  - key: bulk
+    path: src/frontend/bulk.jsx
+  - key: gadget
+    path: src/frontend/gadget.jsx
+  - key: automation
+    path: src/frontend/automation.jsx
 permissions:
   scopes:
     - read:jira-work

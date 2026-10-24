@@ -1,11 +1,14 @@
 // The Jira track's demo step. Two agent tasks become Jira issues; one of them strays (tries an unknown host,
-// changes a settings file) and asks for an OK. The calls the Forge panel makes approve it, then roll back just
-// that task. Offline by default: a stand-in for Jira Cloud on this machine takes the box's REST calls.
-// DEMO_LIVE=jira ./demo sends them to the real demo site's BOX project instead, then deletes those issues.
+// changes a settings file) and asks for an OK. The calls the Forge app makes approve it, then roll back just that
+// task. Then the rest of the control room: a production change decided in Jira Service Management, a Confluence
+// incident page and daily report, the activity the Rovo agent and gadget read, a task started from a teammate's
+// issue, pause all, and a bulk roll back. Offline by default: a stand-in for Jira Cloud on this machine takes the
+// box's REST calls. DEMO_LIVE=jira ./demo uses the real demo site instead, then deletes what it made.
 import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
 import type { DemoKit, Task } from '../../core/contract.ts';
+import { dailyTitle } from './confluence.ts';
 
 export default async function (d: DemoKit) {
   const live = (process.env.DEMO_LIVE ?? '').split(/[\s,]+/).includes('jira');
@@ -24,8 +27,18 @@ export default async function (d: DemoKit) {
   // Turn syncing on for this run's box only. Removed at the end so later tracks' tasks stay out of Jira.
   const conf = path.join(d.home, 'jira', 'config.json');
   fs.mkdirSync(path.dirname(conf), { recursive: true });
-  fs.writeFileSync(conf, JSON.stringify(stub ? { project: 'BOX', site: stub.url } : { project: 'BOX' }));
+  // Live, reports go to a scratch space so the real daily page is never overwritten, and JSM uses the site's
+  // approval request type with the signed-in account as approver.
+  const cfg = {
+    project: 'BOX',
+    ...(stub && { site: stub.url }),
+    start: { workspace: 'jira', worker: 'fake', budgetCents: 0 },
+    jsm: stub ? { serviceDesk: '1', requestType: '1', match: ['production'], approvers: ['acct-approver'] } : { serviceDesk: '11', requestType: '145', match: ['production'] },
+    confluence: { space: stub ? 'AGENTS' : 'GURTDEMO' },
+  };
+  fs.writeFileSync(conf, JSON.stringify(cfg));
   const made: string[] = [];
+  const pages: string[] = [];
   try {
     d.workspace('jira', { 'README.md': 'teh box' });
     const start = (title: string, prompt: string) => d.api<Task>('POST', '/tasks', { title, prompt, workspace: 'jira', worker: 'fake', source: 'demo' });
@@ -88,18 +101,104 @@ export default async function (d: DemoKit) {
     // Live, check the text the box wrote; Jira's own JSON carries the site and email, which are not secrets.
     const sent = stub ? stub.bodies.join('\n') : JSON.stringify([a.text, a.comments, b2.text, b2.comments]);
     d.check(!secrets.some((s) => sent.includes(s)), 'no vault secret is in anything the box sent to Jira');
+
+    // ---- the rest of the control room ----
+    const call = async (method: string, p: string, body?: unknown) => {
+      const r = await panel(method, p, secret, body);
+      const out = await r.json();
+      if (!r.ok) throw new Error(`${method} ${p}: ${r.status} ${out.error}`);
+      return out;
+    };
+    const opened = () => JSON.parse(fs.existsSync(path.join(d.home, 'jira', 'jsm.json')) ? fs.readFileSync(path.join(d.home, 'jira', 'jsm.json'), 'utf8') : '{}');
+
+    // JSM: B's "production" question also opened a request; the panel answered first, so the box closed it.
+    const bReq = await d.waitFor('B\'s JSM request', async () => opened()[approval]?.key, 40000).catch(() => undefined);
+    if (bReq) made.push(bReq);
+    d.check(bReq, `B's production push opened Jira Service Management request ${bReq} for its approvers`);
+    // C asks for a production deploy and nobody answers in GurtOS: the JSM approver decides.
+    const C = await start('Ship the hotfix', 'write hotfix.txt deployed\nask Deploy the hotfix to production?');
+    const cReq = await d.waitFor('C\'s JSM request', async () => opened()[`${C.id}.line2`]?.key, 40000);
+    made.push(cReq);
+    if (stub) stub.approve(cReq);
+    else {
+      const ap = (await jira('GET', `/rest/servicedeskapi/request/${cReq}/approval`)).values[0];
+      await jira('POST', `/rest/servicedeskapi/request/${cReq}/approval/${ap.id}`, { decision: 'approve' });
+    }
+    await d.settled([C.id]);
+    const cTask = await d.api('GET', `/tasks/${C.id}`);
+    d.check(d.view('jira', 'hotfix.txt') === 'deployed' && cTask.approvals[0].by.includes(`via JSM ${cReq}`), `C waited for ${cReq}; approved in JSM, it shipped (${cTask.approvals[0].by})`);
+    if (stub) {
+      const closed = await d.waitFor(`${bReq} to be closed`, async () => stub.comments(bReq!).some((c) => c.includes('Answered in GurtOS')), 30000).catch(() => false);
+      d.check(closed, `${bReq} was closed with a note: B was already answered in GurtOS`);
+    }
+
+    // Confluence: B's blocked attempt has an incident page, and today's report lists the tasks.
+    const page = (title: (t: string) => boolean) => (stub ? stub.page(title) : undefined);
+    if (stub) {
+      const inc = await d.waitFor('the incident page', async () => page((t) => t.includes('attacker.example')), 20000);
+      d.check(inc.body.includes('Tidy the settings') && inc.body.includes('refused'), `Confluence incident page: "${inc.title}"`);
+    }
+    await call('POST', '/report');
+    const today = dailyTitle(new Date().toISOString().slice(0, 10));
+    if (stub) {
+      const daily = page((t) => t === today);
+      d.check(daily?.body.includes('Ship the hotfix') && daily.body.includes('attacker.example'), `Confluence daily page "${today}" lists the tasks and the blocked attempt`);
+    } else pages.push(today);
+
+    // What the Rovo agent and the dashboard gadget read.
+    const act = await call('GET', '/activity?source=demo');
+    const bRow = act.tasks.find((t: { id: string }) => t.id === B.id);
+    d.check(act.totals.tasks >= 3 && bRow?.blocked[0]?.startsWith('attacker.example') && bRow.issue === b.key && act.byProject.some((p: { project: string }) => p.project === 'BOX'),
+      `activity: ${act.totals.tasks} tasks, ${act.totals.blocked} blocked, by project ${act.byProject.map((p: { project: string; tasks: number }) => `${p.project} ${p.tasks}`).join(', ')}`);
+
+    // A teammate's issue, assigned to the GurtOS agent: the task works in its own space and reports back there.
+    const teammate = (await jira('POST', '/rest/api/3/issue', { fields: { project: { key: stub ? 'OPS' : 'BOX' }, issuetype: { name: 'Task' }, summary: 'Write the on-call notes', labels: [] } })).key;
+    made.push(teammate);
+    const started = await call('POST', '/start', { issue: { key: teammate, summary: 'Write the on-call notes', description: 'write oncall.md Page Sam first, then Priya.' }, by: 'Jira user' });
+    const again = await call('POST', '/start', { issue: { key: teammate, summary: 'x', description: 'write x.md x' }, by: 'Jira user' });
+    await d.settled([started.task.id]);
+    const report = await d.waitFor(`the report on ${teammate}`, async () => {
+      const cs = (await jira('GET', `/rest/api/3/issue/${teammate}/comment`)).comments.map((c: { body: unknown }) => JSON.stringify(c.body));
+      return cs.find((c: string) => c.includes('+Page Sam first'));
+    }, 30000);
+    d.check(d.view('jira', 'oncall.md') === 'Page Sam first, then Priya.' && report && (again.already || again.task.id === started.task.id),
+      `assigned ${teammate} to the GurtOS agent: the task ran, the diff came back as a comment, a second start did not run it twice`);
+
+    // Pause all: a new task waits; resume, and it runs.
+    await call('POST', '/pause', { paused: true, by: 'Jira user' });
+    const D = await start('Paused job', 'write paused.txt later');
+    await new Promise((r) => setTimeout(r, 1500));
+    const waited = (await d.api('GET', `/tasks/${D.id}`)).task.state === 'queued' && (await call('GET', '/activity')).paused;
+    await call('POST', '/pause', { paused: false, by: 'Jira user' });
+    await d.settled([D.id]);
+    d.check(waited && d.view('jira', 'paused.txt') === 'later', 'pause all from Jira held a new task in the queue; resume ran it');
+
+    // Bulk roll back from a JQL list: A's fix and the hotfix, picked by issue key. Each says what came back.
+    const cIssue = (await issue(C.id, () => true)).key;
+    const bulk = await call('POST', '/undo-many', { issues: [a.key, cIssue, 'NOPE-1'], by: 'Jira user' });
+    const [ra, rc, rx] = bulk.results;
+    d.check(ra.ok && rc.ok && !rx.ok && ra.changes.some((x: { path: string }) => x.path === 'README.md') && d.view('jira', 'README.md') === 'teh box' && d.view('jira', 'hotfix.txt') === undefined && d.view('jira', 'oncall.md') !== undefined,
+      `bulk roll back of ${a.key} and ${cIssue}: both came back (${[...ra.changes, ...rc.changes].map((x: { path: string }) => x.path).join(', ')}), NOPE-1 was refused, the on-call notes stayed`);
+    console.log('  skip  a Jira user acting as their GurtOS Business person: needs GurtOS Business on main');
   } finally {
     fs.rmSync(conf, { force: true });
     stub?.server.close();
-    // Live runs leave the BOX project as they found it.
-    if (live) for (const k of made) await jira('DELETE', `/rest/api/3/issue/${k}`).catch(() => {});
+    // Live runs leave the site as they found it: issues and JSM requests deleted, report pages removed.
+    if (live) {
+      for (const k of made) await jira('DELETE', `/rest/api/3/issue/${k}`).catch(() => {});
+      const sp = (await jira('GET', '/wiki/api/v2/spaces?keys=GURTDEMO').catch(() => ({ results: [] }))).results?.[0];
+      if (sp) for (const pg of (await jira('GET', `/wiki/api/v2/pages?space-id=${sp.id}&limit=50`)).results ?? []) await jira('DELETE', `/wiki/api/v2/pages/${pg.id}`).catch(() => {});
+    }
   }
 }
 
 /** A stand-in for the few Jira Cloud REST calls the box makes, keeping issues in memory. */
 async function stubJira() {
-  type Issue = { key: string; fields: Record<string, any>; props: Record<string, unknown>; comments: { body: unknown }[] };
+  type Issue = { key: string; fields: Record<string, any>; props: Record<string, unknown>; comments: { body: unknown }[]; approval?: string };
   const issues = new Map<string, Issue>();
+  const pages: { id: string; spaceId: string; title: string; body: string; version: number }[] = [];
+  const spaces: { id: string; key: string }[] = [];
+  const newKey = (project: string) => `${project}-${[...issues.keys()].filter((k) => k.startsWith(project + '-')).length + 1}`;
   const bodies: string[] = [];
   const STATUSES = ['To Do', 'In Progress', 'In Review', 'Done'];
   const server = http.createServer(async (req, res) => {
@@ -114,23 +213,63 @@ async function stubJira() {
       return send(200, { issues: [...issues.values()].filter((i) => i.fields.labels.includes(label)).map((i) => ({ key: i.key })) });
     }
     if (req.method === 'POST' && p === '/rest/api/3/issue') {
-      const key = `BOX-${issues.size + 1}`;
-      issues.set(key, { key, fields: { ...b.fields, status: { name: 'To Do' } }, props: {}, comments: [] });
+      const key = newKey(b.fields.project?.key ?? 'BOX');
+      issues.set(key, { key, fields: { labels: [], ...b.fields, status: { name: 'To Do' } }, props: {}, comments: [] });
       return send(201, { key });
+    }
+    // Jira Service Management: a request whose approval waits until the test approves it. Like the real site, an
+    // automation fills Approvers right after it is created.
+    if (req.method === 'POST' && p === '/rest/servicedeskapi/request') {
+      const key = newKey('SEC');
+      issues.set(key, { key, fields: { labels: [], summary: b.requestFieldValues.summary, customfield_10003: [{ accountId: 'bot' }], status: { name: 'Waiting for approval' } }, props: {}, comments: [], approval: 'pending' });
+      return send(201, { issueKey: key });
+    }
+    if (req.method === 'GET' && p === '/rest/api/3/myself') return send(200, { accountId: 'acct-approver' });
+    const sd = p.match(/^\/rest\/servicedeskapi\/request\/([\w-]+)\/(approval|comment)$/);
+    if (sd) {
+      const i = issues.get(sd[1]);
+      if (!i) return send(404, {});
+      if (sd[2] === 'comment') return (i.comments.push({ body: b.body }), send(201, {}));
+      const d = i.approval === 'pending' ? 'pending' : 'approved';
+      return send(200, { values: [{ id: '1', finalDecision: d, approvers: d === 'approved' ? [{ approver: { accountId: 'acct-approver', displayName: 'Approver' }, approverDecision: 'approved' }] : [] }] });
+    }
+    // Confluence: spaces and pages, enough for the reports.
+    if (p === '/wiki/api/v2/spaces') return send(200, { results: spaces.filter((x) => x.key === new URL(req.url!, 'http://x').searchParams.get('keys')) });
+    if (req.method === 'POST' && p === '/wiki/rest/api/space') return (spaces.push({ id: String(spaces.length + 100), key: b.key }), send(200, spaces.at(-1)));
+    if (req.method === 'GET' && p === '/wiki/api/v2/pages') {
+      const q = new URL(req.url!, 'http://x').searchParams;
+      return send(200, { results: pages.filter((x) => x.spaceId === q.get('space-id') && x.title === q.get('title')).map((x) => ({ id: x.id, version: { number: x.version } })) });
+    }
+    if (req.method === 'POST' && p === '/wiki/api/v2/pages') return (pages.push({ id: String(pages.length + 1), spaceId: b.spaceId, title: b.title, body: b.body.value, version: 1 }), send(200, { id: pages.at(-1)!.id }));
+    const pg = p.match(/^\/wiki\/api\/v2\/pages\/(\d+)$/);
+    if (pg && req.method === 'PUT') {
+      const x = pages.find((y) => y.id === pg[1])!;
+      Object.assign(x, { title: b.title, body: b.body.value, version: b.version.number });
+      return send(200, { id: x.id });
     }
     const m = p.match(/^\/rest\/api\/3\/issue\/([\w-]+)(\/.*)?$/);
     const i = m && issues.get(m[1]);
     if (!i) return send(404, { errorMessages: ['no such issue'] });
     const rest = `${req.method} ${m[2] ?? ''}`;
     if (rest === 'GET ') return send(200, { key: i.key, fields: i.fields });
-    if (rest === 'PUT ') return (Object.assign(i.fields, b.fields), send(204));
+    if (rest === 'PUT ') {
+      if (b.update?.labels) for (const l of b.update.labels) i.fields.labels = [...(i.fields.labels ?? []), l.add];
+      return (Object.assign(i.fields, b.fields ?? {}), send(204));
+    }
     if (rest.startsWith('PUT /properties/')) return ((i.props[rest.slice(16)] = b), send(200, {}));
-    if (rest === 'GET /transitions') return send(200, { transitions: STATUSES.map((name, id) => ({ id: String(id), to: { name } })) });
+    if (rest === 'GET /transitions') return send(200, { transitions: STATUSES.map((name, id) => ({ id: String(id), to: { name, statusCategory: { key: name === 'Done' ? 'done' : 'indeterminate' } } })) });
     if (rest === 'POST /transitions') return ((i.fields.status = { name: STATUSES[Number(b.transition.id)] }), send(204));
     if (rest === 'POST /comment') return (i.comments.push(b), send(201, {}));
     if (rest === 'GET /comment') return send(200, { comments: i.comments });
     send(404, {});
   });
   await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
-  return { server, bodies, url: `http://127.0.0.1:${(server.address() as { port: number }).port}` };
+  return {
+    server,
+    bodies,
+    url: `http://127.0.0.1:${(server.address() as { port: number }).port}`,
+    approve: (key: string) => void (issues.get(key)!.approval = 'approved'),
+    comments: (key: string) => (issues.get(key)?.comments ?? []).map((c) => JSON.stringify(c.body)),
+    page: (match: (title: string) => boolean) => pages.find((x) => match(x.title)),
+  };
 }
