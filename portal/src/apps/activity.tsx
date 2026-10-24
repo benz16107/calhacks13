@@ -1,7 +1,7 @@
 // Activity (Figma 84:5312): the action log as an event viewer. Filters in the sidebar, one row per event, newest
 // first, blocked rows red and requests amber, and the selected event's fields below. Live over the log stream.
 import { useEffect, useState } from 'preact/hooks';
-import { useBox, type LogEvent } from '../live.ts';
+import { useBox, type LogEvent, dayOf } from '../live.ts';
 import { Badge, Icon } from '../kit/ui.tsx';
 import { HeaderBar, open } from '../wm.tsx';
 import { clock, pending, plural, taskTitle } from '../util.ts';
@@ -33,8 +33,8 @@ export function ActivityApp() {
     .filter((e) => !needle || `${e.seq} ${e.task ? taskTitle(e.task) : ''} ${kindOf(e)} ${describe(e, b.events).text}`.toLowerCase().includes(needle))
     .slice(0, SHOWN);
   const selected = shown.find((e) => e.seq === sel) ?? shown[0];
-  const today = new Date().toDateString();
-  const todayCount = b.events.filter((e) => new Date(e.at).toDateString() === today).length;
+  const today = dayOf();
+  const todayCount = b.events.filter((e) => dayOf(e.at) === today).length;
 
   useEffect(() => {
     if (selected) document.getElementById(`ev-${selected.seq}`)?.scrollIntoView({ block: 'nearest' });

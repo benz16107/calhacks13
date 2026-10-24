@@ -177,13 +177,14 @@ function refreshSoon() {
 
 // ---------- the log over SSE ----------
 
-const dayOf = (iso: string) => new Date(iso).toLocaleDateString('en-CA');
+/** The box's calendar day for a time, in its own time zone, so every screen agrees on "today". */
+export const dayOf = (t: string | number = Date.now()) => new Date(t).toLocaleDateString('en-CA', box.system?.timezone ? { timeZone: box.system.timezone } : {});
 function take(e: LogEvent) {
   if (e.seq <= (box.events.at(-1)?.seq ?? 0)) return; // already have it (a reconnect replays one line)
   box.events.push(e);
   if (box.events.length > KEEP) box.events.splice(0, box.events.length - KEEP);
   const day = dayOf(e.at);
-  if (day === dayOf(new Date().toISOString())) {
+  if (day === dayOf()) {
     if (box.today.day !== day) box.today = { day, cents: 0, blocked: 0 };
     if (e.type === 'cost') box.today.cents += e.cents;
     if (e.type === 'tool.result') box.today.cents += e.cents ?? 0;

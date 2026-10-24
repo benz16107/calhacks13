@@ -5,7 +5,7 @@ import './settings.css';
 import type { ComponentChildren, JSX } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
 import qrcode from 'qrcode-generator';
-import { api, box, loadApps, loadSetup, onEvent, patchSettings, useBox, type AppInfo } from '../live.ts';
+import { api, box, loadApps, loadSetup, onEvent, patchSettings, useBox, type AppInfo, dayOf } from '../live.ts';
 import { AddRow, Alert, AppIcon, Badge, Button, ComboRow, Group, Icon, IconButton, LinkRow, Row, Sheet, SwitchRow } from '../kit/ui.tsx';
 import { HeaderBar, InWindow, open, phone, useWin } from '../wm.tsx';
 import { access } from '../shell.tsx';
@@ -291,17 +291,17 @@ function Agents() {
   const b = useBox();
   const [vault, reload] = useVault();
   const [sheet, setSheet] = useState<string>();
-  const today = new Date().toDateString();
+  const today = dayOf();
   let model = 0;
   let tools = 0;
   let modelId = '';
   for (const e of b.events) {
     if (e.type === 'cost' && e.model) modelId = e.model;
-    if (new Date(e.at).toDateString() !== today) continue;
+    if (dayOf(e.at) !== today) continue;
     if (e.type === 'cost') e.model ? (model += e.cents) : (tools += e.cents);
     if (e.type === 'tool.result') tools += e.cents ?? 0;
   }
-  const ran = [...b.tasks.values()].filter((t) => new Date(t.createdAt).toDateString() === today).length;
+  const ran = [...b.tasks.values()].filter((t) => dayOf(t.createdAt) === today).length;
   const keyRow = (name: string, what: string) => {
     const k = vault?.find((x) => x.name === name);
     const other = vault?.some((x) => x.name !== name && MODEL_KEYS.includes(x.name));
