@@ -284,5 +284,5 @@ below. See `personal-os/README.md`.
 
 ## Not built yet
 
-The Business edition (one shared box with roles) is not designed. The phone's Activity and Settings tabs reuse the
+The Business edition (one shared box with roles) is designed as a checkpoint for Ben's approval, in `business/README.md`. The phone's Activity and Settings tabs reuse the
 desktop's pages in the phone layout; they are not drawn separately.

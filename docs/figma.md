@@ -34,6 +34,14 @@ GurtOS Personal as its own system on GNOME 46: a shell theme, accent, icon theme
 boot splash, and the GurtOS top-bar item and Quick Settings tile. The identity, how each part ships, eleven screens and the theme assets
 (wallpapers, colours as CSS, the wordmark, Plymouth and GDM) are in [`figma/personal-os/README.md`](figma/personal-os/README.md) (page "GurtOS Personal OS").
 
+## GurtOS Business (checkpoint, waiting for Ben's approval)
+
+GurtOS Business is the Server desktop and design system plus people, rules and accountability for a company. The
+checkpoint uses Fogline Supply from the credit desk track: People with approval limits, Rules as editable sentences,
+Rosa's Waiting for me on her phone, the Audit timeline for one customer, the kill switch on the box and the phone, and
+the same $40,000 request in Server and in Business. Nine PNGs, the node IDs and the open questions are in
+[`figma/business/README.md`](figma/business/README.md) (page "GurtOS Business"). Don't code these until Ben approves.
+
 ## Files
 
 | File | Link | What is in it |
@@ -239,7 +247,8 @@ These are examples in the mockups; the real values come from the running box.
 
 GurtOS has three editions. **GurtOS Server** is everything above: an always-on box with its own screen, run from the
 portal and a phone. **GurtOS Personal** is below: the OS on your own laptop. **GurtOS Business** (one shared box for a
-team, with roles for who starts tasks and who approves spending) is planned and not designed.
+team, with roles for who starts tasks and who approves spending) is designed as a checkpoint, not built yet: see
+[`figma/business/README.md`](figma/business/README.md).
 
 ## The wordmark
 
