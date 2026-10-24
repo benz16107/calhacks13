@@ -66,7 +66,7 @@ wait_for() { # <pattern> <how many times in the log> <seconds>
   tail -40 "$run/serial.log"
   exit 1
 }
-box_id() { grep 'box: up and healthy' "$run/serial.log" | sed -n "${1}p" | sed -n 's/.* box \([0-9a-f]*\):.*/\1/p'; }
+box_id() { grep 'box: up and healthy' "$run/serial.log" | sed -n "${1}p" | sed -n 's/.* \(box-[0-9a-f]*\):.*/\1/p'; }
 vm() { ssh -q -p "$port" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5 root@127.0.0.1 "$@"; }
 
 wait_for 'box-install: Installing the box on' 1 300
@@ -88,7 +88,7 @@ if [[ $name != *-debug ]]; then
   echo "test: PASSED (a release build has no ssh, so the update steps need --debug)"
   exit 0
 fi
-vm 'systemctl is-active box spacetimedb box-screen box-kiosk; box-update status'
+vm 'systemctl is-active box spacetimedb box-kiosk; box-update status'
 
 echo "test: system update to slot B"
 vm 'cat > /data/update/root.sqfs' < "$dir/root-$name.sqfs"

@@ -1,7 +1,7 @@
 [Unit]
 Description=Check the box is healthy, then keep or roll back a system update
 ConditionKernelCommandLine=!box.install
-After=box.service spacetimedb.service box-screen.service
+After=box.service spacetimedb.service
 RequiresMountsFor=/data /boot/efi
 
 [Service]

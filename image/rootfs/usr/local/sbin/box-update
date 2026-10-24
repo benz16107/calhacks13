@@ -99,7 +99,7 @@ confirm)
   done
   where=${cur:+slot $cur}
   where=${where:-the install disc}
-  where+=", build $(build /), box $(sed -n 's/.*"box":"\([^"]*\)".*/\1/p' /etc/box/pairing.json 2>/dev/null || true)"
+  where+=", build $(build /), $(cat /proc/sys/kernel/hostname)"
   if [ -n "$health" ]; then report "up and healthy on $where: $health"
   else report "NOT healthy after 5 minutes on $where"; fi
   [ -n "$cur" ] && [ -f $state/trial ] || { [ -n "$health" ]; exit; }

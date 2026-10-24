@@ -1,10 +1,11 @@
-# The box's screen: cage (a one-window Wayland compositor) running a full-screen browser on the box's page.
+# The box's screen: cage (a one-window Wayland compositor) running a full-screen browser on the portal's box
+# screen, which the box serves at /screen.
 # It runs as the kiosk user (no password, no shell, no sudo). seatd hands it the display and input devices.
 [Unit]
 Description=The box's screen
 ConditionKernelCommandLine=!box.install
-Wants=seatd.service box-screen.service
-After=seatd.service box-screen.service systemd-user-sessions.service
+Wants=seatd.service box.service
+After=seatd.service box.service systemd-user-sessions.service
 StartLimitIntervalSec=0
 
 [Service]
@@ -15,7 +16,7 @@ RuntimeDirectoryMode=0700
 Environment=XDG_RUNTIME_DIR=/run/kiosk LIBSEAT_BACKEND=seatd
 # Virtual machines often have no GPU. These keep WebKit on its simplest drawing path.
 Environment=WEBKIT_DISABLE_DMABUF_RENDERER=1 WEBKIT_DISABLE_COMPOSITING_MODE=1
-ExecStart=/usr/bin/cage -d -- /usr/bin/python3 /usr/local/lib/box-os/kiosk.py http://127.0.0.1:7780/
+ExecStart=/usr/bin/cage -d -- /usr/bin/python3 /usr/local/lib/box-os/kiosk.py http://127.0.0.1:7700/screen
 Restart=always
 RestartSec=2
 

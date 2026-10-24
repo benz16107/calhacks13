@@ -6,8 +6,7 @@
 #   BUILD_SHELL='ssh other-vm' image/build      any Ubuntu 24.04 VM with root. An arm64 VM builds arm64 natively:
 #   BUILD_SHELL='ssh benmac /opt/homebrew/bin/limactl shell box --' image/build arm64
 #   image/build --here x86_64      this machine. Only on a build VM: it needs root and loop devices.
-# Env: BOX_PORTAL_URL  where the pairing QR code points (default: a placeholder)
-#      BOX_SSH_KEY     a public key file. Adds sshd with that key for root. Debug builds only.
+# Env: BOX_SSH_KEY     a public key file. Adds sshd with that key for root. Debug builds only.
 # Outputs on the build machine, in /var/lib/box-image/out: box-<arch>.iso, root-<arch>.sqfs (+ .sha256, .sig).
 # Debug builds are named <arch>-debug, so they cannot be mistaken for a release.
 set -euo pipefail
@@ -27,7 +26,7 @@ if [[ ${1:-} != --here ]]; then
     echo "echo '$(git rev-parse --short HEAD)$(git diff --quiet HEAD -- . || echo +dirty)' > $dest/image/.commit"
     [[ -n $key ]] && echo "echo $key | base64 -d > $dest/image/.ssh-key"
     for arch in $([[ ${1:-x86_64} == all ]] && echo x86_64 arm64 || echo "${1:-x86_64}"); do
-      echo "BOX_PORTAL_URL='${BOX_PORTAL_URL:-}' $dest/image/build --here $arch"
+      echo "$dest/image/build --here $arch"
     done
   } | $BUILD_SHELL sudo bash -s
   exit
@@ -118,8 +117,7 @@ key=$top/update-signing.key # stays on the build machine
 [[ -f $key ]] || (umask 077; openssl genpkey -algorithm ed25519 -out "$key")
 openssl pkey -in "$key" -pubout -out "$root/etc/box-os/update.pub"
 build_id="$(date -u +%Y%m%d-%H%M)-$(cat "$src/image/.commit" 2>/dev/null || echo local)"
-printf 'BUILD=%s\nARCH=%s\nPORTAL_URL=%s\n' "$build_id" "$arch" "${BOX_PORTAL_URL:-https://portal.example/pair}" \
-  > "$root/etc/box-os/release"
+printf 'BUILD=%s\nARCH=%s\n' "$build_id" "$arch" > "$root/etc/box-os/release"
 
 in_root bash -euo pipefail -c '
   useradd --system --home-dir /var/lib/kiosk --create-home --shell /usr/sbin/nologin kiosk
@@ -127,7 +125,7 @@ in_root bash -euo pipefail -c '
   # State lives on the data partition. These are its mount points; what the image put there is hidden at boot.
   rm -rf /etc/box /var/lib/box /var/lib/spacetimedb /root/.config/spacetime
   mkdir -p /data /boot/efi /etc/box /var/lib/box /var/lib/spacetimedb /root/.config/spacetime /var/log/journal
-  systemctl enable systemd-networkd systemd-resolved seatd box-firstboot box-screen box-kiosk box-confirm box-install >/dev/null 2>&1
+  systemctl enable systemd-networkd systemd-resolved seatd box-firstboot box-kiosk box-confirm box-install >/dev/null 2>&1
   # No login prompt anywhere: the screen is the box, and no human account exists.
   systemctl mask getty@.service serial-getty@.service autovt@.service console-getty.service >/dev/null 2>&1
   update-initramfs -u -k all >/dev/null

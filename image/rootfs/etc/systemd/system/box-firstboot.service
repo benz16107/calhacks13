@@ -1,8 +1,8 @@
 [Unit]
-Description=First-boot setup: the box's own identity, pairing code and vault
+Description=First-boot setup: the box's own identity and vault
 ConditionKernelCommandLine=!box.install
 RequiresMountsFor=/etc/box
-Before=box.service box-screen.service
+Before=box.service
 
 [Service]
 Type=oneshot
