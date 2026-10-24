@@ -25,11 +25,16 @@ MODEL_KEYS = [  # vault name, label, where to get it. One is enough.
 FOLDER_CHOICES = ['May change', 'Not allowed']  # "May read" waits for the core to tell reading from changing
 
 
+SHOW_TITLES = True  # GurtOS Settings, which reuses these pages, names them in its header bar instead
+
+
 def page(title, intro):
     """A setup page: a big title and one line, then the step's content, clamped like a preferences page."""
     box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=18, margin_top=36, margin_bottom=36, margin_start=40, margin_end=40)
-    box.append(Gtk.Label(label=title, xalign=0, wrap=True, css_classes=['gurt-title-1']))
-    box.append(Gtk.Label(label=intro, xalign=0, wrap=True, css_classes=['gurt-secondary'], margin_bottom=6))
+    if SHOW_TITLES:
+        box.append(Gtk.Label(label=title, xalign=0, wrap=True, css_classes=['gurt-title-1']))
+    if intro:
+        box.append(Gtk.Label(label=intro, xalign=0, wrap=True, css_classes=['gurt-secondary'], margin_bottom=6))
     return Gtk.ScrolledWindow(child=Adw.Clamp(maximum_size=800, child=box), hscrollbar_policy=Gtk.PolicyType.NEVER, vexpand=True), box
 
 
@@ -137,7 +142,7 @@ class SetupWindow(Adw.ApplicationWindow):
             self.next.set_sensitive(False)
             return
         setup, self.settings, self.vault, self.apps, self.boxes = state
-        self.model = setup.get('model')
+        self.model = setup.get('model') or ({'ready': setup['modelKey']} if 'modelKey' in setup else None)
         self.taken = setup.get('steps', {})
         first_open = next((i for i, (sid, _l) in enumerate(STEPS) if sid not in self.taken and sid != 'done'), len(STEPS) - 1)
         self.go(0 if setup.get('done') else first_open)

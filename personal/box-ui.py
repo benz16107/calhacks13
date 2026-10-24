@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 # GurtOS Personal on the owner's GNOME desktop: one GTK 4 and libadwaita application (dev.box.Box) with four windows.
-#   box-ui.py app [route]        the portal in its own window, e.g. route 'task/<id>' or 'settings'
+#   box-ui.py app [route]        the portal in its own window, e.g. route 'task/<id>' or '/t/find/?q=…'
+#   box-ui.py settings [page]    GurtOS Settings, its own app (dev.box.Settings)
 #   box-ui.py ask [folder ...]   "Ask an Agent": what to do, the folders it may change, a budget
 #   box-ui.py review <task id>   a finished task's changes, with Keep and Undo
 #   box-ui.py setup [--first-login]   GurtOS Setup; --first-login opens it only for the owner, after GNOME's own setup,
@@ -19,6 +20,7 @@ from gi.repository import Adw, Gdk, Gio, GLib, Gtk  # noqa: E402
 sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
 from boxapi import BOX, api, ask_spec, background, dollars, needs_review, tilde, where  # noqa: E402
 from setupwin import SetupWindow  # noqa: E402
+from settingswin import SettingsWindow  # noqa: E402
 
 APP = 'dev.box.Box'
 HERE = os.path.dirname(os.path.realpath(__file__))
@@ -63,7 +65,7 @@ class AppWindow(Adw.ApplicationWindow):
     def go(self, route=''):
         self.route = route
         self.stack.set_visible_child_name('web')
-        self.web.load_uri(f'{BOX}/' + (f'#{route}' if route else ''))
+        self.web.load_uri(BOX + route if route.startswith('/') else f'{BOX}/' + (f'#{route}' if route else ''))  # '/t/find/?q=' or a portal window
         self.present()
 
     def failed(self, _web, _event, _uri, error):
@@ -398,8 +400,8 @@ class ReviewWindow(Adw.ApplicationWindow):
 # ---------- the application ----------
 
 class Box(Adw.Application):
-    def __init__(self):
-        super().__init__(application_id=APP, flags=Gio.ApplicationFlags.HANDLES_COMMAND_LINE)
+    def __init__(self, app_id=APP):
+        super().__init__(application_id=app_id, flags=Gio.ApplicationFlags.HANDLES_COMMAND_LINE)
         self.app_window = None
 
     def do_startup(self):
@@ -459,6 +461,8 @@ class Box(Adw.Application):
             AskWindow(self, rest)
         elif cmd == 'review' and rest:
             ReviewWindow(self, rest[0])
+        elif cmd == 'settings':
+            SettingsWindow(self, rest[0] if rest else 'general')
         elif cmd in ('setup', 'welcome'):
             if '--first-login' in rest or cmd == 'welcome':
                 self.setup_first_login()
@@ -470,5 +474,7 @@ class Box(Adw.Application):
 
 
 if __name__ == '__main__':
-    GLib.set_prgname(APP)  # the window's class matches dev.box.Box.desktop, so the dock groups it under GurtOS
-    sys.exit(Box().run(sys.argv))
+    # GurtOS Settings is its own app (dev.box.Settings), so the dock shows it apart from the GurtOS app.
+    app_id = 'dev.box.Settings' if sys.argv[1:2] == ['settings'] else APP
+    GLib.set_prgname(app_id)  # the window's class matches its .desktop file, so the dock groups it right
+    sys.exit(Box(app_id).run(sys.argv))

@@ -73,10 +73,14 @@ atexit.register(lambda: shutil.rmtree(ROOT, ignore_errors=True))
 api('PATCH', '/api/settings', {'agentFolders': [ROOT]})
 
 
-for f in ('box-ui.py', 'setupwin.py', 'boxapi.py', 'files/box-nautilus.py'):
+for f in ('box-ui.py', 'setupwin.py', 'settingswin.py', 'search-provider.py', 'boxapi.py', 'files/box-nautilus.py'):
     with open(os.path.join(HERE, f)) as src:
         compile(src.read(), f, 'exec')  # a syntax check that writes no .pyc
-check(True, 'the GurtOS app, GurtOS Setup and the Files extension compile under the system Python')
+check(True, 'the GurtOS app, Setup, Settings, the search provider and the Files extension compile under the system Python')
+ext = os.path.join(HERE, 'shell', 'gurtos@gurtos.dev', 'extension.js')
+subprocess.run([NODE, '--check', ext], check=True, capture_output=True)
+check(js('headerCaps', 'buy a GPU hour needs your OK') == 'Buy a GPU Hour Needs Your OK' and js('noModelKey', 'the vault has no FACTORY_API_KEY'),
+      'the Shell extension parses, and its notification wording and missing-key check work (the same logic.js GNOME Shell runs)')
 
 with urllib.request.urlopen(f'{BOX}/api/log/stream?after=0', timeout=5) as r:
     head = [r.readline().decode() for _ in range(2)]

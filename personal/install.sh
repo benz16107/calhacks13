@@ -32,11 +32,17 @@ fi
 
 install -Dm644 "$here/files/dev.box.Box.desktop" /usr/share/applications/dev.box.Box.desktop
 install -Dm644 "$here/icons/dev.box.Box.svg" /usr/share/icons/hicolor/scalable/apps/dev.box.Box.svg
+install -Dm644 "$here/files/dev.box.Settings.desktop" /usr/share/applications/dev.box.Settings.desktop
+install -Dm644 "$here/icons/dev.box.Settings.svg" /usr/share/icons/hicolor/scalable/apps/dev.box.Settings.svg
 install -Dm644 "$here/icons/dev.box.Box-symbolic.svg" /usr/share/icons/hicolor/symbolic/apps/dev.box.Box-symbolic.svg
+install -Dm644 "$here/icons/emblem-gurtos-agent.svg" /usr/share/icons/hicolor/scalable/emblems/emblem-gurtos-agent.svg
 gtk-update-icon-cache -q -t -f /usr/share/icons/hicolor 2>/dev/null || true
 install -Dm644 "$here/files/apparmor-box-ui" /etc/apparmor.d/box-ui
 apparmor_parser -r -W /etc/apparmor.d/box-ui 2>/dev/null || true # in a chroot it loads at the next boot instead
 install -Dm644 "$here/files/box-nautilus.py" /usr/share/nautilus-python/extensions/box-nautilus.py
+# GurtOS in the Activities search: agent tasks and /find results.
+install -Dm644 "$here/files/dev.box.Box.search-provider.ini" /usr/share/gnome-shell/search-providers/dev.box.Box.search-provider.ini
+install -Dm644 "$here/files/dev.box.Search.service" /usr/share/dbus-1/services/dev.box.Search.service
 rm -f /etc/xdg/autostart/box-welcome.desktop # GurtOS Setup took over the welcome
 install -Dm644 "$here/files/box-setup.desktop" /etc/xdg/autostart/box-setup.desktop
 # The GurtOS typeface (docs/figma/system.md): Atkinson Hyperlegible Next and Mono, SIL OFL, for GurtOS's own windows.

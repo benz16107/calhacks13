@@ -1,24 +1,64 @@
-# GurtOS Personal: the desktop layer
+# GurtOS Personal: GurtOS built into the desktop
 
-GurtOS Personal is the OS on your own laptop. You use Ubuntu's GNOME desktop as usual, with your own account and
-sudo. Agents work beside you as their own users without sudo, on copies of your folders, and nothing in your folders
-changes until you choose Keep. This folder is the GNOME side of that: five small pieces that talk to the box's API on
-`127.0.0.1:7700`. The box itself (tasks, the vault, the action log, Keep and Undo) is `core/`.
+GurtOS Personal is the OS on your own laptop, the way elementary OS and Pop!_OS are: Ubuntu 24.04 underneath (kernel,
+drivers, packages, updates), and GurtOS on top as part of the desktop, not an app beside it. You use it as a normal
+computer, with your own account and sudo. Agents work beside you as their own users without sudo, on copies of your
+folders, and nothing in your folders changes until you choose Keep. This folder is that desktop side. It talks to the
+box's API on `127.0.0.1:7700`; the box itself (tasks, the vault, the action log, Keep and Undo) is `core/`.
 
-Tested two ways on a cloud VM: installed onto plain Ubuntu 24.04 with GNOME 46 (Xorg), and as a fresh install of the
-GurtOS Personal ISO walked as a new person on Wayland, Ubuntu's default (below).
+Tested on a cloud VM: installed onto plain Ubuntu 24.04 with GNOME 46, and as a fresh install of the GurtOS Personal
+ISO walked as a new person, on Wayland (Ubuntu's default) and Xorg.
 
 ## What it adds
 
-| Piece | What it does | File |
+| Piece | What it does | Where |
 |---|---|---|
-| GurtOS Setup | At the owner's first login, after GNOME's own setup: Welcome, AI models, Folders, Permissions, Apps, Pair a phone, Done. Every answer goes to the box | `box-ui.py setup`, `setupwin.py` |
-| Approvals as notifications | Each approval becomes a GNOME notification with Deny and Approve (Approve names the amount). Clicking the body opens the task in GurtOS. An answer from anywhere else (phone, portal, the top bar) withdraws it. In quiet hours it waits in the list with no banner | `box-desktop.py` |
-| Top-bar indicator | The GurtOS box icon with "1 running · 2 need you". Its menu: Needs your OK (with Approve and Deny), Ready to review, Running, then Ask an Agent, Open GurtOS and GurtOS settings | `box-desktop.py` |
-| The GurtOS app | The portal in its own window (WebKitGTK), first in the dock | `box-ui.py app` |
-| Ask an Agent in Files | Right-click one folder or up to ten. One dialog: the task, the folders it may change, its internet, budget and worker. One Droid task on copies of them | `files/box-nautilus.py`, `box-ui.py ask` |
-| Keep or Undo | When the task is done, a notification opens the review: what changed, the diff, and a card that asks Keep these changes? Put files back undoes a Keep | `box-ui.py review` |
-| Failures | A task that cannot finish says why in a notification (a missing model key instead offers to open GurtOS Setup) | `box-desktop.py` |
+| The GurtOS session | Its own GNOME session and Shell mode, like Ubuntu's own: it loads the GurtOS Shell extension, Ubuntu's dock, AppIndicator support and tiling. GDM starts it by default, on Wayland or Xorg. An extension a session mode loads cannot be switched off by accident | `theme/session/`, `theme/install.sh` |
+| The top bar | The GurtOS item: the amber count of what needs you and "1 running". Its popover: Needs your OK with Deny and Approve on each, Ready to review, Running, then Ask an Agent, Open GurtOS, GurtOS Settings | `shell/gurtos@gurtos.dev/` |
+| Quick Settings | An Agents tile: on means agents may interrupt you, off is quiet hours. Its menu: Quiet hours, Pause all agents (once the core has it), GurtOS Settings | `shell/gurtos@gurtos.dev/` |
+| Approvals as Shell notifications | Deny and Approve (Approve names the amount); clicking the body opens the task; answered anywhere else, it goes away; in quiet hours it waits in the list without a banner. GNOME shows no actions on the lock screen, so while locked one notice says how many wait: "Unlock to approve or deny" | `shell/gurtos@gurtos.dev/` |
+| Activities search | Type in the overview: agent tasks by title, and /find's files, photos and task history. A result opens in the GurtOS app | `search-provider.py` |
+| Files | Ask an Agent… on one folder or up to ten. The "changed by an agent" emblem on a folder whose agent changes wait for review or were kept. On that folder: Keep Agent Changes, Undo Agent Changes… (the review asks first), Put Files Back… | `files/box-nautilus.py` |
+| GurtOS Settings | A native libadwaita app (its own icon in the dock): General, Agents & Models, Permissions, Folders, Accounts & Keys, Apps, Devices, Updates, Privacy & Logs, About ("Based on Ubuntu 24.04 LTS") | `settingswin.py` |
+| GurtOS Setup | At the owner's first login, after GNOME's own setup: Welcome, AI models, Folders, Permissions, Apps, Pair a phone, Done | `setupwin.py` |
+| The GurtOS app | Tasks, Activity and Time Machine: the portal in its own window, first in the dock | `box-ui.py app` |
+| Keep or Undo | The review: what changed, the diff, and Keep these changes? | `box-ui.py review` |
+| The look | Wallpaper, the dock as a floating bottom bar, the GurtOS font, a GurtOS icon theme over Yaru (no Ubuntu logo in the dock), GTK accents for new accounts, the GDM logo, a Plymouth splash. Ubuntu's welcome tour, Pro notices and update nags are hidden in the GurtOS session | `theme/` |
+
+![The GurtOS session: wallpaper, floating dock, the GurtOS item in the top bar](screenshots/os/01-desktop.png)
+
+![An approval as a Shell notification, with the count in the top bar](screenshots/os/02-approval.png)
+
+![The top-bar popover](screenshots/os/03-popover.png)
+
+![The Agents tile in Quick Settings](screenshots/os/06-agents-tile.png)
+
+![The lock screen: one notice, no details](screenshots/os/07-lock.png)
+
+![GurtOS Settings, Accounts & Keys](screenshots/os/10-settings-keys.png)
+
+![Activities search finds agent tasks and /find results](screenshots/os/11-search.png)
+
+![Files: the emblem on folders agents changed](screenshots/os/13-files-emblem.png)
+
+![Files: Keep or Undo agent changes on a folder](screenshots/os/14-files-keep.png)
+
+![The same session on Xorg](screenshots/os/16-xorg.png)
+
+## Waiting on Figma's theme
+
+Everything below is wired; the files are placeholders that the theme replaces without code changes.
+
+| Hook | File today | What Figma's theme provides |
+|---|---|---|
+| GNOME Shell theme | the extension's `stylesheet.css` (styles the top-bar item, badge, popover); `theme/session/gurtos.json` points at Yaru's Shell theme | a `gnome-shell-theme.gresource`; change `themeResourceName` in `gurtos.json` |
+| GTK and libadwaita accents | `theme/gtk/gtk4.css`, `gtk3.css` (accent only), imported by new accounts' `~/.config/gtk-4.0/gtk.css` | the full colour set |
+| Icons | `theme/icons/GurtOS` inherits Yaru-blue; replaces the dock's Ubuntu-logo Show Apps icon | GurtOS's icon set, in the same folder |
+| Cursor, fonts | dconf `cursor-theme='Yaru'`; Atkinson Hyperlegible Next and Mono | a cursor theme, if any |
+| Wallpaper | `theme/backgrounds/gurtos-night.svg` (the portal's night hills) | final wallpapers, light and dark |
+| Logos | `theme/gurtos-logo.svg`, `gurtos-logo-gdm.png`, `plymouth/gurtos/logo.png`, rendered from the box glyph and the wordmark | the logo and wordmark |
+| GDM | `theme/dconf/db/gdm.d/01-gurtos` (logo, font) | a login background if wanted |
+| Plymouth | `theme/plymouth/gurtos/` (logo on the night colours) | the boot screen (Figma `Box / Boot`) |
 
 **The design.** These windows follow the GurtOS system (`docs/figma/system.md`) and the Personal frames in
 `docs/figma/os-v2/personal/`, built from libadwaita's own widgets so they sit among GNOME apps. The system's colour
@@ -132,45 +172,49 @@ On Ubuntu 24.04 with the box installed:
 sudo core/install.sh && sudo personal/install.sh [owner]
 ```
 
-`install.sh` installs GNOME if it is missing (`ubuntu-desktop-minimal`) and the libraries the layer uses (GTK 4,
-libadwaita, WebKitGTK 6, AyatanaAppIndicator, nautilus-python). It copies this folder to `/opt/box/personal`, adds the
-desktop entry, icons, the GurtOS fonts, the Files extension, GurtOS Setup's autostart entry, the user service (enabled for every
-account), and a schema override that puts GurtOS first in the dock for new accounts. It sets `BOX_OWNER` on the box
-service to the owner you name, or to the first human in the `sudo` group. It is safe to run again.
+`install.sh` installs GNOME if it is missing (`ubuntu-desktop-minimal`) and what the layer uses (GTK 4, libadwaita,
+WebKitGTK 6, nautilus-python, Ubuntu's AppIndicator extension, `dconf-cli`, `librsvg2-common`). It copies this folder
+to `/opt/box/personal` and installs the apps, icons, fonts, the Files extension, the search provider and GurtOS Setup's
+autostart entry. Then `theme/install.sh` installs the GurtOS session, its Shell mode and extension, the dconf defaults
+(`/etc/dconf/profile/user` and `gdm`, `/etc/dconf/db/gurtos.d`, `gdm.d`, then `dconf update`), wallpaper, icon theme,
+GTK accents in `/etc/skel`, logos and the Plymouth theme, makes the GurtOS session GDM's default
+(`DefaultSession=gurtos.desktop`) and moves existing accounts from Ubuntu's session to it. It sets `BOX_OWNER` on the
+box service to the owner you name, or to the first human in the `sudo` group. It is safe to run again.
 
 **For `image/build personal`:** run `personal/install.sh` in the image's root after the box's own install steps. It
 only installs files and packages and never starts anything, so it works in a chroot (the AppArmor profile then loads
-at first boot). Two things the image must do itself: boot to GDM and the GNOME session instead of the Server's kiosk
-(`box-kiosk.service`, `box-screen.service`), and set the owner once the first account exists, by running
-`personal/install.sh <user>` again or writing `BOX_OWNER` into `/etc/systemd/system/box.service.d/personal.conf`.
+at first boot). What the image adds itself:
+- Packages: `plymouth` and `plymouth-label` (the splash; `install.sh` sets the GurtOS theme only when Plymouth is
+  there) and `splash` on the kernel command line; `qrencode` for pairing QR codes.
+- `DefaultSession=gurtos.desktop` in its own `/etc/gdm3/custom.conf` (install.sh adds it when missing).
+- `/etc/issue` from `theme/issue`; `os-release` with `LOGO=gurtos-logo` (the icon is installed).
+- Optional: drop Ubuntu's sessions from `/usr/share/{wayland-sessions,xsessions}/ubuntu*.desktop`, so the login
+  screen offers only GurtOS.
+- Rebuild the initramfs after install.sh, for the Plymouth theme.
 
 ## How it works
 
-- **The service** (`box-desktop.service`, a systemd user unit in the graphical session) reads the action log once
-  (`GET /api/log`) and then follows it live (`GET /api/log/stream`). Events only mean "something changed": it then
-  reads `GET /api/tasks` and `GET /api/approvals?state=pending`, and `plan()` in `boxapi.py` decides which
-  notifications to post and which to withdraw. So a replayed or missed event cannot leave a stale notification.
-  It posts and answers notifications over D-Bus (`org.freedesktop.Notifications`) and answers approvals with
-  `POST /api/approvals/<id> {approved, by: "desktop:<user>"}`, so the log records who said yes.
-- **Approvals use the critical urgency**, so the banner stays on screen until you answer. The task has stopped and
-  is waiting for you. Reviews of finished work use the normal urgency.
-- **The indicator is an AppIndicator, not a Shell extension.** Ubuntu 24.04 ships and enables AppIndicator support,
-  so the indicator is a few lines in the service that already holds the task and approval state. A Shell extension
-  would need its own connection to the box, has to be enabled per account, and breaks when GNOME changes its
-  extension API (GNOME 45 moved extensions to ES modules). A crash in the service also cannot take down the shell.
-- **The windows** are one GTK 4 and libadwaita application (`dev.box.Box`), so a second launch from Files, the dock
-  or a notification opens its window in the same process. GNOME's HIG patterns throughout: header bars, boxed
-  lists, Cancel first and Start as the suggested action, Undo in the destructive style with a confirmation.
-- **Ask an Agent** sends `POST /api/tasks {title, prompt, folder, budgetCents, source: "files"}`. The core links the
-  folder and runs the task as its own user on an overlay copy. Keep is `POST /api/tasks/<id>/keep`, which returns
-  `{kept}` or `{conflicts}` (you changed the same file meanwhile; nothing is written). Undo is
-  `POST /api/tasks/<id>/undo`, and Undo Keep is `POST /api/tasks/<id>/unkeep`. The task's `review` field
-  (`pending`, `kept`, `conflict`, `undone`) is how the desktop knows which tasks still need the owner.
-- **Python, not TypeScript.** GNOME's own bindings (PyGObject) ship with Ubuntu's desktop, so the layer needs no
-  build step and no npm packages. The box itself stays TypeScript.
+- **The Shell extension** (`shell/gurtos@gurtos.dev/`, GNOME Shell 46, ES modules) follows the action log over
+  Server-Sent Events (`GET /api/log/stream`). Events only mean "something changed": it then reads tasks, pending
+  approvals and settings, and `plan()` in `logic.js` decides which notifications to post and withdraw, so a replayed
+  or missed event cannot leave a stale one. It answers with `POST /api/approvals/<id> {approved, by: "desktop:<user>"}`.
+  It shows nothing for an account that is not the box's owner. `logic.js` has no GNOME imports, so the demo step runs
+  the same code under Node.
+- **Why a session, not a user extension.** GNOME loads the extensions a session mode lists (as Ubuntu does for its
+  dock), and the Extensions app cannot turn those off. The session's desktop names are `GurtOS;ubuntu;GNOME`, so
+  Ubuntu's own defaults still apply where GurtOS sets none, and its `XDG_CONFIG_DIRS` puts `/etc/xdg/gurtos` first,
+  which is how Ubuntu's welcome tour and nags are hidden there without touching Ubuntu's files. The extension is also
+  in the default `enabled-extensions`, because only listed extensions keep running on the lock screen.
+- **Defaults, not locks.** `theme/dconf/db/gurtos.d/00-gurtos` sets wallpaper, fonts, icons, the dock and favourites
+  as defaults people can change. Nothing is locked: the part that must not be turned off (the extension) is held by
+  the session mode instead.
+- **GurtOS Settings and Setup share their pages** (`setupwin.py`), so they never disagree. Settings applies each
+  change at once; Setup records each step.
+- **Python for the apps, JavaScript only where GNOME requires it.** PyGObject ships with Ubuntu's desktop, so the
+  apps, the search provider and the Files extension need no build step. The Shell extension must be JavaScript.
 - **WebKitGTK and AppArmor.** Ubuntu 24.04 lets only programs with an AppArmor profile create the user namespace
   WebKit's sandbox needs. `files/apparmor-box-ui` gives the GurtOS app the same kind of profile Ubuntu gives Epiphany
-  and Geary, so the web sandbox stays on. That is why launchers run `box-ui.py` directly and not through `python3`.
+  and Geary. That is why launchers run `box-ui.py` directly and not through `python3`.
 
 ## The demo step
 

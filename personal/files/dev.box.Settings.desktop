@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=GurtOS Settings
+Comment=Models, folders agents may use, permissions, apps, keys and devices
+Exec=/opt/box/personal/box-ui.py settings
+Icon=dev.box.Settings
+Terminal=false
+Categories=Settings;System;
+Keywords=agent;ai;keys;vault;permissions;budget;quiet;
+StartupNotify=true
+StartupWMClass=dev.box.Settings

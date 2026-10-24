@@ -1,0 +1,3 @@
+[D-BUS Service]
+Name=dev.box.Search
+Exec=/opt/box/personal/search-provider.py
