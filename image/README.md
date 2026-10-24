@@ -14,7 +14,7 @@ version is not healthy. Both editions are Ubuntu 24.04 underneath (`ID_LIKE=ubun
 
 ## Build it yourself
 
-You need an Ubuntu 24.04 machine or VM with root (sudo), about 10 GB of free disk for each edition and
+You need an Ubuntu 24.04 machine or VM with root (sudo), about 12 GB of free disk for each edition and
 architecture you build, and a network connection: the build downloads Ubuntu's packages, Node.js and
 SpacetimeDB. (Droid is not in the image: each machine downloads it on first start.) The build runs as root, installs build tools, mounts loop devices and runs chroots, so use a
 VM or a machine set aside for it.
@@ -32,9 +32,16 @@ It builds on this machine (it asks for sudo). To build on another machine instea
 architecture on a machine of that architecture: arm64 on an x86_64 machine works, under emulation, but takes
 about an hour (`BUILD_SHELL='ssh my-arm-vm' image/build arm64`).
 
-How long: GurtOS Server for x86_64 took about 12 minutes the first time and 3 after that, on a 6-core VM with
-16 GB of memory. GurtOS Personal takes longer, as it downloads the GNOME desktop. Most of the first build is
-downloads.
+How long, measured from a fresh `git clone` (so including Ubuntu's base) on a Vultr vc2-4c-8gb (4 vCPU, 8 GB):
+
+| Build | Time | Peak memory | Disk used |
+|---|---|---|---|
+| GurtOS Server, x86_64 | 6 min 16 s | 1.0 GB | about 7 GB |
+| GurtOS Personal, x86_64 | about 6 min | 1.7 GB | about 11 GB |
+| GurtOS Server, arm64, natively on an Apple M2 Max VM (6 cores, 8 GB) | 4 min 42 s | | |
+
+A second build of the same edition reuses the cached Ubuntu base and takes about half as long. Most of the time is
+downloads. arm64 on an x86_64 machine runs under emulation and takes about an hour.
 
 The outputs are on the build machine in `/var/lib/box-image/out/`:
 
