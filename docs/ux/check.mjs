@@ -91,6 +91,7 @@ if (process.env.LIVE) {
   S('live-app-gurtos', { base: 'https://app.gurtos.com', path: '/', vp: PHONE, mobile: true });
   S('live-app-gurtos-desktop', { base: 'https://app.gurtos.com', path: '/', vp: DESK });
   S('live-remote-address', { base: 'https://gurt-cloud.box.gurtos.com', path: '/', vp: PHONE, mobile: true });
+  S('live-remote-laptop', { base: 'https://gurt-laptop.box.gurtos.com', path: '/', vp: DESK });
 }
 
 // Checks that run in the page. Each returns a list of short problems with an example.

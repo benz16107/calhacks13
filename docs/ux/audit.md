@@ -32,6 +32,10 @@ Release (P-1): one rebuild of all four ISOs from one main commit, about 75 minut
 the download pages. The UX thread sends the commit once the Personal, image and core P0 and P1 fixes are in. Target
 before midnight PT, hard cutoff 6:30 AM PT Sunday (at 5:30 AM the best demo-ready commit goes regardless).
 
+Deployed: the three installed computers run e5d7246 (core, after the UX batches). The live remote addresses serve the
+new build (`after/live-remote-address.png`, `after/live-remote-laptop.png`). app.gurtos.com is still the old build
+until the remote access thread redeploys it.
+
 ## Top 10
 
 Ranked by how much each changes a judge's first impression. Each links to its full entry below.
