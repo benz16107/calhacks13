@@ -55,10 +55,11 @@ export default async function (d: DemoKit) {
   d.check(/Cal Hacks 13/.test(okA.question) && !pub.includes('Cal Hacks 13') && pub.includes('A guest request from a public app'),
     "the owner's approval quotes the guest's words; the public status does not");
   await d.api('POST', `/approvals/${okA.id}`, { approved: true, by: 'demo' });
+  const live = /\bdroid\b/.test(process.env.DEMO_LIVE ?? ''); // a real Droid run takes about a minute
   const done = await d.waitFor('the approved request to finish', async () => {
     const v = (await look(a.body.id, 'mana:demo-a')).body;
     return v.state === 'done' || v.state === 'failed' ? v : undefined;
-  });
+  }, live ? 180_000 : undefined);
   const runTask = done.run ? (await d.api('GET', `/tasks/${done.run}`)).task : undefined;
   d.check(done.state === 'done' && runTask?.workspace === 'guest' && runTask?.hosts.length === 0 && runTask?.budgetCents === 25,
     `after the OK it ran as ${done.run}: the empty guest workspace, no network of its own, a 25 cent budget, and the guest sees "${done.answer}"`);
