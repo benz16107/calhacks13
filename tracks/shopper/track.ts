@@ -677,6 +677,8 @@ export default {
   routes: {
     'GET /': file('app.html', 'text/html'),
     'GET /passkey.js': file('passkey.js', 'text/javascript'),
+    // Face ID top level on the box's own address, for when Shopper runs inside the GurtOS app's window (a cross-origin frame).
+    'GET /approve': file('approve.html', 'text/html'),
 
     'GET /state': async (_req, box) => {
       const events = readLog();

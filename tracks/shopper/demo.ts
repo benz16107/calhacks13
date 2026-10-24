@@ -74,10 +74,12 @@ export default async function (d: DemoKit) {
   const code = await d.api<{ code: string }>('POST', '/api/pair/start', {});
   const phone = await d.api<{ token: string }>('POST', '/api/pair', { code: code.code, name: 'Shopper demo phone' });
   const away = (p: string, h: Record<string, string> = {}) => fetch(`${base}${p}`, { headers: { 'x-forwarded-for': '203.0.113.7', ...h } }); // not from the box's own screen
-  const [bare, app, st, shop] = await Promise.all([
+  const [bare, app, st, shop, approvePage] = await Promise.all([
     away('/t/shopper/state'), away(`/t/shopper/?access_token=${phone.token}`), away('/t/shopper/state', { authorization: `Bearer ${phone.token}` }), away(`/t/shopper/store/stats?access_token=${phone.token}`),
+    away(`/t/shopper/approve?approval=x&access_token=${phone.token}`),
   ]);
-  d.check(bare.status === 401 && app.status === 200 && st.status === 200 && shop.status === 200, 'off the box, a paired phone gets the app, its live state and the store with its token, and 401 without it');
+  d.check(bare.status === 401 && app.status === 200 && st.status === 200 && shop.status === 200 && approvePage.status === 200,
+    'off the box, a paired phone gets the app, its live state, the store and the top-level Face ID page with its token, and 401 without it');
 
   // ---------- a signed shopping mandate, then a purchase inside it ----------
   await admin('HV60-100', { priceCents: 899, inStock: true });

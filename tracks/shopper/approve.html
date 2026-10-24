@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Approve with Face ID</title>
+<link rel="stylesheet" href="/kit/gurtos.css">
+<script type="module" src="/kit/gurtos.js"></script>
+<style>
+  main { max-width: 520px; margin: 0 auto; padding: var(--space-lg) var(--space-md); display: flex; flex-direction: column; gap: var(--space-md); }
+  .g-notification-actions { flex-wrap: wrap; }
+  .g-notification-actions .g-btn { flex: 1 1 auto; justify-content: center; }
+</style>
+<body class="g-page">
+<!-- Face ID, top level on the box's own address. The GurtOS app opens this page when Shopper runs inside its
+     window (a cross-origin frame), because a passkey ceremony there is not reliable on every browser. -->
+<main>
+  <div class="g-banner" role="note"><g-icon name="dialog-warning"></g-icon><div><p class="t-caption"><b>TEST PAYMENTS ONLY.</b> A Visa test card held in the box's vault; no real money moves.</p></div></div>
+  <div id="card" aria-live="polite"><p class="t-body t-secondary">Loading…</p></div>
+</main>
+<script type="module">
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+  const q = new URLSearchParams(location.search);
+  const id = q.get('approval');
+  const done = (text) => {
+    $('card').innerHTML = `<div class="g-card"><p class="t-body-strong">${esc(text)}</p><p class="t-caption t-secondary">You can close this and go back to the GurtOS app.</p><button class="g-btn" id="close">Close</button></div>`;
+    $('close').onclick = () => window.close();
+    setTimeout(() => window.close(), 1500);
+  };
+  const fail = (e) => $('card').insertAdjacentHTML('beforeend', `<p class="t-caption t-destructive" role="alert">${esc(e.message)}</p>`);
+  const pk = await import('/t/shopper/passkey.js');
+
+  if (q.get('enroll')) {
+    $('card').innerHTML = `<div class="g-card" style="display:flex;flex-direction:column;gap:12px"><p class="t-heading">Set up Face ID for Shopper on this device</p>
+      <p class="t-caption t-secondary">The box checks your Face ID signature before it pays, so a stolen pairing token can't buy anything.</p>
+      <label class="t-caption-strong">Name this device <input class="g-field" id="name" value="${/iPhone/.test(navigator.userAgent) ? 'iPhone' : /Android/.test(navigator.userAgent) ? 'Android phone' : 'This device'}"></label>
+      <button class="g-btn g-btn-suggested g-btn-large" id="go">Set up Face ID</button></div>`;
+    $('go').onclick = async () => {
+      try {
+        const status = await (await fetch(`/t/shopper/passkey/status?origin=${encodeURIComponent(location.origin)}`)).json();
+        await pk.enroll($('name').value, { existing: status.enrolled });
+        done('Face ID is set up on this device.');
+      } catch (e) { fail(e); }
+    };
+  } else {
+    const list = await (await fetch('/api/approvals?state=pending')).json().catch(() => []);
+    const a = Array.isArray(list) ? list.find((x) => x.id === id) : undefined;
+    if (!a) done('Nothing is waiting for you: it was already answered.');
+    else {
+      const [head, ...rest] = a.question.split('? ');
+      const amount = (a.question.match(/ for (\$[\d.]+(?: CAD)?)\?/) ?? [])[1];
+      $('card').innerHTML = `<article class="g-notification">
+        <div class="g-notification-head"><div class="g-notification-meta"><span class="g-notification-app">SHOPPER · TEST PAYMENT</span><span class="g-notification-title">${esc(head)}?</span></div></div>
+        <p class="g-notification-body">${esc(rest.join('? '))}</p>
+        <p class="t-caption t-secondary">The box checks your Face ID signature before it pays. The card stays in the vault; the agent never sees it.</p>
+        <div class="g-notification-actions"><button class="g-btn g-btn-large" id="no">Deny</button><button class="g-btn g-btn-suggested g-btn-large" id="yes"><g-icon name="security-high"></g-icon>Approve${amount ? ' ' + esc(amount) : ''} with Face ID</button></div>
+      </article>`;
+      $('yes').onclick = async () => { try { await pk.approve(a.id); done('Approved with Face ID.'); } catch (e) { fail(e); } };
+      $('no').onclick = async () => {
+        const r = await fetch(`/api/approvals/${encodeURIComponent(a.id)}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ approved: false, by: 'phone' }) });
+        r.ok ? done('Denied. Nothing was bought.') : fail(new Error(`The box answered ${r.status}.`));
+      };
+    }
+  }
+</script>
+</html>

@@ -68,7 +68,12 @@ payment passkey service.
 **Where there's no HTTPS.** WebAuthn needs a secure address: the box's own `https://<name>.box.gurtos.com` (from
 GurtOS remote access; TLS ends on the box) or `localhost` on the box itself. Browsers never make a passkey for an IP
 address. On any other address the app says so, and approvals fall back to a plain tap. A passkey belongs to the
-address it was made on.
+address it was made on, which the box reads from the browser's Origin header.
+
+**Inside the GurtOS app.** app.gurtos.com shows Shopper in a window that frames the box's own https address. A
+passkey ceremony inside another site's frame is not reliable on every browser (Safari in particular), so there the
+Face ID buttons open `/t/shopper/approve`, a small page on the box's own address, top level: on an iPhone home-screen
+app that is a Safari sheet, where Face ID works. It answers one approval, or sets up Face ID, then closes.
 
 ### 2. A signed shopping mandate
 
@@ -284,8 +289,9 @@ passkey). `passkey.browser.mjs` runs the passkey flow in a real Chromium with a 
   against its own id.
 - **Shipping and tax are compared, not charged.** The test store charges items only, so the mandate's total and your
   caps cover items.
-- **A passkey belongs to one address.** Set it up where you approve (the box's https address on your phone). There
-  is no remove button yet.
+- **A passkey belongs to one address.** Set it up where you approve (the box's https address on your phone). If you
+  turn remote access off and on again with a different name, passkeys made on the old address stop working; the same
+  name keeps working. There is no remove button yet.
 - Challenges for passkeys and TAP nonces are kept in memory: a restart clears pending ones (you tap again), and the
   Idempotency-Key still stops a replayed order from being charged twice.
 - The test store keeps price and stock changes in memory; orders and its dashboard counts are on disk.
