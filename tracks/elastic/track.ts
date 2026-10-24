@@ -209,7 +209,12 @@ async function flush(box: Box) {
       const end = buf.lastIndexOf(10) + 1; // whole lines only
       if (!end) return;
       const r = (await box.job('elastic.bulk', { lines: buf.subarray(0, end).toString() })) as { skipped?: string };
-      if (r.skipped) return; // no Elastic keys on this box: the outbox keeps everything for when they are added
+      if (r.skipped) {
+        // No Elastic keys on this box: keep nothing, so the outbox cannot grow. A demo keeps it for its checks.
+        // shortcut: events from before the keys are added are never sent; delete cursors/elastic.docs to backfill.
+        if (!inDemo) fs.truncateSync(OUTBOX, 0), fs.writeFileSync(SENT, '0');
+        return;
+      }
       if (!inDemo && sent + end === fs.statSync(OUTBOX).size) {
         fs.writeFileSync(SENT, '0'); // all sent: start the outbox over. Offset first, so a crash here only resends.
         fs.truncateSync(OUTBOX, 0);
@@ -263,8 +268,9 @@ export default {
         try {
           [url, key] = [ctx.secret('ELASTIC_URL'), ctx.secret('ELASTIC_API_KEY')];
         } catch {
-          return { skipped: 'the vault has no ELASTIC_URL or ELASTIC_API_KEY' };
+          url = key = '';
         }
+        if (!url.trim() || !key.trim()) return { skipped: 'the vault has no ELASTIC_URL or ELASTIC_API_KEY' };
         const es = client(url, key);
         ready ??= ensureIndex(es).catch((e) => ((ready = undefined), Promise.reject(e)));
         await ready;

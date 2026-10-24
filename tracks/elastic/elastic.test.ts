@@ -92,3 +92,10 @@ test('the reader ships every event once, in order, in bulk; a failed send is sen
   assert.deepEqual(sent.map((l) => JSON.parse(l).event.seq), [2, 3, 4]);
   assert.equal(fs.readFileSync(path.join(path.dirname(OUTBOX), 'sent'), 'utf8'), String(fs.statSync(OUTBOX).size), 'it knows everything was sent');
 });
+
+test('with no Elastic keys, or empty ones, the job sends nothing and does not fail', async () => {
+  const job = track.modelJobs[0];
+  const missing = { secret: (n: string) => { throw new Error(`the vault has no ${n}`); } };
+  const empty = { secret: () => ' ' };
+  for (const ctx of [missing, empty]) assert.deepEqual(await job.run({ lines: '' }, ctx as any), { skipped: 'the vault has no ELASTIC_URL or ELASTIC_API_KEY' });
+});

@@ -123,14 +123,16 @@ The judging criteria were not published when this was built (Oct 23, 8 PM PT).
 
 ## Run it
 
-Everything runs from the repo root. The keys live in `/etc/box/vault.env` on the test machines and in
-`~/.config/calhacks13/env` on linuxbox, never in the repo.
+Everything runs from the repo root. On a box, the box service reads `ELASTIC_URL` and `ELASTIC_API_KEY` from
+its vault, `/etc/box/vault.env` (root only). `agent.ts`, run by hand, reads `KIBANA_URL`, `ELASTIC_URL` and
+`ELASTIC_API_KEY` from the environment. Keys never go in the repo. A box without the two Elastic keys sends
+nothing and logs no errors; the rest of the box works as before.
 
 ```sh
 ./demo                         # offline: documents go to an outbox file; the checks read it
 DEMO_LIVE=elastic ./demo       # also ships the run to Elastic, installs the agent, asks the four questions
 
-set -a; . ~/.config/calhacks13/env; set +a
+export KIBANA_URL=... ELASTIC_URL=... ELASTIC_API_KEY=...   # your Serverless project and an API key
 node tracks/elastic/agent.ts install                       # create or update the tools and the agent
 node tracks/elastic/agent.ts ask "Why did the job routine fail?"
 ```

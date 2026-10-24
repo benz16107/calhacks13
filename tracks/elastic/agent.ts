@@ -2,7 +2,8 @@
 // Agent Builder API, so the agent in Kibana always matches this file.
 //   node tracks/elastic/agent.ts install            create or update the tools and the agent
 //   node tracks/elastic/agent.ts ask "question"     ask the agent, print its answer and the tools it used
-// Both read KIBANA_URL and ELASTIC_API_KEY from the environment (on linuxbox: ~/.config/calhacks13/env).
+// Both read KIBANA_URL, ELASTIC_URL and ELASTIC_API_KEY from the environment. On a box they live in the vault;
+// run by hand, export them first. They never go in the repo.
 import { client, ensureIndex, INDEX } from './track.ts';
 
 export const AGENT_ID = 'gurtos-log';
