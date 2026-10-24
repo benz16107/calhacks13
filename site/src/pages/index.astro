@@ -6,8 +6,6 @@ import server from '../assets/home/server-screen.png';
 import personal from '../assets/home/personal-everyday.png';
 import businessDesktop from '../assets/home/business-desktop.png';
 import businessPhone from '../assets/home/business-phone.png';
-import macLight from '../assets/home/mac-menu-light.png';
-import macDark from '../assets/home/mac-menu-dark.png';
 import homeLight from '../assets/home/iphone-home-light.png';
 import homeDark from '../assets/home/iphone-home-dark.png';
 import approvalLight from '../assets/home/iphone-approval-light.png';
@@ -50,8 +48,12 @@ const core = [
       <h2 id="editions-h" class="section-h">One core, three editions</h2>
 
       <article class="edition" id="server">
-        <figure class="media">
-          <Image src={server} alt="The GurtOS Server box screen: what needs you, what is running, what was spent today, and a dock of apps." widths={[720, 1440]} sizes="(max-width: 900px) 100vw, 640px" />
+        <figure class="media duo">
+          <Image class="desk" src={server} alt="The GurtOS Server box screen: what needs you, what is running, what was spent today, and a dock of apps." widths={[720, 1440]} sizes="(max-width: 900px) 100vw, 640px" />
+          <div class="phone">
+            <Image class="t-light" src={homeLight} alt="The GurtOS iPhone app: three requests under Needs you, each with Deny and Approve." widths={[180, 360]} sizes="(max-width: 900px) 25vw, 150px" />
+            <Image class="t-dark" src={homeDark} alt="The GurtOS iPhone app in dark mode: three requests under Needs you, each with Deny and Approve." widths={[180, 360]} sizes="(max-width: 900px) 25vw, 150px" />
+          </div>
         </figure>
         <div class="text">
           <h3><span class="dot server" aria-hidden="true"></span>{NAME} Server</h3>
@@ -63,8 +65,15 @@ const core = [
       </article>
 
       <article class="edition" id="personal">
-        <figure class="media">
-          <Image src={personal} alt="GurtOS Personal in everyday use: mail, a browser and Files open, while the GurtOS app and a notification ask to approve a $42.10 grocery order." widths={[720, 1440]} sizes="(max-width: 900px) 100vw, 640px" />
+        <figure class="media duo">
+          <Image class="desk" src={personal} alt="GurtOS Personal in everyday use: mail, a browser and Files open, while the GurtOS app and a notification ask to approve a $42.10 grocery order." widths={[720, 1440]} sizes="(max-width: 900px) 100vw, 640px" />
+          <div class="watch">
+            <Image src={watch} alt="The GurtOS Apple Watch app: Buy a GPU hour, $8, with a red deny and a green approve button." widths={[140, 280]} sizes="(max-width: 900px) 18vw, 110px" />
+          </div>
+          <div class="phone">
+            <Image class="t-light" src={approvalLight} alt="A request on the iPhone: Buy a GPU hour, $8, with Deny and Approve $8." widths={[180, 360]} sizes="(max-width: 900px) 25vw, 150px" />
+            <Image class="t-dark" src={approvalDark} alt="A request on the iPhone in dark mode: Buy a GPU hour, $8, with Deny and Approve $8." widths={[180, 360]} sizes="(max-width: 900px) 25vw, 150px" />
+          </div>
         </figure>
         <div class="text">
           <h3><span class="dot personal" aria-hidden="true"></span>{NAME} Personal</h3>
@@ -78,7 +87,7 @@ const core = [
       <article class="edition" id="business">
         <figure class="media duo">
           <Image class="desk" src={businessDesktop} alt="GurtOS Business: a $40,000 credit line Sam asked for waits for Rosa, the Controller, on her desktop." widths={[720, 1440]} sizes="(max-width: 900px) 100vw, 640px" />
-          <Image class="phone" src={businessPhone} alt="The same $40,000 credit line on Rosa's phone, with Deny and Approve $40,000." widths={[180, 360]} sizes="(max-width: 900px) 25vw, 150px" />
+          <div class="phone"><Image src={businessPhone} alt="The same $40,000 credit line on Rosa's phone, with Deny and Approve $40,000." widths={[180, 360]} sizes="(max-width: 900px) 25vw, 150px" /></div>
         </figure>
         <div class="text">
           <h3><span class="dot business" aria-hidden="true"></span>{NAME} Business</h3>
@@ -87,33 +96,6 @@ const core = [
         </div>
       </article>
       <p class="more"><a href="/download/">Checksums, signatures and install steps</a></p>
-    </section>
-
-    <section aria-labelledby="devices-h">
-      <h2 id="devices-h" class="section-h">On every device you carry</h2>
-      <p class="devices-lead">Approve, deny and undo from your Mac, iPhone or Apple Watch.</p>
-      <div class="devices">
-        <figure class="dev mac">
-          <Image class="t-light" src={macLight} alt="The GurtOS Mac menu bar app, open: two requests that need you, what is running, Ask Home box, Machines and Pause all agents." widths={[504, 1008]} sizes="(max-width: 900px) 90vw, 440px" />
-          <Image class="t-dark" src={macDark} alt="The GurtOS Mac menu bar app in dark mode, open: two requests that need you, what is running, Ask Home box, Machines and Pause all agents." widths={[504, 1008]} sizes="(max-width: 900px) 90vw, 440px" />
-          <figcaption>Mac</figcaption>
-        </figure>
-        <figure class="dev phone">
-          <Image class="t-light" src={homeLight} alt="The GurtOS iPhone app home: three requests under Needs you, each with Deny and Approve." widths={[241, 482]} sizes="200px" />
-          <Image class="t-dark" src={homeDark} alt="The GurtOS iPhone app home in dark mode: three requests under Needs you, each with Deny and Approve." widths={[241, 482]} sizes="200px" />
-          <figcaption>iPhone</figcaption>
-        </figure>
-        <figure class="dev phone">
-          <Image class="t-light" src={approvalLight} alt="A request on the iPhone: Buy a GPU hour, $8, with Deny and Approve $8." widths={[241, 482]} sizes="200px" />
-          <Image class="t-dark" src={approvalDark} alt="A request on the iPhone in dark mode: Buy a GPU hour, $8, with Deny and Approve $8." widths={[241, 482]} sizes="200px" />
-          <figcaption>A request</figcaption>
-        </figure>
-        <figure class="dev watch">
-          <Image src={watch} alt="The GurtOS Apple Watch app: Buy a GPU hour, $8, with a red deny and a green approve button." widths={[208, 416]} sizes="150px" />
-          <figcaption>Apple Watch</figcaption>
-        </figure>
-      </div>
-      <p class="more"><a href="/download/#apps-h">Get the apps</a></p>
     </section>
 
     <section aria-labelledby="core-h">
@@ -150,7 +132,16 @@ const core = [
   .media { margin: 0; }
   .media img { width: 100%; border: 1px solid var(--gw-rule); border-radius: 6px; }
   .duo { position: relative; padding-bottom: 2.5rem; padding-right: 3rem; }
-  .duo .phone { position: absolute; right: 0; bottom: 0; width: 24%; border-width: 2px; background: var(--gw-glass); }
+  /* Device frames drawn in CSS: a black bezel with a hairline ring that shows on dark. Only the real screenshots go inside. */
+  .duo .phone { position: absolute; right: 0; bottom: 0; width: 24%; }
+  .duo .phone img { border: clamp(3px, 0.55vw, 7px) solid #0b0e12; border-radius: clamp(14px, 3.2vw, 34px); box-shadow: 0 0 0 1px #5b6672; background: #0b0e12; }
+  .duo .watch { position: absolute; right: 27%; bottom: 0; width: 17%; }
+  .duo .watch::after { content: ''; position: absolute; right: -2.5%; top: 30%; width: 3.5%; height: 18%; background: #2a2f35; border-radius: 0 3px 3px 0; }
+  .duo .watch img { border: clamp(3px, 0.5vw, 6px) solid #1d2126; border-radius: clamp(16px, 3.4vw, 38px); box-shadow: 0 0 0 1px #5b6672; background: #000; }
+  .t-dark { display: none; }
+  :global(:root[data-theme='dark']) .t-light { display: none; }
+  :global(:root[data-theme='dark']) .t-dark { display: block; }
+  @media (max-width: 600px) { .duo { padding-right: 1.5rem; } .duo .phone { width: 30%; } .duo .watch { width: 21%; right: 33%; } }
   .text h3 { font-size: var(--gw-h3); display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.6rem; }
   .text p { font-size: var(--gw-text-lg); color: var(--gw-ink-2); }
   .dot { width: 0.8rem; height: 0.8rem; border-radius: 2px; flex: none; }
@@ -158,19 +149,6 @@ const core = [
   .dot.personal { background: var(--gw-amber); }
   .dot.business { background: var(--gw-link); }
   .dl { display: flex; flex-wrap: wrap; gap: 0.6rem; margin-top: 1.1rem; }
-  .devices-lead { color: var(--gw-ink-2); font-size: var(--gw-text-lg); max-width: 46rem; }
-  .devices { min-width: 0; display: flex; flex-wrap: wrap; align-items: flex-end; gap: 1.5rem; margin-top: 1.5rem; }
-  .dev { margin: 0; }
-  .dev img { border: 1px solid var(--gw-rule); border-radius: 10px; width: 100%; }
-  .dev figcaption { margin-top: 0.5rem; font-size: var(--gw-text-sm); color: var(--gw-ink-2); }
-  .dev.mac { flex: 1 1 min(22rem, 100%); max-width: 29rem; }
-  .dev.phone { flex: 0 1 12.5rem; }
-  .dev.watch { flex: 0 1 9.5rem; }
-  .dev.watch img { border-radius: 24px; }
-  .t-dark { display: none; }
-  :global(:root[data-theme='dark']) .t-light { display: none; }
-  :global(:root[data-theme='dark']) .t-dark { display: block; }
-  @media (max-width: 600px) { .dev.phone { flex-basis: 40%; } .dev.watch { flex-basis: 40%; } }
   .more { margin-top: 0.5rem; font-size: var(--gw-text-sm); }
   .core { list-style: none; padding: 0; margin: 0; color: var(--gw-ink-2); }
   .core li { padding: 0.8rem 0; border-top: 1px solid var(--gw-rule); }
