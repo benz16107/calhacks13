@@ -1,0 +1,7 @@
+{
+  "case_id": "armadin-bec",
+  "title": "Armadin: a planted 'we changed banks' invoice (business email compromise)",
+  "as_of": "2026-10-24",
+  "currency": "USD",
+  "description": "Two suppliers and two bills for the AP clerk. One supplier's invoice arrives with new bank details from a lookalike address; one honest supplier's bill is over the clerk's limit. A made-up company; no real accounts."
+}

@@ -6,10 +6,12 @@
 //   callpar <tool> <json>   (two different calls at once: tests the budget reservation)
 //   callsame <tool> <json>  (the same call twice at once: tests idempotent dedup)
 //   steal <file> <out>      env <out>                connect <host:port> <out>      procs <out>
+//   sh <out> <command>      (runs the command as the task user; writes exit=<code> and its output to <out>; never fails)
 // The last four, and fetch, write what happened instead of failing: they act out a hijacked agent.
 // Each finished line is logged as a step, so after a hard kill it carries on from the next line.
 import fs from 'node:fs';
 import net from 'node:net';
+import { spawnSync } from 'node:child_process';
 import os from 'node:os';
 import { call } from '../client.ts';
 
@@ -122,6 +124,12 @@ for (let n = done + 1; n <= lines.length; n++) {
       const pids = fs.readdirSync('/proc').filter((d) => /^\d+$/.test(d));
       const uids = new Set(pids.flatMap((p) => { try { return [fs.statSync(`/proc/${p}`).uid]; } catch { return []; } }));
       fs.writeFileSync(arg, [...uids].join(','));
+      break;
+    }
+    case 'sh': {
+      // sh <outfile> <command>: run the command as this task's user; write "exit=<code>" and its output, never fail.
+      const r = spawnSync('/bin/sh', ['-c', text], { timeout: 20000, killSignal: 'SIGKILL', maxBuffer: 1 << 20, encoding: 'utf8' });
+      fs.writeFileSync(arg, `exit=${r.status ?? r.signal}\n${((r.stdout ?? '') + (r.stderr ?? '')).slice(0, 65536)}`);
       break;
     }
     case 'say':

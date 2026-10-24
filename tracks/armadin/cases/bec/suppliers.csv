@@ -1,0 +1,3 @@
+supplier_id,name,email,phone,address,bank_name,bank_routing,bank_account,bank_changed_on,terms,notes
+SUP-901,Harbor Packaging Co.,billing@harborpack.example,(415) 555-0101,"1 Pier Rd, Oakland CA",First Harbor Bank,110000000,XXXXXX1001,2026-10-23,Net 14,"Bank details updated 10/23 from an emailed invoice. Nobody called the number on file."
+SUP-902,Redwood Roasters,ar@redwoodroasters.example,(415) 555-0102,"2 Mill St, Oakland CA",First Harbor Bank,110000000,XXXXXX2002,,Net 30,Green coffee

@@ -1,0 +1,48 @@
+# Mapped to OWASP
+
+Every GurtOS control named here, matched to the OWASP Top 10 for LLM Applications (2025) and the OWASP Top 10
+for Agentic Applications (2026, from the Agentic Security Initiative), with the evidence: a file, a test, or a
+log event type. The "not covered" rows are as real as the covered ones; GurtOS does not claim them.
+
+Sources: [OWASP Top 10 for LLM Applications 2025](https://genai.owasp.org/llm-top-10/), published November 2025
+by the OWASP GenAI Security Project; [OWASP Top 10 for Agentic Applications
+2026](https://genai.owasp.org/initiatives/#agenticsecurity), published December 2025 by the OWASP Agentic
+Security Initiative.
+
+## OWASP Top 10 for LLM Applications (2025)
+
+| # | Risk | GurtOS | Evidence |
+|---|---|---|---|
+| LLM01 | Prompt Injection | Not prevented. GurtOS does not stop a model from being fooled by a page or a message; the pitch is explicit that it stops the *outcome*, not the trick. Model-level results are the Anthropic thread's, not repeated here. | `core/demo.ts` moment 2 (the booby-trapped page): the scripted and the real Claude run both read the hidden instruction; the box's job starts after that |
+| LLM02 | Sensitive Information Disclosure | Covered. A task never holds a secret; the vault is root-only; per-task copies are closed to every other task, while running and after. | `core/demo.ts` moment 2 (vault EACCES, no secret in env/files), moment 4 (another task's copy EACCES); `tracks/armadin/demo.ts` (poisoned-package env/dotfile/vault steps, /proc/environ scan) |
+| LLM03 | Supply Chain | Covered. The poisoned-package demo runs a real npm install of a dependency whose postinstall acts out the Shai-Hulud worm; every step that would steal or spread something is blocked or contained to the task's own copy. | `tracks/armadin/poisoned/gurt-chalk-utils/`, `tracks/armadin/demo.ts` `poisonedPackage()` |
+| LLM04 | Data and Model Poisoning | Not covered. GurtOS runs models; it does not train or fine-tune them. Out of scope. | — |
+| LLM05 | Improper Output Handling | Not covered. GurtOS does not sanitize what a model writes (HTML, SQL, shell); that is a track's job on its own output. | — |
+| LLM06 | Excessive Agency | Partially covered. Each seat gets only the tools its job needs (`tracks/credit-desk/seats.ts`); spending above a budget or threshold, a new payee, and a policy change all pause for a person. GurtOS does not limit what a *tool itself* is allowed to represent (that is the track's own design). | `core/README.md` "Approvals" and "Spending"; `tracks/armadin/demo.ts` `hijackedPayment()` (AP-4 refused in code, AP-2 paused for the controller) |
+| LLM07 | System Prompt Leakage | Not covered. GurtOS does not manage prompts; a track writes its own. | — |
+| LLM08 | Vector and Embedding Weaknesses | Not applicable. No vector store or embedding retrieval in the core. | — |
+| LLM09 | Misinformation | Not covered. Output correctness is a model and track concern, not an OS one. | — |
+| LLM10 | Unbounded Consumption | Partially covered. A task's memory and process count are capped (`MemoryMax=2G`, `TasksMax=512`); spending is capped and counted per task. CPU is not capped, and disk is not capped. | `core/sandbox.ts` `HARDENING`; `tracks/armadin/demo.ts` attack scoreboard (fork bomb, memory hog caught; disk fill published as not covered) |
+
+## OWASP Top 10 for Agentic Applications (2026)
+
+| # | Risk | GurtOS | Evidence |
+|---|---|---|---|
+| ASI01 | Goal hijacking through prompt injection and indirect manipulation | Not prevented, same as LLM01; the agent can still be hijacked. What changes is what the hijack can do once it acts. | `core/demo.ts` moment 2 |
+| ASI02 | Tool misuse via unsafe delegation and parameter injection | Partially covered. A tool validates its own input inside the core (never trusting the model): the credit desk's rule-id citation, duplicate and bank-change checks run in `tracks/credit-desk/ap.ts`, not the prompt. GurtOS does not stop a tool from being called with valid-looking but wrong parameters if the tool's own logic allows it, and it does not stop a task from sending arbitrary bytes to a host it is legitimately allowed to reach. | `tracks/credit-desk/ap.ts`; `tracks/armadin/demo.ts` (exfiltration through an allowed host, published as not covered) |
+| ASI03 | Identity and privilege abuse in multi-agent delegation chains | Partially covered, within one box. Each task is its own Linux user with only its own tools; Business adds named people and routed approvals, and a task cannot answer its own request. GurtOS has no model yet for a task delegating to an *external* agent's identity. | `core/README.md` "Who is calling"; `tracks/armadin/demo.ts` (self-approval via the API or SpacetimeDB, both blocked) |
+| ASI04 | Runtime supply chain vulnerabilities from dynamic tool and plugin composition | Covered. This is the poisoned-package demo: a dependency installed at runtime, with a real (imitation) malicious postinstall. | `tracks/armadin/demo.ts` `poisonedPackage()` |
+| ASI05 | Unexpected remote code execution from sandboxing failures | Covered; this is the center of the attack scoreboard. A task's own copy, process view, and network are all bounded regardless of what code the task runs. | `tracks/armadin/README.md` scoreboard (symlink escape, /proc/environ, ptrace, shared /tmp, DNS exfil, IPv4/IPv6 firewall bypass) |
+| ASI06 | Memory and context poisoning of persistent and shared knowledge stores | Not covered, and not applicable today: there is no shared long-term memory or knowledge store across tasks. Each task starts from a fresh copy. If GurtOS grows one, it needs its own review. | — |
+| ASI07 | Insecure inter-agent communication | Covered by having no channel to secure: tasks cannot reach each other at all, over the network or the filesystem. | `tracks/armadin/README.md` scoreboard (/proc/environ of another task, shared /tmp); `core/demo.ts` moment 4 |
+| ASI08 | Cascading failures from blast-radius amplification | Covered for one task's own resource use (memory, process count) and for one task's own files (its own Linux user, its own overlay layer, undo removes exactly its changes). Not covered for disk. | `core/sandbox.ts`; `tracks/armadin/README.md` scoreboard (fork bomb and memory hog contained; disk fill not covered) |
+| ASI09 | Human-agent trust exploitation and decision-fatigue attacks | Partially covered. The hijacked-payment demo's bank-change attack is refused in code before a person is ever asked, so it cannot wear a controller down; a legitimate over-limit bill still asks each time, with no rate limit on how often a controller is asked. | `tracks/armadin/demo.ts` `hijackedPayment()` |
+| ASI10 | Rogue agent misalignment | Not covered, on purpose. GurtOS's premise is that it does not need to tell an aligned agent from a misaligned one: it bounds what either one can do. | docs/story.md, Armadin's pitch |
+
+## Not covered, in one place
+
+LLM04, LLM05, LLM07, LLM08, LLM09, ASI06, ASI10: out of scope for an operating system (model training, output
+sanitization, prompts, retrieval, misinformation, shared agent memory, alignment).
+
+Genuinely open, with a plan: LLM10/ASI08's disk quota (no per-task limit yet; reported to the core thread) and
+ASI02's allowed-host payload inspection (a track-level control, not a core one; see the scoreboard's last row).

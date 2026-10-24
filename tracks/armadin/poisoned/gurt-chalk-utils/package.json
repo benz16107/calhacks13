@@ -1,0 +1,8 @@
+{
+  "name": "gurt-chalk-utils",
+  "version": "1.0.1",
+  "description": "A HARMLESS IMITATION of a poisoned npm package, for GurtOS's Armadin demo. Its postinstall acts out what the September 2025 Shai-Hulud worm did, aimed only at reserved .example names. Do not publish.",
+  "main": "index.js",
+  "license": "Apache-2.0",
+  "scripts": { "postinstall": "node postinstall.js" }
+}
