@@ -93,6 +93,50 @@ prices them at the model's list rates (`core/pricing.ts`), writing a `cost` even
 breakdown. `task.costCents` is tool spending plus model cost. Workers report model
 spending with `POST /cost`. `task.costCents` is the total.
 
+## One path each: where every app plugs in
+
+Several apps need approvals, spending rules, guest requests and a pause. Each has **one** path in the core. Build on
+it; don't keep a second copy of the state in a track, or two apps (and two screens) will disagree.
+
+**Approvals.** There is one kind of approval, made by the core and kept in the log.
+- A task asks with `POST /ask` (or `box_ask` for Droid), or by calling a tool whose `cost(input)` goes over its
+  budget or the owner's threshold. The core's `askFor` makes the approval, one per action (a retry reuses it),
+  with `question`, `costCents`, `payee` and `purpose` (a tool fills the last two with `approval(input)`).
+- Every answer goes through one function, `answer(id, approved, by)`: the API, the SpacetimeDB `answer` reducer
+  (vouched connections only), a phone, a Jira or JSM button, ASI:One, a passkey. A track answers with
+  `box.answer(...)`. `by` names the device or person, never what a caller typed.
+- **Extend it, don't fork it.** Business adds who may answer and who was asked (`route`, checked before
+  `answer`). Push notifies on `approval.asked`. A passkey (Shopper) verifies, writes a `note`, then calls
+  `box.answer`. A tool that must not run without a stronger approval checks that itself before paying (for
+  example, a passkey note in the log for this approval). No track keeps its own pending or approved state.
+
+**Spending.** One budget per task, in US cents, counted by the core.
+- A task's `budgetCents` (default: Settings `defaultBudgetCents`). A tool that spends declares `cost(input)`; the
+  broker reserves it before the call (so parallel calls can't overspend), asks when it would go over the budget or
+  over Settings `approvalThresholdCents`, and counts it in the same log line as the result.
+- **Money only moves inside a tool** that the task calls through the broker, never from a route or a log reader.
+  That is what makes the budget, the approval and the log cover every payment (wallet, x402, Stripe, Visa).
+- New spending rules (a per-merchant cap, a mandate, a daily limit) belong in this check in the core
+  (`runTool`, next to the threshold), as Settings, so every paying app obeys them. Ask the core thread.
+
+**Guest requests** (a stranger asks the box for something: a Mana page, an ASI:One chat). One path, shared by
+every front door: the request becomes a task that first waits for the owner's OK (an approval, as above), runs
+with no owner files and only the network and tools it was given, a small budget, and is undone if nobody answers.
+The limits (kinds allowed, per-guest and overall rate, how many may wait) are kept in one place, so two front
+doors can't double them. Until it moves into the core, Mana's `tracks/mana` route is that path, and other front
+doors (Fetch) call it rather than keep their own.
+
+**Pausing.** Settings `paused` is the only pause: no task starts, running ones hold before their next step, tool
+call or question. Personal's switch and Business's kill switch both set it (Business may also freeze task units
+on top, and thaws before resuming).
+
+**Who is calling.** A track route reads `x-box-caller` (set by the box). Business adds a person. Never trust a
+name, person or role the caller sends in the body.
+
+**Looking back.** The log is append-only and every task, approval and cost is rebuilt from it, so "as of a date"
+is a fold over the events up to that time (`GET /api/log`, filter by `at`). It needs no core change, and nothing
+may rewrite the log.
+
 ## Writing a track
 
 Make `tracks/<name>/track.ts` and default-export a `Track` with any of these slots:

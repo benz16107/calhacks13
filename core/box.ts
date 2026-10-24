@@ -1156,7 +1156,7 @@ class Core {
     let act: ((body: any) => unknown) | undefined;
     if (m === 'GET' && p === '/boxes') act = () => this.boxes();
     else if (m === 'POST' && (p === '/pair/start' || p === '/pair/new')) act = (body) => (this.requireOwner(req), this.pairStart(body?.owner === true));
-    else if (m === 'GET' && (p === '/devices' || p === '/pair/devices')) act = () => (this.requireOwner(req), this.devices).filter((d) => !d.revoked).map(({ token, ...d }) => d);
+    else if (m === 'GET' && (p === '/devices' || p === '/pair/devices')) act = () => (this.requireOwner(req), this.devices).filter((d) => !d.revoked).map(({ token, push, ...d }) => ({ ...d, push: !!push }));
     else if (m === 'DELETE' && p === '/pair/self') act = () => this.revokeDevice((this.deviceOf(req) ?? (() => { throw Object.assign(new Error('this request carries no paired device token'), { status: 403 }); })()).id); // a phone forgets itself
     else if ((m === 'DELETE' || m === 'POST') && del) act = () => (this.requireOwner(req), this.revokeDevice(del));
     const needsBody = m === 'POST' && p === '/pair';
