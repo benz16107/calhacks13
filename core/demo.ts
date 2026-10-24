@@ -168,7 +168,9 @@ await moment(
           workspace: 'repo',
           worker: 'droid',
           source: 'demo',
-          prompt: 'Append the line "Droid was here." to notes.md. Do nothing else.',
+          tools: ['example.spend'],
+          budgetCents: 100,
+          prompt: 'Append the line "Droid was here." to notes.md. Then buy one coffee for 50 cents with the example.spend tool (on: coffee). Do nothing else.',
         });
         // From outside, as root: the environment of every process the task's user runs.
         const envs: string[] = [];
@@ -184,11 +186,13 @@ await moment(
         const steps = events.filter((e) => e.type === 'task.step').length;
         check(view('repo', 'notes.md')?.includes('Droid was here.'), 'Droid, running Claude as its own Linux user, edited the file in its own copy');
         check(steps >= 2, `its steps are in the action log (${steps} steps)`);
+        const paid = events.find((e) => e.type === 'tool.result' && e.ok);
+        check(paid, 'it used a box tool through the broker; the tool ran in the core with the vault, not in the task');
         const keys = new Set(envs.flatMap((e) => e.split('\0').filter((v) => v.startsWith('FACTORY_API_KEY='))));
         const seen = [...envs, fs.readFileSync(path.join(HOME, 'tasks', D.id, 'worker.log'), 'utf8'), JSON.stringify(events)].join('\n');
         const onlyPlaceholder = keys.size === 1 && keys.has(`FACTORY_API_KEY=${PLACEHOLDER_KEY}`);
         check(onlyPlaceholder && !secrets.some((v) => seen.includes(v)), `all ${envs.length} process samples held only a placeholder key; no real key ever entered the task`);
-        check(d.costCents > 0, `its model cost is counted ($${(d.costCents / 100).toFixed(2)}, estimated)`);
+        check(d.costCents > 50, `its cost is counted: $${(d.costCents / 100).toFixed(2)}, the $0.50 test spend plus the model (estimated)`);
         await api('POST', `/tasks/${D.id}/undo`);
         check(view('repo', 'notes.md') === '# Notes', 'undo removed its changes');
       },
