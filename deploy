@@ -29,5 +29,6 @@ echo "deploy: origin/main ($sha) -> $target:/var/lib/box"
   echo "base64 -d <<'EOF' | tar -xzf - -C $dest"
   git archive --format=tar HEAD | gzip | base64
   echo EOF
+  echo "echo $sha > $dest/VERSION"   # the build the box reports in GET /api/system
   echo "exec $dest/core/install.sh"
 } | $BOX_SHELL sudo bash -s

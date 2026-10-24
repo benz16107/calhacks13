@@ -144,6 +144,50 @@ for each thing your part shows. `./demo` runs it after the four moments on a fre
 loaded. Keep it under about 10 seconds. Test-mode keys go in `/etc/box/vault.env` on the test VM; the demo
 copies them into each run's vault.
 
+## Setup, Settings, App Center and the vault
+
+What the first-run wizard, Settings and the App Center are built on. **Who may call what.** Anything that
+changes setup, settings, apps or the vault is for the owner only: the box's own screen (a request from this
+machine, or over its socket, with no proxy header such as `X-Forwarded-For`) or a phone paired as the owner. A
+request relayed by a reverse proxy or a tailnet serve looks local to the box but carries those headers, so it
+does not count. Everything else gets a `403`. Reads of `/api/setup`, `/api/settings`, `/api/system` and `/api/apps`
+are open like the rest of the API. To pair the owner's phone, the box's own screen calls
+`POST /api/pair/start {owner: true}`; the phone redeems the code as usual and the device is then an owner device.
+The `owner` flag is ignored from anyone who is not already the owner.
+
+| Request | Does |
+|---|---|
+| `GET /api/system` | `{product, edition, editionName, version, build, hostname, timezone, network: {online, interfaces}, boxId, boxName, owner, startedAt, uptimeSec}`. `build` is the commit `./deploy` installed. |
+| `GET /api/setup` | `{done, finishedAt, migrated, steps: {id: {at, data?}}, suggested: [...]}`. **Until `done`, the box's screen shows the wizard.** A box that already ran tasks when this arrived is `migrated` and counts as done. |
+| `POST /api/setup/step {id, data?}` | Records a step as taken (any id like `network`; `suggested` lists the usual ones). `data` is at most 4 KB and is for answers, not keys: keys go to the vault. |
+| `POST /api/setup/finish`, `POST /api/setup/reopen` | Mark setup done, or show the wizard again. |
+| `GET /api/settings`, `PATCH /api/settings {...}` | The settings below. A patch changes only the keys it names (`quietHours` and `appearance` merge one level). Unknown keys and bad values are a `400` that names the field. Each change is a `note` in the action log with the old and new value. |
+| `GET /api/apps` | The apps that have a window and are on, in the shape the portal reads (`name, title, href, track`), plus the fields below. |
+| `GET /api/apps?all=1` | Every installed app, on or off: the App Center. |
+| `POST /api/apps/<id>/enable`, `.../disable` | Turn an app on or off without a reinstall. Returns the app. |
+| `GET /api/vault` | Names of the keys in the vault and when each was set through the API (`setAt` is null for one that was put there by hand). Never a value. |
+| `PUT /api/vault/<NAME> {value}` | Set or replace a key (`NAME` is capital letters, digits, `_`). The file stays root-only. The log records that `NAME` was set, never the value. **No route reads a value back.** |
+
+**Settings** (defaults in parentheses; the first four are enforced by the core):
+
+- `approvalThresholdCents` (10000): a single spend above this always asks for an OK, even inside the task's budget.
+- `defaultBudgetCents` (0): the budget of a task that names none. 0 means every spend asks.
+- `networkDefault` (`none`) and `defaultHosts` (`[]`): with `allowlist`, a task that names no hosts gets `defaultHosts`; a task that names its own keeps them.
+- `agentFolders` (`[]`): Personal. When not empty, `POST /api/tasks {folder}` only accepts a folder inside one of these. Empty means none has been chosen yet, so any folder is allowed.
+- `quietHours` (`{enabled: false, from: "22:00", to: "07:00"}`): read by the desktop and phone for notifications.
+- `logRetentionDays` (365), `updateChannel` (`stable` | `beta`), `autoUpdate` (true), `appearance` (`{theme: light | dark | system, accent: "#rrggbb" or ""}`): stored for the screens and the updater to read.
+
+**An app** is a track. Each entry has `id` (the track name), `title`, `description` (the track's own, else the
+first paragraph of its README), `status` (`enabled`, `disabled` or `error`, with `error` text), and `access`:
+`tools` (name and description), `jobs`, `hosts` the tools reach, `secrets` (the key **names** it needs, each with
+`set: true or false`, never a value), `triggers` and `routes`. `ui` lists its windows (`name, title, href`).
+
+Turning an app **off** takes its tools, jobs, routes, webhooks, log readers and windows out at once and stops
+its triggers; a task that asks for one of its tools is refused. A trigger that returns a stop function from
+`start` stops cleanly (the generic `schedule`, `webhook` and `onFileChange` all do). A trigger that returns
+nothing keeps running until the box restarts, and the app reports `restartNeeded: true`. Turning it **on** loads
+it again with no reinstall. The choice is saved in `apps.json`, so it survives a restart.
+
 ## Personal edition: the owner and their real folders
 
 On a Personal box the human is the **owner**, a Linux user with sudo, set with `BOX_OWNER`. `GET /api/owner`

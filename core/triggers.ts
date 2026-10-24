@@ -17,7 +17,10 @@ export function schedule(opts: { name: string; everyMs?: number; dailyAt?: strin
           console.error(`schedule ${opts.name} failed:`, e);
         }
       };
-      if (opts.everyMs) setInterval(fire, opts.everyMs).unref();
+      let timer: NodeJS.Timeout | undefined;
+      let stopped = false;
+      const every = opts.everyMs ? setInterval(fire, opts.everyMs) : undefined;
+      every?.unref();
       if (opts.dailyAt) {
         const [h, m] = opts.dailyAt.split(':').map(Number);
         const arm = () => {
@@ -25,13 +28,20 @@ export function schedule(opts: { name: string; everyMs?: number; dailyAt?: strin
           const next = new Date(now);
           next.setHours(h, m, 0, 0);
           if (next <= now) next.setDate(next.getDate() + 1);
-          setTimeout(() => {
+          timer = setTimeout(() => {
+            if (stopped) return;
             void fire();
             arm();
-          }, next.getTime() - now.getTime()).unref();
+          }, next.getTime() - now.getTime());
+          timer.unref();
         };
         arm();
       }
+      return () => {
+        stopped = true;
+        if (every) clearInterval(every);
+        clearTimeout(timer);
+      };
     },
   };
 }
@@ -45,6 +55,7 @@ export function webhook(opts: { name: string; task: (payload: any, headers: Reco
         const spec = await opts.task(payload, headers);
         return spec ? await box.createTask(spec) : undefined;
       });
+      return () => {}; // the box stops serving /hook/<track>/ itself when the app is disabled
     },
   };
 }
@@ -76,6 +87,11 @@ export function onFileChange(opts: { name: string; dir: string; task: (file: str
         );
       });
       watcher.unref(); // the box's API keeps the process alive; don't hold it open ourselves
+      return () => {
+        watcher.close();
+        for (const t of pending.values()) clearTimeout(t);
+        pending.clear();
+      };
     },
   };
 }

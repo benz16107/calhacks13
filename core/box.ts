@@ -15,9 +15,11 @@ import { PLACEHOLDER_KEY, firewall, relayCert, reservePort, startProxy } from '.
 import * as sandbox from './sandbox.ts';
 import { HOME, dirs } from './sandbox.ts';
 import { usageCents } from './pricing.ts';
-import { loadVault } from './vault.ts';
+import { DEFAULT_SETTINGS, SETUP_STEPS, applyPatch, insideAny, loadDisabled, loadSetup, loadSettings, recordStep, saveDisabled, saveSettings, saveSetup, type Settings, type SetupState } from './config.ts';
+import * as system from './system.ts';
+import { VAULT_NAME, loadVault, writeVaultKey } from './vault.ts';
 
-type Handler = (method: string, url: URL, body: any, headers: http.IncomingHttpHeaders) => unknown;
+type Handler = (method: string, url: URL, body: any, headers: http.IncomingHttpHeaders, req: http.IncomingMessage) => unknown;
 
 /** A JSON-over-HTTP server. Thrown errors become 400s. */
 function jsonServer(handler: Handler, raw?: (req: http.IncomingMessage, res: http.ServerResponse) => boolean) {
@@ -28,7 +30,7 @@ function jsonServer(handler: Handler, raw?: (req: http.IncomingMessage, res: htt
     let status = 200;
     let out: unknown;
     try {
-      out = await handler(req.method ?? 'GET', new URL(req.url ?? '/', 'http://box'), text ? JSON.parse(text) : {}, req.headers);
+      out = await handler(req.method ?? 'GET', new URL(req.url ?? '/', 'http://box'), text ? JSON.parse(text) : {}, req.headers, req);
       if (out === undefined) [status, out] = [404, { error: 'not found' }];
     } catch (e) {
       status = (e as { status?: number }).status ?? 400;
@@ -62,6 +64,8 @@ interface Device {
   token: string;
   pairedAt: string;
   revoked?: boolean;
+  /** Paired from the box's own screen as the owner: may use setup, settings, apps and the vault. */
+  owner?: boolean;
 }
 
 class Core {
@@ -83,7 +87,11 @@ class Core {
   trackSecrets = new Map<string, Set<string>>(); // vault keys each track's routes and triggers may read
   devicesPath = path.join(HOME, 'devices.json');
   devices: Device[] = fs.existsSync(this.devicesPath) ? JSON.parse(fs.readFileSync(this.devicesPath, 'utf8')) : [];
-  pairCodes = new Map<string, number>(); // one-time code -> expiry (ms)
+  pairCodes = new Map<string, { expiry: number; owner: boolean }>(); // one-time code -> expiry (ms), and whether it pairs an owner device
+  settings: Settings = loadSettings(HOME);
+  setup: SetupState = loadSetup(HOME, this.log.events.some((e) => e.type === 'task.created'));
+  vaultMetaPath = path.join(HOME, 'vault-meta.json');
+  vaultMeta: Record<string, string> = fs.existsSync(this.vaultMetaPath) ? JSON.parse(fs.readFileSync(this.vaultMetaPath, 'utf8')) : {};
   startedAt = new Date().toISOString();
   resumed: string[] = []; // tasks boot() restarted after a power cut, for the screen's banner
   linksPath = path.join(HOME, 'links.json');
@@ -139,7 +147,9 @@ class Core {
     const known = ['title', 'prompt', 'workspace', 'worker', 'tools', 'hosts', 'budgetCents', 'source', 'folder'];
     const unknown = Object.keys(spec ?? {}).filter((k) => !known.includes(k));
     if (unknown.length) throw new Error(`unknown task field${unknown.length > 1 ? 's' : ''}: ${unknown.join(', ')} (known: ${known.join(', ')})`);
-    const s: FullSpec = { workspace: 'home', worker: 'droid', tools: [], hosts: [], budgetCents: 0, source: 'api', ...spec };
+    // What a task does not name comes from the owner's settings: the budget and the network it gets.
+    const dflt = { hosts: this.settings.networkDefault === 'allowlist' ? this.settings.defaultHosts : [], budgetCents: this.settings.defaultBudgetCents };
+    const s: FullSpec = { workspace: 'home', worker: 'droid', tools: [], source: 'api', ...spec, hosts: spec.hosts ?? dflt.hosts, budgetCents: spec.budgetCents ?? dflt.budgetCents };
     if (!s.title || !s.prompt) throw new Error('a task needs a title and a prompt');
     if (!/^[\w.-]+$/.test(s.workspace) || !fs.existsSync(dirs.workspace(s.workspace))) throw new Error(`no workspace ${s.workspace}`);
     if (!['droid', 'fake'].includes(s.worker)) throw new Error(`no worker ${s.worker}`);
@@ -327,9 +337,12 @@ class Core {
     const cost = entry.tool.cost?.(input) ?? 0;
     // Count spending this task's other in-flight calls have committed, so two payments at once can't both pass.
     const committed = () => t.costCents + (this.reserved.get(t.id) ?? 0);
-    if (cost > 0 && committed() + cost > t.budgetCents) {
+    const overBudget = committed() + cost > t.budgetCents;
+    const overThreshold = cost > this.settings.approvalThresholdCents; // the owner's rule: a spend this big always asks
+    if (cost > 0 && (overBudget || overThreshold)) {
       const meta = entry.tool.approval?.(input) ?? {};
-      const q = `Spend ${dollars(cost)}${meta.payee ? ` to ${meta.payee}` : ''} on ${name}${meta.purpose ? ` (${meta.purpose})` : ''}? Budget ${dollars(t.budgetCents)}, spent ${dollars(t.costCents)}.`;
+      const why = overBudget ? `Budget ${dollars(t.budgetCents)}, spent ${dollars(t.costCents)}.` : `Spends above ${dollars(this.settings.approvalThresholdCents)} always ask.`;
+      const q = `Spend ${dollars(cost)}${meta.payee ? ` to ${meta.payee}` : ''} on ${name}${meta.purpose ? ` (${meta.purpose})` : ''}? ${why}`;
       // Approval id keyed by the action, so a retry of the same call reuses it instead of asking again.
       const outcome = await this.askFor(t, `budget.${action}`, { question: q, costCents: cost, payee: meta.payee, purpose: meta.purpose });
       if (outcome === 'pending') return { ok: false, pending: true, error: 'Waiting for the box owner to approve this spend. Call this tool again to check.' };
@@ -483,39 +496,212 @@ class Core {
       busy = false;
     };
     this.readers.push(pump);
+    return pump;
   }
 
-  async loadTracks() {
+  // ---------- apps: every track is an app that can be turned on and off ----------
+
+  installed = new Map<string, { track?: Track; error?: string }>();
+  active = new Set<string>();
+  disabled = loadDisabled(HOME);
+  trackPumps = new Map<string, (() => void)[]>();
+  triggerRuns = new Map<string, { stops: (() => void)[]; unstoppable: boolean; starting: Promise<unknown>[] }>();
+  needsRestart = new Set<string>(); // apps disabled while a trigger without a stop function was running
+
+  /** Import every track in tracks/ to read what it is, without turning any of them on. */
+  async discoverTracks() {
     const root = new URL('../tracks/', import.meta.url).pathname;
-    if (!fs.existsSync(root)) return [];
-    const loaded: Track[] = [];
+    if (!fs.existsSync(root)) return;
     for (const name of fs.readdirSync(root).sort()) {
       const file = path.join(root, name, 'track.ts');
       if (!fs.existsSync(file)) continue;
       try {
         const track: Track = (await import(file)).default;
         if (track?.name !== name) throw new Error(`track.ts must default-export a Track named "${name}"`);
-        this.trackSecrets.set(name, new Set(track.secrets ?? []));
-        for (const tool of track.tools ?? []) {
-          if (this.tools.has(tool.name)) throw new Error(`tool ${tool.name} already exists`);
-          this.tools.set(tool.name, { tool, track: name });
-        }
-        for (const job of track.modelJobs ?? []) this.jobs.set(job.name, { job, track: name });
-        for (const [key, route] of Object.entries(track.routes ?? {})) {
-          const [method, p] = key.split(' ');
-          this.routes.set(`${method} /t/${name}${p}`, { route, track: name });
-        }
-        for (const app of track.apps ?? []) this.apps.push({ ...app, track: name });
-        for (const r of track.logReaders ?? []) this.addReader(name, r);
-        loaded.push(track);
+        this.installed.set(name, { track });
       } catch (e) {
         console.error(`track ${name} not loaded:`, e); // one broken track must not stop the box
+        this.installed.set(name, { error: (e as Error).message });
+      }
+    }
+  }
+
+  /** Turn an app on: its tools, jobs, routes, apps and log readers become live. Triggers start separately. */
+  register(name: string) {
+    const rec = this.installed.get(name);
+    const track = rec?.track;
+    if (!track) throw new Error(rec?.error ?? `no app ${name}`);
+    if (this.active.has(name)) return;
+    for (const tool of track.tools ?? []) if (this.tools.has(tool.name)) throw new Error(`tool ${tool.name} already exists`); // check before adding any
+    this.trackSecrets.set(name, new Set(track.secrets ?? []));
+    for (const tool of track.tools ?? []) this.tools.set(tool.name, { tool, track: name });
+    for (const job of track.modelJobs ?? []) this.jobs.set(job.name, { job, track: name });
+    for (const [key, route] of Object.entries(track.routes ?? {})) {
+      const [method, p] = key.split(' ');
+      this.routes.set(`${method} /t/${name}${p}`, { route, track: name });
+    }
+    for (const app of track.apps ?? []) this.apps.push({ ...app, track: name });
+    this.trackPumps.set(name, (track.logReaders ?? []).map((r) => this.addReader(name, r)));
+    this.active.add(name);
+    if (rec) rec.error = undefined;
+  }
+
+  /** Start an app's triggers. A trigger that returns a stop function can be switched off without a restart. */
+  startTriggers(name: string) {
+    const track = this.installed.get(name)?.track;
+    const run = { stops: [] as (() => void)[], unstoppable: false, starting: [] as Promise<unknown>[] };
+    this.triggerRuns.set(name, run);
+    for (const trig of track?.triggers ?? []) {
+      run.starting.push(
+        Promise.resolve()
+          .then(() => trig.start(this.boxFor(name)))
+          .then((stop) => {
+            if (typeof stop === 'function') run.stops.push(stop);
+            else run.unstoppable = true;
+          })
+          .catch((e) => console.error(`trigger ${name}.${trig.name} failed:`, e)),
+      );
+    }
+  }
+
+  /** Turn an app off: take everything it registered out, and stop its triggers. */
+  async unregister(name: string) {
+    if (!this.active.has(name)) return;
+    const run = this.triggerRuns.get(name);
+    await Promise.allSettled(run?.starting ?? []);
+    for (const stop of run?.stops ?? []) {
+      try {
+        stop();
+      } catch (e) {
+        console.error(`stopping a trigger of ${name} failed:`, e);
+      }
+    }
+    if (run?.unstoppable) this.needsRestart.add(name); // it keeps running until the box restarts
+    this.triggerRuns.delete(name);
+    for (const [k, v] of this.tools) if (v.track === name) this.tools.delete(k);
+    for (const [k, v] of this.jobs) if (v.track === name) this.jobs.delete(k);
+    for (const [k, v] of this.routes) if (v.track === name) this.routes.delete(k);
+    for (const k of this.webhooks.keys()) if (k.startsWith(`/hook/${name}/`)) this.webhooks.delete(k);
+    this.apps = this.apps.filter((a) => a.track !== name);
+    const pumps = new Set(this.trackPumps.get(name) ?? []);
+    this.readers = this.readers.filter((r) => !pumps.has(r));
+    this.trackPumps.delete(name);
+    this.trackSecrets.delete(name);
+    this.active.delete(name);
+  }
+
+  async enableApp(name: string) {
+    const rec = this.installed.get(name);
+    if (!rec) throw Object.assign(new Error(`no app ${name}`), { status: 404 });
+    this.disabled.delete(name);
+    saveDisabled(HOME, this.disabled);
+    if (!this.active.has(name)) {
+      try {
+        this.register(name);
+        this.startTriggers(name);
+      } catch (e) {
+        rec.error = (e as Error).message;
+        throw e;
+      }
+    }
+    this.needsRestart.delete(name);
+    this.write({ type: 'note', track: 'apps', data: { enabled: name } });
+    return this.appEntry(name);
+  }
+
+  async disableApp(name: string) {
+    if (!this.installed.has(name)) throw Object.assign(new Error(`no app ${name}`), { status: 404 });
+    this.disabled.add(name);
+    saveDisabled(HOME, this.disabled);
+    await this.unregister(name);
+    this.write({ type: 'note', track: 'apps', data: { disabled: name } });
+    return this.appEntry(name);
+  }
+
+  /** The first paragraph of the app's README, for an app that gives no description of its own. */
+  readmeBlurb(name: string): string {
+    try {
+      const text = fs.readFileSync(new URL(`../tracks/${name}/README.md`, import.meta.url), 'utf8');
+      const para = text.split(/\n\s*\n/).map((p) => p.trim()).find((p) => p && !p.startsWith('#') && !p.startsWith('|') && !p.startsWith('```'));
+      return (para ?? '').replace(/[*_`]/g, '').replace(/\[([^\]]+)\]\([^)]*\)/g, '$1').replace(/\s+/g, ' ').slice(0, 240);
+    } catch {
+      return '';
+    }
+  }
+
+  /** One app for the App Center: what it is, what it can reach (names only), and whether it is on. */
+  appEntry(name: string) {
+    const rec = this.installed.get(name);
+    const track = rec?.track;
+    const tools = track?.tools ?? [];
+    const jobs = track?.modelJobs ?? [];
+    const secretNames = [...new Set([...tools.flatMap((t) => t.secrets ?? []), ...jobs.flatMap((j) => j.secrets ?? []), ...(track?.secrets ?? [])])].sort();
+    const ui = (track?.apps ?? []).map((a) => ({ name: a.name, title: a.title, href: a.href }));
+    const status = this.active.has(name) ? 'enabled' : rec?.error && !this.disabled.has(name) ? 'error' : 'disabled';
+    return {
+      id: name,
+      track: name,
+      name,
+      title: track?.title ?? ui[0]?.title ?? name,
+      description: track?.description ?? this.readmeBlurb(name),
+      status,
+      enabled: status === 'enabled',
+      ...(rec?.error ? { error: rec.error } : {}),
+      ...(this.needsRestart.has(name) ? { restartNeeded: true } : {}),
+      access: {
+        tools: tools.map((t) => ({ name: t.name, description: t.description })),
+        jobs: jobs.map((j) => j.name),
+        hosts: [...new Set(tools.flatMap((t) => t.hosts ?? []))].sort(),
+        secrets: secretNames.map((n) => ({ name: n, set: this.vault.has(n) })),
+        triggers: (track?.triggers ?? []).map((t) => t.name),
+        routes: Object.keys(track?.routes ?? {}),
+      },
+      ui,
+    };
+  }
+
+  /** At boot: find every app and turn on the ones that are enabled. */
+  async loadTracks() {
+    await this.discoverTracks();
+    const loaded: Track[] = [];
+    for (const [name, rec] of this.installed) {
+      if (!rec.track || this.disabled.has(name)) continue;
+      try {
+        this.register(name);
+        loaded.push(rec.track);
+      } catch (e) {
+        console.error(`track ${name} not loaded:`, e);
+        rec.error = (e as Error).message;
       }
     }
     return loaded;
   }
 
-  // ---------- the API: portal, demo, phone ----------
+  /** Hostname, time zone, network, edition and version, for the wizard and Settings. */
+  async systemFacts() {
+    const v = system.version();
+    const edition = system.edition();
+    return {
+      product: 'GurtOS',
+      edition,
+      editionName: `GurtOS ${edition[0].toUpperCase()}${edition.slice(1)}`,
+      version: v.version,
+      build: v.build,
+      hostname: os.hostname(),
+      timezone: system.timezone(),
+      network: { online: await system.online(), interfaces: system.interfaces() },
+      boxId: BOX_ID,
+      boxName: BOX_NAME,
+      owner: BOX_OWNER ?? null,
+      startedAt: this.startedAt,
+      uptimeSec: Math.round(process.uptime()),
+    };
+  }
+
+  /** The setup state with the suggested step order. Until `done`, the box's screen shows the wizard. */
+  setupView() {
+    return { done: this.setup.done, finishedAt: this.setup.finishedAt ?? null, migrated: this.setup.migrated ?? false, steps: this.setup.steps, suggested: SETUP_STEPS };
+  }
 
   // ---------- pairing a phone, and listing every box ----------
 
@@ -532,10 +718,10 @@ class Core {
   }
 
   /** Mint a one-time pairing code for the box screen's QR. Good for 5 minutes, usable once. */
-  pairStart() {
+  pairStart(owner = false) {
     const code = randomBytes(4).toString('hex');
     const expiry = Date.now() + 5 * 60 * 1000;
-    this.pairCodes.set(code, expiry);
+    this.pairCodes.set(code, { expiry, owner });
     // With BOX_URL set (the image sets it from the box's address) the url is absolute, so the box screen's QR
     // opens on a phone. Without it the url is a path the page prefixes with its own origin.
     const base = (process.env.BOX_URL ?? '').replace(/\/+$/, '');
@@ -544,10 +730,10 @@ class Core {
 
   /** A phone redeems the code for a durable device token. */
   pair(body: { code?: string; name?: string }) {
-    const expiry = body.code ? this.pairCodes.get(body.code) : undefined;
-    if (!expiry || expiry < Date.now()) throw Object.assign(new Error('bad or expired pairing code'), { status: 400 });
+    const entry = body.code ? this.pairCodes.get(body.code) : undefined;
+    if (!entry || entry.expiry < Date.now()) throw Object.assign(new Error('bad or expired pairing code'), { status: 400 });
     this.pairCodes.delete(String(body.code)); // one-time
-    const device: Device = { id: 'd' + randomBytes(5).toString('hex'), name: String(body.name || 'phone').slice(0, 40), token: randomBytes(24).toString('hex'), pairedAt: new Date().toISOString() };
+    const device: Device = { id: 'd' + randomBytes(5).toString('hex'), name: String(body.name || 'phone').slice(0, 40), token: randomBytes(24).toString('hex'), pairedAt: new Date().toISOString(), ...(entry.owner ? { owner: true } : {}) };
     this.devices.push(device);
     this.saveDevices();
     return { token: device.token, device: { id: device.id, name: device.name }, box: { id: BOX_ID, name: BOX_NAME } };
@@ -559,6 +745,29 @@ class Core {
     d.revoked = true;
     this.saveDevices();
     return { id, revoked: true };
+  }
+
+  /**
+   * The request comes from the box's own screen: over the local socket, or from this machine's loopback with
+   * no proxy header. A request relayed by a reverse proxy or a tailnet serve looks local to the box, but it
+   * carries forwarding headers, so it does not count.
+   */
+  isLocal(req: http.IncomingMessage): boolean {
+    const addr = req.socket.remoteAddress; // undefined on a unix socket
+    const loopback = addr === undefined || addr === '127.0.0.1' || addr === '::1' || addr === '::ffff:127.0.0.1';
+    const h = req.headers;
+    const relayed = !!(h['x-forwarded-for'] || h.forwarded || h['x-real-ip'] || h['tailscale-user-login'] || h['x-forwarded-host']);
+    return loopback && !relayed;
+  }
+
+  /** The box's own screen, or a device that was paired as the owner. */
+  isOwner(req: http.IncomingMessage): boolean {
+    return this.isLocal(req) || !!this.deviceByToken(req.headers.authorization)?.owner;
+  }
+
+  /** Setup, settings, apps on and off, and the vault are for the owner only. */
+  requireOwner(req: http.IncomingMessage) {
+    if (!this.isOwner(req)) throw Object.assign(new Error("only the box's own screen or the owner's paired device can do this"), { status: 403 });
   }
 
   deviceByToken(token?: string): Device | undefined {
@@ -578,9 +787,9 @@ class Core {
     const del = (p.match(/^\/devices\/([\w-]+)$/) || p.match(/^\/pair\/devices\/([\w-]+)\/revoke$/))?.[1];
     // Match the exact method and path. Anything else (a GET of /pair, which is a portal page route) is not
     // ours, so return false and let the static portal handler serve the app.
-    let act: (() => unknown) | undefined;
+    let act: ((body: any) => unknown) | undefined;
     if (m === 'GET' && p === '/boxes') act = () => this.boxes();
-    else if (m === 'POST' && (p === '/pair/start' || p === '/pair/new')) act = () => this.pairStart();
+    else if (m === 'POST' && (p === '/pair/start' || p === '/pair/new')) act = (body) => this.pairStart(body?.owner === true && this.isOwner(req));
     else if (m === 'GET' && (p === '/devices' || p === '/pair/devices')) act = () => this.devices.filter((d) => !d.revoked).map(({ token, ...d }) => d);
     else if ((m === 'DELETE' || m === 'POST') && del) act = () => this.revokeDevice(del);
     const needsBody = m === 'POST' && p === '/pair';
@@ -591,7 +800,7 @@ class Core {
         const chunks: Buffer[] = [];
         for await (const c of req) chunks.push(c as Buffer);
         const body = chunks.length ? JSON.parse(Buffer.concat(chunks).toString()) : {};
-        json(200, act ? act() : this.pair(body));
+        json(200, act ? act(body) : this.pair(body));
       } catch (e) {
         json((e as { status?: number }).status ?? 400, { error: (e as Error).message });
       }
@@ -603,7 +812,7 @@ class Core {
 
   api = () =>
     jsonServer(
-      async (method, url, body, headers) => {
+      async (method, url, body, headers, req) => {
         const [, a, rawId, action] = url.pathname.replace(/^\/api(?=\/)/, '').split('/');
         const id = rawId ? decodeURIComponent(rawId) : rawId; // ids may hold spaces (Droid's questions); the client encodes them
         const route = `${method} /${a ?? ''}${rawId ? '/:id' : ''}${action ? '/' + action : ''}`;
@@ -616,6 +825,9 @@ class Core {
             if (body.folder) {
               // The name carries a hash of the full real path: ~/a/notes and ~/b/notes must never share a workspace.
               const real = fs.realpathSync(String(body.folder));
+              if (this.settings.agentFolders.length && !insideAny(real, this.settings.agentFolders)) {
+                throw new Error(`${real} is not one of the folders agents may use (Settings > agentFolders: ${this.settings.agentFolders.join(', ')})`);
+              }
               const name = `owner-${path.basename(real).replace(/[^\w.-]/g, '-')}-${createHash('sha256').update(real).digest('hex').slice(0, 6)}`;
               this.linkWorkspace(name, String(body.folder));
               body.workspace = name;
@@ -652,8 +864,66 @@ class Core {
             return this.log.events.slice(Number(q('after') ?? 0)).filter((e) => !q('task') || e.task === q('task'));
           case 'GET /owner':
             return BOX_OWNER ? { user: BOX_OWNER, home: os.homedir() === '/root' ? `/home/${BOX_OWNER}` : os.homedir() } : null;
-          case 'GET /apps':
-            return this.apps;
+          case 'GET /apps': {
+            // Default: the apps that have a window, enabled ones only, in the shape the portal reads
+            // ({name, title, href, track}) plus what the App Center shows. ?all=1: every installed app, on or off.
+            if (q('all')) return [...this.installed.keys()].map((n) => this.appEntry(n));
+            return this.apps.map((a) => ({ ...a, ...this.appEntry(a.track), name: a.name, title: a.title, href: a.href }));
+          }
+          case 'POST /apps/:id/enable':
+            this.requireOwner(req);
+            return this.enableApp(id);
+          case 'POST /apps/:id/disable':
+            this.requireOwner(req);
+            return this.disableApp(id);
+          case 'GET /system':
+            return this.systemFacts();
+          case 'GET /setup':
+            return this.setupView();
+          case 'POST /setup/:id': {
+            this.requireOwner(req);
+            if (id === 'step') {
+              recordStep(this.setup, body.id ?? body.step, body.data);
+              saveSetup(HOME, this.setup);
+              this.write({ type: 'note', track: 'setup', data: { step: body.id ?? body.step } }); // the step id only: data may be personal
+            } else if (id === 'finish') {
+              this.setup.done = true;
+              this.setup.finishedAt = new Date().toISOString();
+              saveSetup(HOME, this.setup);
+              this.write({ type: 'note', track: 'setup', data: { finished: true } });
+            } else if (id === 'reopen') {
+              this.setup.done = false;
+              delete this.setup.finishedAt;
+              saveSetup(HOME, this.setup);
+              this.write({ type: 'note', track: 'setup', data: { reopened: true } });
+            } else return undefined;
+            return this.setupView();
+          }
+          case 'GET /settings':
+            return this.settings;
+          case 'PATCH /settings': {
+            this.requireOwner(req);
+            const next = applyPatch(this.settings, body);
+            const changed = Object.fromEntries(Object.keys(body).map((k) => [k, { from: (this.settings as any)[k], to: (next as any)[k] }]));
+            this.settings = next;
+            saveSettings(HOME, next);
+            this.write({ type: 'note', track: 'settings', data: { changed } });
+            return this.settings;
+          }
+          case 'GET /vault':
+            this.requireOwner(req);
+            // Names and when each was set. No route returns a value.
+            return [...new Set([...this.vault.keys(), ...Object.keys(this.vaultMeta)])].sort().map((name) => ({ name, setAt: this.vaultMeta[name] ?? null }));
+          case 'PUT /vault/:id': {
+            this.requireOwner(req);
+            if (!VAULT_NAME.test(id)) throw new Error('key names are capital letters, digits and _ (like STRIPE_KEY), 2 to 64 characters');
+            writeVaultKey(id, body?.value); // validates; throws without echoing the value
+            this.vault.set(id, String(body.value).trim());
+            this.vaultMeta[id] = new Date().toISOString();
+            fs.writeFileSync(this.vaultMetaPath, JSON.stringify(this.vaultMeta, null, 2), { mode: 0o600 });
+            this.write({ type: 'note', track: 'vault', data: { set: id } }); // the name only, never the value
+            return { name: id, setAt: this.vaultMeta[id] };
+          }
           case 'GET /health':
             return { ok: true, startedAt: this.startedAt, resumed: this.resumed, tasks: this.state.tasks.size, tools: [...this.tools.keys()], spacetime: { port: 3000, database: DB } };
         }
@@ -668,7 +938,7 @@ class Core {
     if (!origin || !(allowed.includes(origin) || allowed.includes('*'))) return false;
     res.setHeader('access-control-allow-origin', origin);
     res.setHeader('access-control-allow-headers', 'content-type');
-    res.setHeader('access-control-allow-methods', 'GET, POST, OPTIONS');
+    res.setHeader('access-control-allow-methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
     if (req.method !== 'OPTIONS') return false;
     res.writeHead(204).end();
     return true;
@@ -798,13 +1068,7 @@ data: ${JSON.stringify(e)}
       reservePort(port);
       fs.writeFileSync(path.join(HOME, 'api.port'), String(port));
     }
-    for (const track of tracks) {
-      for (const trig of track.triggers ?? []) {
-        Promise.resolve()
-          .then(() => trig.start(this.boxFor(track.name)))
-          .catch((e) => console.error(`trigger ${track.name}.${trig.name} failed:`, e));
-      }
-    }
+    for (const track of tracks) this.startTriggers(track.name);
     this.live.start(); // publishes and connects in the background; the API above is already serving
     console.log(`box up: ${this.state.tasks.size} tasks in the log, tracks: ${tracks.map((t) => t.name).join(', ') || 'none'}`);
   }

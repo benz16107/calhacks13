@@ -159,6 +159,10 @@ export interface Ctx {
 export interface Track {
   /** Same as the folder name. */
   name: string;
+  /** Shown in the App Center. Defaults to the first app's title, then the name. */
+  title?: string;
+  /** One or two plain sentences for the App Center. Defaults to the first paragraph of the track's README. */
+  description?: string;
   /** Vault keys this track's routes and triggers may read with box.secret(). Tools and jobs declare their own. */
   secrets?: string[];
   triggers?: Trigger[];
@@ -170,10 +174,14 @@ export interface Track {
   routes?: Record<string, Route>;
 }
 
-/** Starts tasks: a webhook, a schedule, a chat agent. `start` runs once at boot. */
+/**
+ * Starts tasks: a webhook, a schedule, a chat agent. `start` runs when the app turns on (at boot, or when it is
+ * enabled). Return a function that stops it and the app can be switched off without a restart; a trigger that
+ * returns nothing keeps running until the box restarts, and the app reports `restartNeeded` when disabled.
+ */
 export interface Trigger {
   name: string;
-  start(box: Box): void | Promise<void>;
+  start(box: Box): void | (() => void) | Promise<void | (() => void)>;
 }
 
 /** Something a task uses through the broker. It runs in the core with vault access; the task sees only the result. */

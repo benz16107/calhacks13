@@ -39,6 +39,7 @@ async function stdbRows(sql: string): Promise<Record<string, any>[]> {
 
 let box: ReturnType<typeof spawn> | undefined;
 let PORT = 0; // the box's API port, which the box picks and writes to BOX_HOME/api.port
+const DEFAULT_THRESHOLD = 10_000; // the approval threshold setting's default
 const WINDOW = 600; // the approval wait window; short here so a long wait is quick to act out (a fake clock)
 
 reap(); // clear demo boxes left by runs that crashed or were interrupted, before starting ours
@@ -124,6 +125,20 @@ function authApi<T = any>(token: string, method: string, p: string, body?: unkno
     req.end(body === undefined ? undefined : JSON.stringify(body));
   });
 }
+
+/** A request over TCP, the way a phone or a relayed browser reaches the box. Extra headers can mimic a proxy. */
+function viaTcp(method: string, p: string, body?: unknown, headers: Record<string, string> = {}): Promise<{ status: number; body: any }> {
+  return new Promise((resolve, reject) => {
+    const req = http.request({ host: '127.0.0.1', port: PORT, method, path: p, headers: { 'content-type': 'application/json', ...headers } }, (res) => {
+      let t = '';
+      res.on('data', (c) => (t += c));
+      res.on('end', () => resolve({ status: res.statusCode ?? 0, body: t ? JSON.parse(t) : undefined }));
+    });
+    req.on('error', reject);
+    req.end(body === undefined ? undefined : JSON.stringify(body));
+  });
+}
+const RELAYED = { 'x-forwarded-for': '203.0.113.9' }; // what a reverse proxy or tailnet serve adds: not the box's own screen
 
 const task = async (id: string) => (await api<{ task: Task }>('GET', `/tasks/${id}`)).task;
 const settled = (ids: string[], ms?: number) =>
@@ -607,6 +622,125 @@ await moment('a failed task carries the worker\'s own error message', async () =
   check(failed?.type === 'task.state' && /nothing\.txt is "\(missing\)"/.test(failed.error ?? ''), `the failed event carries the worker's message ("${(failed?.type === 'task.state' ? failed.error : '')?.slice(0, 90)}")`);
 });
 
+
+
+// ---------- first-run setup, settings, the vault, apps on and off, system facts ----------
+
+await moment('setup: the wizard, settings, the vault and apps', async () => {
+  // System facts for the wizard.
+  const sys = await api<any>('GET', '/api/system');
+  check(sys.product === 'GurtOS' && !!sys.hostname && !!sys.timezone && !!sys.version && typeof sys.network.online === 'boolean' && ['server', 'personal', 'business'].includes(sys.edition), `system facts: ${sys.editionName} ${sys.version} (${sys.build}), host ${sys.hostname}, ${sys.timezone}, network ${sys.network.online ? 'online' : 'offline'}`);
+
+  // Setup state. Only the box's own screen or the owner's paired device may change it.
+  const s0 = await api<any>('GET', '/api/setup');
+  check(s0.done === false && s0.suggested.includes('network'), 'a new box has not finished setup, so its screen shows the wizard');
+  const remote = await viaTcp('POST', '/api/setup/step', { id: 'network' }, RELAYED);
+  check(remote.status === 403, 'a request relayed from elsewhere cannot change setup (403)');
+  await api('POST', '/api/setup/step', { id: 'network', data: { wifi: 'home' } });
+  const plain = await api<{ code: string }>('POST', '/api/pair/start', {});
+  const stranger = await api<{ token: string }>('POST', '/api/pair', { code: plain.code, name: 'a visitor' });
+  const asStranger = await viaTcp('POST', '/api/setup/step', { id: 'folders' }, { ...RELAYED, authorization: `Bearer ${stranger.token}` });
+  check(asStranger.status === 403, "a paired phone that is not the owner's cannot change setup either (403)");
+  const ownerCode = await api<{ code: string }>('POST', '/api/pair/start', { owner: true });
+  const ownerDev = await api<{ token: string }>('POST', '/api/pair', { code: ownerCode.code, name: "the owner's phone" });
+  const asOwner = await viaTcp('POST', '/api/setup/step', { id: 'folders' }, { ...RELAYED, authorization: `Bearer ${ownerDev.token}` });
+  check(asOwner.status === 200 && 'folders' in asOwner.body.steps, "the owner's phone, paired from the box's screen, can");
+  const forgedOwner = await viaTcp('POST', '/api/pair/start', { owner: true }, RELAYED);
+  const forged = await viaTcp('POST', '/api/pair', { code: forgedOwner.body.code, name: 'sneaky' });
+  const asForged = await viaTcp('POST', '/api/setup/step', { id: 'apps' }, { ...RELAYED, authorization: `Bearer ${forged.body.token}` });
+  check(asForged.status === 403, 'asking a code to be an owner code from outside the box does not work (403)');
+  await api('POST', '/api/setup/finish', {});
+  const s1 = await api<any>('GET', '/api/setup');
+  check(s1.done === true && !!s1.finishedAt && Object.keys(s1.steps).sort().join() === 'folders,network', 'finishing marks setup done and keeps the steps taken');
+
+  // Settings: validated, owner only, logged, and the safety ones are honored.
+  const set0 = await api<any>('GET', '/api/settings');
+  check(set0.networkDefault === 'none' && set0.autoUpdate === true && set0.appearance.theme === 'system', 'settings start at safe defaults');
+  const bad = await Promise.all([{ approvalThresholdCents: -5 }, { nope: 1 }, { quietHours: { from: '25:00' } }, { defaultHosts: ['not a host'] }, { agentFolders: ['relative/path'] }].map((b) => api('PATCH', '/api/settings', b).then(() => '', (e: Error) => e.message)));
+  check(bad.every((m) => m.startsWith('settings.')), `bad values are refused with the field named ("${bad[0]}")`);
+  check((await viaTcp('PATCH', '/api/settings', { autoUpdate: false }, RELAYED)).status === 403, 'settings cannot be changed from outside the box (403)');
+
+  workspace('prefs', {});
+  const run = (extra: Record<string, unknown> = {}) => api<Task>('POST', '/tasks', { title: 'Settings probe', workspace: 'prefs', worker: 'fake', source: 'demo', prompt: 'write p.txt yes', ...extra });
+
+  await api('PATCH', '/api/settings', { defaultBudgetCents: 500, networkDefault: 'allowlist', defaultHosts: ['Example.com', '*.cdn.example.com:443'] });
+  const d1 = await run();
+  const d2 = await run({ hosts: [], budgetCents: 0 });
+  check(d1.budgetCents === 500 && d1.hosts.join() === 'example.com,*.cdn.example.com:443' && d2.budgetCents === 0 && d2.hosts.length === 0, 'a task that names no budget or hosts gets the defaults; one that names them keeps its own');
+  await api('PATCH', '/api/settings', { defaultBudgetCents: 0, networkDefault: 'none' });
+  check((await run()).hosts.length === 0, 'with the network default back to none, a task reaches nothing');
+  await settled([d1.id, d2.id]);
+
+  // The approval threshold: a spend over it asks even inside the budget.
+  await api('PATCH', '/api/settings', { approvalThresholdCents: 100 });
+  const big = await run({ tools: ['example.spend'], budgetCents: 10000, prompt: 'call example.spend {"cents":150,"on":"a thing"}' });
+  const ask = await waitFor('the threshold approval', async () => (await api<{ id: string; task: string; question: string }[]>('GET', '/api/approvals?state=pending')).find((a) => a.task === big.id));
+  check(/always ask/.test(ask.question), `a $1.50 spend inside a $100 budget still asks when the threshold is $1.00: "${ask.question}"`);
+  await api('POST', `/api/approvals/${encodeURIComponent(ask.id)}`, { approved: true, by: 'demo' });
+  await settled([big.id]);
+  const small = await run({ tools: ['example.spend'], budgetCents: 10000, prompt: 'call example.spend {"cents":50,"on":"a thing"}' });
+  await settled([small.id]);
+  check((await task(small.id)).costCents === 50, 'a spend under the threshold and inside the budget goes through without asking');
+  await api('PATCH', '/api/settings', { approvalThresholdCents: DEFAULT_THRESHOLD });
+
+  // The folders agents may use (Personal).
+  const okDir = path.join(HOME, 'owner', 'allowed', 'docs');
+  const noDir = path.join(HOME, 'owner', 'elsewhere');
+  for (const d of [okDir, noDir]) fs.mkdirSync(d, { recursive: true });
+  await api('PATCH', '/api/settings', { agentFolders: [path.join(HOME, 'owner', 'allowed') + '/'] });
+  const refused = await api('POST', '/tasks', { title: 'Outside', worker: 'fake', prompt: 'x', folder: noDir }).then(() => '', (e: Error) => e.message);
+  const allowedTask = await api<Task>('POST', '/tasks', { title: 'Inside', worker: 'fake', prompt: 'write a.txt x', folder: okDir });
+  await settled([allowedTask.id]);
+  check(/not one of the folders agents may use/.test(refused), 'a folder outside the chosen ones is refused, one inside is allowed');
+  await api('PATCH', '/api/settings', { agentFolders: [], quietHours: { enabled: true, from: '23:30' }, appearance: { theme: 'dark', accent: '#5b8cff' } });
+  const set1 = await api<any>('GET', '/api/settings');
+  check(set1.quietHours.enabled && set1.quietHours.from === '23:30' && set1.quietHours.to === '07:00' && set1.appearance.theme === 'dark', 'nested settings merge: changing one quiet-hours field keeps the others');
+  const logText = fs.readFileSync(path.join(HOME, 'log.jsonl'), 'utf8');
+  check(logText.includes('"track":"settings"') && logText.includes('approvalThresholdCents'), 'each settings change is in the action log, with the old and new value');
+  check(JSON.parse(fs.readFileSync(path.join(HOME, 'settings.json'), 'utf8')).appearance.theme === 'dark', 'settings are saved on disk, so they survive a restart');
+
+  // The vault: write-only. Names and times come back; values never do.
+  const SECRET1 = 'sk_demo_first_value_8f3a91c2';
+  const SECRET2 = 'sk_demo_second_value_77d1e0aa';
+  check((await viaTcp('PUT', '/api/vault/DEMO_NEW_KEY', { value: SECRET1 }, RELAYED)).status === 403 && (await viaTcp('GET', '/api/vault', undefined, RELAYED)).status === 403, 'the vault cannot be reached from outside the box (403)');
+  const put = await api<any>('PUT', '/api/vault/DEMO_NEW_KEY', { value: SECRET1 });
+  const names1 = await api<{ name: string; setAt: string | null }[]>('GET', '/api/vault');
+  check(put.name === 'DEMO_NEW_KEY' && names1.some((n) => n.name === 'DEMO_NEW_KEY' && n.setAt) && names1.some((n) => n.name === 'DEMO_SECRET'), 'a key is set and the list shows names and when they were set');
+  await api('PUT', '/api/vault/DEMO_NEW_KEY', { value: SECRET2 });
+  const vaultFileText = fs.readFileSync(path.join(HOME, 'vault.env'), 'utf8');
+  check(vaultFileText.split('\n').filter((l) => l.startsWith('DEMO_NEW_KEY=')).length === 1 && vaultFileText.includes(SECRET2) && !vaultFileText.includes(SECRET1) && (fs.statSync(path.join(HOME, 'vault.env')).mode & 0o777) === 0o600, 'setting it again replaces the old value in the vault file, which stays root-only (0600)');
+  const everything = JSON.stringify([names1, put, await api('GET', '/api/vault'), await api('GET', '/api/settings'), await api('GET', '/api/setup'), await api('GET', '/api/apps?all=1'), await api('GET', '/log')]);
+  check(!everything.includes(SECRET1) && !everything.includes(SECRET2) && !fs.readFileSync(path.join(HOME, 'log.jsonl'), 'utf8').includes('second_value'), 'no API answer and nothing in the action log ever holds a value, only that it was set');
+  check((await viaTcp('GET', '/api/vault/DEMO_NEW_KEY')).status === 404, 'there is no route that reads one key back (404)');
+  const badName = await api('PUT', '/api/vault/lower_case', { value: 'x' }).then(() => '', (e: Error) => e.message);
+  check(/capital letters/.test(badName), 'key names are checked');
+
+  // Apps: each track is one, and can be turned off and on without a reinstall.
+  const all = await api<any[]>('GET', '/api/apps?all=1');
+  const ex = all.find((a) => a.id === 'example');
+  check(ex?.status === 'enabled' && ex.access.tools.some((t: { name: string }) => t.name === 'example.spend') && ex.access.secrets.some((s: { name: string; set: boolean }) => s.name === 'DEMO_SECRET' && s.set) && ex.access.triggers.length === 3, `the App Center lists ${all.length} apps; "${ex?.title}" shows its tools, triggers and the key names it needs`);
+  check(all.every((a) => typeof a.description === 'string') && all.filter((a) => a.description).length >= all.length - 1, 'each app has a description (its own, or the first paragraph of its README)');
+  check(JSON.stringify(all).includes(SECRET2) === false, 'the list names the keys an app needs and whether they are set, never their values');
+  check((await viaTcp('POST', '/api/apps/example/disable', {}, RELAYED)).status === 403, 'apps cannot be switched from outside the box (403)');
+
+  const off = await api<any>('POST', '/api/apps/example/disable', {});
+  const tasksBefore = (await api<Task[]>('GET', '/tasks')).length;
+  const noTool = await api('POST', '/tasks', { title: 'x', prompt: 'x', worker: 'fake', tools: ['example.spend'] }).then(() => '', (e: Error) => e.message);
+  const route = await viaTcp('GET', '/t/example/secret-check');
+  const hook = await viaTcp('POST', '/hook/example/start', { title: 'nope' });
+  fs.mkdirSync(path.join(HOME, 'inbox', 'example'), { recursive: true });
+  fs.writeFileSync(path.join(HOME, 'inbox', 'example', 'late.txt'), 'x');
+  await sleep(900);
+  check(off.status === 'disabled' && /no tool/.test(noTool) && route.status === 404 && hook.status === 404, 'turned off: its tools, routes and webhooks are gone at once');
+  check((await api<Task[]>('GET', '/tasks')).length === tasksBefore && !(await api<any[]>('GET', '/apps')).some((a) => a.track === 'example') && !off.restartNeeded, 'its file watcher stopped (no task from the new file), it left the app list, and no restart was needed');
+  check(JSON.parse(fs.readFileSync(path.join(HOME, 'apps.json'), 'utf8')).disabled.includes('example'), 'the choice is saved on disk, so it survives a restart');
+
+  const on = await api<any>('POST', '/api/apps/example/enable', {});
+  const hook2 = await viaTcp('POST', '/hook/example/start', { title: 'back' });
+  check(on.status === 'enabled' && (await viaTcp('GET', '/t/example/secret-check')).status === 200 && hook2.status === 200, 'turned back on, with no reinstall: its tools, routes and webhooks work again');
+  const noApp = await api('POST', '/api/apps/nothing-here/enable', {}).then(() => '', (e: Error) => e.message);
+  check(/no app/.test(noApp), 'an app that is not installed is refused');
+});
 
 // ---------- each track's own steps: tracks/<name>/demo.ts ----------
 
