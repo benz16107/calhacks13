@@ -185,6 +185,12 @@ async function guests(d: DemoKit) {
   const runInfo = ((await d.api<LogEvent[]>('GET', '/log')).find((e) => e.type === 'note' && e.track === 'credit-desk' && (e.data as any)?.kind === 'run.started' && (e.data as any).info.guest) as any)?.data;
   d.check(runInfo?.info.guest === true && analyst.budgetCents === 0 && !analyst.tools.some((t: string) => /wallet|shopper|pay|bank/.test(t)) && !analyst.tools.includes('credit-desk.bank'),
     'the guest\'s run is marked guest in its run.started note, the analyst has a $0 budget and no tool that pays or reads the bank');
+  // No guest task can pay: the gate has no tools, a guest's web run has web tools and 25 cents, the credit analyst has no wallet, Shopper or x402 tool.
+  const tasks = await d.api<Task[]>('GET', '/tasks');
+  const gates = tasks.filter((t) => t.source.startsWith('guest:')), runs = tasks.filter((t) => t.source.startsWith('guest-run:'));
+  const web = ['apify.run', 'apify.checkPrice', 'shopper.checkPrice'];
+  d.check(gates.length > 0 && gates.every((t) => t.tools.length === 0 && t.budgetCents === 0) && runs.every((t) => t.budgetCents <= 25 && t.tools.every((x) => web.includes(x))) && !analyst.tools.some((x: string) => /^(wallet|shopper|x402)/.test(x)),
+    `no guest task can pay: ${gates.length} guest gates have no tools and a $0 budget, ${runs.length} guest web runs have only web tools and at most 25 cents, and the credit analyst holds no wallet, Shopper or x402 tool`);
   const all = JSON.stringify(await d.api('GET', '/log'));
   d.check(!all.includes(grace.guarantor.ssn) && !all.includes(person('P13').guarantor.ssn), 'no guest SSN is anywhere in the log');
 }
