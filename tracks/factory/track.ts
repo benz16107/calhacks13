@@ -19,9 +19,11 @@ export function teamPrompt(goal: string, finish = '') {
   return [
     goal,
     '',
-    'Work as a team. Delegate the change to the `coder` droid. Then give the `reviewer` droid the full `git diff` (or the',
-    'changed files) and ask for its verdict. If the verdict is CHANGES, have the coder fix it and ask the reviewer again,',
-    'at most twice. End with the reviewer\'s last verdict line, the files changed and the test result.',
+    'Work as a team of custom droids, through the Task tool. Do not edit files yourself.',
+    '1. Task with subagent_type `coder`: give it the goal; it makes the change and runs the tests.',
+    '2. Task with subagent_type `reviewer`: give it the full diff of the changed files and ask for its verdict.',
+    '3. If the verdict is CHANGES, send the reasons to the coder and ask the reviewer again, at most twice.',
+    'End with the reviewer\'s last verdict line, the files changed and the test result.',
     finish,
   ].join('\n');
 }

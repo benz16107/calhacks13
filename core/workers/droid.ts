@@ -30,7 +30,7 @@ const factory = path.join(process.env.HOME!, '.factory');
 fs.mkdirSync(path.join(factory, 'droids'), { recursive: true });
 const hook = (event: string) => ({
   type: 'command',
-  command: [`BOX_SOCKET=${sock}`, process.execPath, '--experimental-strip-types', '--disable-warning=ExperimentalWarning', new URL('./hook.ts', import.meta.url).pathname, event].map((a) => `'${a}'`).join(' '),
+  command: [process.execPath, '--experimental-strip-types', '--disable-warning=ExperimentalWarning', new URL('./hook.ts', import.meta.url).pathname, event].map((a) => `'${a}'`).join(' '),
   timeout: 86_400, // a risky command may wait a long time for its OK
 });
 fs.writeFileSync(path.join(factory, 'hooks.json'), JSON.stringify({ PreToolUse: [{ matcher: 'Execute', hooks: [hook('pre')] }], PostToolUse: [{ matcher: '*', hooks: [hook('post')] }] }));

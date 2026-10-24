@@ -68,10 +68,12 @@ export default async function (d: DemoKit) {
   }, 600_000);
   const { events } = await d.api('GET', `/tasks/${id}`);
   const steps = events.filter((e: any) => e.type === 'task.step');
+  const team = ['coder', 'reviewer'].every((n) => steps.some((s: any) => s.data?.droid === n));
+  if (!team) for (const s of steps) console.log(`        step ${JSON.stringify(s.data ?? {}).slice(0, 80)} ${s.text.split('\n')[0].slice(0, 120)}`);
   d.check(d.view(live.task.workspace, 'add.js')?.includes('a + b'), 'after the approval Droid fixed add.js');
-  d.check(steps.some((s: any) => s.data?.droid === 'coder') && steps.some((s: any) => s.data?.droid === 'reviewer'), 'the coder droid made the change and the reviewer droid checked it');
   d.check(steps.filter((s: any) => s.data?.hook === 'PostToolUse').length >= 2, "Droid's hooks logged each tool call's result");
-  d.check(steps.some((s: any) => s.data?.factoryCredits), `Factory usage logged: ${done.costCents} cents at list price`);
+  d.check(team, 'the coder droid made the change and the reviewer droid checked it');
+  d.check(steps.some((s: any) => s.data?.factoryCredits), `Factory usage logged: $${(done.costCents / 100).toFixed(2)} at list price`);
 
   // The token lives in its own root-only file on the test machine, not the shared vault, so only this run gets it.
   const ghFile = '/root/factory-github.env';
