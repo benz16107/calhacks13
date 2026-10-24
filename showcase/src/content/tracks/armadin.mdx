@@ -26,14 +26,14 @@ shots:
     caption: 'Asked in Elastic, "What got blocked this week, and from where?", the agent lists attacker.example and the task that tried it.'
 links:
   - label: 'Docs: threat model'
-    href: https://gurtos.com/security/threat-model/
+    href: https://gurtos.com/docs/security/threat-model/
     note: 'What GurtOS defends against, and a plain list of what it does not.'
   - label: 'Docs: trust boundaries'
-    href: https://gurtos.com/security/trust-boundaries/
+    href: https://gurtos.com/docs/security/trust-boundaries/
   - label: 'Docs: network policy'
-    href: https://gurtos.com/concepts/network-policy/
+    href: https://gurtos.com/docs/concepts/network-policy/
   - label: 'Docs: the vault and the broker'
-    href: https://gurtos.com/concepts/vault-and-broker/
+    href: https://gurtos.com/docs/concepts/vault-and-broker/
   - label: The test itself, core/demo.ts (moment 2)
     href: https://github.com/benz16107/calhacks13/blob/main/core/demo.ts
     note: 'Search for "the booby-trapped page". The hidden instructions are in the test.'
@@ -178,7 +178,7 @@ Or run the whole merge gate, which plays the full attack twice: `./demo`.
 
 ## Limits
 
-From the [threat model](https://gurtos.com/security/threat-model/), in plain terms:
+From the [threat model](https://gurtos.com/docs/security/threat-model/), in plain terms:
 
 - **Root on the box gets everything.** The core runs as root and holds every key. A kernel exploit inside a task
   escapes users, systemd and overlayfs, which share one kernel. Tasks are not virtual machines.

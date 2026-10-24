@@ -10,5 +10,27 @@
         }
       ]
     }
+  ],
+  "redirects": [
+    {
+      "source": "/project/terms",
+      "destination": "/terms/",
+      "permanent": true
+    },
+    {
+      "source": "/project/privacy",
+      "destination": "/privacy/",
+      "permanent": true
+    },
+    {
+      "source": "/:section(introduction|get-started|concepts|guides|reference|security|project)/:rest*",
+      "destination": "/docs/:section/:rest*",
+      "permanent": true
+    },
+    {
+      "source": "/og/:section(introduction|get-started|concepts|guides|reference|security|project)/:rest*",
+      "destination": "/og/docs/:section/:rest*",
+      "permanent": true
+    }
   ]
 }

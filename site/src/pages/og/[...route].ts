@@ -5,6 +5,8 @@ import { NAME, named } from '../../product.ts';
 
 const entries = await getCollection('docs');
 const pages = Object.fromEntries(entries.map((e) => [e.id, e.data]));
+// The landing page at / has no docs entry.
+pages.index = { title: NAME, description: `${NAME} is an operating system where AI agents do real work, with Server and Personal downloads.` } as (typeof pages)[string];
 
 export const { getStaticPaths, GET } = await OGImageRoute({
   param: 'route',

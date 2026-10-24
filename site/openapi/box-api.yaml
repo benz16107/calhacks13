@@ -6,7 +6,7 @@ info:
   description: |
     The box's HTTP API is how the portal, a phone and outside tools list tasks, start them, answer
     approvals, undo work and follow the action log. These pages are generated from the routes the core
-    serves. For a guided overview, read [HTTP API](/reference/http-api/).
+    serves. For a guided overview, read [HTTP API](/docs/reference/http-api/).
 
     ## Base address
 
@@ -1363,7 +1363,7 @@ components:
             data: {}
 
     LogEvent:
-      description: One line of the action log. See [Log events](/reference/log-events/).
+      description: One line of the action log. See [Log events](/docs/reference/log-events/).
       oneOf:
         - $ref: '#/components/schemas/TaskCreatedEvent'
         - $ref: '#/components/schemas/TaskStateEvent'

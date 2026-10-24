@@ -28,7 +28,7 @@ The thumbnail is image 1.
 ## Try it out (links)
 
 - https://calhacks.gurtos.com (the showcase: one page per sponsor track, with evidence)
-- https://gurtos.com (the product docs)
+- https://gurtos.com/docs/ (the product docs)
 - https://github.com/benz16107/calhacks13 (the code, open source under the Apache License 2.0)
 - https://www.figma.com/slides/SBrJtJiY20k88X3IGzKwZW (the pitch deck, Figma Slides)
 

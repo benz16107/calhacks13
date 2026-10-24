@@ -1,7 +1,7 @@
 // Links used on more than one page. Change a link here and every page follows.
 export const LINKS = {
   repo: 'https://github.com/benz16107/calhacks13',
-  docs: 'https://gurtos.com',
+  docs: 'https://gurtos.com/docs',
   devpost: '', // set once the Devpost page exists
   deck: 'https://www.figma.com/slides/SBrJtJiY20k88X3IGzKwZW',
   figmaDesign: 'https://www.figma.com/design/oppzH621OOOMA31rgLbxbM',

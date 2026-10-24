@@ -10,7 +10,7 @@ back up when it boots.
 has been installed from its own ISO on cloud VMs and QEMU, but it has not had a security audit.
 Try it on a spare machine or a VM, not on a computer whose disk you need: the installer takes the whole disk.
 
-Docs: [gurtos.com](https://gurtos.com). Hackathon showcase: [calhacks.gurtos.com](https://calhacks.gurtos.com).
+Docs: [gurtos.com](https://gurtos.com) (docs at [gurtos.com/docs](https://gurtos.com/docs/)). Hackathon showcase: [calhacks.gurtos.com](https://calhacks.gurtos.com).
 
 ## Editions
 
@@ -129,7 +129,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md).
 | The power goes out | The log is the truth; at boot the box rebuilds every task from it and resumes what was running |
 
 Read the full model, including what it does not protect against, at
-[gurtos.com](https://gurtos.com). Report security problems privately through GitHub's
+[gurtos.com/docs](https://gurtos.com/docs/). Report security problems privately through GitHub's
 [security advisories](https://github.com/benz16107/calhacks13/security/advisories/new), not in public issues.
 
 ## What is in this repo

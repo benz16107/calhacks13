@@ -283,7 +283,7 @@ const PAGE = `<!doctype html><meta charset=utf-8><meta name=viewport content="wi
 <p>This relay gives GurtOS boxes an address like <code>rosa.${DOMAIN}</code>. It passes each connection to the box by name,
 still encrypted: the box holds its own certificate and key, so the relay cannot read what goes through.</p>
 <p>It also forwards push notifications to phones. The box encrypts each one for the phone before it gets here.</p>
-<p><a href="https://gurtos.com/guides/reach-your-box-from-anywhere/">How it works</a></p></body>`;
+<p><a href="https://gurtos.com/docs/guides/reach-your-box-from-anywhere/">How it works</a></p></body>`;
 
 // ---------- serving ----------
 

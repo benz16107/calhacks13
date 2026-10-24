@@ -33,7 +33,7 @@ export const onRequest = defineRouteMiddleware(async (context) => {
   // One image per docs page, drawn at build time by src/pages/og/[...route].ts. Generated API pages use the home page's.
   const ids = new Set((await getCollection('docs')).map((e) => e.id));
   const id = entry.id || 'index';
-  if (context.url.pathname.startsWith('/reference/api/')) {
+  if (context.url.pathname.startsWith('/docs/reference/api/')) {
     // Pages generated from the OpenAPI spec have no description of their own.
     const description = `${entry.data.title}: reference for the ${NAME} HTTP API, with its parameters, request body, responses and examples.`;
     for (const tag of route.head) {

@@ -38,7 +38,7 @@ links:
     href: https://www.mana.space/home/x5CqxyjcOgVCAyrvUBqK2LNRcMJ2/apps/box-status
     note: 'Opens signed out. Reads the Vultr box''s read-only status route every 5 seconds: tasks running, approvals waiting, cost, recent work.'
   - label: 'Docs: install GurtOS on a cloud instance'
-    href: https://gurtos.com/get-started/install-server/#install-on-a-cloud-instance
+    href: https://gurtos.com/docs/get-started/install-server/#install-on-a-cloud-instance
     note: 'The Vultr steps: add the ISO, deploy an instance from it.'
   - label: The image build and its test results
     href: https://github.com/benz16107/calhacks13/tree/main/image
@@ -177,7 +177,7 @@ The other Vultr jobs use the same VM over ssh from the build scripts:
 3. Install the box for real: copy the repo over and run `sudo core/install.sh`.
 4. Build the discs on it: `BUILD_SHELL='ssh root@<your instance>' image/build`, then `image/build personal`.
 5. To boot GurtOS itself on Vultr, run `tracks/vultr/up.ts --iso-url <the disc's https address>` (it adds the disc, creates the instance, waits for the installer and detaches the disc), or follow
-   [Install on a cloud instance](https://gurtos.com/get-started/install-server/#install-on-a-cloud-instance):
+   [Install on a cloud instance](https://gurtos.com/docs/get-started/install-server/#install-on-a-cloud-instance):
    serve the ISO, add it under Orchestration, ISOs, and deploy an instance from it.
 
 <Status rows={frontmatter.status} />

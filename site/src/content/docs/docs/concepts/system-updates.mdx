@@ -1,0 +1,101 @@
+---
+title: System updates and rollback
+description: A GurtOS machine updates its whole system as one signed image into a spare slot, keeps it only if the box comes up healthy, and rolls back by itself if not.
+---
+
+import DiskLayout from '../../../../assets/diagrams/disk-layout.svg';
+
+A box runs unattended, so an update must never leave it broken. GurtOS does not update package by package. It replaces the whole system as one image, into a second copy of the system, and keeps the new one only if the box comes up healthy on it. This applies to machines installed from a GurtOS ISO, Server or Personal.
+
+## Two system slots
+
+The installer splits the disk into five partitions:
+
+| Partition | Label | Size | Holds |
+|---|---|---|---|
+| BIOS boot | `box-bios` | 1 MB | GRUB, for BIOS machines (x86 only) |
+| EFI system | `BOX-ESP` | 512 MB | GRUB, its menu, and `grubenv`, which says which slot starts |
+| System slot A | `box-a` | 6 GB (Personal: 12 GB) | A whole system: kernel, Ubuntu, the box service |
+| System slot B | `box-b` | The same size | The other system. Empty until the first update. |
+| Data | `box-data` | The rest | Everything that must outlive an update |
+
+The box runs from one slot at a time. The other is the spare.
+
+<figure class="diagram">
+  <DiskLayout />
+  <figcaption>The disk holds two system slots and a data partition. An update goes into the spare slot, starts once on trial, and stays only if the box is healthy.</figcaption>
+</figure>
+
+## What survives an update
+
+Everything you care about is on the data partition and is bind-mounted into place at boot:
+
+- `/var/lib/box`: the action log, workspaces and task layers.
+- `/etc/box`: the vault and the box's identity key.
+- `/var/lib/spacetimedb` and `/root/.config/spacetime`: the live database and the identity that owns it.
+- `/var/log/journal`: system logs, so a failed update's logs are still there after the rollback.
+
+An update also copies `/etc/machine-id`, SSH host keys on debug builds, and every task user (uids 30000 to 39999) into the new system, so a task resumed after the update keeps its uid.
+
+On GurtOS Personal the data partition also holds `/home`, saved network connections, account pictures and Bluetooth pairings. An update carries over people's accounts (uids 1000 to 29999), their groups and `sudo` membership, the time zone, language, computer name and login settings.
+
+Anything else changed by hand inside a running slot is lost at the next update. That is by design: the system is the image. On Personal this includes software installed with `apt` outside your home folder: your files, accounts and settings stay, the extra software does not.
+
+## How an update runs
+
+`box-update apply <file or URL>` does it in order:
+
+1. **Fetch.** It downloads the update image, `gurtos-<edition>-<arch>.sqfs`, with its `.sha256` and `.sig` files, or reads them from disk. For example, `box-update apply https://updates.example.com/gurtos-server-x86_64.sqfs`.
+2. **Verify.** It checks that `.sig` is a valid signature of the `.sha256` file by the build key in `/etc/box-os/update.pub`, and that the image matches the hash. An image signed by any other key does not install.
+3. **Check the edition.** An update must be the same edition as the running system. A Server image does not install on Personal, which would lose its desktop, and the other way round.
+4. **Write.** It formats the spare slot and unpacks the image into it, then copies the identity, task users and, on Personal, people's accounts and settings across.
+5. **Arm a trial.** It sets GRUB's `next_entry` to the spare slot. GRUB clears that value as it uses it, so the new slot starts exactly once. The default slot does not change yet.
+6. **Restart.**
+
+## The health check
+
+At every start, `box-confirm.service` waits up to 5 minutes for the box service to answer `GET /health` with `ok: true`. The first start of a new system can take a while, because it publishes the SpacetimeDB module.
+
+- **Healthy:** the new slot becomes the default. The update is done.
+- **Not healthy:** the box restarts. GRUB starts the old slot, because the default never changed.
+- **The new kernel panics:** the system restarts by itself after 10 seconds (`panic=10`) and lands on the old slot the same way.
+
+Either way, the result is written to `/data/update/last` and printed on the serial console, and `box-update status` shows it.
+
+## Rolling back by hand
+
+`box-update rollback` makes the other slot the default again and restarts into it. Use it when an update is healthy by the check but wrong for you. See [update and roll back](/docs/guides/update-and-roll-back/).
+
+```sh
+box-update status      # which slot runs, what the other holds, the last result
+box-update rollback    # make the other slot the default again, and restart
+```
+
+## What makes the system an image
+
+On GurtOS Server, the system in each slot is built from 40 named Ubuntu packages, 440 with their dependencies, plus the box service and the files GurtOS adds. It has no `apt`, no snapd, no cloud-init, no `sudo`, no desktop and no login prompt on any screen or serial port. Root's password is locked. Since nothing can install a package on the running system, the only way to change it is a new image.
+
+GurtOS Personal is Ubuntu's GNOME desktop with the box beside it, and its owner has `sudo`. The whole system still updates as one image, the way ChromeOS and Fedora Silverblue do.
+
+## Limits
+
+These are the trade-offs in this release, written down:
+
+- The slots are plain writable ext4. They are not read-only or verified at boot. dm-verity is not built.
+- Updates are signed with one ed25519 key held on the build machine. There is no key rotation.
+- There is no rollback protection. An older signed image installs as readily as a newer one.
+- A system that hangs instead of panicking or failing its health check stays hung until someone restarts it. A hardware watchdog would cover that, and is not set up.
+- The GRUB menu on the EFI partition is written once at install. A change to the boot menu itself needs a reinstall.
+- The two slots cost 12 GB on Server, with a minimum disk of about 17 GB. On Personal they cost 24 GB, with a minimum disk of about 29 GB.
+- The boot loader is not signed, so Secure Boot must be off.
+
+## On other installs
+
+A box installed with `core/install.sh` on an existing Ubuntu machine has none of this. It updates like any Ubuntu machine, and the box service updates when you run the install script again. See [install on Ubuntu](/docs/get-started/install-on-ubuntu/).
+
+## Related
+
+- [Update and roll back](/docs/guides/update-and-roll-back/)
+- [Disk layout](/docs/reference/disk-layout/)
+- [Install GurtOS Server](/docs/get-started/install-server/)
+- [Threat model](/docs/security/threat-model/)
