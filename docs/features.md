@@ -424,4 +424,4 @@ Found by trial merges and by comparing what each branch edits. Each is sent to e
 | Oct 23 22:29 to 22:38 | release ISO 21:34 build | install, first boot, power cut, every app |
 | Oct 23 22:55 to Oct 24 01:30 | debug ISO 22:16 build, then main on top after each merge | the four moments, security, phones, every app |
 | Oct 24 00:02 | release ISO 20261024-0644-881318a | install, GurtOS screen, Pacific time, firewall |
-| next | the signed release ISOs | planned twice more before Sun 8:00 AM |
+| next | the rebuilt release ISOs, all four, from the commit where image's age, voice, theme and first-boot work lands (the release thread will give the new checksums; the published d8620e9 ISOs are superseded, so QA pins no old checksum) | planned twice more before Sun 8:00 AM; the backup claim stays "needs age, in the next build" until then |
