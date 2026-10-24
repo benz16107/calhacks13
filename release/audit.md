@@ -81,7 +81,7 @@ closed before the repository goes public.
 | The Personal test VM is the default | `personal/vm.sh` | personal | Done (96ce0cb, 85d5655): `PERSONAL_VM` is required |
 | The Forge app calls Ben's Vultr box | `tracks/jira/forge/manifest.yml`, `forge/src/resolvers/index.js` | jira | Sent: the box URL is a deploy-time setting, documented for people deploying their own Forge app |
 | Image descriptions use Ollama on Ben's Mac | `tracks/find/find.ts`, `record.ts` | find | Done (4351905): `FIND_OLLAMA_URL`; no model call or task at boot |
-| Comments and READMEs name Ben's machines or key file | Apify, Elastic, Shopper, Wallet, find, Jira READMEs; `tracks/elastic/agent.ts`, `tracks/shopper/store.ts` | each track | Sent; Shopper done (408ad13). Showcase and spikes done (8b1a75b, 3a4e4ca) |
+| Comments and READMEs name Ben's machines or key file | Apify, Elastic, Shopper, Wallet, find, Jira READMEs; `tracks/elastic/agent.ts`, `tracks/shopper/store.ts` | each track | Sent; Shopper (408ad13), wallet (3a319c6) done. Showcase and spikes done (8b1a75b, 3a4e4ca) |
 | Demo data names Ben as approver | `tracks/jira/demo.ts` ("Ben Zhou") | jira | Sent: a neutral name |
 | BOX_PEERS, BOX_URL, BOX_OWNER | core | core | Fine: empty or unset by default, set per machine |
 | Docs screenshots show a test machine's name as a box name | `site/src/assets/screens/box-*.png` | docs | Done (1d88636): replaced with the running portal's screenshots |
