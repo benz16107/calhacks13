@@ -191,6 +191,7 @@ then follows it live. In Kibana, open **Agents**, then **GurtOS log** (`/app/age
   boxes add the worker's own last error line, which makes answers sharper.
 - An entry can be changed in the seconds between the box writing it and Elastic receiving it. After that it cannot be changed without the check naming it. Root can still change the file on the box: what changes is that it is caught.
 - A box that is fully taken over can stop sending, or lie about its own check. The agent flags a box that has gone silent, and `node tracks/elastic/agent.ts verify <log copy> <machine id>` checks a copy of a log without asking the box.
+- A hardening of the log chain is on a branch and not merged yet: that an event cannot set its own `prev` value, and that a line without one after the chain began counts as a break. Until it is on main, the chain on main does not enforce those two rules.
 - The keys for people are issued by hand. A role change in GurtOS needs a new key.
 - Only undo is requestable by Elastic today.
 - The Elastic trial ends about Oct 30, 2026.
