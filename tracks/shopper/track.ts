@@ -418,11 +418,30 @@ export default {
       secrets: ['SHOPPER_AGENT_KEY'],
       hosts: ['the box itself: /t/shopper/store/checkout'],
       cost: (i) => usd(total(i), i?.currency),
+      // What the core's approval shows: who gets paid, and that it is test money.
+      approval: (i) => ({
+        payee: [...new Set(items(i).map((l) => (l.from ? `${label(l.from)} (checkout at the GurtOS Test Store)` : 'GurtOS Test Store')))].join(', '),
+        purpose: `TEST purchase: ${items(i).map((l) => `${l.qty} × ${l.name}`).join(', ')}`.slice(0, 200),
+      }),
       async run(i, ctx) {
         // One payment at a time, so two purchases can't both read the same "spent" and pass a cap together.
         const turn = paying.then(() => buy(i, ctx));
         paying = turn.catch(() => {});
         return turn;
+      },
+    },
+
+    {
+      name: 'shopper.refund',
+      description: "Refund the order a purchase task placed, after that task was undone (a TEST refund). Only the box's own refund tasks get this. Input: { task }.",
+      input: { type: 'object', properties: { task: { type: 'string' } }, required: ['task'] },
+      async run(i, ctx) {
+        const t = ctx.box.task(String(i?.task));
+        if (t?.state !== 'undone' || !/^shopper:(buy|propose):/.test(t.source)) throw new Error('only an undone Shopper purchase is refunded');
+        const o = await refundTask(t.id, charge(ctx.box));
+        if (!o) return { note: 'that task placed no order' };
+        ctx.log(`Refunded order ${o.id}: ${money(o.refund!.refundedCents ?? o.totalCents, o.currency)} back (TEST refund ${o.refund!.id}).`);
+        return { order: o.id, refund: o.refund, test: true };
       },
     },
 
@@ -661,14 +680,9 @@ export default {
             });
           }
         }
-        // Undo on a purchase task refunds its order: the store gives the test money back.
-        if (e.type === 'task.state' && e.state === 'undone' && /^shopper:(buy|propose):/.test(t?.source ?? '')) {
-          try {
-            const o = await refundTask(e.task!, charge(box));
-            if (o?.refund) box.note({ kind: 'refund', order: o.id, refund: o.refund }, e.task);
-          } catch (err) {
-            box.note({ kind: 'refund.failed', task: e.task, error: (err as Error).message }, e.task);
-          }
+        // Undo on a purchase task refunds its order. Money only moves inside a tool, so a small task does it.
+        if (e.type === 'task.state' && e.state === 'undone' && /^shopper:(buy|propose):/.test(t?.source ?? '') && !ofSource(box, `shopper:refund:${e.task}`).length) {
+          await start(box, { title: `Refund: ${t!.title.slice(0, 60)}`, source: `shopper:refund:${e.task}`, tools: ['shopper.refund'], prompt: `call shopper.refund ${JSON.stringify({ task: e.task })}` });
         }
       },
     },
