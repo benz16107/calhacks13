@@ -36,7 +36,7 @@ final class NotificationTests: XCTestCase {
     app.launch()
     Thread.sleep(forTimeInterval: 1)
     XCUIDevice.shared.press(.home)
-    let banner = spring.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS 'Deploy the new build'")).firstMatch
+    let banner = spring.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS %@", ProcessInfo.processInfo.environment["BANNER"] ?? "Deploy the new build")).firstMatch
     XCTAssert(banner.waitForExistence(timeout: 30), "no notification arrived")
     Thread.sleep(forTimeInterval: 1)
     shot("notification")

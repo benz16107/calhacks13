@@ -48,7 +48,10 @@ final class AppState {
     // Simulator screenshots and UI checks: SIMCTL_CHILD_GURTOS_PAIR=<pairing link>, SIMCTL_CHILD_GURTOS_OPEN=gurtos://...
     let env = ProcessInfo.processInfo.environment
     if let l = env["GURTOS_PAIR"].flatMap(PairingLink.parse) {
-      if let m = model.machines.first(where: { URL(string: $0.url)?.host == l.box.host }) { model.select(m) } else { Task { try? await model.pair(l, name: "Simulator") } }
+      let old = model.machines.first(where: { URL(string: $0.url)?.host == l.box.host })
+      if let old, env["GURTOS_REPAIR"] == nil { model.select(old) } else {
+        Task { if let old { await model.forget(old) }; try? await model.pair(l, name: env["GURTOS_NAME"] ?? "iPhone") }
+      }
     }
     if let u = env["GURTOS_OPEN"].flatMap(URL.init(string:)) { Task { try? await Task.sleep(nanoseconds: 2_500_000_000); open(url: u) } }
     if env["GURTOS_TAB"] == "settings" { tab = .settings } else if env["GURTOS_TAB"] == "tasks" { tab = .tasks } else if env["GURTOS_TAB"] == "activity" { tab = .activity }

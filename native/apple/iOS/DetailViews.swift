@@ -43,6 +43,7 @@ struct ApprovalView: View {
           }
         }
         .gurtList()
+        .defaultScrollAnchor(ProcessInfo.processInfo.environment["GURTOS_SCROLL"] == "bottom" ? .bottom : .top) // debug screenshots
         .scrollEdgeEffectStyle(.hard, for: .bottom)
         .safeAreaBar(edge: .bottom) {
           if a.isPending && app.model.mayAnswer {
