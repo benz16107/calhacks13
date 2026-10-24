@@ -229,6 +229,11 @@ export interface Ctx {
   cost(cents: number, what: string): void;
   /** Add a step to the task's log. */
   log(text: string, data?: unknown): void;
+  /**
+   * Ask the owner for an OK on behalf of this task, through the one approval path (top bar, phone, desktop). Resolves
+   * true when approved, false when denied or when there is no task. The same call after a restart returns the same answer.
+   */
+  ask(question: string, opts?: { purpose?: string }): Promise<boolean>;
 }
 
 // ---------- Slots ----------
@@ -243,6 +248,13 @@ export interface Track {
   description?: string;
   /** Vault keys this track's routes and triggers may read with box.secret(). Tools and jobs declare their own. */
   secrets?: string[];
+  /**
+   * Called for every new task before it starts, never for a guest's task (a stranger's: its result goes back to the
+   * stranger). Return plain text to hand the task's agent (what GurtOS remembers that is relevant to it), or nothing.
+   * For a Droid task the text is added to the end of its prompt; the core logs a step with what was handed over. A throw
+   * or more than 2 s is logged and the task starts without it. All apps together may hand over 8,000 characters.
+   */
+  taskContext?(spec: TaskSpec, box: Box): string | undefined | Promise<string | undefined>;
   /**
    * Keys among this app's declared secrets (track, tool or job) that it can run without, like a payment key it
    * falls back to test mode without. A new box turns the app on when only these are missing.

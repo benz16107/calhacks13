@@ -7,7 +7,8 @@
 <script type="module" src="/kit/gurtos.js"></script>
 <style>
   main { max-width: 960px; margin: 0 auto; padding: var(--space-lg); }
-  .g-search { margin-bottom: var(--space-md); }
+  .top { display: flex; gap: var(--space-md); align-items: center; flex-wrap: wrap; margin-bottom: var(--space-md); }
+  .top .g-search { flex: 1; min-width: 240px; }
   .g-search input { width: 100%; }
   .g-group { margin-top: var(--space-md); }
   .photos { display: grid; gap: var(--space-md); grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }
@@ -15,18 +16,37 @@
   .photos .g-card { padding: var(--space-sm); }
   .g-row-title, .g-row-sub, .photos p { overflow-wrap: anywhere; }
   .photos p { margin: var(--space-xs) 0 0; }
+  .add { display: flex; gap: var(--space-sm); margin-bottom: var(--space-md); }
+  .add input { flex: 1; }
+  .g-row-trail { display: flex; gap: var(--space-sm); align-items: center; }
   footer { margin-top: var(--space-lg); }
+  [hidden] { display: none !important; }
 </style>
 <body class="g-page">
 <main>
-  <form role="search" id="form" class="g-search">
-    <g-icon name="system-search"></g-icon>
-    <label class="g-sr" for="q">Search this box</label>
-    <input id="q" class="g-field" type="search" placeholder="Find the whiteboard photo" autocomplete="off" autofocus>
-  </form>
+  <div class="top">
+    <div class="g-toggle-group" role="radiogroup" aria-label="View">
+      <button class="g-toggle" role="radio" aria-checked="true" id="v-search" type="button">Search</button>
+      <button class="g-toggle" role="radio" aria-checked="false" id="v-memory" type="button">Memory</button>
+    </div>
+    <form role="search" id="form" class="g-search">
+      <g-icon name="system-search"></g-icon>
+      <label class="g-sr" for="q">Search this box</label>
+      <input id="q" class="g-field" type="search" placeholder="Find the whiteboard photo" autocomplete="off" autofocus>
+    </form>
+  </div>
   <div id="describe" class="g-banner" hidden><g-icon name="dialog-information"></g-icon><div><span id="describe-text"></span> <button class="g-btn" id="describe-btn" type="button">Describe with Claude</button></div></div>
   <div id="results" aria-live="polite"></div>
-  <footer id="foot" class="t-caption t-secondary">Searches tasks, files and photo descriptions on this box. Photos never leave it.</footer>
+  <section id="memory" hidden>
+    <form id="add" class="add">
+      <label class="g-sr" for="pref">A preference to remember</label>
+      <input id="pref" class="g-field" maxlength="300" placeholder="Never buy from Corner Market">
+      <button class="g-btn g-btn-suggested" type="submit">Remember</button>
+    </form>
+    <p class="t-caption t-secondary">Preferences go to every agent in every app before its task starts. Notes from earlier tasks go only to tasks with the same permissions. A note from a task that could reach the web is not shared with agents until you trust it.</p>
+    <div id="items"></div>
+  </section>
+  <footer class="t-caption t-secondary"><div id="privacy"></div><div id="foot">Searches tasks, files, memories and photo descriptions on this box.</div></footer>
 </main>
 <script>
   // gurtos.js puts the pairing token on this page's fetches. An <img> cannot carry a header, so photos take it in the URL.
@@ -37,56 +57,90 @@
   const body = (r) => r.text.replace(/^[^:]*: /, ''); // a file's doc starts with "<workspace>/<path>: "
   const BADGE = { done: 'g-badge-success', failed: 'g-badge-destructive', undone: 'g-badge-neutral' };
   const $ = (id) => document.getElementById(id);
+  const post = (path, body) => fetch(`/t/find/${path}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body ?? {}) });
 
-  function status(title, text, icon = 'system-search') {
+  function status(into, title, text, icon = 'system-search') {
     const s = el('div', 'g-status');
     const i = el('g-icon');
     i.setAttribute('name', icon);
     i.setAttribute('size', '64');
     s.append(i, el('div', 'g-status-title', title), el('div', 'g-status-body', text));
-    $('results').replaceChildren(s);
+    into.replaceChildren(s);
   }
 
-  function row(r) {
+  // Two clicks to forget: the first asks, the second does it.
+  function forgetButton(id, label, done) {
+    const b = el('button', 'g-btn g-btn-flat', 'Forget');
+    b.type = 'button';
+    b.setAttribute('aria-label', `Forget ${label}`);
+    let armed;
+    b.addEventListener('click', async () => {
+      if (!armed) {
+        b.textContent = 'Sure? Forget';
+        b.classList.add('g-btn-destructive');
+        armed = setTimeout(() => ((armed = undefined), (b.textContent = 'Forget'), b.classList.remove('g-btn-destructive')), 4000);
+        return;
+      }
+      clearTimeout(armed);
+      const r = await post('forget', { id });
+      const d = await r.json().catch(() => ({}));
+      gurtos.toast(r.ok ? d.message : d.error || `HTTP ${r.status}`);
+      if (r.ok) done();
+    });
+    return b;
+  }
+
+  function row(r, again) {
     const div = el('div', 'g-row');
     const text = el('div', 'g-row-text');
+    const trail = el('span', 'g-row-trail');
     if (r.kind === 'task') {
       const [, title = r.task, state = r.state] = r.text.match(/^Task "(.*)" \((\w+)\)/) || [];
       text.append(el('div', 'g-row-title', r.title || title), el('div', 'g-row-sub', `${r.source || 'task'} · task ${r.task}`));
-      const trail = el('span', 'g-row-trail');
       trail.append(el('span', `g-badge ${BADGE[state] || 'g-badge-neutral'}`, state));
-      div.append(text, trail);
+      if (r.trust === 'untrusted' || !r.trust) {
+        const t = el('span', 'g-badge g-badge-destructive', 'Not shared with agents');
+        t.title = 'This task could reach the web, so its note is kept from agents.';
+        trail.append(t);
+      }
+    } else if (r.kind === 'memory') {
+      text.append(el('div', 'g-row-title', r.text), el('div', 'g-row-sub', `${r.memkind === 'preference' ? 'Preference' : 'Lesson'} · ${r.trust === 'owner' ? 'you said it' : r.trust === 'approved' ? 'you approved it' : 'from a task with no outside access'}`));
     } else {
       text.append(el('div', 'g-row-title t-mono', `${r.workspace}/${r.path}`), el('div', 'g-row-sub', body(r).slice(0, 160)));
-      div.append(text);
     }
+    trail.append(forgetButton(r.id, r.title || r.path || 'this', again));
+    div.append(text, trail);
     return div;
   }
 
-  function photo(r) {
+  function photo(r, again) {
     const card = el('div', 'g-card');
     const img = el('img');
     img.src = withToken(`/t/find/file?workspace=${encodeURIComponent(r.workspace)}&path=${encodeURIComponent(r.path)}`);
     img.alt = body(r).split('. ')[0];
     img.loading = 'lazy';
-    card.append(img, el('p', 't-caption t-mono', `${r.workspace}/${r.path}`), el('p', 't-caption t-secondary', `Described by ${r.model || 'a model'}`));
+    card.append(img, el('p', 't-caption t-mono', `${r.workspace}/${r.path}`), el('p', 't-caption t-secondary', `Described by ${r.model || 'a model'}`), forgetButton(r.id, r.path, again));
     return card;
   }
 
-  function render(d, q) {
-    if (!d.results.length) status('Nothing found', `No photo, file or task on this box matches "${q}".`);
-    else $('results').replaceChildren();
-    for (const [kind, label] of [['task', 'Tasks'], ['file', 'Files'], ['photo', 'Photos']]) {
-      const hits = d.results.filter((r) => r.kind === kind);
+  function groups(into, results, again) {
+    into.replaceChildren();
+    for (const [kind, label] of [['memory', 'Memory'], ['task', 'Tasks'], ['file', 'Files'], ['photo', 'Photos']]) {
+      const hits = results.filter((r) => r.kind === kind);
       if (!hits.length) continue;
       const group = el('section', 'g-group');
       const head = el('div', 'g-group-head');
       head.append(el('h2', 'g-group-title', label));
       const list = el('div', kind === 'photo' ? 'photos' : 'g-list');
-      list.append(...hits.map(kind === 'photo' ? photo : row));
+      list.append(...hits.map((r) => (kind === 'photo' ? photo(r, again) : row(r, again))));
       group.append(head, list);
-      $('results').append(group);
+      into.append(group);
     }
+  }
+
+  function render(d, q) {
+    if (!d.results.length) status($('results'), 'Nothing found', `No photo, file, memory or task on this box matches "${q}".`);
+    else groups($('results'), d.results, search);
     const by = d.index === 'moss' ? `Moss, in ${d.ms < 1 ? 'under 1' : d.ms} ms (${Math.round(d.wallMs)} ms on the box)` : d.index;
     $('foot').textContent = `Answered by ${by}. ${d.cloud}.`;
   }
@@ -103,20 +157,47 @@
       if (!r.ok) throw new Error(r.status === 401 ? 'Pair this device with the box first.' : d.error || `HTTP ${r.status}`);
       render(d, q);
     } catch (e) {
-      status('The box did not answer', String(e.message), 'dialog-warning');
+      status($('results'), 'The box did not answer', String(e.message), 'dialog-warning');
     }
   }
+
+  async function memory() {
+    const r = await fetch('/t/find/memory');
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) return status($('items'), 'Only the owner sees memory', d.error || `HTTP ${r.status}`, 'dialog-warning');
+    if (!d.items.length) return status($('items'), 'Nothing remembered yet', 'Add a preference above, or let an agent propose one.', 'dialog-information');
+    groups($('items'), d.items, memory);
+  }
+
+  function view(name) {
+    for (const v of ['search', 'memory']) $(`v-${v}`).setAttribute('aria-checked', String(v === name));
+    $('memory').hidden = name !== 'memory';
+    $('results').hidden = $('form').hidden = name !== 'search';
+    if (name === 'memory') memory();
+  }
+  $('v-search').addEventListener('click', () => view('search'));
+  $('v-memory').addEventListener('click', () => view('memory'));
   $('form').addEventListener('submit', (e) => (e.preventDefault(), search()));
   $('q').addEventListener('input', () => (clearTimeout(timer), (timer = setTimeout(search, 250))));
-  status('Search this box', 'Photos by what is in them, text files, and past tasks.');
+  $('add').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const text = $('pref').value.trim();
+    if (!text) return;
+    const r = await post('memory', { text });
+    const d = await r.json().catch(() => ({}));
+    if (r.ok) ($('pref').value = ''), gurtos.toast('Remembered. Every agent is told before its next task.'), memory();
+    else gurtos.toast(d.error || `HTTP ${r.status}`);
+  });
+  status($('results'), 'Search this box', 'Photos by what is in them, text files, memories and past tasks.');
   // Photos no model on this box could describe. Claude describes them only when you ask: it uses your model key.
   fetch('/t/find/status').then((r) => r.json()).then((s) => {
+    $('privacy').textContent = s.privacy;
     if (!s.undescribed) return;
     $('describe-text').textContent = `${s.undescribed} photo${s.undescribed > 1 ? 's are' : ' is'} not described yet, so search cannot find ${s.undescribed > 1 ? 'them' : 'it'} by what is in ${s.undescribed > 1 ? 'them' : 'it'}.`;
     $('describe').hidden = false;
   }).catch(() => {});
   $('describe-btn').addEventListener('click', async () => {
-    const r = await fetch('/t/find/describe', { method: 'POST' });
+    const r = await post('describe');
     const d = await r.json().catch(() => ({}));
     $('describe-text').textContent = r.ok ? 'Claude is describing them in a task. Watch it in Tasks; search finds them when it is done.' : d.error || `HTTP ${r.status}`;
     $('describe-btn').hidden = true;

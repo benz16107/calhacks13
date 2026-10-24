@@ -3,10 +3,11 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import type { Box, Track } from '../../core/contract.ts';
-import { HOME, MODELS, OFFLINE, PROMPT, cloudStatus, describeAny, docs, drop, isUsageLimit, mossIndex, photoType, put, root, scan, use, wordIndex, type Index } from './find.ts';
+import { HOME, MODELS, OFFLINE, PROMPT, cloudStatus, describeAny, docs, drop, forget, isUsageLimit, mossIndex, photoType, put, root, scan, use, wordIndex, type Index } from './find.ts';
+import { addPreference, clean, isGuest, preferences, recall, remember, scope } from './memory.ts';
 
 const MOSS = ['MOSS_PROJECT_ID', 'MOSS_PROJECT_KEY'];
-const KINDS = ['photo', 'file', 'task'];
+const KINDS = ['photo', 'file', 'task', 'memory'];
 type Secret = (name: string) => string;
 const round = (n: number) => Math.round(n * 100) / 100;
 const maybe = (secret: Secret, name: string) => {
@@ -36,34 +37,42 @@ function open(secret: Secret) {
   return opening;
 }
 
-async function search(secret: Secret, input: { query?: unknown; kind?: unknown; topK?: unknown }) {
-  const query = String(input.query ?? '').trim();
-  if (!query) throw new Error('query is required');
-  const kind = input.kind ? String(input.kind) : undefined;
-  if (kind && !KINDS.includes(kind)) throw new Error(`kind must be one of ${KINDS.join(', ')}`);
+/** Ask the index. If Moss cannot answer (no network, usage limit), or `fast` and no session is open yet, answer from the same docs by words. */
+async function query(secret: Secret, q: string, topK: number, kind?: string, fast = false) {
   const index = await open(secret);
-  const topK = Math.min(Math.max(Number(input.topK) || 5, 1), 20);
-  const t0 = performance.now();
-  let used: string = index.kind;
-  let found: Awaited<ReturnType<Index['query']>>;
-  try {
-    found = await index.query(query, topK, kind);
-  } catch (e) {
-    if (index.kind !== 'moss') throw e;
-    // Moss could not open a session (no network, usage limit): answer from the same docs by words.
+  const byWords = async (why: string) => {
+    // shortcut: tokenises every doc on each call; fine for hundreds of docs, keep one word index up to date past a few thousand.
     const words = wordIndex();
     await words.add([...docs.values()]);
-    found = await words.query(query, topK, kind);
-    used = `words (Moss unavailable: ${(e as Error).message.slice(0, 120)})`;
+    return { ...(await words.query(q, topK, kind)), used: `words (${why})` };
+  };
+  if (fast && index.warm && !index.ready?.()) {
+    index.warm(); // the next call finds the session open
+    return byWords('Moss is warming up');
   }
-  const { hits, ms } = found;
+  try {
+    return { ...(await index.query(q, topK, kind)), used: index.kind as string };
+  } catch (e) {
+    if (index.kind !== 'moss') throw e;
+    return byWords(`Moss unavailable: ${(e as Error).message.slice(0, 120)}`);
+  }
+}
+
+/** `fast`: never wait for Moss to open. For a voice assistant: call warm() when the person starts talking. */
+async function search(secret: Secret, input: { query?: unknown; kind?: unknown; topK?: unknown; fast?: unknown }) {
+  const q = String(input.query ?? '').trim();
+  if (!q) throw new Error('query is required');
+  const kind = input.kind ? String(input.kind) : undefined;
+  if (kind && !KINDS.includes(kind)) throw new Error(`kind must be one of ${KINDS.join(', ')}`);
+  const t0 = performance.now();
+  const { hits, ms, used } = await query(secret, q, Math.min(Math.max(Number(input.topK) || 5, 1), 20), kind, input.fast === true || input.fast === 'true' || input.fast === '1');
   return {
-    query,
+    query: q,
     index: used,
     ms: round(ms),
     wallMs: round(performance.now() - t0),
     cloud: cloudStatus(),
-    results: hits.map((h) => ({ ...h.metadata, score: round(h.score), text: h.text.slice(0, 400) })),
+    results: hits.map((h) => ({ id: h.id, ...h.metadata, score: round(h.score), text: h.text.slice(0, 400) })),
   };
 }
 
@@ -115,6 +124,22 @@ export function askClaude(box: Box, failed: { workspace: string; path: string }[
   return fresh;
 }
 
+const owner = (req: Request) => ['screen', 'owner'].includes(req.headers.get('x-box-caller') ?? '');
+const denied = () => Response.json({ error: "only the box's own screen or the owner's paired device can do this" }, { status: 403 });
+
+/** Where a photo goes to be described, in words the Find page shows. It must match the code in find.ts. */
+function privacy(secret: Secret) {
+  const url = maybe(secret, 'FIND_OLLAMA_URL');
+  const host = url ? new URL(url).hostname : '';
+  const here = ['127.0.0.1', 'localhost', '::1', 'host.lima.internal'].includes(host);
+  const parts = [
+    url ? (here ? 'Photos are described by a model on this machine.' : `Photos are described by a model on ${host}.`) : 'No local photo model is set, so photos are found by file name until you set one.',
+    ...(maybe(secret, 'VULTR_INFERENCE_KEY') ? ["If that model does not answer, a photo is sent to Vultr's hosted model."] : []),
+    'Claude (through Factory) sees a photo only when you press Describe with Claude.',
+  ];
+  return parts.join(' ');
+}
+
 let undescribed: { workspace: string; path: string }[] = []; // from the last scan: photos no model could describe
 
 // ---------- indexing, one pass at a time ----------
@@ -152,15 +177,25 @@ const summaries = new Map<string, string>(); // task id -> Droid's final message
 export default {
   name: 'find',
   // FACTORY_API_KEY: only checked for presence before starting a Claude describe task; its value is never read here.
-  secrets: [...MOSS, 'FIND_OLLAMA_URL', 'VULTR_INFERENCE_KEY', 'FACTORY_API_KEY'],
+  secrets: [...MOSS, 'FIND_OLLAMA_URL', 'FIND_OLLAMA_MODEL', 'VULTR_INFERENCE_KEY', 'FACTORY_API_KEY'],
 
+  // Before every task starts, the core asks for what we remember: the owner's preferences, and the few notes from
+  // earlier tasks that match its prompt and that this task's permissions allow.
+  async taskContext(spec, box) {
+    const { text, ids } = await recall(spec, async (q, topK, kind) => {
+      const r = await query(box.secret, q, topK, kind);
+      return r.hits.filter((h) => h.score >= (r.used === 'moss' ? 0.3 : 0.05)).map((h) => ({ score: h.score, doc: h }));
+    });
+    if (ids.length) box.note({ memory: 'handed', ids });
+    return text;
+  },
   triggers: [
     {
       name: 'index',
       start(box) {
         box.workspace('photos', new URL('./photos/', import.meta.url).pathname); // the test photos, the first time only
         // Earlier versions indexed the box's own describe tasks; they are housekeeping, not history.
-        void drop([...docs.values()].filter((d) => d.metadata.kind === 'task' && d.metadata.source === 'find').map((d) => d.id));
+        void drop([...docs.values()].filter((d) => d.metadata.kind === 'task' && (d.metadata.source === 'find' || /^guest(-run)?:/.test(d.metadata.source ?? '') || d.metadata.workspace === 'guest')).map((d) => d.id));
         const tick = () => indexNow(box).catch((e) => console.error(`find: indexing failed: ${e.message}`));
         void tick();
         setInterval(tick, 60_000).unref(); // also catches files copied straight into a workspace
@@ -181,11 +216,12 @@ export default {
         const what = summaries.get(t.id) ?? t.summary ?? e.error ?? t.prompt;
         summaries.delete(t.id);
         // The box's own describe tasks are housekeeping, not history: their result shows up as photo descriptions.
-        if (t.source !== 'find') {
+        if (t.source !== 'find' && !isGuest(t)) {
           await put({
             id: `task:${t.id}`,
             text: `Task "${t.title}" (${e.state}): ${what.slice(0, 1500)}`,
-            metadata: { kind: 'task', task: t.id, title: t.title, workspace: t.workspace, state: e.state, source: t.source },
+            // A task that could reach the outside is untrusted: its note is for the owner to read, never handed to an agent.
+            metadata: { kind: 'task', memkind: 'lesson', trust: clean(t) ? 'task' : 'untrusted', task: t.id, title: t.title, state: e.state, source: t.source, ...scope(t) },
           });
         }
         if (e.state !== 'failed') void indexNow(box).catch(() => {}); // a failed task's files are not applied
@@ -194,11 +230,25 @@ export default {
   ],
 
   modelJobs: [
+    /** The owner's standing preferences, as plain sentences, for an app's own code to check ("never buy from X"). */
+    { name: 'find.preferences', run: async () => preferences().map((p) => p.text) },
     /** Describe one photo, for any track: { file } -> { text, model, ms }. */
     { name: 'find.describe', secrets: ['FIND_OLLAMA_URL', 'VULTR_INFERENCE_KEY'], run: (input: { file: string }, ctx) => describeAny(input.file, ctx.secret) },
   ],
 
   tools: [
+    remember,
+    {
+      name: 'find.recall',
+      description: 'Look up what GurtOS remembers: the owner\'s preferences and notes from earlier tasks you may know about. Returns the best matches.',
+      input: { type: 'object', properties: { query: { type: 'string' } }, required: ['query'] },
+      secrets: MOSS,
+      async run(input: { query?: string }, ctx) {
+        const spec = { title: ctx.task?.title ?? '', prompt: String(input.query ?? ''), source: ctx.task?.source, workspace: ctx.task?.workspace, tools: ctx.task?.tools, hosts: ctx.task?.hosts };
+        const { text } = await recall(spec, async (q, topK, kind) => (await query(ctx.secret, q, topK, kind)).hits.map((h) => ({ score: h.score, doc: h })));
+        return { memory: text ?? 'Nothing relevant is remembered.' };
+      },
+    },
     {
       name: 'find.search',
       description:
@@ -226,7 +276,7 @@ export default {
     'GET /search': async (req, box) => {
       const u = new URL(req.url);
       try {
-        return Response.json(await search(box.secret, { query: u.searchParams.get('q'), kind: u.searchParams.get('kind'), topK: u.searchParams.get('k') }));
+        return Response.json(await search(box.secret, { query: u.searchParams.get('q'), kind: u.searchParams.get('kind'), topK: u.searchParams.get('k'), fast: u.searchParams.get('mode') === 'fast' }));
       } catch (e) {
         return Response.json({ error: (e as Error).message }, { status: 400 });
       }
@@ -246,14 +296,55 @@ export default {
       if (!file.startsWith(dir + path.sep) || !fs.statSync(file).isFile()) return new Response('not found', { status: 404 });
       return new Response(fs.readFileSync(file), { headers: { 'content-type': photoType(file) ?? 'text/plain; charset=utf-8' } });
     },
-    // The Find page's button: the person asks Claude to describe the photos no other model could.
-    'POST /describe': (_req, box) => {
+    // Open a Moss session now, so the next /search?mode=fast answers from Moss. A voice assistant calls this as the person starts talking.
+    'POST /warm': async (_req, box) => {
+      (await open(box.secret)).warm?.();
+      return Response.json({ ok: true });
+    },
+    // The Find page's button: the owner asks Claude to describe the photos no other model could. It spends model money.
+    'POST /describe': (req, box) => {
+      if (!owner(req)) return denied();
       try {
         const started = askClaude(box, undescribed);
         return Response.json({ started: started.length });
       } catch (e) {
         return Response.json({ error: (e as Error).message }, { status: 400 });
       }
+    },
+    // Memory, for the owner: what GurtOS remembers, and the ways to add, trust and forget.
+    'GET /memory': (req) => {
+      if (!owner(req)) return denied();
+      const items = [...docs.values()].filter((d) => d.metadata.kind === 'memory' || (d.metadata.kind === 'task' && d.metadata.source !== 'find'));
+      return Response.json({ items: items.map((d) => ({ id: d.id, text: d.text.slice(0, 400), ...d.metadata })) });
+    },
+    'POST /memory': async (req, box) => {
+      if (!owner(req)) return denied();
+      try {
+        const doc = await addPreference(String((await req.json().catch(() => ({}))).text ?? ''));
+        box.note({ memory: 'preference added', id: doc.id });
+        return Response.json({ id: doc.id });
+      } catch (e) {
+        return Response.json({ error: (e as Error).message }, { status: 400 });
+      }
+    },
+    // The owner's OK for a note from a task that reached the outside: from then on agents may be handed it.
+    'POST /trust': async (req, box) => {
+      if (!owner(req)) return denied();
+      const id = String((await req.json().catch(() => ({}))).id ?? '');
+      const d = docs.get(id);
+      if (!d || d.metadata.kind !== 'task') return Response.json({ error: 'no such task note' }, { status: 404 });
+      await put({ ...d, metadata: { ...d.metadata, trust: 'approved' } });
+      box.note({ memory: 'trusted by the owner', id });
+      return Response.json({ id, trust: 'approved' });
+    },
+    // Forget one memory, task note, photo or file: out of the local index and the Moss cloud copy, with a log entry (no content).
+    'POST /forget': async (req, box) => {
+      if (!owner(req)) return denied();
+      const id = String((await req.json().catch(() => ({}))).id ?? '');
+      const r = await forget(id);
+      if (!r) return Response.json({ error: 'nothing is remembered under that id' }, { status: 404 });
+      box.note({ forgot: id, kind: r.kind, cloud: r.cloud });
+      return Response.json({ id, ...r, message: `Forgotten. ${r.cloud[0].toUpperCase()}${r.cloud.slice(1)}.${id.startsWith('file:') ? ' The file itself is untouched; it will not be described again.' : ''}` });
     },
     'GET /status': (_req, box) => {
       const count: Record<string, number> = {};
@@ -263,6 +354,8 @@ export default {
         cloud: cloudStatus(),
         docs: count,
         undescribed: undescribed.length,
+        privacy: privacy(box.secret),
+        preferences: preferences().length,
         models: MODELS.map((m) => `${m.model}: ${maybe(box.secret, m.needs) ? 'on' : `off until ${m.needs} is set`}`).concat(
           `Claude via a Droid task: ${maybe(box.secret, 'FACTORY_API_KEY') ? 'on request' : 'needs FACTORY_API_KEY'}`,
         ),

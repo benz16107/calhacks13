@@ -253,8 +253,27 @@ class Core {
     // A demo run spends no Factory credit unless it was asked to: a track that wants a real agent must be gated behind DEMO_LIVE=droid.
     if (s.worker === 'droid' && process.env.BOX_NO_DROID) throw new Error('real Droid is off in this demo run (it spends Factory credit); DEMO_LIVE=droid ./demo, or ./demo --live-droid, turns it on');
     for (const name of s.tools) if (!this.tools.has(name)) throw new Error(`no tool ${name}`);
+    // Apps may hand the agent what they remember. A Droid task gets it after its prompt; any task logs what it was handed.
+    // Never for a guest's task (a stranger through the public Mana app or ASI:One): its result goes back to the stranger.
+    // Each app gets 2 s, and all of them together may add 8,000 characters, so a slow app or a long memory cannot hold up or swamp a task.
+    const handed: string[] = [];
+    const guest = /^guest(-run)?:/.test(s.source) || s.workspace === 'guest';
+    let room = 8000;
+    for (const [name, rec] of guest ? [] : this.installed) {
+      if (!this.active.has(name) || !rec.track?.taskContext || room <= 0) continue;
+      try {
+        const text = await Promise.race([
+          Promise.resolve(rec.track.taskContext(spec, this.boxFor(name))),
+          new Promise<never>((_, no) => setTimeout(() => no(new Error('took longer than 2 s')), 2000).unref()),
+        ]);
+        if (text) handed.push(text.slice(0, room)), (room -= text.length);
+      } catch (e) {
+        console.error(`track ${name}: taskContext failed, the task starts without it:`, (e as Error).message);
+      }
+    }
     const id = 't' + Date.now().toString(36).slice(-6) + randomBytes(2).toString('hex');
-    this.write({ type: 'task.created', task: id, spec: s, user: `box-${id}`, ...(requestedBy ? { requestedBy } : {}) });
+    this.write({ type: 'task.created', task: id, spec: s.worker === 'droid' && handed.length ? { ...s, prompt: `${s.prompt}\n\n${handed.join('\n\n')}` } : s, user: `box-${id}`, ...(requestedBy ? { requestedBy } : {}) });
+    if (handed.length) this.write({ type: 'task.step', task: id, text: `Handed over ${handed.length} memory block${handed.length > 1 ? 's' : ''}`, data: { memory: handed.join('\n\n') } });
     const t = this.must(id);
     if (!this.settings.paused) await this.start(t); // paused: it stays queued until the owner resumes
     return t;
@@ -785,6 +804,16 @@ class Core {
       },
       cost: (cents, what) => this.write({ type: 'cost', task: task?.id, cents, what }),
       log: (text, data) => task && this.write({ type: 'task.step', task: task.id, text, data }),
+      ask: async (question, opts) => {
+        if (!task) return false;
+        // The same question in the same tool call is the same approval; a different one gets its own. A slow owner is not a "no":
+        // askFor gives up waiting after a while but leaves the approval open, so ask again until it is answered.
+        const askKey = `${key}.ask.${createHash('sha256').update(question).digest('hex').slice(0, 8)}`;
+        for (;;) {
+          const r = await this.askFor(task, askKey, { question, purpose: opts?.purpose });
+          if (r !== 'pending') return r === 'approved';
+        }
+      },
     };
   }
 

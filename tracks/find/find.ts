@@ -29,7 +29,8 @@ export type Model = { model: string; base: string; key?: string };
  * example http://host.lima.internal:11434/v1 from a Lima VM: the photo stays on your own machines.
  */
 export const MODELS: (Model & { needs: string })[] = [
-  { model: 'gemma4', base: '', needs: 'FIND_OLLAMA_URL' },
+  // The model name is the default; FIND_OLLAMA_MODEL in the vault changes it (any vision model Ollama has).
+  { model: 'qwen3-vl:2b-instruct', base: '', needs: 'FIND_OLLAMA_URL' },
   // Vultr's hosted model, for a box with no GPU. Needs a Serverless Inference key.
   { model: 'qwen3.8-27b', base: 'https://api.vultrinference.com/v1', key: 'VULTR_INFERENCE_KEY', needs: 'VULTR_INFERENCE_KEY' },
 ];
@@ -54,7 +55,7 @@ export const photoType = (file: string): string | undefined => TYPES[path.extnam
 export async function describe(file: string, m: Model, key?: string) {
   if (!photoType(file)) throw new Error(`not a photo: ${path.basename(file)}`); // never send another kind of file to a model
   const t0 = Date.now();
-  // shortcut: photos go at full size; a 3 MB photo spent 2.5 s on the prompt in spike 6. Resize to ~1024 px if real photos are slow.
+  // shortcut: sent at full size. Shrinking to 448 px did not change prompt tokens or time for qwen3-vl or moondream (Ollama resizes anyway).
   const url = `data:${photoType(file)};base64,${fs.readFileSync(file).toString('base64')}`;
   const r = await fetch(`${m.base}/chat/completions`, {
     method: 'POST',
@@ -103,7 +104,8 @@ export async function describeAny(file: string, secret: (name: string) => string
       continue;
     }
     try {
-      return await describe(real, { ...m, base: m.base || set.replace(/\/+$/, '') }, m.key ? set : undefined);
+      const model = m.needs === 'FIND_OLLAMA_URL' ? has(secret, 'FIND_OLLAMA_MODEL') || m.model : m.model;
+      return await describe(real, { ...m, model, base: m.base || set.replace(/\/+$/, '') }, m.key ? set : undefined);
     } catch (e) {
       errors.push((e as Error).message);
       down.set(m.model, Date.now() + 5 * 60_000);
@@ -120,6 +122,12 @@ export interface Index {
   remove(ids: string[]): Promise<unknown>;
   /** `ms` is the time inside the index. */
   query(q: string, topK: number, kind?: string): Promise<{ hits: Hit[]; ms: number }>;
+  /** Moss only: is a session open, so a query answers in milliseconds? */
+  ready?(): boolean;
+  /** Moss only: open a session now, so the next query is fast. */
+  warm?(): void;
+  /** Remove these from every copy the index keeps (the saved session, the cloud copy). Returns what happened, in words. */
+  forget?(ids: string[]): Promise<string>;
 }
 
 export const isUsageLimit = (e: unknown) => /usage limit/i.test((e as Error)?.message ?? '');
@@ -144,6 +152,7 @@ export async function mossIndex(projectId: string, projectKey: string, name = IN
   type Session = Awaited<ReturnType<typeof client.session>>;
   let session: Promise<Session> | undefined;
   let idle: NodeJS.Timeout | undefined;
+  let ready = false;
   let inFlight: Promise<unknown> = Promise.resolve(); // adds and removes still running on the open session
   /** Apply a change to the open session, if one is open. A closed one catches up from docs.json when it opens. */
   const change = (fn: (s: Session) => Promise<unknown>) => {
@@ -157,6 +166,7 @@ export async function mossIndex(projectId: string, projectKey: string, name = IN
     const opened = session;
     const held = hashes(); // every add and remove reached the open session, so it holds exactly docs.json now
     session = undefined;
+    ready = false;
     const s = await opened?.catch(() => undefined);
     if (!s) return;
     await inFlight.catch(() => {});
@@ -182,6 +192,7 @@ export async function mossIndex(projectId: string, projectKey: string, name = IN
       const changed = [...docs.values()].filter((d) => had[d.id] !== now[d.id]).map(plain);
       if (gone.length) await s.deleteDocs(gone);
       if (changed.length) await s.addDocs(changed);
+      ready = true;
       return s;
     })().catch((e) => {
       session = undefined;
@@ -192,6 +203,30 @@ export async function mossIndex(projectId: string, projectKey: string, name = IN
 
   return {
     kind: 'moss',
+    ready: () => ready,
+    warm: () => void open().catch(() => {}),
+    async forget(ids) {
+      // The saved session on disk still holds the text: refresh it if a session is open, else delete it (the next one embeds again).
+      if (session) {
+        const s = await session.catch(() => undefined);
+        await inFlight.catch(() => {});
+        await s?.saveToDisk(SNAPSHOT).then(() => fs.writeFileSync(SNAPSHOT_DOCS, JSON.stringify(hashes()))).catch(() => {});
+      } else {
+        fs.rmSync(SNAPSHOT, { recursive: true, force: true });
+        fs.rmSync(SNAPSHOT_DOCS, { force: true });
+      }
+      if (!CLOUD_SYNC) return 'this box keeps no Moss cloud copy';
+      const paused = 'the Moss cloud copy is paused (usage limit); its next push replaces it without this';
+      if (cloud.limited && Date.now() < cloud.nextTry) return paused;
+      try {
+        await client.deleteDocs(name, ids);
+        return 'removed from the Moss cloud copy';
+      } catch (e) {
+        const msg = (e as Error).message;
+        if (isUsageLimit(e)) return Object.assign(cloud, { limited: true, nextTry: Date.now() + 3600_000 }), paused;
+        return /not found/i.test(msg) ? 'it was not in the Moss cloud copy' : `could not reach the Moss cloud copy (${msg.slice(0, 80)}); its next push replaces it without this`;
+      }
+    },
     // While no session is open there is nothing to update: the next one loads docs.json.
     add: async (list) => change((s) => s.addDocs(list)),
     remove: async (ids) => change((s) => s.deleteDocs(ids)),
@@ -284,6 +319,26 @@ export async function put(doc: Entry, persist = true) {
   await index?.add([plain(doc)]);
 }
 
+const FORGOTTEN = path.join(DIR, 'forgotten.json'); // files the owner asked to forget: never read or described again
+const forgotten = new Set<string>(fs.existsSync(FORGOTTEN) ? JSON.parse(fs.readFileSync(FORGOTTEN, 'utf8')) : []);
+
+/**
+ * Forget one thing: a memory, a task note, a photo or a file. It leaves docs.json, the open Moss session, the saved
+ * session on disk and (when this box keeps one) the Moss cloud copy. A file stays on disk, untouched, and is never
+ * described again. The action log is the box's audit trail and keeps its own record of what a task did.
+ */
+export async function forget(id: string) {
+  const d = docs.get(id);
+  if (!d) return undefined;
+  if (id.startsWith('file:')) {
+    forgotten.add(id);
+    fs.mkdirSync(DIR, { recursive: true, mode: 0o700 });
+    fs.writeFileSync(FORGOTTEN, JSON.stringify([...forgotten]));
+  }
+  await drop([id]);
+  return { kind: d.metadata.kind, cloud: (await index?.forget?.([id])) ?? 'this box keeps no Moss cloud copy' };
+}
+
 export async function drop(ids: string[]) {
   if (!ids.length) return;
   ids.forEach((id) => docs.delete(id));
@@ -344,7 +399,7 @@ export async function scan(describePhoto: (file: string, ws: string, rel: string
       const st = fs.statSync(file);
       const sig = `${st.size}:${st.mtimeMs}`;
       seen.add(id);
-      if (docs.get(id)?.sig === sig) continue;
+      if (forgotten.has(id) || docs.get(id)?.sig === sig) continue;
       const metadata: Record<string, string> = { kind: photoType(rel) ? 'photo' : 'file', workspace: ws, path: rel };
       let text: string | undefined;
       if (photoType(rel)) {
