@@ -583,7 +583,9 @@ class Core {
       const owners = (s?: Sso) => Object.values(s?.groups ?? {}).some((g) => g.role === 'owner');
       if ((owners(b.sso as Sso | undefined) || owners(this.business.sso)) && !this.isOwner(req)) forbid('only the owner can map a group to the owner role');
     }
-    if ('shadow' in b) b.shadow = checkShadow(b.shadow, (b.seats as Business['seats']) ?? this.business.seats);
+    // A seat counts once it is declared, or once a task on this box has worked in it (the credit desk's seats).
+    const worked = [...this.state.tasks.values()].flatMap((t) => (t.seat ? [{ name: t.seat }] : []));
+    if ('shadow' in b) b.shadow = checkShadow(b.shadow, [...((b.seats as Business['seats']) ?? this.business.seats), ...worked]);
     const { name, who } = this.actor(req);
     const was = this.business.on;
     if ('policy' in b) {

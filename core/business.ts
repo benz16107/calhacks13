@@ -58,7 +58,7 @@ export function checkShadow(v: unknown, seats: Seat[]): string[] {
   if (!Array.isArray(v) || v.some((s) => typeof s !== 'string')) throw new Error('shadow: a list of seat names, like ["Credit analyst"], or [] for none');
   const out = v.map((s) => seats.find((x) => x.name.toLowerCase() === s.trim().toLowerCase())?.name ?? '');
   const bad = v.filter((_, i) => !out[i]);
-  if (bad.length) throw new Error(`shadow: no seat named ${bad.join(', ')} (seats: ${seats.map((x) => x.name).join(', ') || 'none yet'})`);
+  if (bad.length) throw new Error(`shadow: no seat named ${bad.join(', ')} (seats: ${seats.map((x) => x.name).join(', ') || 'none yet'}; declare one with PUT /api/business {seats}, or run a task with that seat)`);
   return [...new Set(out)];
 }
 
