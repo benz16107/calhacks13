@@ -61,7 +61,7 @@ let lastCheck: { at?: string; repo?: string; found?: number; started?: string[];
 
 async function checkGithub(box: BoxApi) {
   const repo = maybe(box, 'FACTORY_GITHUB_REPO').trim();
-  if (!repo) return (lastCheck = { at: new Date().toISOString(), error: 'no FACTORY_GITHUB_REPO in the vault, so no repo is watched' });
+  if (!repo) return (lastCheck = { at: new Date().toISOString(), error: 'No GitHub repo connected. Add one in Settings, Accounts & Keys.' });
   const token = maybe(box, 'GITHUB_TOKEN'); // a public repo can be read without one
   try {
     const seen = new Set(box.tasks().map((t) => t.source));
@@ -80,23 +80,36 @@ async function checkGithub(box: BoxApi) {
     }
     return (lastCheck = { at: new Date().toISOString(), repo, found: open.length, started });
   } catch (e) {
-    return (lastCheck = { at: new Date().toISOString(), repo, error: (e as Error).message });
+    return (lastCheck = { at: new Date().toISOString(), repo, error: `Couldn't read its issues. Check the repository name and the GitHub key. (${(e as Error).message})` });
   }
 }
 
-// Factory credits per task, from the worker's "Factory usage" steps, rebuilt from the log at boot.
-const credits = new Map<string, number>();
+// Factory credits per task, from the worker's "Factory usage" steps in the action log. Read from the file each
+// time: a log reader resumes from its saved place after a restart, so a total kept in memory would start again at 0.
+// shortcut: reads the whole log per request, fine at this weekend's log sizes; keep a running total if it grows.
+function creditsByTask() {
+  const m = new Map<string, number>();
+  const file = path.join(HOME, 'log.jsonl');
+  for (const line of fs.existsSync(file) ? fs.readFileSync(file, 'utf8').split('\n') : []) {
+    if (!line.includes('factoryCredits')) continue;
+    try {
+      const e = JSON.parse(line);
+      if (e.type === 'task.step' && e.data?.factoryCredits) m.set(e.task, (m.get(e.task) ?? 0) + e.data.factoryCredits);
+    } catch {} // a torn last line after a power cut
+  }
+  return m;
+}
 
 async function limits(key: string) {
-  if (!key) return { error: 'no FACTORY_API_KEY in the vault (Droid runs on your Anthropic key)' };
+  if (!key) return { error: 'Add a Factory API key in Settings, Accounts & Keys to see your plan here.' };
   try {
     const r = await fetch('https://api.factory.ai/api/billing/limits', { headers: { authorization: `Bearer ${key}` }, signal: AbortSignal.timeout(8000) });
     const std = (await r.json()).limits?.standard;
-    if (!std?.fiveHour) return { error: `Factory answered ${r.status} with no limits` };
+    if (!std?.fiveHour) return { error: `Factory didn't send your plan's limits (error ${r.status}).` };
     const pick = (l: any) => ({ usedPercent: l.usedPercent, resetsInMin: Math.round((l.secondsRemaining ?? 0) / 60) });
     return { fiveHour: pick(std.fiveHour), weekly: pick(std.weekly) };
   } catch (e) {
-    return { error: `could not reach Factory: ${(e as Error).message}` };
+    return { error: "Couldn't reach Factory. Check this computer's internet connection." };
   }
 }
 
@@ -141,16 +154,6 @@ export default {
     },
   ],
 
-  logReaders: [
-    {
-      name: 'credits',
-      read(e) {
-        const c = e.type === 'task.step' ? (e.data as { factoryCredits?: number } | undefined)?.factoryCredits : undefined;
-        if (c && e.type === 'task.step') credits.set(e.task, (credits.get(e.task) ?? 0) + c);
-      },
-    },
-  ],
-
   routes: {
     'GET /': () => new Response(PAGE, { headers: { 'content-type': 'text/html; charset=utf-8' } }),
 
@@ -162,7 +165,7 @@ export default {
       const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'factory-exec-'));
       try {
         if (b.repo) {
-          if (typeof b.repo !== 'string' || !/^https:\/\/[\w.-]+\/[\w./-]+$/.test(b.repo)) return Response.json({ error: 'repo: an https git URL' }, { status: 400 });
+          if (typeof b.repo !== 'string' || !/^https:\/\/[\w.-]+\/[\w./-]+$/.test(b.repo)) return Response.json({ error: 'Use an https:// link to a Git repository.' }, { status: 400 });
           clone('', dir, b.repo);
         } else if (b.files && typeof b.files === 'object') {
           for (const [f, text] of Object.entries(b.files as Record<string, string>)) {
@@ -174,7 +177,7 @@ export default {
         }
         box.workspace(ws, dir);
       } catch (e) {
-        return Response.json({ error: `could not get the files: ${(e as Error).message}` }, { status: 400 });
+        return Response.json({ error: `Couldn't copy that repository. Check the link. (${(e as Error).message.split('\n')[0]})` }, { status: 400 });
       } finally {
         fs.rmSync(dir, { recursive: true, force: true });
       }
@@ -199,6 +202,7 @@ export default {
 
     // Factory usage: each task's credits next to the plan's limits. The key stays here; only percentages go out.
     'GET /usage': async (_req, box) => {
+      const credits = creditsByTask();
       const tasks = box
         .tasks()
         .filter((t) => t.worker === 'droid')
