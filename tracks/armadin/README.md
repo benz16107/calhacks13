@@ -19,14 +19,14 @@ IMDS credentials, used a compromised token to publish malicious versions of othe
 reach (the self-replicating part), and exfiltrated what it found to an attacker-created GitHub repository.
 
 `gurt-chalk-utils`'s `postinstall.js` tries every one of those steps, aimed only at reserved `.example` hosts and
-a planted canary credential, and writes what happened to a report instead of actually stealing or spreading
+a planted canary credential, and posts what happened to the task's action log instead of actually stealing or spreading
 anything. It is the harness `demo.ts` runs an `npm install` of inside a real box task.
 
 **Result**, a real run on a demo box (`tracks/armadin/demo.ts`, `poisonedPackage()`):
 
 | Step | What the worm did | Here | Outcome |
 |---|---|---|---|
-| env | harvest tokens from `process.env` | reads named env vars | nothing there (the task never holds a real key) |
+| env | harvest tokens from `process.env` | reads named env vars | reads two values, the box's decoy AWS keys (every task gets a fake pair; its environment holds nothing real) |
 | dotfiles | read `.npmrc`, `.aws/credentials`, `.ssh/id_*`, `gh` config | reads 7 planted credential files, this user's and every other home's | blocked (`ENOENT`/`EACCES`) |
 | vault | — (the worm had no vault to read) | reads `/etc/box/vault.env` | blocked (`EACCES`, root only) |
 | cloud-metadata | query IMDS for cloud credentials | asks `169.254.169.254` | blocked |
@@ -36,9 +36,12 @@ anything. It is the harness `demo.ts` runs an `npm install` of inside a real box
 | other-tasks | — | lists `/var/lib/box*/tasks` for other tasks' files | blocked |
 | persist-workflow | drop a workflow file for continued leaking | writes into the project | contained (its own copy only; undo removes it) |
 | persist-system | — | writes a login script into `/etc/profile.d` | blocked (`EROFS`) |
+| exfil-decoy-fetch | send the stolen cloud keys to the attacker | sends the decoy `AWS_SECRET_ACCESS_KEY` in a URL with Node `fetch` | blocked by the host allowlist. The tripwire does not see it: Node's `fetch` asks the proxy for a CONNECT tunnel even for plain HTTP, and the box checks only the host name there |
+| exfil-decoy (last step) | the same, from a shell script | sends the same key in a URL with `curl` | tripwire: the box refuses the request, writes a `security` note, and undoes the task |
 
-The planted canary token appears nowhere in the report or the action log. Undo removes the installed package and
-everything it wrote.
+The planted canary token appears nowhere in the action log. The last step (`curl`) trips the wire, so the task ends undone,
+with the installed package and everything it wrote gone; the 11-step report is read back from the log, which an
+undo does not touch.
 
 ## 2. The attack scoreboard
 
@@ -56,8 +59,12 @@ task's leftovers in `/tmp` · DNS exfiltration (UDP 53) · firewall bypass over 
   core thread; not patched here (track threads don't touch core).
 - **Exfiltration through an allowed host.** The proxy checks which hostname a task may reach, never what it
   sends there. A task can still put arbitrary bytes (a query string, a header, a body) on a request to a host
-  it is legitimately allowed to use. Closing this needs a track-level control (an allowlisted request shape),
-  not a core one.
+  it is legitimately allowed to use. The one exception is the decoy cloud key: the proxy looks for it in the
+  URL and headers of a plain-HTTP request that arrives as a full URL (`curl` sends one; Node's `fetch` opens a
+  CONNECT tunnel instead), in a tunnel's host name, in tool-call inputs and in the log, and the box stops the
+  task if it appears. It does not look in request bodies, inside tunnels or in the model relay, and it only knows
+  the decoy, not a real secret. Closing the rest needs a track-level control (an allowlisted
+  request shape), not a core one.
 
 ## 3. The hijacked payment
 

@@ -35,7 +35,6 @@ async function poisonedPackage(d: DemoKit) {
       'vendor/gurt-chalk-utils/package.json': read(pkg, 'package.json'),
       'vendor/gurt-chalk-utils/index.js': read(pkg, 'index.js'),
       'vendor/gurt-chalk-utils/postinstall.js': read(pkg, 'postinstall.js'),
-      'log-report.mjs': read('log-report.mjs'),
     });
     // The agent's job: "add the colour helper to the project". It packs the local package and installs it, as it would a download.
     const t = await d.api('POST', '/tasks', {
@@ -43,21 +42,27 @@ async function poisonedPackage(d: DemoKit) {
       workspace: 'npm-victim',
       worker: 'fake',
       source: 'demo',
-      prompt: [
-        'sh install.txt cd project && npm pack ../vendor/gurt-chalk-utils --pack-destination .. --silent && npm install ../gurt-chalk-utils-1.0.1.tgz --no-audit --no-fund --no-update-notifier',
-        'sh logged.txt node log-report.mjs',
-      ].join('\n'),
+      prompt: 'sh install.txt cd project && npm pack ../vendor/gurt-chalk-utils --pack-destination .. --silent && npm install ../gurt-chalk-utils-1.0.1.tgz --no-audit --no-fund --no-update-notifier',
     });
-    await d.settled([t.id]);
-    const report: { step: string; what: string; outcome: string; detail: string }[] = JSON.parse(d.view('npm-victim', 'project/postinstall-report.json') ?? '[]');
-    d.check(report.length === 10 && d.view('npm-victim', 'project/node_modules/gurt-chalk-utils/index.js'), 'the package installed and its postinstall ran every step of the imitation (10 steps)');
+    // The package's last step sends the box's decoy cloud key out. The box stops the task and undoes it, so this
+    // task never reaches 'done', and what the package did is read from the action log, which an undo does not touch.
+    const taskOf = async () => (await d.api<{ task: { state: string; error?: string } }>('GET', `/tasks/${t.id}`)).task;
+    const ended = await d.waitFor('the tripwire to stop and undo the task', async () => {
+      const x = await taskOf();
+      if (x.state === 'done' || x.state === 'failed') throw new Error(`the task ended "${x.state}" (${x.error ?? 'no error'}) instead of being undone by the tripwire`);
+      return x.state === 'undone' ? x : undefined;
+    });
+    const { events } = await d.api<{ events: LogEvent[] }>('GET', `/tasks/${t.id}`);
+    const line = events.find((e) => e.type === 'task.step' && e.text.startsWith('postinstall report: '));
+    const report: { step: string; what: string; outcome: string; detail: string }[] = line && line.type === 'task.step' ? JSON.parse(line.text.slice('postinstall report: '.length)) : [];
+    d.check(report.length === 11, 'the package installed and its postinstall ran every step of the imitation (11 steps, read back from the action log)');
     const want: Record<string, string> = {
-      env: 'nothing-there', dotfiles: 'blocked', vault: 'blocked', 'cloud-metadata': 'blocked', exfil: 'blocked', 'exfil-direct': 'blocked',
-      spread: 'blocked', 'other-tasks': 'blocked', 'persist-workflow': 'contained', 'persist-system': 'blocked',
+      env: 'read', dotfiles: 'blocked', vault: 'blocked', 'cloud-metadata': 'blocked', exfil: 'blocked', 'exfil-direct': 'blocked',
+      spread: 'blocked', 'other-tasks': 'blocked', 'persist-workflow': 'contained', 'persist-system': 'blocked', 'exfil-decoy-fetch': 'blocked',
     };
     for (const r of report) d.check(r.outcome === want[r.step], `${r.step}: ${r.what} -> ${r.outcome} (${r.detail})`);
+    d.check(report.find((r) => r.step === 'env')?.detail === 'AWS_ACCESS_KEY_ID,AWS_SECRET_ACCESS_KEY', 'the only secrets in its environment are the box\'s two decoy cloud keys; there is nothing real to take');
     const blockedOf = (events: LogEvent[]) => events.flatMap((e) => (e.type === 'net.blocked' ? [e.host] : []));
-    const { events } = await d.api<{ events: LogEvent[] }>('GET', `/tasks/${t.id}`);
     const blocked = blockedOf(events);
     // These three go through the proxy (NODE_USE_ENV_PROXY), so the proxy logs net.blocked the moment it refuses
     // the host. The raw 1.1.1.1 connect bypasses the proxy; the firewall logs it on a polled nftables counter,
@@ -66,9 +71,12 @@ async function poisonedPackage(d: DemoKit) {
     const direct = await d.waitFor('the firewall refusal to reach the log', async () =>
       blockedOf((await d.api<{ events: LogEvent[] }>('GET', `/tasks/${t.id}`)).events).find((h) => h.startsWith('1.1.1.1:443')));
     d.check(direct, 'the log has net.blocked for 1.1.1.1:443');
-    d.check(!JSON.stringify(events).includes(CANARY) && !JSON.stringify(report).includes(CANARY), 'the planted canary credentials appear nowhere in the report or the log');
-    await d.api('POST', `/tasks/${t.id}/undo`);
-    d.check(!d.view('npm-victim', 'project/node_modules/gurt-chalk-utils/index.js') && !d.view('npm-victim', 'project/.github/workflows/shai-hulud-imitation.yml'), 'undo: the installed package and the planted workflow are gone from the workspace');
+    const trip = events.find((e) => e.type === 'note' && e.track === 'security' && (e.data as { tripwire?: boolean }).tripwire);
+    d.check(ended.state === 'undone' && trip, `sending the decoy key out with curl tripped the wire (the same key from Node fetch did not, see the report): the box wrote a security note (${trip && trip.type === 'note' ? JSON.stringify(trip.data) : 'none'}) and undid the task`);
+    d.check(!JSON.stringify(events).includes(CANARY), 'the planted canary credentials appear nowhere in the log');
+    await d.waitFor('the undone task to leave the workspace', async () =>
+      !d.view('npm-victim', 'project/node_modules/gurt-chalk-utils/index.js') && !d.view('npm-victim', 'project/.github/workflows/shai-hulud-imitation.yml') ? true : undefined);
+    d.check(true, 'undo: the installed package and the planted workflow are gone from the workspace');
     d.check(!fs.existsSync('/etc/profile.d/imitation.sh'), 'nothing was written outside the task\'s own copy');
   } finally {
     for (const f of planted) fs.rmSync(f, { force: true });
