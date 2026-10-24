@@ -1,0 +1,469 @@
+{
+  "run": "97ba92",
+  "case": "fogline-2026-10",
+  "summary": "caught 14 of 17 planted errors; 1 false alarm (precision 94%); 6 of 6 credit decisions, 0 of 11 collection steps, 0 of 6 order decisions, 0 of 8 supplier bills match the answer key",
+  "caught": 14,
+  "total": 17,
+  "precision": 0.9444444444444444,
+  "errors": [
+    {
+      "id": "E01",
+      "title": "Sunset Noodle Bar exists twice",
+      "caught": true,
+      "by": "Duplicate customer record, each with its own limit",
+      "findings": 1
+    },
+    {
+      "id": "E02",
+      "title": "INV-24105 header overstated",
+      "caught": false,
+      "by": null,
+      "findings": 0
+    },
+    {
+      "id": "E03",
+      "title": "PMT-8812 posted to INV-24089 instead of INV-24098",
+      "caught": true,
+      "by": "Payment from Golden Gate Bagel applied to another customer's invoice",
+      "findings": 1
+    },
+    {
+      "id": "E04",
+      "title": "INV-24117 duplicates INV-24116",
+      "caught": true,
+      "by": "Duplicate invoice",
+      "findings": 1
+    },
+    {
+      "id": "E05",
+      "title": "PMT-8823 is a check dated 2026-11-06",
+      "caught": true,
+      "by": "Post-dated check treated as cash",
+      "findings": 1
+    },
+    {
+      "id": "E06",
+      "title": "Rockridge Ramen took 2% after 24 days",
+      "caught": true,
+      "by": "Early-payment discount taken but not earned",
+      "findings": 1
+    },
+    {
+      "id": "E07",
+      "title": "INV-24111 dated 2025 instead of 2026",
+      "caught": true,
+      "by": "Invoice date a year out of sequence",
+      "findings": 1
+    },
+    {
+      "id": "E08",
+      "title": "Harborview's limit has not been reviewed since 2024-05-20",
+      "caught": true,
+      "by": "Credit review overdue on a $30,000 account with an invoice 36 days past due",
+      "findings": 1
+    },
+    {
+      "id": "E09",
+      "title": "Telegraph Ave Pizza is over its limit with no hold",
+      "caught": true,
+      "by": "Open balance above the limit with an invoice 43 days past due",
+      "findings": 1
+    },
+    {
+      "id": "E10",
+      "title": "Pacific Crest Provisions LLC is a fake applicant",
+      "caught": true,
+      "by": "Fraud Finder risk score 88 with prepaid VoIP phone and brand-new email",
+      "findings": 4
+    },
+    {
+      "id": "E11",
+      "title": "Lakeshore Diner claims 1.85M; the bureau says 210K",
+      "caught": true,
+      "by": "Stated revenue is about 8.8 times what the business file and the bank support",
+      "findings": 1
+    },
+    {
+      "id": "E12",
+      "title": "Saffron Table says no liens; PitchPoint finds a lien and a judgment",
+      "caught": true,
+      "by": "Application says no open liens or judgments; public records show both",
+      "findings": 1
+    },
+    {
+      "id": "E13",
+      "title": "Castellanos attached her own 18-month-old credit report",
+      "caught": true,
+      "by": "Applicant attached its own stale TransUnion report",
+      "findings": 1
+    },
+    {
+      "id": "E14",
+      "title": "Castellanos: the three bureaus disagree",
+      "caught": true,
+      "by": "Guarantor has a collection at Experian only, and no file at Equifax",
+      "findings": 1
+    },
+    {
+      "id": "E15",
+      "title": "Bay Cup's invoice BCL-77120 entered twice",
+      "caught": false,
+      "by": null,
+      "findings": 0
+    },
+    {
+      "id": "E16",
+      "title": "Pacific Paper's bank account was changed from an email on a lookalike domain",
+      "caught": false,
+      "by": null,
+      "findings": 0
+    },
+    {
+      "id": "E17",
+      "title": "Harborview paid two invoices with one ACH; the system put it all on the first",
+      "caught": true,
+      "by": "Payment applied to one invoice although its memo names two",
+      "findings": 1
+    }
+  ],
+  "false_alarms": [
+    {
+      "problem": "No email on the customer record",
+      "ids": [
+        "C-1003",
+        "C-1005",
+        "C-1008",
+        "C-1009"
+      ],
+      "key_says": "'Oakalnd' is a typo in the address, not a different customer or a fraud signal."
+    }
+  ],
+  "other_findings": [],
+  "decisions": {
+    "applications": [
+      {
+        "application_id": "APP-1041",
+        "match": true,
+        "wrong": [],
+        "want": {
+          "outcome": "approve",
+          "limit": 8000,
+          "terms": "net 30",
+          "band": "A",
+          "controller": false
+        },
+        "got": {
+          "outcome": "approve",
+          "limit": 8000,
+          "terms": "net 30",
+          "band": "A",
+          "controller": false
+        },
+        "decided_by": "credit analyst"
+      },
+      {
+        "application_id": "APP-1042",
+        "match": true,
+        "wrong": [],
+        "want": {
+          "outcome": "approve",
+          "limit": 40000,
+          "terms": "net 30",
+          "band": "A",
+          "controller": true
+        },
+        "got": {
+          "outcome": "approve",
+          "limit": 40000,
+          "terms": "net 30",
+          "band": "A",
+          "controller": true
+        },
+        "decided_by": "controller (Rosa Delgado)"
+      },
+      {
+        "application_id": "APP-1043",
+        "match": true,
+        "wrong": [],
+        "want": {
+          "outcome": "fraud hold",
+          "limit": 0,
+          "terms": "cash in advance",
+          "band": "none",
+          "controller": true
+        },
+        "got": {
+          "outcome": "fraud hold",
+          "limit": 0,
+          "terms": "none: no terms, no shipments (cash in advance included) until the controller decides",
+          "band": "none",
+          "controller": true
+        },
+        "decided_by": "controller (Rosa Delgado)"
+      },
+      {
+        "application_id": "APP-1044",
+        "match": true,
+        "wrong": [],
+        "want": {
+          "outcome": "approve",
+          "limit": 7500,
+          "terms": "net 15",
+          "band": "C",
+          "controller": true
+        },
+        "got": {
+          "outcome": "approve",
+          "limit": 7500,
+          "terms": "net 15",
+          "band": "C",
+          "controller": true
+        },
+        "decided_by": "controller (Rosa Delgado)"
+      },
+      {
+        "application_id": "APP-1045",
+        "match": true,
+        "wrong": [],
+        "want": {
+          "outcome": "approve",
+          "limit": 15000,
+          "terms": "net 30",
+          "band": "B",
+          "controller": true
+        },
+        "got": {
+          "outcome": "approve",
+          "limit": 15000,
+          "terms": "net 30",
+          "band": "B",
+          "controller": true
+        },
+        "decided_by": "controller (Rosa Delgado)"
+      },
+      {
+        "application_id": "APP-1046",
+        "match": true,
+        "wrong": [],
+        "want": {
+          "outcome": "approve",
+          "limit": 21000,
+          "terms": "net 30",
+          "band": "A",
+          "controller": true
+        },
+        "got": {
+          "outcome": "approve",
+          "limit": 21000,
+          "terms": "net 30",
+          "band": "A",
+          "controller": true
+        },
+        "decided_by": "controller (Rosa Delgado)"
+      }
+    ],
+    "reviews": [],
+    "collections": [
+      {
+        "customer_id": "C-1001",
+        "match": false,
+        "want": "no action",
+        "got": []
+      },
+      {
+        "customer_id": "C-1002",
+        "match": false,
+        "want": "phone call",
+        "got": []
+      },
+      {
+        "customer_id": "C-1003",
+        "match": false,
+        "want": "no action",
+        "got": []
+      },
+      {
+        "customer_id": "C-1004",
+        "match": false,
+        "want": "second notice",
+        "got": []
+      },
+      {
+        "customer_id": "C-1005",
+        "match": false,
+        "want": "phone call",
+        "got": []
+      },
+      {
+        "customer_id": "C-1006",
+        "match": false,
+        "want": "no action",
+        "got": []
+      },
+      {
+        "customer_id": "C-1007",
+        "match": false,
+        "want": "friendly reminder",
+        "got": []
+      },
+      {
+        "customer_id": "C-1008",
+        "match": false,
+        "want": "friendly reminder",
+        "got": []
+      },
+      {
+        "customer_id": "C-1009",
+        "match": false,
+        "want": "second notice",
+        "got": []
+      },
+      {
+        "customer_id": "C-1010",
+        "match": false,
+        "want": "second notice",
+        "got": []
+      },
+      {
+        "customer_id": "C-1012",
+        "match": false,
+        "want": "friendly reminder",
+        "got": []
+      }
+    ],
+    "orders": [
+      {
+        "order_id": "SO-5519",
+        "match": false,
+        "want": "release",
+        "got": null
+      },
+      {
+        "order_id": "SO-5521",
+        "match": false,
+        "want": "hold",
+        "got": null
+      },
+      {
+        "order_id": "SO-5524",
+        "match": false,
+        "want": "hold",
+        "got": null
+      },
+      {
+        "order_id": "SO-5527",
+        "match": false,
+        "want": "hold",
+        "got": null
+      },
+      {
+        "order_id": "SO-5528",
+        "match": false,
+        "want": "release",
+        "got": null
+      },
+      {
+        "order_id": "SO-5530",
+        "match": false,
+        "want": "release",
+        "got": null
+      }
+    ],
+    "bills": [
+      {
+        "bill_id": "B-3301",
+        "match": false,
+        "want": "hold",
+        "got": null
+      },
+      {
+        "bill_id": "B-3304",
+        "match": false,
+        "want": "pay (AP clerk)",
+        "got": null
+      },
+      {
+        "bill_id": "B-3307",
+        "match": false,
+        "want": "pay (controller)",
+        "got": null
+      },
+      {
+        "bill_id": "B-3309",
+        "match": false,
+        "want": "pay (AP clerk)",
+        "got": null
+      },
+      {
+        "bill_id": "B-3311",
+        "match": false,
+        "want": "void",
+        "got": null
+      },
+      {
+        "bill_id": "B-3313",
+        "match": false,
+        "want": "wait",
+        "got": null
+      },
+      {
+        "bill_id": "B-3315",
+        "match": false,
+        "want": "hold",
+        "got": null
+      },
+      {
+        "bill_id": "CFL-21390",
+        "match": false,
+        "want": "enter",
+        "got": null
+      }
+    ]
+  },
+  "simple_rule": [
+    {
+      "application_id": "APP-1041",
+      "outcome": "approve",
+      "limit": 8000,
+      "transunion_score": 770
+    },
+    {
+      "application_id": "APP-1042",
+      "outcome": "approve",
+      "limit": 40000,
+      "transunion_score": 790
+    },
+    {
+      "application_id": "APP-1043",
+      "outcome": "approve",
+      "limit": 20000,
+      "transunion_score": 640
+    },
+    {
+      "application_id": "APP-1044",
+      "outcome": "approve",
+      "limit": 15000,
+      "transunion_score": 690
+    },
+    {
+      "application_id": "APP-1045",
+      "outcome": "approve",
+      "limit": 25000,
+      "transunion_score": 760
+    },
+    {
+      "application_id": "APP-1046",
+      "outcome": "approve",
+      "limit": 45000,
+      "transunion_score": 815
+    }
+  ],
+  "moment": [
+    {
+      "application_id": "APP-1043",
+      "simple_rule": "approve $20,000",
+      "desk": "fraud hold",
+      "decided_by": "controller (Rosa Delgado)"
+    }
+  ]
+}

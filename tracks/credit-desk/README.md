@@ -87,6 +87,13 @@ asked twice about it.
   - **Reviews:** a reopened decision, with what the desk knew then beside what is true now.
   - **Collections:** the problems flagged and the clerk's actions.
   - **Payables:** the AP clerk's bills, payments, holds and voids.
+  - **Coordinate** (checkbox next to New run, Droid only, needs the Live app): two credit analysts, titled
+    `Credit analyst: <case>` and `Credit analyst: <case> (2)`, take the applications from one SpacetimeDB queue
+    (`spacetime.claim`, `spacetime.finish`). SpacetimeDB gives each application to exactly one analyst. Both are the same
+    seat with the same limits. `POST /t/credit-desk/run {"coordinate": true}` does the same; it returns a 400 if the
+    Live app is off. Live check (`DEMO_LIVE=droid,coordinate ./demo`, analysts only): run `97ba92` split the six
+    applications three and three, decided all six, and all 6 credit decisions match the key. Evidence in
+    `runs/2026-10-24-coordinated-97ba92/`. It is not a scored headline run: the clerk and AP seats were not started.
   - **Books:** the real Beancount books, which seat posted each entry, and a download for Fava or bean-check.
   - **Score:** the run against the answer key, with precision.
   - **Impact:** a person's minutes per application, bad credit and supplier payments stopped, model cost, against
