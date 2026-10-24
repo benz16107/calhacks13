@@ -54,6 +54,7 @@ The box screen is 1920 x 1080. Phone screens are 390 x 844.
 | Box / Find | `31:1407` (panel `31:1583`) | `docs/figma/os/box-find.png` | A Spotlight-style search over tasks, the action log, workspace files and photos. Photos come from the planned Moss index, described on the box's GPU. The two photo thumbnails are AI-generated stand-ins, labeled as such in the layer names |
 | Box / Pair a phone | `31:1636` (window `31:1736`) | `docs/figma/os/box-pair.png` | Settings: a QR code, the code to compare, and paired phones. The QR encodes the example `https://box.local/pair?code=7Q4M-2KXD`; the core has no pairing route yet |
 | Box / Home after a power cut | `31:1765` | `docs/figma/os/box-after-power-cut.png` | Moment 4 as a session restore: "Welcome back", the running widget says "resumed", and an Info banner lists what picked up where it stopped. Data: the `task.state` events after boot and the boot time |
+| Box / Boot | `34:2342` | `docs/figma/os/box-boot.png` | The boot screen after a power cut: the wallpaper, the product name, and progress while the box rebuilds every task from `log.jsonl` (moment 4, before the "Welcome back" home) |
 | Phone / Home | `23:304` | `docs/figma/os/phone-home.png` | The same OS on a phone: the Dynamic Island shows how many tasks run, two widgets, the app grid with badges, the dock |
 | Phone / Approval notification | `32:1801` | `docs/figma/os/phone-approval.png` | The approval arrives on the lock screen as a notification with full-width Approve and Deny (48 px). Other pending approvals stack below it, collapsed |
 | Phone / Live Activity | `32:1853` | `docs/figma/os/phone-live-activity.png` | Running tasks as Live Activities: the Dynamic Island expanded with one task's progress, and lock-screen cards with step progress and the latest `step`. Data: the SpacetimeDB `task` table |
@@ -84,7 +85,7 @@ On the "Design system" page. Desktop pieces are new; window content reuses the f
 
 | Component | Node ID | Properties | Notes |
 |---|---|---|---|
-| Wallpaper | `22:40` (set) | `Size`: Desktop, Phone | Four flat hill layers and a crescent moon, all desktop variables. No gradient, no photo. Export as SVG |
+| Wallpaper | `22:40` (set) | `Size`: Desktop, Phone | Four flat hill layers and a crescent moon, all desktop variables. No gradient, no photo. Export as SVG. Weave art was planned here but Ben's Figma account is not linked to Weave yet |
 | MenuBar | `22:68` | `Product name`, `Box name`, `Uptime`, `Status`, `Clock` | The box switcher moves between this box and the Vultr box. Notifications opens Notification Center |
 | Dock | `22:99` | none | Apps, a divider, then the boxes. A dot under an app means it has a running task; under a box, it is the one you are on |
 | PhoneDock | `22:176` | none | Four apps |
