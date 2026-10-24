@@ -92,6 +92,22 @@ approvals as amber rows. The rules app makers follow are in `../system.md`, "App
 | `tracks/elastic-insights.png` | `87:6462` | The log copy's status, the four questions, and one answer with a table, from the Agent Builder agent over the log |
 | `tracks/mana-status.png` | `87:6686` | Publishing the public status page, what it shows and never shows, and a preview of the page |
 
+## Phone (`phone/`)
+
+The portal on a phone, 390 x 844: a large title, boxed lists and a tab bar (Home, Tasks, Activity, Settings). The lock
+screen, the notification and the Live Activities are drawn by the phone's own OS, with GurtOS content. Paired phones
+send their device token with every answer (`Authorization: Bearer <token>`).
+
+| PNG | Node | What it shows, and its data |
+|---|---|---|
+| `phone/1-home.png` | `90:6534` | The box, what needs you (each with its amount), and what is running with progress |
+| `phone/2-approval-notification.png` | `90:6649` | The approval as a lock-screen notification with 44 px Deny and Approve |
+| `phone/3-live-activity.png` | `90:6708` | The island after approving ("running again", paid once) and two Live Activities with steps and progress |
+| `phone/4-tasks.png` | `90:6773` | The task list with views (all, running, waiting, done) and a state badge on each |
+| `phone/5-task-detail.png` | `91:6771` | One task: state, cost, the blocked alert, its steps, its files, and Undo task pinned at the bottom |
+| `phone/6-pairing.png` | `91:6834` | What the phone shows after scanning: the code to compare, a name for the phone, the owner switch, Pair. `POST /api/pair {code, name}` |
+| `phone/7-setup-step-5.png` | `91:6883` | The setup wizard on the phone: step progress, "the box's screen follows along", one step at a time, Back and Next pinned |
+
 ## System sheets
 
 `system-foundations.png` (colors in both modes, type, spacing, radius, elevation, motion), `system-icons.png` (the
