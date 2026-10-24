@@ -57,7 +57,7 @@ Coinbase asks for four parts: a summary, a working example, the architecture wit
   { what: 'Metered APIs: wallet.payMetered', why: 'Technical design', os: 'The cap counts against the budget', track: 'The upto scheme', status: "Shipped. A search capped at $0.02 was charged $0.002. Until the core reads the settled amount, the task's cost counts the cap" },
   { what: "Two locks: a CDP Server Wallet whose policy signs only for listed payees, under the cap, in USDC", why: 'Technical design', os: 'Budgets and phone approvals come first', track: 'CDP Server Wallets and the policy engine', status: 'Built and unit-tested, not run live: it needs a CDP Wallet Secret. Live runs use the root-only key with the payee list and cap checked by GurtOS' },
   { what: 'Reuse in one command: install.sh for Claude Code, Droid or any MCP client', why: 'Ease of reuse', os: 'The same budget and approval rules, as an MCP prompt', track: 'x402 SDK', status: 'Shipped. A real Claude Code session installed it and paid $0.01 over MCP' },
-  { what: 'Top up from the phone', why: 'Usefulness', os: 'The wallet page on the portal and phone', track: 'Coinbase Onramp', status: "Sandbox only. Sandbox orders move no money, so test money comes from Circle's faucet" },
+  { what: 'Top up from the phone', why: 'Usefulness', os: 'The wallet page on the portal and phone', track: 'Coinbase Onramp', status: "Sandbox only, and only the session step is verified: a $5 USDC quote on Solana on Oct 24. The checkout was not opened, and the link it returns points at Coinbase's live host, so treat the button as a flow test, not a purchase. Test money comes from Circle's faucet" },
   { what: 'Open source, Apache-2.0', why: 'Ease of reuse', os: 'The whole OS and the wallet', track: 'None', status: 'Shipped' },
 ]} />
 
@@ -110,7 +110,7 @@ Coinbase asks for four parts: a summary, a working example, the architecture wit
 - The CDP Server Wallet lock was not run live: it needs a CDP Wallet Secret. Live runs keep the key in the box's root-only file. A CDP key that can manage policies could also loosen its own policy, so the policy key should be kept off the box.
 - A metered payment counts at its cap in the task's cost until the core reads the settled amount.
 - Bazaar free-text search did not find the box's routes on Oct 24; the lookup by pay-to address did.
-- Onramp runs in sandbox mode only and cannot deliver devnet USDC.
+- Onramp runs in sandbox mode only, and only the session step is verified (a $5 USDC quote on Solana, Oct 24). We did not open the checkout or complete an order, and the link points at the live pay.coinbase.com, so treat the button as a flow test. Onramp cannot deliver devnet USDC.
 - After a power cut mid-payment, the call fails instead of checking the chain. The owner checks the wallet on Explorer.
 - `GET` only: APIs that want a `POST` body are not supported yet. Responses are cut at 20 KB. The paid APIs in the demo are our own test sellers.
 
@@ -118,7 +118,7 @@ Coinbase asks for four parts: a summary, a working example, the architecture wit
 
 ## Builder feedback
 
-Kept while building, with times, in [FEEDBACK.md](https://github.com/benz16107/calhacks13/blob/main/tracks/wallet/FEEDBACK.md): 27 points across two rounds (x402 and the facilitator on Oct 23; Bazaar, `upto`, Server Wallets, policies, faucets and Onramp on Oct 24).
+Kept while building, with times, in [FEEDBACK.md](https://github.com/benz16107/calhacks13/blob/main/tracks/wallet/FEEDBACK.md): 28 points across two rounds (x402 and the facilitator on Oct 23; Bazaar, `upto`, Server Wallets, policies, faucets and Onramp on Oct 24).
 
 **What worked.** The first devnet payment settled on the first try, about 15 minutes in, about 1.5 s from the 402 to the 200. Swapping the x402.org facilitator for the CDP facilitator was one line. On Solana the facilitator pays the fee, so an agent wallet needs only USDC. `registerPolicy` was the right hook to pay only the approved offer.
 
@@ -130,9 +130,9 @@ Kept while building, with times, in [FEEDBACK.md](https://github.com/benz16107/c
 4. Policies need a scope the default CDP key does not have, and that same scope lets a compromised server rewrite its own policy.
 5. Bazaar gives almost no feedback: listing happens on the first paid call and nothing says so, and free-text search did not find a fresh listing that the merchant lookup did.
 
-<Details summary="All 27 points, short">
+<Details summary="All 28 points, short">
 
-`@coinbase/cdp-sdk/x402` imports the EVM package even for Solana · `@x402/core` prints on every CDP payment · opaque error for a payee with no USDC account · `decodePaymentResponseHeader` throws a bare `SyntaxError` · two Solana versions in one install · a stale CDP facilitator helper still in docs · `/supported` needs keys · no payment idempotency key · "pay exactly this" needs custom code · two repos for one project · policies need a missing scope · that scope is the weak point · Server Wallets need a second secret made only in the portal · `splAddress` is ambiguous · a `signSolTransaction` policy leaves other operations open · `policies.simulate` needs an existing account · no fetch-style seller adapter · partial `upto` settlement only in the types · the `upto` receipt hides the memo · self-payment refused with only a code · Bazaar gives almost no feedback · Bazaar search with a network filter looked broken · Bazaar entries carry no decimals or USD price · Onramp sandbox is a string prefix · a vague JWT key error · free-text search misses a fresh listing · listing happens silently on the first paid call.
+`@coinbase/cdp-sdk/x402` imports the EVM package even for Solana · `@x402/core` prints on every CDP payment · opaque error for a payee with no USDC account · `decodePaymentResponseHeader` throws a bare `SyntaxError` · two Solana versions in one install · a stale CDP facilitator helper still in docs · `/supported` needs keys · no payment idempotency key · "pay exactly this" needs custom code · two repos for one project · policies need a missing scope · that scope is the weak point · Server Wallets need a second secret made only in the portal · `splAddress` is ambiguous · a `signSolTransaction` policy leaves other operations open · `policies.simulate` needs an existing account · no fetch-style seller adapter · partial `upto` settlement only in the types · the `upto` receipt hides the memo · self-payment refused with only a code · Bazaar gives almost no feedback · Bazaar search with a network filter looked broken · Bazaar entries carry no decimals or USD price · Onramp sandbox is a string prefix · a vague JWT key error · free-text search misses a fresh listing · listing happens silently on the first paid call. · the sandbox flag is a prefix and the returned Onramp link still points at the live host
 
 </Details>
 
