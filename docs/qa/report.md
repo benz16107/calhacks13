@@ -326,6 +326,15 @@ person (403 "only the owner can pair a phone as the owner"), but can for a reque
 by the kill switch for 12 s finished normally on resume (the ECONNRESET is gone). The Business screens are back in
 `portal/dist` (fa30fbf).
 
+**P2-26. A policy rule "Fraud referrals go to the Controller." doesn't match the question "...fraud referral.".** Owner:
+business. The rule's plural never matches the singular, so the credit desk's fraud referrals fall through to the next
+rule ("Over $10,000") and say so in the route sentence. They still reach the Controller here, but a policy without a
+catch-all would send them to the owner. Match the words ignoring a plural s.
+
+**P2-27. Ask why finds nothing for "Bright Harbor" alone.** Owner: credit desk. The full name, the customer id and the
+application id all work; a short name returns no decisions. The window's example question is "Why did we give Bright
+Harbor $40,000?"; check it maps to the full name.
+
 ## Docs site (gurtos.com)
 
 **D-1 to D-4 and D-7 fixed in 199dce5 and live, spot-checked 00:00 PT:** real ISO names, `gurt-<id>`, the Personal ISO
