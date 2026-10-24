@@ -281,7 +281,7 @@ A Vultr Cloud Compute VM in San Jose is the GurtOS box the internet can reach: J
 
 ### Figma: Best Workflow, Stage Log, Best Design, Most Creative
 
-Figma ran every stage: a FigJam board for the architecture and the four demo moments, two rounds of OS research, three directions, then the GurtOS design system with every token as a variable in Light and Dark and 64 v2 screens drawn only from it, four prototype flows with 136 links, a 16-slide Figma Slides deck, and a handoff through Figma's MCP server that became the portal the box runs today and the GNOME desktop layer. 31 sessions, 339 minutes, all logged.
+Figma ran every stage: a FigJam board for the architecture and the four demo moments, two rounds of OS research, three directions, then the GurtOS design system with every token as a variable in Light and Dark and 64 v2 screens drawn only from it, four prototype flows with 136 links, a 16-slide Figma Slides deck, and a handoff through Figma's MCP server that became the portal the box runs today and the GNOME desktop layer. 32 sessions, 364 minutes, all logged.
 
 **Proof:** every Figma variable is a CSS custom property of the same name in the shipped kit: Figma's `accent/bg` (#2F64A6 Light, #78A9E6 Dark) is `--color-accent-bg` in `portal/src/kit/kit.css` with the same two values, and `portal/README.md` puts every frame beside the running app.
 
@@ -311,14 +311,26 @@ undone state with a toast, and the desktop with Notification Center, Control Cen
 rounds also went into Figma Make as a small working web page in the design's tokens, tested in a browser before each
 import. Links are in `docs/figma.md`.
 
-**Handoff (Figma's MCP server, 19 minutes, 4 of 5).** Every color, size and motion value is a variable with its CSS
-name as code syntax, in Light and Dark, and every screen and component is named. `docs/figma/os-v2/README.md` lists
-each v2 screen's node ID, its PNG and the API field behind every value, matched to the core's setup, settings, apps
-and vault routes. The screens were merged to main in six batches as they were finished, so the portal thread could
-build each one with `get_design_context` while the next was drawn. `docs/figma/system.md` holds the rules, including
-guidelines for app makers. The GNOME frames for GurtOS Personal went the other way: native GTK widgets have no web code, so the desktop layer was built from the exported frames and their notes.
+**Handoff (Figma Design and Figma's MCP server, 19 minutes, 4 of 5).** Two handoffs. The first (4 minutes) made the design file ready
+for code: every frame named, auto layout throughout, and every color, size and motion value a variable with its CSS
+name as code syntax, so `get_design_context` emits the names the portal uses. `docs/figma.md` lists each screen's node
+ID and the API data behind it. After the redesign, `docs/figma/os-v2/README.md` does the same for every v2 screen,
+matched to the core's setup, settings, apps and vault routes, and the screens reached main in six batches so the
+portal thread could build each one while the next was drawn. The second (15 minutes) took the Personal (GNOME) frames
+to the Personal thread as exported PNGs with notes, not as web code, because Personal is native GTK and libadwaita.
+Each frame's sections became a widget: the indicator menu's "Needs you" and "Running", the notification's actions,
+the Ask an Agent dialog's access group. `docs/figma/system.md` holds the rules, including guidelines for app makers.
 
-**Code generation (Figma's MCP server, 137 minutes, 4 of 5).** Claude Code read every screen with `get_design_context` and adapted Figma's React and Tailwind reference into the portal's own Preact components and CSS. The first round built the direction A screens. When Ben approved the GurtOS design system, the second round turned its variables into a kit: each Figma variable is a CSS custom property with the same name in Light and Dark, with Atkinson Hyperlegible and GNOME's Adwaita icons self-hosted. On that kit it built a desktop with movable windows, the 12-step setup, ten Settings pages, App Center and the phone. Three helper agents built screens in parallel from their own frames. Anything the box can't back up was changed: no greeting with a made-up name, no Power button without an API, progress bars only when a step says how far it is. The output is `portal/`, one app the box serves as its own screen, the portal and the phone, and the kit at `/kit/` for track apps. `portal/README.md` puts every Figma frame beside a screenshot of the running app.
+**Code generation (Figma's MCP server, 162 minutes, 4 of 5).** Claude Code read the screens with `get_design_context`
+and adapted Figma's React and Tailwind reference into the portal's own Preact components and CSS. The first rounds
+built Shopper's approval page and the direction A screens. When Ben approved the GurtOS design system, the next round
+turned its variables into a kit: each Figma variable is a CSS custom property with the same name in Light and Dark,
+with Atkinson Hyperlegible and GNOME's Adwaita icons self-hosted. On that kit it built a desktop with movable windows,
+the 12-step setup, ten Settings pages, App Center and the phone, with three helper agents building screens in parallel. The last round built GurtOS Personal's GNOME layer from the same frames and tokens as
+libadwaita widgets: the seven-step setup, Ask an Agent, Keep or Undo, the top-bar menu and the notification. Anything
+the box can't back up was cut: no made-up greeting, no Power button without an API, no progress bar without a step
+count. The output is `portal/`, the kit at `/kit/` for track apps, and `personal/`.
+`portal/README.md` puts every Figma frame beside a screenshot of the running app.
 
 [Full write-up, video and evidence →](https://calhacks.gurtos.com/tracks/figma/)
 
@@ -358,7 +370,6 @@ Public links: chat https://www.mana.space/shared-chats/x5CqxyjcOgVCAyrvUBqK2LNRc
    counts). If yes, change the "through GoDaddy Registry" row in `showcase/src/content/tracks/godaddy.mdx` to `met`.
 9. **Coinbase.** Their track asks for a verified Coinbase account. Confirm it is verified.
 10. **Devpost link.** Once the project page exists, set `LINKS.devpost` in `showcase/src/data/site.ts`.
-11. **Stage log totals.** `docs/stagelog.md`'s "For Devpost" paragraphs say Handoff 4 and Code generation 127 minutes; its
-    own table sums to 19 and 137. The Figma section above and the showcase use the table's numbers.
+11. **Stage log.** The showcase, this text and `docs/stagelog.md` now agree: 32 sessions, 364 minutes.
 
 <!-- TODO END -->
