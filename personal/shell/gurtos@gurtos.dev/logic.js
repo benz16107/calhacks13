@@ -33,7 +33,8 @@ export const noModelKey = (error) => /vault has no/i.test(error ?? '') && /(fact
 /** Why a task failed, in one sentence. `key` is true when the fix is a model key in Settings. */
 export function failure(error) {
   const e = (error ?? '').replace(/^worker exited with \d+:\s*/i, '').replace(/^Error:\s*/i, '');
-  if (/\b401\b|authentication_error|invalid x-api-key|invalid api key/i.test(e)) return { key: true, text: 'Your Anthropic key was not accepted. Check it in GurtOS Settings.' };
+  if (/key was not accepted/i.test(e)) return { key: true, text: e.split(/\n/)[0].trim() }; // the core's own sentence
+  if (/\b401\b|authentication_error|invalid x-api-key|invalid api key/i.test(e)) return { key: true, text: 'Your Anthropic key was not accepted. Change it in Settings, Keys.' };
   if (noModelKey(error)) return { key: true, text: 'Add an Anthropic API key in GurtOS Settings first.' };
   const first = e.split(/\n/)[0].trim();
   return { key: false, text: first ? (/[.?!]$/.test(first) ? first : first + '.') : 'It stopped with an error.' };

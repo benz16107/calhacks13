@@ -48,6 +48,37 @@ def when_saved(iso):
     return f"Saved {day} at {t.strftime('%-I:%M %p')}"
 
 
+def button_for(label, fn):
+    b = Gtk.Button(label=label, valign=Gtk.Align.CENTER)
+    b.connect('clicked', lambda _b: fn())
+    return b
+
+
+def update_state():
+    """GET /api/update, or None on a box without it: the System update row hides."""
+    try:
+        out = api('GET', '/api/update')
+    except Exception:  # noqa: BLE001
+        return None
+    return out if isinstance(out, dict) and out.get('state') not in (None, 'unknown') else None
+
+
+def update_words(u):
+    """(title, subtitle) for box-update's state, in plain words."""
+    v = u.get('version') or u.get('build') or ''
+    name = f'GurtOS {v}'.strip()
+    if u.get('state') == 'ready':
+        return 'An update is ready', 'It is applied the next time you restart this computer.'
+    if u.get('state') == 'trial':
+        return f'{name} is starting for the first time', 'GurtOS keeps it once it runs well, and goes back by itself if it does not.'
+    if u.get('state') == 'rolledBack':
+        return 'The last update did not start properly', f'GurtOS went back to {name}. Nothing of yours changed.'
+    if u.get('available'):
+        a = u['available']
+        return f"GurtOS {a.get('version') or a.get('build')} is available", 'GurtOS installs it as a whole and can go back if it does not start.'
+    return f'{name} is up to date', (when_saved(u['checkedAt']).replace('Saved', 'Checked') if u.get('checkedAt') else '')
+
+
 def take(scroller, into):
     """Move a Setup page's content (under its title) into another page's box."""
     inner = scroller.get_child().get_child().get_child()
@@ -75,7 +106,7 @@ class SettingsWindow(SetupWindow):
         Adw.ApplicationWindow.__init__(self, application=app, title='GurtOS Settings', default_width=860, default_height=760)
         setupwin.SHOW_TITLES = False  # the view switcher names the page; Setup's big titles are for setup
         self.settings, self.vault, self.apps, self.boxes, self.taken, self.model = {}, [], [], [], {'folders': True}, None
-        self.system, self.devices, self.remote = {}, [], None
+        self.system, self.devices, self.remote, self.update = {}, [], None, None
         self.remote_poll = self.name_check = 0
         self.folder_draft = None
         self.summary = Gtk.Label(visible=False)  # Setup's footer line; Settings speaks through toasts instead
@@ -118,12 +149,12 @@ class SettingsWindow(SetupWindow):
                 while (c := holder.get_first_child()) is not None:
                     holder.remove(c)
                 return holder.append(Adw.StatusPage(icon_name='dialog-error-symbolic', title="GurtOS isn't answering", description=GLib.markup_escape_text(str(err)), vexpand=True))
-            setup, self.settings, self.vault, self.apps, self.boxes, self.system, self.devices, self.remote = state
+            setup, self.settings, self.vault, self.apps, self.boxes, self.system, self.devices, self.remote, self.update = state
             self.model = setup.get('model') or ({'ready': setup['modelKey']} if 'modelKey' in setup else None)
             self.ready = True
             self.go(then or self.at)
         background(lambda: (api('GET', '/api/setup'), api('GET', '/api/settings'), api('GET', '/api/vault'), api('GET', '/api/apps?all=1'),
-                            api('GET', '/api/boxes'), api('GET', '/api/system'), api('GET', '/api/devices'), remote_state()), done)
+                            api('GET', '/api/boxes'), api('GET', '/api/system'), api('GET', '/api/devices'), remote_state(), update_state()), done)
 
     def go(self, pid):
         if isinstance(pid, int):  # Setup's builders call go(self.at) to show a change
@@ -152,6 +183,16 @@ class SettingsWindow(SetupWindow):
         take(self.models(), box)
         st = self.settings
         lst = section(box, 'Updates', 'GurtOS updates as a whole system and rolls itself back if a new version is not healthy.')
+        if self.update:
+            title, sub = update_words(self.update)
+            r = Adw.ActionRow(title=GLib.markup_escape_text(title), subtitle=GLib.markup_escape_text(sub))
+            r.add_prefix(Gtk.Image(icon_name='software-update-available-symbolic' if self.update.get('state') == 'ready' or self.update.get('available')
+                                   else 'emblem-ok-symbolic', accessible_role=Gtk.AccessibleRole.PRESENTATION))
+            if self.update.get('state') == 'ready':
+                r.add_suffix(button_for('Restart…', lambda: subprocess.Popen(['gnome-session-quit', '--reboot'], start_new_session=True)))
+            elif 'checkedAt' in self.update:  # the box can look for updates
+                r.add_suffix(button_for('Check now', self.check_update))
+            lst.append(r)
         auto = Adw.SwitchRow(title='Update automatically', subtitle='Installs at night; running tasks resume after the restart', active=bool(st.get('autoUpdate', True)))
         auto.connect('notify::active', lambda r, _p: self.patch({'autoUpdate': r.get_active()}))
         channel = Adw.ComboRow(title='Channel', model=Gtk.StringList.new(['Stable', 'Beta']), selected=1 if st.get('updateChannel') == 'beta' else 0)
@@ -165,6 +206,15 @@ class SettingsWindow(SetupWindow):
         keep.connect('notify::selected', lambda r, _p: self.patch({'logRetentionDays': RETENTION[r.get_selected()]}))
         lst.append(keep)
         return scroller
+
+    def check_update(self):
+        def done(out, err):
+            if err:
+                return self.toast(f'GurtOS could not check: {err}')
+            self.update = out
+            self.toast(update_words(out)[0] + '.')
+            self.go('agents')
+        background(lambda: api('POST', '/api/update/check', {}), done)
 
     def permissions(self):
         """Folders, internet, spending and quiet hours, from Setup's folder and safety steps."""

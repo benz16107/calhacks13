@@ -268,6 +268,14 @@ class SetupWindow(Adw.ApplicationWindow):
         ):
             lst.append(row(title, sub, icon))
         box.append(lst)
+        if not Gio.NetworkMonitor.get_default().get_network_available():  # offline: Claude and apps need the internet
+            net = boxed()
+            r = row("This computer isn't online", 'Connect to Wi-Fi first. Agents use Claude over the internet.', 'network-wireless-offline-symbolic')
+            b = Gtk.Button(label='Choose Wi-Fi…', valign=Gtk.Align.CENTER, css_classes=['suggested-action'])
+            b.connect('clicked', lambda _b: subprocess.Popen(['gnome-control-center', 'wifi'], start_new_session=True))
+            r.add_suffix(b)
+            net.append(r)
+            box.append(net)
         self.summary.set_label('About 5 minutes.')
         return scroller
 

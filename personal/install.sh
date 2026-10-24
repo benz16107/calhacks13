@@ -50,6 +50,11 @@ install -Dm644 "$here/files/dev.box.Find.search-provider.ini" /usr/share/gnome-s
 install -Dm644 "$here/files/dev.box.Find.desktop" /usr/share/applications/dev.box.Find.desktop
 install -Dm644 "$here/files/dev.box.Search.service" /usr/share/dbus-1/services/dev.box.Search.service
 rm -f /etc/xdg/autostart/box-welcome.desktop # GurtOS Setup took over the welcome
+# One terminal in search and the app grid: Console (the dock's). Terminal stays installed for "Open in Terminal".
+if [[ -f /usr/share/applications/org.gnome.Terminal.desktop ]]; then
+  mkdir -p /usr/local/share/applications
+  sed '/^\[Desktop Entry\]/a NoDisplay=true' /usr/share/applications/org.gnome.Terminal.desktop > /usr/local/share/applications/org.gnome.Terminal.desktop
+fi
 install -Dm644 "$here/files/box-setup.desktop" /etc/xdg/autostart/box-setup.desktop
 # The GurtOS typeface (docs/figma/system.md): Atkinson Hyperlegible Next and Mono, SIL OFL, for GurtOS's own windows.
 install -Dm644 -t /usr/share/fonts/truetype/gurtos "$here"/fonts/*.ttf "$here/fonts/OFL.txt"

@@ -112,7 +112,7 @@ def event_text(e, me=None):
         return 'document-save-symbolic', {'pending': 'Changes ready for review', 'kept': 'You kept its changes', 'conflict': 'Keep stopped: you edited the same files',
                                           'unkept': 'Undone after Keep: the files are back', 'undone': 'Undone'}.get(e.get('result'), 'Changes updated')
     if t == 'note':
-        return 'document-edit-symbolic', f"{(e.get('track') or 'An app').capitalize()} made a note"
+        return 'document-edit-symbolic', e.get('text') or f"{(e.get('track') or 'An app').capitalize()} made a note"
     return 'emblem-documents-symbolic', 'Something happened'
 
 
@@ -121,8 +121,10 @@ def failure_text(error):
     import re
     e = re.sub(r'^worker exited with \d+:\s*', '', error or '', flags=re.I)
     e = re.sub(r'^Error:\s*', '', e)
+    if re.search(r'key was not accepted', e, re.I):
+        return e.strip().splitlines()[0]  # the core's own sentence
     if re.search(r'\b401\b|authentication_error|invalid x-api-key|invalid api key', e, re.I):
-        return 'Your Anthropic key was not accepted. Check it in GurtOS Settings.'
+        return 'Your Anthropic key was not accepted. Change it in Settings, Keys.'
     if re.search(r'vault has no', e, re.I):
         return 'Add an Anthropic API key in GurtOS Settings first.'
     first = e.strip().splitlines()[0] if e.strip() else ''
