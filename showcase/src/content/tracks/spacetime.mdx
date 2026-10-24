@@ -21,7 +21,7 @@ video: main
 shots:
   - src: ../../assets/repo/portal/live-agents.png
     alt: 'The Live window, Agents view: meters across the top, and a queue of credit applications as Open, In hand and Done columns, with each agent''s status, such as Working, or Waiting for an OK.'
-    caption: 'The Live window, Agents: a queue as Open, In hand and Done, and what each agent is doing, all arriving over SpacetimeDB subscriptions. Demo data. The credit desk''s own use of the queue is not on main yet.'
+    caption: 'The Live window, Agents: a queue as Open, In hand and Done, and what each agent is doing, all arriving over SpacetimeDB subscriptions. Demo data.'
   - src: ../../assets/repo/portal/live-requests.png
     alt: 'The Live window, Requests view: two waiting requests with Deny and Approve, one marked "Rosa''s phone is viewing".'
     caption: 'The Live window, Requests: every waiting request, and who is viewing it. The first answer wins and the later one is told who answered.'
@@ -87,8 +87,8 @@ status:
     state: not-built
     note: 'The module and the opt-in reporter (counts only) are written, but it is not published: it waits on one sign-in to SpacetimeDB. It is not running.'
   - part: The credit desk using the shared queue
-    state: not-built
-    note: 'The queue and its tools are on main and checked in the merge gate. The credit desk''s own Coordinate option, with two analysts, is not on main yet.'
+    state: live
+    note: 'The queue and its tools are on main and checked in the merge gate. The credit desk''s opt-in Coordinate option ran live with real Droid: two analysts took three applications each from the queue and decided all six, matching the answer key. Analysts only, not the scored headline run.'
 ---
 
 ## Why SpacetimeDB, and what each part is for
@@ -100,7 +100,7 @@ status:
 | Feature | Why it is there | Criterion | From | Today |
 |---|---|---|---|---|
 | Tasks and approvals mirrored live; the box's screens answer through the `answer` reducer from connections the box vouched for | Every screen shows the same request the moment it is asked | Live shared state, instant sync | GurtOS (the module) | Shipped |
-| A shared work queue with atomic claims and four broker tools (`spacetime.claim`, `finish`, `post`, `team`), and agent presence | Several agents split one job without colliding | Agents coordinating | GurtOS (the module, the broker) | Shipped. 3 agents made 15 claims on 12 jobs at once, 12 distinct jobs and none twice; 30 simultaneous claims on 10 jobs gave 10 distinct jobs; a task that ends holding a job gives it back. The credit desk's own use of the queue is not on main yet |
+| A shared work queue with atomic claims and four broker tools (`spacetime.claim`, `finish`, `post`, `team`), and agent presence | Several agents split one job without colliding | Agents coordinating | GurtOS (the module, the broker) | Shipped. 3 agents made 15 claims on 12 jobs at once, 12 distinct jobs and none twice; 30 simultaneous claims on 10 jobs gave 10 distinct jobs; a task that ends holding a job gives it back. The credit desk's coordinated run is on main and was run live with real Droid: two analyst seats, titled Credit analyst and Credit analyst (2), claimed three applications each from one SpacetimeDB queue, decided all six, and all 6 credit decisions match the answer key. It is opt-in (the Coordinate checkbox, or `coordinate: true` on the run route) and analysts only, not the scored headline run: the clerk and AP seats were not started |
 | Each person is sent only their own requests (Business): private `request` and `routed_to` tables and a per-connection `my_requests` view | A request routed to Rosa must not reach Priya | Meaningful use, security | GurtOS Business and the module | Shipped. Rosa's client is sent what is routed to her, Priya's and a stranger's get nothing, and the request table cannot be read. This is enforced by the database for any connection that reaches it; today only the box's own screens and local helpers reach SpacetimeDB, and phones use the API |
 | No double approvals, with presence: the later answer is refused with "already approved by" and the name, and "Rosa's phone is viewing" shows while someone has a request open | Two people can open the same request, and the second should know who won | Instant sync | GurtOS (the reducers) | Shipped. Presence clears when the connection drops |
 | Timers in the database: a scheduled reducer brings a second person into a request that is still pending | A request nobody has answered reaches someone else | Meaningful use | GurtOS (the module) | Shipped as the mechanism: the demo brought Priya in after 3 seconds. It only nudges screens, phone pushes still come from the core, and the Business policy has no reminder rule yet |
@@ -197,6 +197,5 @@ Or open the box screen and a paired phone, and approve on one.
   the log still records every post, claim and result. Reminders restart their clock when the box refills a pending
   request.
 - **The Maincloud fleet view is not running.** It is written, not published, and waits on one sign-in to SpacetimeDB.
-- **The credit desk's own use of the shared queue is not on main yet.** The queue, its four tools and the proof above
-  are.
+- **The credit desk's use of the shared queue is opt-in and analysts only.** The live run (`runs/2026-10-24-coordinated-97ba92/`) started two analysts and not the clerk or the AP seat, so it is not the scored headline run. Fetch's team of box agents also posts to the queue, but only its posting and board are checked offline: its claiming agents need real Droid and have not been run live, so the claim is limited to a request that lists items becoming jobs on the shared queue.
 - Each box keeps its own SpacetimeDB login, which fixed a bug where boxes sharing a VM broke each other's republish.

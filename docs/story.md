@@ -174,6 +174,7 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 | Pulling the plug while a request waits: after the reboot each request is asked once, answered once and each bill paid once, and no tool call repeats | GurtOS (the fsynced log, resume from it) and the desk (`pay_bill` checks the bank first, since Nessie takes no idempotency key) | Shipped, shown with scripted seats in run 853015. Each of 3 requests was asked and answered once, and the one bill was paid once |
 | Fairness by construction: the seats never see protected attributes, or the guarantor's name, SSN, date of birth or address; two applicants who differ only in those are byte-identical to the seats | The desk (`fairness.test.ts`) | Shipped |
 | A plain letter for every adverse decision, with the main reasons and the ECOA notice; a fraud hold says only "We need to verify some information" | The desk (`letters.ts`) | Shipped as model letters. Not a claim of legal compliance: the fraud-hold wording needs a lawyer's check |
+| Two analysts splitting the work: the opt-in Coordinate option starts two credit analysts that take applications from one shared SpacetimeDB queue, so each application goes to exactly one of them | Several agents can share one case without colliding | GurtOS (the queue and its claim) and the desk (the option) | Shipped, run live with real Droid: three applications each, all six decided, and all 6 credit decisions match the key. Analysts only: the clerk and AP seats were not started, so this is not the scored headline run |
 | Credit rules, the planted case, the scorer, the Credit desk window | The desk | Shipped |
 
 **Demo moment and proof:** The full live run with real Droid on all three seats, scored from the action log against the answer key: 16 of 17 planted errors caught, 1 false alarm (precision 97%), all 6 credit decisions right (outcome, band, limit and terms), in 12 minutes for about $5.24. It held APP-1043, a synthetic identity that a simple rule approves for $20,000. The January review caught 2 of 2.
@@ -405,7 +406,6 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 
 - Review the story with Ben: problem, features with their why, OS vs track
 - Maincloud fleet view (not built)
-- The credit desk using the shared queue (not built)
 
 ## Elastic: Best use of Elastic Agent Builder on Serverless
 
