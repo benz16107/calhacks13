@@ -1,0 +1,8 @@
+[Plymouth Theme]
+Name=GurtOS Server
+Description=A moon and the GurtOS wordmark on the box screen's night sky
+ModuleName=script
+
+[script]
+ImageDir=/usr/share/plymouth/themes/gurtos-server
+ScriptFile=/usr/share/plymouth/themes/gurtos-server/gurtos-server.script

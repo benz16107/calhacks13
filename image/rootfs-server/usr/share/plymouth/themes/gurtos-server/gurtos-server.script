@@ -1,0 +1,9 @@
+# The box screen's colour (#27313F) with the moon and the wordmark in the middle, from the first frame to the moment
+# the kiosk takes over. No text is drawn, so the theme needs no fonts in the initramfs.
+Window.SetBackgroundTopColor(0.153, 0.192, 0.247);
+Window.SetBackgroundBottomColor(0.153, 0.192, 0.247);
+
+logo.image = Image("logo.png");
+logo.sprite = Sprite(logo.image);
+logo.sprite.SetX(Window.GetX() + Window.GetWidth() / 2 - logo.image.GetWidth() / 2);
+logo.sprite.SetY(Window.GetY() + Window.GetHeight() / 2 - logo.image.GetHeight() / 2);

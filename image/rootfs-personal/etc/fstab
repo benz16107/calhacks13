@@ -14,3 +14,5 @@ LABEL=box-data       /data                                ext4  defaults        
 /data/journal        /var/log/journal                     none  bind,x-systemd.requires-mounts-for=/data         0 0
 /data/voice-venv     /opt/box/voice-venv                  none  bind,x-systemd.requires-mounts-for=/data         0 0
 /data/voice-models   /opt/box/voice-models                none  bind,x-systemd.requires-mounts-for=/data         0 0
+/data/cups-etc       /etc/cups                            none  bind,x-systemd.requires-mounts-for=/data         0 0
+/data/cups-var       /var/lib/cups                        none  bind,x-systemd.requires-mounts-for=/data         0 0

@@ -12,17 +12,25 @@ src=/run/boxlive/iso/box/root.sqfs
 name=$(. /etc/os-release && echo "$NAME $VARIANT")
 mnt=/run/box-install
 
-say() {
-  echo "$*"
-  for t in /dev/ttyS0 /dev/ttyAMA0; do { echo "box-install: $*" > $t; } 2>/dev/null || true; done
+# What goes where: the screen shows one title, one reassurance and one bar, redrawn as the install goes (screen).
+# Everything else, tool output included, goes to the serial console and the journal (say, with a box-install: prefix).
+say() { for t in /dev/ttyS0 /dev/ttyAMA0; do { echo "box-install: $*" > $t; } 2>/dev/null || true; done; echo "$*" >> /run/box-install.log; }
+cols=$(stty size 2>/dev/null | cut -d' ' -f2); cols=${cols:-80}
+screen() { # <percent> [message]: the whole screen, cleared and redrawn
+  local p=$1 w=$((cols - 4)) n
+  n=$((w * p / 100))
+  if [ -z "${drawn:-}" ]; then printf '\033[?25l\033[2J'; drawn=1; fi
+  printf '\033[H\n\n  Installing %s. %s%%\033[K\n  %s\033[K\n\n  [%s%s]\033[K\n' "$name" "$p" "${2:-This takes about 2 minutes. Do not turn the computer off.}" \
+    "$(head -c $n </dev/zero | tr '\0' '=')" "$(head -c $((w - n)) </dev/zero | tr '\0' ' ')"
 }
 fail() {
   say "FAILED: $*"
-  say "$name is not installed. Power off, then start from the disc again."
+  printf '\033[?25h\033[2J\033[H\n\n  Installing %s did not work.\n  %s\n\n  Turn the computer off and start from the disc again. The details are on the serial console.\n' "$name" "$*"
   sleep infinity
 }
 trap 'fail "line $LINENO: $BASH_COMMAND"' ERR
 [ -f "$src" ] || fail "no system image at $src"
+screen 0 "Looking for a disk."
 
 udevadm settle
 disc=$(findmnt -no SOURCE /run/boxlive/iso)
@@ -39,12 +47,15 @@ done
 about="$disk ($(lsblk -dno SIZE,MODEL "$disk" | xargs))"
 
 if [ -n "$(wipefs -n "$disk"; lsblk -nro NAME "$disk" | tail -n +2)" ]; then
-  say "$about has data on it. Installing $name erases all of it."
-  read -r -p 'Type erase and press Enter to go on: ' answer
+  say "$about has data on it"
+  drawn=
+  printf '\033[?25h\033[2J\033[H\n\n  %s has data on it.\n  Installing %s erases all of it.\n\n' "$about" "$name"
+  read -r -p '  Type erase and press Enter to go on: ' answer
   [ "$answer" = erase ] || fail "you did not type erase, so nothing changed"
 fi
 
 say "Installing $name on $about"
+screen 2
 wipefs -qa "$disk"
 sgdisk -Z "$disk" >/dev/null
 bios=()
@@ -61,11 +72,18 @@ for _ in $(seq 10); do [ -b "$(part box-data)" ] && break; sleep 1; udevadm sett
 
 mkfs.vfat -F 32 -n BOX-ESP "$(part box-esp)" >/dev/null
 for p in box-a box-b box-data; do mkfs.ext4 -q -F -L $p "$(part $p)"; done
+screen 5
 
 say "Copying the system to slot A"
 mkdir -p $mnt/a $mnt/data $mnt/esp
 mount "$(part box-a)" $mnt/a
-unsquashfs -f -d $mnt/a "$src" # its progress bar shows on the screen
+# unsquashfs prints a percentage when it runs on a terminal; script gives it one. 5 to 95 percent of the bar.
+last=-1
+script -qefc "unsquashfs -percentage -f -d $mnt/a $src" /dev/null 2>>/run/box-install.log | tr '\r' '\n' | while IFS= read -r l; do
+  l=${l//[[:space:]]/}
+  if [[ $l =~ ^[0-9]+$ && $l -le 100 && $l -ne $last ]]; then last=$l; screen $((5 + 90 * l / 100)); fi
+done
+[ -f $mnt/a/opt/box/core/box.ts ] || fail "the system did not copy completely"
 mount "$(part box-data)" $mnt/data
 mkdir -p $mnt/data/update
 # Each /data/... bind mount in the system's fstab starts as a copy of what the image has at that path.
@@ -74,6 +92,7 @@ awk '$1 ~ "^/data/" { print $1, $2 }' $mnt/a/etc/fstab | while read -r from to; 
 done
 
 say "Installing the boot loader"
+screen 96 "Almost done."
 mount "$(part box-esp)" $mnt/esp
 if [ "$(uname -m)" = x86_64 ]; then
   grub-install --target=i386-pc --boot-directory=$mnt/esp/boot "$disk" 2>/dev/null
@@ -83,10 +102,20 @@ else
 fi
 sed "s/@NAME@/$name/g" /usr/local/lib/box-os/grub.cfg > $mnt/esp/boot/grub/grub.cfg
 grub-editenv $mnt/esp/boot/grub/grubenv create
-grub-editenv $mnt/esp/boot/grub/grubenv set saved_entry=a
+grub-editenv $mnt/esp/boot/grub/grubenv set saved_entry=a just_installed=1 # the disc starts the new system at once
+# The menu's large font, so the screen does not change size between the disc and the installed system.
+install -D -m 644 /usr/local/lib/box-os/gurtos.pf2 $mnt/esp/boot/grub/fonts/gurtos.pf2
 
 sync
 umount $mnt/a $mnt/data $mnt/esp
-say "Installed. Restarting into $name. You can remove the install disc."
-sleep 3
-systemctl reboot
+say "Installed. Restarting into $name."
+screen 100 "Done. Restarting."
+# Take the disc out first, or the machine starts from it again. A disc drive opens; a USB stick stays, and the
+# disc's own menu then starts the installed system. After the eject nothing more can be read from the disc, and
+# the live system runs from it, so the restart is a sysrq one: shell built-ins only, no program to load. Everything
+# on the new disk is already written and unmounted.
+echo 1 > /proc/sys/kernel/sysrq
+eject -i off "/dev/$disc" 2>/dev/null || true
+eject -m "/dev/$disc" 2>/dev/null || true
+echo s > /proc/sysrq-trigger
+echo b > /proc/sysrq-trigger

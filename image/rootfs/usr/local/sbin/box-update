@@ -104,7 +104,10 @@ confirm)
   where=${cur:+slot $cur}
   where=${where:-the install disc}
   where+=", build $(build /), $(cat /proc/sys/kernel/hostname)"
-  if [ -n "$health" ]; then report "up and healthy on $where: $health"
+  if [ -n "$health" ]; then
+    report "up and healthy on $where: $health"
+    # A healthy start from the disk: the install disc may now offer its menu again.
+    [ -z "$cur" ] || grub-editenv $env unset just_installed
   else report "NOT healthy after 5 minutes on $where"; fi
   [ -n "$cur" ] && [ -f $state/trial ] || { [ -n "$health" ]; exit; }
 

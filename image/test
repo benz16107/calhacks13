@@ -117,16 +117,26 @@ vm 'grep -h "^PRETTY_NAME\|^ID" /etc/os-release; hostname; grep -o "menuentry \"
 if [[ $edition == personal- ]]; then
   echo "test: GNOME's setup would make the first account an administrator. Make one the same way, through AccountsService"
   vm 'busctl call org.freedesktop.Accounts /org/freedesktop/Accounts org.freedesktop.Accounts CreateUser ssi ana "Ana Test" 1 >/dev/null &&
-    sleep 2 && mkdir -p /home/ana && echo kept > /home/ana/note && chown -R ana: /home/ana && id ana'
+    sleep 2 && cp -aT /etc/skel /home/ana && echo kept > /home/ana/note && chown -R ana: /home/ana && id ana'
   vm 'id ana | grep -q "(sudo)"' || { echo "test: FAILED, ana is not in the sudo group"; exit 1; }
   vm 'getent group sudo | cut -d: -f4' | grep -q box- && { echo "test: FAILED, a task user has sudo"; exit 1; }
   owner() { for _ in $(seq 30); do vm 'grep -q BOX_OWNER=ana /etc/systemd/system/box.service.d/personal.conf' 2>/dev/null && return; sleep 2; done
     echo "test: FAILED, the box did not learn its owner ($1)"; exit 1; }
   owner "after the first account" && echo "test: the box knows its owner: ana"
-  check() { vm "$2" >/dev/null 2>&1 || { echo "test: FAILED, $1"; exit 1; }; }
+  check() { out=$(vm "$2" 2>&1) || { echo "test: FAILED, $1"; echo "$out" | tail -n 8 | cut -c1-200; exit 1; }; }
   check "a Python error prints apport's second traceback" '! python3 -c "raise ValueError" 2>&1 | grep -q "package manager"'
   check "a computer named after the account is not renamed back" 'hostnamectl --static set-hostname ana && /usr/local/lib/box-os/box-hostname && hostnamectl --static | grep -q "^gurt-"'
   check "a name the person chose is not kept" 'hostnamectl --static set-hostname mycomputer && /usr/local/lib/box-os/box-hostname && [ "$(hostnamectl --static)" = mycomputer ]'
+  # What a stock Ubuntu desktop has (docs/ux/parity.md): printing, an app store that survives updates, accounts, zram.
+  check "no printing system, or its folders are not on the data partition" 'test -x /usr/sbin/cupsd && findmnt -n -o SOURCE /etc/cups | grep -q cups-etc && findmnt -n -o SOURCE /var/lib/cups | grep -q cups-var'
+  check "no Flathub for a new account" 'runuser -u ana -- env HOME=/home/ana flatpak remotes --user | grep -q flathub'
+  check "no app store, or a snap or deb plugin came with it" 'test -x /usr/bin/gnome-software && ! test -e /usr/bin/snap && ! dpkg -s gnome-software-plugin-deb >/dev/null 2>&1'
+  check "Ubuntu's updater is still in the menus" 'grep -q NoDisplay=true /usr/share/applications/update-manager.desktop && grep -q Prompt=never /etc/update-manager/release-upgrades'
+  check "no zram swap or oomd" 'swapon --show | grep -q zram && systemctl is-active systemd-oomd'
+  check "no online accounts or sharing" 'test -x /usr/libexec/goa-daemon && test -x /usr/libexec/gnome-remote-desktop-daemon'
+  check "no H.264 or AAC decoder" 'gst-inspect-1.0 avdec_h264 >/dev/null && gst-inspect-1.0 avdec_aac >/dev/null'
+  check "the firewall switch does not work" 'box-firewall open && nft list chain inet gurtos input | grep -q "policy accept" && box-firewall locked && nft list chain inet gurtos input | grep -q "policy drop"'
+  echo "test: kernel $(vm uname -r)"
   check "no BOX_URL" 'grep -q "^BOX_URL=http" /run/box-os/box.env'
   check "no pretty hostname" 'grep -q "^PRETTY_HOSTNAME=gurt-" /etc/machine-info'
   check "Adwaita icons outside Ubuntu's session" '! sudo -u ana env -u XDG_CURRENT_DESKTOP gsettings get org.gnome.desktop.interface icon-theme | grep -q Adwaita'

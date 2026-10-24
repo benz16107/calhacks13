@@ -71,11 +71,15 @@ deleted afterwards. To make one: `openssl genpkey -algorithm ed25519 -out update
 
 ## Start it
 
-The disc's menu says GurtOS Server or GurtOS Personal. On a machine without GurtOS it waits 5 seconds, then
-installs. On a machine that already has GurtOS on its disk it waits 30 seconds, then starts that; pick Install to
-install again. A blank disk is used straight away. A
-disk with anything on it is erased only after someone types `erase` on the screen. The installer then restarts
-into GurtOS. Server's screen opens GurtOS's setup wizard; Personal shows GNOME's welcome, which makes the first
+The disc's menu says GurtOS Server or GurtOS Personal, and that installing erases the whole disk. On a machine
+without GurtOS it counts down 5 seconds, then installs; Esc stops the countdown and opens the menu (a stray key
+does not). On a machine that already has GurtOS on its disk it waits 30 seconds, then starts that; pick Install to
+install again. A blank disk is used straight away. A disk with anything on it is erased only after someone types
+`erase` on the screen. The installer shows one screen, "Installing GurtOS Server. 37%" with a full-width bar,
+and prints one plain line if it fails. It ejects the disc before it restarts, and the system it just installed
+starts at once (`just_installed` in the disc's `grubenv`, cleared by the first healthy start from the disk). The
+installed system's own boot menu (system A, system B) stays hidden; hold Shift at power-on to see it.
+The installer then restarts into GurtOS. Server's screen opens GurtOS's setup wizard; Personal shows GNOME's welcome, which makes the first
 account, and then GurtOS Setup (see First-run setup below).
 
 **In a QEMU VM on a Linux machine** (no root): `image/test` takes the ISO from `/var/lib/box-image/out` (or
@@ -215,9 +219,25 @@ kiosk:
   and a Plymouth boot splash (`splash` is on Personal's kernel line with `plymouth.ignore-serial-consoles`, and
   `/etc/plymouth/plymouthd.conf` names the theme; Server boots without one). The login screen offers only the GurtOS
   session: Ubuntu's own sessions are removed. The image installs
-  their packages up front, so the layer's install needs no network. It does not ship a software store (GNOME
-  Software or Snap Store): software installed with `apt` is gone after the next system update (see the trade-off
-  below), so a store would install things that later disappear.
+  their packages up front, so the layer's install needs no network. The login screen and shell use GurtOS's
+  blue (`#2F64A6`, a GDM theme built from Yaru at build time) and Plymouth shows "GurtOS Personal" under the logo.
+- **An app store that survives updates.** GNOME Software with Flatpak and Flathub (a per-user remote that every new
+  account gets from `/etc/skel`). It has no snap or deb plugin, because snaps cannot be built into the image and
+  software installed with `apt` is gone after the next system update (see the trade-off below). Flatpak apps live
+  in the person's home, so they stay. `apt` still works.
+- **What a stock Ubuntu desktop has** (`docs/ux/parity.md`): printing (CUPS, with `/etc/cups` and `/var/lib/cups`
+  on the data partition), online accounts, screen and media sharing, zram swap (half the RAM, zstd) with
+  systemd-oomd, Orca, speech and braille, IBus with Chinese, Japanese, Korean and Indic input, power profiles,
+  fingerprint, Thunderbolt and firmware tools, NTFS and phone file systems, the common GNOME utilities, H.264,
+  AAC and other codecs (restricted, universe and multiverse are on), and the HWE kernel. Server has none of
+  these.
+- **Ubuntu's updater and release upgrade are hidden** (`NoDisplay`, `Prompt=never`). GurtOS's own update is the
+  way to update. `unattended-upgrades` is installed, so security updates still reach the running slot until the next GurtOS update.
+- **The firewall has a switch.** `box-firewall status|locked|open` (Personal only). `locked` is the default and
+  is the policy above. `open` loads `/usr/share/gurtos/firewall-open.nft`, which accepts incoming connections on the
+  home network (the usual desktop behaviour, so file sharing or a local web server works), except port 3000, and
+  port 7700 from outside the private networks. The
+  choice is kept in `/etc/box/firewall-mode` on the data partition.
 - **Talk to your computer** needs a local speech model (faster-whisper `base.en`, about 600 MB with its Python
   environment). It is not in the image, which would then be larger than 2 GiB: `box-voice.service` runs
   `personal/voice-setup.sh` once the network is up, retrying every minute, into `/opt/box/voice-venv` and
@@ -241,8 +261,8 @@ would write people's files into the system slot. An update also carries over peo
 **The trade-off:** A/B fits, but a desktop with sudo is a system people change. Software someone installs with
 `apt`, and any other change they make outside their home folder and the settings above, is gone after the next
 system update, because the update replaces the whole system. Their files, accounts and settings stay. That is
-how ChromeOS and Fedora Silverblue behave too. Ubuntu's own update tools (Software Updater) are still installed
-and can update the running slot, but the next GurtOS update replaces that too. Dual boot with another OS is not
+how ChromeOS and Fedora Silverblue behave too. Ubuntu's own update tools are still installed but hidden;
+they can update the running slot, but the next GurtOS update replaces that too. Dual boot with another OS is not
 supported: the installer takes the whole disk.
 
 ### The hook with `personal/`
@@ -280,6 +300,9 @@ With `image/test` in QEMU on an x86_64 Linux machine:
 - The installer also finds the disc on a USB CD drive.
 - Both editions report `PRETTY_NAME="GurtOS <edition> <version>"`, `ID=gurtos`, `ID_LIKE=ubuntu`, a `gurt-<id>`
   hostname, and boot menus that say GurtOS.
+- Personal parity (x86_64 debug build): printing's folders are on the data partition, a new account has the Flathub
+  remote, GNOME Software has no snap or deb plugin, the updater is hidden, zram and oomd run, online accounts and
+  remote desktop are installed, H.264 and AAC decoders are present, and `box-firewall` switches both ways.
 - Personal: installs on a blank 40 GB disk and shows GNOME's first-boot welcome. An account made the way GNOME's
   setup makes one (AccountsService, administrator) lands in `sudo`; no task user does. The box learns its owner,
   and after an update the account, its sudo and its files are still there.

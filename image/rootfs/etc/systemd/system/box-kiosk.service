@@ -16,6 +16,8 @@ RuntimeDirectoryMode=0700
 Environment=XDG_RUNTIME_DIR=/run/kiosk LIBSEAT_BACKEND=seatd
 # Virtual machines often have no GPU. These keep WebKit on its simplest drawing path.
 Environment=WEBKIT_DISABLE_DMABUF_RENDERER=1 WEBKIT_DISABLE_COMPOSITING_MODE=1
+# The boot splash keeps its last frame on the screen until the kiosk draws its first one.
+ExecStartPre=-/usr/bin/plymouth quit --retain-splash
 ExecStart=/usr/bin/cage -d -- /usr/bin/python3 /usr/local/lib/box-os/kiosk.py http://127.0.0.1:7700/screen
 Restart=always
 RestartSec=2

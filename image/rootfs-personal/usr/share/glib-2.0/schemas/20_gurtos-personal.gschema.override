@@ -1,7 +1,7 @@
-# Ubuntu's look for every session and app. Ubuntu keys these to its "ubuntu" session only (10_ubuntu-settings),
+# Ubuntu's look, in GurtOS's blue, for every session and app, GNOME's first-boot setup included. Ubuntu keys these to its "ubuntu" session only (10_ubuntu-settings),
 # which a program started without that session's environment (Files opened by D-Bus) does not see.
 [org.gnome.desktop.interface]
-gtk-theme = 'Yaru'
+gtk-theme = 'Yaru-blue'
 icon-theme = 'Yaru'
 cursor-theme = 'Yaru'
 

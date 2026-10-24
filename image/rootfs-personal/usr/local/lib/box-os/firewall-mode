@@ -1,0 +1,5 @@
+#!/bin/sh
+# nftables.service runs this after loading /etc/nftables.conf. In "open" mode it replaces GurtOS's table with the
+# open variant. The mode lives in /etc/box, on the data partition, so an update keeps it.
+[ "$(cat /etc/box/firewall-mode 2>/dev/null)" = open ] && nft -f /usr/share/gurtos/firewall-open.nft
+exit 0

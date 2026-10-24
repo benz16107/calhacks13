@@ -77,12 +77,17 @@ exec 8>"$work.lock"
 flock -n 8 || { say "another build of $name is running; waiting for it"; flock 8; }
 
 # The whole OS. Everything else on the image comes from core/setup.sh, core/install.sh and image/rootfs/.
+# Server keeps Ubuntu's general kernel; a laptop needs the newer one (hardware from the last year or two).
+kernel=linux-image-generic
+[[ $edition == personal ]] && kernel=linux-image-generic-hwe-24.04
 base_packages="systemd systemd-sysv systemd-resolved systemd-timesyncd libpam-systemd dbus udev kmod passwd
-  linux-image-generic initramfs-tools zstd $grub grub2-common
+  $kernel initramfs-tools zstd $grub grub2-common
   e2fsprogs dosfstools gdisk squashfs-tools util-linux procps iproute2
-  nftables ripgrep rsync curl ca-certificates xz-utils openssl age"
+  nftables ripgrep rsync curl ca-certificates xz-utils openssl age eject"
+components="main universe"
+[[ $edition == personal ]] && components="main restricted universe multiverse" # codecs and drivers people install later
 if [[ $edition == server ]]; then
-  packages="$base_packages qrencode
+  packages="$base_packages qrencode plymouth
   cage seatd python3-gi gir1.2-webkit2-4.1 libegl-mesa0 libgl1-mesa-dri fonts-dejavu-core"
 else
   # Ubuntu's GNOME desktop without snaps (so GNOME Web instead of Firefox), GNOME's first-boot account setup,
@@ -97,11 +102,23 @@ else
   gnome-shell-extension-appindicator python3-nautilus
   papirus-icon-theme bibata-cursor-theme gnome-console plymouth plymouth-label plymouth-theme-spinner qrencode
   python3-venv espeak-ng alsa-utils libnotify-bin
-  dconf-cli librsvg2-common"
+  dconf-cli librsvg2-common
+  cups cups-browsed cups-filters cups-pk-helper ipp-usb system-config-printer-udev avahi-daemon bluez-cups printer-driver-all
+  flatpak gnome-software gnome-software-plugin-flatpak
+  gnome-online-accounts gnome-online-accounts-gtk evolution-data-server
+  gnome-remote-desktop rygel gnome-user-share
+  systemd-zram-generator systemd-oomd unattended-upgrades
+  orca brltty speech-dispatcher speech-dispatcher-espeak-ng ibus ibus-gtk3 ibus-gtk4 ibus-libpinyin ibus-table ibus-m17n
+  gnome-accessibility-themes
+  power-profiles-daemon iio-sensor-proxy switcheroo-control fprintd libpam-fprintd bolt fwupd modemmanager usbmuxd ntfs-3g
+  gvfs-backends mesa-vulkan-drivers gnome-power-manager rtkit
+  gnome-disk-utility baobab gnome-logs gnome-clocks gnome-characters gnome-font-viewer seahorse gnome-startup-applications
+  gstreamer1.0-libav gstreamer1.0-plugins-bad gstreamer1.0-plugins-ugly gstreamer1.0-vaapi"
 fi
 [[ -f $src/image/.ssh-key ]] && packages+=" openssh-server" # debug builds only
 
 host_tools="mmdebstrap squashfs-tools xorriso mtools grub-common"
+[[ $edition == personal ]] && host_tools+=" gettext libglib2.0-bin libglib2.0-dev-bin" # the first-boot text and GDM theme
 [[ $arch == x86_64 ]] && host_tools+=" grub-pc-bin grub-efi-amd64-bin" # so x86 builds need an x86 build VM
 [[ $arch == arm64 && $(uname -m) != aarch64 ]] && host_tools+=" qemu-user-static"
 missing=$(for p in $host_tools; do dpkg -s "$p" >/dev/null 2>&1 || echo "$p"; done)
@@ -147,7 +164,7 @@ if [[ ! -d $base ]]; then
     --dpkgopt='path-exclude=/usr/share/doc/*' --dpkgopt='path-include=/usr/share/doc/*/copyright' \
     --dpkgopt='path-exclude=/usr/share/man/*' \
     noble "$work/base.tmp" \
-    "deb $mirror noble main universe" "deb $mirror noble-updates main universe" "deb $mirror noble-security main universe"
+    "deb $mirror noble $components" "deb $mirror noble-updates $components" "deb $mirror noble-security $components"
   root=$work/base.tmp
   mount_root "$root"
   mkdir -p "$root/tmp/core" && cp core/setup.sh "$root/tmp/core/"
@@ -185,7 +202,7 @@ if [[ $edition == personal ]]; then
 fi
 
 if [[ $edition == server ]]; then
-  rsync -a "$src/image/rootfs/" "$root/"
+  rsync -a "$src/image/rootfs/" "$src/image/rootfs-server/" "$root/"
 else
   # The shared files, without the Server's screen and networking, then the Personal edition's own.
   rsync -a --exclude /etc/fstab --exclude /etc/systemd/network/ --exclude /etc/systemd/system/box-kiosk.service \
@@ -193,6 +210,80 @@ else
   rsync -a "$src/image/rootfs-personal/" "$root/"
 fi
 mkdir -p "$root/etc/box-os"
+# The boot menu's large font, from the same DejaVu Sans as the screens (one file for the disc and the installed disk).
+grub-mkfont -s 28 -o "$root/usr/local/lib/box-os/gurtos.pf2" "$root/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
+
+if [[ $edition == personal ]]; then
+  # GNOME's first-boot setup ends on "All done! GurtOS is ready to be used." and a Start button, before the GurtOS
+  # setup that follows. gettext also looks in a catalog for en_US, so say what happens next. The ids are the program's.
+  po=$work/initial-setup.po
+  cat > "$po" <<'POEOF'
+msgid ""
+msgstr "Content-Type: text/plain; charset=UTF-8\n"
+
+msgid "All done!"
+msgstr "Almost there"
+
+msgid "%s is ready to be used."
+msgstr "Your account is ready. One more step: set up %s."
+
+msgid "_Start Using %s"
+msgstr "_Continue"
+
+msgid "Setup Complete"
+msgstr "Your account"
+POEOF
+  install -d "$root/usr/share/locale/en_US/LC_MESSAGES"
+  msgfmt -o "$root/usr/share/locale/en_US/LC_MESSAGES/gnome-initial-setup.mo" "$po"
+
+  # The login screen and the first-boot setup use Yaru's shell theme: an orange accent and a flat grey backdrop.
+  # Make a copy with GurtOS's blue (#2F64A6, a lighter and a darker step) and the wallpaper colour (#27313F), and make
+  # it the theme GDM and the default shell use. The GurtOS session names its own theme and is not touched.
+  g=$root/usr/share/gnome-shell/theme/Yaru/gnome-shell-theme.gresource
+  t=$work/gdm-theme
+  rm -rf "$t"; mkdir -p "$t/res"
+  gresource list "$g" | while read -r r; do
+    f=$t/res/${r#/org/gnome/shell/theme/}; mkdir -p "$(dirname "$f")"; gresource extract "$g" "$r" > "$f"
+  done
+  find "$t/res" -name '*.css' -exec sed -i -e 's/#e95420/#2f64a6/Ig; s/#ef8661/#6d92c1/Ig; s/#d34615/#265085/Ig' {} +
+  find "$t/res" -name '*.css' -exec perl -0pi -e 's/(#lockDialogGroup \{\s*background-color: )#222222/${1}#27313f/g' {} +
+  grep -q 2f64a6 "$t/res/Yaru/gnome-shell.css" || { say "the GDM theme has no accent colour to change"; exit 1; }
+  { echo '<gresources><gresource prefix="/org/gnome/shell/theme">'
+    (cd "$t/res" && find . -type f | sed 's|^\./||; s|.*|<file>&</file>|')
+    echo '</gresource></gresources>'; } > "$t/theme.gresource.xml"
+  install -d "$root/usr/share/gnome-shell/theme/GurtOS"
+  glib-compile-resources --sourcedir="$t/res" --target="$root/usr/share/gnome-shell/theme/GurtOS/gnome-shell-theme.gresource" "$t/theme.gresource.xml"
+  in_root update-alternatives --install /usr/share/gnome-shell/gdm-theme.gresource gdm-theme.gresource \
+    /usr/share/gnome-shell/theme/GurtOS/gnome-shell-theme.gresource 30
+  in_root update-alternatives --install /usr/share/gnome-shell/gnome-shell-theme.gresource gnome-shell-theme.gresource \
+    /usr/share/gnome-shell/theme/GurtOS/gnome-shell-theme.gresource 30
+fi
+if [[ $edition == personal ]]; then
+  # Ubuntu's Software Updater, Software & Updates and the update notifiers offer a release upgrade (to a different
+  # Ubuntu) and know nothing of GurtOS's whole-system updates. gnome-software depends on software-properties-gtk, so
+  # the programs stay installed and are hidden from menus, search and login.
+  for f in update-manager software-properties-gtk software-properties-drivers software-properties-livepatch; do
+    [[ -f $root/usr/share/applications/$f.desktop ]] && sed -i '/^\[Desktop Entry\]/a NoDisplay=true' "$root/usr/share/applications/$f.desktop"
+  done
+  for f in update-notifier ubuntu-advantage-notification gnome-software-service; do
+    [[ -f $root/etc/xdg/autostart/$f.desktop ]] && echo 'Hidden=true' >> "$root/etc/xdg/autostart/$f.desktop"
+  done
+  # About shows the distributor's logo from here (Ubuntu's patch); the GurtOS wordmark replaces it (rootfs-personal).
+  sed -i 's/^DISTRIB_DESCRIPTION=.*/DISTRIB_DESCRIPTION="GurtOS Personal"/' "$root/etc/lsb-release"
+  # Flathub, as each person's own installation (under their home, which is on the data partition), so an app they
+  # install survives a system update. New accounts copy this from /etc/skel.
+  curl -fsSL https://dl.flathub.org/repo/flathub.flatpakrepo -o "$root/tmp/flathub.flatpakrepo"
+  install -d "$root/etc/skel"
+  in_root env HOME=/etc/skel flatpak remote-add --user --if-not-exists flathub /tmp/flathub.flatpakrepo
+  [[ -f $root/etc/skel/.local/share/flatpak/repo/config ]] || { say "no Flathub remote for new accounts"; exit 1; }
+  # No snaps and no apt store: an install through GNOME Software must go to Flathub, never to a deb or snap.
+  if in_root dpkg -s snapd >/dev/null 2>&1 || in_root dpkg -s gnome-software-plugin-snap >/dev/null 2>&1 \
+     || in_root dpkg -s gnome-software-plugin-deb >/dev/null 2>&1; then
+    say "a snap or deb plugin came in with GNOME Software"; exit 1
+  fi
+  # the printing system, and the cups folders' mount points (rootfs-personal/etc/fstab)
+  in_root test -x /usr/sbin/cupsd
+fi
 key=${BOX_UPDATE_KEY:-$top/update-signing.key} # never inside the image
 [[ -n ${BOX_UPDATE_KEY:-} || -f $key ]] || (umask 077; openssl genpkey -algorithm ed25519 -out "$key")
 openssl pkey -in "$key" -noout -text 2>/dev/null | grep -q '^ED25519 Private-Key' ||
@@ -234,7 +325,12 @@ if [[ $edition == server ]]; then in_root bash -euo pipefail -c '
   systemctl enable nftables systemd-networkd systemd-resolved seatd box-firstboot box-droid box-kiosk box-confirm box-install >/dev/null 2>&1
   # No login prompt anywhere: the screen is the box, and no human account exists.
   systemctl mask getty@.service serial-getty@.service autovt@.service console-getty.service >/dev/null 2>&1
+  # The boot splash. initramfs-tools takes the theme from this alternative, so it must be set before the rebuild.
+  update-alternatives --install /usr/share/plymouth/themes/default.plymouth default.plymouth \
+    /usr/share/plymouth/themes/gurtos-server/gurtos-server.plymouth 200 >/dev/null
+  update-alternatives --set default.plymouth /usr/share/plymouth/themes/gurtos-server/gurtos-server.plymouth
   update-initramfs -u -k all >/dev/null
+  lsinitramfs /boot/initrd.img-* | grep -q gurtos-server/logo.png
   cd /boot
   ln -sf "$(ls vmlinuz-* | sort -V | tail -1)" vmlinuz
   ln -sf "$(ls initrd.img-* | sort -V | tail -1)" initrd.img
@@ -249,9 +345,8 @@ if [[ $edition == personal ]]; then in_root bash -euo pipefail -c '
   update-locale LANG=en_US.UTF-8
   # Only the GurtOS session at the login screen: the Ubuntu one has no GurtOS top bar.
   rm -f /usr/share/wayland-sessions/ubuntu*.desktop /usr/share/xsessions/ubuntu*.desktop
-  # The boot splash (personal/theme sets the GurtOS Plymouth theme; update-initramfs below puts it in place).
-  # Plymouth stays in text mode while a serial console is listed, unless told to ignore it.
-  sed -i "s/^set opts=\"rw quiet /set opts=\"rw quiet splash plymouth.ignore-serial-consoles /" /usr/local/lib/box-os/grub.cfg
+  # The boot splash: personal/theme sets the theme, /etc/plymouth/plymouthd.conf names it, and update-initramfs
+  # below puts it in place. `splash` is on the kernel line in grub.cfg.
   grep -q " splash " /usr/local/lib/box-os/grub.cfg
   systemctl enable box-voice
   systemctl enable nftables box-firstboot box-droid box-confirm box-install box-owner.service box-owner.path >/dev/null 2>&1
@@ -304,7 +399,8 @@ rm -rf "$iso"; mkdir -p "$iso/boot/grub" "$iso/box"
 cp -L "$root/boot/vmlinuz" "$root/boot/initrd.img" "$iso/boot/"
 ln "$sq" "$iso/box/root.sqfs"
 cp "$sq.sha256" "$sq.sig" "$iso/box/"
-sed "s/@NAME@/GurtOS $Edition $version/g" "$src/image/iso-grub.cfg" > "$iso/boot/grub/grub.cfg"
+sed "s/@NAME@/GurtOS $Edition/g; s/@VERSION@/$version/g" "$src/image/iso-grub.cfg" > "$iso/boot/grub/grub.cfg"
+install -D -m 644 "$root/usr/local/lib/box-os/gurtos.pf2" "$iso/boot/grub/fonts/gurtos.pf2"
 dirs=()
 [[ $arch == arm64 ]] && dirs=(-d "$root/usr/lib/grub/arm64-efi")
 grub-mkrescue "${dirs[@]}" -o "$out/$product.iso" "$iso" -volid GURTOS -iso-level 3 2>&1 | grep -v '^xorriso : UPDATE' || true

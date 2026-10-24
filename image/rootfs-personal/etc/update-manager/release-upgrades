@@ -1,0 +1,3 @@
+# GurtOS updates as a whole system (box-update), so Ubuntu's own release upgrade never applies here.
+[DEFAULT]
+Prompt=never
