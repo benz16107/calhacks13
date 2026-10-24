@@ -18,6 +18,22 @@ const view = (ws: string, file: string) => {
 };
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+// SpacetimeDB over HTTP, the way a phone with its own identity sees it.
+const STDB = 'http://127.0.0.1:3000';
+const DB = `box-demo-${run}`;
+let phoneToken = '';
+async function stdb(path: string, body: string) {
+  phoneToken ||= (await (await fetch(`${STDB}/v1/identity`, { method: 'POST' })).json()).token;
+  const r = await fetch(`${STDB}/v1/database/${DB}${path}`, { method: 'POST', headers: { authorization: `Bearer ${phoneToken}`, 'content-type': 'application/json' }, body });
+  if (!r.ok) throw new Error(`SpacetimeDB ${path}: ${r.status} ${await r.text()}`);
+  return r;
+}
+async function stdbRows(sql: string): Promise<Record<string, any>[]> {
+  const [{ schema, rows }] = await (await stdb('/sql', sql)).json();
+  const names: string[] = schema.elements.map((e: { name: { some: string } }) => e.name.some);
+  return rows.map((row: unknown[]) => Object.fromEntries(names.map((n, i) => [n, row[i]])));
+}
+
 let box: ReturnType<typeof spawn> | undefined;
 
 async function startBox() {
@@ -26,7 +42,7 @@ async function startBox() {
   box = spawn(process.execPath, [...process.execArgv, new URL('./box.ts', import.meta.url).pathname], {
     detached: true,
     stdio: ['ignore', out, out],
-    env: { ...process.env, BOX_HOME: HOME, BOX_PORT: '0', BOX_VAULT: path.join(HOME, 'vault.env') },
+    env: { ...process.env, BOX_HOME: HOME, BOX_PORT: '0', BOX_VAULT: path.join(HOME, 'vault.env'), BOX_STDB_DB: DB },
   });
   for (let i = 0; i < 100; i++) {
     if (await api('GET', '/health').catch(() => undefined)) return;
@@ -130,7 +146,31 @@ await moment('moment 1: undo one task', async () => {
 // ---------- moments 2 to 4 ----------
 
 await moment('moment 2: the booby-trapped page');
-await moment('moment 3: a pause for your OK');
+await moment('moment 3: a pause for your OK', async () => {
+  workspace('shop', {});
+  const base = { workspace: 'shop', worker: 'fake', source: 'demo' };
+  const P = await api<Task>('POST', '/tasks', {
+    ...base,
+    title: 'Buy a GPU hour',
+    tools: ['example.spend'],
+    budgetCents: 500,
+    prompt: ['call example.spend {"cents":800,"on":"a GPU hour"}', 'write bought.txt yes'].join('\n'),
+  });
+  const Q = await api<Task>('POST', '/tasks', { ...base, title: 'Other work', prompt: 'sleep 1\nwrite other.txt done' });
+
+  const ask = await waitFor('the request to reach SpacetimeDB', async () => (await stdbRows(`SELECT * FROM approval WHERE task = '${P.id}'`))[0]);
+  const [live] = await stdbRows(`SELECT * FROM task WHERE id = '${P.id}'`);
+  check(ask.state === 'pending' && live?.state === 'waiting', `P stopped over budget, and SpacetimeDB shows it live: "${ask.question}"`);
+  await settled([Q.id]);
+  check((await task(P.id)).state === 'waiting', 'another task kept running and finished while P waited');
+
+  await stdb('/call/answer', JSON.stringify([ask.id, true, 'phone'])); // what the phone's Approve button does
+  await settled([P.id]);
+  const { task: p, events } = await api<{ task: Task; events: LogEvent[] }>('GET', `/tasks/${P.id}`);
+  const answered = events.find((e) => e.type === 'approval.answered');
+  check(answered?.type === 'approval.answered' && answered.by === 'phone', 'the OK from the phone came back through SpacetimeDB into the log');
+  check(p.costCents === 800 && view('shop', 'bought.txt') === 'yes', 'P carried on, spent $8.00 (test money) and finished');
+});
 await moment('moment 4: pull the plug');
 
 // ---------- each track's own steps: tracks/<name>/demo.ts ----------
@@ -154,6 +194,7 @@ await sleep(200);
 const mounts = fs.readFileSync('/proc/self/mountinfo', 'utf8').split('\n').map((l) => l.split(' ')[4]).filter((m) => m?.startsWith(HOME + '/'));
 for (const m of mounts) execFileSync('umount', ['-l', m]);
 for (const u of users) spawnSync('userdel', [u]); // most are gone already
+spawnSync('spacetime', ['delete', '--server', 'local', '-y', DB]);
 if (failed) console.log(`\nkept ${HOME} for a look (box.log, log.jsonl, tasks/*/worker.log)`);
 else fs.rmSync(HOME, { recursive: true, force: true });
 

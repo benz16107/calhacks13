@@ -29,3 +29,33 @@ if ! /usr/local/bin/droid --version 2>/dev/null | grep -q "$DROID_VERSION"; then
   rm -f "$tmp"
 fi
 droid --version
+
+# SpacetimeDB: live task status and approvals for the portal and phone. The box publishes its module at boot.
+if ! command -v spacetime >/dev/null; then
+  curl -sSf https://install.spacetimedb.com | HOME=/root sh -s -- --yes >/dev/null
+  ln -sf /root/.local/bin/spacetime /usr/local/bin/spacetime
+fi
+unit=/etc/systemd/system/spacetimedb.service
+want=$(cat <<'UNIT'
+[Unit]
+Description=SpacetimeDB for the box
+After=network.target
+StartLimitIntervalSec=0
+
+[Service]
+Environment=HOME=/root
+ExecStart=/usr/local/bin/spacetime start --non-interactive --data-dir /var/lib/spacetimedb --listen-addr 0.0.0.0:3000
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+)
+if [ "$(cat $unit 2>/dev/null)" != "$want" ]; then
+  printf '%s\n' "$want" > $unit
+  systemctl daemon-reload
+  systemctl enable spacetimedb.service >/dev/null 2>&1
+  systemctl restart spacetimedb.service
+fi
+spacetime --version | head -1

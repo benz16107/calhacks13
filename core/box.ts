@@ -7,6 +7,7 @@ import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
 import type { App, Approval, Box, Ctx, LogEvent, LogReader, ModelJob, NewEvent, Route, Task, TaskSpec, TaskState, Tool, Track } from './contract.ts';
+import { Live } from './live.ts';
 import { Log, apply, canMove, doneLayers, fold, type State } from './log.ts';
 import * as sandbox from './sandbox.ts';
 import { HOME, dirs } from './sandbox.ts';
@@ -60,10 +61,22 @@ class Core {
   workers = new Map<string, ChildProcess>();
   brokers = new Map<string, http.Server>();
   waiters = new Map<string, ((approved: boolean) => void)[]>();
+  live = new Live({
+    tasks: () => [...this.state.tasks.values()],
+    approvals: () => [...this.state.approvals.values()],
+    answer: (id, approved, by) => this.answer(id, approved, by),
+  });
 
   write(e: NewEvent): LogEvent {
     const full = this.log.append(e);
     apply(this.state, full);
+    if (full.type === 'task.created' || full.type === 'task.state' || full.type === 'cost') {
+      const t = full.task && this.state.tasks.get(full.task);
+      if (t) this.live.task(t);
+    }
+    if (full.type === 'approval.asked' || full.type === 'approval.answered') {
+      this.live.approval(this.state.approvals.get(full.type === 'approval.asked' ? full.approval.id : full.id)!);
+    }
     for (const l of this.listeners) {
       try {
         l(full);
@@ -373,6 +386,7 @@ class Core {
   );
 
   async boot() {
+    this.live.start();
     const tracks = await this.loadTracks();
     for (const ws of fs.readdirSync(path.join(HOME, 'workspaces'))) this.refreshView(ws);
     // Resume what was going when the box went down. Approvals still pending stay pending.
