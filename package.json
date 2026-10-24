@@ -12,7 +12,7 @@
   "scripts": {
     "box": "node --experimental-strip-types --disable-warning=ExperimentalWarning core/box.ts",
     "check": "tsc -p .",
-    "test": "node --experimental-strip-types --disable-warning=ExperimentalWarning --test core/*.test.ts"
+    "test": "node --experimental-strip-types --disable-warning=ExperimentalWarning --test --test-force-exit 'core/*.test.ts' 'tracks/*/*.test.ts'"
   },
   "devDependencies": {
     "@types/node": "^22.20.5",
