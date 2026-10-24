@@ -4,7 +4,8 @@ description: GurtOS comes in three editions. GurtOS Server is an always-on box, 
 ---
 
 GurtOS has one core: the service that runs tasks as separate users, keeps the vault, and writes the action log.
-The editions put that core on different machines for different people.
+The editions put that core on different machines for different people. For the jobs each one fits, see
+[Use cases by edition](/introduction/use-cases/).
 
 ## GurtOS Server
 
@@ -69,6 +70,7 @@ applies to the others unless it says otherwise.
 
 ## Related
 
+- [Use cases by edition](/introduction/use-cases/)
 - [What is GurtOS?](/introduction/overview/)
 - [Install GurtOS Server](/get-started/install-server/)
 - [Install GurtOS Personal](/get-started/install-personal/)

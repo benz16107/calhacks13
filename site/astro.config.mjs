@@ -69,7 +69,7 @@ export default defineConfig({
         { label: 'Download', link: '/download/' },
         {
           label: 'Introduction',
-          items: ['introduction/overview', 'introduction/editions'],
+          items: ['introduction/overview', 'introduction/editions', 'introduction/use-cases'],
         },
         {
           label: 'Get started',

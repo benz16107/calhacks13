@@ -5,6 +5,21 @@ description: The layers that keep an agent task inside its limits on GurtOS, wha
 
 GurtOS assumes the agent in a task can be wrong or can be turned against you, by a bad instruction, a buggy plan or a web page with hidden instructions. So it does not rely on the agent's judgement or on its own permission prompts. Each task runs with high autonomy inside limits the operating system enforces. This page lists those limits, layer by layer, and what each one stops.
 
+## Why keys never reach an agent
+
+Agent tools often keep API keys and tokens where the agent itself, or any program running as the same user, can read
+them: in an environment variable, a `.env` file or the agent's own configuration folder. Anything that can read that
+file can take the key. That includes the agent after it reads a page with hidden instructions, a malicious plugin, and
+ordinary malware. In February 2026, researchers reported the first case of infostealer malware taking an AI agent's
+configuration folder from a victim's machine, including a gateway token and the device's private key
+([BleepingComputer](https://www.bleepingcomputer.com/news/security/infostealer-malware-found-stealing-openclaw-secrets-for-first-time/)).
+The malware was not aimed at that agent: it collected any file that looked like it held a token or a private key.
+
+GurtOS never gives a key to an agent. Keys live in a vault that only root can read. A task runs as its own Linux user,
+holds placeholders, and asks for work by tool name; the box makes the call with the key and returns only the
+result. Model calls go through the box's proxy, which adds the key on the way out. So a task has no key to leak, to
+send to a web page, or to leave in a file for malware to find. The layers below are how that holds.
+
 For what GurtOS does and does not defend against, read the [threat model](/security/threat-model/). For a picture of the zones, read [trust boundaries](/security/trust-boundaries/).
 
 ## 1. Each task is its own Linux user
