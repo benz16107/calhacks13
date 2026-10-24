@@ -1,47 +1,34 @@
 ---
 import { Image } from 'astro:assets';
 import Landing from '../layouts/Landing.astro';
-import { NAME, REPO } from '../product.ts';
+import { NAME, REPO, LICENSE_NAME } from '../product.ts';
 import server from '../assets/home/server-screen.png';
 import personal from '../assets/home/personal-everyday.png';
 import businessDesktop from '../assets/home/business-desktop.png';
 import businessPhone from '../assets/home/business-phone.png';
 
 const RELEASE = `${REPO}/releases/download/v0.1.0-preview`;
-const SUMS: Record<string, string> = {
-  'gurtos-server-x86_64.iso': '1676fa7183f35b3ab7b5a9c695adb6d795efc0925aef32c314c884ba42d08c0a',
-  'gurtos-server-arm64.iso': '07e3daca006faf892b9a3c2574536303888f36dbf29f38c8651f6a195b712377',
-  'gurtos-personal-x86_64.iso': '0ba7ff5caa1bcc73073c94435131b48434a2128a46576320878ea77b2616bca3',
-  'gurtos-personal-arm64.iso': '4d78deb9c879b9cc5325208d2e9e18c1d63e0620a7ebbbd2a559449ba8e7bbce',
-};
-const isos = (edition: string, x86: string, arm: string) => [
-  { arch: 'x86_64', size: x86, file: `gurtos-${edition}-x86_64.iso`, for: 'Intel or AMD PC, server or cloud VM' },
-  { arch: 'arm64', size: arm, file: `gurtos-${edition}-arm64.iso`, for: 'Apple silicon Mac in UTM or Parallels, or an arm64 server' },
+const isos = (edition: string) => [
+  { arch: 'x86_64', label: 'x86_64', file: `gurtos-${edition}-x86_64.iso` },
+  { arch: 'arm64', label: 'arm64, Apple silicon', file: `gurtos-${edition}-arm64.iso` },
 ];
-const editions = [
-  { id: 'server', title: `${NAME} Server`, files: isos('server', '1.37 GB', '1.36 GB') },
-  { id: 'personal', title: `${NAME} Personal`, files: isos('personal', '1.78 GB', '1.77 GB') },
+const core = [
+  { label: 'Undo one task', line: 'Each task works on its own layer.', href: '/docs/concepts/workspaces-and-layers/' },
+  { label: 'Keys stay out of reach', line: 'Tasks never hold a secret.', href: '/docs/concepts/vault-and-broker/' },
+  { label: 'Pause for your OK', line: 'Spending waits for you.', href: '/docs/concepts/approvals-and-budgets/' },
+  { label: 'Every step logged', line: 'One action log, kept on disk.', href: '/docs/concepts/action-log/' },
 ];
-const sums = (id: string) => isos(id, '', '').map((f) => `${SUMS[f.file]}  ${f.file}`).join('\n');
 ---
 
 <Landing title={NAME} description={`${NAME} is an operating system where AI agents do real work with real access and never hold your keys. Download GurtOS Server or GurtOS Personal.`}>
   <div class="wrap">
     <section class="intro" aria-labelledby="home-h">
-      <p class="eyebrow">{NAME} v0.1.0-preview · open source under Apache 2.0</p>
-      <div class="intro-grid">
-        <h1 id="home-h">An operating system where AI agents work safely</h1>
-        <div>
-          <p class="lead">
-            Agents get real access to files, the web and money, and never hold your keys. Every task runs as its own
-            Linux user, in its own copy of your files, and you can undo any one of them.
-          </p>
-          <p class="actions">
-            <a class="btn primary" href="/download/">Download {NAME}</a>
-            <a class="btn" href="/docs/introduction/overview/">What is {NAME}?</a>
-          </p>
-        </div>
-      </div>
+      <h1 id="home-h">An operating system where AI agents work safely</h1>
+      <p class="lead">Agents never hold your keys. Each task runs on its own copy of your files.</p>
+      <p class="actions">
+        <a class="btn primary" href="/download/">Download {NAME}</a>
+        <a class="btn" href="/docs/">Docs</a>
+      </p>
     </section>
   </div>
 
@@ -55,44 +42,31 @@ const sums = (id: string) => isos(id, '', '').map((f) => `${SUMS[f.file]}  ${f.f
     <section id="editions" aria-labelledby="editions-h">
       <h2 id="editions-h" class="section-h">One core, three editions</h2>
 
-      {editions.map((e) => (
-        <article class="edition" id={e.id}>
-          <figure class="media">
-            {e.id === 'server' ? (
-              <Image src={server} alt="The GurtOS Server box screen: what needs you, what is running, what was spent today, and a dock of apps." widths={[720, 1440]} sizes="(max-width: 900px) 100vw, 640px" />
-            ) : (
-              <Image src={personal} alt="GurtOS Personal in everyday use: mail, a browser and Files open, while the GurtOS app and a notification ask to approve a $42.10 grocery order." widths={[720, 1440]} sizes="(max-width: 900px) 100vw, 640px" />
-            )}
-          </figure>
-          <div class="text">
-            <h3><span class={`dot ${e.id}`} aria-hidden="true"></span>{e.title}</h3>
-            {e.id === 'server' ? (
-              <>
-                <p>An always-on box at home or in the cloud. Agents work all day, and you watch from the box's own screen, a browser or your phone. There is no desktop and no user with sudo.</p>
-                <p><strong>For</strong> anyone who wants agents working 24/7 on a machine they own, or a cloud instance.</p>
-              </>
-            ) : (
-              <>
-                <p>Your own laptop on GNOME, with your own account. Agents work beside you as separate users, on copies of your folders, and nothing changes until you choose Keep.</p>
-                <p><strong>For</strong> people who want an AI computer of their own, for files, shopping and everyday errands.</p>
-              </>
-            )}
-            <div class="dl">
-              {e.files.map((f) => (
-                <a class="iso" href={`${RELEASE}/${f.file}`} data-arch={f.arch}>
-                  <span class="iso-main">Download for {f.arch}</span>
-                  <span class="iso-sub">{f.size} · {f.for}</span>
-                </a>
-              ))}
-            </div>
-            <details class="sums">
-              <summary>SHA-256 checksums and signature</summary>
-              <pre>{sums(e.id)}</pre>
-              <p>The checksum file is signed. <a href="/download/#verify-it">How to verify it</a>.</p>
-            </details>
+      <article class="edition" id="server">
+        <figure class="media">
+          <Image src={server} alt="The GurtOS Server box screen: what needs you, what is running, what was spent today, and a dock of apps." widths={[720, 1440]} sizes="(max-width: 900px) 100vw, 640px" />
+        </figure>
+        <div class="text">
+          <h3><span class="dot server" aria-hidden="true"></span>{NAME} Server</h3>
+          <p>An always-on agent box, at home or in the cloud.</p>
+          <div class="dl">
+            {isos('server').map((f) => <a class="btn" href={`${RELEASE}/${f.file}`} data-arch={f.arch}>Download {f.label}</a>)}
           </div>
-        </article>
-      ))}
+        </div>
+      </article>
+
+      <article class="edition" id="personal">
+        <figure class="media">
+          <Image src={personal} alt="GurtOS Personal in everyday use: mail, a browser and Files open, while the GurtOS app and a notification ask to approve a $42.10 grocery order." widths={[720, 1440]} sizes="(max-width: 900px) 100vw, 640px" />
+        </figure>
+        <div class="text">
+          <h3><span class="dot personal" aria-hidden="true"></span>{NAME} Personal</h3>
+          <p>Your own laptop, with agents working beside you.</p>
+          <div class="dl">
+            {isos('personal').map((f) => <a class="btn" href={`${RELEASE}/${f.file}`} data-arch={f.arch}>Download {f.label}</a>)}
+          </div>
+        </div>
+      </article>
 
       <article class="edition" id="business">
         <figure class="media duo">
@@ -101,37 +75,21 @@ const sums = (id: string) => isos(id, '', '').map((f) => `${SUMS[f.file]}  ${f.f
         </figure>
         <div class="text">
           <h3><span class="dot business" aria-hidden="true"></span>{NAME} Business</h3>
-          <p>One box shared by a team. People have roles, approvals go to whoever the rules allow, and an audit with CSV export and a kill switch show and stop what agents do. Shown on a made-up company, with sandbox data.</p>
-          <p><strong>For</strong> a company that wants several people to supervise shared agents.</p>
-          <div class="note">
-            <p><strong>There is no Business download.</strong> Install Server or Personal above, then turn Business on from the owner's screen.</p>
-            <p><a class="btn" href="/docs/guides/turn-on-business/">How to turn on Business</a></p>
-          </div>
+          <p>A team's shared box, turned on from Server or Personal.</p>
+          <div class="dl"><a class="btn" href="/docs/guides/turn-on-business/">Turn on Business</a></div>
         </div>
       </article>
+      <p class="more"><a href="/download/">Checksums, signatures and install steps</a></p>
     </section>
 
     <section aria-labelledby="core-h">
       <h2 id="core-h" class="section-h">What the core does</h2>
       <ul class="core">
-        <li><a href="/docs/concepts/workspaces-and-layers/">Undo one task</a> Each task's changes are a separate layer. Undo removes one and leaves the rest.</li>
-        <li><a href="/docs/concepts/vault-and-broker/">Keep keys out of reach</a> Tasks never hold a secret. Tools that need a key run inside the core.</li>
-        <li><a href="/docs/concepts/network-policy/">Limit the network</a> A task reaches only the hosts it names. The rest is refused and logged.</li>
-        <li><a href="/docs/concepts/approvals-and-budgets/">Pause for your OK</a> Spending above a budget waits for you, on the screen or your phone.</li>
-        <li><a href="/docs/concepts/action-log/">Record everything</a> One append-only log holds every step, tool call, approval and cost.</li>
-        <li><a href="/docs/concepts/resume-after-power-loss/">Survive a power cut</a> At boot the box rebuilds every task from the log and resumes.</li>
-        <li><a href="/docs/concepts/system-updates/">Update as a whole</a> A second system slot takes the update and rolls back if it is not healthy.</li>
+        {core.map((c) => <li><a href={c.href}>{c.label}</a> {c.line}</li>)}
       </ul>
     </section>
 
-    <section aria-labelledby="open-h">
-      <h2 id="open-h" class="section-h">Open source</h2>
-      <p class="measure">{NAME} is under the Apache License 2.0. The <a href={REPO}>source is on GitHub</a>, the install images are signed, and the checksums are published. It is an early preview: features that are not built are marked <strong>Planned</strong> in the <a href="/docs/">documentation</a>, and the <a href="/docs/project/roadmap/">roadmap</a> lists them.</p>
-      <p class="actions">
-        <a class="btn primary" href="/download/">Download {NAME}</a>
-        <a class="btn" href="/docs/">Read the documentation</a>
-      </p>
-    </section>
+    <p class="closing">Open source under the <a href={REPO}>{LICENSE_NAME}</a> on GitHub.</p>
   </div>
 </Landing>
 
@@ -141,46 +99,38 @@ const sums = (id: string) => isos(id, '', '').map((f) => `${SUMS[f.file]}  ${f.f
   const ua = navigator.userAgent;
   const arm = /Macintosh|Mac OS X/.test(ua) || /aarch64|arm64|\barm\b/i.test(ua);
   const want = arm ? 'arm64' : 'x86_64';
-  document.querySelectorAll<HTMLAnchorElement>('.dl .iso').forEach((a) => {
-    if (a.dataset.arch !== want) return;
-    a.classList.add('suggested');
-    a.querySelector('.iso-main')!.textContent += ' (suggested for this computer)';
+  document.querySelectorAll<HTMLAnchorElement>('.dl .btn[data-arch]').forEach((a) => {
+    if (a.dataset.arch === want) a.classList.add('primary');
   });
 </script>
 
 <style>
-  .eyebrow { font-family: var(--gw-mono); font-size: 0.86rem; color: var(--gw-link); margin-bottom: 1rem; }
-  .intro { padding: 3rem 0 2.5rem; }
-  .intro-grid { display: grid; gap: 1.5rem 3rem; align-items: end; }
-  .intro h1 { font-size: clamp(2.2rem, 5vw, 3.6rem); letter-spacing: -0.02em; }
-  .lead { font-size: 1.15rem; }
-  .actions { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 1.25rem; }
+  .intro { padding: 4rem 0 3rem; max-width: 52rem; }
+  .intro h1 { margin-bottom: 1rem; }
+  .lead { font-size: var(--gw-text-lg); color: var(--gw-ink-2); }
+  .actions { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 1.5rem; }
+  .btn.primary { font-size: 1.1rem; padding: 0.8rem 1.4rem; }
   .hills { display: block; width: 100%; height: clamp(70px, 11vw, 170px); }
   .section-h { font-size: var(--gw-h2); }
-  .edition { display: grid; gap: 1.5rem 3rem; padding: 2rem 0; border-top: 1px solid var(--gw-rule); }
-  .media { margin: 0; align-self: start; }
+  .edition { display: grid; gap: 1.5rem 3rem; padding: 2rem 0; border-top: 1px solid var(--gw-rule); align-items: center; }
+  .media { margin: 0; }
   .media img { width: 100%; border: 1px solid var(--gw-rule); border-radius: 6px; }
   .duo { position: relative; padding-bottom: 2.5rem; padding-right: 3rem; }
   .duo .phone { position: absolute; right: 0; bottom: 0; width: 24%; border-width: 2px; background: var(--gw-glass); }
-  .text h3 { font-size: 1.6rem; display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.9rem; }
+  .text h3 { font-size: var(--gw-h3); display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.6rem; }
+  .text p { font-size: var(--gw-text-lg); color: var(--gw-ink-2); }
   .dot { width: 0.8rem; height: 0.8rem; border-radius: 2px; flex: none; }
-  .dot.server { background: #46586b; }
+  .dot.server { background: #46586b; outline: 1px solid var(--gw-rule-strong); }
   .dot.personal { background: var(--gw-amber); }
   .dot.business { background: var(--gw-link); }
-  .dl { display: grid; gap: 0.6rem; margin: 1.1rem 0 0.6rem; }
-  .iso { display: flex; flex-direction: column; gap: 0.1rem; padding: 0.7rem 0.95rem; border: 1px solid var(--gw-ink-2); border-radius: 6px; background: var(--gw-surface); text-decoration: none; color: var(--gw-ink); }
-  .iso.suggested { border: 2px solid var(--gw-link); padding: calc(0.7rem - 1px) calc(0.95rem - 1px); }
-  .iso-main { font-weight: 700; }
-  .iso-sub { font-size: 0.9rem; color: var(--gw-ink-2); }
-  .sums { font-size: 0.9rem; }
-  .sums summary { cursor: pointer; color: var(--gw-ink-2); }
-  .sums pre { font-size: 0.72rem; margin: 0.6rem 0; }
-  .note { border: 1px solid var(--gw-rule); border-radius: 6px; background: var(--gw-surface); padding: 1rem 1.1rem 0.2rem; margin-top: 1.1rem; }
-  .core { list-style: none; padding: 0; margin: 0; }
-  .core li { padding: 0.8rem 0; border-top: 1px solid var(--gw-rule); color: var(--gw-ink-2); }
-  .core a { display: block; font-weight: 700; color: var(--gw-ink); }
+  .dl { display: flex; flex-wrap: wrap; gap: 0.6rem; margin-top: 1.1rem; }
+  .more { margin-top: 0.5rem; font-size: var(--gw-text-sm); }
+  .core { list-style: none; padding: 0; margin: 0; color: var(--gw-ink-2); }
+  .core li { padding: 0.8rem 0; border-top: 1px solid var(--gw-rule); }
+  .core a { font-weight: 700; color: var(--gw-ink); margin-right: 0.4rem; }
+  .closing { margin-top: 3rem; color: var(--gw-ink-2); }
   @media (min-width: 900px) {
-    .intro-grid, .edition { grid-template-columns: 7fr 5fr; }
+    .edition { grid-template-columns: 7fr 5fr; }
     .core { display: grid; grid-template-columns: 1fr 1fr; column-gap: 3rem; }
   }
 </style>
