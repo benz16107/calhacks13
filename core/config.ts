@@ -37,6 +37,8 @@ export interface Settings {
   updateChannel: 'stable' | 'beta';
   autoUpdate: boolean;
   appearance: { theme: 'light' | 'dark' | 'system'; accent: string };
+  /** Pause all agents: no task starts, and running ones hold before their next step or tool call. */
+  paused: boolean;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -50,6 +52,7 @@ export const DEFAULT_SETTINGS: Settings = {
   updateChannel: 'stable',
   autoUpdate: true,
   appearance: { theme: 'system', accent: '' },
+  paused: false,
 };
 
 const fail = (field: string, why: string): never => {
@@ -152,6 +155,9 @@ export function applyPatch(current: Settings, patch: unknown): Settings {
         break;
       case 'autoUpdate':
         next.autoUpdate = bool(key, v);
+        break;
+      case 'paused':
+        next.paused = bool(key, v);
         break;
       case 'appearance': {
         if (!isObj(v)) fail(key, 'must be {theme, accent}');

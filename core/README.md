@@ -185,6 +185,7 @@ The `owner` flag is ignored from anyone who is not already the owner.
 - `networkDefault` (`none`) and `defaultHosts` (`[]`): with `allowlist`, a task that names no hosts gets `defaultHosts`; a task that names its own keeps them.
 - `agentFolders` (`[]`): Personal. Folders agents may use besides the owner's home. Can't include the system or the box's own state. Empty means only the owner's home.
 - `quietHours` (`{enabled: false, from: "22:00", to: "07:00"}`): read by the desktop and phone for notifications.
+- `paused` (false): Pause all agents. While true no task starts (new ones stay `queued`) and running ones hold before their next step, tool call or question; false resumes them all. Enforced by the core.
 - `logRetentionDays` (365), `updateChannel` (`stable` | `beta`), `autoUpdate` (true), `appearance` (`{theme: light | dark | system, accent: "#rrggbb" or ""}`): stored for the screens and the updater to read.
 
 **An app** is a track. Each entry has `id` (the track name), `title`, `description` (the track's own, else the

@@ -196,7 +196,7 @@ class Core {
     const id = 't' + Date.now().toString(36).slice(-6) + randomBytes(2).toString('hex');
     this.write({ type: 'task.created', task: id, spec: s, user: `box-${id}` });
     const t = this.must(id);
-    await this.start(t);
+    if (!this.settings.paused) await this.start(t); // paused: it stays queued until the owner resumes
     return t;
   }
 
@@ -333,6 +333,18 @@ class Core {
   // ---------- approvals ----------
 
   /** Pause the task until someone answers. The same key returns the same approval, even after a restart. */
+  pauseWaiters: (() => void)[] = [];
+  /** Resolves at once, or when the owner turns Pause all agents off. */
+  untilResumed(): Promise<void> {
+    return this.settings.paused ? new Promise((r) => this.pauseWaiters.push(r)) : Promise.resolve();
+  }
+
+  /** Pause all agents off: release every held step and start the tasks that queued meanwhile. */
+  resumeAll() {
+    for (const r of this.pauseWaiters.splice(0)) r();
+    for (const t of this.state.tasks.values()) if (t.state === 'queued' && !this.workers.has(t.id)) void this.start(t);
+  }
+
   /** Back to running once nothing of this task's is still waiting. */
   settleTask(t: Task) {
     const stillWaiting = [...this.state.approvals.values()].some((x) => x.task === t.id && x.state === 'pending');
@@ -478,6 +490,7 @@ class Core {
           return { name, description, input: input ?? { type: 'object' } };
         });
       }
+      if (route === 'POST /step' || route === 'POST /call' || route === 'POST /ask') await this.untilResumed(); // Pause all agents
       if (route === 'POST /step') {
         sandbox.flush(t);
         return this.write({ type: 'task.step', task: t.id, text: String(body.text), data: body.data });
@@ -1165,6 +1178,7 @@ class Core {
             this.settings = next;
             saveSettings(HOME, next);
             this.write({ type: 'note', track: 'settings', data: { changed } });
+            if ('paused' in body && !next.paused) this.resumeAll();
             return this.settings;
           }
           case 'GET /vault':
@@ -1337,7 +1351,7 @@ data: ${JSON.stringify(e)}
       if (t.state === 'queued' || t.state === 'running' || t.state === 'waiting') {
         console.log(`resuming ${t.id} (${t.state})`);
         this.resumed.push(t.id);
-        void this.start(t);
+        if (!(this.settings.paused && t.state === 'queued')) void this.start(t);
       }
     }
     this.sweepUndone();

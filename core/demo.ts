@@ -941,6 +941,23 @@ await moment('setup: the wizard, settings, the vault and apps', async () => {
   check(logText.includes('"track":"settings"') && logText.includes('approvalThresholdCents'), 'each settings change is in the action log, with the old and new value');
   check(JSON.parse(fs.readFileSync(path.join(HOME, 'settings.json'), 'utf8')).appearance.theme === 'dark', 'settings are saved on disk, so they survive a restart');
 
+  // Pause all agents: nothing new starts, a running task holds before its next step, and resuming lets both go.
+  const runningOne = await run({ prompt: 'write first.txt 1\nsleep 1\nwrite second.txt 2' });
+  const steps = async (id: string) => (await api<{ events: LogEvent[] }>('GET', `/api/tasks/${id}`)).events.filter((e) => e.type === 'task.step').length;
+  await waitFor('the first step', async () => ((await steps(runningOne.id)) >= 1 ? true : undefined));
+  await api('PATCH', '/api/settings', { paused: true });
+  try {
+    const queuedOne = await run({ prompt: 'write later.txt 3' });
+    await sleep(2500);
+    const [r1, q1, n] = await Promise.all([task(runningOne.id), task(queuedOne.id), steps(runningOne.id)]);
+    check(q1.state === 'queued' && r1.state === 'running' && n === 1, `while paused a new task waits (${q1.state}) and a running one holds before its next step (${n} step logged, ${r1.state})`);
+    await api('PATCH', '/api/settings', { paused: false });
+    await settled([runningOne.id, queuedOne.id]);
+  } finally {
+    await api('PATCH', '/api/settings', { paused: false }); // never leave the demo box paused
+  }
+  check(view('prefs', 'second.txt') === '2' && view('prefs', 'later.txt') === '3', 'resumed, both finished');
+
   // The vault: write-only. Names and times come back; values never do.
   const SECRET1 = 'sk_demo_first_value_8f3a91c2';
   const SECRET2 = 'sk_demo_second_value_77d1e0aa';
