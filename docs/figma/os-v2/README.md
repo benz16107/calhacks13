@@ -76,6 +76,22 @@ screen or the owner's phone.
 | `windows/activity.png` | `84:5312` | The action log as an event viewer: filters in the sidebar, one row per event (`seq`, time, task, `type` as a chip, text), blocked events red, approvals amber, and the selected event's fields below. `GET /api/log?after=<seq>` over SSE |
 | `windows/time-machine.png` | `85:5256` | One workspace's layers as a stack, newest on top, the base files at the bottom; for the selected layer, what comes out and what stays, and Undo this task |
 
+## Track apps (`tracks/`)
+
+Each track's app restyled into the system: a standard window over the desktop, its views in the header bar, and its
+approvals as amber rows. The rules app makers follow are in `../system.md`, "App guidelines".
+
+| PNG | Node | What it shows, and its data |
+|---|---|---|
+| `tracks/credit-desk.png` | `86:5497` | A run's results (planted errors caught, false alarms, time and cost) and its decisions, each citing rule ids; APP-1042 waits for you. `GET /t/credit-desk/runs`, `POST /t/credit-desk/score` |
+| `tracks/shopper.png` | `86:5774` | The test-payments notice, the watch list with prices and limits (one purchase waits for you), and recent orders with test receipts |
+| `tracks/wallet.png` | `86:6030` | The devnet USDC balance (test money), how 402 payments work, and payments with their task, API, amount, status and Solana transaction |
+| `tracks/find.png` | `86:6245` | A search panel over the desktop with results grouped as tasks, log, files and photos. The two photos are AI-generated stand-ins |
+| `tracks/jira.png` | `87:5997` | The project board the box keeps in Jira: To Do, In Progress, In Review (waiting for you) and Done, from the task states |
+| `tracks/asi-one.png` | `87:6275` | The box as an Agentverse agent (online, its address), a chat from ASI:One with an approval card, and the tasks chats started |
+| `tracks/elastic-insights.png` | `87:6462` | The log copy's status, the four questions, and one answer with a table, from the Agent Builder agent over the log |
+| `tracks/mana-status.png` | `87:6686` | Publishing the public status page, what it shows and never shows, and a preview of the page |
+
 ## System sheets
 
 `system-foundations.png` (colors in both modes, type, spacing, radius, elevation, motion), `system-icons.png` (the

@@ -198,6 +198,34 @@ gives the totals.
 - Test money says so: "Test payments only: no real money moves."
 - Times are 24-hour (19:04). Money has two decimals ($0.50).
 
+## App guidelines
+
+An app is a track: one folder that adds tools, windows and triggers (`core/README.md`, "Writing a track"). Its window
+runs inside GurtOS, so it has to look like part of it. The eight track apps in `os-v2/tracks/` follow these rules.
+
+- **Use the system, nothing else.** Components from the page "GurtOS system" (in code, the portal's shared
+  components) and the CSS variables. No other typeface, no other icon set, no colors of your own except your app
+  icon's tile.
+- **One window, standard chrome.** The header bar has your app icon (24 px) and name at the start, your views as a
+  toggle group in the center (two to five), and your main action as a Default button at the end, before the menu
+  and the window controls. Content padding is 24; sections are 16 apart.
+- **Approvals go through the core.** Never build your own approve dialog. Ask the core, and the request reaches the
+  top bar, Notification Center, the phone and your window at once; the first answer wins. In your window, show it
+  as a row with an amber "Needs you" badge and Deny and Approve buttons.
+- **Keys never appear.** Name the keys you need in `secrets`. People set them in App Center or Settings > Accounts &
+  Keys. Your window may say a key is missing; it never asks for one, shows one or stores one.
+- **Money says what it is.** Every amount names its currency, and test money says so on the same line. An app that
+  moves test money shows "Test payments only" as an amber notice at the top of its window.
+- **States use the shared colors.** Amber needs you, blue is running, green is done, grey is off or undone, red is
+  blocked or failed. Don't add a meaning.
+- **Tables and lists.** Caption strong column headers, 48 to 56 px rows, Mono for IDs, hosts, keys and paths. Settings
+  for your app are boxed-list rows, not forms.
+- **Empty and error states** use the status page: a symbolic icon, a title, one sentence, at most one button.
+- **Your app icon** is one glyph on a 48 px grid with 3 px round strokes, on a tile in a muted color no other app
+  uses. No logos, gradients or photos.
+- **Before you ship:** it works in Light and Dark; text meets AA; every amount says test or real; no key is ever on
+  screen; every approval goes through the core; the window uses only system components.
+
 ## Accessibility
 
 - Text meets WCAG AA (4.5:1); control edges meet 3:1. The pairs are under Color.
