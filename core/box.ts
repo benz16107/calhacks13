@@ -1359,7 +1359,8 @@ class Core {
     this.devices.push(device);
     this.saveDevices();
     if (device.identity && !this.business.on) this.live.register(device.identity, device.name);
-    return { token: device.token, device: { id: device.id, name: device.name, ...(person ? { person: person.id } : {}) }, box: { id: BOX_ID, name: BOX_NAME } };
+    // The edition comes along, so a phone shows the right home (GurtOS Business: Waiting for me) from its first frame.
+    return { token: device.token, device: { id: device.id, name: device.name, ...(person ? { person: person.id } : {}) }, box: { id: BOX_ID, name: BOX_NAME }, edition: system.edition(this.owner, this.business.on) };
   }
 
   // ---------- Business: sign in with a work account (OpenID Connect) ----------

@@ -48,3 +48,4 @@
   .biz-request { padding: var(--space-xs) var(--space-md) var(--space-lg); }
   .biz-answer { padding-bottom: var(--space-md); }
 }
+.biz-loading { margin: var(--space-lg) var(--space-md); height: 180px; }

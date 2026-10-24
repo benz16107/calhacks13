@@ -650,3 +650,6 @@ export async function start() {
   // SpacetimeDB listens on the box's loopback only (core c6f747e): the box's own screen subscribes, others follow the log.
   if (box.health && ['127.0.0.1', 'localhost', '[::1]'].includes(location.hostname)) spacetime(box.health);
 }
+
+// A phone paired just now knows its box's edition from the pairing, before anything loads: the first frame is right.
+if (!box.business.on && (machine() as { edition?: string } | undefined)?.edition === 'business') box.business.on = true;

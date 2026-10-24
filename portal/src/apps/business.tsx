@@ -95,7 +95,8 @@ export function WaitingList({ selected, onPick }: { selected?: string; onPick?: 
   const b = useBox();
   const me = b.business.me;
   const pick = onPick ?? ((a: Approval) => open(`request/${a.id}`));
-  if (!me?.person)
+  if (!me) return <div class="gos-skeleton biz-loading" aria-busy="true" aria-label="Loading what waits for you" />;
+  if (!me.person)
     return (
       <StatusPage icon="avatar-default" title="Sign in to see what waits for you">
         On {b.business.company || 'this box'}, each person sees what the rules send to them. Pick who you are from the person menu in the top bar.
