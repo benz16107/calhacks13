@@ -80,7 +80,7 @@ closed before the repository goes public.
 | Every app starts on, even without keys; /find starts a Droid task at every boot | `core/box.ts` app loading | core, find | Sent: apps with missing keys start off |
 | The Personal test VM is the default | `personal/vm.sh` | personal | Done (96ce0cb, 85d5655): `PERSONAL_VM` is required |
 | The Forge app calls Ben's Vultr box | `tracks/jira/forge/manifest.yml`, `forge/src/resolvers/index.js` | jira | Sent: the box URL is a deploy-time setting, documented for people deploying their own Forge app |
-| Image descriptions use Ollama on Ben's Mac | `tracks/find/find.ts`, `record.ts` | find | Sent: say "a machine running Ollama", configurable |
+| Image descriptions use Ollama on Ben's Mac | `tracks/find/find.ts`, `record.ts` | find | Done (4351905): `FIND_OLLAMA_URL`; no model call or task at boot |
 | Comments and READMEs name Ben's machines or key file | Apify, Elastic, Shopper, Wallet, find, Jira READMEs; `tracks/elastic/agent.ts`, `tracks/shopper/store.ts` | each track | Sent; Shopper done (408ad13). Showcase and spikes done (8b1a75b, 3a4e4ca) |
 | Demo data names Ben as approver | `tracks/jira/demo.ts` ("Ben Zhou") | jira | Sent: a neutral name |
 | BOX_PEERS, BOX_URL, BOX_OWNER | core | core | Fine: empty or unset by default, set per machine |
