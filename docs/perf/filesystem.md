@@ -74,3 +74,14 @@ agent's view (Keep still catches it as a conflict); files in the folder owned by
 unreadable to the task; and the multi-folder layout needs one such mount per folder. It needs its own QA pass on
 Personal (Keep, undoing a Keep, conflicts, multiple folders, power cut). About half a day with QA. **Recommendation:
 not before the freeze; first after Sunday.**
+
+### Fast folders: tried on Sat Oct 24, not shipped
+
+Ben approved the idmapped lower as an optional fast mode. It is built on the branch `fast-folders` (off by default,
+falling back to a copy with a logged reason for several folders, files owned by someone else, or a kernel that
+can't map) but is **not merged**: inside a running box, the first write to an existing file fails with `EINVAL`
+when overlayfs copies it up from the mapped lower layer. Mounting took 53 to 67 ms, and creating new files and
+reading existing ones worked. The same `prepare` and `spawnWorker` code, the real fake worker and the box's worker
+environment all succeed from a standalone script on the same VM, so the difference is in the box process and is
+not found yet. Until it is, the claim stays at today's merged numbers above, not 7 ms.
+
