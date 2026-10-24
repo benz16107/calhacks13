@@ -43,19 +43,20 @@ E = {
 q = lambda t: "'" + t.replace("'", "''") + "'"
 md = lambda t: re.sub(r'<a href="([^"]+)">(.*?)</a>', r'[\2](\1)', t).replace('<code>', '`').replace('</code>', '`')
 if __name__ == '__main__':
-    import sys
+    # Since the track-page redesign the pitch and "Best shown in" live in each page's frontmatter (the page writers own them).
+    # This script now only copies them into docs/devpost.md; it never writes the pages.
+    import sys, json, subprocess, os
     root = sys.argv[1]
-    for slug, (ed, pitch) in E.items():
-        p = f'{root}/showcase/src/content/tracks/{slug}.mdx'; s = open(p).read()
-        s = re.sub(r"^editions: .*\n", "", s, flags=re.M); s = re.sub(r"^pitch: .*\n", "", s, flags=re.M)
-        s = re.sub(r"^(prize: .*\n)", lambda m: m.group(1) + f"editions: {q(ed)}\npitch: {q(pitch)}\n", s, count=1, flags=re.M)
-        assert 'editions:' in s, slug
-        open(p, 'w').write(s)
+    here = os.path.dirname(os.path.abspath(__file__))
+    fm = json.loads(subprocess.run(['node', os.path.join(here, 'frontmatter.mjs'), root], check=True, capture_output=True, text=True).stdout)
+    E = {k: (v['editions'], v['pitch']) for k, v in fm.items()}
     p = f'{root}/docs/devpost.md'; d = open(p).read()
     d = re.sub(r"\n\*\*Best shown in:\*\*.*\n", "\n", d)
     for slug, (ed, pitch) in E.items():
         link = f"(https://calhacks.gurtos.com/tracks/{slug}/)"
+        if link not in d: continue
         i = d.index(link); h = d.rindex('\n### ', 0, i) + 1; e = d.index('\n', h)
         d = d[:e+1] + f"\n**Best shown in:** {ed}. {md(pitch)}\n" + d[e+1:]
+    d = re.sub(r'\n{3,}', '\n\n', d)
     open(p, 'w').write(d)
     print('ok', len(E))

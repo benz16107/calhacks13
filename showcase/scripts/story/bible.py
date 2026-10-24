@@ -28,6 +28,7 @@ PROBLEM = {
 }
 def strip(t): return html.unescape(re.sub(r'<[^>]+>', '', t or '')).strip()
 FM = json.loads(subprocess.run(['node', os.path.join(HERE, 'frontmatter.mjs'), root], check=True, capture_output=True, text=True).stdout)
+E = {k: (v['editions'], v['pitch']) for k, v in FM.items()}  # the pages own their pitch and editions
 def front(slug):
     return FM[slug], open(f'{root}/showcase/src/content/tracks/{slug}.mdx').read()
 OS = json.loads(subprocess.run(['node', os.path.join(HERE, 'osvstrack.mjs'), root], check=True, capture_output=True, text=True).stdout)

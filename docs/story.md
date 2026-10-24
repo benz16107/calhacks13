@@ -180,7 +180,7 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 
 **Best shown in:** GurtOS Server and GurtOS Personal
 
-**Pitch:** Droid does the work and GurtOS makes it safe. Droid never holds a key: the vault keeps it and the box's proxy swaps it in outside the task. Each task is its own Linux user with its own firewall rule and its own copy of the files, on a locked-down Linux base where task users have no sudo, and every change is reviewable in the log and undoable. Keys kept where agents can reach them keep leaking: OpenCode Console exposed users' provider API keys on Oct 17, 2026, OpenClaw stores tokens and API keys in plaintext in ~/.openclaw/openclaw.json, and CVE-2026-25253 let one crafted link make OpenClaw send its token to an attacker.
+**Pitch:** Droid does the work and GurtOS makes it safe. Each Droid task is its own Linux user with its own firewall rule and its own copy of the files, and Droid never holds a key: the vault keeps it and the box's proxy swaps it in outside the task. Droid plans first and starts only after you approve the plan on your phone, a read-only reviewer droid checks the coder's diff, and every change is reviewable in the log and undoable. In August 2025 malicious Nx packages used AI CLIs already on developers' machines, started with permission-skipping flags, to hunt for tokens and keys. A Droid on GurtOS has none to find.
 
 **The problem:** Draft: coding agents need keys to work, and tools keep leaking them (the OpenCode Console breach, OpenClaw's plaintext key file, CVE-2026-25253). Today the agent runs as you, on your files, with your keys in its environment.
 
@@ -435,7 +435,7 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 
 **Best shown in:** GurtOS Personal
 
-**Pitch:** A personal agent is only useful if it remembers you, and today that means uploading your life to someone's cloud. On GurtOS the index lives in your own computer's memory, agents search it with no network and no keys, and undoing a task takes its files out. A fresh box calls no model: a photo is described by a model you point it at, such as one in Ollama on your own machine, and Claude describes photos only when the owner presses a button. Only text goes to Moss's cloud copy, including what a vision model wrote about your photos. Talking to your computer is built in GurtOS Personal. Next (being built): memory that cannot be poisoned, one preference honoured across apps and a forget button.
+**Pitch:** A personal agent is only useful if it remembers you, and today that means uploading your life to someone's cloud, while any page an agent reads can plant a false memory. On GurtOS Personal the index lives in your own computer's memory, agents search it with no network and no keys, a task that reached the web cannot add to your memory without your answer, one preference reaches every app, a Forget button removes what you choose, and you can ask out loud. A fresh computer calls no model, and Claude describes photos only when you press a button, which sends them to Factory.
 
 **The problem:** A personal agent is only useful if it remembers you, and today that means uploading your life to someone's cloud, and any web page an agent reads can plant false memories.
 
