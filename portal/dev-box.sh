@@ -13,7 +13,6 @@
 #   DEV=<name> DEV_PORT=<port>                  a second box beside the first (another checkout), with its own data
 #   DEV_NAME='lab box'                          the box's name (default "dev box")
 #   DEV_ORIGINS='*'                             let pages on other origins call it (the hosted app, app.gurtos.com)
-#   DEV_SEED=business                           seed it as GurtOS Business instead: Fogline Supply (portal/dev-business.ts)
 set -euo pipefail
 cd "$(dirname "$0")/.."
 read -r -a vm_cmd <<< "${DEV_VM:-limactl shell --workdir / box --}"
@@ -41,12 +40,12 @@ start="cd $dest
 
 case ${1:-} in
   stop) vm sudo bash -c "$wipe"; exit ;;
-  dist) tar --mode=go+rX,go-w -czf - portal/dist | vm sudo bash -c "rm -rf $dest/portal/dist && tar -xzf - -C $dest"; exit ;;
+  dist) tar -czf - portal/dist | vm sudo bash -c "rm -rf $dest/portal/dist && tar -xzf - -C $dest"; exit ;;
   restart) vm sudo bash -c "$kill; sleep 3; $start; echo 'dev box restarted'"; exit ;;
 esac
 
 git ls-files -co --exclude-standard | while IFS= read -r f; do [[ -e $f ]] && printf '%s\n' "$f"; done |
-  tar --mode=go+rX,go-w -czf - -T - | vm sudo bash -c "mkdir -p $dest && find $dest -mindepth 1 -maxdepth 1 ! -name node_modules -exec rm -rf {} + && tar -xzf - -C $dest"
+  tar -czf - -T - | vm sudo bash -c "mkdir -p $dest && find $dest -mindepth 1 -maxdepth 1 ! -name node_modules -exec rm -rf {} + && tar -xzf - -C $dest"
 vm sudo bash -s <<EOF
 set -e
 $wipe
@@ -59,7 +58,6 @@ printf '# Notes\n\nNothing yet.\n' > $home/workspaces/notes/notes.md
 chmod -R a+rwX $home/workspaces
 grep -v "^ELASTIC_" /etc/box/vault.env > $home/vault.env && echo DEMO_SECRET=portal-dev-test >> $home/vault.env && chmod 600 $home/vault.env
 $start
-if [ "${DEV_SEED:-}" = business ]; then node --experimental-strip-types --disable-warning=ExperimentalWarning portal/dev-business.ts $port; echo "dev box up: http://127.0.0.1:$port (log: $home/box.log)"; exit; fi
 task() { curl -fs 127.0.0.1:$port/api/tasks -H 'content-type: application/json' -d "\$1" | sed 's/.*"id":"\([^"]*\)".*/\1/'; }
 f='"worker":"fake","source":"portal-dev"'
 task '{"title":"Write the weekly notes",'"\$f"',"workspace":"notes","prompt":"write notes.md # Notes\nappend notes.md Groceries came in under budget.\nappend notes.md The deploy went out on Tuesday."}' >/dev/null

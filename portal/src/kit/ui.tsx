@@ -15,8 +15,6 @@ import shopper from './apps/shopper.svg';
 import tasks from './apps/tasks.svg';
 import timeMachine from './apps/time-machine.svg';
 import wallet from './apps/wallet.svg';
-import waiting from './apps/waiting.svg';
-import audit from './apps/audit.svg';
 
 /** One Adwaita symbolic icon, 16 px, in the text color. Decorative unless given a label. */
 export function Icon({ name, label, size = 16, class: cls = '' }: { name: string; label?: string; size?: number; class?: string }) {
@@ -50,8 +48,6 @@ const APP_ICONS: Record<string, { glyph: string; tile: string }> = {
   jira: { glyph: jira, tile: 'var(--color-app-jira)' },
   fetch: { glyph: asiOne, tile: 'var(--color-app-asi-one)' },
   'asi-one': { glyph: asiOne, tile: 'var(--color-app-asi-one)' },
-  waiting: { glyph: waiting, tile: 'var(--color-app-waiting)' },
-  audit: { glyph: audit, tile: 'var(--color-app-audit)' },
 };
 export const hasAppIcon = (id: string) => id in APP_ICONS;
 

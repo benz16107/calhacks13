@@ -91,49 +91,6 @@ Differences from the frames, on purpose:
 - Control Center has no Power button and no "Pause agents" tile, and the lock screen has no passcode: the box has no
   API for them yet. Larger text takes the fourth tile.
 
-### GurtOS Business (1920 x 1080 and 390 x 844)
-
-The approved frames from `docs/figma/business/`, beside the app on a dev box seeded as Fogline Supply
-(`DEV_SEED=business ./dev-box.sh`, scripted seats, sandbox data). Everything on these screens comes from the box:
-`GET /api/me`, `/api/business`, `/api/people` and `/api/audit` (core/README.md, "Business edition").
-
-| Figma | The app |
-|---|---|
-| ![](../docs/figma/business/1a-people.png) | ![](screenshots/business/1a-people.png) |
-| ![](../docs/figma/business/1b-add-a-person.png) | ![](screenshots/business/1b-add-a-person.png) |
-| ![](../docs/figma/business/2-rules.png) | ![](screenshots/business/2-rules.png) |
-| ![](../docs/figma/business/4-audit.png) | ![](screenshots/business/4-audit.png) |
-| ![](../docs/figma/business/5a-kill-switch-box.png) | ![](screenshots/business/5a-kill-switch-box.png) |
-| ![](../docs/figma/business/5c-all-agents-paused.png) | ![](screenshots/business/5c-all-agents-paused.png) |
-
-The phones (Figma `3-waiting-for-me-rosa-phone.png`, `5b-kill-switch-phone.png`, `6-server-vs-business.png`):
-
-| Rosa: Waiting for me | Rosa: the request | Sam: his request | Priya: Kill switch | Priya: paused |
-|---|---|---|---|---|
-| ![](screenshots/business/3-waiting-rosa-phone.png) | ![](screenshots/business/3-request-rosa-phone.png) | ![](screenshots/business/6-my-request-sam-phone.png) | ![](screenshots/business/5b-kill-switch-phone.png) | ![](screenshots/business/5b-paused-phone.png) |
-
-Two phones, one request: Rosa approves $40,000 on hers, and Sam's shows who answered.
-
-| Rosa approves | Sam's phone after |
-|---|---|
-| ![](screenshots/business/two-phones-rosa-approves.png) | ![](screenshots/business/two-phones-sam-after.png) |
-
-Differences from the frames, on purpose:
-
-- **Who is signed in.** A phone is the person it was paired for (Settings, People, Pair a phone). The box's own
-  screen picks a person from the top bar's person menu, and sends it with every call; without one it answers nothing.
-- **Add a person** has no email field and says "Add", not "Add and invite": the box sends no email. It shows the
-  person's pairing QR code right after adding them.
-- **Rules** are the box's policy lines with their values editable in place. The frame's "The Credit analyst may
-  approve up to $10,000 on its own" is the credit desk's own rules file, so it shows on People under Agent seats, not
-  as a box rule. "Remind Priya when the Controller hasn't answered" is left out: reminders aren't built.
-- **Who clears fraud flags** is a name in the rules ("Fraud referrals go to the fraud reviewer"), and "Can clear fraud
-  flags" on a person adds them to it. Rosa is the only one.
-- **Counts are real.** "Needs you" counts only what the rules send to the person signed in, so Priya, who approves
-  nothing, sees none. The frames show 3 for everyone.
-- **The request's checks** are the agent's own steps from the log, before it asked.
-- Control Center's network tile shows the box's address; the screenshots leave it out.
-
 ## The four moments on screen
 
 1. **Undo one task.** Tasks, Time Machine and the task window each undo one task behind an alert: "Its files are

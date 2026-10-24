@@ -49,6 +49,8 @@ const ctx = await esbuild.context({
   bundle: true,
   outdir: `${dir}dist`,
   assetNames: 'assets/[name]-[hash]',
+  // Absolute asset URLs: the kit's script runs on track pages under /t/<track>/, where a relative path would miss.
+  publicPath: '/',
   format: 'esm',
   // The kiosk is WebKitGTK on Ubuntu 24.04; phones are Safari and Chrome.
   target: ['es2022', 'safari16'],
