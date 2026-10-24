@@ -362,7 +362,8 @@ relay on a real phone.
 **P1-17. Any paired phone can open the ASI:One page and its pairing code.** Owner: fetch. `/t/fetch/` never reads
 `x-box-caller`. On main 4536aac a paired Business requester gets 200 (a stranger gets 401). With the agent on, the page
 shows the pairing code and opens pairing for 10 minutes, so a requester or an auditor could pair their own ASI:One
-account as the agent's owner. QA read the code and saw the agent off on its box; not exploited. Filed with Fetch at 06:50 PT.
+account as the agent's owner. QA read the code and saw the agent off on its box; not exploited. Filed with Fetch at 06:50 PT. **Fixed in 06a874a, verified 07:50 PT:** a paired requester gets 403 on
+`/t/fetch/`, `/t/fetch/agent` (GET) and POST `/t/fetch/agent`; the box's own screen gets 200; a stranger 401.
 
 **P2-31. The per-task `model` option accepts any lowercase word.** Owner: anthropic, core. `model: "gpt-5"` is not
 refused (the check only wants a slug, though the message says "haiku, sonnet, opus, or a Claude model id"), and a real

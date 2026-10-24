@@ -403,6 +403,7 @@ at a time and only when the load is under 8. QA's fresh-install passes run on se
 | Sat 05:00 | 8a4cbf4, clean worktree (after a symlink of mine broke the first start) | **29 passed, 0 failed, 1 pending**. Fetch's wait fix (5f099f1) works |
 | Sat 06:40 | d7f9fc1 (Fetch agent team) | 29 passed, 0 failed, 1 pending |
 | Sat 07:10 | 4b075fa (Anthropic, Armadin, Elastic merged) | **31 passed, 0 failed, 1 pending** |
+| Sat 07:50 | 932ec53+ (Moss memory, SpacetimeDB merged), clean worktree | **32 passed, 0 failed, 1 pending** |
 
 
 ## Collisions
