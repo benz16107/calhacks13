@@ -18,7 +18,7 @@ How it was walked:
 
 ## Status
 
-**Fixed 32, open 41** (73 findings: 15 web, 22 Server, 36 Personal; parity findings join when measured). Each fixed
+**Fixed 38, closed 1, open 34** (73 findings: 15 web, 22 Server, 36 Personal; parity findings join when measured). Each fixed
 finding gets a **Fixed** line with the commit and an after-screenshot in `after/`.
 
 | Owner | Open |
@@ -31,7 +31,7 @@ finding gets a **Fixed** line with the commit and an after-screenshot in `after/
 Release (P-1): one rebuild of all four ISOs from one main commit, about 75 minutes to a verified release plus 20 for
 the download pages. The UX thread sends the commit once the Personal, image and core P0 and P1 fixes are in. Target
 before midnight PT, hard cutoff 6:30 AM PT Sunday (at 5:30 AM the best demo-ready commit goes regardless).
-| core | W2 (sleep steps), W13, S5 to S8, S12 (apps on by default), P-2, P-14, P-16 |
+| core | S5 empty-key wording (P2) |
 
 ## Top 10
 
@@ -106,7 +106,7 @@ Owners: core (event text), portal (rendering).
 
 **Fixed in 4cdd461** (portal): sentences ("Setup: Network done"), Kind in words, raw fields under Technical details,
 Audit opens with nothing selected and its actor is GurtOS. ![](after/srv-activity.png) ![](after/biz-audit-owen.png)
-Still open (core): the scripted worker's `sleep 2` steps show in Audit.
+The scripted worker's `sleep 2` steps stay: test worker only (see W13).
 ### W3. P0. App descriptions are hackathon notes
 ![](shots/web/srv-app-center.png)
 App Center, Settings > Apps and app details show text written for judges and sponsors, not users:
@@ -187,6 +187,9 @@ the safety story, so keep it once. Owner: portal.
 "Find me a road bike finished: write bikes.md Two road bikes under 600 dollars." Fix: "Wrote bikes.md: two road
 bikes under $600." Owner: core.
 
+
+**Closed** (core): real agents write a summary and the portal shows it; the raw step comes only from the scripted test
+worker, whose steps the demo counts. Same for the `sleep 2` steps left in W2.
 ### W14. P2. Devices: no "this phone", and same-name phones stack
 ![](shots/web/srv-settings-devices.png)
 Pairing the same phone again adds another identical "Ben's iPhone, Owner" row (the check script made 20). Fix:
@@ -223,7 +226,7 @@ except the worker. Owner: portal (labels from track manifests).
 
 **Fixed in 4cdd461** (portal): six apps, one access chip in words and one keys chip; the Keys step lists each key
 by its plain name with the variable underneath; `example` hidden (S13 fixed too). ![](after/setup-08.png)
-![](after/setup-09.png) Still open (core, S12): five apps start on by default, so the footer says "5 apps on".
+![](after/setup-09.png) S12 **fixed in baeabc5** (core): a new computer starts with only the model app on.
 ### S5. P1. A fake key is "saved, tasks can run"
 ![](shots/server/21-model-key-fake-saved.png)
 "not-a-real-key" gives "Saved to the vault." and "A model key is in the vault. Tasks can run." Same as P-2 on
@@ -231,22 +234,32 @@ Personal. Fix: check the shape (`sk-ant-` or Factory's prefix) and make one test
 accepted. Anthropic keys start with sk-ant-."; offline, "Saved. GurtOS couldn't check it yet." Owners: core
 (check), portal (copy).
 
+
+**Fixed in baeabc5** (core): `PUT /api/vault/ANTHROPIC_API_KEY` tries the key; a refused key is a 400 reading
+"Anthropic didn't accept this key. Check that you copied all of it."; offline it saves and says so. The empty-key
+message still reads "the key is empty" (P2, core: "Paste a key first.").
 ### S6. P1. Privacy says nothing leaves, but the public status page is on
 ![](shots/server/29-privacy-and-logs.png)
 The step says "Nothing leaves the box unless you turn it on here" while "Public status page" (Mana) is on. Fix:
 default it off. Owners: portal, core (default).
 
+
+**Fixed in baeabc5** (core): Mana is off on a new computer.
 ### S7. P1. The box name isn't validated or applied
 ![](shots/server/31-done.png)
 Name accepted empty and "My Box!! & $ym"; Done showed that name, but the top bar and Settings still said
 `gurt-0d87eb`. Fix: letters, digits, spaces; show the network name it becomes; apply it before Done. Owners:
 portal, core. (The walker's typing was unreliable here: confirm the stored value.)
 
+
+**Fixed in baeabc5** (core): setup's name becomes the computer's name. Recheck on the rebuilt ISO.
 ### S8. P1. The version says "build dev"
 ![](shots/server/28-updates.png)
 Updates and Control Center say "GurtOS Server 0.1.0, build dev" on the release image. Fix: read the image's build
 id: "GurtOS Server 0.1.0-preview, build 20261024-1439". Owner: core.
 
+
+**Fixed in baeabc5** (core): the build comes from the image's `BUILD_ID`. Recheck on the rebuilt ISO.
 ### S15. P1. The installer prints errors and raw tool output
 ![](shots/server/03-installer-progress.png)
 `nuke: can't remove '/dev/disk': Directory not empty` above `unsquashfs` output ("created 61949 files"). Fix: send
@@ -413,6 +426,9 @@ Only `~/Documents` is allowed and Pictures shows "Not allowed", yet `POST /api/t
 offered Keep (20, 46). Tried through the API, not the folder chooser. Fix: refuse it with "Pictures is not on your
 list. Add it in GurtOS Settings, Permissions." Owner: core.
 
+
+**Fixed in baeabc5** (core): with folders chosen, a task elsewhere is refused with "Pictures is not on your list.
+Add it in GurtOS Settings, Permissions."
 ### P-15. P1. Internal words in the native app
 ![](shots/personal/92-native-task-review-dark.png)
 `Runs as box-tmozly4252f`, event kinds `task.state` and `approval.asked`, JSON and hashes in Activity,
@@ -425,6 +441,9 @@ changes"); raw data behind "Technical details"; folder names instead of workspac
 "worker exited with 1: Error: The backup drive is not conne..." (46, 55). Fix: "Check the backup could not
 finish. The backup drive is not connected." Strip the `worker exited with N: Error:` prefix. Owner: core.
 
+
+**Fixed in baeabc5** (core): failures are sentences ("Your Anthropic key was not accepted. Change it in Settings,
+Keys.").
 ### P-17. P1. Login screen doesn't match the design
 ![](shots/personal/80-gdm-login.png)
 Flat #222 background with no Hills or moon, an orange focus ring on the password field, no caption on the shutdown
@@ -506,6 +525,25 @@ plain-zero alternate, so the only fix is a second typeface for numbers. Recommen
 ![](after/personal-sidebar-apps.png)
 
 ## Everyday use against stock Ubuntu
+
+### Filesystem and agent speed (core, measured)
+
+From `docs/perf/filesystem.md` (baeabc5): 50,246 files, 2.3 GB, ext4, Ubuntu 24.04 kernel 6.8.
+
+| What | Before | Now |
+|---|---|---|
+| A task's copy of the folder ready | 17.7 s | 8.1 s |
+| 10 tasks at once | 166 s | 77 s, the computer answering throughout (longest pause 2.2 s) |
+| Keep 1,000 small files and one 1 GB file | 14.6 s | 3.1 s |
+| Undo that Keep | 6.5 s | 0.3 s |
+| Undo a task | | 2.3 s |
+| First read or write inside a task | | under 1 ms |
+| `git status` inside a task vs the real folder | | 19 ms vs 8 ms |
+| Disk per task | | 2.3 GB |
+| GurtOS service memory | 1.2 GB | 228 MB |
+
+Not measured yet: `npm install` inside a task. Fast folders (no copy, 53 to 67 ms) is on a branch and not working
+yet, so it isn't quoted here.
 
 PARITY
 
