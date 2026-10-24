@@ -3,7 +3,7 @@
 Everything the portal thread needs to build the box's own screen, the portal and the phone from Figma. Claude Code
 made these files through Figma's MCP server, in Ben's School team (UofT account).
 
-**The look is direction A, a home-server OS** (Ben's pick, Fri Oct 23): a wallpaper, widgets, an app grid and a dock,
+**This covers the Server and Personal editions.** **Server's look is direction A, a home-server OS** (Ben's pick, Fri Oct 23): a wallpaper, widgets, an app grid and a dock,
 like umbrelOS. Apps open as windows, approvals arrive as notification banners, and the phone is the same OS in a
 pocket. The box's screen and the portal are the same desktop: on the box it fills the display, in a browser it fills
 the tab. Research and the three directions are in `docs/figma/refs/` and `docs/figma/directions/`.
@@ -201,6 +201,58 @@ These are examples in the mockups; the real values come from the running box.
 - The Vultr box in the switcher and dock: the second box is planned, not running yet.
 - Credit desk scores: score the desk's log against `answer_key.json` (see its `scoring` field).
 - "Box" is a placeholder product name until Ben names the OS (MenuBar `Product name`).
+
+## Editions
+
+The OS has three editions. **Server** is everything above: an always-on box with its own screen, run from the portal
+and a phone. **Personal** is below: the OS on your own laptop. **Team** (a shared box with roles) is not designed.
+
+## Personal edition (GNOME), page "Personal (GNOME)", node `35:86`
+
+Personal is installed on your own laptop and used as a normal computer: Ubuntu's GNOME desktop with your own account.
+Agents work beside you as separate users, on copies of folders you pick, and you can undo them. Box adds a thin layer
+to that desktop; it does not reskin it.
+
+- **Native, unchanged:** the top bar, the Ubuntu dock, GNOME notifications and menus, and Files. They use Ubuntu Sans
+  (the 24.04 system font) and the Yaru look.
+- **Box's own surfaces** (the Box app, the Ask an Agent dialog, the welcome) use libadwaita's patterns (header bars, a
+  view switcher, boxed lists, action dialogs) filled with direction A's Paper tokens, amber for "needs you", and the
+  Box glyphs. Text is the system font, not Instrument Sans.
+- **Followed from GNOME's HIG:** notifications carry an app icon, a title that stands alone in header capitalization,
+  a sentence-case body and at most three actions, and every action also exists in the app window. Header bars keep
+  the main action at the start, a view switcher in the center (three views, nouns, with an activity badge) and the
+  menu at the end, as icon buttons. Action dialogs put Cancel first and name the affirmative button with a verb
+  (Start). Boxed list rows have at most two controls.
+- **The top bar:** GNOME's HIG does not cover status icons. Ubuntu 24.04 ships AppIndicator support, so the Box
+  indicator is an AppIndicator: the Box symbol, an amber count of approvals waiting, and "2 running". Its menu lists
+  what needs you and what runs.
+
+| Screen | Node ID | Screenshot | What it shows |
+|---|---|---|---|
+| Desktop with the Box indicator | `37:86` (menu `37:173`) | `docs/figma/personal/1-desktop-indicator.png` | The indicator's menu: 3 approvals waiting (spending, a folder outside its grant, a website outside its list), 2 running with progress, then Ask an Agent, Open Box, Pause All Agents, Box Settings |
+| Approval notification | `37:219` | `docs/figma/personal/2-approval-notification.png` | The approval as a GNOME notification over the app you are using, with Deny and Approve. Clicking the body opens the task in Box. Withdraw it once it is answered anywhere |
+| Box app, Tasks | `38:305` (window `38:392`) | `docs/figma/personal/3-box-app-tasks.png` | The portal as a libadwaita app: Needs You with Deny and Approve or Allow on each row, Running, Today. Each task names its folder |
+| Files: Ask an Agent from a folder | `40:621` | `docs/figma/personal/4-files-ask-an-agent.png` | "Ask an Agent…" in a folder's right-click menu in Files |
+| Ask an Agent dialog | `40:867` | `docs/figma/personal/5-ask-an-agent-dialog.png` | What to do; may change (the folder you clicked); may read; internet off by default; budget; worker. Start stays insensitive until the task text is filled in |
+| Review changes: Keep or Undo | `39:401` | `docs/figma/personal/6-review-keep-or-undo.png` | The finished task for that folder: what moved, what was added (with its diff), that nothing outside the folder changed, the cost, then Undo and Keep |
+| Time Machine | `39:572` | `docs/figma/personal/7-time-machine.png` | Folders agents changed, and for one folder its agent layers newest first, each with Undo. Your own edits are never listed or undone |
+| First-run welcome | `41:787` | `docs/figma/personal/8-first-run-welcome.png` | After account setup: what agents can and cannot do, and an optional phone pairing |
+| One approval, three places | `41:942` | `docs/figma/personal/compare-one-approval-three-places.png` | The same approval on Server, in Personal and on the phone |
+
+Components on the same page: `GNOME/Top bar` `36:86` (properties `Needs you`, `Running`, `Clock`), `GNOME/Ubuntu dock`
+`36:116`, `GNOME/Notification` `36:164` (`Title`, `Body`, `Action 1`, `Action 2`), `GNOME/Box header bar` `38:268`.
+
+How the Personal pieces map to GNOME, for the Personal thread to confirm:
+
+- Indicator: an AppIndicator (StatusNotifierItem). An icon plus label works everywhere; the amber count pill needs an
+  icon drawn per count or a small Shell extension.
+- Notification: `GNotification` with two button actions; its default action opens the task in the Box app.
+- Files: a Nautilus extension (`nautilus-python` menu provider) adds "Ask an Agent…" to folders.
+- Box app: GTK 4 and libadwaita (`AdwHeaderBar`, `AdwViewSwitcher`, boxed lists, `AdwNavigationView` for the task
+  page, `AdwDialog` for Ask an Agent), with the Box colors set through libadwaita's CSS variables. Undo uses the
+  destructive style, Keep the suggested style.
+- Folder access: "May change" grants a folder copy the task writes to; "May read" grants read-only access; internet is
+  off unless switched on, as on Server where a task reaches only its hosts.
 
 ## Sharing
 

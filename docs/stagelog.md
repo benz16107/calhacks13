@@ -38,3 +38,4 @@ screen and component is named, and `docs/figma.md` lists each screen's node ID a
 portal thread reads them with `get_design_context`.
 
 **Code generation.** Logged by the portal thread.
+| Fri Oct 23, 9:00 to 9:11 PM | Design: Personal edition (GNOME) | Figma Design via Claude Code and Figma's MCP server (`use_figma`), after reading GNOME's HIG on notifications, header bars, view switchers, boxed lists and dialogs | 11 | 4 | 9 frames on the "Personal (GNOME)" page: the desktop with a Box AppIndicator and its menu, an approval as a GNOME notification, the Box app as a libadwaita window, Ask an Agent from a folder in Files and its dialog, review with Keep and Undo, Time Machine for your folders, the first-run welcome with optional pairing, and one approval in three places. Native GNOME parts stay unchanged in Ubuntu Sans; Box's surfaces use direction A's tokens. PNGs in `docs/figma/personal/`. |
