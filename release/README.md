@@ -24,14 +24,15 @@ image/build arm64               # arm64 on an x86_64 machine: emulated, several 
 ```
 
 The ISOs are in `/var/lib/box-image/out/`. Measured on a fresh Vultr `vc2-4c-8gb` (4 vCPU, 8 GB, x86_64), from a
-clean clone of main:
+clean clone of main, with downloads from Vultr's network. Plan on 4 GB of memory and 40 GB free for building
+both editions:
 
 | Build | Time | Peak memory | Disk used |
 |---|---|---|---|
-| Server x86_64 | measuring | | |
-| Personal x86_64 | | | |
-| Server arm64, native | | | |
-| Personal arm64, native | | | |
+| Server x86_64 | 4 min 24 s | 1.5 GB | 8 GB (5 GB cached base, 2.9 GB output) |
+| Personal x86_64 | 6 min | 1.7 GB | 11 GB (7 GB cached base, 3.6 GB output) |
+| Server arm64, native | not measured yet | | |
+| Personal arm64, native | not measured yet | | |
 
 A second build of the same edition reuses the cached Ubuntu base in `/var/lib/box-image/<arch>/` and takes a
 few minutes. To start clean, delete `/var/lib/box-image`.
