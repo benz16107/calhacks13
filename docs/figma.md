@@ -8,9 +8,9 @@ like umbrelOS. Apps open as windows, approvals arrive as notification banners, a
 pocket. The box's screen and the portal are the same desktop: on the box it fills the display, in a browser it fills
 the tab. Research and the three directions are in `docs/figma/refs/` and `docs/figma/directions/`.
 
-**Built so far:** the box home and the phone home (final). The other screens follow in this order and this file is
-updated with each merge: the Tasks window, banners and Notification Center, the task detail window, Activity,
-Time Machine, Credit desk, Shopper, Wallet, Find, pairing, the session restore, and the phone screens.
+**Built so far:** the box home, the phone home, the Tasks window, Notification Center and the task detail window.
+Still to come, in this order, each merged as it lands: Activity, Time Machine, Credit desk, Shopper, Wallet, Find,
+pairing, the session restore, and the phone screens.
 
 ## Files
 
@@ -42,6 +42,9 @@ The box screen is 1920 x 1080. Phone screens are 390 x 844.
 | Screen | Node ID | Screenshot | What it shows, and its data |
 |---|---|---|---|
 | Box / Home | `23:84` | `docs/figma/os/box-home.png` | Menu bar (box switcher, Notifications with the pending count, clock), greeting, four widgets, the app grid, the dock, and an approval banner. Widgets: pending approvals (SpacetimeDB `approval` where `state` is `pending`), running tasks with their `step` and progress (SpacetimeDB `task`), money spent today (sum of `costCents`), and Time Machine's layer count (finished tasks). App badges count each app's pending approvals |
+| Box / Tasks | `24:283` (window `24:383`) | `docs/figma/os/box-tasks.png` | The Tasks app as a window over the desktop. `GET /api/tasks` once, then the SpacetimeDB `task` table live: `title`, `id`, `source`, `step` (Live status), `state`, `costCents` of `budgetCents`. Tabs count by state |
+| Box / Task detail | `24:454` (window `24:554`) | `docs/figma/os/box-task-detail.png` | One task as a window. `GET /api/tasks/<id>` (`task`, `approvals`, `events`): steps are its events in `seq` order, blocked rows are `net.blocked` events and failed `tool.result` events. `GET /api/tasks/<id>/diff` for the files. Undo is `POST /api/tasks/<id>/undo` |
+| Box / Notification Center | `25:629` (panel `25:804`) | `docs/figma/os/box-notification-center.png` | Opens from Notifications in the menu bar. Pending approvals first (SpacetimeDB `approval` where `state` is `pending`), each with Approve and Deny; then earlier notices from the log: blocked attempts (`net.blocked`) and the session restore |
 | Phone / Home | `23:304` | `docs/figma/os/phone-home.png` | The same OS on a phone: the Dynamic Island shows how many tasks run, two widgets, the app grid with badges, the dock |
 
 Apps and where they come from: Tasks, Activity and Time Machine are the core's own. Credit desk, Shopper and Wallet
