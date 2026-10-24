@@ -385,6 +385,9 @@ on the pages or in OCR of all 61 images; no em dashes; every page fits 390 x 844
   (shot 39).
 - **No HTML runs from task text.** Titles, approval questions and file contents carrying HTML showed as plain text on
   the portal (home, Tasks, the task window, Activity, notifications, Time Machine), the track pages and a phone.
+- **`x-box-person` can't impersonate (Business, 276bb32).** With Sam's token and `x-box-person: rosa` from off the box,
+  the answer was refused as Sam ("You asked for this"). With Rosa's token and `x-box-person: sam`, the denial was
+  recorded as Rosa. With no token through a proxy: 401. Only the box's own screen honours the header.
 - **Shopper (Visa).** A watch on the Box Test Store fired in 6 s with "Buy 2 x Hario V60 02 paper filters for $17.98?
   TEST PAYMENT". Approved on the phone: a Stripe test-mode order signed with Visa TAP and verified by the store. No
   repeat purchase on the next check. Undo refunded it in Stripe test mode (shots 40 to 46).
