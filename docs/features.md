@@ -32,11 +32,11 @@ Checked against main `7fe6651`, Sat Oct 24 08:09 PT. `./demo` from a clean workt
 |---|---|
 | verified (ISO) | 3 |
 | verified | 56 |
-| merged | 142 |
+| merged | 145 |
 | building | 3 |
-| planned | 0 |
+| planned | 2 |
 | not pursued | 6 |
-| **Total** | **210** |
+| **Total** | **215** |
 
 **Collisions** (detail below): none open at 03:27. The three found at 02:25 are resolved and Business is on main. Still
 watched: portal/dist rebuilt from merged sources (C-4).
@@ -114,6 +114,11 @@ watched: portal/dist rebuilt from merged sources (C-4).
 | Native Activity: the action log, a search box (Ctrl+F) and two filters (task, app) | personal | merged | c1e790d, a9b1c44 | personal demo | |
 | Native Time Machine: take out one task (Undo or Put back) or everything since 15 minutes, 1 hour or today, newest first; stops and says so if you edited a file | personal | merged | c1e790d, a9b1c44 | personal demo | |
 | Native Apps: each installed app is a panel in the window (a web view of the app's own page); links outside the app open in the browser | personal | merged | c1e790d, a9b1c44 | personal demo | |
+| Faster task start on real folders: 17.7 s to 8.1 s per task on 50k files and 2.3 GB; 10 tasks 166 s to 77 s; the box API blocked at most 2.2 s (it was blocked the whole time). Numbers in `docs/perf/filesystem.md` | core | merged (deploying; gate on Vultr 35 passed, 0 failed) | 3ee6672 | Personal and multi-folder demo steps (Keep, conflicts, unkeep) | Personal |
+| Faster Keep and undo of a Keep: 14.6 s to 3.1 s and 6.5 s to 0.3 s; memory 1.2 GB to 228 MB. The conflict check uses size and mtime (older tasks' hash records still work) | core | merged | 3ee6672 | same steps | Personal |
+| A resumed task keeps its own copy after a restart | core | merged | 3ee6672 | moment 4 | Personal |
+| Zero-copy workspaces (idmapped lower, 7 ms, no disk) | core | planned (decision for Ben, after Sunday) | | | Personal |
+| XFS or btrfs install with reflink (installer change on both architectures) | image | planned (decision for Ben, after Sunday) | | | Personal |
 | GDM and Plymouth branding | personal, image | merged (branding hooks) | d451f8d, b0ab128 | none | Figma |
 | GurtOS Setup (first boot) | personal | merged | 96ce0cb | none | |
 | Approvals as GNOME notifications, Ask an Agent in Files | personal | merged (owner verified) | 65679b2 | personal/demo.ts | |
