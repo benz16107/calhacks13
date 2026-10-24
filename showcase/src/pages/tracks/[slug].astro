@@ -7,6 +7,7 @@ import Shots from '../../components/Shots.astro';
 import LinkList from '../../components/LinkList.astro';
 import Flow from '../../components/Flow.astro';
 import Status from '../../components/Status.astro';
+import { LINKS } from '../../data/site';
 
 export async function getStaticPaths() {
   const tracks = (await getCollection('tracks')).sort((a, b) => a.data.order - b.data.order);
@@ -49,6 +50,17 @@ const jumps = [
     </header>
 
     <VideoSlot video={d.video ?? entry.id} clip={d.clip} label={`${d.sponsor} video`} />
+
+    <aside class="runs-on" aria-label="Runs on GurtOS">
+      <p class="runs-h">Runs on top of GurtOS</p>
+      <ul>
+        <li><strong>Its own space for every agent:</strong> its own Linux user and its own copy of the files, like a worktree per task.</li>
+        <li><strong>Security first:</strong> keys never reach an agent, each task reaches only its allowed hosts, spending waits for your OK, and every change is logged and undoable.</li>
+        <li><strong>On a computer you own:</strong> GurtOS Server needs 4 GB of memory and 17 GB of disk on any x86_64 or arm64 machine, no GPU; GurtOS Personal needs 4 GB and 29 GB.</li>
+        <li><strong>Live control:</strong> the portal and the phone show every agent on any of your machines, and can approve, undo or pause it.</li>
+        <li><strong>Open source:</strong> Apache-2.0. Anyone can <a href={LINKS.repo}>run it, customise it and reuse it</a>.</li>
+      </ul>
+    </aside>
 
     <Criteria sponsor={d.sponsor} source={d.criteriaSource} items={d.criteria} />
     <Shots shots={d.shots} />
@@ -120,6 +132,26 @@ const jumps = [
   }
   .pitch :global(code) {
     background: rgb(255 255 255 / 0.1);
+  }
+  .runs-on {
+    margin: var(--space-6) 0;
+    padding: var(--space-4) var(--space-5);
+    background: var(--color-bg-surface);
+    border: 1px solid var(--color-border-default);
+    border-radius: var(--radius-md);
+    max-width: var(--measure);
+    font-size: 0.93rem;
+  }
+  .runs-h {
+    font-weight: 600;
+    margin: 0 0 var(--space-2);
+  }
+  .runs-on ul {
+    margin: 0;
+    padding-left: 1.2em;
+  }
+  .runs-on li {
+    margin-bottom: var(--space-1);
   }
   .proof {
     background: var(--color-bg-surface);

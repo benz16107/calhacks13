@@ -2,10 +2,10 @@
 order: 16
 sponsor: Solana
 prize: 'MLH: Best use of Solana'
-editions: 'GurtOS Server'
-pitch: 'An always-on box holds the wallet, so agents can pay for APIs at any hour. The key never leaves the vault, and every payment is a devnet transaction anyone can check.'
+editions: 'GurtOS Server, and GurtOS Business'
+pitch: 'An always-on box you own holds the Solana wallet in its root-only vault, so agents can pay for APIs at any hour without ever seeing the key. Every payment is a devnet transaction anyone can check, recorded in the box''s log with the task that made it. GurtOS is open source (Apache-2.0), so the same wallet works in anyone''s agents.'
 title: Agents pay in USDC on Solana devnet, without ever holding the key
-summary: 'GurtOS gives every box an agent wallet on Solana. When an agent needs a paid API, the box signs an SPL token transfer of devnet USDC from a wallet in its root-only vault, a facilitator pays the network fee and submits it, and the box checks the transaction is confirmed on chain before it records the receipt. Agents only ever see results. All of it is devnet USDC, which has no value.'
+summary: 'Giving an agent money today means handing it a private key on a system with no layer built for it. GurtOS gives every box an agent wallet on Solana that the agent never touches. When an agent needs a paid API, the box signs an SPL token transfer of devnet USDC from a wallet in its root-only vault, a facilitator pays the network fee and submits it, and the box checks the transaction is confirmed on chain before it records the receipt. Agents only ever see results. All of it is devnet USDC, which has no value.'
 proof: 'The wallet''s whole history is public on Solana Explorer: one 20 USDC faucet deposit, then 36 x402 payments of $0.01 or $0.03 made by agents on the box, 0.76 USDC in all, every one a finalized SPL TransferChecked whose fee was paid by the facilitator, never by the wallet.'
 criteriaSource: "MLH's Solana prize asks only that the project uses Solana. Quoted from the project's track plan."
 criteria:
@@ -72,6 +72,20 @@ status:
     state: not-built
     note: 'Devnet only, by design. Mainnet needs a different network and asset in the wallet code, real USDC and a review.'
 ---
+
+## Why GurtOS, and what each part is for
+
+**Solana payments, on top of the OS.** The key, the budget, the approval and the record come from GurtOS; the wallet
+app adds the SPL transfers. A GurtOS Server box needs 4 GB of memory and 17 GB of disk on any x86_64 or arm64 machine,
+no GPU. GurtOS is open source under Apache-2.0, so anyone can run it, customise it, and reuse the wallet and its Solana signing in their own agents.
+
+| Feature | Why it is there | What it shows for Solana | From | Today |
+|---|---|---|---|---|
+| SPL `TransferChecked` of devnet USDC, signed in the core | Real on-chain payments an agent can make without holding the key | Use of Solana | The wallet app | Shipped. 36 payments, every one finalized |
+| The wallet holds no SOL; a facilitator pays each fee | An agent wallet needs only the asset it spends | Use of Solana | The wallet app, on Coinbase CDP | Shipped |
+| Each transfer confirmed on chain before the receipt is logged | The log never claims a payment the chain does not have | Best use of Solana | The wallet app and GurtOS's log | Shipped |
+| Key in the root-only vault, per-task budget, approval on the phone | Spending is safe enough to leave running | Best use of Solana | GurtOS | Shipped |
+| A tamper-evident fingerprint of the box's log on Solana | Anyone could check the record was not rewritten | Best use of Solana | The wallet app | Being built; not on main yet |
 
 ## Evidence
 
