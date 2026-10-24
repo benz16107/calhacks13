@@ -13,9 +13,9 @@ quota was used up; /find searched locally and the find thread is fixing the sync
 ## Machines
 
 The QA run used three Vultr instances labelled `calhacks13-qa` (the debug ISO, then main's core on top, with test keys
-in its vault and its box ports open only to linuxbox), `calhacks13-qa-release` (the 00:44 PT release ISO) and a first
+in its vault and its box ports open only to the QA machine), `calhacks13-qa-release` (the 00:44 PT release ISO) and a first
 release install that was deleted at 22:54 PT. Their IDs and addresses are kept out of this repo, in
-`~/.config/calhacks13/qa-instances.md` on linuxbox. **Delete them and their custom ISOs after Sunday Oct 25.**
+a private notes file outside the repo. **Delete them and their custom ISOs after Sunday Oct 25.**
 
 ## Summary
 
@@ -64,7 +64,7 @@ network all work on main as of 717bc3f.
 | P2-18 phone tasks logged as "api" | Fixed, verified: "Ask the box" on a phone logs the device name as source | portal d64cb80 |
 | Open P1s | P1-12 ASI:One not paired; P1-13 real agent probes the proxy in moment 2; D-5; showcase S-1 to S-6 | |
 
-**Not re-tested yet:** P2-6, P2-7, P2-8, P2-10 (portal says fixed), and the installed boxes. **At 01:08:** linuxbox runs current main. The laptop (Sunday's demo box) and Vultr run
+**Not re-tested yet:** P2-6, P2-7, P2-8, P2-10 (portal says fixed), and the installed boxes. **At 01:08:** the always-on x86 test box runs current main. The laptop (Sunday's demo box) and Vultr run
 current core and /find but the portal from 717bc3f, without d64cb80's QR pairing (P0-8) and live-banner (P1-7) fixes.
 Core was asked to deploy both once more. /find's fixes are not yet checked on a fresh ISO install (the latest ISO,
 881318a, predates them).
@@ -77,7 +77,7 @@ Core was asked to deploy both once more. /find's fixes are not yet checked on a 
 - Steps: on a box reachable from another machine (BOX_LISTEN=0.0.0.0, a port forward or a funnel), from that
   machine with no Authorization header: `GET /api/log`, `POST /api/tasks`, `POST /api/approvals/<id>
   {"approved":true,"by":"Ben's iPhone"}`, `POST /api/tasks/<id>/undo`, `POST /api/pair/start` then `POST /api/pair`,
-  `DELETE /api/devices/<id>`. Script: `the QA thread's `stranger.py`` on linuxbox.
+  `DELETE /api/devices/<id>`. Script: the QA thread's `stranger.py`, kept outside the repo.
 - Expected: every route except redeeming a pairing code needs a paired device's token when the request isn't from
   the box itself. `by` comes from the device, not the body.
 - Actual: all of them return 200. A bogus token gets 401, but no token at all passes. The log says the $500
@@ -202,7 +202,7 @@ connecting via external IP", `ss`, `lsof` and /proc lookups, then tried the prox
 the steps sees an agent trying to get around the box. The demo uses the same `shop.localhost` host. Use a host name
 curl proxies (not `.localhost`), or tell the agent the proxy in its prompt.
 
-**P1-12. Nobody is paired with the ASI:One agent.** Owner: fetch. linuxbox's box runs agent `box` with its mailbox,
+**P1-12. Nobody is paired with the ASI:One agent.** Owner: fetch. The always-on x86 test box runs agent `box` with its mailbox,
 but its page says "Owners paired: 0", so the chat flow needs `pair <code>` from Ben's ASI:One account before judging.
 The Vultr box's agent is off (no Agentverse key in its vault), which is fine if it's documented.
 
@@ -371,7 +371,7 @@ on the pages or in OCR of all 61 images; no em dashes; every page fits 390 x 844
 
 | PT | Step | Shot |
 |---|---|---|
-| 22:27 | ISO served from vultrbox, added to Vultr by URL, md5 matched | |
+| 22:27 | ISO served from the build VM, added to Vultr by URL, md5 matched | |
 | 22:29 | Instance deployed from the release ISO; first boot lands in iPXE until the ISO mounts | 01 |
 | 22:31 | Disc boots, black screen about 2 min, then the installer | 03, 04 |
 | 22:34 | Installed, restarted, the box's screen | 05 |
@@ -380,7 +380,7 @@ on the pages or in OCR of all 61 images; no em dashes; every page fits 390 x 844
 | 22:38 | Each app on the fresh install | 10 |
 | 22:55 | New instance from the debug ISO; installed and SSH up in about 3 min | |
 | 23:00 | Main's core on top, vault filled through the vault API, API on 0.0.0.0 | |
-| 23:01 | Stranger tests from linuxbox: P0-1, P0-2, P0-3 | |
+| 23:01 | Stranger tests from another machine: P0-1, P0-2, P0-3 | |
 | 23:05 | Main's box screen | 12, 13 |
 | 23:06 | Phone pairs from the box screen's QR; a second phone pairs | 14 to 17 |
 | 23:08 | Two phones answer one request; double tap approves two | 18 to 20 |
