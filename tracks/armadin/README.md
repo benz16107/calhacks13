@@ -60,11 +60,10 @@ task's leftovers in `/tmp` · DNS exfiltration (UDP 53) · firewall bypass over 
 - **Exfiltration through an allowed host.** The proxy checks which hostname a task may reach, never what it
   sends there. A task can still put arbitrary bytes (a query string, a header, a body) on a request to a host
   it is legitimately allowed to use. The one exception is the decoy cloud key: the proxy looks for it in the
-  URL and headers of a plain-HTTP request that arrives as a full URL (`curl` sends one), in the bytes of a
+  URL, headers and body of a plain-HTTP request that arrives as a full URL (`curl` sends one), in the bytes of a
   tunnel to an allowed host on any port but 443 (Node's `fetch` opens one, even for plain HTTP), in a tunnel's
   host name, in tool-call inputs and in the log, and the box stops the task if it appears. It does not look
-  inside a tunnel on port 443 (HTTPS), in the model relay, or (from reading `core/net.ts`; this track has not
-  tested it) in the body of a plain-HTTP request sent as a full URL. It only knows the decoy, not a real secret. Closing the rest needs a track-level control (an allowlisted
+  inside a tunnel on port 443 (HTTPS) or in the model relay, and it only knows the decoy, not a real secret. Closing the rest needs a track-level control (an allowlisted
   request shape), not a core one.
 
 ## 3. The hijacked payment
