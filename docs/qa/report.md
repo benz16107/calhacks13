@@ -19,7 +19,7 @@ release install that was deleted at 22:54 PT. Their IDs and addresses are kept o
 
 ## Summary
 
-Status at 00:30 PT Saturday. **8 P0 found: 7 fixed and verified, P0-8 open.** 20 P1 and 18 P2 found in the product, plus 7 in
+Status at 00:35 PT Saturday. **8 P0 found: 7 fixed and verified, P0-8 open.** 20 P1 and 18 P2 found in the product, plus 7 in
 the docs site and 9 in the showcase. The four moments, Shopper, the wallet, the credit desk and a phone paired over the
 network all work on main as of 717bc3f.
 
@@ -44,11 +44,16 @@ network all work on main as of 717bc3f.
 | P1-11 supplies form pays the budget | Fixed, verified: pauses at "$0.03 on a $0.02 budget", then pays | shopper b842425 |
 | P2-1 the losing phone gets no word | Fixed, verified 00:29: "Already approved on Judge's iPhone" (shot 76) | portal |
 | Unpaired phone sees everything | Fixed, verified: "Pair this phone first", no tasks shown | portal |
+| P1-3 /find starts a Droid task at boot | Fixed, verified 00:33: no describe task on restart | find 7663eb4, 4351905 |
+| P1-10 (find half) no /find page | Fixed, verified: "whiteboard photo" on a phone finds photos/IMG_2041.jpg (shot 77) | find 76ff3f8 |
+| P1-14 budget and hosts not validated | Fixed, verified: -5, "abc", 0.5, 1e15, "*", "*.*", CIDRs and the box's own port refused with clear messages | core 5942002 |
+| P2-15 no size limits, raw JSON errors | Fixed, verified: 200-character titles, 100,000-character prompts, "the request body isn't valid JSON" | core 5942002 |
+| P2-16 a restart announced as a power cut | Fixed, verified: /api/health says cleanStart true after a clean restart; the portal says "Back after a restart" | core 5942002, portal 717bc3f |
 | P2-9 undo doesn't say it refunds | Fixed, verified: "Undo and refund (test)" | portal 717bc3f, shopper |
 | P2-14 "Box" names | Store, Mana app, Jira panel renamed; Elastic open | tracks |
 | D-1 to D-4, D-7 docs | Fixed, live | docs 199dce5 |
 | P1-7 live banner names the wrong hosts | **Still open** at 00:21 on a phone: "tm2diipf4e2 tried to reach attacker.example. It may not reach any host." (id instead of title, and its host is shop.localhost:8123) | portal |
-| Open P1s | P1-3 /find starts a Droid task at boot; P1-12 ASI:One not paired; P1-13 real agent probes the proxy in moment 2; P1-14 budget and hosts not validated; D-5, D-6; showcase S-1 to S-6 | |
+| Open P1s | P1-12 ASI:One not paired; P1-13 real agent probes the proxy in moment 2; D-5, D-6; showcase S-1 to S-6 | |
 
 **Not re-tested yet:** P2-6, P2-7, P2-8, P2-10 (portal says fixed), and the installed boxes. **At 00:22 none
 runs current main:** linuxbox and Vultr are at 3a4e4ca (no P0-7 fix), and the laptop, Sunday's demo box, still runs
@@ -386,3 +391,6 @@ on the pages or in OCR of all 61 images; no em dashes; every page fits 390 x 844
 | 00:02 | Release ISO 20261024-0644-881318a installed fresh on Vultr: GurtOS, Pacific time, ports closed | 60 |
 | 00:09 | Main 3a4e4ca: double tap, outage bar, Ask the box, credit desk, supplies form on a paired phone | 61 to 70 |
 | 00:12 | Main 717bc3f: P0-7, firewall refusals logged, a test-store purchase and its refund Undo | 71 |
+| 00:21 | P1-7 on a phone (still open) | 72 |
+| 00:27 | Pairing from the QR address on a fresh phone (P0-8); two phones racing (P2-1) | 73 to 76 |
+| 00:33 | Main a427291: validation, clean-stop marker, no /find boot task, /find on a phone | 77 |
