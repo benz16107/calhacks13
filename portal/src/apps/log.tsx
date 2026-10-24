@@ -64,6 +64,9 @@ export function noteText(e: Extract<LogEvent, { type: 'note' }>): string {
   return `${appName(e.track)}: ${[words(verb), ...facts].filter(Boolean).join(', ') || 'a note'}`;
 }
 
+/** A step with nothing to say (the scripted worker's waits): kept in the log for resume, left off every list. */
+export const silent = (e: LogEvent) => e.type === 'task.step' && !e.text;
+
 /** One log event as a sentence. `tone` marks what deserves color: blocked attempts, requests, spending. */
 export function describe(e: LogEvent, events: LogEvent[]): { text: string; data: string; tone?: 'blocked' | 'ask' | 'money' } {
   switch (e.type) {

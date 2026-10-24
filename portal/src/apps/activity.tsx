@@ -5,7 +5,7 @@ import { useBox, type LogEvent, dayOf } from '../live.ts';
 import { Badge, Icon } from '../kit/ui.tsx';
 import { HeaderBar, open } from '../wm.tsx';
 import { clock, pending, plural, taskTitle } from '../util.ts';
-import { describe, fieldsOf, kindOf } from './log.tsx';
+import { describe, fieldsOf, kindOf, silent } from './log.tsx';
 
 type Filter = 'all' | 'blocked' | 'approvals' | 'vault' | 'tasks';
 const isBlocked = (e: LogEvent) => e.type === 'net.blocked' || (e.type === 'tool.result' && !e.ok);
@@ -27,7 +27,7 @@ export function ActivityApp() {
   const [, label, , test] = FILTERS.find((f) => f[0] === filter)!;
   const needle = q.trim().toLowerCase();
   const shown = b.events
-    .filter(test)
+    .filter((e) => test(e) && !silent(e))
     .slice(-SHOWN * 2)
     .reverse()
     .filter((e) => !needle || `${e.seq} ${e.task ? taskTitle(e.task) : ''} ${kindOf(e)} ${describe(e, b.events).text}`.toLowerCase().includes(needle))

@@ -5,7 +5,7 @@ import { api, box, hosted, machine, onEvent, undo, useBox, type Approval, type L
 import { Alert, AppIcon, Badge, Button, Icon, IconButton, Menu, Popover, StatusPage } from '../kit/ui.tsx';
 import { HeaderBar, open, useWin } from '../wm.tsx';
 import { STATE, appOf, clock, dollars, needsModelKey, taskTitle } from '../util.ts';
-import { DiffView, describe, undoCopy, type Diff } from './log.tsx';
+import { DiffView, describe, silent, undoCopy, type Diff } from './log.tsx';
 import { AnswerButtons } from './answer.tsx';
 
 interface Detail {
@@ -190,7 +190,7 @@ export function TaskApp({ id }: { id: string }) {
 
             <h3 class="t-heading">Steps, from the action log</h3>
             <ol class="gos-w-steps">
-              {detail.events.map((e) => {
+              {detail.events.filter((e) => !silent(e)).map((e) => {
                 const bad = isBlocked(e);
                 return (
                   <li class={`gos-w-step${bad ? ' is-blocked' : ''}`} key={e.seq}>

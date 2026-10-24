@@ -7,6 +7,8 @@ export const dollars = (cents: number) => `$${(cents / 100).toFixed(2)}`;
 export const spentToday = () => (box.logLoaded ? dollars(box.today.cents) : '…');
 export const plural = (n: number, one: string, many = one + 's') => `${n} ${n === 1 ? one : many}`;
 const ACRONYMS = new Set(['API', 'ID', 'URL', 'MLE', 'JWT', 'SSH', 'AWS', 'CDP', 'TAP', 'PAT', 'IMAP', 'SMTP', 'POP3', 'RPC', 'MCP', 'CRS', 'SSO', 'PEM', 'RSA', 'ASI', 'X402', 'USDC', 'JSM']);
+/** A message from GurtOS as a sentence: capital first letter and a full stop ("the key is empty" reads "The key is empty."). */
+export const sentence = (m: string) => (m ? m[0].toUpperCase() + m.slice(1) + (/[.!?]$/.test(m) ? '' : '.') : m);
 /** Who answered or acted, for people: the box's own screen is "this computer's screen". */
 export const who = (by: string) => (by === 'box screen' ? "this computer's screen" : by);
 /** A key's name for people: ANTHROPIC_API_KEY is "Anthropic API key". The variable name stays a small caption. */

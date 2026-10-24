@@ -11,7 +11,7 @@ import { AddRow, Alert, AppIcon, Badge, Button, ComboRow, Group, Icon, IconButto
 import { HeaderBar, InWindow, open, phone, useWin } from '../wm.tsx';
 import { access } from '../shell.tsx';
 import { PRODUCT } from '../product.ts';
-import { dollars, keyLabel, plural, selfBox, useNow } from '../util.ts';
+import { dollars, keyLabel, plural, selfBox, sentence, useNow } from '../util.ts';
 import { KillSwitchPage, PeoplePage, RulesPage } from './company.tsx';
 /** One model key lets agents think: an Anthropic key or a Factory key. */
 const MODEL_KEYS = ['ANTHROPIC_API_KEY', 'FACTORY_API_KEY'];
@@ -127,7 +127,7 @@ export function KeySheet({ name, onClose, onSaved }: { name?: string; onClose: (
         </label>
         {error && (
           <p class="gos-error" role="alert">
-            Not saved: {error}
+            {sentence(error)}
           </p>
         )}
       </Sheet>
@@ -447,9 +447,9 @@ function HostsSheet({ onClose }: { onClose: () => void }) {
     <InWindow>
       <Sheet title="Sites any task may reach" onCancel={onClose} onDone={() => void save()} done="Save">
         <label class="gos-field">
-          <span class="t-body-strong">One host on each line</span>
+          <span class="t-body-strong">One site on each line</span>
           <textarea class="g-field gos-set-mono" rows={6} value={text} placeholder={'api.example.com\n*.example.com'} spellcheck={false} onInput={(e) => setText((e.target as HTMLTextAreaElement).value)} />
-          <span class="t-caption t-secondary">With "Only listed hosts", a task that names no hosts may reach these. Everything else is blocked and logged.</span>
+          <span class="t-caption t-secondary">With "Only the sites below", a task that names no sites may reach these. Everything else is blocked and logged.</span>
         </label>
         {error && (
           <p class="gos-error" role="alert">

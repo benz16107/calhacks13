@@ -18,7 +18,7 @@ interface Entry {
   kind: string;
   tone: Tone;
   actor: Actor;
-  /** Who did it: a person's name, "Credit analyst agent", or "The box". */
+  /** Who did it: a person's name, "Credit analyst agent", or "GurtOS". */
   who: string;
   icon: string;
   bad: boolean;
@@ -123,7 +123,7 @@ function entryOf(r: AuditRow, ev: LogEvent | undefined, c: Ctx): Entry {
         return mk('Tool', 'neutral', 'agent', agent, 'applications-science', r.what, `In ${task}.`);
       case 'note': {
         const by = who(r.by || 'Someone');
-        // The box's own screen acts without a person: show it as the box, not as initials.
+        // This computer's own screen acts without a person: show it as GurtOS, not as initials.
         const act: Actor = c.people.has(by) ? 'person' : 'system';
         const glyph = act === 'person' ? 'avatar-default' : 'computer';
         // The wallet's daily fingerprint of the log, written to Solana devnet (a test network): editing any old line
@@ -286,7 +286,7 @@ export function AuditApp() {
     const ctx: Ctx = { roster, names, people: new Set(names.values()) };
     const bySeq = new Map(box.events.map((e) => [e.seq, e]));
     const inRange = (r: AuditRow) => (!range.from || dayKey(r.at) >= range.from) && (!range.to || dayKey(r.at) <= range.to);
-    return { entries: (rows ?? []).filter(inRange).map((r) => entryOf(r, bySeq.get(r.seq), ctx)), ctx };
+    return { entries: (rows ?? []).filter((r) => inRange(r) && !(r.event === 'task.step' && !r.what.trim())).map((r) => entryOf(r, bySeq.get(r.seq), ctx)), ctx };
   }, [rows, b.logLoaded, b.business.people, b.business.me, range.from, range.to]);
 
   const needle = q.trim().toLowerCase();

@@ -9,7 +9,7 @@ import { AppIcon, Badge, Button, Chip, ComboRow, Group, Icon, IconButton, LinkRo
 import { access } from './shell.tsx';
 import { phone } from './wm.tsx';
 import { PRODUCT } from './product.ts';
-import { dollars, hhmm, keyLabel, plural, selfBox, useNow } from './util.ts';
+import { dollars, hhmm, keyLabel, plural, selfBox, sentence, useNow } from './util.ts';
 import './setup.css';
 import { RemoteAccess } from './apps/remote.tsx';
 
@@ -633,14 +633,16 @@ function ModelsStep({ w }: { w: Wiz }) {
   const [via, setVia] = useState<(typeof MODEL_KEYS)[number]>(modelKey(w) ?? 'ANTHROPIC_API_KEY');
   const [value, setValue] = useState('');
   const [saved, setSaved] = useState('');
+  const [refused, setRefused] = useState('');
   const anthropic = via === 'ANTHROPIC_API_KEY';
   // A quick shape check here; GurtOS itself checks the key with Anthropic or Factory and says if it was refused.
   const shape = anthropic && value.trim() && !value.trim().startsWith('sk-ant-') ? "That isn't an Anthropic key. Anthropic keys start with sk-ant-." : '';
   const save = () => {
     if (!value.trim() || shape) return;
-    api<{ checked?: boolean }>('PUT', `/vault/${via}`, { value: value.trim() }).then(
-      (r) => (setValue(''), setSaved(r?.checked === false ? "Saved. GurtOS couldn't check it yet." : `${anthropic ? 'Anthropic' : 'Factory'} key saved.`), w.reloadVault()),
-      (e) => setSaved(`Not saved: ${(e as Error).message}`),
+    // GurtOS checks the key with Anthropic: `checked` only when Anthropic accepted it, and a refused key is a 400 in words.
+    api<{ check?: 'ok' | 'unchecked'; checked?: boolean; message?: string }>('PUT', `/vault/${via}`, { value: value.trim() }).then(
+      (r) => (setValue(''), setRefused(''), setSaved(r?.message ? sentence(r.message) : r?.checked ? `${anthropic ? 'Anthropic' : 'Factory'} key saved.` : "Saved. GurtOS couldn't check it yet."), w.reloadVault()),
+      (e) => (setSaved(''), setRefused(sentence((e as Error).message))),
     );
   };
   const vultr = 'VULTR_INFERENCE_KEY';
@@ -652,7 +654,7 @@ function ModelsStep({ w }: { w: Wiz }) {
       <ToggleGroup
         label="Which key"
         value={via}
-        onChange={(v) => (setVia(v), setValue(''), setSaved(''))}
+        onChange={(v) => (setVia(v), setValue(''), setSaved(''), setRefused(''))}
         options={[
           ['ANTHROPIC_API_KEY', 'Anthropic'],
           ['FACTORY_API_KEY', 'Factory'],
@@ -683,8 +685,8 @@ function ModelsStep({ w }: { w: Wiz }) {
         <Button kind="suggested" disabled={!value.trim() || !!shape} onClick={save}>
           Save key
         </Button>
-        <span class={`t-caption${shape || saved.startsWith('Not saved') ? ' t-destructive' : saved || keySet(w, via) ? ' t-success' : ' t-secondary'}`} role="status">
-          {shape || saved || (keySet(w, via) ? `${setText(w, via)}. You can replace it but never see it.` : 'You can replace a key but never see it.')}
+        <span class={`t-caption${shape || refused ? ' t-destructive' : saved || keySet(w, via) ? ' t-success' : ' t-secondary'}`} role="status">
+          {shape || refused || saved || (keySet(w, via) ? `${setText(w, via)}. You can replace it but never see it.` : 'You can replace a key but never see it.')}
         </span>
       </div>
       <Group title="Model keys">
@@ -724,7 +726,7 @@ function KeySheet({ name, onClose, after }: { name: string; onClose: () => void;
       </label>
       {error && (
         <p class="t-caption t-destructive" role="alert">
-          Not saved: {error}
+          {sentence(error)}
         </p>
       )}
     </Sheet>
