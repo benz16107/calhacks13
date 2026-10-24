@@ -1170,6 +1170,19 @@ await moment("native apps: device kinds and the Apple Watch's limits, enforced b
   const limited = [];
   for (let i = 0; i < 3; i++) limited.push((await phone('POST', '/api/devices/self/watch', {})).status);
   check(limited.includes(429), `adding Watches is rate-limited per iPhone (${limited.join(', ')})`);
+  const b64 = (t: string) => Buffer.from(t).toString('base64');
+  const shared = await phone('POST', '/api/tasks', { title: 'Summarize the shared note', worker: 'fake', source: 'demo', prompt: 'expect note.txt hello from the Mac', files: [{ name: 'note.txt', data: b64('hello from the Mac\n') }] });
+  check(shared.status === 200 && /^shared-[0-9a-f]{12}$/.test(shared.body.workspace), `shared files go to a new workspace the box names (${shared.body.workspace})`);
+  check((await settled([shared.body.id]))[0].state === 'done', 'and the task reads them');
+  const shareLog = (await api<LogEvent[]>('GET', `/api/log`)).filter((e) => e.type === 'note' && (e as { track?: string }).track === 'share');
+  check(shareLog.length > 0 && !JSON.stringify(shareLog).includes(b64('hello from the Mac\n')), 'the log keeps the names and sizes, never the contents');
+  const refused = await Promise.all([
+    { workspace: 'home' }, { folder: '/home/someone/Documents' }, { folders: ['/home/someone/Documents'] },
+  ].map((extra) => phone('POST', '/api/tasks', { title: 'x', worker: 'fake', prompt: 'say hi', files: [{ name: 'a.txt', data: b64('a') }], ...extra })));
+  check(refused.every((r) => r.status >= 400 && r.status < 500) && refused[0].body.error.startsWith('Shared files go to a new workspace'), `files with a workspace, a folder or folders are refused (${refused.map((r) => r.status).join(', ')}): "${refused[0].body.error}"`);
+  const bad = await Promise.all([[{ name: '../x', data: b64('a') }], [{ name: 'big.bin', data: Buffer.alloc(5 * 1024 * 1024 + 1).toString('base64') }], Array.from({ length: 9 }, (_, i) => ({ name: `f${i}`, data: b64('a') }))]
+    .map((files) => phone('POST', '/api/tasks', { title: 'x', worker: 'fake', prompt: 'say hi', files })));
+  check(bad.every((r) => r.status === 400), 'a path in a name, more than 5 MB, or more than 8 files is refused');
   await api('DELETE', `/api/devices/${phoneDev.device.id}`);
   check((await phone('GET', '/api/tasks')).status === 401 && (await as(wt.body.token)('GET', '/api/tasks')).status === 401, "revoking the iPhone revokes its Watch");
   await as(webDev.token)('DELETE', '/api/pair/self');

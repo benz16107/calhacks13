@@ -632,6 +632,7 @@ answers without `/api`, which is what the demo and tracks use.
 |---|---|
 | `GET /api/tasks` | Every task: `id, title, state, source, workspace, costCents, budgetCents, step, summary, error, createdAt, updatedAt` |
 | `POST /api/tasks {title, prompt, workspace?, tools?, hosts?, budgetCents?}` | The new task. Workspace defaults to `home`, worker to Droid. A field the box doesn't know (a typo like `folders`) is refused with a 400 naming it. `folder` (Personal) is a real field: the owner's folder the task works a copy of, kept on the task. |
+| `POST /api/tasks {..., files: [{name, data}]}` | Files shared to a new task (the Mac app's Share menu): 1 to 8, base64, 5 MB in all, plain names. They go to a new workspace whose name the box picks (`shared-<random>`), so the task's copy holds only them; a task with files can't name a workspace, folder or folders. The log keeps names and sizes, never the contents. |
 | `GET /api/tasks/<id>` | `{task, approvals, events}`: the task, its approvals, and its whole action log |
 | `GET /api/tasks/<id>/diff` | `{changes: [{path, change}], diff}`: what it added, modified or deleted, and a unified diff |
 | `POST /api/tasks/<id>/undo` | The task, now `undone`. For a real-folder task, discards its changes. |

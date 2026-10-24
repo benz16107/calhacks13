@@ -264,6 +264,8 @@ class Core {
         return d.fast === true ? `Fast folders: workspace ready in ${d.ms} ms` : d.fast === false ? `Fast folders not used: ${d.why}` : undefined;
       case 'remote':
         return typeof d.text === 'string' ? d.text : undefined;
+      case 'share':
+        return Array.isArray(d.files) ? `Files shared to a new task: ${d.files.map((f: { name: string }) => f.name).join(', ')}` : undefined;
     }
     return undefined;
   }
@@ -328,10 +330,43 @@ class Core {
   // ---------- tasks ----------
 
   /** `requestedBy` is the person who asked (Business), from their paired phone or the track route they called. */
+  /** 1 to 8 files, 5 MB in all, plain names, into a new workspace whose name the box picks. */
+  sharedWorkspace(files: unknown): string {
+    if (!Array.isArray(files) || files.length < 1 || files.length > 8) throw new Error('Send 1 to 8 files.');
+    let total = 0;
+    const list = files.map((f: { name?: unknown; data?: unknown }) => {
+      const name = String(f?.name ?? '');
+      if (!/^[\w .()\[\]-]{1,100}$/.test(name) || name.startsWith('.')) throw new Error(`"${name.slice(0, 40)}" isn't a plain file name.`);
+      const data = typeof f?.data === 'string' && /^[A-Za-z0-9+/=]*$/.test(f.data) ? Buffer.from(f.data, 'base64') : undefined;
+      if (!data) throw new Error(`${name} needs its contents as base64.`);
+      total += data.length;
+      return { name, data };
+    });
+    if (total > 5 * 1024 * 1024) throw new Error('Shared files can be 5 MB in all.');
+    const ws = `shared-${randomBytes(6).toString('hex')}`;
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'box-shared-'));
+    try {
+      for (const f of list) fs.writeFileSync(path.join(tmp, f.name), f.data);
+      sandbox.workspace(ws, tmp);
+    } finally {
+      fs.rmSync(tmp, { recursive: true, force: true });
+    }
+    this.write({ type: 'note', track: 'share', data: { workspace: ws, files: list.map((f) => ({ name: f.name, bytes: f.data.length })) } });
+    return ws;
+  }
+
   async createTask(spec: TaskSpec, requestedBy?: string): Promise<Task> {
-    const known = ['title', 'prompt', 'workspace', 'worker', 'tools', 'hosts', 'budgetCents', 'source', 'folder', 'folders', 'seat', 'droid', 'model'];
+    const known = ['title', 'prompt', 'workspace', 'worker', 'tools', 'hosts', 'budgetCents', 'source', 'folder', 'folders', 'seat', 'droid', 'model', 'files'];
     const unknown = Object.keys(spec ?? {}).filter((k) => !known.includes(k));
     if (unknown.length) throw new Error(`unknown task field${unknown.length > 1 ? 's' : ''}: ${unknown.join(', ')} (known: ${known.join(', ')})`);
+    // Files shared to a new task (the Mac app's Share menu) get a workspace of their own, named by the box; the log
+    // keeps only names and sizes. Never with a folder or a workspace, so they can't land in the owner's files.
+    if ((spec as { files?: unknown }).files !== undefined) {
+      const { files, ...rest } = spec as TaskSpec & { files?: unknown };
+      if (rest.workspace !== undefined || (rest as { folder?: unknown }).folder !== undefined || (rest as { folders?: unknown }).folders !== undefined)
+        throw new Error('Shared files go to a new workspace of their own, so a task with files can\'t also name a workspace or a folder.');
+      spec = { ...rest, workspace: this.sharedWorkspace(files) };
+    }
     // What a task does not name comes from the owner's settings: the budget and the network it gets.
     const dflt = { hosts: this.settings.networkDefault === 'allowlist' ? this.settings.defaultHosts : [], budgetCents: this.settings.defaultBudgetCents };
     const s: FullSpec = { workspace: 'home', worker: 'droid', tools: [], source: 'api', ...spec, hosts: spec.hosts ?? dflt.hosts, budgetCents: spec.budgetCents ?? dflt.budgetCents };
