@@ -55,9 +55,9 @@ network all work on main as of 717bc3f.
 | P2-13 Elastic index mixes test boxes | Fixed, verified 00:48: 505 documents from installed boxes plus one demo run kept for screenshots (a18523); no dev boxes; the agent filters to installed boxes by default | elastic ca03219, portal 717bc3f |
 | P2-11 wallet page shows only the balance | Fixed, verified 01:00: "TEST MONEY" once, balance, then a Payments table with time, amount, payee, task and transaction | wallet fb51e47 |
 | Wallet approvals don't name the payee | Fixed, verified: "Spend $0.03 to 39w7... on wallet.pay (.../report in devnet USDC (test money))? Budget $0.02" | wallet fb51e47 |
-| Showcase S-2, S-3, S-5, S-6, S-7 | Fixed, rechecked 01:00 on all 22 pages; only /tracks/elastic/ still says "Box log" (now "GurtOS log") | showcase ab8e509 |
+| Showcase S-2, S-3, S-5, S-6, S-7 | Fixed, rechecked 01:00 on all 22 pages and 01:30 on Elastic and Figma: "GurtOS log", and 32 sessions, 364 min, code generation 162 | showcase ab8e509, 213622e |
 | Showcase S-1 GitHub links 404 | **Ben's call**: the repo is still private at 01:00 PT | Ben |
-| Stage log Devpost paragraphs | Fixed, checked 01:20: paragraphs and table agree (32 sessions, 364 min; ideation 32, prototyping 26, handoff 19, code generation 162). The showcase still says 137 / 31 / 339; sent to the submission thread | figma 809b1bf |
+| Stage log Devpost paragraphs | Fixed, checked 01:20: paragraphs and table agree (32 sessions, 364 min; ideation 32, prototyping 26, handoff 19, code generation 162). The showcase matches since 213622e | figma 809b1bf |
 | P2-19 "spent today" shows an old total at load | Fixed, verified 01:25: three fresh loads sampled every 200 ms showed "…" then only the right total | portal 1832a59 |
 | Jira through Caddy after the token gate | Fixed. The Jira thread checked Approve and Roll back from the real panel on BOX-14 through Caddy. QA confirmed from outside at 00:45: /t/jira/task 401 without the secret, /t/mana/status 200, everything else 404 | core 6879fb9, jira c82fcdb |
 | D-1 to D-4, D-6, D-7 docs | Fixed, live. D-6 spot-checked 00:52: the Elastic, Jira and Shopper guides say GurtOS log (gurtos-log), GurtOS agent task and GurtOS Test Store, with no "Box" names left | docs 199dce5, 9cc7d92 |
