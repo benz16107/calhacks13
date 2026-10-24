@@ -167,7 +167,10 @@ Pull the plug mid-task. When the box boots, it resumes every task where it stopp
 ### 6. Pick your machine from the chat [Fetch]
 
 "Link my laptop agent1q... 123456" with the code from the laptop's GurtOS page links the laptop's own GurtOS agent.
-Then "fix the test on my laptop" runs there, and the answer comes back to this chat. Linking sends the code with a
+In the GurtOS app on the phone, open that machine's ASI:One window to read its code. The linked box says what it is
+(its GurtOS edition and name, from `GET /api/system`). Then "fix the test on my laptop" or, from the laptop, "... on my
+server" runs there, and the answer comes back to this chat, which names the machine as the app does: "Home server
+(GurtOS Server)". Linking sends the code with a
 fresh nonce. The laptop must answer with an HMAC of the code, the nonce and both addresses, and it gets one try.
 The chat shows the laptop's full address. A linked machine can only answer, never give orders, and its replies
 are screened too.
@@ -221,6 +224,8 @@ ASI:One chat ──► Agentverse mailboxes ◄── agent.py on the box: GurtO
   calls the vault, settings or folder routes.
 - **[Fetch]** Only paired owners give work. The pairing code works only for 10 minutes after the box's own screen
   shows it, and only once. Five wrong codes close pairing and change the code.
+- **[Fetch]** Only the box's own screen and the owner's phone can see the ASI:One page and its code, or switch the
+  agents: any other paired phone (a Business requester, say) gets 403, so it cannot pair itself as the owner.
 - **[Fetch]** Each app agent takes work only from its own box's GurtOS agent. Strangers get the Shopper's paid
   price check, or a polite no.
 - **[Fetch]** Every relayed reply is screened, and the chat never quotes a blocked instruction. Cards from outside
