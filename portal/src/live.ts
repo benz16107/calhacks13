@@ -67,16 +67,20 @@ export function useBox() {
   return box;
 }
 
+// Off the box's own screen, every call needs this device's pairing token (core c6f747e): a header on fetches,
+// and ?access_token= where a header can't go (the log stream, a track app's page in a window).
 export async function api<T = any>(method: string, path: string, body?: unknown): Promise<T> {
+  const token = pairing()?.token;
   const r = await fetch(`/api${path}`, {
     method,
-    headers: body === undefined ? {} : { 'content-type': 'application/json' },
+    headers: { ...(body === undefined ? {} : { 'content-type': 'application/json' }), ...(token ? { authorization: `Bearer ${token}` } : {}) },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
   const out = await r.json().catch(() => ({ error: `${r.status} ${r.statusText}` }));
   if (!r.ok) throw new Error(out.error ?? `${r.status} ${r.statusText}`);
   return out as T;
 }
+export const tokenQuery = (sep = '?') => (pairing() ? `${sep}access_token=${encodeURIComponent(pairing()!.token)}` : '');
 
 async function refresh() {
   const [tasks, approvals] = await Promise.all([api<Task[]>('GET', '/tasks'), api<Approval[]>('GET', '/approvals')]);
@@ -121,7 +125,7 @@ let activeBeforeDrop: string[] | undefined;
 let dropAt = 0;
 function follow() {
   // Start one line back: the box sends the stream's headers with its first event, so a replayed line opens it at once.
-  const es = new EventSource(`/api/log/stream?after=${Math.max(0, (box.events.at(-1)?.seq ?? 0) - 1)}`);
+  const es = new EventSource(`/api/log/stream?after=${Math.max(0, (box.events.at(-1)?.seq ?? 0) - 1)}${tokenQuery('&')}`);
   es.onmessage = (m) => take(JSON.parse(m.data));
   es.onopen = () => {
     if (activeBeforeDrop) void cameBack(activeBeforeDrop);
@@ -263,5 +267,6 @@ export async function start() {
   box.boxes = await api<BoxEntry[]>('GET', '/boxes').catch(() => []);
   changed();
   follow();
-  if (box.health) spacetime(box.health);
+  // SpacetimeDB listens on the box's loopback only (core c6f747e): the box's own screen subscribes, others follow the log.
+  if (box.health && ['127.0.0.1', 'localhost', '[::1]'].includes(location.hostname)) spacetime(box.health);
 }

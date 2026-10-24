@@ -3,7 +3,7 @@
 import type { ComponentChildren } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import qrcode from 'qrcode-generator';
-import { api, box, onEvent, pairing, surface, undo, useBox, type Approval, type LogEvent, type Pairing, type Task } from './live.ts';
+import { api, box, onEvent, pairing, surface, tokenQuery, undo, useBox, type Approval, type LogEvent, type Pairing, type Task } from './live.ts';
 import { appList, boxList, ofState } from './home.tsx';
 import { PRODUCT } from './product.ts';
 import { ApprovalBanner, CloseIcon, Glyph, STATE_WORDS, StatePill, askedAt, clock, dollars, hhmm, plural, taskTitle } from './ui.tsx';
@@ -48,7 +48,7 @@ export function Window({ route, onClose }: { route: string; onClose: () => void 
           sub: a ? `/t/${a.track}${a.href}` : '',
           glyph: def?.glyph ?? 'tasks',
           wide: true,
-          body: a ? <iframe class="track-frame" title={a.title} src={`/t/${a.track}${a.href}`} /> : <p class="empty">No app called {arg} on this box.</p>,
+          body: a ? <iframe class="track-frame" title={a.title} src={`/t/${a.track}${a.href}${tokenQuery(a.href.includes('?') ? '&' : '?')}`} /> : <p class="empty">No app called {arg} on this box.</p>,
         };
       }
       default:
