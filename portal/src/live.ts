@@ -94,6 +94,8 @@ export const box = {
   /** The box's API stopped answering (a power cut, or this device lost the network). */
   down: false,
   today: { day: '', cents: 0, blocked: 0 },
+  /** The log has been read once, so totals from it (today's spending, blocked today) are whole. */
+  logLoaded: false,
   restored: undefined as Restored | undefined,
   /** net.blocked events seen live, newest last. */
   blockedLive: [] as LogEvent[],
@@ -463,6 +465,9 @@ export async function start() {
     () => true,
     () => false,
   );
+  // The log in one answer first, so totals like today's spending are whole from the first frame; the stream picks up after it.
+  for (const e of await api<LogEvent[]>('GET', '/log?after=0').catch(() => [] as LogEvent[])) take(e);
+  box.logLoaded = true;
   changed();
   follow();
   // SpacetimeDB listens on the box's loopback only (core c6f747e): the box's own screen subscribes, others follow the log.

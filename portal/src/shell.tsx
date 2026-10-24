@@ -9,7 +9,7 @@ import { AppIcon, Badge, Button, Icon, Menu, Popover, Progress, Switch } from '.
 import { focus, focused, minimize, open, phone, wm } from './wm.tsx';
 import { launchable, type Launchable } from './apps/index.tsx';
 import { PRODUCT } from './product.ts';
-import { appOf, asks, boxList, dollars, hhmm, ofState, pending, plural, selfBox, taskTitle, trackOf, useNow, zone } from './util.ts';
+import { appOf, asks, boxList, dollars, hhmm, ofState, pending, plural, selfBox, taskTitle, trackOf, useNow, zone, spentToday } from './util.ts';
 
 /** Which shell overlay is open. One at a time, like a real desktop. */
 export const shell = { open: '' as '' | 'notifications' | 'control' | 'apps' | 'menu' | 'boxes', locked: false };
@@ -510,7 +510,7 @@ export function DesktopHome() {
         {r ? (
           <Widget label="Paid twice" value={twice} lines={twice ? ['A paid call ran again after the restart'] : ['A call that had paid kept its key,', 'so the resume did not pay again']} onClick={() => open('activity')} />
         ) : (
-          <Widget label="Spent today" value={dollars(b.today.cents)} lines={[`${plural(b.tasks.size, 'task')}, ${plural(blocked, 'blocked attempt')}`, 'Test money']} onClick={() => open('activity')} />
+          <Widget label="Spent today" value={spentToday()} lines={[`${plural(b.tasks.size, 'task')}, ${plural(blocked, 'blocked attempt')}`, 'Test money']} onClick={() => open('activity')} />
         )}
       </div>
       <div class="gos-desk-actions">
@@ -628,7 +628,7 @@ export function PhoneHome() {
           <Icon name="pan-down" />
         </button>
         <p class="t-caption t-secondary">
-          {b.down ? 'Out of reach' : 'Online'} · {running.length} running · {dollars(b.today.cents)} spent today (test money)
+          {b.down ? 'Out of reach' : 'Online'} · {running.length} running · {spentToday()} spent today (test money)
         </p>
       </header>
       {shell.open === 'boxes' && <BoxMenu anchor={anchor} />}

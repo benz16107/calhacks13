@@ -3,6 +3,8 @@ import { useEffect, useState } from 'preact/hooks';
 import { HOLD, box, surface, type Approval, type Task } from './live.ts';
 
 export const dollars = (cents: number) => `$${(cents / 100).toFixed(2)}`;
+/** Today's spending, once the log has been read (before that a total would be too low). */
+export const spentToday = () => (box.logLoaded ? dollars(box.today.cents) : '…');
 export const plural = (n: number, one: string, many = one + 's') => `${n} ${n === 1 ? one : many}`;
 /** The box's own screen shows the box's time zone (its browser may run in UTC); a phone or laptop shows its own. */
 export const zone = () => (surface === 'box screen' && box.system?.timezone ? { timeZone: box.system.timezone } : {});

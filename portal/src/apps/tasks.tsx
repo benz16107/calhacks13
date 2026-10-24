@@ -5,7 +5,7 @@ import { useEffect, useState } from 'preact/hooks';
 import { api, box, pairing, surface, undo, useBox, type Task } from '../live.ts';
 import { Alert, AppIcon, Badge, Button, ContextMenu, Icon, IconButton, Menu, Popover, Progress, Sheet, StatusPage, ToggleGroup, type MenuItem } from '../kit/ui.tsx';
 import { HeaderBar, InWindow, open, useWin } from '../wm.tsx';
-import { STATE, appOf, approvalFor, dollars, hhmm, needsModelKey, ofState, pending, plural } from '../util.ts';
+import { STATE, appOf, approvalFor, dollars, hhmm, needsModelKey, ofState, pending, plural, spentToday } from '../util.ts';
 import { AnswerButtons } from './answer.tsx';
 import { undoCopy } from './log.tsx';
 
@@ -231,7 +231,7 @@ export function TasksApp({ view }: { view: string }) {
           </div>
           <div>
             <span class="g-summary-label">Spent today</span>
-            <span class="g-summary-value">{dollars(b.today.cents)}</span>
+            <span class="g-summary-value">{spentToday()}</span>
             <span class="g-summary-sub">{b.settings?.defaultBudgetCents ? `default budget ${dollars(b.settings.defaultBudgetCents)} a task` : 'models and tools, test money'}</span>
           </div>
           <div>
