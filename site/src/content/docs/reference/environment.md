@@ -30,7 +30,7 @@ Then run `systemctl daemon-reload && systemctl restart box.service`.
 | `BOX_OWNER` | none | Personal (preview): the owner's Linux user. An owner set at runtime with `PUT /api/owner` (saved in `BOX_HOME/owner.json`) wins over it. On the GurtOS Personal image, `box-owner.service` sets it after the desktop's own setup makes the first account. Leave it unset on a Server box. |
 | `BOX_EDITION` | `personal` with an owner, else `server` | The edition `GET /api/system` reports: `server`, `personal` or `business`. |
 | `BOX_APPROVAL_WAIT_MS` | `150000` | How long one `/ask` or over-budget `/call` waits for an answer before returning "pending, call again". Keep it under the worker's tool-call timeout. |
-| `BOX_MODEL` | `claude-sonnet-4-6` | The model Droid tasks use. When set, it is passed into every Droid task; when unset, the worker uses the default. |
+| `BOX_MODEL` | `claude-sonnet-5-5` | The model Droid tasks use. When set, it is passed into every Droid task; when unset, the worker uses the default. |
 | `BOX_PROXY_PORT` | `8888` | The task proxy's port. `auto` picks a free port in 8800 to 8887. It must stay in 8800 to 8899, the range the firewall lets tasks reach. |
 | `BOX_STDB_URL` | `ws://127.0.0.1:3000` | Where the box reaches SpacetimeDB |
 | `BOX_STDB_DB` | `box` | The SpacetimeDB database name |

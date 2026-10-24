@@ -104,6 +104,7 @@ export function TaskApp({ id }: { id: string }) {
 
   const asks = detail.approvals.map((a) => b.approvals.get(a.id) ?? a).filter((a) => a.state === 'pending');
   const blocked = detail.events.filter(isBlocked);
+  const looks = detail.events.flatMap((e) => (e.type === 'task.step' && (e.data as { review?: { verdict: string } } | undefined)?.review ? [(e.data as { review: { verdict: string } }).review] : []));
   const hostsTried = [...new Set(blocked.flatMap((e) => (e.type === 'net.blocked' ? [e.host] : [])))];
   const created = detail.events.find((e) => e.type === 'task.created');
   const ended = detail.events.findLast((e) => e.type === 'task.state' && FINISHED.includes(e.state));
@@ -249,6 +250,18 @@ export function TaskApp({ id }: { id: string }) {
                 <span>Worker</span>
                 <span>{t.worker === 'droid' ? 'Droid with Claude' : 'Scripted (test)'}</span>
               </div>
+              {t.model && (
+                <div class="gos-w-fact">
+                  <span>Model</span>
+                  <span class="t-mono">{t.model}</span>
+                </div>
+              )}
+              {looks.length > 0 && (
+                <div class="gos-w-fact">
+                  <span>Second look</span>
+                  <span>{looks.length} risky step{looks.length > 1 ? 's' : ''} checked, {looks.filter((r) => r.verdict !== 'ok').length} off goal</span>
+                </div>
+              )}
             </div>
           </aside>
         </div>

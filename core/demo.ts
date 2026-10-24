@@ -195,7 +195,10 @@ function check(ok: unknown, what: string) {
 let passed = 0;
 let failed = 0;
 let pending = 0;
+// DEMO_ONLY=anthropic ./demo runs just that track's step (a developer's loop; the merge gate runs everything).
+const ONLY = process.env.DEMO_ONLY;
 async function moment(title: string, fn?: () => Promise<void>, why = 'not built yet') {
+  if (ONLY && title !== `track ${ONLY}`) return;
   if (!fn) {
     console.log(`${title}: PENDING (${why})`);
     pending++;

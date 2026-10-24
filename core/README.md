@@ -40,11 +40,25 @@ through the box's own TLS certificate, for model calls. So the real key never en
 
 **One model key is enough: Factory's or your own Anthropic key.** With `FACTORY_API_KEY` in the vault, Droid uses
 Factory. With only `ANTHROPIC_API_KEY`, the box writes a bring-your-own-key model into the task user's
-`~/.factory/settings.json` (model `BOX_MODEL`, default `claude-sonnet-4-6`, with a placeholder key) and runs Droid on
+`~/.factory/settings.json` (the task's model, and Haiku for the second look, with a placeholder key) and runs Droid on
 `custom:<model>`; the proxy relays `api.anthropic.com` and puts the real key in the `x-api-key` header. Droid's own
 calls to Factory get a 503 then, and the task carries on. With neither, a Droid task fails with "the vault has no
 model key". `GET /api/setup` and `GET /api/system` report `model: {ready, via: 'factory' | 'anthropic' | null}`.
 The cost numbers are list prices either way; with your own key the spend is on your Anthropic account.
+
+**The model is chosen per task.** `POST /api/tasks {model}` takes `haiku` (cheap checks, photo descriptions), `sonnet`
+(most work, the default, `claude-sonnet-5-5`), `opus` (hard tasks, `claude-opus-5-5`) or a full model id. A task that names
+none gets `BOX_MODEL`, else Sonnet. The task records the id it ran on (`task.model`), and each `cost` event carries the model
+and its token counts, priced in `core/pricing.ts` at Anthropic's list rates (`core/models.ts` holds the aliases).
+
+**A second look at risky steps.** Droid runs at autonomy Off, so it asks the worker before every tool use, and the worker
+(`core/workers/droid.ts`) answers at once for ordinary steps. A step that could do harm is first compared with the task's
+goal by a separate Haiku call (`core/workers/review.ts` lists what counts as risky: a shell command that uses the network
+or reaches a host the task may not, runs fetched text, deletes in bulk, touches keys or the environment, or writes outside the
+workspace; a file write outside the workspace; a broker tool that spends money). The verdict is logged as a `task.step` with
+`data.review`, and its Haiku cost as a `cost` event with `what: 'review'`. An off-goal verdict, or a check that could not run,
+asks the owner through `POST /ask` like any other approval, and the step waits for the answer. `BOX_REVIEW=off` switches it off
+(the attack test uses that for its baseline).
 
 ## The broker and the vault
 

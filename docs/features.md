@@ -267,6 +267,17 @@ Owner: the Apify thread. All six merged as 60f5184 (default `./demo` 26 passed; 
 | A web source for the credit desk (`apify.webSource`, finds disagreements) | apify, credit desk | merged; the credit desk must add the tool to its analyst's list | 60f5184 | apify demo | Apify, Hyphenate |
 | Apify run cost in task budgets; approvals say "to Apify (run X)"; an "Apify spend" app lists counted cents and Apify's usage per task | apify, core, portal | merged | 60f5184 | apify demo | Apify |
 
+## Anthropic (GurtOS Personal and Server)
+
+Owner: the Anthropic thread (`anthropic-push`). The GurtOS MCP server and Claude Code as a second worker are the core thread's rows. Numbers and every miss: `tracks/anthropic/README.md`. Status is "merged" only after the squash lands on main; QA has not tried these by hand.
+
+| Feature | Owner | Status | Commit | Demo step | Tracks |
+|---|---|---|---|---|---|
+| Current Claude models chosen per task (`model`: haiku, sonnet, opus; default `claude-sonnet-5-5`), at Anthropic's list rates; the task window shows the model | anthropic, core, portal | building | | tracks/anthropic/demo.ts (a bad model is refused; live: one task per model, `DEMO_LIVE=droid,anthropic-models`) | Anthropic |
+| Claude as a second pair of eyes: a Haiku 5.5 check before a risky step; an off-goal verdict becomes an approval and is logged | anthropic, core | building | | `core/workers/review.test.ts`; live in the attack run; `core/workers/review.eval.ts` | Anthropic |
+| A measured attack test: 12 attacks and 2 controls against real Claude tasks, 0 harm in 48 runs, mostly because Claude did not try; every limit published | anthropic | building | | `DEMO_LIVE=droid,anthropic ./demo` (about 6 min, 35 cents) | Anthropic |
+| The old-computer proof and a one-line install: measured on 1 vCPU with 1 GB (works, one or two tasks) and 512 MB (installs, a task is killed); Vultr had no credit, so QEMU stood in | anthropic | building | | `tracks/anthropic/install.sh` (run on a fresh 1 GB VM, 76 s) | Anthropic |
+
 ## Other tracks, as they exist
 
 | Feature | Owner | Status | Commit | Demo step | Tracks |

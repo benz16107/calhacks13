@@ -23,6 +23,11 @@ export interface TaskSpec {
   workspace?: string;
   /** Default 'droid'. 'fake' runs scripted steps with no model, for tests. */
   worker?: 'droid' | 'fake';
+  /**
+   * Droid worker: the Claude model, 'haiku' (cheap checks, photo descriptions), 'sonnet' (most work, the default)
+   * or 'opus' (hard tasks), or a full model id. The task records the id it ran on.
+   */
+  model?: string;
   /** Tool names the task may call through the broker. Default none. */
   tools?: string[];
   /** Host names the task's network may reach. Default none. */
@@ -57,7 +62,7 @@ export interface DroidOptions {
 }
 
 /** A TaskSpec with its defaults filled in. */
-export type FullSpec = Required<Omit<TaskSpec, 'folder' | 'folders' | 'seat' | 'droid'>> & { folder?: string; folders?: string[]; seat?: string; droid?: DroidOptions };
+export type FullSpec = Required<Omit<TaskSpec, 'folder' | 'folders' | 'seat' | 'droid' | 'model'>> & { folder?: string; folders?: string[]; seat?: string; droid?: DroidOptions; model?: string };
 
 export interface Task extends FullSpec {
   id: string;

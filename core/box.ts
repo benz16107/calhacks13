@@ -15,6 +15,7 @@ import { Log, apply, canMove, doneLayers, fold, type State } from './log.ts';
 import { ANTHROPIC_PLACEHOLDER, PLACEHOLDER_KEY, firewall, logBlocked, stopLoggingBlocked, uidOf, relayCert, reservePort, startProxy } from './net.ts';
 import * as sandbox from './sandbox.ts';
 import { HOME, dirs } from './sandbox.ts';
+import { MODELS, modelProblem, resolveModel } from './models.ts';
 import { usageCents } from './pricing.ts';
 import { DEFAULT_SETTINGS, SETUP_STEPS, applyPatch, folderRefusal, hadHumanUse, hostProblem, insideAny, neverFolder, loadDisabled, loadSetup, loadSettings, readJson, recordStep, saveDisabled, saveSettings, saveSetup, writeJson, type Settings, type SetupState } from './config.ts';
 import * as system from './system.ts';
@@ -217,7 +218,7 @@ class Core {
 
   /** `requestedBy` is the person who asked (Business), from their paired phone or the track route they called. */
   async createTask(spec: TaskSpec, requestedBy?: string): Promise<Task> {
-    const known = ['title', 'prompt', 'workspace', 'worker', 'tools', 'hosts', 'budgetCents', 'source', 'folder', 'folders', 'seat', 'droid'];
+    const known = ['title', 'prompt', 'workspace', 'worker', 'tools', 'hosts', 'budgetCents', 'source', 'folder', 'folders', 'seat', 'droid', 'model'];
     const unknown = Object.keys(spec ?? {}).filter((k) => !known.includes(k));
     if (unknown.length) throw new Error(`unknown task field${unknown.length > 1 ? 's' : ''}: ${unknown.join(', ')} (known: ${known.join(', ')})`);
     // What a task does not name comes from the owner's settings: the budget and the network it gets.
@@ -245,6 +246,9 @@ class Core {
     if (!Array.isArray(s.tools) || s.tools.some((x) => typeof x !== 'string')) throw new Error('tools: a list of tool names');
     if (!/^[\w.-]+$/.test(s.workspace) || !fs.existsSync(dirs.workspace(s.workspace))) throw new Error(`no workspace ${s.workspace}`);
     if (!['droid', 'fake'].includes(s.worker)) throw new Error(`no worker ${s.worker}`);
+    const why = modelProblem(s.model);
+    if (why) throw new Error(why);
+    if (s.worker === 'droid') s.model = resolveModel(s.model); // the task records the exact model it ran on
     if (s.seat !== undefined && (typeof s.seat !== 'string' || !s.seat.trim() || s.seat.length > 60)) throw new Error('seat: text, at most 60 characters, like "Credit analyst"');
     // A demo run spends no Factory credit unless it was asked to: a track that wants a real agent must be gated behind DEMO_LIVE=droid.
     if (s.worker === 'droid' && process.env.BOX_NO_DROID) throw new Error('real Droid is off in this demo run (it spends Factory credit); DEMO_LIVE=droid ./demo, or ./demo --live-droid, turns it on');
@@ -283,14 +287,15 @@ class Core {
         const via = this.modelVia();
         if (!via) throw new Error('the vault has no model key: add ANTHROPIC_API_KEY or FACTORY_API_KEY in Setup');
         // The task holds placeholders. The proxy swaps in the real key on the way to Factory or Anthropic.
-        if (via === 'anthropic') byok = process.env.BOX_MODEL?.replace(/^custom:/, '') ?? 'claude-sonnet-4-6';
+        if (via === 'anthropic') byok = resolveModel(t.model);
         Object.assign(env, {
           FACTORY_API_KEY: PLACEHOLDER_KEY, // the SDK wants one even when the model is the owner's own key
           FACTORY_API_BASE_URL: proxy,
           FACTORY_EXTRA_CA_CERTS: this.relay.caPem,
           NODE_EXTRA_CA_CERTS: this.relay.caPem,
           FACTORY_RIPGREP_PATH: '/usr/bin/rg',
-          ...(byok ? { BOX_MODEL: `custom:${byok}` } : process.env.BOX_MODEL ? { BOX_MODEL: process.env.BOX_MODEL } : {}),
+          BOX_MODEL: byok ? `custom:${byok}` : resolveModel(t.model),
+          ...(process.env.BOX_REVIEW ? { BOX_REVIEW: process.env.BOX_REVIEW } : {}),
         });
       }
       const ids = sandbox.prepare(t);
@@ -298,8 +303,9 @@ class Core {
         // Droid reads its own-key models from the task user's ~/.factory/settings.json; the key there is a placeholder.
         const dir = path.join(dirs.task(t.id), 'home', '.factory');
         fs.mkdirSync(dir, { recursive: true });
-        const model = { model: byok, displayName: 'Claude (your Anthropic key)', baseUrl: 'https://api.anthropic.com', apiKey: ANTHROPIC_PLACEHOLDER, provider: 'anthropic', maxOutputTokens: 8192 };
-        fs.writeFileSync(path.join(dir, 'settings.json'), JSON.stringify({ customModels: [model] }));
+        // The task's model, plus Haiku for the second-pair-of-eyes check (core/workers/review.ts).
+        const customModels = [...new Set([byok, MODELS.haiku])].map((model) => ({ model, displayName: 'Claude (your Anthropic key)', baseUrl: 'https://api.anthropic.com', apiKey: ANTHROPIC_PLACEHOLDER, provider: 'anthropic', maxOutputTokens: 8192 }));
+        fs.writeFileSync(path.join(dir, 'settings.json'), JSON.stringify({ customModels }));
         execFileSync('chown', ['-R', `${ids.uid}:${ids.gid}`, dir]);
       }
       sandbox.snapshotBase(t);
@@ -862,7 +868,7 @@ class Core {
       if (route === 'GET /tools') {
         return t.tools.map((name) => {
           const { description, input } = this.tools.get(name)!.tool;
-          return { name, description, input: input ?? { type: 'object' } };
+          return { name, description, input: input ?? { type: 'object' }, spends: !!this.tools.get(name)!.tool.cost };
         });
       }
       if (route === 'POST /step' || route === 'POST /call' || route === 'POST /ask') await this.untilResumed(); // Pause all agents
