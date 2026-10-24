@@ -32,10 +32,10 @@ Checked against main `8a4cbf4`, Sat Oct 24 05:30 PT. `./demo` from a clean workt
 |---|---|
 | verified (ISO) | 3 |
 | verified | 54 |
-| merged | 93 |
-| building | 19 |
+| merged | 91 |
+| building | 20 |
 | planned | 20 |
-| not pursued | 4 |
+| not pursued | 5 |
 | **Total** | **193** |
 
 **Collisions** (detail below): none open at 03:27. The three found at 02:25 are resolved and Business is on main. Still
@@ -367,16 +367,16 @@ Owner: the Spacetime thread. Merged as ed88206. `portal/dist` matches its source
 | Feature | Owner | Status | Commit | Demo step | Tracks |
 |---|---|---|---|---|---|
 | SpacetimeDB holds live task status and approvals; a paired phone answers through the vouched reducer | core | verified Oct 24 00:09 (two phones, the reducer refusing anonymous calls) | 6879fb9 | moment 3; security | SpacetimeDB |
-| Shared work queue with atomic claims (`spacetime.claim`, `finish`, `post`, `team`): 15 claims by 3 agents on 12 jobs, none twice; 30 simultaneous claims on 10 jobs; jobs return when a task ends holding them | spacetime | merged (ed88206) | ed88206 | tracks/spacetime/demo.ts | SpacetimeDB |
-| Live agent presence and status (agent table, the Live window's Agents view) | spacetime | merged (ed88206) | ed88206 | tracks/spacetime/demo.ts | SpacetimeDB |
-| Each person is sent only their own requests (Business `my_requests` view, private tables) | spacetime, business | merged (ed88206) | ed88206 | tracks/spacetime/demo.ts | SpacetimeDB, Hyphenate |
-| No double approvals: the first answer wins in the reducer, the late one gets "already approved by X" | spacetime, core | merged (ed88206) | ed88206 | tracks/spacetime/demo.ts | SpacetimeDB |
-| "X is viewing" presence on a request (clears when the connection drops) | spacetime | merged (ed88206) | ed88206 | tracks/spacetime/demo.ts | SpacetimeDB |
-| A reminder timer in the database ("brings Priya in after N seconds"); the Business policy line that sets the delay is not on main | spacetime, business | merged (ed88206; module and demo only) | ed88206 | tracks/spacetime/demo.ts | SpacetimeDB |
-| Live meters (`meter`, `activity`) matching the box's task list | spacetime | merged (ed88206) | ed88206 | tracks/spacetime/demo.ts | SpacetimeDB |
-| Paired devices reach SpacetimeDB at `/stdb/<token>/` (identity and subscription only; wrong token 401; SQL 404) | spacetime, core | merged (ed88206; touches the token gate, so QA tests it) | ed88206 | tracks/spacetime/demo.ts | SpacetimeDB, Armadin |
-| Live window `/t/spacetime/` | spacetime | merged (ed88206) | ed88206 | tracks/spacetime/demo.ts | SpacetimeDB |
-| Maincloud fleet view (opt-in, counts only, per-viewer visibility) | spacetime | merged (module and offline demo; the live check waits on Ben signing in to SpacetimeDB once: `DEMO_LIVE=spacetime ./demo`) | | DEMO_LIVE=spacetime | SpacetimeDB |
+| Shared work queue with atomic claims (`spacetime.claim`, `finish`, `post`, `team`): 15 claims by 3 agents on 12 jobs, none twice; 30 simultaneous claims on 10 jobs; jobs return when a task ends holding them | spacetime | merged (ed88206) | ed88206 | track spacetime | SpacetimeDB |
+| Live agent presence and status (agent table, the Live window's Agents view) | spacetime | merged (ed88206) | ed88206 | track spacetime | SpacetimeDB |
+| Each person is sent only their own requests (Business `my_requests` view, private tables) | spacetime, business | merged (ed88206) | ed88206 | track spacetime | SpacetimeDB, Hyphenate |
+| No double approvals: the first answer wins in the reducer, the late one gets "already approved by X" | spacetime, core | merged (ed88206) | ed88206 | track spacetime | SpacetimeDB |
+| "X is viewing" presence on a request (clears when the connection drops) | spacetime | merged (ed88206) | ed88206 | track spacetime | SpacetimeDB |
+| A reminder timer in the database ("brings Priya in after N seconds"); the Business policy line that sets the delay is not on main | spacetime, business | merged (ed88206; module and demo only) | ed88206 | track spacetime | SpacetimeDB |
+| Live meters (`meter`, `activity`) matching the box's task list | spacetime | merged (ed88206) | ed88206 | track spacetime | SpacetimeDB |
+| Paired devices reach SpacetimeDB at `/stdb/<token>/` | spacetime, core | not pursued (core refused the proxy; the Live window on a phone or laptop polls `GET /t/spacetime/snapshot` through the API instead) | | | SpacetimeDB |
+| Live window `/t/spacetime/` | spacetime | merged (ed88206) | ed88206 | track spacetime | SpacetimeDB |
+| Maincloud fleet view (opt-in, counts only, per-viewer visibility) | spacetime | building (module and offline demo are in; the live check waits on Ben signing in to SpacetimeDB once: `DEMO_LIVE=spacetime ./demo`) | ed88206 | DEMO_LIVE=spacetime | SpacetimeDB |
 
 ## Not pursued
 
