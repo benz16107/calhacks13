@@ -35,4 +35,8 @@ export default async function (d: DemoKit) {
   const byFile = await d.waitFor('the file drop to start a task', async () => (await d.api<Task[]>('GET', '/tasks')).find((x) => x.source === 'file'));
   await d.settled([byFile.id]);
   d.check(d.view('home', 'seen-job.txt') === 'yes', 'a new file in the inbox started a task');
+
+  // A route reads a vault secret with box.secret, no model-job workaround, and never returns the secret.
+  const sc = await d.api<{ looksLikeTestKey: boolean }>('GET', '/t/example/secret-check');
+  d.check(sc.looksLikeTestKey && !JSON.stringify(sc).includes('canary'), 'a route read a vault secret directly (box.secret) without leaking it');
 }

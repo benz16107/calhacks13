@@ -116,6 +116,8 @@ export interface Box {
   note(data: unknown, task?: string): void;
   /** Serve POST /hook/<track>/<name>: the handler gets the JSON body and headers and returns JSON. Used by the webhook trigger. */
   onWebhook(name: string, handler: (payload: any, headers: Record<string, string>) => unknown): void;
+  /** Read a vault secret from a route or trigger. Only names in the track's `secrets`. Never return it to a task or a response. */
+  secret(name: string): string;
 }
 
 /** Given to tools and model jobs. They run inside the core, never inside a task. */
@@ -142,6 +144,8 @@ export interface Ctx {
 export interface Track {
   /** Same as the folder name. */
   name: string;
+  /** Vault keys this track's routes and triggers may read with box.secret(). Tools and jobs declare their own. */
+  secrets?: string[];
   triggers?: Trigger[];
   tools?: Tool[];
   logReaders?: LogReader[];

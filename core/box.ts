@@ -65,6 +65,7 @@ class Core {
   waiters = new Map<string, ((approved: boolean) => void)[]>();
   reserved = new Map<string, number>(); // cents a task has in-flight tool calls committed but not yet logged
   webhooks = new Map<string, (payload: unknown, headers: Record<string, string>) => unknown>();
+  trackSecrets = new Map<string, Set<string>>(); // vault keys each track's routes and triggers may read
   uidTask = new Map<number, string>();
   relay = relayCert(HOME);
   proxyPort = 0;
@@ -332,6 +333,12 @@ class Core {
         if (!/^[\w-]+$/.test(name)) throw new Error(`bad webhook name ${name}`);
         this.webhooks.set(`/hook/${track}/${name}`, handler);
       },
+      secret: (name) => {
+        if (!this.trackSecrets.get(track)?.has(name)) throw new Error(`${name} is not in track ${track}'s secrets`);
+        const v = this.vault.get(name);
+        if (v === undefined) throw new Error(`the vault has no ${name}`);
+        return v;
+      },
     };
   }
 
@@ -369,6 +376,7 @@ class Core {
       try {
         const track: Track = (await import(file)).default;
         if (track?.name !== name) throw new Error(`track.ts must default-export a Track named "${name}"`);
+        this.trackSecrets.set(name, new Set(track.secrets ?? []));
         for (const tool of track.tools ?? []) {
           if (this.tools.has(tool.name)) throw new Error(`tool ${tool.name} already exists`);
           this.tools.set(tool.name, { tool, track: name });

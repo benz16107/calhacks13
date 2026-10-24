@@ -81,12 +81,15 @@ Make `tracks/<name>/track.ts` and default-export a `Track` with any of these slo
 | `modelJobs` | Anyone with the box can run it with `box.job(name, input)`. |
 | `apps` | The portal lists them. Their pages are your routes. |
 | `routes` | `'POST /hook': (req, box) => Response`, served at `/t/<name>/hook` on the box's API. Webhooks go here. |
+| `secrets` | Vault keys this track's routes and triggers may read with `box.secret(name)`. Tools and jobs declare their own. |
 
 Rules:
 - Import only types from `core/contract.ts`. Never import other core files or another track.
 - Name tools `<track>.<verb>`. Put keys in the vault, never in the repo.
 - Node runs `.ts` directly (type stripping): use `import type`, `.ts` in import paths, and no enums,
   namespaces or constructor parameter properties.
+- Routes and triggers run in the core (not in a task), so they may read the vault with `box.secret(name)` for
+  any name in the track's `secrets`. Never return a secret in a response or hand it to a task.
 - Need npm packages? Add `tracks/<name>/package.json`; the root is an npm workspace.
 - A track that throws at load is skipped and logged. It cannot stop the box.
 

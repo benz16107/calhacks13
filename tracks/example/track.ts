@@ -6,6 +6,7 @@ const inbox = `${process.env.BOX_HOME ?? '/var/lib/box'}/inbox/example`;
 
 export default {
   name: 'example',
+  secrets: ['DEMO_SECRET'],
 
   // All three generic triggers, which any track reuses. A real track returns a Droid task here.
   triggers: [
@@ -32,6 +33,8 @@ export default {
   // Served on the box's API: GET /t/example/ is the app's page, POST /t/example/start starts a task.
   routes: {
     'GET /': () => new Response('<h1>Example app</h1>', { headers: { 'content-type': 'text/html' } }),
+    // A route reading a vault secret directly (no model-job workaround). It returns a derived fact, never the secret.
+    'GET /secret-check': (_req, box) => Response.json({ looksLikeTestKey: box.secret('DEMO_SECRET').startsWith('sk_test_') }),
     'POST /start': async (req, box) => {
       const { title = 'Example task', prompt = 'write hello.txt hi', workspace = 'example' } = await req.json();
       box.workspace(workspace); // makes it the first time, then leaves it alone
