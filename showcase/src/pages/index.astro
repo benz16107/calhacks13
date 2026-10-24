@@ -24,7 +24,7 @@ const carries = (ed: string) => tracks.filter((t) => t.data.editions.includes('A
 const strip = [
   { name: 'GurtOS Server', ed: 'Server', note: 'built: an always-on box at home or in the cloud' },
   { name: 'GurtOS Personal', ed: 'Personal', note: 'built: your own laptop, with agents beside you' },
-  { name: 'GurtOS Business', ed: 'Business', note: 'built: one box for a team, with roles and routed approvals; sign-in with a work account (Microsoft Entra ID) is built, shadow mode is not' },
+  { name: 'GurtOS Business', ed: 'Business', note: 'built: one box for a team, with roles and routed approvals; sign-in with a work account (Microsoft Entra ID) and shadow mode are built' },
 ].map((e) => ({ ...e, tracks: carries(e.ed) }));
 const hasClip = (name: string) => (clips as { name: string }[]).some((c) => c.name === name);
 
@@ -323,7 +323,7 @@ const prizes = [
             <tr>
               <td><strong>GurtOS Business</strong></td>
               <td>One box shared by a team: people with roles, rules in plain words that route each approval to the right person, a Waiting for me inbox, an audit with CSV export, and a kill switch.</td>
-              <td>Built and on main, checked by a merge-gate step. Sign-in with a work account (Microsoft Entra ID, roles from groups) is Entra-ready and tested with a standards test provider. Shadow mode is not built.</td>
+              <td>Built and on main, checked by a merge-gate step. Sign-in with a work account (Microsoft Entra ID, roles from groups) is Entra-ready and tested with a standards test provider. Shadow mode puts an agent seat on suggestions that a person decides, until it clears a bar written in plain words.</td>
             </tr>
           </tbody>
         </table>
@@ -465,7 +465,7 @@ const prizes = [
         <li>The bootable image is tested in QEMU (x86 with BIOS and UEFI, ARM64 emulated). It has not run on real Apple hardware, a real PC or Vultr's own ISO boot yet.</li>
         <li>System slots are writable ext4 without dm-verity, and updates are signed with one key with no rotation.</li>
         <li>Agents are Droid with Claude. Other agents would need a worker adapter in the core.</li>
-        <li>GurtOS Business has no shadow mode yet, its work-account sign-in has been tested with a standards test provider and not a real Entra tenant, and its screens here are from a seeded box with scripted seats and sandbox data.</li>
+        <li>GurtOS Business's work-account sign-in has been tested with a standards test provider and not a real Entra tenant, and its screens here are from a seeded box with scripted seats and sandbox data.</li>
       </ul>
     </section>
   </div>
