@@ -14,7 +14,7 @@ that for every agent task the box runs.
 - The app also indexes the task's state, cost, blocked attempts and pending approvals for **JQL**, so the
   morning-after question is one search: `project = BOX AND boxBlocked > 0`.
 
-On the demo site: BOX-1 is a Droid task that fixed typos. BOX-2 is a scripted agent that misread a rule, was
+On the Jira site the demo ran on (Ben's own): BOX-1 is a Droid task that fixed typos. BOX-2 is a scripted agent that misread a rule, was
 blocked, approved, then rolled back from Jira. BOX-5 is a Droid task that asked to spend over its budget and was
 approved from Jira. BOX-3 and BOX-4 are the same coffee order from earlier runs, both rolled back.
 
@@ -43,7 +43,7 @@ OK request lands in Jira as a comment and as buttons in the panel:
 ![A Droid task waiting for an OK to spend](screenshots/panel-approval.png)
 
 Approved from Jira, it paid, wrote the receipt and finished. The panel shows its reasoning, the audit trail
-with "Approved by jira:Ben Zhou", and the diff:
+with the approver's Jira name ("Approved by jira:<name>"), and the diff:
 
 ![The same task after approval](screenshots/panel-approved.png)
 
@@ -188,8 +188,10 @@ forge deploy --non-interactive -e production
 forge install --non-interactive --site your-site.atlassian.net --product jira --environment production
 ```
 
-Set the egress address in `manifest.yml` to the box's name too. The demo box has an sslip.io name, so the
-manifest allows `*.sslip.io` and `BOX_URL` picks the box.
+Forge only lets the app call hosts named in `manifest.yml`, and that list is fixed when you deploy (a variable
+cannot set it). So also change `permissions.external.fetch.backend` to your box's host name, such as
+`box.example.com`, then deploy and run `forge install --upgrade`. The committed manifest allows `*.sslip.io`,
+because the demo box has an sslip.io name; `BOX_URL` picks the exact box.
 
 On the site, a Jira admin opens the panel once on any `BOX` issue and picks **Show for all work items** from
 its menu, so every box issue shows it without a click.

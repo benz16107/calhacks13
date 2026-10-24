@@ -71,18 +71,18 @@ export default async function (d: DemoKit) {
       return;
     }
     d.check((await panel('POST', '/answer', secret, { task: A.id, approval, approved: true })).status === 404, "an approval can't be answered through another task's issue");
-    await panel('POST', '/answer', secret, { task: B.id, approval, approved: true, by: 'Ben Zhou' });
+    await panel('POST', '/answer', secret, { task: B.id, approval, approved: true, by: 'Jira user' });
     await d.settled([B.id]);
     d.check(d.view('jira', 'settings.txt') === 'retries=0', 'approved from Jira, task B finished');
-    await panel('POST', '/undo', secret, { task: B.id, by: 'Ben Zhou' });
+    await panel('POST', '/undo', secret, { task: B.id, by: 'Jira user' });
     d.check(d.view('jira', 'settings.txt') === undefined && d.view('jira', 'README.md') === 'the box', 'rolled back from Jira: B\'s settings change is gone, A\'s fix stays');
     const audit = await (await panel('GET', `/task?id=${B.id}`, secret)).json();
     d.check(
-      audit.task.state === 'undone' && audit.audit.some((l: { text: string }) => l.text === 'Approved by jira:Ben Zhou') && audit.blocked[0]?.host.startsWith('attacker.example') && audit.diff.includes('+retries=0'),
+      audit.task.state === 'undone' && audit.audit.some((l: { text: string }) => l.text === 'Approved by jira:Jira user') && audit.blocked[0]?.host.startsWith('attacker.example') && audit.diff.includes('+retries=0'),
       'the panel\'s audit view shows the block, who approved, the roll back and the diff it undid',
     );
-    const b2 = await issue(B.id, (i) => i.fields.labels.includes('box-undone') && i.comments.some((c: string) => c.includes('Rolled back by jira:Ben Zhou')));
-    d.check(b2.fields.status.name === 'Done' && b2.text.includes('Rolled back by jira:Ben Zhou'), `${b2.key} says who rolled it back, in a comment and the description`);
+    const b2 = await issue(B.id, (i) => i.fields.labels.includes('box-undone') && i.comments.some((c: string) => c.includes('Rolled back by jira:Jira user')));
+    d.check(b2.fields.status.name === 'Done' && b2.text.includes('Rolled back by jira:Jira user'), `${b2.key} says who rolled it back, in a comment and the description`);
     d.check(b2.text.includes('+retries=0'), `${b2.key} still shows the diff it undid, though the box deleted those files`);
     const secrets = vault.split('\n').map((l) => l.split('=').slice(1).join('=').trim()).filter((v) => v.length > 8);
     // Live, check the text the box wrote; Jira's own JSON carries the site and email, which are not secrets.
