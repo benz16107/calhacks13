@@ -88,12 +88,26 @@ with the key whose private half is on the relay, and hands that subscription to 
 3. It posts the ciphertext to `/v1/push` with its secret. The gateway checks the endpoint is a real push service
    (Google, Apple, Mozilla, Microsoft), signs a VAPID JWT for it, and forwards the bytes unchanged.
 
+### The native apps (APNs)
+
+The GurtOS iPhone and Mac apps (`native/`) can't use web push, so they subscribe with an address on the relay,
+`https://box.gurtos.com/v1/apns/<app>/<production|sandbox>/<device token>`, and the same keys and per-box `mac` key
+as the web app. A box needs no change: it encrypts for that subscription and posts it to `/v1/push` as always. The
+gateway accepts only the two GurtOS apps (`com.benzhou.gurtos`, `com.benzhou.gurtos.mac`) and a hex token, and sends
+Apple `{"aps": {"alert": {"title": "GurtOS", "body": "A request needs you"}, "mutable-content": 1}, "e": "<ciphertext>"}`.
+The app's notification service extension decrypts `e`, checks the `mac`, and only then shows the machine's name and
+the question. A token Apple no longer knows comes back as `gone: true`.
+
+The APNs key is Ben's (developer.apple.com, Keys, Apple Push Notifications service). On the relay it is
+`apns.p8` and `apns.json` (`{"keyId": "...", "teamId": "..."}`) in the state folder, owned by the relay's user, 0600,
+never in git. Without them an APNs address gets `503 APNs is not set up on this relay`; web push is unchanged.
+
 ## What the relay can and can't see
 
 It **can** see: which names exist; when each box's tunnel connects and from which address; for each connection
 to a box, the caller's IP address, the time, the name asked for (SNI) and how many bytes went each way; the
 plain-HTTP requests on port 80 (certificate challenges and redirects, nothing else is served there); and for each
-push, the push service endpoint, the time and the size.
+push, the push service endpoint (for a native app: the app and its APNs device token), the time and the size.
 
 It **can't** see: anything inside a box's HTTPS connections (pages, API calls, pairing codes, device tokens,
 approvals, files), because TLS ends on the box with a key that never leaves it; or what a push says, because the

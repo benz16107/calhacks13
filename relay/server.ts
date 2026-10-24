@@ -2,7 +2,8 @@
 //   - names: a box enrolls a name (rosa -> rosa.box.gurtos.com) and gets a secret only it holds
 //   - the frps plugin: frps asks it before a box logs in or opens a route, and it checks that box's secret
 //   - the push gateway: a box hands it a push it already encrypted for the phone; the gateway signs it with the
-//     app's VAPID key and forwards it to the phone's push service. It never sees what the push says.
+//     app's VAPID key and forwards it to the phone's push service, or to APNs for the native Apple apps. It never
+//     sees what the push says.
 // It never terminates a box's TLS: frps routes those connections by SNI, as bytes.
 //   node --experimental-strip-types relay/server.ts
 // Env: RELAY_STATE (default /var/lib/gurtos-relay), RELAY_DOMAIN (default box.gurtos.com),
@@ -10,6 +11,7 @@
 import { createHash, createHmac, generateKeyPairSync, createPrivateKey, randomBytes, sign, timingSafeEqual, type KeyObject } from 'node:crypto';
 import fs from 'node:fs';
 import http from 'node:http';
+import http2 from 'node:http2';
 import path from 'node:path';
 
 export const DOMAIN = process.env.RELAY_DOMAIN ?? 'box.gurtos.com';
@@ -191,6 +193,71 @@ export function vapidHeader(vapid: Vapid, endpoint: string, now = Date.now()) {
 /** Topic must be at most 32 URL-safe base64 characters. */
 const topicOf = (t: unknown) => (typeof t === 'string' && t ? createHmac('sha256', 'topic').update(t).digest('base64url').slice(0, 32) : undefined);
 
+// ---------- APNs, for the native apps ----------
+// The native iPhone and Mac apps can't use web push, so they subscribe with an address on this relay:
+// https://<DOMAIN>/v1/apns/<app>/<production|sandbox>/<device token>. The box encrypts for them exactly as for a
+// browser (RFC 8291); the relay sends Apple only that ciphertext, in `e`, with a generic alert. The app's
+// notification service extension decrypts it and checks the box's mac before showing anything.
+
+/** The only apps the relay sends to: the GurtOS iPhone app and the Mac app. */
+export const APNS_TOPICS = ['com.benzhou.gurtos', 'com.benzhou.gurtos.mac'];
+
+export function apnsTarget(endpoint: unknown): { topic: string; sandbox: boolean; token: string } | undefined {
+  let u: URL;
+  try {
+    u = new URL(String(endpoint));
+  } catch {
+    return undefined;
+  }
+  const m = u.protocol === 'https:' && u.hostname === DOMAIN && !u.port && !u.search ? u.pathname.match(/^\/v1\/apns\/([a-z0-9.]+)\/(production|sandbox)\/([0-9a-f]{64,200})$/) : null;
+  return m && APNS_TOPICS.includes(m[1]) ? { topic: m[1], sandbox: m[2] === 'sandbox', token: m[3] } : undefined;
+}
+
+/** Ben's APNs key: `apns.p8` and `apns.json` ({keyId, teamId}) in the state folder, readable by the relay only. */
+export interface Apns { keyId: string; teamId: string; key: KeyObject; jwt?: { token: string; at: number } }
+
+export function loadApns(dir: string): Apns | undefined {
+  const keyFile = path.join(dir, 'apns.p8');
+  const idFile = path.join(dir, 'apns.json');
+  if (!fs.existsSync(keyFile) || !fs.existsSync(idFile)) return undefined;
+  try {
+    const { keyId, teamId } = JSON.parse(fs.readFileSync(idFile, 'utf8'));
+    if (typeof keyId !== 'string' || typeof teamId !== 'string') throw new Error('apns.json needs keyId and teamId');
+    return { keyId, teamId, key: createPrivateKey(fs.readFileSync(keyFile)) };
+  } catch (e) {
+    console.error(`APNs is off: ${(e as Error).message}`); // a bad key file must not stop the tunnels and names
+    return undefined;
+  }
+}
+
+/** Apple's provider token: ES256 over {iss: team, iat}, reused for 50 minutes (Apple refuses one older than an hour). */
+export function apnsJwt(a: Apns, now = Date.now()): string {
+  if (a.jwt && now - a.jwt.at < 50 * 60_000) return a.jwt.token;
+  const b64 = (o: object) => Buffer.from(JSON.stringify(o)).toString('base64url');
+  const unsigned = `${b64({ alg: 'ES256', kid: a.keyId })}.${b64({ iss: a.teamId, iat: Math.floor(now / 1000) })}`;
+  const token = `${unsigned}.${sign('sha256', Buffer.from(unsigned), { key: a.key, dsaEncoding: 'ieee-p1363' }).toString('base64url')}`;
+  a.jwt = { token, at: now };
+  return token;
+}
+
+export type ApnsSend = (host: string, path: string, headers: Record<string, string>, body: string) => Promise<{ status: number; body: string }>;
+
+/** One request to APNs over HTTP/2. */
+export const apnsHttp2: ApnsSend = (host, p, headers, body) =>
+  new Promise((resolve, reject) => {
+    const c = http2.connect(`https://${host}`);
+    c.on('error', reject);
+    const req = c.request({ ':method': 'POST', ':path': p, ...headers });
+    let status = 0;
+    let out = '';
+    req.setTimeout(15_000, () => req.close(http2.constants.NGHTTP2_CANCEL));
+    req.on('response', (h) => (status = Number(h[':status'])));
+    req.on('data', (d) => (out += d));
+    req.on('end', () => (c.close(), resolve({ status, body: out })));
+    req.on('error', (e) => (c.close(), reject(e)));
+    req.end(body);
+  });
+
 // ---------- the API ----------
 
 export interface Relay {
@@ -201,6 +268,10 @@ export interface Relay {
   tunnelCa: string;
   /** Extra push hosts, for tests (a local fake push service). */
   testPushHosts?: RegExp[];
+  /** Absent until Ben's APNs key is installed: then APNs addresses get a 503. */
+  apns?: Apns;
+  /** How APNs is called; tests swap in a fake. */
+  apnsSend?: ApnsSend;
 }
 
 export function load(dir = STATE): Relay {
@@ -208,7 +279,7 @@ export function load(dir = STATE): Relay {
   const selfFile = path.join(dir, 'self.secret');
   if (!fs.existsSync(selfFile)) fs.writeFileSync(selfFile, randomBytes(32).toString('base64url'), { mode: 0o600 });
   const caFile = path.join(dir, 'tunnel-ca.pem');
-  return { names: new Names(dir), vapid: loadVapid(dir), selfSecret: fs.readFileSync(selfFile, 'utf8').trim(), tunnelCa: fs.existsSync(caFile) ? fs.readFileSync(caFile, 'utf8') : '' };
+  return { names: new Names(dir), vapid: loadVapid(dir), selfSecret: fs.readFileSync(selfFile, 'utf8').trim(), tunnelCa: fs.existsSync(caFile) ? fs.readFileSync(caFile, 'utf8') : '', apns: loadApns(dir) };
 }
 
 const limits = { enroll: new Limit(5, 3600_000), enrollAll: new Limit(200, 3600_000), check: new Limit(60, 60_000), push: new Limit(600, 3600_000), bad: new Limit(20, 600_000), logins: new Limit(30, 60_000) };
@@ -256,6 +327,8 @@ export async function api(r: Relay, method: string, url: URL, body: any, auth: s
   if (method === 'POST' && p === '/v1/push') {
     if (!isBox()) return limits.bad.ok(ip), err(403, 'a push needs the box name and its secret');
     if (!limits.push.ok(who)) return err(429, 'too many pushes from this box this hour');
+    const apple = apnsTarget(body?.endpoint);
+    if (apple) return apnsPush(r, apple, body);
     const problem = pushTargetProblem(body?.endpoint, r.testPushHosts);
     if (problem) return err(400, problem);
     const payload = typeof body.payload === 'string' ? Buffer.from(body.payload, 'base64url') : undefined;
@@ -301,6 +374,34 @@ async function readJson(req: http.IncomingMessage) {
   } catch {
     throw Object.assign(new Error("the request body isn't valid JSON"), { status: 400 });
   }
+}
+
+/** A push to a native app: the ciphertext only, under a generic alert the app replaces once it has checked it. */
+async function apnsPush(r: Relay, t: { topic: string; sandbox: boolean; token: string }, body: any): Promise<Answer> {
+  if (!r.apns) return { status: 503, body: { error: 'APNs is not set up on this relay' } };
+  const payload = typeof body.payload === 'string' && /^[A-Za-z0-9_-]+$/.test(body.payload) ? body.payload : '';
+  // APNs allows 4 KB in all, so the base64 ciphertext gets about 3.7 KB.
+  if (payload.length < 115 || payload.length > 3700) return { status: 400, body: { error: 'payload: the encrypted push body (aes128gcm), base64url, at most 2.7 KB for an Apple device' } };
+  const ttl = Math.max(0, Math.min(Number(body.ttl ?? 86400) | 0, 7 * 86400));
+  const topic = topicOf(body.topic);
+  const res = await (r.apnsSend ?? apnsHttp2)(t.sandbox ? 'api.sandbox.push.apple.com' : 'api.push.apple.com', `/3/device/${t.token}`, {
+    authorization: `bearer ${apnsJwt(r.apns)}`,
+    'apns-topic': t.topic,
+    'apns-push-type': 'alert',
+    'apns-priority': body.urgency === 'high' ? '10' : '5',
+    'apns-expiration': String(Math.floor(Date.now() / 1000) + ttl),
+    ...(topic ? { 'apns-collapse-id': topic } : {}),
+  }, JSON.stringify({ aps: { alert: { title: 'GurtOS', body: 'A request needs you' }, 'mutable-content': 1, category: 'APPROVAL', sound: 'default' }, e: payload }));
+  const reason = (() => {
+    try {
+      return String(JSON.parse(res.body).reason ?? '');
+    } catch {
+      return '';
+    }
+  })();
+  // 410, or a token Apple doesn't know for this app: the box should forget the subscription.
+  const gone = res.status === 410 || ['BadDeviceToken', 'DeviceTokenNotForTopic', 'Unregistered'].includes(reason);
+  return { status: 200, body: { status: res.status, gone, ...(res.status === 200 ? {} : { error: reason || res.body.slice(0, 300) }) } };
 }
 
 export function serve(r: Relay, pluginPort = Number(process.env.RELAY_PLUGIN_PORT ?? 7400), apiPort = Number(process.env.RELAY_API_PORT ?? 7401)) {

@@ -1,10 +1,10 @@
 import assert from 'node:assert/strict';
-import { createPublicKey, verify } from 'node:crypto';
+import { createPublicKey, generateKeyPairSync, verify } from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
-import { DOMAIN, Limit, SELF, api, load, nameProblem, plugin, pushTargetProblem, vapidHeader } from './server.ts';
+import { DOMAIN, Limit, SELF, api, apnsTarget, load, nameProblem, plugin, pushTargetProblem, vapidHeader, type ApnsSend } from './server.ts';
 
 const fresh = () => load(fs.mkdtempSync(path.join(os.tmpdir(), 'relay-')));
 const u = (p: string) => new URL(p, 'http://x');
@@ -109,4 +109,44 @@ test('push gateway: only known push services, signed with the app key, payload p
   // A push service that forgot the subscription: the box is told to drop it.
   const gone = (async () => new Response('gone', { status: 410 })) as typeof fetch;
   assert.equal(((await api(r, 'POST', u('/v1/push'), body, `Bearer rosa.${secret}`, '203.0.113.1', gone)).body as any).gone, true);
+});
+
+test('APNs for the native apps: only GurtOS apps, ciphertext only, Apple token signed with the key, gone tokens dropped', async () => {
+  const tok = 'ab'.repeat(32);
+  assert.deepEqual(apnsTarget(`https://${DOMAIN}/v1/apns/com.benzhou.gurtos/sandbox/${tok}`), { topic: 'com.benzhou.gurtos', sandbox: true, token: tok });
+  for (const e of [`https://${DOMAIN}/v1/apns/com.evil.app/production/${tok}`, `http://${DOMAIN}/v1/apns/com.benzhou.gurtos/production/${tok}`, `https://evil.example/v1/apns/com.benzhou.gurtos/production/${tok}`, `https://${DOMAIN}/v1/apns/com.benzhou.gurtos/production/xyz`, `https://${DOMAIN}/v1/apns/com.benzhou.gurtos/staging/${tok}`, `https://${DOMAIN}:8443/v1/apns/com.benzhou.gurtos/production/${tok}`])
+    assert.equal(apnsTarget(e), undefined, e);
+
+  const r = fresh();
+  const secret = r.names.enroll('rosa');
+  const payload = Buffer.alloc(300, 9).toString('base64url');
+  const body = { endpoint: `https://${DOMAIN}/v1/apns/com.benzhou.gurtos/production/${tok}`, payload, ttl: 600, urgency: 'high', topic: 'rosa:t1.k1' };
+  const auth = `Bearer rosa.${secret}`;
+  assert.equal((await api(r, 'POST', u('/v1/push'), body, auth, '203.0.113.1')).status, 503, 'no APNs key installed yet: a clear 503');
+
+  const { privateKey, publicKey } = generateKeyPairSync('ec', { namedCurve: 'P-256' });
+  r.apns = { keyId: 'KEY1234567', teamId: 'TEAM123456', key: privateKey };
+  let seen: { host: string; path: string; headers: Record<string, string>; body: string } | undefined;
+  r.apnsSend = (async (host, p, headers, b) => ((seen = { host, path: p, headers, body: b }), { status: 200, body: '' })) as ApnsSend;
+  assert.equal((await api(r, 'POST', u('/v1/push'), body, 'Bearer rosa.bad', '203.0.113.1')).status, 403);
+  assert.deepEqual((await api(r, 'POST', u('/v1/push'), body, auth, '203.0.113.1')).body, { status: 200, gone: false });
+  assert.equal(seen!.host, 'api.push.apple.com');
+  assert.equal(seen!.path, `/3/device/${tok}`);
+  assert.equal(seen!.headers['apns-topic'], 'com.benzhou.gurtos');
+  assert.equal(seen!.headers['apns-priority'], '10');
+  assert.ok(seen!.headers['apns-collapse-id'].length <= 32);
+  const sent = JSON.parse(seen!.body);
+  assert.equal(sent.e, payload, 'Apple gets the ciphertext as the box made it');
+  assert.deepEqual(sent.aps.alert, { title: 'GurtOS', body: 'A request needs you' }, 'and no readable content');
+  assert.equal(sent.aps['mutable-content'], 1);
+  const [h, c, s] = seen!.headers.authorization.replace(/^bearer /, '').split('.');
+  assert.deepEqual(JSON.parse(Buffer.from(h, 'base64url').toString()), { alg: 'ES256', kid: 'KEY1234567' });
+  assert.equal(JSON.parse(Buffer.from(c, 'base64url').toString()).iss, 'TEAM123456');
+  assert.ok(verify('sha256', Buffer.from(`${h}.${c}`), { key: publicKey, dsaEncoding: 'ieee-p1363' }, Buffer.from(s, 'base64url')));
+  // Too big for APNs, or not base64url: refused before Apple is asked.
+  assert.equal((await api(r, 'POST', u('/v1/push'), { ...body, payload: 'A'.repeat(4000) }, auth, '203.0.113.1')).status, 400);
+  assert.equal((await api(r, 'POST', u('/v1/push'), { ...body, payload: '{"aps":1}'.repeat(20) }, auth, '203.0.113.1')).status, 400);
+  // A token Apple no longer knows: the box is told to drop it.
+  r.apnsSend = (async () => ({ status: 400, body: '{"reason":"BadDeviceToken"}' })) as ApnsSend;
+  assert.deepEqual((await api(r, 'POST', u('/v1/push'), body, auth, '203.0.113.1')).body, { status: 400, gone: true, error: 'BadDeviceToken' });
 });
