@@ -118,6 +118,13 @@ function lines(events: LogEvent[]): { at: string; kind: string; text: string }[]
   return out;
 }
 
+/** Blocked attempts, one per host: when it first happened and how many times. */
+function blockedHosts(events: LogEvent[]) {
+  const by = new Map<string, { at: string; host: string; times: number }>();
+  for (const e of events) if (e.type === 'net.blocked') by.set(e.host, { at: by.get(e.host)?.at ?? e.at, host: e.host, times: (by.get(e.host)?.times ?? 0) + 1 });
+  return [...by.values()];
+}
+
 const rollbackBy = (e: LogEvent) =>
   e.type === 'note' && e.track === 'jira' && (e.data as { action?: string })?.action === 'rollback' ? String((e.data as { by?: string }).by) : undefined;
 
@@ -137,7 +144,7 @@ const capped = (items: string[], max: number) =>
 /** The issue's description: everything the action log knows about the task. Kept under Jira's 32,767 characters. */
 function describe(v: View) {
   const { task, approvals, events, changes, diff } = v;
-  const blocked = events.flatMap((e) => (e.type === 'net.blocked' ? [`${time(e.at)} UTC: tried to reach ${e.host}. The box refused the connection.`] : []));
+  const blocked = blockedHosts(events).map((b) => `${time(b.at)} UTC: tried to reach ${b.host}${b.times > 1 ? ` (${b.times} times)` : ''}. The box refused the connection.`);
   const said = events.filter(isSummary).map((e) => (e as { text: string }).text);
   const log = lines(events);
   const shown = log.slice(-40);
@@ -174,7 +181,11 @@ function describe(v: View) {
 function comment(e: LogEvent, v: View) {
   if (e.type === 'approval.asked') return panel('warning', `The agent is waiting for an OK: ${e.approval.question} Approve or deny it in the GurtOS agent task panel.`);
   if (e.type === 'approval.answered') return panel(e.approved ? 'success' : 'note', `${e.approved ? 'Approved' : 'Denied'} by ${e.by}.`);
-  if (e.type === 'net.blocked') return panel('error', `Blocked: the task tried to reach ${e.host}, which is not one of its allowed hosts. The box refused the connection.`);
+  if (e.type === 'net.blocked') {
+    // One comment per host: a retry loop or repeated lookups must not bury the issue in identical comments.
+    if (v.events.some((x) => x.type === 'net.blocked' && x.host === e.host && x.seq < e.seq)) return undefined;
+    return panel('error', `Blocked: the task tried to reach ${e.host}, which is not one of its allowed hosts. The box refused the connection.`);
+  }
   if (e.type === 'task.state' && e.state === 'failed') return panel('error', `Failed: ${clip(e.error ?? 'no reason given', 1000)}`);
   if (e.type === 'task.state' && e.state === 'undone') {
     const by = v.events.filter((x) => x.seq < e.seq).map(rollbackBy).filter(Boolean).at(-1);
@@ -373,9 +384,16 @@ async function activity(box: Box, q: URLSearchParams) {
   const until = q.get('until') ?? new Date(Date.now() + 60_000).toISOString();
   const [project, source, text, state] = ['project', 'source', 'q', 'state'].map((k) => q.get(k)?.toLowerCase());
   const events = await boxApi<LogEvent[]>(`/api/log`);
-  const blocked = new Map<string, string[]>();
-  for (const e of events) if (e.type === 'net.blocked' && e.at >= since && e.at <= until) blocked.set(e.task, [...(blocked.get(e.task) ?? []), e.host]);
-  const rows: { id: string; title: string; state: string; source: string; issue?: string; project?: string; costCents: number; blocked: string[]; changes: number; createdAt: string; updatedAt: string }[] = [];
+  // Each host once per task. Name lookups to an outside resolver (port 53) are refused by design and counted apart,
+  // so a chatty resolver does not hide the attempts that matter.
+  const blocked = new Map<string, Set<string>>();
+  const lookups = new Map<string, number>();
+  for (const e of events) {
+    if (e.type !== 'net.blocked' || e.at < since || e.at > until) continue;
+    if (/:53$/.test(e.host)) lookups.set(e.task, (lookups.get(e.task) ?? 0) + 1);
+    else blocked.set(e.task, (blocked.get(e.task) ?? new Set()).add(e.host));
+  }
+  const rows: { id: string; title: string; state: string; source: string; issue?: string; project?: string; costCents: number; blocked: string[]; lookups: number; changes: number; createdAt: string; updatedAt: string }[] = [];
   for (const t of box.tasks()) {
     if (t.updatedAt < since || t.createdAt > until) continue;
     const issue = loadSynced(t.id).issue;
@@ -387,7 +405,7 @@ async function activity(box: Box, q: URLSearchParams) {
     const kept = readJson<Diff | undefined>(syncedFile(t.id).replace(/\.json$/, '.diff.json'), undefined);
     rows.push({
       id: t.id, title: t.title, state: t.state, source: t.source, issue, project: proj, costCents: t.costCents,
-      blocked: blocked.get(t.id) ?? [], changes: kept?.changes.length ?? 0, createdAt: t.createdAt, updatedAt: t.updatedAt,
+      blocked: [...(blocked.get(t.id) ?? [])], lookups: lookups.get(t.id) ?? 0, changes: kept?.changes.length ?? 0, createdAt: t.createdAt, updatedAt: t.updatedAt,
     });
   }
   rows.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
@@ -591,6 +609,9 @@ export default {
       async read(e, box) {
         const c = config();
         if (e.type !== 'net.blocked' || !c?.confluence || Date.now() - Date.parse(e.at) > 86400_000) return;
+        // A name lookup to an outside resolver is refused by design (tasks resolve through the box's proxy). It
+        // shows in the issue and the daily page; it is not an incident worth a page.
+        if (/:53$/.test(e.host)) return;
         const t = box.task(e.task);
         if (!t || c.skipSources?.some((p) => t.source.startsWith(p))) return;
         await incident(box, c, e);
@@ -613,7 +634,7 @@ export default {
         task: v.task,
         pending: answerable(v),
         audit: lines(v.events).slice(-30),
-        blocked: v.events.flatMap((e) => (e.type === 'net.blocked' ? [{ at: e.at, host: e.host }] : [])),
+        blocked: blockedHosts(v.events),
         reasoning: v.events.filter(isSummary).map((e) => clip((e as { text: string }).text, 1500)).at(-1) ?? v.task.summary ?? '',
         changes: v.changes,
         diff: clip(v.diff, 6000),

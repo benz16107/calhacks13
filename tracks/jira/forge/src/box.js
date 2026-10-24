@@ -51,7 +51,18 @@ export async function isAdmin() {
 const KEY = /^[A-Z][A-Z0-9_]*-\d+$/;
 /** Issue keys from a list or a comma separated string, cleaned and capped. */
 export const keysOf = (v) =>
-  [...new Set((Array.isArray(v) ? v : String(v ?? '').split(/[\s,]+/)).map((k) => String(k).trim().toUpperCase()).filter((k) => KEY.test(k)))].slice(0, 50);
+  [...new Set((Array.isArray(v) ? v.map(String) : String(v ?? '').toUpperCase().match(/[A-Z][A-Z0-9_]*-\d+/g) ?? []).map((k) => k.trim().toUpperCase()).filter((k) => KEY.test(k)))].slice(0, 50);
+
+/** The issues a JQL search finds, as the user, for when nothing was picked in the list. */
+export async function keysOfJql(jql) {
+  if (!jql) return [];
+  const r = await api.asUser().requestJira(route`/rest/api/3/search/jql`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ jql, fields: ['summary'], maxResults: 50 }),
+  });
+  return r.ok ? ((await r.json()).issues ?? []).map((i) => i.key) : [];
+}
 
 /** The issues among `keys` that the user can see, with their summary and box.task property (undefined on a
  *  plain issue). The task id always comes from here, from Jira, never from a browser or a model. */

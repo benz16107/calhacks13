@@ -3,7 +3,7 @@
 // acting (Forge's context gives the account) or for which task an issue holds (Jira's box.task property does).
 import Resolver from '@forge/resolver';
 import api, { route } from '@forge/api';
-import { box, isAdmin, issuesWithTasks, keysOf, mayEdit, myName, query, rollbackIssues, visible } from '../box';
+import { box, isAdmin, issuesWithTasks, keysOf, keysOfJql, mayEdit, myName, query, rollbackIssues, visible } from '../box';
 
 const resolver = new Resolver();
 const DAY = 24 * 3600 * 1000;
@@ -51,7 +51,9 @@ resolver.define('activity', async ({ payload, context }) => {
 
 /** The issues picked in the issue list, with their task and whether this user may roll it back. */
 resolver.define('selected', async ({ context }) => {
-  const keys = keysOf(context.extension.issueKeys);
+  // The issues picked in the list; with none picked, the ones the search shows.
+  let keys = keysOf(context.extension.issueKeys);
+  if (!keys.length) keys = await keysOfJql(context.extension.jql);
   const found = await issuesWithTasks(keys);
   return Promise.all(found.map(async (f) => ({ ...f, canEdit: f.task?.id ? await mayEdit(f.key) : false })));
 });
