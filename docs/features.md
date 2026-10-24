@@ -31,12 +31,12 @@ Checked against main `8a4cbf4`, Sat Oct 24 05:30 PT. `./demo` from a clean workt
 | Status | Count |
 |---|---|
 | verified (ISO) | 3 |
-| verified | 55 |
-| merged | 96 |
+| verified | 56 |
+| merged | 99 |
 | building | 14 |
 | planned | 20 |
 | not pursued | 5 |
-| **Total** | **193** |
+| **Total** | **197** |
 
 **Collisions** (detail below): none open at 03:27. The three found at 02:25 are resolved and Business is on main. Still
 watched: portal/dist rebuilt from merged sources (C-4).
@@ -67,6 +67,10 @@ watched: portal/dist rebuilt from merged sources (C-4).
 | "Today" is the box's day on every screen | portal | verified Oct 24 00:37 | 465fa7a | none | all |
 | Pause all agents (`settings.paused`) | core | merged | 197ebc2 | demo checks both directions | all, Personal |
 | Track routes learn who is calling (`x-box-caller`) | core | merged | 737ba97 | security step | all |
+| The open `GET /api/health` tells an outside caller only `ok`, `startedAt` and `paused`; the box and paired devices get the full answer | core | verified Oct 24 08:25 (checked from outside on gurt-cloud and gurt-laptop) | efaf100 | security step | all |
+| The API server keeps idle connections 65 s (stops the rare ECONNRESET between clients on the box and its API) | core | merged (not reproducible on demand; QA has not seen the reset again) | efaf100 | none | all |
+| Task units get `MemorySwapMax=0`, so the 2 GB cap is hard on hosts with swap (Armadin's memory hog is now caught on Vultr too) | core | merged | efaf100 | tracks/armadin/demo.ts | Armadin |
+| A request nobody can approve notifies whoever may deny it and the owner | core, business | merged (Vultr runs efaf100, one commit behind) | 29743d9 | business edition | Hyphenate, Microsoft |
 | Wrong pairing codes limited to 10 a minute (then 429) | core | verified Oct 24 03:10 (11th and 12th tries got 429) | 80e660b | security step | Armadin |
 | A page from another site is never the box's own screen | core | verified Oct 24 03:10 (Origin evil.example and app.gurtos.com get 401 even from loopback) | 0417e8c | security step | Armadin |
 | The device list hides push subscriptions | core | verified Oct 24 03:10 (only `push: true/false`) | 7f784ff | none | all |

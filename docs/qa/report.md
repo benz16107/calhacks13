@@ -348,7 +348,7 @@ message could name that call, or the credit desk could register its seats when B
 (`gurt-cloud.box.gurtos.com`, `gurt-laptop.box.gurtos.com`) anyone can read the task count, whether the box is paused,
 when it started, the ids of resumed tasks and all 37 tool names. It is open on purpose for the phone's outage check.
 Trim it to `{ok}` plus what the app needs, or give the full version only to a paired phone. Passed to core, keeping `ok` and
-`startedAt`.
+`startedAt`. **Fixed in efaf100, verified 08:25 PT:** both public names now answer `ok`, `startedAt` and `paused` only.
 
 **P2-30 (withdrawn).** I thought `https://<box>.box.gurtos.com/` showed raw JSON. That was `curl` without a browser's
 `Accept: text/html`; with it, both boxes return the GurtOS page (200), checked at 06:55 PT. The JSON 401 is for clients
