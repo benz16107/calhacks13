@@ -285,6 +285,7 @@ export function Desktop({ covered }: { covered: boolean }) {
     <main class="desktop" inert={covered}>
       <Greeting />
       <Widgets />
+      <span class="desktop-gap" aria-hidden="true" />
       <nav class="grid" aria-label="Apps">
         {apps.map((a) => (
           <AppIcon app={a} size="grid" apps={apps} key={a.id} />

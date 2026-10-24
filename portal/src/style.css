@@ -162,7 +162,15 @@ ol, ul { padding: 0; list-style: none; }
 
 /* ---------- desktop ---------- */
 
-.desktop { display: flex; flex-direction: column; align-items: center; padding: clamp(20px, 6.7vh, 72px) 32px 190px; }
+.desktop {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  /* Fill the screen exactly: the kiosk can't scroll. The gap above the app grid gives way first. */
+  height: calc(100vh - 56px);
+  padding: clamp(16px, 6.7vh, 72px) 32px 168px;
+}
+.desktop-gap { flex: 0 1 216px; min-height: 16px; }
 .greeting { text-align: center; display: grid; gap: 8px; }
 .greeting h1 { font-size: clamp(40px, 2.9vw, 56px); line-height: 1.14; letter-spacing: -0.8px; font-weight: 600; }
 .greeting p { font-size: clamp(18px, 1.25vw, 24px); line-height: 1.33; letter-spacing: -0.2px; font-weight: 600; color: var(--color-desktop-text-secondary); }
@@ -196,7 +204,7 @@ ol, ul { padding: 0; list-style: none; }
 .bar > span { position: absolute; inset: 0 auto 0 0; width: 40%; border-radius: 3px; background: var(--color-desktop-text); animation: working 1.8s ease-in-out infinite; }
 @keyframes working { from { translate: -100% 0; } to { translate: 250% 0; } }
 
-.grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 24px 48px; margin-top: clamp(32px, 20vh, 216px); max-width: 1500px; }
+.grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 24px 48px; max-width: 1500px; }
 .app { display: flex; flex-direction: column; align-items: center; gap: 12px; border-radius: 22px; }
 .app-grid { width: 132px; }
 .app-icon { position: relative; display: block; width: 108px; height: 104px; }
@@ -535,7 +543,35 @@ a.trow:hover { background: #fff; }
   .tm-left { width: 400px; }
   .table-head, .trow { grid-template-columns: minmax(0, 2fr) minmax(0, 1.8fr) 160px 150px; }
 }
+@media (max-width: 1400px) {
+  .widgets { gap: 18px; }
+  .widget-needs { width: 340px; }
+  .widget-running { width: 320px; }
+  .widget-small { min-width: 200px; padding: 20px; }
+  .widget { padding: 16px 20px; }
+  .widget-lines { gap: 8px; }
+  .grid { gap: 16px 20px; }
+  .app-grid { width: 104px; }
+}
+/* Short screens (a 1280 x 800 kiosk, a laptop): a smaller greeting and tighter widgets. */
+@media (max-height: 860px) and (min-width: 700px) {
+  .greeting h1 { font-size: 40px; }
+  .greeting p { font-size: 18px; }
+  .widgets { margin-top: 20px; }
+  .widget-count b, .widget-value { font-size: 32px; line-height: 40px; }
+  .widget-needs, .widget-running { gap: 8px; }
+  .widget-lines { gap: 6px; }
+  .app-grid .app-icon { width: 92px; height: 88px; }
+  .app-grid .app-tile { width: 80px; height: 80px; border-radius: 18px; }
+  .app-grid .glyph { width: 40px; height: 40px; }
+  .app-icon .badge { left: 72px; }
+  .app { gap: 8px; }
+}
 @media (max-width: 1100px) {
+  .widget-small { display: none; }
+  .grid { gap: 16px 12px; }
+  .app-grid { width: 92px; }
+  .app-label { font-size: 14px; }
   .task-columns, .tm-columns, .activity-bottom { flex-direction: column; }
   .col-side, .tm-left, .activity-side { width: 100%; }
   .menubar-quiet { display: none; }
@@ -548,7 +584,8 @@ a.trow:hover { background: #fff; }
   body::before { background-image: url(./assets/wallpaper-phone.svg); background-position: center top; }
   .menubar { height: auto; padding: calc(8px + env(safe-area-inset-top)) 16px 0; }
   .switcher { min-height: 44px; }
-  .desktop { padding: 20px 20px 150px; }
+  .desktop { height: auto; padding: 20px 20px 150px; }
+  .desktop-gap { display: none; }
   .greeting { display: none; }
   .widgets { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; width: 100%; max-width: 362px; margin-top: 0; }
   .widget { width: auto; min-height: 124px; padding: 14px 16px; border-radius: 22px; gap: 6px; overflow: hidden; }

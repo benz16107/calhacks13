@@ -5,7 +5,8 @@ phone needs one address.
 
 - **The box's own screen** at `http://127.0.0.1:7700/screen`, full screen in the image's kiosk (WebKitGTK under
   cage). Buttons are 48 px, there is no hover, and the whole page moves a few pixels every 3 minutes so nothing
-  burns in.
+  burns in. The desktop always fits the screen, because a kiosk can't scroll: checked at 1024 x 768, 1280 x 720,
+  1280 x 800 (what the image's VM boots at), 1366 x 768, 1440 x 900, 1920 x 1080 and 2560 x 1440.
 - **The portal** in a laptop browser: `http://<box>:7700/`.
 - **The phone**: the same address, laid out for a phone. Pair it from Settings with the QR code, and its answers
   go into the log under its own name.
@@ -69,7 +70,7 @@ box and every task process at once and boots it on the same data.
 |---|---|
 | ![Tasks](screenshots/box-tasks.png) | ![Activity](screenshots/box-activity.png) |
 | ![Notification Center](screenshots/box-notifications.png) | ![Pairing on a laptop](screenshots/laptop-pair.png) |
-| ![The box screen rendered in WebKit, the kiosk's engine](screenshots/kiosk-webkit.png) | ![Home](screenshots/box-home.png) |
+| ![The box screen rendered in WebKit, the kiosk's engine](screenshots/kiosk-webkit.png) | ![The box screen at 1280 x 800, the image VM's display](screenshots/kiosk-1280x800.png) |
 
 | Phone home | Tasks | Pairing | Blocked |
 |---|---|---|---|
