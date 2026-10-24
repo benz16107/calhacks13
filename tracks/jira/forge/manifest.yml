@@ -1,0 +1,55 @@
+# Box audit: the Jira side of the box. Each box task is an issue in the BOX project; this panel shows the task
+# live from the box and calls the box back to approve or roll it back. See ../README.md.
+modules:
+  jira:issuePanel:
+    - key: box-task-panel
+      resource: main
+      resolver:
+        function: resolver
+      render: native
+      title: Box agent task
+      icon: https://developer.atlassian.com/platform/forge/images/icons/issue-panel-icon.svg
+      displayConditions:
+        projectKey: BOX
+  # Indexes the issue property the box writes, so JQL can search tasks: boxState = undone, boxBlocked > 0.
+  jira:entityProperty:
+    - key: box-task-index
+      entityType: issue
+      propertyKey: box.task
+      values:
+        - path: state
+          type: string
+          searchAlias: boxState
+        - path: costCents
+          type: number
+          searchAlias: boxCost
+        - path: blocked
+          type: number
+          searchAlias: boxBlocked
+        - path: pending
+          type: number
+          searchAlias: boxPending
+        - path: source
+          type: string
+          searchAlias: boxSource
+  function:
+    - key: resolver
+      handler: index.handler
+resources:
+  - key: main
+    path: src/frontend/index.jsx
+permissions:
+  scopes:
+    - read:jira-work
+    - read:jira-user
+  external:
+    fetch:
+      backend:
+        - address: 45-32-140-213.sslip.io
+          inScopeEUD: true
+app:
+  runtime:
+    name: nodejs24.x
+    memoryMB: 256
+    architecture: arm64
+  id: ari:cloud:ecosystem::app/2f4d3768-f8ac-4799-8f47-4d9fdb3ab918
