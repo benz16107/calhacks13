@@ -10,7 +10,7 @@ the tab. Research and the three directions are in `docs/figma/refs/` and `docs/f
 
 **Built:** every screen in the set. On the box: home, Tasks, Notification Center, task detail, Activity, Time Machine,
 Credit desk, Shopper, Wallet, Find, pairing, and the session restore. On the phone: home, the approval as a
-notification, running tasks as Live Activities, and the task list. The clickable prototype comes next.
+notification, running tasks as Live Activities, and the task list. The clickable prototype is in Figma Design and Figma Make (below).
 
 ## Files
 
@@ -18,7 +18,8 @@ notification, running tasks as Live Activities, and the task list. The clickable
 |---|---|---|
 | Design system and screens | https://www.figma.com/design/oppzH621OOOMA31rgLbxbM | Page "OS screens": the current screens. Page "Design system": tokens, text styles, components. Page "Directions": the three OS directions. Page "Screens": the first, dashboard-style screens (superseded) |
 | Ideation board (FigJam) | https://www.figma.com/board/KvHiDv5HIJuGYOZDDkp8VG | Architecture, the four demo moments, the 25 tracks by slot, the moodboard |
-| Prototype | added after the prototype stage | Approve from the phone; undo one task |
+| Prototype (Figma Design) | Phone: https://www.figma.com/proto/oppzH621OOOMA31rgLbxbM/?node-id=23-304&starting-point-node-id=23%3A304 · Box: https://www.figma.com/proto/oppzH621OOOMA31rgLbxbM/?node-id=24-454&starting-point-node-id=24%3A454 | The two flows below, wired between the real screens |
+| Prototype (Figma Make) | https://www.figma.com/make/19hhCgh3CFsgfi1eBienAS | The same two flows as a small working web page, in direction A's tokens |
 | Pitch deck (Figma Slides) | added after the slides stage | |
 
 File key for MCP calls: `oppzH621OOOMA31rgLbxbM`. Open a node with
@@ -61,6 +62,19 @@ The box screen is 1920 x 1080. Phone screens are 390 x 844.
 Apps and where they come from: Tasks, Activity and Time Machine are the core's own. Credit desk, Shopper and Wallet
 are tracks (`GET /api/apps` lists them; open `/t/<track><href>`). Find is the planned Moss track. Settings holds
 pairing.
+
+## Prototype
+
+Two flows, in Figma Design (page "OS screens", flow starting points) and as a Figma Make file:
+
+1. **Phone: approve from a notification** (start `23:304`). The phone home; after 1.2 s the approval drops in as a
+   banner (`33:1893`); Approve leads to "running again" (`33:1969`), then the Live Activity and the task list. Deny
+   returns home.
+2. **Box: undo one task** (start `24:454`). The task detail window; Undo opens a confirm dialog (`33:2041`); confirming
+   shows the task undone, its files removed and a new log line (`33:2144`). "Keep it" goes back.
+
+Screenshots of the in-between states: `docs/figma/os/prototype-*.png`. To embed the Design prototype:
+`https://www.figma.com/embed?embed_host=share&url=` followed by the URL-encoded prototype link above.
 
 ## Components
 
