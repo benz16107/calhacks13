@@ -1,0 +1,25 @@
+#!/bin/bash
+# box-update runs this with the new system's root, before it starts the new system. It carries what the person set
+# up and the data partition does not hold: their accounts (uid 1000 to 29999), their own groups and memberships
+# (sudo among them), time zone, language, computer name and login settings. Their files are on the data partition.
+set -euo pipefail
+new=$1
+people=$(awk -F: '$3 >= 1000 && $3 < 30000 { print $1 }' /etc/passwd)
+for n in $people; do
+  for f in passwd shadow subuid subgid; do
+    [ -f /etc/$f ] && ! grep -q "^$n:" $new/etc/$f 2>/dev/null && grep "^$n:" /etc/$f >> $new/etc/$f || true
+  done
+done
+for g in $(awk -F: '$3 >= 1000 && $3 < 30000 { print $1 }' /etc/group); do
+  for f in group gshadow; do
+    grep -q "^$g:" $new/etc/$f || grep "^$g:" /etc/$f >> $new/etc/$f || true
+  done
+done
+for n in $people; do
+  groups=$(awk -F: -v u="$n" '{ split($4, m, ","); for (i in m) if (m[i] == u) print $1 }' /etc/group |
+    while read -r g; do grep -q "^$g:" $new/etc/group && echo "$g"; done | paste -sd,)
+  [ -z "$groups" ] || usermod -R "$new" -a -G "$groups" "$n"
+done
+for f in /etc/localtime /etc/timezone /etc/default/locale /etc/hostname /etc/gdm3/custom.conf; do
+  [ -e $f ] && cp -a $f $new$f || true
+done

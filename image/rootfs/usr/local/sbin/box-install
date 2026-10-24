@@ -4,10 +4,12 @@
 #   box.install=/dev/sdb  use that disk
 # An empty disk is used straight away. A disk with anything on it is erased only after you type "erase".
 # Layout (GPT): BIOS boot (x86 only), ESP, system slot A, system slot B, data. Slot B stays empty until the
-# first system update.
+# first system update. A slot is 6 GB unless the image's /etc/box-os/release says SLOT_MB (the Personal edition).
 set -euo pipefail
-SLOT_MB=6144 ESP_MB=512 MIN_DATA_MB=4096
+SLOT_MB=$(sed -n 's/^SLOT_MB=//p' /etc/box-os/release) ESP_MB=512 MIN_DATA_MB=4096
+SLOT_MB=${SLOT_MB:-6144}
 src=/run/boxlive/iso/box/root.sqfs
+name=$(. /etc/os-release && echo "$NAME $VARIANT")
 mnt=/run/box-install
 
 say() {
@@ -16,7 +18,7 @@ say() {
 }
 fail() {
   say "FAILED: $*"
-  say "The box is not installed. Power off, then start from the disc again."
+  say "$name is not installed. Power off, then start from the disc again."
   sleep infinity
 }
 trap 'fail "line $LINENO: $BASH_COMMAND"' ERR
@@ -37,12 +39,12 @@ done
 about="$disk ($(lsblk -dno SIZE,MODEL "$disk" | xargs))"
 
 if [ -n "$(wipefs -n "$disk"; lsblk -nro NAME "$disk" | tail -n +2)" ]; then
-  say "$about has data on it. Installing the box erases all of it."
+  say "$about has data on it. Installing $name erases all of it."
   read -r -p 'Type erase and press Enter to go on: ' answer
   [ "$answer" = erase ] || fail "you did not type erase, so nothing changed"
 fi
 
-say "Installing the box on $about"
+say "Installing $name on $about"
 wipefs -qa "$disk"
 sgdisk -Z "$disk" >/dev/null
 bios=()
@@ -65,7 +67,11 @@ mkdir -p $mnt/a $mnt/data $mnt/esp
 mount "$(part box-a)" $mnt/a
 unsquashfs -f -q -no-progress -d $mnt/a "$src"
 mount "$(part box-data)" $mnt/data
-mkdir -p $mnt/data/{box,etc-box,spacetimedb,spacetime-cli,journal,update}
+mkdir -p $mnt/data/update
+# Each /data/... bind mount in the system's fstab starts as a copy of what the image has at that path.
+awk '$1 ~ "^/data/" { print $1, $2 }' $mnt/a/etc/fstab | while read -r from to; do
+  [ -e "$mnt$from" ] || cp -a "$mnt/a$to" "$mnt$from" 2>/dev/null || mkdir -p "$mnt$from"
+done
 
 say "Installing the boot loader"
 mount "$(part box-esp)" $mnt/esp
@@ -75,12 +81,12 @@ if [ "$(uname -m)" = x86_64 ]; then
 else
   grub-install --target=arm64-efi --efi-directory=$mnt/esp --boot-directory=$mnt/esp/boot --removable --no-nvram 2>/dev/null
 fi
-cp /usr/local/lib/box-os/grub.cfg $mnt/esp/boot/grub/grub.cfg
+sed "s/@NAME@/$name/g" /usr/local/lib/box-os/grub.cfg > $mnt/esp/boot/grub/grub.cfg
 grub-editenv $mnt/esp/boot/grub/grubenv create
 grub-editenv $mnt/esp/boot/grub/grubenv set saved_entry=a
 
 sync
 umount $mnt/a $mnt/data $mnt/esp
-say "Installed. Restarting into the box. You can remove the install disc."
+say "Installed. Restarting into $name. You can remove the install disc."
 sleep 3
 systemctl reboot

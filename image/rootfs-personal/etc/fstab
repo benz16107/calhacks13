@@ -1,0 +1,14 @@
+# The Personal edition's disk: the Server's layout (see image/README.md) plus the person's files and settings.
+# Everything that must outlive a system update lives on box-data, bind-mounted in place. Unlike the Server, these
+# mounts are required: a desktop that started without /home would write people's files into the system slot.
+LABEL=BOX-ESP        /boot/efi                            vfat  umask=0077,nofail,x-systemd.device-timeout=10s  0 2
+LABEL=box-data       /data                                ext4  defaults                                         0 2
+/data/home           /home                                none  bind,x-systemd.requires-mounts-for=/data         0 0
+/data/network        /etc/NetworkManager/system-connections none bind,x-systemd.requires-mounts-for=/data       0 0
+/data/accounts       /var/lib/AccountsService             none  bind,x-systemd.requires-mounts-for=/data         0 0
+/data/bluetooth      /var/lib/bluetooth                   none  bind,x-systemd.requires-mounts-for=/data         0 0
+/data/box            /var/lib/box                         none  bind,x-systemd.requires-mounts-for=/data         0 0
+/data/etc-box        /etc/box                             none  bind,x-systemd.requires-mounts-for=/data         0 0
+/data/spacetimedb    /var/lib/spacetimedb                 none  bind,x-systemd.requires-mounts-for=/data         0 0
+/data/spacetime-cli  /root/.config/spacetime              none  bind,x-systemd.requires-mounts-for=/data         0 0
+/data/journal        /var/log/journal                     none  bind,x-systemd.requires-mounts-for=/data         0 0

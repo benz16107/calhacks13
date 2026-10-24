@@ -1,0 +1,16 @@
+# Runs personal/install.sh on the running system so the box learns who owns the computer (BOX_OWNER, the person
+# in the sudo group). On an image that person only exists after GNOME's first-boot setup, and the setting lives in
+# the system slot, so this runs again after an update until it is there.
+[Unit]
+Description=Tell the box who owns this computer
+ConditionKernelCommandLine=!box.install
+ConditionPathExists=/opt/box/personal/install.sh
+ConditionPathExists=!/etc/systemd/system/box.service.d/personal.conf
+After=box.service
+
+[Service]
+Type=oneshot
+ExecStart=/opt/box/personal/install.sh
+
+[Install]
+WantedBy=multi-user.target

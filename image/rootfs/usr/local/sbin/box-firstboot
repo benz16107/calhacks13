@@ -1,7 +1,8 @@
 #!/bin/bash
 # First-boot setup. Runs at every start and makes only what is missing, so a system update keeps it all.
-#   identity.key   the box's own ed25519 key. Its id is the first 10 hex digits of the public key's hash, and the
-#                  box takes box-<id> as its hostname, which core uses as BOX_ID, so no two boxes share a name.
+#   identity.key   the box's own ed25519 key. Its id is the first 6 hex digits of the public key's hash, and the
+#                  box takes gurt-<id> as its hostname, which core uses as BOX_ID, so no two boxes share a name.
+#                  A name someone gave the computer (the Personal edition's Settings) wins over the default, gurt.
 #   vault.env      the vault, empty until the portal fills it. Root only.
 # Both live on the data partition, in /etc/box. SSH host keys too, on debug builds. Pairing a phone is core's
 # job (POST /api/pair/new), shown in the portal's Settings on the box's screen.
@@ -10,8 +11,10 @@ umask 077
 cd /etc/box
 [ -s identity.key ] || openssl genpkey -algorithm ed25519 -out identity.key
 openssl pkey -in identity.key -pubout -out identity.pub && chmod 644 identity.pub
-id=$(openssl pkey -pubin -in identity.pub -outform DER | sha256sum | cut -c1-10)
+id=$(openssl pkey -pubin -in identity.pub -outform DER | sha256sum | cut -c1-6)
 [ -f vault.env ] || install -m 600 /dev/null vault.env
-echo "box-$id" > /proc/sys/kernel/hostname
+# Written to /etc/hostname, not only the kernel: NetworkManager (Personal) resets the name from that file.
+if [ "$(cat /etc/hostname)" = gurt ]; then echo "gurt-$id" > /etc/hostname; fi
+cat /etc/hostname > /proc/sys/kernel/hostname
 if command -v sshd >/dev/null; then ssh-keygen -A >/dev/null; fi
-echo "box-$id is set up"
+echo "gurt-$id is set up"

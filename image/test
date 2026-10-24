@@ -6,33 +6,35 @@
 #      must roll back by itself
 #   image/test [--debug] [--uefi]   x86_64 with KVM. BIOS by default, like Vultr.
 #   image/test --arm64               arm64 with UEFI, emulated (no KVM), so about 5 times slower
+#   image/test --personal            the Personal edition. With --debug it also checks that a person's account, sudo
+#                                    and files survive the update.
 # It fetches the build from the build VM.
 # Env: ISO (a local ISO instead), BUILD_HOST (default vultrbox), TEST_DIR (default ~/.cache/box-image-test)
 set -Eeuo pipefail
 trap 'echo "test: FAILED at line $LINENO: $BASH_COMMAND"' ERR
-uefi= arch=x86_64 debug=
+uefi= arch=x86_64 debug= edition=server-
 for a in "$@"; do
   case $a in
-    --uefi) uefi=1 ;; --debug) debug=-debug ;; --arm64) arch=arm64 ;;
-    *) echo "usage: image/test [--debug] [--uefi] [--arm64]" >&2; exit 2 ;;
+    --uefi) uefi=1 ;; --debug) debug=-debug ;; --arm64) arch=arm64 ;; --personal) edition=personal- ;;
+    *) echo "usage: image/test [--debug] [--uefi] [--arm64] [--personal]" >&2; exit 2 ;;
   esac
 done
-name=$arch$debug
+name=$edition$arch$debug
 slow=1
 [[ $arch == arm64 ]] && slow=5
 dir=${TEST_DIR:-$HOME/.cache/box-image-test}
 out=/var/lib/box-image/out
 mkdir -p "$dir"
-iso=${ISO:-$dir/box-$name.iso}
+iso=${ISO:-$dir/gurtos-$name.iso}
 if [[ -z ${ISO:-} ]]; then
-  files=("${BUILD_HOST:-vultrbox}:$out/box-$name.iso")
-  [[ -n $debug ]] && files+=("${BUILD_HOST:-vultrbox}:$out/root-$name.sqfs*")
+  files=("${BUILD_HOST:-vultrbox}:$out/gurtos-$name.iso")
+  [[ -n $debug ]] && files+=("${BUILD_HOST:-vultrbox}:$out/gurtos-$name.sqfs*")
   rsync -t --info=progress2 "${files[@]}" "$dir/"
 fi
 run=$dir/run-$(date +%m%d-%H%M%S)
 mkdir -p "$run"
 echo "test: $run"
-qemu-img create -q -f qcow2 "$run/disk.qcow2" 24G
+qemu-img create -q -f qcow2 "$run/disk.qcow2" $([[ $edition == personal- ]] && echo 40G || echo 24G)
 share=$(dirname "$(readlink -f "$(command -v qemu-system-x86_64)")")/../share/qemu
 port=${SSH_PORT:-2299}
 common=(-name box-test -m 4096 -smp 4 -display none
@@ -66,11 +68,11 @@ wait_for() { # <pattern> <how many times in the log> <seconds>
   tail -40 "$run/serial.log"
   exit 1
 }
-box_id() { grep 'box: up and healthy' "$run/serial.log" | sed -n "${1}p" | sed -n 's/.* \(box-[0-9a-f]*\):.*/\1/p'; }
+box_id() { grep 'box: up and healthy' "$run/serial.log" | sed -n "${1}p" | sed -n 's/.* \(gurt-[0-9a-f]*\):.*/\1/p'; }
 vm() { ssh -q -p "$port" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5 root@127.0.0.1 "$@"; }
 
-wait_for 'box-install: Installing the box on' 1 300
-echo "test: $(grep -o 'Installing the box on.*' "$run/serial.log")"
+wait_for 'box-install: Installing GurtOS' 1 300
+echo "test: $(grep -o 'Installing GurtOS.*' "$run/serial.log")"
 wait_for 'box-install: Installed' 1 600
 echo "test: installed, restarting into the box"
 wait_for 'box: up and healthy' 1 600
@@ -88,15 +90,29 @@ if [[ $name != *-debug ]]; then
   echo "test: PASSED (a release build has no ssh, so the update steps need --debug)"
   exit 0
 fi
-vm 'systemctl is-active box spacetimedb box-kiosk; box-update status'
+screen=box-kiosk
+[[ $edition == personal- ]] && screen=gdm
+vm "systemctl is-active box spacetimedb $screen; box-update status"
+vm 'grep -h "^PRETTY_NAME\|^ID" /etc/os-release; hostname; grep -o "menuentry \"[^\"]*\"" /boot/efi/boot/grub/grub.cfg' | sed 's/^/test: /'
+if [[ $edition == personal- ]]; then
+  echo "test: GNOME's setup would make the first account an administrator. Make one the same way, through AccountsService"
+  vm 'busctl call org.freedesktop.Accounts /org/freedesktop/Accounts org.freedesktop.Accounts CreateUser ssi ana "Ana Test" 1 >/dev/null &&
+    sleep 2 && mkdir -p /home/ana && echo kept > /home/ana/note && chown -R ana: /home/ana && id ana'
+  vm 'id ana | grep -q "(sudo)"' || { echo "test: FAILED, ana is not in the sudo group"; exit 1; }
+  vm 'getent group sudo | cut -d: -f4' | grep -q box- && { echo "test: FAILED, a task user has sudo"; exit 1; }
+fi
 
 echo "test: system update to slot B"
-vm 'cat > /data/update/root.sqfs' < "$dir/root-$name.sqfs"
-vm 'cat > /data/update/root.sqfs.sha256' < "$dir/root-$name.sqfs.sha256"
-vm 'cat > /data/update/root.sqfs.sig' < "$dir/root-$name.sqfs.sig"
+vm 'mkdir -p /data/update && cat > /data/update/root.sqfs' < "$dir/gurtos-$name.sqfs"
+vm 'cat > /data/update/root.sqfs.sha256' < "$dir/gurtos-$name.sqfs.sha256"
+vm 'cat > /data/update/root.sqfs.sig' < "$dir/gurtos-$name.sqfs.sig"
 vm 'box-update apply /data/update/root.sqfs' || true
 wait_for 'box: update confirmed: slot b' 1 600
 vm 'box-update status'
+if [[ $edition == personal- ]]; then
+  vm 'id ana | grep -q "(sudo)" && grep -qx kept /home/ana/note' || { echo "test: FAILED, ana or her files did not survive the update"; exit 1; }
+  echo "test: ana, her sudo and her files survived the update"
+fi
 shot screen-2
 
 echo "test: a broken update (its box service never starts) must roll back to slot B by itself"

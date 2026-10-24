@@ -61,6 +61,8 @@ apply)
   unsquashfs -f -q -no-progress -d $work/$new "$file"
   root=$work/$new
   [ -e $root/boot/vmlinuz ] && [ -e $root/opt/box/core/box.ts ] || die "the update is not a box system"
+  edition() { (. "$1/etc/os-release" && echo "${VARIANT_ID:-}"); }
+  [ "$(edition $root)" = "$(edition /)" ] || { umount $root; die "the update is a different edition: $(edition $root)"; }
   # The new system keeps this machine's identity and the box's task users (core makes them, uids 30000-39999).
   cp -a /etc/machine-id $root/etc/
   cp -a /etc/ssh/ssh_host_* $root/etc/ssh/ 2>/dev/null || true
@@ -69,6 +71,8 @@ apply)
       grep -q "^$n:" $root/etc/$f || grep "^$n:" /etc/$f >> $root/etc/$f || true
     done
   done
+  # An edition can carry more (the Personal edition: people's accounts and settings).
+  for f in /usr/local/lib/box-os/carry.d/*; do if [ -x "$f" ]; then "$f" $root; fi; done
   sync && umount $root
   [ "$file" = $state/new.sqfs ] && rm -f $file
 

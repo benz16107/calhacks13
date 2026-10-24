@@ -1,0 +1,11 @@
+# GNOME's first-boot setup makes the first account, which changes /etc/group. Then tell the box its owner.
+[Unit]
+Description=Watch for the first account on this computer
+ConditionKernelCommandLine=!box.install
+
+[Path]
+PathChanged=/etc/group
+Unit=box-owner.service
+
+[Install]
+WantedBy=multi-user.target
