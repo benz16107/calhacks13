@@ -79,11 +79,15 @@ Cut list if long: drop the montage's credit desk shot first, then the ISO shot.
 
 ## 2. Fetch.ai (3 to 5 minutes, inside ASI:One)
 
-Fetch.ai wants the main flow inside an ASI:One chat. Keep the portal off screen except one shot.
+Fetch.ai wants the main flow inside an ASI:One chat. Keep the portal off screen except one shot. Open with the
+problem (a chat agent has to run somewhere: a cloud you can't see into, or your computer with full access), then show
+GurtOS as its safe body. If the Fetch thread's stranger-agent call (with a blocked hidden instruction) or guest
+requests have merged, add them after the stock check.
 
 | Time | On screen | Say |
 |---|---|---|
-| 0:00 | The `box` agent's Agentverse profile: name, address, the innovationlab and hackathon badges, Agent Chat Protocol | "This is my box on Agentverse: an always-on computer where AI agents work safely. It speaks the Agent Chat Protocol, so ASI:One can find it and give it work." |
+| 0:00 | Title card: "A chat agent has to run somewhere. A cloud you can't see into, or your computer with full access." | "For an agent to act, it has to run somewhere. Usually that's a cloud you can't see into, or your own computer with full access. GurtOS is a third option." |
+| 0:10 | The `box` agent's Agentverse profile: name, address, the innovationlab and hackathon badges, Agent Chat Protocol | "This is my box on Agentverse: an always-on computer where AI agents work safely. It speaks the Agent Chat Protocol, so ASI:One can find it and give it work." |
 | 0:20 | ASI:One. Search "box" (or paste the address `agent1qvuk46tnt9lnscher0pawl7pr5y525mak66ptwsrvg4kff0pfy9m2sy0us6`), open a chat | "I find it in ASI:One and open a chat." |
 | 0:35 | Send "hi". The reply asks to pair. Cut to the box screen's ASI:One app with the six-digit code, back to the chat: `pair <code>`. "Paired." | "Only the owner can give it work. I pair once with the code on the box's screen. Anyone else only ever gets the pairing step." |
 | 1:00 | "Fix the failing test in my project." Progress replies arrive | "Now real work. The box starts a task: Droid, Factory's coding agent running Claude, in its own Linux user, with its own copy of the project, no network and a 25 cent budget." |
