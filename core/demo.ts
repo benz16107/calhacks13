@@ -6,7 +6,7 @@ import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
 import { call } from './client.ts';
-import type { DemoKit, LogEvent, Task } from './contract.ts';
+import type { Approval, DemoKit, LogEvent, Task } from './contract.ts';
 import { PLACEHOLDER_KEY } from './net.ts';
 import { mountsUnder, reap, teardown } from './reap.ts';
 
@@ -1130,6 +1130,55 @@ const personalDemo = new URL('../personal/demo.ts', import.meta.url).pathname;
 if (fs.existsSync(personalDemo)) await moment('personal desktop layer', async () => (await import(personalDemo)).default(kit));
 
 // GurtOS Business: people, routed approvals, the audit and the kill switch. Last, because it turns Business on (and off).
+await moment("native apps: device kinds and the Apple Watch's limits, enforced by the box", async () => {
+  const as = (token: string) => (m: string, p: string, body?: unknown) => viaTcp(m, p, body, { ...RELAYED, authorization: `Bearer ${token}` });
+  const pairAs = async (name: string, kind?: string) => viaTcp('POST', '/api/pair', { code: (await api<{ code: string }>('POST', '/api/pair/start')).code, name, ...(kind ? { kind } : {}) }, RELAYED);
+  check((await pairAs('a fridge', 'fridge')).status === 400, 'a device kind other than web, iphone or mac is refused');
+  const phoneDev = (await pairAs('Demo iPhone', 'iphone')).body as { token: string; device: { id: string } };
+  const webDev = (await pairAs('Demo browser')).body as { token: string };
+  const phone = as(phoneDev.token);
+  check((await as(webDev.token)('POST', '/api/devices/self/watch', { name: 'x' })).status === 403, 'only an iPhone app token can add a Watch');
+  const wt = await phone('POST', '/api/devices/self/watch', { name: 'Demo Watch' });
+  check(wt.status === 200 && wt.body.token !== phoneDev.token && !JSON.stringify(wt.body).includes(phoneDev.token), "the iPhone gets a separate Watch token, never its own");
+  const watch = as(wt.body.token);
+  check((await as(wt.body.token)('POST', '/api/devices/self/watch', {})).status === 403, 'a Watch cannot add another Watch');
+  check((await watch('PATCH', '/api/settings', { watchLimitCents: 100000 })).status === 403, "a Watch token is never the owner's: it can't change Settings, its own limit included");
+  check((await watch('POST', '/api/pair/identity', { identity: 'ab'.repeat(32) })).status === 403, 'a Watch token cannot vouch for a SpacetimeDB identity, so it cannot answer around its limits');
+  await api('POST', '/api/apps/example/enable');
+  const ask = async (title: string, cents: number) => {
+    const t = await api<Task>('POST', '/tasks', { title, workspace: 'home', worker: 'fake', source: 'demo', tools: ['example.spend'], budgetCents: 0, prompt: `call example.spend {"cents":${cents},"on":"${title}"}` });
+    return waitFor(title, async () => (await api<Approval[]>('GET', '/api/approvals?state=pending')).find((a) => a.task === t.id));
+  };
+  const small = await ask('watch small', 800);
+  const big = await ask('watch big', 4000);
+  const noWrist = await watch('POST', `/api/approvals/${encodeURIComponent(small.id)}`, { approved: true });
+  check(noWrist.status === 403 && noWrist.body.needs === 'iphone', 'a Watch approve that does not say it is on the wrist is refused, with needs: iphone');
+  const ok = await watch('POST', `/api/approvals/${encodeURIComponent(small.id)}`, { approved: true, auth: 'wrist' });
+  check(ok.status === 200 && ok.body.state === 'approved' && ok.body.by === 'Demo Watch (on the wrist, reported)', `the Watch approves $8.00 on the wrist, recorded as reported: "${ok.body.by}"`);
+  const over = await watch('POST', `/api/approvals/${encodeURIComponent(big.id)}`, { approved: true, auth: 'wrist' });
+  const still = (await api<Approval[]>('GET', '/api/approvals?state=pending')).some((a) => a.id === big.id);
+  check(over.status === 403 && over.body.needs === 'iphone' && still, `$40.00 from the Watch is refused and keeps waiting: "${over.body.error}"`);
+  const viaPhone = await phone('POST', `/api/approvals/${encodeURIComponent(big.id)}`, { approved: true, auth: 'face-id' });
+  check(viaPhone.body.state === 'approved' && viaPhone.body.by === 'Demo iPhone (Face ID, reported)', `the iPhone approves it: "${viaPhone.body.by}"`);
+  const third = await ask('watch deny', 9000);
+  check((await watch('POST', `/api/approvals/${encodeURIComponent(third.id)}`, { approved: false })).body.state === 'denied', 'a Watch may always deny, whatever the amount');
+  await api('PATCH', '/api/settings', { watchLimitCents: 0 });
+  const zero = await ask('watch zero', 100);
+  check((await watch('POST', `/api/approvals/${encodeURIComponent(zero.id)}`, { approved: true, auth: 'wrist' })).status === 403, 'with watchLimitCents 0 a Watch may only deny');
+  await api('PATCH', '/api/settings', { watchLimitCents: 2500 });
+  await api('POST', `/api/approvals/${encodeURIComponent(zero.id)}`, { approved: false, by: 'demo' });
+  const limited = [];
+  for (let i = 0; i < 3; i++) limited.push((await phone('POST', '/api/devices/self/watch', {})).status);
+  check(limited.includes(429), `adding Watches is rate-limited per iPhone (${limited.join(', ')})`);
+  await api('DELETE', `/api/devices/${phoneDev.device.id}`);
+  check((await phone('GET', '/api/tasks')).status === 401 && (await as(wt.body.token)('GET', '/api/tasks')).status === 401, "revoking the iPhone revokes its Watch");
+  await as(webDev.token)('DELETE', '/api/pair/self');
+});
+
+// The native apps' own contract step (native/demo.ts): every call the iPhone, Watch and Mac apps make.
+const nativeDemo = new URL('../native/demo.ts', import.meta.url).pathname;
+if (fs.existsSync(nativeDemo)) await moment('native apps: every call the apps make', async () => (await import(nativeDemo)).default(kit));
+
 await moment('business edition', async () => (await import('./business-demo.ts')).default(kit));
 await moment('business: sign in with a work account (OpenID Connect, roles from groups)', async () => (await import('./sso-demo.ts')).default(kit));
 

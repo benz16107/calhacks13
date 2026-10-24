@@ -299,6 +299,7 @@ The `owner` flag is ignored from anyone who is not already the owner.
 
 - `approvalThresholdCents` (10000): a single spend above this always asks for an OK, even inside the task's budget.
 - `defaultBudgetCents` (0): the budget of a task that names none. 0 means every spend asks.
+- `watchLimitCents` (2500): the most an Apple Watch token may approve (below, "The native apps"). 0: a Watch may only deny.
 - `networkDefault` (`none`) and `defaultHosts` (`[]`): with `allowlist`, a task that names no hosts gets `defaultHosts`; a task that names its own keeps them.
 - `agentFolders` (`[]`): Personal. Folders agents may use besides the owner's home. Can't include the system or the box's own state. Empty means only the owner's home.
 - `quietHours` (`{enabled: false, from: "22:00", to: "07:00"}`): read by the desktop and phone for notifications.
@@ -639,14 +640,15 @@ answers without `/api`, which is what the demo and tracks use.
 | `PUT /api/owner {user}` | Make an existing account the owner. For the image: run it once GNOME's own setup has created the account, e.g. `curl --unix-socket /var/lib/box/api.sock -X PUT -H 'content-type: application/json' -d '{"user":"alice"}' http://box/api/owner`. The account must exist and be a person's (uid 1000 to 29999 or 40000 and up; not root, not a system or task account). Saved in `owner.json`, so it survives a restart, and the box then reports itself as GurtOS Personal. Once an owner is set, changing it takes the box's socket (root) or an owner-paired phone, not any local process. |
 | `DELETE /api/owner` | Forget the saved owner and go back to `BOX_OWNER` (or none) |
 | `GET /api/approvals?state=pending` | The inbox. Leave out `state` for all of them. |
-| `POST /api/approvals/<id> {approved: true or false, by: "portal"}` | The approval. The first answer wins. |
+| `POST /api/approvals/<id> {approved: true or false, by: "portal", auth?}` | The approval. The first answer wins. `auth` is how a native app says it checked it was you (`face-id`, `touch-id`, `passcode`, `wrist`); the answer keeps it as reported, never as proof: "Ben's Watch (on the wrist, reported)", "Ben's iPhone (Face ID, reported)" (`by`, or `via` on Business). |
 | `GET /api/log?after=<seq>&task=<id>` | Log events, both filters optional (cursor polling) |
 | `GET /api/log/stream?after=<seq>&task=<id>` | The log as Server-Sent Events: replays from `after`, then streams new events live. For Elastic and Jira to follow without polling files. |
 | `GET /api/apps` | Apps from tracks: `{name, title, href, track}`. Open `/t/<track><href>`. |
 | `GET /api/health` | `{ok, startedAt, resumed: [taskId...], tasks, tools, spacetime: {port, database}}`. `resumed` is the tasks boot restarted after a power cut, for the screen's session-restore banner. |
 | `GET /api/boxes` | This box and its peers (`BOX_PEERS`), so one portal lists and drives several boxes (the Vultr second box): `[{id, name, stdb, self}, ...]` |
 | `POST /api/pair/start` | Mint a one-time pairing code for the box screen's QR: `{code, url, expiresAt, box}` (localhost) |
-| `POST /api/pair {code, name}` | A phone redeems the code for its own device token: `{token, box:{id,name}, device}`. One-time. |
+| `POST /api/pair {code, name, kind?}` | A phone redeems the code for its own device token: `{token, box:{id,name}, device}`. One-time. `kind` is what the device says it is, `web` (default), `iphone` or `mac`; anything else is a 400. It is never used for a security decision. |
+| `POST /api/devices/self/watch {name}` | An `iphone` token only: a separate token for its Apple Watch, `{token, device}`, with the iPhone's Business person and nothing more: never `owner`, so Settings, keys, setup, apps and devices are refused. It can't vouch for a SpacetimeDB identity. A new one replaces the old; 3 an hour per iPhone. Revoking the iPhone, or removing its person, revokes it. |
 | `GET /api/devices`, `DELETE /api/devices/<id>` | List paired phones; revoke one |
 | `DELETE /api/pair/self` | A paired device revokes itself (the app's Forget): its token and push subscription stop working |
 | `/t/<track>/...` | Track routes |
@@ -768,6 +770,15 @@ The decrypted push is JSON: `{v: 1, type: 'approval' or 'test', machine: <box id
 origin>, id, task, source, title, body, costCents, mac}` (`source` is the task's, like `shopper:...`). `mac` is base64url HMAC-SHA256 with the device's key for this box
 over the JSON of every other field, keys sorted. The app checks it before it shows a push as this box's or acts on
 Approve or Deny.
+
+## The native apps
+
+The iPhone, Apple Watch and Mac apps (`native/`) use this API with their own device tokens. One rule is the core's,
+in `answerAs`, so every path an answer takes gets it: **a Watch token** (only the box makes them) may approve only up
+to Settings `watchLimitCents` ($25), never a GurtOS Business request and never a Shopper purchase, and only when it
+says `auth: "wrist"` (what the Watch reports, not proof). So a Watch can approve any small request that is not
+Business and not Shopper. Anything else is a `403` with `needs: "iphone"`, and the request keeps waiting. A Watch may
+always deny. core/demo.ts checks each of these; native/demo.ts checks every call the apps make.
 
 ## Running it
 

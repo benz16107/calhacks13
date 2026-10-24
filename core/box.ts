@@ -45,7 +45,7 @@ function jsonServer(handler: Handler, raw?: (req: http.IncomingMessage, res: htt
       if (out === undefined) [status, out] = [404, { error: 'not found' }];
     } catch (e) {
       status = (e as { status?: number }).status ?? 400;
-      out = { error: (e as Error).message };
+      out = { error: (e as Error).message, ...((e as { needs?: string }).needs ? { needs: (e as { needs?: string }).needs } : {}) }; // needs: the device that may do it instead
     }
     res.writeHead(status, { 'content-type': 'application/json' }).end(JSON.stringify(out));
   });
@@ -86,6 +86,10 @@ interface Device {
   push?: push.PushSub;
   /** Business: the person this phone signs in as (paired with a code an admin made for them). */
   person?: string;
+  /** What the device says it is: the web app (unset), the iPhone or Mac app. Not proof of anything. */
+  kind?: 'iphone' | 'mac' | 'watch';
+  /** A Watch: the iPhone token that made it. Only the box sets kind 'watch', so the Watch rules can rely on it. */
+  parent?: string;
   /** When it last called this computer. */
   lastSeen?: string;
 }
@@ -640,8 +644,18 @@ class Core {
    * Answer as a person, on a Business box: only a person, never their own request, only one the policy sends to
    * them, and to approve, only within their limit. A refusal is logged and answered with 403. Off, as before.
    */
-  answerAs(id: string, approved: boolean, p: Person | undefined, by: string): Approval {
-    if (!this.business.on) return this.answer(id, approved, by);
+  answerAs(id: string, approved: boolean, p: Person | undefined, by: string, from?: { device?: Device; auth?: unknown }): Approval {
+    // The Watch rules apply on every path an answer takes; only the box makes 'watch' tokens.
+    const d = from?.device;
+    const pending = this.state.approvals.get(id);
+    if (d?.kind === 'watch' && approved && pending?.state === 'pending') {
+      const why = this.watchRefusal(pending, from?.auth);
+      if (why) throw Object.assign(new Error(why), { status: 403, needs: 'iphone' });
+    }
+    // How the device says it checked it was you, kept as reported, never as proof: "Ben's Watch (on the wrist, reported)".
+    const said = ({ 'face-id': 'Face ID', 'touch-id': 'Touch ID', passcode: 'passcode', wrist: 'on the wrist' } as Record<string, string>)[from?.auth as string];
+    const via = d?.kind && said ? `${d.name} (${said}, reported)` : undefined;
+    if (!this.business.on) return this.answer(id, approved, via ?? by);
     const a = this.state.approvals.get(id);
     if (!a) throw new Error(`no approval ${id}`);
     const t = this.must(a.task);
@@ -651,14 +665,14 @@ class Core {
       this.write({ type: 'note', track: 'business', task: a.task, data: { refused: id, approved, by: p?.id ?? by, person: !!p, why } });
       forbid(why);
     }
-    return this.answer(id, approved, p!.name, p!.id, by); // `by` is the phone's name, or what the box's screen says
+    return this.answer(id, approved, p!.name, p!.id, via ?? by); // `by` is the phone's name, or what the box's screen says
   }
 
   /** Business: every paired connection that belongs to a person, for SpacetimeDB: [identity, person id, name]. */
   peopleIdentities(): [string, string, string][] {
     if (!this.business.on) return [];
     return this.devices.flatMap((d) => {
-      const p = !d.revoked && d.identity ? this.person(d.person) : undefined;
+      const p = !d.revoked && d.identity && d.kind !== 'watch' ? this.person(d.person) : undefined;
       return p ? [[d.identity!, p.id, p.name] as [string, string, string]] : [];
     });
   }
@@ -1418,7 +1432,7 @@ class Core {
   /** Every SpacetimeDB identity the box vouches for: the screens that said so, and the paired phones that gave theirs. */
   identities(): [string, string][] {
     if (this.business.on) return []; // a Business box takes answers only through the API, as a person
-    return [...this.screens, ...this.devices.filter((d) => d.identity && !d.revoked).map((d) => [d.identity!, d.name] as [string, string])];
+    return [...this.screens, ...this.devices.filter((d) => d.identity && !d.revoked && d.kind !== 'watch').map((d) => [d.identity!, d.name] as [string, string])];
   }
 
   /** The caller says which SpacetimeDB identity it holds; the box vouches for it under the caller's name. */
@@ -1426,6 +1440,8 @@ class Core {
     if (typeof identity !== 'string' || !/^[0-9a-f]{64}$/i.test(identity)) throw new Error('identity: the 64 hex characters of your SpacetimeDB identity');
     const device = this.deviceOf(req);
     if (!device && !this.isLocal(req)) throw Object.assign(new Error('pair this phone with this computer first'), { status: 401 });
+    // A Watch answers only through the HTTP API, where answerAs applies its limits; SpacetimeDB answers would skip them.
+    if (device?.kind === 'watch') forbid('a Watch has no SpacetimeDB identity; it answers through the API');
     const name = device ? device.name : 'box screen';
     const id = identity.toLowerCase();
     if (device) device.identity = id;
@@ -1545,7 +1561,8 @@ class Core {
 
   /** A phone redeems the code for a durable device token. */
   wrongCodes: number[] = [];
-  pair(body: { code?: string; name?: string; identity?: string }) {
+  pair(body: { code?: string; name?: string; identity?: string; kind?: unknown }) {
+    if (body.kind !== undefined && !['web', 'iphone', 'mac'].includes(body.kind as string)) throw new Error('kind: web, iphone or mac');
     // Pairing is reachable from outside the box, so guessing codes is limited: 10 wrong ones a minute, from everyone together.
     this.wrongCodes = this.wrongCodes.filter((at) => Date.now() - at < 60_000);
     if (this.wrongCodes.length >= 10) throw Object.assign(new Error('too many wrong pairing codes; wait a minute and ask this computer\'s screen for a new one'), { status: 429 });
@@ -1558,7 +1575,8 @@ class Core {
     const person = this.person(entry.person);
     if (entry.person && !person) throw Object.assign(new Error('the person this code was for has been removed'), { status: 400 });
     const name = String(body.name || (person ? `${person.name}'s phone` : 'phone')).slice(0, 40);
-    const device: Device = { id: 'd' + randomBytes(5).toString('hex'), name, token: randomBytes(24).toString('hex'), pairedAt: new Date().toISOString(), ...(entry.owner ? { owner: true } : {}), ...(person ? { person: person.id } : {}), ...(typeof body.identity === 'string' && /^[0-9a-f]{64}$/i.test(body.identity) ? { identity: body.identity.toLowerCase() } : {}) };
+    const kind = body.kind === 'iphone' || body.kind === 'mac' ? body.kind : undefined;
+    const device: Device = { id: 'd' + randomBytes(5).toString('hex'), name, token: randomBytes(24).toString('hex'), pairedAt: new Date().toISOString(), ...(kind ? { kind } : {}), ...(entry.owner ? { owner: true } : {}), ...(person ? { person: person.id } : {}), ...(typeof body.identity === 'string' && /^[0-9a-f]{64}$/i.test(body.identity) ? { identity: body.identity.toLowerCase() } : {}) };
     this.devices.push(device);
     this.saveDevices();
     if (device.identity && !this.business.on) this.live.register(device.identity, device.name);
@@ -1792,6 +1810,7 @@ class Core {
     const d = this.devices.find((x) => x.id === id);
     if (!d) throw Object.assign(new Error(`no device ${id}`), { status: 404 });
     d.revoked = true;
+    for (const w of this.devices) if (w.parent === id) w.revoked = true; // the iPhone's Watch goes with it
     this.saveDevices();
     if (d.identity) this.live.unregister(d.identity);
     if (d.identity && d.person) this.live.removePerson(d.identity);
@@ -1863,6 +1882,38 @@ class Core {
     return d;
   }
 
+  /**
+   * The iPhone app asks for its Apple Watch's own token: kind 'watch', with the phone's Business person and nothing
+   * more. Never `owner`: a Watch reads and answers, and Settings, keys, setup, apps and devices stay off limits.
+   * A new one replaces the old; 3 an hour per phone. The phone's token is never handed out.
+   */
+  watchToken(req: http.IncomingMessage, body: { name?: unknown }) {
+    const phone = this.deviceOf(req);
+    if (!phone || phone.kind !== 'iphone') forbid('only the GurtOS iPhone app can add an Apple Watch');
+    const recent = this.devices.filter((w) => w.parent === phone!.id && Date.now() - Date.parse(w.pairedAt) < 3600_000);
+    if (recent.length >= 3) throw Object.assign(new Error('this iPhone added a Watch 3 times this hour; try again later'), { status: 429 });
+    for (const w of this.devices) if (w.parent === phone!.id) w.revoked = true;
+    const name = String(body?.name || `${phone!.name}'s Watch`).slice(0, 40);
+    const w: Device = { id: 'd' + randomBytes(5).toString('hex'), name, token: randomBytes(24).toString('hex'), pairedAt: new Date().toISOString(), kind: 'watch', parent: phone!.id, ...(phone!.person ? { person: phone!.person } : {}) };
+    this.devices.push(w);
+    this.saveDevices();
+    return { token: w.token, device: { id: w.id, name: w.name } };
+  }
+
+  /**
+   * Why a Watch token may not approve this, or undefined if it may: at most Settings' watchLimitCents, no Business
+   * route, not a Shopper purchase (Face ID by passkey), and the Watch says it is on the wrist. Any small request
+   * outside those may be approved from a Watch. Deny is always allowed.
+   */
+  watchRefusal(a: Approval, auth: unknown): string | undefined {
+    const limit = this.settings.watchLimitCents;
+    if (this.business.on || a.route) return 'Approve this on your iPhone: requests on GurtOS Business need Face ID.';
+    if ((this.state.tasks.get(a.task)?.source ?? '').startsWith('shopper:')) return 'Approve this on your iPhone: purchases are approved with Face ID.';
+    if (a.costCents > limit) return limit ? `Approve this on your iPhone: the Watch approves up to ${dollars(limit)}.` : 'Approve this on your iPhone: this Watch may only deny.';
+    if (auth !== 'wrist') return 'Approve this on your iPhone: the Watch must be on your wrist and unlocked.';
+    return undefined;
+  }
+
   saveDevices() {
     fs.writeFileSync(this.devicesPath, JSON.stringify(this.devices, null, 2), { mode: 0o600 });
   }
@@ -1881,6 +1932,7 @@ class Core {
     else if (m === 'GET' && (p === '/devices' || p === '/pair/devices')) act = () => (this.requireOwner(req), this.devices).filter((d) => !d.revoked).map(({ token, push, ...d }) => ({ ...d, push: !!push }));
     else if (m === 'DELETE' && p === '/pair/self') act = () => this.revokeDevice((this.deviceOf(req) ?? (() => { throw Object.assign(new Error('this request carries no paired device token'), { status: 403 }); })()).id); // a phone forgets itself
     else if ((m === 'DELETE' || m === 'POST') && del) act = () => (this.requireOwner(req), this.revokeDevice(del));
+    else if (m === 'POST' && p === '/devices/self/watch') act = (body) => this.watchToken(req, body);
     const needsBody = m === 'POST' && p === '/pair';
     if (!act && !needsBody) return false;
     void (async () => {
@@ -1958,7 +2010,7 @@ class Core {
             if (headers.authorization && !device) throw Object.assign(new Error('pair this phone with this computer first'), { status: 401 });
             if (device) by = device.name; // a paired phone is named by its device, whatever it sends
             else if (!this.isLocal(req)) throw Object.assign(new Error('pair this phone with this computer first'), { status: 401 });
-            return this.answerAs(id, body.approved === true, this.personOf(req), by); // Business checks who may answer
+            return this.answerAs(id, body.approved === true, this.personOf(req), by, { device, auth: body.auth }); // Business checks who may answer
           }
           case 'GET /business':
             return this.businessView();

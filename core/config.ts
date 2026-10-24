@@ -39,11 +39,14 @@ export interface Settings {
   appearance: { theme: 'light' | 'dark' | 'system'; accent: string };
   /** Pause all agents: no task starts, and running ones hold before their next step or tool call. */
   paused: boolean;
+  /** The most an Apple Watch may approve with its own token. US cents; 0: a Watch may only deny. */
+  watchLimitCents: number;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
   approvalThresholdCents: 500, // ask before any single spend over $5
   defaultBudgetCents: 100, // a task may spend $1 without asking
+  watchLimitCents: 2500, // a Watch approves up to $25; anything more waits for the iPhone
   networkDefault: 'none',
   defaultHosts: [],
   agentFolders: [],
@@ -128,6 +131,9 @@ export function applyPatch(current: Settings, patch: unknown): Settings {
         break;
       case 'defaultBudgetCents':
         next.defaultBudgetCents = int(key, v, 0, 100_000_000);
+        break;
+      case 'watchLimitCents':
+        next.watchLimitCents = int(key, v, 0, 100_000);
         break;
       case 'networkDefault':
         next.networkDefault = oneOf(key, v, ['none', 'allowlist'] as const);
