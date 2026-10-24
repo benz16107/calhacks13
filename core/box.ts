@@ -50,6 +50,10 @@ function jsonServer(handler: Handler, raw?: (req: http.IncomingMessage, res: htt
     res.writeHead(status, { 'content-type': 'application/json' }).end(JSON.stringify(out));
   });
   server.requestTimeout = 0; // approvals can wait for hours
+  // Keep idle connections well past any client's own idle time (Node's fetch keeps them 4 s), so the box never closes
+  // a socket just as a client reuses it (ECONNRESET). headersTimeout must stay above keepAliveTimeout.
+  server.keepAliveTimeout = 65_000;
+  server.headersTimeout = 66_000;
   return server;
 }
 
@@ -1944,8 +1948,12 @@ class Core {
             this.write({ type: 'note', track: 'vault', data: { set: id }, ...(who ? { who } : {}) }); // the name only, never the value
             return { name: id, setAt: this.vaultMeta[id] };
           }
-          case 'GET /health':
-            return { ok: true, startedAt: this.startedAt, cleanStart: this.cleanStart, resumed: this.resumed, paused: !!this.paused, tasks: this.state.tasks.size, tools: [...this.tools.keys()], spacetime: { port: 3000, database: DB } };
+          case 'GET /health': {
+            // Open for the outage check and remote access's self-check; the rest only for this machine or a paired device.
+            const open = { ok: true, startedAt: this.startedAt, paused: !!this.paused };
+            if (!this.isLocal(req) && !this.deviceOf(req)) return open;
+            return { ...open, cleanStart: this.cleanStart, resumed: this.resumed, tasks: this.state.tasks.size, tools: [...this.tools.keys()], spacetime: { port: 3000, database: DB } };
+          }
         }
       },
       (req, res) => this.cors(req, res) || this.gate(req, res) || this.ssoRoutes(req, res) || this.readOnly(req, res) || this.pairing(req, res) || this.remoteRoutes(req, res) || this.logStream(req, res) || this.auditCsv(req, res) || this.webhook(req, res) || this.trackRoute(req, res) || this.portal(req, res),

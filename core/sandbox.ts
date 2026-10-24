@@ -158,6 +158,7 @@ const HARDENING = [
   'InaccessiblePaths=-/run/dbus',
   'RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6 AF_NETLINK',
   'MemoryMax=2G',
+  'MemorySwapMax=0', // a hard 2 GB everywhere: with swap allowed, a memory hog thrashes instead of being stopped
   'TasksMax=512',
 ];
 

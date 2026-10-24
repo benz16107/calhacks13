@@ -720,6 +720,8 @@ await moment('personal: one task on several folders, and a runtime owner', async
     const refusals = await Promise.all(['root', 'nosuchuser99', 'Bad Name'].map((u) => api('PUT', '/api/owner', { user: u }).then(() => '', (e: Error) => e.message)));
     check(before?.user === 'owner' && refusals.every((m) => m.startsWith('user:')), `root, a missing account and a bad name are refused ("${refusals[0].slice(0, 60)}")`);
     check(denied(await viaTcp('PUT', '/api/owner', { user }, RELAYED)), 'from outside the box it is refused');
+    const outside = await viaTcp('GET', '/api/health', undefined, RELAYED);
+    check(outside.status === 200 && Object.keys(outside.body).sort().join() === 'ok,paused,startedAt', `the open health check tells an outside caller only ok, paused and startedAt (${Object.keys(outside.body ?? {}).join(', ')})`);
     check((await viaTcp('PUT', '/api/owner', { user })).status === 403, 'with an owner already set, a plain local process cannot replace it either (403)');
     const set = await api<any>('PUT', '/api/owner', { user });
     const sys = await api<any>('GET', '/api/system');
