@@ -100,9 +100,7 @@ pairing as the web app: you scan the box's QR code and your phone is where your 
 spends nothing can be approved from the notification; anything that spends money says "Approve with Face ID" and opens the
 app, and the box's log records that the answer came from the paired phone with Face ID. The iPhone app makes its own push
 keys and the box encrypts each notification for them (RFC 8291), so the relay forwards only ciphertext; native delivery
-waits on the relay getting an Apple push key. On the Watch, built and demoed on a dev box (not on main yet), the box
-lets it approve any request up to $25 that is not a Business request and not a Shopper purchase (the wrist check is what the
-Watch reports, not proof): $8 is approved and $40 is refused. Limits: tested in Apple's simulators and on a Mac against real GurtOS computers, not yet on
+waits on the relay getting an Apple push key. On the Watch (on main, passing the merge gate's native-app moments), the box lets it approve up to $25 with its own token, never a Business request or a Shopper purchase, and only when it reports being on the wrist (reported, not proof); Deny always works and revoking the iPhone revokes its Watch: $8 is approved and $40 is refused. Limits: tested in Apple's simulators and on a Mac against real GurtOS computers, not yet on
 a physical iPhone or Watch; TestFlight internal testing only, no App Store submission; Android is the web app in a Trusted
 Web Activity. Screenshots and all limits: https://calhacks.gurtos.com/evidence/#devices
 
