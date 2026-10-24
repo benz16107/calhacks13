@@ -1,41 +1,52 @@
 <!doctype html>
 <html lang="en">
-<head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Apify</title>
+<link rel="stylesheet" href="/kit/gurtos.css">
+<script type="module" src="/kit/gurtos.js"></script>
 <style>
-  body { font: 15px/1.5 system-ui, sans-serif; margin: 24px; color: #1d1d1f; background: #fafaf7; }
-  h1 { font-size: 20px; margin: 0 0 4px; }
-  p { margin: 0 0 16px; color: #555; max-width: 60ch; }
-  table { border-collapse: collapse; width: 100%; max-width: 640px; }
-  th, td { text-align: left; padding: 6px 12px 6px 0; border-bottom: 1px solid #ddd; font-variant-numeric: tabular-nums; }
-  th { font-weight: 600; }
-  tfoot td { font-weight: 600; border-bottom: 0; }
+  main { max-width: 880px; margin: 0 auto; padding: var(--space-lg); }
+  .g-group { margin-top: var(--space-lg); }
+  .g-row-title { overflow-wrap: anywhere; }
 </style>
-</head>
-<body>
-<h1>Apify</h1>
-<p>For each task, what the box counted its Apify calls at (the estimate that counts toward the task's budget) and the cost Apify reports for the runs.</p>
-<table>
-  <thead><tr><th>Task</th><th>Calls</th><th>Counted</th><th>Apify cost</th></tr></thead>
-  <tbody id="rows"><tr><td colspan="4">Loading</td></tr></tbody>
-  <tfoot id="total"></tfoot>
-</table>
+<body class="g-page">
+<main>
+  <p class="t-body">What each task's Apify calls cost: the amount counted against the task's budget, and what Apify reports.</p>
+
+  <section class="g-group">
+    <div class="g-group-head"><h2 class="g-group-title">All tasks</h2></div>
+    <div class="g-list" id="total"><div class="g-row"><div class="g-row-text"><div class="g-row-sub">Loading…</div></div></div></div>
+  </section>
+
+  <section class="g-group" id="tasks-group" hidden>
+    <div class="g-group-head"><h2 class="g-group-title">Tasks</h2></div>
+    <div class="g-list" id="tasks"></div>
+  </section>
+</main>
 <script>
-  const cents = (c) => '$' + (c / 100).toFixed(2);
-  const usd = (u) => '$' + u.toFixed(4);
-  fetch('spend').then((r) => r.json()).then((d) => {
-    const body = document.getElementById('rows');
-    body.textContent = '';
-    for (const t of d.tasks) {
-      const tr = body.insertRow();
-      [t.task, t.calls, cents(t.countedCents), usd(t.actualUsd)].forEach((v) => (tr.insertCell().textContent = v));
+  const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+  const counted = (cents) => `$${(cents / 100).toFixed(2)}`;
+  const reported = (usd) => `$${usd.toFixed(4)}`;
+  const row = (title, sub, value) =>
+    `<div class="g-row"><div class="g-row-text"><div class="g-row-title">${esc(title)}</div><div class="g-row-sub">${esc(sub)}</div></div><div class="g-row-trail"><span class="g-row-value">${esc(value)}</span></div></div>`;
+
+  async function load() {
+    const [spend, tasks] = await Promise.all([
+      fetch('/t/apify/spend').then((r) => r.json()),
+      fetch('/api/tasks').then((r) => (r.ok ? r.json() : [])).catch(() => []),
+    ]);
+    const titles = new Map((Array.isArray(tasks) ? tasks : []).map((t) => [t.id, t.title]));
+    const total = document.getElementById('total');
+    if (!spend.tasks.length) {
+      total.innerHTML = '<div class="g-row"><div class="g-row-text"><div class="g-row-sub">No Apify calls yet. When an agent reads a page or checks a price, its cost shows here.</div></div></div>';
+      return;
     }
-    if (!d.tasks.length) body.insertRow().insertCell().textContent = 'No Apify calls yet.';
-    const f = document.getElementById('total').insertRow();
-    ['All tasks', '', cents(d.totalCountedCents), usd(d.totalActualUsd)].forEach((v) => (f.insertCell().textContent = v));
-  }).catch((e) => (document.getElementById('rows').textContent = 'Could not load: ' + e.message));
+    total.innerHTML = row('Counted against budgets', `Apify reports ${reported(spend.totalActualUsd)}`, counted(spend.totalCountedCents));
+    document.getElementById('tasks-group').hidden = false;
+    document.getElementById('tasks').innerHTML = spend.tasks
+      .map((t) => row(titles.get(t.task) ?? t.task, `${t.calls} ${t.calls === 1 ? 'call' : 'calls'}, Apify reports ${reported(t.actualUsd)}`, counted(t.countedCents)))
+      .join('');
+  }
+  load().catch((e) => (document.getElementById('total').innerHTML = `<div class="g-row"><div class="g-row-text"><div class="g-row-sub">Couldn't load the costs: ${esc(e.message)}</div></div></div>`));
 </script>
-</body>
-</html>
