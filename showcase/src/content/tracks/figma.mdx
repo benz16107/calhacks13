@@ -138,8 +138,8 @@ status:
     state: not-built
     note: 'Weave refused because the Figma account is not linked to it yet, so the wallpaper and boot art are flat vector layers.'
   - part: A Figma Sites landing page
-    state: not-built
-    note: 'Designed for desktop and mobile in docs/figma/landing. Not published: publishing is Ben''s click. The landing page people see is the docs at gurtos.com.'
+    state: live
+    note: 'Published at https://plum-fabric-10136193.figma.site from the design file''s desktop and mobile frames. Below 1440 px wide the hero screenshots are clipped on the right. The product landing page people see is gurtos.com.'
 ---
 
 <Lead proof="<code>node docs/figma/tokens/sync.ts --check</code> on today's main: <strong>0 drifts across 82 Figma tokens</strong>. Figma's <code>accent/bg</code> (#2F64A6 Light, #78A9E6 Dark) is <code>--color-accent-bg</code> in the shipped kit, with the same two values.">
@@ -249,7 +249,7 @@ An operating system for agents has to feel like an operating system people trust
 - **Code Connect templates.** 95 components are mapped to the Preact kit in `docs/figma/code-connect/`. Publishing to Figma needs an Organization plan, so they are not published; each component's Dev Mode description holds its kit code and a link to the source line instead.
 - **A generative plugin** that finds fills and strokes not bound to a GurtOS colour variable, names the nearest token, and binds exact Light-mode matches. Run on the file, the Business and landing pages came back fully bound.
 - **A shader fill** for the wallpaper, "GurtOS night hills". It builds and deploys; nobody has seen it render yet, because the MCP cannot draw a custom shader, so the stage log rates it 3 of 5.
-- **A landing page and a Community playbook** designed in Figma and not yet published (Ben's click).
+- **A landing page and a Community playbook** designed in Figma. The landing page is published on Figma Sites. The Community file is linked from it, and Figma blocks automated checks of that page, so it was not verified here.
 
 <Shot src="repo/figma/directions/a-home-server-box.png" alt="Direction A, the home-server OS: a night wallpaper with hills and a moon, a greeting, widgets, an app grid, a dock, and an approval banner." caption="The first round: direction A, the home-server OS, one of three directions drawn on the box screen and the phone. Ben picked it." size="narrow" />
 
@@ -265,7 +265,7 @@ On an ordinary system a design stops at the mockup: the app is built once and dr
   { what: 'The native desktop layer for Personal', why: 'Best Design', os: 'GTK 4 and libadwaita windows in the GurtOS theme', track: 'The Personal frames, exported as PNGs with notes, not as web code', status: 'Built' },
   { what: 'Code Connect templates and Dev Mode code for every component', why: 'Best Workflow', os: 'The kit components the templates map to', track: '95 parserless templates and a Dev Mode description for each component', status: 'Built. Publishing to Figma needs an Organization plan, so not published' },
   { what: 'A drift check and an app-versus-frame comparison', why: 'Best Workflow, Best Design', os: 'The kit and the running app that are checked', track: 'Figma variables exported through the MCP, and the frames compared against screenshots', status: 'Built. 77 frames compared, with a score' },
-  { what: 'A Community playbook and a Figma Sites landing page', why: 'Most Creative', os: 'The docs site the landing page points to', track: 'Both designed in Figma', status: 'Being built. Designed, not published: publishing is Ben\'s click' },
+  { what: 'A Community playbook and a Figma Sites landing page', why: 'Most Creative', os: 'The docs site the landing page points to', track: 'Both designed in Figma', status: 'The Sites landing page is published (https://plum-fabric-10136193.figma.site); the Community playbook file is linked from it, and Figma blocks automated checks of that page, so it was not verified here' },
   { what: 'Weave art for the wallpaper and boot art', why: 'Most Creative', os: 'The wallpaper and boot screen', track: 'Weave', status: 'Being built. Weave refused because the Figma account is not linked to it, so the art is flat vector layers' },
 ]} />
 
@@ -331,7 +331,7 @@ Both flows run here, from the Figma Design file. Click through them: Approve, De
 <Limits>
 
 - The demo video is not made yet. A silent screen recording of the real app stands in.
-- The two Make files and the Figma Sites landing page have no published URL. The Make files open in a signed-out browser; whether their previews run inside Figma was not checked.
+- The two Make files have no published URL. The Figma Sites landing page is published, but below 1440 px wide its hero screenshots are clipped on the right edge. The Make files open in a signed-out browser; whether their previews run inside Figma was not checked.
 - Code Connect templates are written but not published, because publishing needs an Organization plan.
 - The "GurtOS night hills" shader has never been seen rendering, and Weave art was not made.
 - Live Activities and the Dynamic Island are drawn in Figma but have no web equivalent, because they belong to the phone's own OS.

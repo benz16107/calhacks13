@@ -31,6 +31,7 @@ The thumbnail is image 1.
 - https://gurtos.com/docs/ (the product docs)
 - https://github.com/benz16107/calhacks13 (the code, open source under the Apache License 2.0)
 - https://www.figma.com/slides/SBrJtJiY20k88X3IGzKwZW (the pitch deck, Figma Slides)
+- https://plum-fabric-10136193.figma.site (the landing page, published on Figma Sites)
 
 ## Built with
 
@@ -394,7 +395,7 @@ Figma ran every stage: a FigJam board for the architecture and the four demo mom
 
 **Prototype (embedded on the page):** https://www.figma.com/proto/oppzH621OOOMA31rgLbxbM/?node-id=90-6534&starting-point-node-id=90%3A6534
 
-**Files:** [FigJam board](https://www.figma.com/board/KvHiDv5HIJuGYOZDDkp8VG) · [Design file](https://www.figma.com/design/oppzH621OOOMA31rgLbxbM) · [Make](https://www.figma.com/make/udWOO0nK4qggSCOIMqKjCZ), all shared with Anyone.
+**Files:** [FigJam board](https://www.figma.com/board/KvHiDv5HIJuGYOZDDkp8VG) · [Design file](https://www.figma.com/design/oppzH621OOOMA31rgLbxbM) · [Make](https://www.figma.com/make/udWOO0nK4qggSCOIMqKjCZ), all shared with Anyone. **Landing page (Figma Sites):** https://plum-fabric-10136193.figma.site
 
 **Stage log:**
 
@@ -436,6 +437,7 @@ libadwaita widgets: the seven-step setup, Ask an Agent, Keep or Undo, the top-ba
 the box can't back up was cut: no made-up greeting, no Power button without an API, no progress bar without a step
 count. The output is `portal/`, the kit at `/kit/` for track apps, and `personal/`.
 `portal/README.md` puts every Figma frame beside a screenshot of the running app.
+**Landing page (Figma Design to Figma Sites, about 25 minutes, not rated).** The landing page's desktop and mobile frames (`Landing / Desktop 1440` and `Landing / Mobile 390`) were copied into a Sites file with Figma's own copy and paste, along with the design file's 67 variables, and published at https://plum-fabric-10136193.figma.site. The links set as text hyperlinks in the design file came across with the paste (the release, gurtos.com, the showcase, the repo and the Community file), and the live page returns 200 with all five link targets. Known limit: below 1440 px wide the hero's screenshots are clipped on the right edge; the phone layout looks right.
 
 [Full write-up, video and evidence →](https://calhacks.gurtos.com/tracks/figma/)
 

@@ -597,7 +597,7 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 | The native desktop layer for Personal | Best Design | GTK 4 and libadwaita windows in the GurtOS theme | The Personal frames, exported as PNGs with notes, not as web code | Built |
 | Code Connect templates and Dev Mode code for every component | Best Workflow | The kit components the templates map to | 95 parserless templates and a Dev Mode description for each component | Built. Publishing to Figma needs an Organization plan, so not published |
 | A drift check and an app-versus-frame comparison | Best Workflow, Best Design | The kit and the running app that are checked | Figma variables exported through the MCP, and the frames compared against screenshots | Built. 77 frames compared, with a score |
-| A Community playbook and a Figma Sites landing page | Most Creative | The docs site the landing page points to | Both designed in Figma | Being built. Designed, not published: publishing is Ben's click |
+| A Community playbook and a Figma Sites landing page | Most Creative | The docs site the landing page points to | Both designed in Figma | The Sites landing page is published (https://plum-fabric-10136193.figma.site); the Community playbook file is linked from it, and Figma blocks automated checks of that page, so it was not verified here |
 | Weave art for the wallpaper and boot art | Most Creative | The wallpaper and boot screen | Weave | Being built. Weave refused because the Figma account is not linked to it, so the art is flat vector layers |
 
 **Demo moment and proof:** The portal the box runs today was generated from the v2 frames through Figma's MCP server, and every Figma variable is a CSS custom property of the same name: Figma's accent/bg (#2F64A6 Light, #78A9E6 Dark) is --color-accent-bg in the shipped kit, with the same two values. The drift check on today's main finds 0 drifts across 82 Figma tokens.
@@ -608,8 +608,6 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 - A demo video of 3 minutes at most. (partly)
 - A published Figma Make site (not built)
 - Weave art (not built)
-- A Figma Sites landing page (not built)
-- A Community playbook and a Figma Sites landing page
 - Weave art for the wallpaper and boot art
 
 ## Mana: Building with Mana
