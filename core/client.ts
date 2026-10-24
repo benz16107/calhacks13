@@ -3,7 +3,9 @@ import http from 'node:http';
 
 export function call<T = any>(socketPath: string, method: string, path: string, body?: unknown): Promise<T> {
   return new Promise((resolve, reject) => {
-    const req = http.request({ socketPath, method, path, headers: { 'content-type': 'application/json' } }, (res) => {
+    // A new connection per call: a task frozen by the kill switch must not come back to a keep-alive socket the
+    // broker closed while it was stopped (that failed its next call with ECONNRESET).
+    const req = http.request({ socketPath, method, path, agent: false, headers: { 'content-type': 'application/json' } }, (res) => {
       let text = '';
       res.setEncoding('utf8');
       res.on('data', (c) => (text += c));

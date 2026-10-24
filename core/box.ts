@@ -1753,6 +1753,8 @@ class Core {
             // A one-time code that pairs a phone (or a laptop's browser) as this person.
             this.requireAdmin(req);
             if (!this.person(id)) throw Object.assign(new Error(`no person ${id}`), { status: 404 });
+            // Pairing a phone as the owner gives the owner's rights: only the owner may do that, never an admin.
+            if (this.person(id)!.role === 'owner' && !this.isOwner(req)) forbid('only the owner can pair a phone as the owner');
             return { ...this.pairStart(false, id), person: id };
           case 'GET /me':
             return this.me(req);
