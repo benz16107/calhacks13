@@ -223,7 +223,7 @@ once from a different wallet (a wallet can't pay itself).
   checked before payment; there is a daily cap on sales and on open orders. Search reads only regular files the
   owner put in `BOX_HOME/public`. A rented task runs only after the owner approves, with no tools, no hosts and
   no budget.
-- **On the record, on chain.** Every payment and sale is in the action log and on the wallet page. Every payment
+- **On the record, on chain.** Every payment and sale is in the action log and on the wallet page, and each audit fingerprint writes a note (hash and transaction id) to the log too. Every payment
   carries `gurtos task=<id>` as a Solana memo. A daily SHA-256 fingerprint of the log, chained day to day, is
   written to Solana; `GET /audit/verify` recomputes it and compares it with the chain.
 

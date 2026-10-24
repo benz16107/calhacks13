@@ -83,7 +83,7 @@ async function ensureSol(ctx: Pick<Ctx, 'secret'>, rpc: any, addr: string) {
 }
 
 /** Fingerprint the log now and write it to devnet. Nothing new since the last record returns that record. */
-export async function writeAudit(secretCtx: Pick<Ctx, 'secret'>, logPath = logFile()): Promise<AuditRecord> {
+export async function writeAudit(secretCtx: Pick<Ctx, 'secret'>, logPath = logFile(), note?: (data: unknown) => void): Promise<AuditRecord> {
   const last = await latestAudit();
   const { seq, sha256 } = fingerprint(logPath);
   if (seq === 0) throw new Error('the action log is empty; nothing to fingerprint');
@@ -106,6 +106,8 @@ export async function writeAudit(secretCtx: Pick<Ctx, 'secret'>, logPath = logFi
   const sig = getSignatureFromTransaction(tx);
   const done = { ...rec, tx: sig, explorer: explorer('tx', sig) };
   fs.appendFileSync(auditFile(), JSON.stringify(done) + '\n');
+  // The audit is itself in the action log: hash and transaction id (a devnet network fee, no owner money).
+  note?.({ audit: { seq: done.seq, sha256: done.sha256, prev: done.prev, tx: sig, network: 'solana-devnet', test: true } });
   return done;
 }
 
@@ -145,7 +147,7 @@ const SECRETS = ['WALLET_SOLANA_KEY', 'CDP_API_KEY_ID', 'CDP_API_KEY_SECRET'];
 export const auditJob: ModelJob = {
   name: 'wallet.audit',
   secrets: SECRETS,
-  run: (_input, ctx) => writeAudit(ctx),
+  run: (_input, ctx) => writeAudit(ctx, undefined, (d) => ctx.box.note(d)),
 };
 
 /** Once a day at 03:00 (box local time). Returns the stop function. */
@@ -160,7 +162,7 @@ export const auditTrigger: Trigger = {
       if (next.getTime() <= Date.now()) next.setDate(next.getDate() + 1);
       timer = setTimeout(async () => {
         if (stopped) return;
-        await writeAudit(box).catch((e) => console.error('wallet audit failed:', e.message));
+        await writeAudit(box, undefined, (d) => box.note(d)).catch((e) => console.error('wallet audit failed:', e.message));
         arm();
       }, next.getTime() - Date.now());
       timer.unref();
