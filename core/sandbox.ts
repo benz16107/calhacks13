@@ -220,10 +220,32 @@ export function snapshotBase(task: Task) {
   fs.writeFileSync(path.join(dirs.task(task.id), 'manifest.json'), JSON.stringify(manifest));
 }
 
+/** Create `dir` and any missing parents, each owned by (and moded like) its nearest existing ancestor. */
+function mkdirOwned(dir: string) {
+  if (fs.existsSync(dir)) return;
+  mkdirOwned(path.dirname(dir));
+  const parent = fs.statSync(path.dirname(dir));
+  fs.mkdirSync(dir, { mode: parent.mode & 0o7777 });
+  fs.chownSync(dir, parent.uid, parent.gid);
+  fs.chmodSync(dir, parent.mode & 0o7777); // mkdir's mode is cut by the umask
+}
+
+export interface KeepMeta {
+  path: string;
+  change: Change['change'];
+  /** The real file before Keep: its owner and mode, to put back on undo. Absent for a new file. */
+  before?: { mode: number; uid: number; gid: number };
+  /** Hash of the kept content, so undo can tell if the owner has edited it since. */
+  after?: string;
+}
+
 /**
  * Apply a done task's changes to its linked real folder, atomically per file and all-or-nothing on conflict.
  * If the owner changed any of the same files since the task started, nothing is applied and the clash is
- * reported. Before-images are kept under BOX_HOME/timemachine/<task> so the desktop can undo the Keep later.
+ * reported. A kept file keeps the real file's owner, group and mode; a new file takes the owner of the folder
+ * it lands in with mode 0644 (0755 if it was executable). The task's uid and its a+rwX layer permissions
+ * never reach the owner's files. Before-images and metadata go under BOX_HOME/timemachine/<task> so Keep
+ * can be undone later.
  */
 export function keep(task: Task): { kept?: Change[]; conflicts?: string[] } {
   if (!isLinked(task.workspace)) throw new Error(`workspace ${task.workspace} is not a real folder; nothing to keep`);
@@ -245,24 +267,85 @@ export function keep(task: Task): { kept?: Change[]; conflicts?: string[] } {
 
   const saveDir = path.join(HOME, 'timemachine', task.id);
   fs.mkdirSync(saveDir, { recursive: true });
+  const meta: KeepMeta[] = [];
   for (const c of cs) {
     const real = path.join(base, c.path);
+    const m: KeepMeta = { path: c.path, change: c.change };
     if (fs.existsSync(real)) {
-      // keep a before-image so Time Machine can undo this Keep
+      const st = fs.statSync(real);
+      m.before = { mode: st.mode & 0o7777, uid: st.uid, gid: st.gid };
+      // a before-image so Time Machine can undo this Keep
       fs.mkdirSync(path.dirname(path.join(saveDir, c.path)), { recursive: true });
       fs.copyFileSync(real, path.join(saveDir, c.path));
     }
     if (c.change === 'deleted') {
       fs.rmSync(real, { force: true });
     } else {
-      fs.mkdirSync(path.dirname(real), { recursive: true });
+      mkdirOwned(path.dirname(real));
+      const src = path.join(upper, c.path);
+      const srcMode = fs.statSync(src).mode;
+      const dirStat = fs.statSync(path.dirname(real));
+      const mode = m.before?.mode ?? (srcMode & 0o111 ? 0o755 : 0o644);
+      const owner = m.before ?? { uid: dirStat.uid, gid: dirStat.gid };
       const tmp = `${real}.box-${process.pid}`;
-      fs.copyFileSync(path.join(upper, c.path), tmp);
+      fs.copyFileSync(src, tmp);
+      fs.chownSync(tmp, owner.uid, owner.gid);
+      fs.chmodSync(tmp, mode);
       fs.renameSync(tmp, real); // atomic per file
+      m.after = sha(real);
+    }
+    meta.push(m);
+  }
+  fs.writeFileSync(path.join(saveDir, 'kept.json'), JSON.stringify({ at: new Date().toISOString(), changes: meta }));
+  return { kept: cs };
+}
+
+/**
+ * Undo a Keep from its before-images: put each file back with its old content, owner and mode, and remove
+ * the files Keep added. If the owner has edited a kept file since, nothing is changed and the clash is reported.
+ */
+export function unkeep(task: Task): { reverted?: Change[]; conflicts?: string[] } {
+  const base = dirs.workspace(task.workspace);
+  const saveDir = path.join(HOME, 'timemachine', task.id);
+  const file = path.join(saveDir, 'kept.json');
+  if (!fs.existsSync(file) || fs.existsSync(path.join(saveDir, 'reverted.json'))) throw new Error(`task ${task.id} has no Keep to undo`);
+  const { changes } = JSON.parse(fs.readFileSync(file, 'utf8')) as { changes: KeepMeta[] };
+  const conflicts = changes
+    .filter((m) => m.after !== undefined)
+    .filter((m) => {
+      const real = path.join(base, m.path);
+      return !fs.existsSync(real) || sha(real) !== m.after;
+    })
+    .map((m) => m.path);
+  if (conflicts.length) return { conflicts };
+  for (const m of changes) {
+    const real = path.join(base, m.path);
+    if (m.before) {
+      mkdirOwned(path.dirname(real));
+      const tmp = `${real}.box-${process.pid}`;
+      fs.copyFileSync(path.join(saveDir, m.path), tmp);
+      fs.chownSync(tmp, m.before.uid, m.before.gid);
+      fs.chmodSync(tmp, m.before.mode);
+      fs.renameSync(tmp, real);
+    } else {
+      fs.rmSync(real, { force: true }); // Keep added it
     }
   }
-  fs.writeFileSync(path.join(saveDir, 'kept.json'), JSON.stringify({ at: new Date().toISOString(), changes: cs }));
-  return { kept: cs };
+  fs.writeFileSync(path.join(saveDir, 'reverted.json'), JSON.stringify({ at: new Date().toISOString() }));
+  return { reverted: changes.map(({ path: p, change }) => ({ path: p, change })) };
+}
+
+/** The worker's own last error message, from the end of its log, for the failed task's error. */
+export function workerError(task: Task): string | undefined {
+  try {
+    const log = path.join(dirs.task(task.id), 'worker.log');
+    const tail = fs.readFileSync(log, 'utf8').slice(-4000).split('\n').map((l) => l.trim()).filter(Boolean);
+    const noise = (l: string) => /^at |^Node\.js v|^\^+$|^\{$|^\}$|^file:\/\/\//.test(l);
+    const err = [...tail].reverse().find((l) => /error|failed|denied|cannot|not found|refused/i.test(l) && !noise(l)) ?? [...tail].reverse().find((l) => !noise(l));
+    return err?.slice(0, 300);
+  } catch {
+    return undefined;
+  }
 }
 
 /** Put the task's file changes on disk, so a step the log calls done survives a power cut. */

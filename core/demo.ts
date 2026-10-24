@@ -516,6 +516,14 @@ await moment("personal: an agent works on the owner's folder, then Keep or Undo"
   fs.mkdirSync(folder, { recursive: true });
   fs.writeFileSync(path.join(folder, 'intro.md'), 'Draft intro.\n');
   fs.writeFileSync(path.join(folder, 'notes.md'), 'notes\n');
+  // The owner is not root: files have their own owner and mode, which Keep must never change.
+  const OWNER = { uid: 4242, gid: 4343 };
+  for (const f of [folder, path.join(folder, 'intro.md'), path.join(folder, 'notes.md')]) fs.chownSync(f, OWNER.uid, OWNER.gid);
+  fs.chmodSync(path.join(folder, 'intro.md'), 0o640);
+  const statOf = (f: string) => {
+    const st = fs.statSync(path.join(folder, f));
+    return { uid: st.uid, gid: st.gid, mode: st.mode & 0o777 };
+  };
 
   const owner = await api<{ user: string } | null>('GET', '/api/owner');
   check(owner?.user === 'owner', `the box knows its owner (${owner?.user}); agents run as their own users, never as the owner`);
@@ -527,8 +535,13 @@ await moment("personal: an agent works on the owner's folder, then Keep or Undo"
   const d = await api<{ changes: { path: string }[]; diff: string }>('GET', `/api/tasks/${T.id}/diff`);
   check(d.changes.some((c) => c.path === 'intro.md') && d.diff.includes('+Polished by the agent.'), 'the owner sees the diff of what the agent changed');
 
+  check((await task(T.id)).review === 'pending', 'the task shows review: pending until the owner decides');
   const kept = await api<{ kept?: unknown[] }>('POST', `/api/tasks/${T.id}/keep`);
   check(!!kept.kept && fs.readFileSync(path.join(folder, 'intro.md'), 'utf8').includes('Polished by the agent.'), 'Keep applied the change to the real folder');
+  const after = statOf('intro.md');
+  check(after.uid === OWNER.uid && after.gid === OWNER.gid && after.mode === 0o640, `the kept file kept its owner (${after.uid}:${after.gid}) and mode (${after.mode.toString(8)}), not the task's uid or a+rwX`);
+  const t1 = await task(T.id);
+  check(t1.review === 'kept' && (await api<LogEvent[]>('GET', '/log')).some((e) => e.type === 'keep' && e.task === T.id && e.result === 'kept'), 'the log has a keep event and the task shows review: kept');
   check(fs.existsSync(path.join(HOME, 'timemachine', T.id, 'intro.md')), 'a before-image was saved, so Time Machine can undo the Keep later');
 
   // Conflict: the owner edits the same file while a task works; Keep refuses rather than overwrite.
@@ -537,13 +550,46 @@ await moment("personal: an agent works on the owner's folder, then Keep or Undo"
   fs.writeFileSync(path.join(folder, 'notes.md'), 'notes\nthe owner edited this\n');
   const clash = await api<{ conflicts?: string[] }>('POST', `/api/tasks/${C.id}/keep`);
   check(clash.conflicts?.includes('notes.md') && !fs.readFileSync(path.join(folder, 'notes.md'), 'utf8').includes('from the agent'), "Keep reported a conflict and did not overwrite the owner's edit");
+  check((await task(C.id)).review === 'conflict' && (await api<LogEvent[]>('GET', '/log')).some((e) => e.type === 'keep' && e.task === C.id && e.result === 'conflict'), 'the conflict is in the log and the task shows review: conflict');
 
   // Undo discards a task's changes without ever touching the real folder.
   const U = await api<Task>('POST', '/tasks', { title: 'Throwaway', worker: 'fake', source: 'demo', folder, prompt: 'write scratch.md x' });
   await settled([U.id]);
   await api('POST', `/api/tasks/${U.id}/undo`);
   check(!fs.existsSync(path.join(folder, 'scratch.md')), 'Undo discarded the change; the real folder never received it');
+  check((await task(U.id)).review === 'undone', 'the task shows review: undone');
+
+  // New files and folders belong to the owner, not the task: the folder's owner, 0644, no a+rwX widening.
+  const N = await api<Task>('POST', '/tasks', { title: 'Add a chapter', worker: 'fake', source: 'demo', folder, prompt: 'mkdir chapters\nwrite chapters/ch2.md The second chapter' });
+  await settled([N.id]);
+  await api('POST', `/api/tasks/${N.id}/keep`);
+  const ch = statOf('chapters/ch2.md');
+  const dir = statOf('chapters');
+  check(ch.uid === OWNER.uid && ch.gid === OWNER.gid && ch.mode === 0o644, `a new file takes the folder's owner (${ch.uid}:${ch.gid}) and mode 0644 (got ${ch.mode.toString(8)})`);
+  check(dir.uid === OWNER.uid && dir.gid === OWNER.gid && (dir.mode & 0o022) === 0, `a new folder takes the owner too, and is not world-writable (${dir.mode.toString(8)})`);
+
+  // Undo a Keep from Time Machine: the kept files go back as they were, or are removed if Keep added them.
+  await api('POST', `/api/tasks/${N.id}/unkeep`);
+  check(!fs.existsSync(path.join(folder, 'chapters', 'ch2.md')) && (await task(N.id)).review === 'undone', 'undoing a Keep from Time Machine removed the files it added');
+  await api('POST', `/api/tasks/${T.id}/unkeep`);
+  const back = statOf('intro.md');
+  check(fs.readFileSync(path.join(folder, 'intro.md'), 'utf8').trim() === 'Draft intro.' && back.uid === OWNER.uid && back.mode === 0o640, 'undoing the other Keep restored the old content with its owner and mode');
+
+  // A task spec with a field the box doesn't know is refused, not silently run somewhere else.
+  const bad = await api('POST', '/tasks', { title: 'Typo', worker: 'fake', prompt: 'x', folders: [folder] }).then(() => '', (e: Error) => e.message);
+  check(/unknown task field.*folders/.test(bad), `an unknown task field is refused with a clear error ("${bad.slice(0, 60)}")`);
 });
+
+// A task that fails says why, in its own words.
+await moment('a failed task carries the worker\'s own error message', async () => {
+  workspace('oops', {});
+  const F = await api<Task>('POST', '/tasks', { title: 'Fails', workspace: 'oops', worker: 'fake', source: 'demo', prompt: 'expect nothing.txt hello' });
+  await waitFor('it to fail', async () => ((await task(F.id)).state === 'failed' ? true : undefined));
+  const { events } = await api<{ events: LogEvent[] }>('GET', `/api/tasks/${F.id}`);
+  const failed = events.find((e) => e.type === 'task.state' && e.state === 'failed');
+  check(failed?.type === 'task.state' && /nothing\.txt is "\(missing\)"/.test(failed.error ?? ''), `the failed event carries the worker's message ("${(failed?.type === 'task.state' ? failed.error : '')?.slice(0, 90)}")`);
+});
+
 
 // ---------- each track's own steps: tracks/<name>/demo.ts ----------
 
@@ -557,6 +603,10 @@ for (const name of fs.existsSync(tracks) ? fs.readdirSync(tracks).sort() : []) {
 // The portal's own demo step, if there is one.
 const portalDemo = new URL('../portal/demo.ts', import.meta.url).pathname;
 if (fs.existsSync(portalDemo)) await moment('portal', async () => (await import(portalDemo)).default(kit));
+
+// The Personal desktop layer's own demo step, if there is one (it only needs python3).
+const personalDemo = new URL('../personal/demo.ts', import.meta.url).pathname;
+if (fs.existsSync(personalDemo)) await moment('personal desktop layer', async () => (await import(personalDemo)).default(kit));
 
 // ---------- cleanup ----------
 

@@ -136,6 +136,9 @@ class Core {
   // ---------- tasks ----------
 
   async createTask(spec: TaskSpec): Promise<Task> {
+    const known = ['title', 'prompt', 'workspace', 'worker', 'tools', 'hosts', 'budgetCents', 'source'];
+    const unknown = Object.keys(spec ?? {}).filter((k) => !known.includes(k));
+    if (unknown.length) throw new Error(`unknown task field${unknown.length > 1 ? 's' : ''}: ${unknown.join(', ')} (known: ${known.join(', ')})`);
     const s: Required<TaskSpec> = { workspace: 'home', worker: 'droid', tools: [], hosts: [], budgetCents: 0, source: 'api', ...spec };
     if (!s.title || !s.prompt) throw new Error('a task needs a title and a prompt');
     if (!/^[\w.-]+$/.test(s.workspace) || !fs.existsSync(dirs.workspace(s.workspace))) throw new Error(`no workspace ${s.workspace}`);
@@ -187,7 +190,10 @@ class Core {
       child.on('exit', (code, signal) => {
         this.workers.delete(t.id);
         if (t.state === 'running' || t.state === 'waiting') {
-          this.move(t, code === 0 ? 'done' : 'failed', code === 0 ? {} : { error: `worker exited with ${signal ?? code}` });
+          const why = code === 0 ? undefined : sandbox.workerError(t);
+          this.move(t, code === 0 ? 'done' : 'failed', code === 0 ? {} : { error: `worker exited with ${signal ?? code}${why ? `: ${why}` : ''}` });
+          // A task on the owner's real folder waits for their Keep or Undo.
+          if (code === 0 && sandbox.isLinked(t.workspace)) this.write({ type: 'keep', task: t.id, result: 'pending' });
         }
         this.finish(t);
       });
@@ -406,9 +412,19 @@ class Core {
   keep(id: string) {
     const t = this.must(id);
     if (t.state !== 'done') throw new Error(`task ${id} is ${t.state}; only a done task can be kept`);
+    if (t.review === 'kept') throw new Error(`task ${id} was already kept`);
     const out = sandbox.keep(t);
-    if (out.conflicts) this.write({ type: 'task.step', task: id, text: `keep found a conflict: you changed ${out.conflicts.join(', ')} too`, data: { keep: 'conflict', conflicts: out.conflicts } });
-    else this.write({ type: 'task.step', task: id, text: `kept ${out.kept?.length ?? 0} change(s) to ${this.links[t.workspace]}`, data: { keep: 'applied', changes: out.kept } });
+    if (out.conflicts) this.write({ type: 'keep', task: id, result: 'conflict', conflicts: out.conflicts });
+    else this.write({ type: 'keep', task: id, result: 'kept', changes: out.kept });
+    return out;
+  }
+
+  /** Undo a Keep from Time Machine's before-images, unless the owner has edited the kept files since. */
+  unkeep(id: string) {
+    const t = this.must(id);
+    if (t.review !== 'kept') throw new Error(`task ${id} has no Keep to undo`);
+    const out = sandbox.unkeep(t);
+    if (out.reverted) this.write({ type: 'keep', task: id, result: 'reverted', changes: out.reverted });
     return out;
   }
 
@@ -513,7 +529,10 @@ class Core {
     const code = randomBytes(4).toString('hex');
     const expiry = Date.now() + 5 * 60 * 1000;
     this.pairCodes.set(code, expiry);
-    return { code, url: `/pair#${code}`, expiresAt: new Date(expiry).toISOString(), box: { id: BOX_ID, name: BOX_NAME } };
+    // With BOX_URL set (the image sets it from the box's address) the url is absolute, so the box screen's QR
+    // opens on a phone. Without it the url is a path the page prefixes with its own origin.
+    const base = (process.env.BOX_URL ?? '').replace(/\/+$/, '');
+    return { code, url: `${base}/pair#${code}`, expiresAt: new Date(expiry).toISOString(), box: { id: BOX_ID, name: BOX_NAME } };
   }
 
   /** A phone redeems the code for a durable device token. */
@@ -591,6 +610,7 @@ class Core {
               const name = 'owner-' + path.basename(String(body.folder)).replace(/[^\w.-]/g, '-');
               this.linkWorkspace(name, String(body.folder));
               body.workspace = name;
+              delete body.folder;
             }
             return this.createTask(body);
           }
@@ -604,6 +624,8 @@ class Core {
             return sandbox.diff(this.must(id));
           case 'POST /tasks/:id/keep':
             return this.keep(id);
+          case 'POST /tasks/:id/unkeep':
+            return this.unkeep(id);
           case 'POST /tasks/:id/undo':
             return this.undo(id);
           case 'GET /approvals':
@@ -653,6 +675,7 @@ class Core {
     const task = url.searchParams.get('task');
     let cursor = Number(req.headers['last-event-id'] ?? url.searchParams.get('after') ?? 0);
     res.writeHead(200, { 'content-type': 'text/event-stream', 'cache-control': 'no-cache', connection: 'keep-alive' });
+    res.flushHeaders(); // send the headers now, so a reader sees the stream open before the first event
     const send = (e: LogEvent) => {
       if (task && e.task !== task) return;
       res.write(`id: ${e.seq}

@@ -1,6 +1,10 @@
-# calhacks13
+# GurtOS (calhacks13)
 
-Ben's solo Cal Hacks 13.0 project. "calhacks13" is a working name; the OS is not named yet.
+Ben's solo Cal Hacks 13.0 project. The OS is called **GurtOS**.
+**Naming rule:** anything a person reads (the portal, the box screen, the docs, the README, the Devpost page,
+the deck) says **GurtOS**, and the editions are **GurtOS Server**, **GurtOS Personal** and **GurtOS Business**.
+Internal names stay `box`: the repo folder, `core/box.ts`, `BOX_*` variables, `box.service`, `box-<id>` users.
+Don't rename those.
 Devpost deadline: Sun Oct 25, 9:00 AM PT. Judging at the table Sun 10:30 AM to 12:30 PM.
 
 ## What we're building
@@ -25,7 +29,7 @@ Also: one action log of everything every agent did, and the cost of each task.
 
 ## Editions
 
-The same OS ships in three editions. Server and Personal are built now; Team is a maybe for later. The core,
+The same OS ships in three editions. Server and Personal are built now; Business is a maybe for later. The core,
 the tracks and the four moments are shared; the editions differ in who the box belongs to and how its screen
 and controls are presented.
 
@@ -37,7 +41,7 @@ and controls are presented.
   your real folders, with undo. The Box layer lives in the desktop: approvals as desktop notifications, a
   top-bar indicator for running tasks, the Box app (the portal in a window), Time Machine for what agents
   changed in your files, and "Ask an agent" on a folder in Files. The desktop side is built in `personal/`.
-- **Team (maybe):** one box shared by several people with roles (who may approve what, up to how much),
+- **Business (maybe):** one box shared by several people with roles (who may approve what, up to how much),
   routed approvals, per-person budgets, a shared audit trail. Don't build it, but don't design anything that
   blocks it. For example, approvals already record who answered and could later record who is allowed to.
 
@@ -61,8 +65,11 @@ The core thread owns this section. Don't add other top-level folders; ask the co
   `Track`; the box loads every `tracks/*/track.ts` at boot. `demo.ts` is the track's demo step. Its own
   `package.json` if it needs packages (the root is an npm workspace). `tracks/example/` shows every slot.
 - `portal/` the web app for the portal and the box's own screen, after the Figma handoff.
+- `personal/` the GurtOS Personal desktop layer (notifications, top-bar indicator, Time Machine, Files action).
+- `site/` public docs, owned by the docs thread.
 - `spikes/` throwaway tests (spike thread). `docs/` tracks and the Figma stage log. `image/` the bootable
   image, last.
+- `deploy` puts origin/main on an always-on machine (see Test machines). `core/reap.ts` clears stale demo boxes.
 - `demo` the merge gate. `./demo` ships your checkout to a test VM and runs the four moments, then every
   `tracks/*/demo.ts`. Exit 0 means you may merge. **Runs from different checkouts are isolated and go side by
   side on one VM**: each has its own `BOX_HOME` (`/var/lib/box-demo/<run>`), task users, ports and SpacetimeDB

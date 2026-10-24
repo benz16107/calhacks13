@@ -64,12 +64,16 @@ export function apply(s: State, e: LogEvent): void {
     case 'task.state':
       if (!t) break;
       t.state = e.state;
+      if (e.state === 'undone' && t.review && t.review !== 'kept') t.review = 'undone'; // a Kept task's changes are in the real folder until a Keep is undone
       if (e.layers) t.layers = e.layers;
       if (e.error) t.error = e.error;
       if (e.summary) t.summary = e.summary;
       break;
     case 'task.step':
       if (t) t.step = e.text.slice(0, 200);
+      break;
+    case 'keep':
+      if (t) t.review = e.result === 'kept' ? 'kept' : e.result === 'reverted' ? 'undone' : e.result;
       break;
     case 'cost':
       if (t) t.costCents += e.cents;

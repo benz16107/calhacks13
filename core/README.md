@@ -70,6 +70,9 @@ charged once.
 with "call again to check"; the worker (and Droid, which calls the tool again) polls until the answer exists.
 So a task can wait hours for an OK.
 
+**Why a task failed.** The `task.state: failed` event's `error` ends with the worker's own last error message
+(`worker exited with 1: Error: ...`), so the screen can say what went wrong.
+
 **Closed at the end.** When a task reaches done, failed or undone, any approval still pending for it is
 closed, so none lingers.
 
@@ -157,6 +160,18 @@ A task can work on one of the owner's real folders:
   Otherwise it returns `{kept: changes}` and saves before-images under `BOX_HOME/timemachine/<id>` so the
   desktop's Time Machine can undo the Keep later.
 - `POST /api/tasks/<id>/undo` discards the task's changes; the real folder never received them.
+- `POST /api/tasks/<id>/unkeep` undoes a Keep from the Time Machine before-images: kept files go back with
+  their old content, owner and mode, and files Keep added are removed. If the owner edited a kept file since,
+  it changes nothing and returns `{conflicts}`.
+
+**Keep never changes ownership or widens permissions.** A kept file keeps the real file's owner, group and mode.
+A new file or folder takes the owner of the folder it lands in; files are 0644 (0755 if executable), and new
+folders copy their parent's mode. The task's uid and the layer's `a+rwX` never reach the owner's files.
+
+**Where a task's changes stand.** `task.review` is `pending` (done, waiting for the owner), `kept`, `conflict`
+(the owner edited the same files; nothing applied) or `undone` (discarded, or a Keep was undone). Each change
+is a `keep` event in the log (`result`: `pending`, `kept`, `conflict`, `reverted`, with `changes` or
+`conflicts`), so the desktop can notify from the event stream.
 
 The portal is reachable on localhost without pairing: pairing only gates requests that carry a device token
 (a phone). The desktop layer in `personal/` uses these routes and the SSE log stream for approvals and events.
@@ -174,7 +189,7 @@ answers without `/api`, which is what the demo and tracks use.
 | Request | Returns |
 |---|---|
 | `GET /api/tasks` | Every task: `id, title, state, source, workspace, costCents, budgetCents, step, summary, error, createdAt, updatedAt` |
-| `POST /api/tasks {title, prompt, workspace?, tools?, hosts?, budgetCents?}` | The new task. Workspace defaults to `home`, worker to Droid. |
+| `POST /api/tasks {title, prompt, workspace?, tools?, hosts?, budgetCents?}` | The new task. Workspace defaults to `home`, worker to Droid. A field the box doesn't know (a typo like `folders`) is refused with a 400 naming it. `folder` (Personal) is also accepted. |
 | `GET /api/tasks/<id>` | `{task, approvals, events}`: the task, its approvals, and its whole action log |
 | `GET /api/tasks/<id>/diff` | `{changes: [{path, change}], diff}`: what it added, modified or deleted, and a unified diff |
 | `POST /api/tasks/<id>/undo` | The task, now `undone`. For a real-folder task, discards its changes. |
@@ -211,7 +226,8 @@ is the same data by polling if a reader prefers a cursor.
 a phone scans it and redeems the code for its own device token (`POST /api/pair`). Any phone at the judging
 table pairs this way for the Hacker's Choice demo. A phone sends its token as `Authorization: Bearer <token>`
 when it approves, so the log records which phone said yes; revoke it with `POST /api/pair/devices/<id>/revoke`
-and that token stops working. `GET /api/boxes` lists this box plus the peers named in the `BOX_PEERS`
+and that token stops working. Set `BOX_URL` (the image sets it from the box's address at first boot) and `POST /api/pair/start` returns an
+absolute `url`, so the QR on the box's screen opens on a phone. `GET /api/boxes` lists this box plus the peers named in the `BOX_PEERS`
 environment variable (JSON array of `{id, name, url, stdb}`), so one portal shows and drives both the linuxbox
 and Vultr boxes. Each entry is `{id, name, url, stdb, self?}`; this box's own `url` comes from `BOX_URL`.
 

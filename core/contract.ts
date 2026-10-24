@@ -43,6 +43,12 @@ export interface Task extends Required<TaskSpec> {
   costCents: number;
   /** The latest step, for a one-line "doing now". */
   step?: string;
+  /**
+   * Personal edition, for a task on a real folder: where its changes stand.
+   * pending (done, waiting for the owner), kept (applied to the real folder), conflict (the owner edited the
+   * same files; nothing applied), undone (discarded, or a Keep was undone from Time Machine).
+   */
+  review?: 'pending' | 'kept' | 'conflict' | 'undone';
   createdAt: string;
   updatedAt: string;
   error?: string;
@@ -82,6 +88,8 @@ export type LogEvent =
   | Ev<'task.state', { task: string; state: TaskState; layers?: string[]; error?: string; summary?: string }>
   /** Progress the worker reports: plans, steps, diffs. `data` is what the worker needs to resume. */
   | Ev<'task.step', { task: string; text: string; data?: unknown }>
+  /** Personal: the owner's decision on a real-folder task's changes, or a conflict that stopped it. */
+  | Ev<'keep', { task: string; result: 'pending' | 'kept' | 'conflict' | 'reverted'; changes?: { path: string; change: string }[]; conflicts?: string[] }>
   | Ev<'tool.call', { task: string; key: string; tool: string; input: unknown }>
   /** `cents` is what the call spent; it counts toward the task's cost. */
   | Ev<'tool.result', { task: string; key: string; ok: boolean; output?: unknown; error?: string; cents?: number }>
