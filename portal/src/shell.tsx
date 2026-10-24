@@ -97,8 +97,8 @@ export function TopBar() {
             </TopButton>
           )
         )}
-        {b.business.me?.paused ? (
-          <TopButton label={`All agents paused by ${b.business.me.paused.by}. Open the kill switch`} onClick={pop('control')}>
+        {pausedNow() ? (
+          <TopButton label={`All agents paused by ${pausedNow()!.by}. Open the kill switch`} onClick={pop('control')}>
             <Icon name="media-playback-pause" />
             <span class="gos-tb-paused">All paused</span>
           </TopButton>
@@ -303,7 +303,7 @@ function newsNotices(): Notice[] {
       app: 'settings',
       appTitle: PRODUCT,
       title: d.paused ? `All agents paused by ${d.by}` : `Agents resumed by ${d.by}`,
-      body: d.paused ? `${d.by} used the kill switch${d.via && d.via !== d.by ? ` on ${d.via}` : ''}. Tasks stopped where they were. Only an IT admin can resume.` : 'Every task carries on from where it stopped.',
+      body: d.paused ? `${d.by} used the kill switch${d.via && d.via !== d.by ? ` on ${d.via}` : ''}. Tasks stopped where they were. Only ${resumer()} can resume.` : 'Every task carries on from where it stopped.',
       quiet: !d.paused,
       open: () => toggle('control'),
     });
@@ -535,10 +535,18 @@ function ControlCenter({ anchor }: { anchor: HTMLElement | null }) {
           );
         })}
       </div>
-      {b.business.on && <KillSwitchCard />}
+      {(b.business.on || b.owner) && <KillSwitchCard />}
     </Popover>
   );
 }
+
+/** The kill switch's state on any edition: Business says who pulled it; elsewhere GET /api/system does. */
+export const pausedNow = () => {
+  const p = box.business.me?.paused ?? (box.system?.paused?.paused ? box.system.paused : null);
+  return p ? { by: p.by ?? 'the owner', at: p.at ?? '', via: p.via ?? undefined } : null;
+};
+/** Who may resume: an IT admin on GurtOS Business, the owner elsewhere. */
+const resumer = () => (box.business.on ? 'an IT admin' : 'the owner');
 
 /** Who may pull the kill switch: an admin or the owner. */
 export const mayPause = () => box.owner || ['admin', 'owner'].includes(box.business.me?.person?.role ?? '');
@@ -551,8 +559,8 @@ function KillSwitchCard() {
   const [confirm, setConfirm] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const paused = b.business.me?.paused;
-  const company = b.business.company || 'this box';
+  const paused = pausedNow();
+  const company = b.business.company || selfBox().name;
   const go = async (what: 'pause' | 'resume') => {
     setBusy(true);
     setError('');
@@ -569,9 +577,9 @@ function KillSwitchCard() {
       <div class="gos-two gos-grow">
         <span class="t-body-strong gos-kill-title">{paused ? 'All agents are paused' : 'Kill switch'}</span>
         <span class="t-caption">
-          {paused ? `${paused.by} paused them at ${hhmm(paused.at)}. Requests waiting for an OK stay open.` : 'IT admins only. Stops every agent at once.'}
+          {paused ? `${paused.by} paused them at ${hhmm(paused.at)}. Requests waiting for an OK stay open.` : `${b.business.on ? 'IT admins only' : 'Owner only'}. Stops every agent at once.`}
         </span>
-        {!mayPause() && <span class="t-caption t-secondary">Only an IT admin can {paused ? 'resume' : 'pause'} the agents.</span>}
+        {!mayPause() && <span class="t-caption t-secondary">Only {resumer()} can {paused ? 'resume' : 'pause'} the agents.</span>}
         {error && (
           <span class="gos-error" role="alert">
             {error}
@@ -590,7 +598,7 @@ function KillSwitchCard() {
       {confirm && (
         <Alert
           title={`Pause all agents at ${company}?`}
-          body={`${plural(stoppable().length, 'running task')} stop where they are, and nothing new starts. The ${plural([...b.approvals.values()].filter((a) => a.state === 'pending').length, 'request')} waiting for an OK stay open. Only an IT admin can resume. The pause goes in the audit log.`}
+          body={`${plural(stoppable().length, 'running task')} stop where they are, and nothing new starts. The ${plural([...b.approvals.values()].filter((a) => a.state === 'pending').length, 'request')} waiting for an OK stay open. Only ${resumer()} can resume. The pause goes in the ${b.business.on ? 'audit log' : 'action log'}.`}
           action="Pause all agents"
           destructive
           busy={busy}
@@ -631,7 +639,7 @@ export function DesktopHome() {
   const now = useNow(60_000);
   const need = pending();
   const running = ofState('running');
-  if (b.business.me?.paused) return <PausedHome />;
+  if (pausedNow()) return <PausedHome />;
   const r = b.restored && now - b.restored.at < 15 * 60_000 ? b.restored : undefined;
   const blocked = b.today.blocked;
   const summary = r
@@ -670,7 +678,7 @@ export function DesktopHome() {
 /** GurtOS Business while the kill switch is on (docs/figma/business/5c-all-agents-paused.png). */
 function PausedHome() {
   const b = useBox();
-  const p = b.business.me!.paused!;
+  const p = pausedNow()!;
   const stopped = stoppable();
   const waiting = [...b.approvals.values()].filter((a) => a.state === 'pending');
   const seats = new Map<string, number>();
@@ -690,7 +698,7 @@ function PausedHome() {
           tone={waiting.length ? 'attention' : undefined}
           lines={waiting.slice(0, 3).map((a) => {
             const i = askInfo(a);
-            return `${i.id ?? short(i.title, 22)}: ${i.fraud ? 'fraud flag' : i.amount ? `$${Math.round(i.amount / 100).toLocaleString('en-US')}` : 'an OK'}, for ${a.route?.people.map((x) => x.name.split(' ')[0]).join(' or ') || 'nobody yet'}`;
+            return `${i.id ?? short(i.title, 22)}: ${i.fraud ? 'fraud flag' : i.amount ? `$${Math.round(i.amount / 100).toLocaleString('en-US')}` : 'an OK'}${a.route ? `, for ${a.route.people.map((x) => x.name.split(' ')[0]).join(' or ') || 'nobody yet'}` : ''}`;
           })}
           onClick={() => open('waiting')}
         />

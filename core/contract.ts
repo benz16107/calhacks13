@@ -181,6 +181,14 @@ export interface Box {
   onWebhook(name: string, handler: (payload: any, headers: Record<string, string>) => unknown): void;
   /** Read a vault secret from a route or trigger. Only names in the track's `secrets`. Never return it to a task or a response. */
   secret(name: string): string;
+  /** GurtOS Business: the approval rules as text, one rule per line (core/README.md, "Business edition"). */
+  policy(): string;
+  /**
+   * GurtOS Business: replace the rules with `text`, once a person has said yes. `approvalId` must be an approved
+   * request of one of this track's own tasks, answered by an owner or an admin, whose question carries
+   * `[policy <hash>]`, the first 12 hex characters of the text's SHA-256. Throws otherwise and changes nothing.
+   */
+  setPolicy(text: string, approvalId: string): void;
 }
 
 /** Given to tools and model jobs. They run inside the core, never inside a task. */

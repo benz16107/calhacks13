@@ -95,3 +95,17 @@ Everything else goes to any approver.`);
   assert.equal(refusal(people[0], req, false), undefined, 'it can still be denied');
   assert.equal(route(r, ask('Approve APP-1042 for $40,000?'), people, 'sam').rule, 'Requests over $10,000 go to the Controller for approval.');
 });
+
+test("Mana's review: the largest figure is the amount, and the owner backs up a name nobody can answer for", () => {
+  assert.equal(amountOf(0, 'Raise Bright Harbor from $5,000 to $60,000?'), 6_000_000);
+  assert.equal(amountOf(80_000, 'Spend $500?'), 80_000);
+  const owner = checkPerson({ id: 'martin', name: 'Martin Hale', role: 'owner' }, []);
+  const withOwner = [...people, owner];
+  const own = route(rules, ask('Approve a $12,000 limit?'), withOwner, 'rosa');
+  assert.deepEqual(own.people.map((p) => p.id), ['martin'], "Rosa asked, so it falls to the owner");
+  assert.match(own.why, /so it goes to the owner: Martin Hale/);
+  const normal = route(rules, ask('Approve APP-1042 for $40,000?'), withOwner, 'sam');
+  assert.deepEqual(normal.people.map((p) => p.id), ['rosa'], 'the owner is not sent what the Controller can answer');
+  assert.equal(refusal(owner, { to: 'the Controller', amountCents: 4_000_000, askedBy: 'sam' }, true), undefined, 'but may answer it');
+  assert.match(route(parsePolicy('Production goes to IT.'), ask('Deploy the new invoice export to production?'), people).to, /IT/);
+});

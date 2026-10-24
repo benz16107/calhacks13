@@ -167,15 +167,14 @@ function matches(r: Rule, a: Ask): boolean {
 }
 
 /**
- * The amount a request is about: its spending, else the first dollar figure in its question ("approve ... for
- * $40,000"), else 0.
- * shortcut: reads the figure from the words when a task asks without costCents; give /ask an amount field if a
- * question ever names two figures in the wrong order.
+ * The amount a request is about: the larger of its spending and the largest dollar figure in its question, so
+ * "Raise Bright Harbor from $5,000 to $60,000?" is checked as $60,000 (Mana's review of these rules found that).
+ * shortcut: reads figures from the words when a task asks without costCents; give /ask an amount field if a
+ * question ever names a big figure that isn't the request.
  */
 export function amountOf(costCents: number, question: string): number {
-  if (costCents > 0) return costCents;
-  const m = /\$([\d,]+(?:\.\d{1,2})?)/.exec(question);
-  return m ? Math.round(Number(m[1].replace(/,/g, '')) * 100) : 0;
+  const figures = [...question.matchAll(/\$([\d,]+(?:\.\d{1,2})?)/g)].map((m) => Math.round(Number(m[1].replace(/,/g, '')) * 100));
+  return Math.max(costCents, 0, ...figures);
 }
 
 /** Whether a person approves for this name or role. */
@@ -194,8 +193,19 @@ export function refusal(p: Person | undefined, req: { to: string; amountCents: n
   if (!ANSWERS.includes(p.role)) return `A ${p.role} can't answer requests.`;
   const over = approved && p.limitCents !== null && req.amountCents > p.limitCents ? `This is ${dollars(req.amountCents)}, above your ${dollars(p.limitCents)} limit.` : undefined;
   if (key(req.to) === 'nobody') return approved ? (over ?? `Nobody can approve this in GurtOS: ${req.rule ?? 'a rule says so'}`) : undefined;
-  if (!holds(p, req.to)) return `This goes to ${req.to}. You approve for ${p.approvesFor.join(', ') || 'nothing yet'}.`;
+  // The owner is the backstop: they may answer anything within their limit, so one person away never stops the work.
+  if (!holds(p, req.to) && p.role !== 'owner') return `This goes to ${req.to}. You approve for ${p.approvesFor.join(', ') || 'nothing yet'}.`;
   return over;
+}
+
+/**
+ * Who a request waits for now: the people who approve for its name and may approve it, or, when none of them can
+ * (they asked for it, or it is above their limit), the owner as the backstop.
+ */
+export function approversFor(req: { to: string; amountCents: number; askedBy?: string; rule?: string }, people: Person[]): Person[] {
+  const can = people.filter((p) => !refusal(p, req, true));
+  const named = can.filter((p) => holds(p, req.to));
+  return named.length ? named : can.filter((p) => p.role === 'owner');
 }
 
 /** Where the policy sends a request, who can approve it now, and why. */
@@ -205,9 +215,11 @@ export function route(rules: Rule[], ask: Ask, people: Person[], askedBy?: strin
   const to = rule?.to ?? 'the owner';
   const line = rule?.line ?? 'No rule matched, so it goes to the owner.';
   const req = { to, amountCents: ask.amountCents, askedBy };
-  const can = rule?.blocked ? [] : people.filter((p) => !refusal(p, req, true));
+  const can = rule?.blocked ? [] : approversFor(req, people);
+  const backstop = can.length > 0 && can.every((p) => p.role === 'owner' && !holds(p, to));
   let why: string;
   if (rule?.blocked) why = `${line} Nobody can approve it here.`;
+  else if (backstop) why = `${line} Nobody there can approve it, so it goes to the owner: ${can.map((p) => p.name).join(' or ')}.`;
   else if (can.length) why = `${line} ${can.map((p) => p.name).join(' or ')} can approve it.`;
   else {
     const holders = people.filter((p) => ANSWERS.includes(p.role) && holds(p, to));

@@ -14,7 +14,7 @@ export const POLICY = `# Fogline Supply: who approves what. A ceiling applies fi
 Fraud referrals go to the fraud reviewer for approval.
 Requests over $50,000 can't be approved in GurtOS.
 Requests over $10,000 go to the Controller for approval.
-Production changes go to IT for approval.
+Production goes to IT for approval.
 Everything else goes to any approver.`;
 
 export const PEOPLE = [

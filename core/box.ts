@@ -9,7 +9,7 @@ import http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
 import type { App, Approval, ApprovalRoute, Box, FullSpec, Ctx, LogEvent, LogReader, ModelJob, NewEvent, Route, Task, TaskSpec, TaskState, Tool, Track, Who } from './contract.ts';
-import { DEFAULT_POLICY, amountOf, auditRows, checkPerson, checkSeats, holds, parsePolicy, refusal, route, toCsv, whoOf, type Business, type Person } from './business.ts';
+import { DEFAULT_POLICY, amountOf, approversFor, auditRows, checkPerson, checkSeats, holds, parsePolicy, refusal, route, toCsv, whoOf, type Business, type Person } from './business.ts';
 import { DB, Live } from './live.ts';
 import { Log, apply, canMove, doneLayers, fold, type State } from './log.ts';
 import { ANTHROPIC_PLACEHOLDER, PLACEHOLDER_KEY, firewall, logBlocked, stopLoggingBlocked, uidOf, relayCert, reservePort, startProxy } from './net.ts';
@@ -587,6 +587,29 @@ class Core {
     return { on: this.business.on, company: this.business.company, policy: this.business.policy, rules, seats: this.business.seats, paused: this.paused };
   }
 
+  /**
+   * Rules from outside (Mana drafts them in a chat): applied only when a track's own request for exactly this text was
+   * approved by an owner or an admin, so no rule can let an approver, an agent or the app itself change the rules.
+   */
+  policyFrom(track: string, text: unknown, approvalId: string) {
+    if (typeof text !== 'string') throw new Error('policy: text');
+    const a = this.state.approvals.get(approvalId);
+    const t = a && this.state.tasks.get(a.task);
+    if (!a || !t || t.source.split(':')[0] !== track) throw new Error(`no request ${approvalId} from ${track}`);
+    const mark = `[policy ${createHash('sha256').update(text).digest('hex').slice(0, 12)}]`;
+    if (!a.question.includes(mark)) throw new Error(`request ${approvalId} is not for this text: its question must carry ${mark}`);
+    const p = this.person(a.person);
+    if (a.state !== 'approved' || !p || (p.role !== 'owner' && p.role !== 'admin')) forbid('only an owner or an admin approving the request changes the rules');
+    parsePolicy(text); // throws naming the bad line
+    const source = /^#\s*source:\s*(.+)$/m.exec(text)?.[1]?.trim() ?? track;
+    const at = new Date().toISOString();
+    const meta: Business['policyMeta'] = {};
+    for (const r of parsePolicy(text)) meta[r.line] = this.business.policyMeta[r.line] ?? { by: `${p!.name} (from ${source})`, at };
+    Object.assign(this.business, { policy: text, policyMeta: meta });
+    this.saveBusiness();
+    this.write({ type: 'note', track: 'business', data: { changed: ['policy'], by: p!.name, approval: approvalId, source }, who: { by: p!.id } });
+  }
+
   /** "Who would approve this?": where a request would go, without asking it. */
   tryRoute(q: URLSearchParams) {
     const text = (q.get('text') ?? '').slice(0, 500);
@@ -647,7 +670,7 @@ class Core {
       if (a.state !== 'pending') return false;
       const t = this.must(a.task);
       const r = a.route ?? this.routeOf(a, t);
-      return !refusal(p, { to: r.to, amountCents: r.amountCents, askedBy: a.askedBy ?? t.requestedBy, rule: r.rule }, true);
+      return approversFor({ to: r.to, amountCents: r.amountCents, askedBy: a.askedBy ?? t.requestedBy, rule: r.rule }, this.business.people).some((x) => x.id === p.id);
     });
   }
 
@@ -933,6 +956,8 @@ class Core {
         if (!/^[\w-]+$/.test(name)) throw new Error(`bad webhook name ${name}`);
         this.webhooks.set(`/hook/${track}/${name}`, handler);
       },
+      policy: () => this.business.policy,
+      setPolicy: (text, approvalId) => this.policyFrom(track, text, approvalId),
       secret: (name) => {
         if (!this.trackSecrets.get(track)?.has(name)) throw new Error(`${name} is not in track ${track}'s secrets`);
         const v = this.vault.get(name);

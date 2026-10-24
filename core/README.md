@@ -347,7 +347,7 @@ own screen is trusted as it always was: it acts as the owner, or as a person whe
 ```
 Fraud referrals go to the Controller.
 Over $10,000 goes to the Controller.
-Production changes go to IT.
+Production goes to IT.
 Everything else goes to any approver.
 ```
 
@@ -356,10 +356,21 @@ contains (`Fraud referrals`), `Requests from the credit desk` (the app), or word
 $500`). Who: a name people approve for (`the Controller`, `IT`), or a role (`any approver`, `an admin`, `the owner`).
 A request matching no rule goes to the owner. `PUT /api/business {policy}` refuses a line it can't read and names it.
 
+**Rules from outside** (Mana drafts them in a chat). A track reads the rules with `box.policy()` and proposes new text
+by starting a task that asks for an OK whose question carries `[policy <hash>]` (the first 12 hex characters of the
+text's SHA-256). Once that request is approved, `box.setPolicy(text, approvalId)` applies the text, but only if the
+request came from one of the track's own tasks and was approved by an owner or an admin, never by an approver, an agent
+or the app. Each new line's "Changed by" names that person and the text's `# source:` line. A rule such as "Rule
+changes go to an admin." sends those requests to the right people.
+
+**The owner is the backstop.** An owner may answer any request within their limit (never their own). A request goes
+to the owner only when nobody who approves for its name can (they asked for it, or it is above their limit), so one
+person away never stops the work.
+
 **Routing.** When a task asks, the approval records `askedBy` (the person who started the task) and `route`:
 `{rule, to, amountCents, people, why}`, the rule that matched, who it goes to, the people who could approve it then,
 and one sentence such as "Over $10,000 goes to the Controller. Rosa Delgado can approve it." The amount is the
-spend, or else the first dollar figure in the question.
+spend or the largest dollar figure in the question, whichever is larger.
 
 **Who may answer** (`POST /api/approvals/<id>`, and `box.answer` from a track), checked again at the moment of the
 answer against the people as they are now. Each refusal is a `403` with the reason and a `business` note in the log.
