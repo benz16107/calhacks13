@@ -46,6 +46,7 @@ S('srv-lock', { act: async (pg) => { await click('[aria-label="System menu"]')(p
 for (const r of ['tasks', 'tasks/running', 'tasks/waiting', 'activity', 'time-machine', 'app-center'])
   S(`srv-${r.replace('/', '-')}`, { hash: r });
 S('srv-app-live', { hash: 'app/spacetime/live' });
+S('srv-app-find', { hash: 'app/find/find' });
 S('srv-app-factory', { hash: 'app/factory/factory' });
 S('srv-tasks-dark', { hash: 'tasks', dark: true });
 for (const st of ['running', 'waiting', 'done', 'failed', 'undone']) S(`srv-task-${st}`, { hash: async () => `task/${await firstTask(SRV, st)}` });

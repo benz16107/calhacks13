@@ -18,7 +18,7 @@ How it was walked:
 
 ## Status
 
-**Fixed 31, open 42** (73 findings: 15 web, 22 Server, 36 Personal; parity findings join when measured). Each fixed
+**Fixed 32, open 41** (73 findings: 15 web, 22 Server, 36 Personal; parity findings join when measured). Each fixed
 finding gets a **Fixed** line with the commit and an after-screenshot in `after/`.
 
 | Owner | Open |
@@ -26,7 +26,6 @@ finding gets a **Fixed** line with the commit and an after-screenshot in `after/
 | portal | W4 to W12, W14, W15, S1, S5 to S7, S11, S14, S17 to S23, S25, S26, S27 |
 | factory track | S11 (Factory half) |
 | personal | P-36; P-29 waits for Ben |
-| find track | P-35 |
 | image | S2, S15, S16, S24, P-4, P-17, P-28, then P-1 with release |
 
 Release (P-1): one rebuild of all four ISOs from one main commit, about 75 minutes to a verified release plus 20 for
@@ -498,7 +497,7 @@ plain-zero alternate, so the only fix is a second typeface for numbers. Recommen
   Owner: personal.
 - **P-34. P2. Fixed in 61180f4** (the first after-shot predates it). Key names made from variable names: "ASI one API key", "Wallet solana key". Fix: "ASI:One API key",
   "Solana wallet key". Owner: personal.
-- **P-35. P2.** The Find panel shows `FIND_CLOUD_SYNC=1` and "Described by claude-sonnet-4-6 via Droid task
+- **P-35. P2. Fixed in ab2a67c** ([after](after/srv-app-find.png)). The Find panel shows `FIND_CLOUD_SYNC=1` and "Described by claude-sonnet-4-6 via Droid task
   tzw81bc1dd" (`after/personal-panel-dark.png`). Fix: "Search runs on this computer." and "Described by Claude".
   Owner: find track.
 - **P-36. P2.** The sidebar cuts "Agent wallet (Solana devne..."; drop the bracketed note as the portal does
