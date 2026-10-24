@@ -98,7 +98,7 @@ And the day's "What our agents did" page, rewritten every 15 minutes from the bo
 
 ![The GurtOS agent activity gadget](screenshots/gadget.png)
 
-**The issue panel**, from before: waiting for an OK, then rolled back.
+**The issue panel** on BOX-29: waiting for an OK, then rolled back.
 
 ![The GurtOS agent task panel waiting for an OK](screenshots/panel-waiting.png)
 
