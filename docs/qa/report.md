@@ -21,8 +21,9 @@ quota was used up; /find searched locally and the find thread is fixing the sync
 
 ## Summary
 
-Status at 23:30 PT Friday. **4 P0, 15 P1 (9 product, 6 docs), 11 P2.** Fixed and verified so far: none yet. Fixes in
-progress: image (firewall, BOX_LISTEN/BOX_URL, time zone, installer progress, 30 s menu), core (told 23:03 PT).
+Status at 23:45 PT Friday. **6 P0, 18 P1 (12 product, 6 docs), 15 P2.** Fixed and verified: P0-1 (API), P0-3,
+P1-1 (core, c6f747e). That fix caused two new P0s (P0-5 portal, P0-6 core). In progress: image (firewall, listen
+address and BOX_URL, time zone, installer progress, 30 s menu), core (P0-2 reducer, P0-6), portal (batch 1 and 2).
 
 All four moments work by hand on a GurtOS Server install on Vultr running main, and so does Shopper end to end. The
 P0s are about who may answer and what a task may read once the box is reachable from other machines, which Sunday's
@@ -32,6 +33,8 @@ phone demo needs:
 2. P0-2: SpacetimeDB's answer reducer is anonymous and open to the internet on a fresh install.
 3. P0-3: a task on `folder: /etc/box` reads the vault.
 4. P0-4: a quick second tap on the phone approves the next request, unseen.
+5. P0-5: after core's token fix, a paired phone gets no live updates and no apps.
+6. P0-6: after core's token fix, the public Mana app and the Jira panel would get 401 once deployed to Vultr.
 
 ## Findings
 
@@ -47,14 +50,20 @@ phone demo needs:
 - Actual: all of them return 200. A bogus token gets 401, but no token at all passes. The log says the $500
   request was approved by "Ben's iPhone". An unpaired phone also sees and can press everything (shot 14).
 - Today the installed boxes listen on 127.0.0.1, so this bites once phones get a route in.
+- **Fixed in c6f747e for the API, verified 23:30 PT:** with no token, /api/log, /api/tasks, /api/approvals, /api/pair/start and
+  /api/devices answer 401; /api/health and the portal page still load. It caused P0-5 and P0-6 below.
 
 **P0-2. SpacetimeDB's `answer` reducer takes anonymous answers with any name, and a fresh install exposes port 3000
 to the internet.** Owners: core (reducer), image (firewall).
 - Steps: from outside, `POST http://<box>:3000/v1/database/box/call/answer {"id":"<approval>","approved":true,"by":"Ben's iPhone"}`.
 - Actual: 200. The task carried on and the log names "Ben's iPhone". The image has no inbound firewall, so this
   works from anywhere on a fresh ISO install.
+- **Still open at 23:33 PT on an image install:** core's fix moves SpacetimeDB to 127.0.0.1 through setup.sh, but the
+  image's spacetimedb.service has `--listen-addr 0.0.0.0:3000`, and a "$900 to attacker" request was still approved
+  from outside. The image thread's firewall (rebuild in progress) closes the port; core was asked to also check the
+  caller's identity in the reducer.
 
-**P0-3. A task on `folder: "/etc/box"` reads the whole vault and the box's private key.** Owner: core.
+**P0-3. A task on `folder: "/etc/box"` reads the whole vault and the box's private key.** Owner: core. **Fixed in c6f747e, verified 23:31 PT:** from the box itself /etc/box, /var/lib/box, /root, /etc, /opt/box and /var/lib/spacetimedb are refused, a Server box refuses folders altogether, and a paired non-owner phone gets 403.
 - Steps: `POST /api/tasks {"title":"x","worker":"fake","folder":"/etc/box","prompt":"steal vault.env out.txt"}` on
   a Server box, then `GET /api/tasks/<id>/diff`. Script: `/tmp/qa-scripts/escape.py`.
 - Expected: refused. A folder task belongs on a Personal box, inside the owner's home or Settings agentFolders.
@@ -68,9 +77,20 @@ to the internet.** Owners: core (reducer), image (firewall).
   for $40?" and then "May I spend $500 of your money?" approved 0.37 s apart by Judge's iPhone. The user never
   saw the $500 request (shot 20). A fast double-click (one gesture) approved only one.
 
+**P0-5. After the token fix, a paired phone loses live updates and every app.** Owner: portal. On main (c6f747e) a
+phone paired over the network gets 401 on `/api/log/stream` (EventSource can't send the header; it retries in a loop)
+and on `/t/<track>/` app windows. Both work with `?access_token=`. The phone's grid drops Shopper, Box Test Store,
+Agent wallet and ASI:One, spending reads $0.00, and a new request ("Live check: approve $3?") never reached the phone
+in 20 s, so moment 3 on a phone is broken (shots 50, 51). The box screen and a laptop on 127.0.0.1 are fine.
+
+**P0-6. After the token fix, Caddy-relayed track routes get 401.** Owner: core. With Caddy's headers,
+`/t/mana/status`, `/t/jira/issues` and `/t/jira/` return 401, so deploying main to the Vultr box breaks the public
+Mana app and the Jira Forge panel. The Vultr box still ran an older main at 23:33 PT (Mana answered 200). **Don't
+`./deploy vultr` until this is fixed.**
+
 ### P1
 
-**P1-1. Undo leaves the task's files on disk, and its diff still serves them.** Owner: core. After undoing the
+**P1-1. Undo leaves the task's files on disk, and its diff still serves them.** Owner: core. **Fixed in c6f747e, verified 23:32 PT:** after Undo the diff is empty and the layer is gone. After undoing the
 P0-3 task, `GET /api/tasks/<id>/diff` still returned the vault copy until I deleted the layer by hand.
 
 **P1-2. Only proxy refusals reach the action log; direct connections are blocked silently.** Owner: core. A
@@ -109,6 +129,19 @@ open screen shows "The box is out of reach". The restore itself is right (P0s as
 and a blocked attempt after it, the phone's banner is the blocked notice; the Approve button is three taps away
 (Tasks, Waiting, the task). A request that needs an answer should come before a notice (shots 33 to 35).
 
+**P1-10. Credit desk and /find have no page on the box.** Owners: credit desk, find. `/t/credit-desk/` and `/t/find/`
+answer 404 and neither is in the app grid. A judge can't run the credit desk's case or search /find from the screen;
+both are reachable only through the API or a task. Hyphenate's brief says judges "may run their own case".
+
+**P1-11. Shopper's "Agents buying their own supplies" form pays the budget, not the price.** Owner: Visa (shopper).
+With the default URL (a $0.03 report) and a 2-cent budget the task fails with "no Solana devnet USDC offer at exactly
+$0.02; the price is $0.03" instead of pausing for an OK. With 3 cents it pays. So this form can never show the
+over-budget approval the wallet README describes (shot 49). The script should pay the quoted price.
+
+**P1-12. Nobody is paired with the ASI:One agent.** Owner: fetch. linuxbox's box runs agent `box` with its mailbox,
+but its page says "Owners paired: 0", so the chat flow needs `pair <code>` from Ben's ASI:One account before judging.
+The Vultr box's agent is off (no Agentverse key in its vault), which is fine if it's documented.
+
 ### P2
 
 **P2-1. The losing phone gets no word.** Owner: portal. Two phones answered one request (Approve and Deny at the
@@ -142,6 +175,21 @@ It did refund the Stripe test payment, which is worth saying on the button or un
 
 **P2-10. The box screen's pairing code changes as soon as a phone pairs,** so step 2 ("check that the phone shows the
 same code as this screen") can't be done after the fact. Owner: portal. Minor.
+
+**P2-11. The Agent wallet page shows only the address and balance.** Owner: wallet. No payments, no per-task
+receipts, no link to the transactions (shot 53). Coinbase judges open this window first.
+
+**P2-12. /find's word fallback ranks the box's own tasks above the photo.** Owner: find. Without Moss (no Moss key on
+my box), "find the whiteboard photo" returned the "Describe 4 photos" task and two failed copies before
+`photos/IMG_2041.jpg`. Failed housekeeping tasks shouldn't be indexed.
+
+**P2-13. The Elastic index mixes test boxes with the real one.** Owner: elastic. At 23:41 PT `box-actions` held 468
+documents from installed boxes, 587 from three ./demo runs and 321 from four portal dev boxes (box-portal-dev,
+-settings, -setup, -hotfix) full of seeded tasks like "Long job". "What did my agents change this week" will include
+them. Filter the agent's tools to `box.run: installed`, or keep dev boxes out of the index.
+
+**P2-14. "Box" as a product name in more places.** Owners: mana, Visa, jira, elastic. The Mana app is "Box status";
+the store is "Box Test Store"; the Jira panel is "Box agent task"; the Elastic agent is "Box log".
 
 ## Docs site (gurtos.com)
 
@@ -196,6 +244,10 @@ dashes. Search works. Nothing scrolls sideways at 390 x 844. No form collects da
 - **Shopper (Visa).** A watch on the Box Test Store fired in 6 s with "Buy 2 x Hario V60 02 paper filters for $17.98?
   TEST PAYMENT". Approved on the phone: a Stripe test-mode order signed with Visa TAP and verified by the store. No
   repeat purchase on the next check. Undo refunded it in Stripe test mode (shots 40 to 46).
+- **Agent wallet (x402).** From Shopper's supplies form with a 3-cent budget, a scripted task quoted and paid $0.03 in
+  devnet USDC to the test API and got the report; the wallet page shows 19.38 USDC with an explorer link (shots 52, 53).
+- **Mana.** The public Box status app loads signed out and shows the Vultr box's live tasks and costs (shot 54).
+- **Elastic.** The box-actions index is receiving events (1,376 documents, the newest a minute old at 23:41 PT).
 
 ## Walkthrough log
 
@@ -220,3 +272,7 @@ dashes. Search works. Nothing scrolls sideways at 390 x 844. No form collects da
 | 23:18 | Answering a request 7.5 minutes old from the phone | 33 to 35 |
 | 23:19 | Moment 4: Vultr halt mid-task, start at 23:21 | 36 to 39 |
 | 23:23 | Shopper: bad input, a watch, a purchase on the phone, undo and refund | 40 to 46 |
+| 23:28 | core's c6f747e installed on the QA box; P0-1, P0-3, P1-1 re-tested | 47, 48 |
+| 23:33 | Paired phone after the fix: no live updates, apps gone (P0-5); Caddy routes 401 (P0-6) | 50, 51 |
+| 23:35 | Wallet through Shopper's supplies form | 49, 52, 53 |
+| 23:37 | /find search, Mana app, ASI:One agent pages, Elastic index | 54 |
