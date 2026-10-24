@@ -18,13 +18,13 @@ How it was walked:
 
 ## Status
 
-**Fixed 86, closed 1, open 5** (92 findings: 19 web, 22 Server, 36 Personal, 15 parity). Each fixed
+**Fixed 87, closed 1, open 4** (92 findings: 19 web, 22 Server, 36 Personal, 15 parity). Each fixed
 finding gets a **Fixed** line with the commit and an after-screenshot in `after/`.
 
 | Owner | Open |
 |---|---|
 | image | P-4 (GNOME first-run colours), then P-1 with release |
-| personal | P-29 (plain zeros on the GNOME desktop), E-14 (measured once on the rebuilt ISO) |
+| personal | E-14 (measured once on the rebuilt ISO) |
 | Ben | E-6 (firewall: image built the switch, the policy is unchanged) |
 
 Release (P-1): one rebuild of all four ISOs from one main commit, about 75 minutes to a verified release plus 20 for
@@ -589,7 +589,8 @@ screen; GNOME's lock-screen blur and the folder chooser's "Open directories read
 ![](after/personal-offline-app.png) ![](after/personal-panel-dark.png)
 
 **P-29: Ben chose plain zeros.** The portal, phone app, box screen and track pages have them (e894ac2, f5fe049:
-a zero-only face loaded first). Personal's GNOME desktop still shows the slashed zero. Earlier note: The slashed zero is Atkinson Hyperlegible's own 0, part of what makes it legible; there is no
+a zero-only face loaded first). Personal's desktop has them too (16aa8a4: Atkinson Hyperlegible Next rewritten so 0 is plain; Mono keeps its slash
+for code, like the web). **Fixed.** ![](after/personal-p29-plain-zero.png) Earlier note: The slashed zero is Atkinson Hyperlegible's own 0, part of what makes it legible; there is no
 plain-zero alternate, so the only fix is a second typeface for numbers. Recommendation: keep it.
 
 **Found in the after-shots:**
