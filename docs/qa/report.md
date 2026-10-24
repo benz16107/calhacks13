@@ -64,9 +64,10 @@ network all work on main as of 717bc3f.
 | P2-18 phone tasks logged as "api" | Fixed, verified: "Ask the box" on a phone logs the device name as source | portal d64cb80 |
 | Open P1s | P1-12 ASI:One not paired; P1-13 real agent probes the proxy in moment 2; D-5; showcase S-1 to S-6 | |
 
-**Not re-tested yet:** P2-6, P2-7, P2-8, P2-10 (portal says fixed), and the installed boxes. **At 00:40:** Vultr runs current main (the public Mana app answers 200; Jira's route
-refuses calls without its secret), linuxbox runs main as of bb0ccde (has the P0-7 fix), and **the laptop, Sunday's
-demo box, still runs code from before c6f747e** (no tokens, the old UI). Core was asked to deploy it.
+**Not re-tested yet:** P2-6, P2-7, P2-8, P2-10 (portal says fixed), and the installed boxes. **At 01:08:** linuxbox runs current main. The laptop (Sunday's demo box) and Vultr run
+current core and /find but the portal from 717bc3f, without d64cb80's QR pairing (P0-8) and live-banner (P1-7) fixes.
+Core was asked to deploy both once more. /find's fixes are not yet checked on a fresh ISO install (the latest ISO,
+881318a, predates them).
 
 ## Findings
 
