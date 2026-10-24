@@ -1,0 +1,19 @@
+GurtOS
+Copyright 2026 Ben Zhou
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+
+The GurtOS images and this repository also contain third-party software, each under its own licence:
+
+- Ubuntu 24.04 packages. Each package's licence is in /usr/share/doc/<package>/copyright on an installed
+  system. GurtOS is not affiliated with or endorsed by Canonical; Ubuntu is a trademark of Canonical Ltd.
+- Node.js, under the MIT licence.
+- SpacetimeDB, by Clockwork Laboratories, under the Business Source License 1.1, which changes to the GNU Affero
+  General Public License v3.0 with a linking exception on 2031-10-14. Each GurtOS machine runs one SpacetimeDB
+  instance for its own use.
+- npm packages, including Factory's droid SDK (Apache-2.0) and the SpacetimeDB client (ISC). Each package's
+  licence is in its folder under node_modules.
+- The fonts Instrument Sans and IBM Plex Mono, under the SIL Open Font License 1.1.
+
+Factory's Droid CLI is not distributed with GurtOS. A GurtOS machine downloads it from Factory's servers on
+first start, and its use is governed by Factory's terms.
