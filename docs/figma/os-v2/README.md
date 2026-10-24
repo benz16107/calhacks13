@@ -32,13 +32,34 @@ ones to send.
 
 The footer's Skip shows on the optional steps (apps, keys, privacy, appearance). Next is the only filled button.
 
-## The checkpoint screens
+## Settings (`settings/`)
 
-| PNG | Node | What it shows |
+One window with a sidebar (280 px) and a page clamped to 680 px. Every page is boxed lists of rows. Changes are
+`PATCH /api/settings` unless noted; reads are `GET /api/settings` and `GET /api/system`. Owner only: the box's own
+screen or the owner's phone.
+
+| PNG | Node | Page and data |
 |---|---|---|
-| `3-settings-permissions.png` | `56:446` | Settings on Permissions (now also in `settings/`) |
-| `3-settings-permissions-dark.png` | `57:1122` | The same window in the Dark mode of the same variables |
-| `4-desktop-tasks.png` | `57:722` | Tasks as a window, like Activity Monitor |
+| `settings/01-general.png` | `76:2071` | Name (`boxName`), address (`hostname`), time zone (`timezone`), network (`network.interfaces`), Restart, Run setup again (`POST /api/setup/reopen`) |
+| `settings/02-agents-and-models.png` | `76:2395` | The worker and model, the model keys (`GET /api/vault`), and today's spend on models and tools (task `costCents`) |
+| `settings/03-permissions.png` | `56:446` | `networkDefault`, `defaultHosts`, `agentFolders` (Personal), `approvalThresholdCents`, `defaultBudgetCents`, `quietHours` |
+| `settings/03-permissions-dark.png` | `57:1122` | The same page with the window in the Dark mode of the variables (`appearance.theme`) |
+| `settings/04-accounts-and-keys.png` | `76:2694` | Every key name in the vault with when it was set (`GET /api/vault`: `setAt`, null when put there by hand), Replace or Set key, and the owner device. Never a value |
+| `settings/04-accounts-and-keys-replace-sheet.png` | `76:3011` | The sheet for `PUT /api/vault/<NAME> {value}`: a password field, Cancel and Save |
+| `settings/05-apps.png` | `76:3178` | Every installed app with a switch (`GET /api/apps?all=1`, `status`, `error`; `POST /api/apps/<id>/enable` and `disable`) and a link to App Center |
+| `settings/06-devices.png` | `76:3757` | Paired phones with Revoke (`GET /api/devices`, `DELETE /api/devices/<id>`), and a pairing card (`POST /api/pair/start`) |
+| `settings/07-updates.png` | `77:3222` | Systems A and B (`box-update status`), last check, `autoUpdate`, `updateChannel`, and Go back (`box-update rollback`), the one destructive button |
+| `settings/08-privacy-and-logs.png` | `77:3513` | `logRetentionDays`, the log's size and path, the Elastic and Mana sharing switches, lock-screen titles |
+| `settings/09-appearance.png` | `77:3809` | `appearance.theme`, `appearance.accent`, wallpaper, and the accessibility switches |
+| `settings/10-about.png` | `77:4131` | The wordmark, `editionName`, `version`, `build`, `boxId`, uptime, and credits for the icons and the typeface |
+
+## Windows (`windows/`)
+
+| PNG | Node | What it shows, and its data |
+|---|---|---|
+| `windows/tasks.png` | `57:722` | Tasks, like Activity Monitor: views in the header bar (All, Running, Waiting, Done with counts), one row per task with the user it runs as, its state badge, its `step` and progress, its cost of its budget, and a summary strip (running, waiting, spent today, blocked today) |
+| `windows/app-center.png` | `79:4011` | App Center: a sidebar of filters (all, on, off, needs a key) and a grid of app cards with status, hosts and keys, and one action each. `GET /api/apps?all=1` |
+| `windows/app-center-shopper-detail.png` | `79:4398` | One app: what it does, Turn off, every host it reaches (`access.hosts`), every key it needs (`access.secrets`), and the tools, windows and triggers it adds |
 
 ## System sheets
 
