@@ -14,7 +14,7 @@ Devpost text, and Ben's approved list.
 **Demo step** names the check in `./demo` (`core/demo.ts` moments, or `tracks/<name>/demo.ts`). "none" means no
 automated check yet.
 
-Checked against main `7f784ff`, Sat Oct 24 03:10 PT. `./demo` on that commit: 25 passed, 0 failed, 1 pending (real Droid, off by default).
+Checked against main `8d25e1f`, Sat Oct 24 03:25 PT. `./demo` on that commit: 25 passed, 0 failed, 1 pending (real Droid, off by default).
 
 ## Freeze plan
 
@@ -32,9 +32,9 @@ Checked against main `7f784ff`, Sat Oct 24 03:10 PT. `./demo` on that commit: 25
 | verified (ISO) | 3 |
 | verified | 31 |
 | merged | 28 |
-| building | 23 |
-| planned | 33 |
-| **Total** | **118** |
+| building | 24 |
+| planned | 38 |
+| **Total** | **124** |
 
 **Collisions** (detail below): none open at 02:40. The three found at 02:25 were resolved on the `business` branch
 (rebased, kill switch on core's `settings.paused`). Still watched: portal/dist rebuilt from merged sources (C-4).
@@ -207,13 +207,26 @@ Owner: the Mana thread.
 | A GurtOS guide agent in Mana | mana | planned | | | Mana |
 | A public Mana home page for the entry | mana | planned | | | Mana |
 
+## Apify (GurtOS Personal and Server)
+
+Owner: the Apify thread. Ben approved the Apify push; same freeze as everything else.
+
+| Feature | Owner | Status | Commit | Demo step | Tracks |
+|---|---|---|---|---|---|
+| Run any Actor, Best Buy price check, places, through the broker with no token in the task | apify | verified Oct 23 23:40 (live Best Buy price) | 97694e0 | tracks/apify/demo.ts | Apify |
+| Our own published Actor "Agent-Safe Page Reader" (flags or strips hidden instructions aimed at agents; re-enters Best Actor) | apify | building (uncommitted in the Apify worktree: actor/, detect.test.ts; not yet published) | | detect.test.ts in worktree | Apify |
+| Apify's MCP server as the agents' web toolkit, through the broker and within budgets | apify, core | planned | | | Apify |
+| An Apify schedule or webhook starts a GurtOS task through core's webhook trigger | apify, core | planned | | | Apify |
+| The Website Content Crawler feeds /find | apify, find | planned | | | Apify, Moss |
+| A web source (a site, reviews) for the credit desk | apify, credit desk | planned | | | Apify, Hyphenate |
+| Apify run cost counts in task budgets and shows in the portal | apify, core, portal | planned (run cost already counts as the tool's cost; portal display not checked) | | | Apify |
+
 ## Other tracks, as they exist
 
 | Feature | Owner | Status | Commit | Demo step | Tracks |
 |---|---|---|---|---|---|
 | Elastic: log in Serverless, GurtOS log agent | elastic | verified Oct 24 00:48 (index and agent via API) | 70f3673, ca03219 | tracks/elastic/demo.ts | Elastic |
 | /find: search page, photos described on request, Moss local index | find | verified Oct 24 00:33 (search on a phone) | a0d6dbd, 4351905 | tracks/find/demo.ts | Moss |
-| Apify: run any Actor, Best Buy price check, places | apify | verified Oct 23 23:40 (live Best Buy price) | 97694e0 | tracks/apify/demo.ts | Apify |
 
 ## Figma
 
