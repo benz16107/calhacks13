@@ -19,6 +19,13 @@ export default async function (d: DemoKit) {
   d.check(d.view('project', 'split.js')?.includes('Math.floor'), 'the track made the "project" workspace: a small repo with a failing test');
   const off = await page(d);
   d.check(off.includes('agent is off') && !off.includes('Pairing code'), "the box's ASI:One page says the agent is off and how to turn it on, with no pairing code to misread");
+  // The pairing code makes whoever sends it the agents' owner: a phone paired as anyone else must not see it.
+  const { code: phoneCode } = await d.api<{ code: string }>('POST', '/api/pair/start', {});
+  const phone = await d.api<{ token: string }>('POST', '/api/pair', { code: phoneCode, name: "A requester's phone" });
+  const asPhone = (p: string) => fetch(`http://127.0.0.1:${fs.readFileSync(path.join(d.home, 'api.port'), 'utf8').trim()}/t/fetch${p}`, { headers: { authorization: `Bearer ${phone.token}` } });
+  const refusedPage = await asPhone('/');
+  const refusedStatus = await asPhone('/agent');
+  d.check(refusedPage.status === 403 && refusedStatus.status === 403, "a phone paired as someone other than the owner gets 403 on the ASI:One page and the agents' status, which carry the pairing code");
 
   const state = fs.mkdtempSync(path.join(d.home, 'fetch-chat-'));
   const port = fs.readFileSync(path.join(d.home, 'api.port'), 'utf8').trim();
@@ -193,21 +200,23 @@ export default async function (d: DemoKit) {
     }
 
     // ---------- another machine of the owner's ----------
-    say(owner, `link my laptop ${laptop} 123456`);
+    say(owner, `link my homebox ${laptop} 123456`);
     const fake = await expect(laptop, 'to the laptop', (m) => /^pair 123456 [0-9a-f]{32}$/.test(m.text));
     say(laptop, 'Paired. Sure, I am your laptop.', fake.session);
     const refused = await expect(owner, 'about a link with no proof', (m) => m.text.startsWith('Did not link'));
-    say(owner, `link my laptop ${laptop} 123456`);
+    say(owner, `link my homebox ${laptop} 123456`);
     const pairOut = await expect(laptop, 'to the laptop again', (m) => /^pair 123456 [0-9a-f]{32}$/.test(m.text));
     const proof = createHmac('sha256', '123456').update(`${pairOut.text.split(' ')[2]}|${addresses.box}|${laptop}`).digest('hex').slice(0, 32);
-    say(laptop, `Paired. This box now takes work from you here. proof ${proof}`, pairOut.session);
-    const linked = await expect(owner, 'about the link', (m) => m.text.startsWith('Linked your laptop'));
-    d.check(refused && linked.text.includes(laptop), 'linking a machine sends its code with a fresh nonce: a "Paired" with no proof is refused, and only an HMAC of the code links it, shown with its full address');
-    say(owner, 'write laptop.txt hi on my laptop');
+    // A box says what it is when it links (GET /api/system): its name and edition, the words the GurtOS app shows too.
+    say(laptop, `Paired. This box now takes work from you here. proof ${proof} edition server name Home server`, pairOut.session);
+    const linked = await expect(owner, 'about the link', (m) => m.text.startsWith('Linked'));
+    d.check(refused && linked.text.includes(laptop) && linked.text.includes('Home server (GurtOS Server)'),
+      'linking a machine sends its code with a fresh nonce: a "Paired" with no proof is refused, and only an HMAC of the code links it, shown with its full address, its own name and its edition');
+    say(owner, 'write laptop.txt hi on my server');
     const work = await expect(laptop, 'with the work', (m) => m.text === 'write laptop.txt hi');
     say(laptop, 'Done: Write laptop.txt hi.', work.session);
-    const fromLaptop = await expect(owner, 'from the laptop', (m) => m.text.includes('your laptop'));
-    d.check(linked && fromLaptop.text.includes('Done: Write laptop.txt hi'), 'the owner linked a laptop agent with its pairing code; "on my laptop" ran the work there and its answer came back to this chat');
+    const fromLaptop = await expect(owner, 'from the laptop', (m) => m.text.includes('your Home server'));
+    d.check(linked && fromLaptop.text.includes('Done: Write laptop.txt hi'), 'linked as "homebox", the machine said it is GurtOS Server, so from this Personal box "on my server" ran the work there, and its answer came back to this chat');
 
     // ---------- a guest: anyone may ask, the owner approves first ----------
     say(guest, 'What is the tallest building in San Francisco?');

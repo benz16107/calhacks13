@@ -321,7 +321,7 @@ class Brain:
             self.s.update(code=new_code(), closed_at=time.time(), wrong=[])  # the code on the screen works once
             note({'kind': 'asi1.paired', 'agent': self.LABEL, 'owner': sender})
             # Another of the owner's boxes asked with a nonce: show it this box knows the code too.
-            proof = f' proof {pair_proof(code, nonce, sender, self.address)}' if nonce else ''
+            proof = f' proof {pair_proof(code, nonce, sender, self.address)}{self.whoami()}' if nonce else ''
             return self.say(sender, session, 'Paired. This box now takes work from you here. Tell me what to do, for '
                                              f'example "fix the failing test in my project".{proof}')
         self.s['wrong'].append(time.time())
@@ -331,6 +331,15 @@ class Brain:
             return self.say(sender, session, "Five wrong codes, so pairing is closed and the code changed. Open the ASI:One "
                                              "page on the box's screen again for a new one.")
         self.say(sender, session, "That is not the code on the box's screen.")
+
+    def whoami(self):
+        """' edition personal name Ben's MacBook': what this box says about itself, for the box that links to it."""
+        try:
+            s = call('GET', '/system')
+        except (BoxError, OSError):
+            return ''
+        name = re.sub(r'\s+', ' ', str(s.get('boxName') or ''))[:60]
+        return f" edition {s.get('edition', 'server')}" + (f' name {name}' if name else '')
 
     def mine(self, sender):
         """This person's chat tasks, newest first."""
@@ -661,7 +670,8 @@ OUTSIDE = {
     'weather': {'address': 'agent1qfvydlgcxrvga2kqjxhj3hpngegtysm2c7uk48ywdue0kgvtc2f5cwhyffv', 'label': 'Weather Agent (Fetch.ai)'},
     'stocks': {'address': 'agent1q0s9puxhqvyd0f865fxsaf4f392qpc6ufs3xce59wz3teyguw7tyqywch0y', 'label': 'Stock Price Agent (Fetch.ai)'},
 }
-SELF_NAMES = {'box', 'server', 'here', 'this box', 'gurtos'}
+SELF_WORDS = {'box', 'here', 'gurtos'}  # always this box
+EDITION_WORDS = {'personal': ['laptop', 'desktop', 'computer', 'personal'], 'server': ['server'], 'business': ['business', 'office']}
 GUEST_KIND = ("Sort a request a stranger sent to someone's personal AI agent. Reply with one word: lookup (a question the "
               "public web can answer), price (a product's price or stock), or other (anything else: code, files, buying, "
               "contacting people, anything about the owner).")
@@ -677,6 +687,7 @@ class Box(Brain):
         self.agents = agents or {}
         self.s.setdefault('paid', [])  # [[time, FET]]: automatic payments stop at PAY_DAY_FET a day
         self.s.setdefault('mana_guests', {})
+        self.s.setdefault('machines', {})  # a linked machine's address -> "Ben's MacBook (GurtOS Personal)"
         self.last_guest_poll = 0
 
     # ---------- whom a message is from ----------
@@ -722,11 +733,11 @@ class Box(Brain):
             return self.say(sender, session, f"Sent the pairing code to {address}. Check that this is the address on your "
                                              f"{name}'s ASI:One page. It must answer with proof that it knows the code.")
         where = re.search(r'\b(?:on|using|with) (?:my|the) ([a-z][\w-]{1,20})\b', t)
-        if where and where.group(1) in self.s['peers']:
-            name = where.group(1)
+        if where and where.group(1) in self.s['peers']:  # a linked machine's own words beat this box's edition words
+            name, address = where.group(1), self.s['peers'][where.group(1)]
             rest = re.sub(rf'\s*\b(?:on|using|with) (?:my|the) {re.escape(name)}\b', '', text, flags=re.I).strip(' ,.')
-            return self.ask(sender, session, self.s['peers'][name], f'your {name}', rest or text, 'peer')
-        if where and where.group(1) in SELF_NAMES:
+            return self.ask(sender, session, address, f"your {self.s['machines'].get(address, name)}", rest or text, 'peer')
+        if where and where.group(1) in self.self_names():
             text = re.sub(rf'\s*\b(?:on|using|with) (?:my|the) {re.escape(where.group(1))}\b', '', text, flags=re.I).strip(' ,.')
         named = re.search(r'\bask (?:agent )?(agent1[0-9a-z]{40,})\b[\s:,]*(.*)', text, re.I | re.S)
         if named:
@@ -741,6 +752,21 @@ class Box(Brain):
         if route in OUTSIDE:
             return self.ask(sender, session, OUTSIDE[route]['address'], OUTSIDE[route]['label'], text, 'outside')
         self.start(sender, session, text)
+
+    def system(self):
+        if not getattr(self, '_system', None):
+            try:
+                self._system = call('GET', '/system')
+            except (BoxError, OSError):
+                return {}
+        return self._system
+
+    def edition(self):
+        return self.system().get('edition', 'server')
+
+    def self_names(self):
+        """Words that mean this box: always "box" or "here", its edition's words ("server" on GurtOS Server), its name."""
+        return SELF_WORDS | set(EDITION_WORDS.get(self.edition(), [])) | set(re.findall(r'[a-z][\w-]{1,20}', str(self.system().get('boxName', '')).lower()))
 
     def route(self, text):
         said = ask_model(ROUTE, text)
@@ -850,10 +876,20 @@ class Box(Brain):
         code, nonce = relay.pop('code', ''), relay.pop('nonce', '')
         proof = re.search(r'\bproof ([0-9a-f]{32})\b', text)
         if text.startswith('Paired') and proof and hmac.compare_digest(proof.group(1), pair_proof(code, nonce, self.address, relay['agent'])):
-            self.s['peers'][relay['name']] = relay['agent']
-            note({'kind': 'asi1.machine.linked', 'name': relay['name'], 'agent': relay['agent']})
-            return self.say(relay['to'], relay['session'], f"Linked your {relay['name']}: {relay['agent']}. Say \"... on my "
-                                                           f"{relay['name']}\" to run work there. It can only answer you, never give orders.")
+            edition = (re.search(r'\bedition (server|personal|business)\b', text) or [None, ''])[1]
+            box = (re.search(r'\bname (.{1,60})$', text) or [None, ''])[1].strip()
+            # The edition's words ("laptop" for Personal) only when this box is another edition, or they would be ambiguous.
+            mine = set(EDITION_WORDS.get(self.edition(), []))
+            words = [relay['name'], *[w for w in EDITION_WORDS.get(edition, []) if w not in mine], *re.findall(r'[a-z][\w-]{1,20}', box.lower())]
+            for w in dict.fromkeys(words):
+                if w not in SELF_WORDS:
+                    self.s['peers'][w] = relay['agent']
+            label = f"{box} (GurtOS {edition.title()})" if box and edition else relay['name']
+            self.s['machines'][relay['agent']] = label
+            note({'kind': 'asi1.machine.linked', 'name': label, 'agent': relay['agent']})
+            said = ', '.join(f'"on my {w}"' for w in dict.fromkeys(words[:4]) if w not in SELF_WORDS)
+            return self.say(relay['to'], relay['session'], f"Linked {label}: {relay['agent']}. Say {said} to run work there. "
+                                                           "It can only answer you, never give orders.")
         self.say(relay['to'], relay['session'], f"Did not link {relay['agent']}: it did not prove it knows the code. Get a new "
                                                 f"code from your {relay['name']}'s ASI:One page and try again.")
 

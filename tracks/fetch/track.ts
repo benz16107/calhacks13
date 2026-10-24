@@ -103,6 +103,18 @@ async function agentSwitch(box: Box, input: { on?: boolean } & Conf) {
   return status();
 }
 
+/**
+ * Who may use a route, by the x-box-caller header the box sets (a caller cannot forge it). The pairing code makes
+ * whoever sends it the agents' owner, so only the box's own screen and the owner's phone see it or switch the agents.
+ * The agents themselves call as 'service'.
+ */
+const OWNER = ['screen', 'owner'];
+const AGENTS = ['screen', 'owner', 'service'];
+function only(req: Request, callers: string[]) {
+  const caller = req.headers.get('x-box-caller') ?? 'none';
+  return callers.includes(caller) ? undefined : Response.json({ error: "only the box's own screen or the owner's phone can do this" }, { status: 403 });
+}
+
 export default {
   name: 'fetch',
   secrets: ['AGENTVERSE_API_KEY', 'ASI_ONE_API_KEY'], // handed to the agent: its mailbox, and ASI:One's model
@@ -124,7 +136,9 @@ export default {
 
   routes: {
     // A plain page until the portal shows this app. It has the pairing code the owner types into ASI:One.
-    'GET /': (_req, box) => {
+    'GET /': (req, box) => {
+      const refused = only(req, OWNER);
+      if (refused) return refused;
       const s = status();
       const esc = (v: unknown) => String(v ?? '').replace(/[&<>"]/g, (c) => `&#${c.charCodeAt(0)};`);
       let hasKey = true;
@@ -153,16 +167,20 @@ export default {
 <p>Owners paired: ${s.owners}.</p>${team && s.running ? `<p>Its team on Agentverse:</p><ul>${team}</ul>` : ''}`;
       return new Response(html, { headers: { 'content-type': 'text/html' } });
     },
-    'GET /agent': () => Response.json(status()),
+    'GET /agent': (req) => only(req, OWNER) ?? Response.json(status()),
     // The box's test-FET wallet on Fetch's testnet, which the app agents name in their payment requests.
-    'GET /wallet': async () => Response.json(await boxWallet()),
+    'GET /wallet': async (req) => only(req, AGENTS) ?? Response.json(await boxWallet()),
     // Did this transaction pay the box's wallet, for this request? {tx, amount, reference}
     'POST /pay/verify': async (req) => {
+      const refused = only(req, AGENTS);
+      if (refused) return refused;
       const { tx, amount, reference } = await req.json().catch(() => ({}));
       return Response.json(await verifyIncoming(String(tx ?? ''), String(amount ?? ''), String(reference ?? '')));
     },
     // The agents' own events in the box's action log: pairings, payments, blocked instructions, guests.
     'POST /note': async (req, box) => {
+      const refused = only(req, AGENTS);
+      if (refused) return refused;
       const data = await req.json().catch(() => ({}));
       if (typeof data?.kind !== 'string' || !data.kind.startsWith('asi1.') || JSON.stringify(data).length > 4000) {
         return Response.json({ error: 'a note needs a kind starting with asi1., under 4000 characters' }, { status: 400 });
@@ -171,7 +189,7 @@ export default {
       return Response.json({ ok: true });
     },
     // {on: true} starts the agents and keeps them on across restarts; {on: false} stops them. Optional: {name, testAgents}.
-    'POST /agent': async (req, box) => Response.json(await agentSwitch(box, await req.json().catch(() => ({})))),
+    'POST /agent': async (req, box) => only(req, OWNER) ?? Response.json(await agentSwitch(box, await req.json().catch(() => ({})))),
   },
 
   apps: [{ name: 'asi1', title: 'ASI:One', href: '/' }],
