@@ -255,6 +255,7 @@ Also built: the box earns over x402 (it sells its audit proof, a metered file se
 
 **Architecture:** seven controls (key in the core, exact price, devnet USDC only, task hosts only, budget then the owner, never twice, everything in the log). Known limits: devnet only, `GET` only, the box holds the key.
 
+**Your OK, from the device you carry:** on the iPhone (TestFlight, internal testing) a payment asks for Face ID first, and the log records "Approved by iPhone (Face ID, reported)"; the Watch approves only up to $25, on the wrist, never a Business request or a Shopper purchase. The web app stays the path anyone can use.
 **Real attacks:** the page cites three incidents with sources (Bybit as the FBI describes it, Coinbase's own 8-K, Equifax as the FTC describes it) and says what the OS's controls do and do not do about each kind of attack.
 **Builder feedback:** what worked, plus 28 points across two rounds (x402 and the facilitator on Oct 23; Bazaar, `upto`, Server Wallets, policies, faucets and Onramp on Oct 24), in `tracks/wallet/FEEDBACK.md`. Payments are real devnet transactions in test USDC; nothing is simulated except our own test API.
 
