@@ -1,0 +1,167 @@
+---
+order: 10
+sponsor: SpacetimeDB
+prize: SpacetimeDB as the core real-time backend
+title: Live tasks and approvals on every screen at once
+summary: Each GurtOS box runs its own SpacetimeDB, with a TypeScript module the box publishes at boot. It holds the live state of every task and every approval. The box's own screen, the portal and every paired phone subscribe to it, so an agent's request for an OK lands everywhere at the same moment, and a phone answers it by calling a reducer. The first answer wins.
+proof: 'In every merge-gate run, a task stops over its budget and SpacetimeDB shows the request live with its amount, payee and purpose. Another task keeps running and finishes meanwhile. The OK from a phone goes through SpacetimeDB''s answer reducer into the box''s log, the task spends its $8.00 of test money and finishes, and SpacetimeDB shows it done with its cost.'
+criteriaSource: "From SpacetimeDB's track description, as copied into the project's track plan."
+criteria:
+  - ask: 'SpacetimeDB as the core real-time backend.'
+    how: 'SpacetimeDB is how every screen sees the box live. The portal, the box''s kiosk screen and phones read the <code>task</code> and <code>approval</code> tables and answer through the <code>answer</code> reducer. The box writes through <code>putTask</code> and <code>putApproval</code>, which refuse anyone but the box.'
+  - ask: 'Used meaningfully, not on the side: live shared state.'
+    how: 'One shared state for every person and every task on the box: what each task is doing now (<code>step</code>), its cost against its budget, and every pending approval with its question, amount, payee and purpose.'
+  - ask: 'Instant sync.'
+    how: 'An approval appears on the box screen and the phone at the same moment. Approve on either and the other''s banner goes away. The box picks up the answer from its subscription and writes it to its log within milliseconds.'
+  - ask: 'Agents coordinating.'
+    how: 'Agents and people meet in the <code>approval</code> table: a paused agent''s request is a row, and whoever answers first, from any screen or a chat, lets it carry on. The credit desk''s two agent seats run side by side and both stop there for the controller. Agents do not message each other through SpacetimeDB yet.'
+    status: partly
+video: main
+shots:
+  - src: ../../assets/shots/box-home.png
+    alt: 'The box screen with an approval banner asking to spend 15 dollars of test money, and widgets showing two tasks waiting and two running.'
+    caption: 'The box screen: the request arrives as a banner while other tasks keep running in the widgets. All from the task and approval tables.'
+  - src: ../../assets/shots/phone-approval.png
+    alt: 'The same approval on a phone, with Approve and Deny buttons.'
+    caption: 'The same request on a phone at the same moment. Approve calls the answer reducer.'
+    tall: true
+  - src: ../../assets/shots/phone-tasks.png
+    alt: 'The task list on a phone, with each task''s state and live step.'
+    caption: 'Tasks on the phone, live from the task table.'
+    tall: true
+  - src: ../../assets/shots/box-tasks.png
+    alt: 'The Tasks window on the box screen listing tasks with their state, live status and cost against budget.'
+    caption: 'The Tasks app: each row''s live status and cost of budget come from SpacetimeDB.'
+links:
+  - label: The module, core/spacetime/src/index.ts
+    href: https://github.com/benz16107/calhacks13/blob/main/core/spacetime/src/index.ts
+    note: 'The two public tables and three reducers, in 66 lines.'
+  - label: The box's mirror, core/live.ts
+    href: https://github.com/benz16107/calhacks13/blob/main/core/live.ts
+  - label: The portal's client, portal/src/live.ts
+    href: https://github.com/benz16107/calhacks13/blob/main/portal/src/live.ts
+  - label: 'Docs: live updates'
+    href: https://gurtos.com/reference/live-updates/
+  - label: 'Docs: approve from your phone'
+    href: https://gurtos.com/guides/approve-from-your-phone/
+flow:
+  - zone: task
+    label: A task asks for an OK
+    detail: Over its budget, or with <code>box_ask</code>. The broker pauses it.
+  - zone: core
+    label: The log, then SpacetimeDB
+    detail: The box writes <code>approval.asked</code> to its log, then calls <code>putApproval</code>.
+  - zone: you
+    label: Every screen sees it
+    detail: Box screen, portal and phones subscribe to the <code>approval</code> table.
+  - zone: you
+    label: Someone answers
+    detail: The phone calls <code>answer</code>. A pending row changes once; the first answer wins.
+  - zone: core
+    label: The box picks it up
+    detail: Its subscription sees the update and writes the answer, with who gave it, to the log.
+  - zone: task
+    label: The task carries on
+    detail: The other screens' banners go away. Other tasks never stopped.
+status:
+  - part: SpacetimeDB on the box
+    state: live
+    note: 'Self-hosted, installed by <code>core/setup.sh</code> as <code>spacetimedb.service</code> on x86 and ARM64. Each <code>./demo</code> run publishes its own database.'
+  - part: The amounts in the demo
+    state: test
+    note: 'The $8.00 is test money (<code>example.spend</code>).'
+  - part: Phones through a tunnel
+    state: live
+    note: 'When port 3000 is out of reach, the portal falls back to the action log stream and says so in Settings.'
+---
+
+## Evidence
+
+From the Oct 24 merge-gate run on the x86 test VM (22 sections, 175 checks, 0 failed):
+
+```
+moment 3: a pause for your OK
+  ok    P stopped over budget, and SpacetimeDB shows it live: "Spend $8.00 to Test Vendor on example.spend (test spend on a GPU hour)? Budget $5.00, spent $0.00."
+  ok    another task kept running and finished while P waited
+  ok    the portal's inbox lists it too (GET /api/approvals?state=pending)
+  ok    the request carries the amount ($8.00), payee and purpose, so the phone can fill its rows
+  ok    the OK from the phone came back through SpacetimeDB into the log
+  ok    P carried on, spent $8.00 (test money) and finished
+  ok    SpacetimeDB shows it done live, with its cost and last step
+  ok    only one of the two parallel $0.60 payments went through: $0.60 spent, not $1.20 (atomic budget)
+moment 4: pull the plug
+  ok    the box is down hard: no processes, no mounts, a torn last line
+  ok    the box came back and picked up the long job (running)
+  ok    the long job carried on from where it was: no step done twice, none skipped
+  ok    the deploy is still waiting for its OK, live in SpacetimeDB
+  ok    approved after the restart, it finished
+```
+
+The test plays the phone through SpacetimeDB itself: it reads the rows with SQL over SpacetimeDB's HTTP API and
+calls the `answer` reducer, which is what the phone's Approve button does. A task's own user cannot do the same: the firewall keeps task users away from port 3000, and moment
+2 checks it ("it could not reach SpacetimeDB or the box's API to approve itself").
+
+## How it works
+
+<Flow steps={frontmatter.flow} />
+
+**The module** (`core/spacetime/src/index.ts`, SpacetimeDB 2.13):
+
+| Table or reducer | Who | What |
+|---|---|---|
+| `task` (public) | read by everyone | `id, title, state, source, workspace, worker, costCents, budgetCents, updatedAt, step, note` |
+| `approval` (public) | read by everyone | `id, task, question, costCents, payee, purpose, state, by` |
+| `owner` (private) | set at `init` | The identity that published the module. That is the box. |
+| `putTask`, `putApproval` | the box only | Insert or update a row. Anyone else gets "only the box may do this". An answered approval never goes back to pending. |
+| `answer({id, approved, by})` | anyone with the box's address | Sets a pending approval to approved or denied. A second answer does nothing. |
+
+**The log stays the truth.** The action log on disk is fsynced line by line, and undo and resume are rebuilt from it.
+SpacetimeDB is the live mirror: the box writes every task and approval change to it as it happens. If SpacetimeDB is
+down, the box keeps working and catches up when it returns, and an answer given while the box was offline is applied
+when its subscription reconnects. After a power cut, the box republishes the module and refills the tables from the
+log, which is why the deploy in moment 4 is "still waiting for its OK, live in SpacetimeDB".
+
+**Clients.** The portal is one Preact app for the box's kiosk screen, a laptop and a phone. It calls the HTTP API once,
+then subscribes to both tables over `ws://<box>:3000`. A paired phone sends its device token with HTTP answers so the
+log names it; through the reducer, `by` carries the screen's name. The Fetch.ai chat agent answers approvals whose ids
+contain spaces through SpacetimeDB, as the phone does.
+
+## Try it
+
+On a box (Ubuntu 24.04 with `sudo core/install.sh`):
+
+```ts
+import { DbConnection } from './core/spacetime/bindings/index.ts';
+
+DbConnection.builder()
+  .withUri('ws://127.0.0.1:3000')
+  .withDatabaseName('box')
+  .onConnect((conn) => {
+    conn.db.approval.onInsert((_ctx, a) => console.log('needs an OK:', a.question));
+    conn.subscriptionBuilder().subscribeToAllTables();
+    // conn.reducers.answer({ id: a.id, approved: true, by: 'my script' });
+  })
+  .build();
+```
+
+Then start a task that spends over its budget and watch the row arrive:
+
+```sh
+curl -s 127.0.0.1:7700/api/tasks -H 'content-type: application/json' -d '{"title": "Buy a GPU hour",
+  "tools": ["example.spend"], "budgetCents": 500, "prompt": "Spend 8 dollars on a GPU hour with example.spend."}'
+```
+
+Or open the portal on two devices and approve on one.
+
+<Status rows={frontmatter.status} />
+
+## Limits
+
+- **SpacetimeDB listens on every interface, and `answer` takes anyone's call.** Anyone who can reach port 3000 can
+  answer an approval. Task users cannot. Keep the box on a network you trust, or block port 3000 at the firewall. A
+  check of the device token inside the reducer is the next step.
+- **`by` is free text through the reducer**, cut to 40 characters. Answers through the HTTP API with a device token
+  name the paired phone reliably.
+- **One database per box.** Two boxes show in one portal through each box's own SpacetimeDB, not a shared one.
+- **Agents do not coordinate with each other here yet.** The shared state is between the box, its paused agents and
+  the people who answer them.

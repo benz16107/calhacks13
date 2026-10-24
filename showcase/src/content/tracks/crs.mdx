@@ -1,0 +1,189 @@
+---
+order: 14
+sponsor: CRS
+prize: Overall, Best Financial AI Agent, Best Identity/Fraud, and Most Unexpected
+title: CRS is how the credit analyst decides, and how it stops a synthetic identity
+summary: 'The credit desk''s analyst agent runs seven CRS checks on every applicant''s guarantor before it may set terms: TransUnion, Equifax and Experian reports, TransUnion identity verification, Fraud Finder, PitchPoint public records and a reverse phone lookup. The box enforces it: the decision tool refuses to record anything until those checks have run in the same task, and every decision carries their request ids. The agent never holds the CRS login.'
+proof: 'APP-1043 has clean-looking numbers and a 640 score, and the simple rule approves it for $20,000. CRS, live: identity fails with codes <strong>2201, 2202 and 2101</strong>, Fraud Finder scores it <strong>88</strong>, nobody owns its phone, and 9 credit inquiries landed between Aug 19 and Sep 12. The analyst put it on fraud hold and the controller confirmed it. Every merge-gate run repeats this live.'
+criteriaSource: "From CRS's track description, as copied into the project's track plan (docs/tracks.md). CRS judges four prizes: Overall, Financial AI Agent, Identity/Fraud, and Unexpected."
+video: hyphenate
+criteria:
+  - ask: 'CRS central, not bolted on.'
+    how: 'CRS is the analyst''s main source. Rule CHK-1 says no terms before the CRS checks, and the <code>credit-desk.credit_decision</code> tool enforces it: it refuses a decision on an application whose seven checks have not run in the same task. Bands come from the lowest bureau score, fraud stops from identity codes and the Fraud Finder score.'
+  - ask: 'Live against the sandbox.'
+    how: 'Every <code>./demo</code> run calls the CRS sandbox live. On Oct 23 all six applicants were checked live (42 calls) and every answer matched its CRS persona. Recorded answers are used only if CRS cannot be reached, and the result says which source answered.'
+  - ask: 'Useful.'
+    how: 'Three of the case''s 14 planted errors rest on CRS answers: the synthetic identity (APP-1043), a lien and a judgment the applicant denied (APP-1044), and three bureaus that disagree (APP-1045). The live Droid run <code>73c47b</code> caught all three, and the bureau scores set the band and limit on every application.'
+  - ask: 'Creative.'
+    how: 'CRS runs as a tool inside an operating system for agents. The agent asks the box; the core logs in to CRS with keys from a root-only vault, makes the calls and returns a summary with each request id. A hijacked or confused agent cannot pull reports it was not asked to, or see the login.'
+  - ask: 'Test identities only.'
+    how: 'Every applicant''s guarantor is copied from one of CRS''s 20 sandbox personas (<code>sandbox/crs-personas.json</code>). The businesses around them are made up.'
+  - ask: 'Best Financial AI Agent.'
+    how: 'The analyst is an agent that does the work: runs the checks, compares them with the application, the business credit file and the bank, sets band, limit and terms by rule, and routes what it may not decide alone to the controller.'
+  - ask: 'Best Identity/Fraud.'
+    how: 'Fraud stops are rules the tools hold the agent to: identity codes 2201, 2202 and 2301 (FRD-1), Fraud Finder 70 or more (FRD-2), and compound signals (FRD-4). A fraud hold stops every shipment and always goes to a person.'
+  - ask: 'Most Unexpected.'
+    how: 'Credit data as a guard for agents: the same box that stops a booby-trapped web page from stealing keys uses CRS to stop a fake customer from talking an AI desk into $20,000 of credit.'
+shots:
+  - src: ../../assets/track/hyphenate/analyst-crs-live.png
+    alt: 'The analyst task''s steps: CRS on APP-1043 from the live sandbox, scores 640 at TransUnion, Equifax and Experian, identity not verified, fraud score 88.'
+    caption: 'The analyst''s action log: the CRS checks on APP-1043, from the live sandbox, summarized and logged with their request ids. From a scripted run of the seats calling the real tools.'
+  - src: ../../assets/track/hyphenate/box-fraud-referral.png
+    alt: 'The GurtOS box screen with the analyst''s fraud referral for APP-1043.'
+    caption: 'The referral reaches the controller with the CRS findings in it.'
+  - src: ../../assets/track/hyphenate/analyst-decision.png
+    alt: 'The recorded fraud hold decision with rules FRD-1 and FRD-2 and seven CRS request ids.'
+    caption: 'After the controller''s yes, the decision is recorded with the request ids of all seven CRS checks (rule CHK-3).'
+  - src: ../../assets/track/hyphenate/phone-fraud-referral.png
+    alt: 'The fraud referral on the controller''s phone.'
+    caption: 'The controller confirms on the phone.'
+    tall: true
+links:
+  - label: The CRS client and the seven checks
+    href: https://github.com/benz16107/calhacks13/blob/main/tracks/credit-desk/crs.ts
+    note: 'One login per box process; a failed login is never retried, because repeated failures disable the account.'
+  - label: What the desk calls and how it reads CRS answers
+    href: https://github.com/benz16107/calhacks13/blob/main/tracks/credit-desk/sandbox/crs.md
+    note: 'Routes, bodies, how to read each answer, and the live results for every applicant.'
+  - label: Raw CRS answers recorded on Oct 23
+    href: https://github.com/benz16107/calhacks13/tree/main/tracks/credit-desk/sandbox/crs-responses
+  - label: 'The credit desk write-up (Hyphenate)'
+    href: /tracks/hyphenate/
+    note: 'The whole desk: the seats, the 14 planted errors, the scores.'
+  - label: 'Docs: the credit desk app'
+    href: https://gurtos.com/reference/apps/#credit-desk
+flow:
+  - zone: task
+    label: The analyst asks for the checks
+    detail: '<code>credit-desk.crs {"application_id": "APP-1043"}</code>, through the task''s broker socket.'
+  - zone: core
+    label: The tool logs in to CRS
+    detail: 'Username and password from the root-only vault. One login per box process.'
+  - zone: outside
+    label: Seven CRS calls
+    detail: 'Three bureau reports, identity, Fraud Finder, public records, phone owner.'
+  - zone: core
+    label: A summary back to the agent
+    detail: 'Scores, codes, signals and each call''s request id, into the action log. Never the login.'
+  - zone: task
+    label: The analyst proposes a decision
+    detail: 'Band, limit and terms by rule, or a fraud hold.'
+  - zone: core
+    label: CHK-1 and the controller gate
+    detail: 'No checks, no decision. A fraud hold waits for a person.'
+  - zone: you
+    label: The controller confirms
+    detail: 'On the portal or a phone. The decision is logged with the request ids.'
+status:
+  - part: CRS credit, identity, fraud, public records, phone owner
+    state: live
+    note: 'The CRS sandbox, five products, called live in every <code>./demo</code> run.'
+  - part: Identities
+    state: test
+    note: 'CRS''s own sandbox personas only. No real person is pulled.'
+  - part: Business credit
+    state: simulated
+    note: 'No sandbox route covers business credit, so the business file is made up and labeled <code>"simulated": true</code>.'
+  - part: Recorded answers
+    state: simulated
+    note: 'Saved live answers from Oct 23, used only when CRS cannot be reached. The summary then says so.'
+---
+
+## Evidence
+
+### Live CRS results for the six applicants, Oct 23
+
+Seven checks each, 42 calls, every result matched the persona the guarantor uses.
+
+<div class="table-wrap">
+
+| Application | TransUnion / Equifax / Experian | Inquiries | Identity | Fraud Finder | Public records | Phone owner | Desk conclusion |
+|---|---|---|---|---|---|---|---|
+| APP-1041 | 770 / 770 / 770 | 2 | verified | 9 | none | the guarantor | Approve $8,000 Net 30 (analyst) |
+| APP-1042 | 790 / 790 / 790 | 1 | verified | 11 | none | the guarantor | Propose $40,000; controller approves |
+| **APP-1043** | 640 / 640 / 640 | **9, Aug 19 to Sep 12** | **fails: 2201, 2202, 2101** | **88**: prepaid VoIP, owner does not match, email first seen Oct 15, IP over 1,000 miles away | none | **no one** | **Fraud hold**, though a simple rule approves $20,000 |
+| APP-1044 | 690 / 690 / 690 | 2 | verified | 10 | **$12,300 judgment, unsatisfied; $7,450 tax lien, unreleased** | the guarantor | Band C, $7,500 Net 15; controller |
+| APP-1045 | **760 / no file / 700 with one collection** | 1 | verified | 11 | none | the guarantor | Band B, $15,000; controller |
+| APP-1046 | 815 / 815 / 815 | 1 | verified | 9 | none | the guarantor | $21,000 on verified revenue; controller |
+
+</div>
+
+### Every merge, live
+
+From the Oct 24 merge-gate run on the x86 test VM:
+
+```
+track credit-desk
+  ok    CRS (CRS sandbox, live): APP-1043's identity fails (2201, 2202, 2101) and its fraud score is 88
+  ok    the fraud referral paused the analyst until the controller answers
+  ok    the fraud hold is in the log with the controller's OK, its rule ids (FRD-1, FRD-2) and the 7 CRS request ids it rests on
+  ok    the simple rule would have approved APP-1043 for $20,000 on the same CRS answers; the desk held it
+  ok    no CRS or Nessie key is anywhere in the log
+```
+
+### The decision the analyst recorded, live Droid run 73c47b
+
+```
+credit-desk.credit_decision  APP-1043  outcome: fraud hold  limit: 0
+  identity_codes:     2201 SSN_NOT_ASSOCIATED_WITH_NAME, 2202 DOB_MISMATCH, 2101 ADDRESS_MISMATCH
+  fraud_score:        88     phone_type: VoIP_prepaid     phone_owner_match: false
+  email_first_seen:   2026-10-15     ip_distance_miles: >1000
+  crs_request_ids:    transunion bdd5f423  equifax 97455d31  experian 2a171fe7  identity 303ddb55
+                      fraud 428f0f74  public_records dbe01fb0  phone_owner 26510204
+  rules:              FRD-1 FRD-2 FRD-3 FRD-4 FRR-1 FRR-2 FRR-3 GEN-1 CHK-1 CHK-3
+  approved_by:        controller (scripted for the scored run)
+```
+
+Request ids are cut to 8 characters here; the log has them in full. In that run the analyst also found APP-1044's
+unsatisfied judgment and unreleased tax lien, which its application denied, and banded APP-1045 on its lowest
+bureau because Equifax returned no file.
+
+## How it works
+
+<Flow steps={frontmatter.flow} />
+
+| Check | CRS product and route |
+|---|---|
+| Credit report, each bureau | `/transunion/credit-report/standard/tu-prequal-fico9`, `/equifax/credit-report/standard/efx-prequal-vantage4`, `/experian/credit-report/standard/exp-prequal-vantage4` |
+| Identity | `/transunion/identity-manager-verification/basic` |
+| Fraud | `/fraud-finder/fraud-finder` (name, phone, email, address and the IP the application came from) |
+| Public records | `/pp/fcrablj/data` (PitchPoint bankruptcies, liens, judgments) |
+| Phone owner | `/accurate-append/reverse` |
+
+**Responsible by rule.** The desk pulls only on owners who signed a personal guarantee and a credit check consent.
+It pulls only what a trade-credit decision needs: no criminal or eviction searches (rule CHK-2). Only the controller
+sees a fraud referral, and the applicant is told "We need to verify some information before we can offer terms",
+never which check failed (rule FRR-3). The CRS client logs in once per box process and never retries a failed login.
+
+**Read carefully.** Things the desk handles that CRS's sandbox does: credit reports return errors as HTTP 200, file
+status says when a bureau has no file, Fraud Finder takes `ipAddress` (a field named `ip` is ignored), and a single
+PitchPoint record comes back as an object rather than a list. `sandbox/crs.md` has the rest.
+
+## Try it
+
+On a box with `CRS_USERNAME` and `CRS_PASSWORD` in its vault:
+
+```sh
+curl -s -X POST localhost:7700/t/credit-desk/run -d '{"case": "fogline-2026-10", "seats": ["analyst"]}'
+```
+
+Or run the seven checks on their own, as root on a test VM, from a copy of `tracks/credit-desk`:
+
+```sh
+sudo node sandbox/crs-check.ts /tmp/crs-out cases/fogline-2026-10
+```
+
+To try another CRS persona, copy an application, paste a guarantor from `sandbox/crs-personas.json` (P05 subprime,
+P12 identity mismatch, P14 deceased SSN, P16 fraud alert), check it with `check-case.ts`, and run it with
+`{"dir": "/path/to/case"}`.
+
+<Status rows={frontmatter.status} />
+
+## Limits
+
+- The sandbox returns results only for its 20 personas, so every guarantor is one of them.
+- Business credit is simulated until the sandbox has a route for it.
+- The desk reads CRS answers as summaries (scores, codes, signals). Full reports stay in CRS's retention, reachable
+  by request id.
+- Questions we have for CRS are in `sandbox/crs.md`, including one about every sandbox Experian tradeline carrying
+  the same charge-off amount.

@@ -1,0 +1,141 @@
+---
+import '../styles/global.css';
+import { LINKS } from '../data/site';
+
+interface Props {
+  title: string;
+  description: string;
+  image?: string;
+}
+const { title, description, image = '/og.png' } = Astro.props;
+const canonical = new URL(Astro.url.pathname, Astro.site);
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <meta name="theme-color" content="#27313F" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:image" content={new URL(image, Astro.site)} />
+    <meta name="twitter:card" content="summary_large_image" />
+  </head>
+  <body>
+    <a class="skip" href="#main">Skip to content</a>
+    <header class="site">
+      <div class="wrap bar">
+        <a class="brand" href="/" aria-label="GurtOS at Cal Hacks 13.0, overview">
+          <span class="wordmark"><span class="g">Gurt</span><span class="o">OS</span></span>
+          <span class="event">at Cal Hacks 13.0</span>
+        </a>
+        <nav aria-label="Site">
+          <a href="/">Overview</a>
+          <a href="/#tracks">Tracks</a>
+          <a href={LINKS.docs}>Docs</a>
+          <a href={LINKS.repo}>Code</a>
+        </nav>
+      </div>
+    </header>
+    <main id="main">
+      <slot />
+    </main>
+    <footer class="site">
+      <div class="wrap foot">
+        <p>
+          GurtOS, by Ben Zhou, solo, for Cal Hacks 13.0 (Oct 23 to 25, 2026). Product docs:{' '}
+          <a href={LINKS.docs}>gurtos.com</a>. Code: <a href={LINKS.repo}>GitHub</a>.
+        </p>
+        <p>
+          Every payment on this site is test money: Stripe test mode, a Visa test card, or USDC on Solana devnet. Pages
+          say which parts are live and which are simulated.
+        </p>
+      </div>
+    </footer>
+  </body>
+</html>
+
+<style>
+  header.site {
+    background: var(--color-desktop-sky);
+    color: var(--color-desktop-text);
+  }
+  .bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+    min-height: 56px;
+    flex-wrap: wrap;
+  }
+  .brand {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-2);
+    color: inherit;
+    text-decoration: none;
+    padding: var(--space-2) 0;
+  }
+  .wordmark {
+    font-size: 1.25rem;
+    letter-spacing: -0.03em;
+  }
+  .wordmark .g {
+    font-weight: 600;
+  }
+  .wordmark .o {
+    font-weight: 400;
+  }
+  .event {
+    color: var(--color-desktop-text-secondary);
+    font-size: 0.9rem;
+  }
+  nav {
+    display: flex;
+    gap: var(--space-5);
+    flex-wrap: wrap;
+  }
+  nav a {
+    color: var(--color-desktop-text);
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 0.95rem;
+    padding: var(--space-2) 0;
+  }
+  nav a:hover {
+    text-decoration: underline;
+  }
+  nav a:focus-visible,
+  .brand:focus-visible {
+    outline-color: var(--color-desktop-accent);
+  }
+  footer.site {
+    margin-top: var(--space-8);
+    border-top: 1px solid var(--color-border-default);
+    color: var(--color-text-secondary);
+    font-size: 0.9rem;
+  }
+  .foot {
+    padding-top: var(--space-6);
+    padding-bottom: var(--space-7);
+    max-width: var(--page);
+  }
+  .foot p {
+    max-width: var(--measure);
+  }
+  @media (max-width: 640px) {
+    nav {
+      gap: var(--space-4);
+    }
+    .event {
+      display: none;
+    }
+  }
+</style>

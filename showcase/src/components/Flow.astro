@@ -1,0 +1,157 @@
+---
+// How it works, as one diagram: the steps in order, each tagged with where it runs. Text, not an image, so it
+// reads on a phone and to a screen reader. Where a step runs is a word as well as a color.
+interface Props {
+  steps: { zone: 'you' | 'outside' | 'core' | 'task'; label: string; detail?: string }[];
+  title?: string;
+}
+const { steps, title = 'How it works, step by step' } = Astro.props;
+const zone = { you: 'You', outside: 'Outside', core: 'Box core', task: 'Task' };
+const meaning = {
+  you: 'a person, on the portal, a phone, Jira or a chat',
+  outside: 'a service outside the box',
+  core: 'the box service, root, the only part that reads the vault',
+  task: 'its own Linux user, its own copy of the files, no keys',
+};
+const used = (['task', 'core', 'outside', 'you'] as const).filter((z) => steps.some((s) => s.zone === z));
+---
+
+{
+  steps.length > 0 && (
+    <figure class="flow">
+      <figcaption>{title}</figcaption>
+      <ol>
+        {steps.map((s) => (
+          <li>
+            <span class={`zone ${s.zone}`}>{zone[s.zone]}</span>
+            <span class="text">
+              <span class="label" set:html={s.label} />
+              {s.detail && <span class="detail" set:html={s.detail} />}
+            </span>
+          </li>
+        ))}
+      </ol>
+      <dl class="legend">
+        {used.map((z) => (
+          <div>
+            <dt class={`zone ${z}`}>{zone[z]}</dt>
+            <dd>{meaning[z]}</dd>
+          </div>
+        ))}
+      </dl>
+    </figure>
+  )
+}
+
+<style>
+  .flow {
+    margin: var(--space-5) 0 var(--space-6);
+    padding: var(--space-5);
+    background: var(--color-bg-surface);
+    border: 1px solid var(--color-border-default);
+    border-radius: var(--radius-md);
+    max-width: var(--measure);
+  }
+  figcaption {
+    font-weight: 600;
+    margin-bottom: var(--space-4);
+  }
+  ol {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  li {
+    display: grid;
+    grid-template-columns: 6.5rem minmax(0, 1fr);
+    gap: var(--space-4);
+    position: relative;
+    padding-bottom: var(--space-4);
+  }
+  /* The line that joins one step to the next. */
+  li:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    left: 3.25rem;
+    top: 2rem;
+    bottom: 2px;
+    border-left: 2px solid var(--color-border-strong);
+  }
+  .zone {
+    display: inline-block;
+    font-size: 0.72rem;
+    font-weight: 500;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    text-align: center;
+    padding: 4px 6px;
+    border-radius: var(--radius-sm);
+    border: 1px solid transparent;
+    align-self: start;
+    position: relative;
+    z-index: 1;
+  }
+  .text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding-top: 1px;
+  }
+  .label {
+    font-weight: 600;
+    line-height: 1.35;
+  }
+  .detail {
+    font-size: 0.9rem;
+    color: var(--color-text-secondary);
+    line-height: 1.45;
+  }
+  .you {
+    background: var(--color-state-waiting-bg);
+    color: var(--color-state-waiting-fg);
+    border-color: #ead7ad;
+  }
+  .outside {
+    background: var(--color-state-neutral-bg);
+    color: var(--color-state-neutral-fg);
+    border-color: var(--color-border-default);
+  }
+  .core {
+    background: var(--color-state-running-bg);
+    color: var(--color-state-running-fg);
+    border-color: #bcd0e4;
+  }
+  .task {
+    background: var(--color-state-done-bg);
+    color: var(--color-state-done-fg);
+    border-color: #bcd8b8;
+  }
+  .legend {
+    margin: var(--space-4) 0 0;
+    padding-top: var(--space-4);
+    border-top: 1px solid var(--color-border-default);
+    display: grid;
+    gap: var(--space-2);
+    font-size: 0.85rem;
+    color: var(--color-text-secondary);
+  }
+  .legend div {
+    display: grid;
+    grid-template-columns: 6.5rem minmax(0, 1fr);
+    gap: var(--space-4);
+    align-items: start;
+  }
+  .legend dd {
+    margin: 0;
+  }
+  @media (max-width: 480px) {
+    li,
+    .legend div {
+      grid-template-columns: 5.5rem minmax(0, 1fr);
+      gap: var(--space-3);
+    }
+    li:not(:last-child)::after {
+      left: 2.75rem;
+    }
+  }
+</style>

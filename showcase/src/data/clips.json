@@ -1,0 +1,47 @@
+[
+  {
+    "name": "moment-1-undo",
+    "title": "Undo one task",
+    "caption": "A task deleted notes.md by mistake; Undo takes out only that task's layer, notes.md comes back, and Time Machine shows the other two tasks' changes still in place. Real app, scripted tasks, sped up 1.3 times.",
+    "seconds": 30.5,
+    "width": 1600,
+    "height": 900,
+    "poster": "/clips/moment-1-undo.jpg"
+  },
+  {
+    "name": "moment-2-blocked",
+    "title": "The booby-trapped page",
+    "caption": "A task allowed to reach only example.com reads the page, then tries attacker.example and a raw IP address; the box refuses both, raises a red banner and marks the blocked steps in the task's log. Real app, scripted agent acting out the hijack.",
+    "seconds": 28.1,
+    "width": 1600,
+    "height": 900,
+    "poster": "/clips/moment-2-blocked.jpg"
+  },
+  {
+    "name": "moment-3-approval",
+    "title": "A pause for your OK",
+    "caption": "A task asks to spend $15.00 on a $10.00 budget; the request lands on the box screen and the phone at once, Approve on the phone clears it from the box screen too, and the task carries on. Real app, scripted task, test money.",
+    "seconds": 16.8,
+    "width": 2042,
+    "height": 900,
+    "poster": "/clips/moment-3-approval.jpg"
+  },
+  {
+    "name": "moment-4-power-cut",
+    "title": "Pull the plug",
+    "caption": "The box and every task process are killed at once; the screen says the box is out of reach, it boots on the same data, and opens on Welcome back with the three tasks that resumed and nothing paid twice. Real app, scripted tasks.",
+    "seconds": 30.5,
+    "width": 1600,
+    "height": 900,
+    "poster": "/clips/moment-4-power-cut.jpg"
+  },
+  {
+    "name": "shopper",
+    "title": "Shopper: buy only after your tap",
+    "caption": "A watch on Hario filters under $7.00 sees the price drop to $6.50, asks to buy 2 for $13.00 as a TEST PAYMENT, and pays at the Box Test Store after Approve. Real app, Stripe test mode, no real money.",
+    "seconds": 22,
+    "width": 1600,
+    "height": 900,
+    "poster": "/clips/shopper.jpg"
+  }
+]

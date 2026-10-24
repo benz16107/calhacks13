@@ -1,0 +1,173 @@
+---
+order: 2
+sponsor: Atlassian
+prize: Agentic Workforce Challenge, Track 2 (security for agents acting for a user)
+title: See what an agent did in Jira, then roll back only that
+summary: Every task an agent runs on a GurtOS box becomes a Jira issue with what it was asked, what it was allowed, its reasoning, every blocked attempt, its diff and its full action log. A Forge app adds a panel to the issue with Approve, Deny and Roll back, and Roll back removes only that task's changes on the box.
+proof: 'BOX-2, a scripted agent that misread a rule, changed three configs instead of one and tried to send the repo to a paste site. It was blocked, approved from Jira, then rolled back from Jira: its configs came back and the README fix another task made a minute earlier stayed.'
+criteriaSource: "From Atlassian's Track 2 brief and the challenge rules, as copied into the project's track plan."
+criteria:
+  - ask: 'Audit and reversion: record every action with the inputs and reasoning behind it, so an admin can see exactly what happened the next morning and roll back only the changes that were wrong.'
+    how: 'Each issue holds the prompt, the tools and hosts the task was allowed, the agent''s reasoning in its own words, approvals and who gave them, blocked attempts, the diff and the last 40 log entries. <strong>Roll back this task</strong> takes out that task''s layer of file changes on the box. Every other task keeps its own.'
+  - ask: 'A Forge app for Jira or Confluence.'
+    how: 'A Jira issue panel (UI Kit, native render) with a resolver in Atlassian''s cloud, plus a <code>jira:entityProperty</code> index so state, cost, blocked attempts and pending approvals are searchable in JQL. Installed on the demo site in production.'
+  - ask: 'Technical use of Forge.'
+    how: 'The resolver reads the issue property <strong>as the signed-in user</strong>, checks <code>EDIT_ISSUES</code> before any action, and is the only place that holds the box''s shared secret (a Forge encrypted variable). It calls one declared external host. Scopes are read-only: the app never writes to Jira; the box does.'
+  - ask: 'Usefulness to Atlassian users.'
+    how: 'The morning-after question is one JQL search: <code>project = BOX AND boxBlocked > 0</code>. Agent work moves across a normal board (To Do, In Progress, In Review, Done), so a team reviews agents the way it reviews people.'
+  - ask: 'Demo video, 3 minutes at most.'
+    how: 'Shot list in the repo''s <code>docs/videos.md</code>; the video is embedded above once uploaded.'
+    status: partly
+  - ask: 'Repo link.'
+    how: 'The track lives in <code>tracks/jira/</code> (box side) and <code>tracks/jira/forge/</code> (the Forge app).'
+clip: moment-1-undo
+shots:
+  - src: ../../assets/repo/jira/panel-waiting.png
+    alt: 'The Box agent task panel in Jira, waiting for an OK, with a blocked attempt to reach paste.example.net and a diff that changed three service configs.'
+    caption: 'BOX-2 waits for an OK. The agent misread a rule, changed three configs instead of one, and tried to reach a paste site, which the box refused.'
+    tall: true
+  - src: ../../assets/repo/jira/panel-rolled-back.png
+    alt: 'The same panel after Roll back: the task is Rolled back and the configs are as they were.'
+    caption: 'After Roll back: only this task''s changes are gone.'
+    tall: true
+  - src: ../../assets/repo/jira/panel-approval.png
+    alt: 'A Droid task asks in Jira to spend 3 dollars of test money on a 1 dollar budget.'
+    caption: 'BOX-5: a Droid task (Claude) asks to spend $3.00 of test money on a $1.00 budget. The box paused it and the request landed in Jira.'
+    tall: true
+  - src: ../../assets/repo/jira/panel-approved.png
+    alt: 'The task after approval from Jira, with its reasoning, an audit trail naming the approver, and its diff.'
+    caption: 'Approved from Jira, it paid, wrote the receipt and finished. The audit trail says who approved.'
+    tall: true
+  - src: ../../assets/repo/jira/issue-description.png
+    alt: 'A box task as a Jira issue: what it was asked, what it could use, its reasoning, files changed with the diff, and the action log.'
+    caption: 'BOX-1, written by the box from its append-only action log.'
+  - src: ../../assets/repo/jira/jql-search.png
+    alt: 'A JQL search on the fields the Forge app indexes, listing BOX-2, BOX-3 and BOX-4.'
+    caption: 'JQL on the indexed fields: every task that tried a blocked host or was rolled back.'
+links:
+  - label: BOX-2, rolled back from Jira
+    href: https://one-atlas-tyfk.atlassian.net/browse/BOX-2
+    note: 'The demo site is private: Jira asks for a sign-in with access to the site. The screenshots above are from these issues.'
+  - label: BOX-5, approved from Jira
+    href: https://one-atlas-tyfk.atlassian.net/browse/BOX-5
+  - label: BOX-1, a Droid task that fixed typos
+    href: https://one-atlas-tyfk.atlassian.net/browse/BOX-1
+  - label: Every BOX issue (JQL)
+    href: https://one-atlas-tyfk.atlassian.net/issues/?jql=project%20%3D%20BOX%20ORDER%20BY%20created%20ASC
+  - label: The track's code and README
+    href: https://github.com/benz16107/calhacks13/tree/main/tracks/jira
+  - label: 'Docs: connect Jira'
+    href: https://gurtos.com/guides/connect-jira/
+flow:
+  - zone: task
+    label: An agent works
+    detail: Its own Linux user, its own copy of the files, no keys.
+  - zone: core
+    label: The action log
+    detail: Every step, tool call, approval and blocked host, in order.
+  - zone: core
+    label: Jira track (log reader)
+    detail: Creates or updates one issue per task over Jira REST v3.
+  - zone: outside
+    label: Jira issue and Forge panel
+    detail: The resolver checks the user may edit the issue.
+  - zone: you
+    label: Approve, Deny or Roll back
+    detail: The resolver calls the box with the shared secret.
+  - zone: core
+    label: The box acts
+    detail: Same undo and answer as the portal and phone, logged as jira:&lt;name&gt;.
+status:
+  - part: Jira issues, comments, status and JQL fields
+    state: live
+    note: 'Written by the box to the demo site''s BOX project. <code>DEMO_LIVE=jira ./demo</code> runs the whole flow against the real site.'
+  - part: Forge panel and resolver
+    state: live
+    note: Installed in production on the demo site.
+  - part: The agents behind the issues
+    state: live
+    note: 'BOX-1 and BOX-5 are real Droid tasks running Claude. BOX-2 is a scripted agent, so the misread rule happens the same way every time.'
+  - part: Money
+    state: test
+    note: 'The coffee order uses the example track''s <code>example.spend</code>, which moves no money.'
+  - part: Offline merge gate
+    state: simulated
+    note: '<code>./demo</code> points the track at a stand-in for Jira Cloud on the test machine, so every merge runs it without touching the real site.'
+---
+
+## Evidence
+
+The merge gate, `./demo`, runs this track on every merge. With `DEMO_LIVE=jira` it runs against the real demo
+site, then deletes the issues it made. This run passed on Oct 23 on the x86 test VM; BOX-8 and BOX-9 were real
+issues on the site:
+
+```
+track jira
+  ok    DEMO_LIVE=jira: the vault has the Jira site, email and API token
+  ok    BOX-8: task A is an issue in Done, with its diff
+  ok    BOX-9: task B waits for an OK, in In Review
+  ok    BOX-9 holds B's prompt, steps and diff
+  ok    BOX-9 has a comment for the blocked attempt on attacker.example
+  ok    BOX-9 has a comment asking for the OK
+  ok    without the shared secret the panel routes refuse to approve or roll back (401)
+  ok    an approval can't be answered through another task's issue
+  ok    approved from Jira, task B finished
+  ok    rolled back from Jira: B's settings change is gone, A's fix stays
+  ok    the panel's audit view shows the block, who approved and the roll back
+  ok    BOX-9 says who rolled it back, in a comment and the description
+  ok    no vault secret is in anything the box sent to Jira
+```
+
+The same 12 checks pass offline in every `./demo` run, the latest on Oct 24 with all 22 sections of the gate
+(175 checks, 0 failed).
+
+## How it works
+
+<Flow steps={frontmatter.flow} />
+
+**Into Jira.** The box feeds the track every event in its append-only log, in order, and saves its place, so it
+survives restarts and power cuts. Agent output only ever goes into Atlassian Document Format text nodes, so a task
+cannot inject markup, links or mentions into Jira. Status follows the task: queued is To Do, running is In
+Progress, waiting for an OK is In Review, and done, failed or rolled back is Done. It is safe to repeat: a crash
+between creating an issue and saving its key finds the issue by label instead of making a second one.
+
+**Out of Jira.** The panel's resolver runs in Atlassian's cloud. It reads the issue's `box.task` property as the
+signed-in user (so the task id comes from Jira, never from the browser), asks Jira whether that user may edit the
+issue, and only then calls the box with the shared secret, passing the user's name for the log. The box checks the
+secret in constant time and checks that the approval belongs to that task. From the internet, the box forwards
+only its Jira routes and one read-only status route; the rest of its API is a 404.
+
+| Forge or Atlassian piece | Used for |
+|---|---|
+| `jira:issuePanel` (UI Kit, native render) | The Box agent task panel on `BOX` issues |
+| `@forge/resolver` | `load`, `answer`, `rollback` |
+| `jira:entityProperty` | JQL fields `boxState`, `boxCost`, `boxBlocked`, `boxPending`, `boxSource` |
+| `api.asUser().requestJira` | Reads the property, the user's permissions and name, with the user's own access |
+| `fetch` with `permissions.external.fetch.backend` | The one call out, to the box |
+| Encrypted variable `BOX_SECRET` | The shared secret |
+| Jira REST v3, from the box | `issue`, `properties`, `transitions`, `comment`, `search/jql` |
+
+## Try it
+
+1. Put `ATLASSIAN_SITE`, `ATLASSIAN_EMAIL`, `ATLASSIAN_API_TOKEN` and `JIRA_BOX_SECRET` in the box's vault,
+   `/etc/box/vault.env`.
+2. Turn syncing on: `echo '{"project":"BOX"}' > /var/lib/box/jira/config.json`.
+3. Give the box public HTTPS for `/t/jira/*` only (the README has the Caddy block).
+4. From `tracks/jira/forge/`: `forge variables set --encrypt BOX_SECRET <secret>`, `forge deploy`, `forge install`.
+5. Start any task on the box. Its issue appears in `BOX`; open the panel and try Approve and Roll back.
+
+The full steps are in the [track README](https://github.com/benz16107/calhacks13/tree/main/tracks/jira) and the
+docs guide [Connect Jira](https://gurtos.com/guides/connect-jira/).
+
+<Status rows={frontmatter.status} />
+
+## Limits
+
+- Roll back undoes the task's **file changes**. It cannot recall something a task already sent out through a tool,
+  such as a payment. Those show in the issue so a person can follow up.
+- One shared secret guards the box's three Jira routes. Forge Remote's signed invocation tokens would let the box
+  check each call came from this app and this user; that is the next step.
+- The box writes to Jira with one person's API token, so its comments show that person as the author.
+- The panel polls the box every 4 seconds while it is open.
+- Issue descriptions keep the last 40 log entries and the first 8,000 characters of the diff. The panel and the
+  box's log have the rest.

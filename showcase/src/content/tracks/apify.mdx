@@ -1,0 +1,158 @@
+---
+order: 13
+sponsor: Apify
+prize: Best Use of Apify (top 5)
+title: Agents do their web work through Actors, and never hold the token
+summary: 'Agents on a GurtOS box read the web through Apify Actors instead of driving a browser and reading screenshots. An agent asks for "the price of AirPods Pro at Best Buy" or "coffee near Berkeley" and gets clean JSON. The Apify token stays in the box''s vault: the tool runs in the box''s core, the agent''s task has no network and no secrets, and every call, result and cost lands in the action log.'
+proof: 'The live run on Oct 23, on both the x86 and the ARM64 test VMs, started two tasks with no network at all. Both Actors ran on Apify at the same time and came back with AirPods Pro 3 at $299.99 CAD, in stock, at Best Buy Canada, and Cole Coffee Café at 6255 College Ave, Oakland. The token was nowhere in either task''s log.'
+criteriaSource: "Apify asks for meaningful use of Apify and judges overall quality; no detailed criteria were published. Quoted from the project's track plan."
+criteria:
+  - ask: 'A project that uses Apify meaningfully.'
+    how: 'Apify is how every agent on the box reaches the web. Three box tools run Actors: <code>apify.checkPrice</code> (Playwright Scraper on Best Buy Canada), <code>apify.findPlaces</code> (Google Maps Scraper) and <code>apify.run</code> (any Actor from the Store). The Visa shopping agent watches prices with the first, and the ASI:One chat agent searches the web with the third.'
+  - ask: 'Overall quality.'
+    how: 'Each Actor was picked for a reason and tested live (below). Spending is capped twice, by Apify''s <code>maxTotalChargeUsd</code> and by the box''s per-task budget. Results are trimmed for the log, a token in a result is refused, and offline unit tests stub Apify so every merge runs them.'
+clip: shopper
+video: visa
+shots:
+  - src: ../../assets/shots/app-shopper.png
+    alt: 'The Shopper app running on the box screen, with a form to watch a product by store, product, price limit and quantity.'
+    caption: 'Where Apify shows up for a person: the Shopper app on the box. A watch on Best Buy Canada is checked through apify.checkPrice in a task with no network and no token.'
+links:
+  - label: The Apify track's code and README
+    href: https://github.com/benz16107/calhacks13/tree/main/tracks/apify
+    note: 'The three tools and the page function are in <code>track.ts</code>; tests in <code>apify.test.ts</code>.'
+  - label: 'Playwright Scraper, used for Best Buy'
+    href: https://apify.com/apify/playwright-scraper
+  - label: 'Google Maps Scraper, used for places'
+    href: https://apify.com/compass/crawler-google-places
+  - label: 'RAG Web Browser, used by the ASI:One chat agent'
+    href: https://apify.com/apify/rag-web-browser
+  - label: 'Docs: the vault and the broker'
+    href: https://gurtos.com/concepts/vault-and-broker/
+    note: 'Why a tool that needs a key runs in the core and a task never sees the key.'
+flow:
+  - zone: task
+    label: 'The agent calls apify.checkPrice'
+    detail: 'Through its broker socket, by name. In Droid it shows up as the MCP tool <code>apify__checkPrice</code>. The task has no network and no token.'
+  - zone: core
+    label: The tool runs in the core
+    detail: 'It reads <code>APIFY_TOKEN</code> from the vault and counts the cost against the task''s budget. Over budget, the task waits for your OK.'
+  - zone: outside
+    label: Apify runs the Actor
+    detail: 'On Apify''s servers through Apify Proxy, with its own short-lived run token, a <code>maxTotalChargeUsd</code> cap and a 120-second timeout.'
+  - zone: core
+    label: Results checked and logged
+    detail: 'Cut to 20,000 characters for the log; refused if they contain the token. Call, result and cost go in the action log.'
+  - zone: task
+    label: The agent gets clean JSON
+    detail: 'Price, stock and a product link, or places with ratings and addresses.'
+status:
+  - part: Actor runs
+    state: live
+    note: 'Real runs on Apify, on the free plan. A live merge-gate run spends about one cent.'
+  - part: Best Buy Canada prices and stock
+    state: live
+    note: "Best Buy's own product JSON, read by Playwright Scraper. Prices are in CAD."
+  - part: Costs the box counts
+    state: simulated
+    note: "Estimates from the Actors' list prices, not Apify's bill. For <code>apify.run</code> the box counts the full spending cap."
+  - part: Offline merge gate
+    state: simulated
+    note: '<code>./demo</code> runs the unit tests against a stubbed Apify, so every merge stays offline and free.'
+---
+
+## Evidence
+
+**Live, Oct 23** (`DEMO_LIVE=apify ./demo`), passed on the x86 and the ARM64 test VMs. It starts two tasks with the
+scripted worker and no network: one checks AirPods Pro at Best Buy, the other finds two coffee shops near Berkeley.
+Both Actors run on Apify at the same time. It checks the results have a real price, a stock answer and real places,
+that the token is nowhere in either task's log, and that each task's cost was counted. Results: **AirPods Pro 3 at
+$299.99 CAD, in stock**, and **Cole Coffee Café at 6255 College Ave, Oakland**. About one cent, about 15 seconds.
+
+**Cost and speed.** On Oct 23 a Best Buy search plus two product pages took 12 seconds and cost $0.0016 of Apify
+compute, well under the 1 cent the box counts.
+
+**Used by other parts of the box, live:**
+
+- The Visa shopping agent's live run read Chemex filters (Best Buy SKU 20220310) at $15.36 CAD through
+  `apify.checkPrice`, and bought them at that price after the owner's tap (Stripe test mode).
+- The ASI:One chat agent's stock check ran `apify/rag-web-browser` through `apify.run`, paused for approval at the
+  $0.50 cap, and found the Hario filters in stock at $10.25 on Hario's US store.
+
+**The merge gate, every run.** The latest, Oct 24 on the x86 test VM, passed all 22 sections (175 checks, 0 failed):
+
+```
+track apify
+  ok    the box loaded the Apify tools
+  ok    the offline tests pass against a stubbed Apify
+  skip  live Actor runs, which cost Apify credit: DEMO_LIVE=apify ./demo runs them
+```
+
+What `apify.checkPrice` returns, for `{ "product": "airpods pro", "max": 2 }`:
+
+```json
+{ "store": "bestbuy.ca", "currency": "CAD", "checkedAt": "2026-10-24T02:10:00.000Z",
+  "products": [{ "sku": "19451577", "name": "Apple AirPods Pro 3 ...", "price": 299.99, "regularPrice": 299.99,
+                 "inStock": true, "online": "InStock", "onlineQuantity": 15376, "inStores": "Available",
+                 "url": "https://www.bestbuy.ca/en-ca/product/.../19451577" }] }
+```
+
+## How it works
+
+<Flow steps={frontmatter.flow} />
+
+| Tool | What it does | Actor | Cost the box counts |
+|---|---|---|---|
+| `apify.checkPrice` | Live price and stock of a product at Best Buy Canada, by SKU, link or search words | `apify/playwright-scraper` | 1 cent |
+| `apify.findPlaces` | Places on Google Maps near a location | `compass/crawler-google-places` | 0.4 cents a place |
+| `apify.run` | Any Actor from the Apify Store, with an input; returns its results | The agent's pick | Its spending cap, default $0.50 |
+
+**Why these Actors.**
+
+- **Playwright Scraper for Best Buy.** Best Buy Canada serves its product data as open JSON, with price and stock in
+  one answer. The Actor opens it in a browser on Apify's servers and a small page function keeps only the useful
+  fields. For a search it queues each hit's product page, because only that page says whether it is in stock. We
+  first used Cheerio Scraper, which is lighter, but it needs full access to the Apify account, so Apify refused it
+  until a person approves it, and approving it would let a hijacked agent send it its own page code through
+  `apify.run`. Playwright Scraper runs page code with limited permissions.
+- **Google Maps Scraper** (by Compass) for places: the most used Actor in the Store, about 45,000 users a month, $0.004
+  a place on the free plan with no start fee. The tool turns every paid extra off and asks for only the ten fields it
+  returns.
+- **Any Actor** through `apify.run`, so an agent is not limited to what we wrapped. For other stores,
+  `apify/e-commerce-scraping-tool` covers bestbuy.com, Walmart, Target and about 200 more.
+
+**Why a hijacked agent cannot misuse it.**
+
+- **The token is never in the task:** not in its files, environment or network. The tool refuses to return a result
+  that contains it, and the merge gate checks the log for it.
+- **An Actor never gets the token either.** Apify starts each run with its own short-lived token. Actors with limited
+  permissions, Apify's default, reach only that run's storage. An Actor that wants full account access fails with a
+  403 until a person approves it in Apify Console, and the API cannot approve it.
+- **Spending is capped twice:** Apify holds a run to `maxTotalChargeUsd` and a 120-second timeout, and the box asks
+  for an OK before any call above the task's budget.
+- **Results are data.** A scraped page may carry instructions, but the agent's task still has no network and no
+  secrets to act on them with.
+
+**Left out on purpose.** Amazon refuses AI agents, so the box does not shop there. Apify's hosted MCP server would put
+the token in the agent's own session; here the box's own MCP relay gives Droid the same kind of tools with the token
+kept in the core.
+
+## Try it
+
+1. Sign up free at apify.com (the free plan includes $5 of usage a month) and copy the token from Settings, API &
+   Integrations. A scoped token works: allow running Actors and reading their datasets.
+2. On the box: `echo 'APIFY_TOKEN=apify_api_...' | sudo tee -a /etc/box/vault.env`. The file stays root only.
+3. Start a task that lists the tool, for example with the tools `apify.checkPrice` and no hosts: "What does Best Buy
+   Canada charge for AirPods Pro, and are they in stock?"
+4. Or run the live test: `DEMO_LIVE=apify ./demo`.
+
+<Status rows={frontmatter.status} />
+
+## Limits
+
+- `apify.checkPrice` covers Best Buy Canada only, with prices in CAD. bestbuy.com drops plain requests; the E-commerce
+  Scraping Tool reaches it through Apify's unblocking proxy, through `apify.run`.
+- Apify's synchronous run endpoint waits at most 300 seconds, so each tool sets its own Actor timeout below that: 90
+  seconds for prices, 120 for places and other Actors.
+- Apify's run endpoint takes no idempotency key. A call cut off by a power cut starts a new run when the task resumes.
+  These tools only read the web, so the only cost is one more small run.

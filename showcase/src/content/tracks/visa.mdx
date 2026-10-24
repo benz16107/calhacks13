@@ -1,0 +1,197 @@
+---
+order: 7
+sponsor: Visa
+prize: Reimagining Shopping
+title: Shopping by standing instruction, paid only after your tap
+summary: 'You tell the box what you want and when: "the Chemex filters when they are under $16", "keep the house stocked". An always-on box checks real stores on a schedule, reads your receipts, and when a deal or a reorder is due your phone asks one question with the price against your limit. Tap Approve and it pays, with every checkout signed by Visa''s Trusted Agent Protocol. The model never holds the card or a buy tool.'
+proof: 'In the live run on Oct 23, Apify read Chemex filters at Best Buy Canada for $15.36 CAD, the box asked, and after the tap it bought them at that price with a Stripe test-mode charge on a Visa test card. Undoing the household reorder refunded it in Stripe test mode. Every payment was test money.'
+criteriaSource: "Visa published weighted criteria for the track; the full brief was not published. Quoted from the project's track plan."
+criteria:
+  - ask: 'Innovation in reimagining shopping (25%).'
+    how: 'Shopping becomes standing instructions: "when it''s under $16", "when it''s back", "keep us stocked". The box carries them out around the clock, and you only answer yes or no. Agents can also buy their own supplies (a paid API) within a budget, over x402.'
+  - ask: 'User experience (25%).'
+    how: 'Say it in words, or fill four fields. The phone shows one card: what, how many, the price against your limit, TEST PAYMENT, Approve. Undo gives the money back: undoing a purchase task refunds its order.'
+  - ask: 'Technical execution with AI (20%).'
+    how: 'Claude, inside Factory''s Droid, turns your words into a watch and reads receipts to decide what runs out. Code does the money: the price rule, the budget, the signature, and idempotent charges that survive a power cut. Apify supplies live prices. Every check, approval and payment is a line in the action log.'
+  - ask: 'Commerce impact (15%).'
+    how: 'Merchants get agent orders they can verify with TAP instead of blocking every bot, at the price the buyer named. Households stop running out of the things they buy every week.'
+  - ask: 'Trust and responsibility (15%).'
+    how: 'The agent never sees the card or the mailbox login and cannot buy on its own. Every purchase needs your tap and stays within its budget. A signed order cannot be changed in transit or replayed. Test money only, enforced in code: the store refuses a live Stripe key and orders over $500.'
+clip: shopper
+video: visa
+shots:
+  - src: ../../assets/shots/app-shopper.png
+    alt: 'The Shopper app running on the box screen: a TEST PAYMENTS ONLY notice, which secrets the vault holds, and a form to watch a product in words or by store, product, price and quantity.'
+    caption: 'The Shopper app on the box, running: say what you want in words, or fill in the store, product, price limit and quantity. Claude can set a watch but cannot buy.'
+  - src: ../../assets/shots/app-store.png
+    alt: 'The Box Test Store: a TEST STORE notice, the rule that checkout takes only orders signed with Visa Trusted Agent Protocol, and a product table with prices and stock.'
+    caption: 'The Box Test Store, the stand-in merchant. Checkout takes only orders signed with Visa''s Trusted Agent Protocol and charges Stripe test mode.'
+  - src: ../../assets/shots/phone-approval.png
+    alt: 'A phone running the GurtOS portal: an approval banner with Approve and Deny buttons, two running tasks, and the app grid with Shopper and Box Test Store.'
+    caption: 'The real portal on a phone. Approvals, including Shopper''s purchases, arrive as a banner with the amount on the Approve button. This one is a scripted test spend.'
+    tall: true
+links:
+  - label: The Shopper track's code and README
+    href: https://github.com/benz16107/calhacks13/tree/main/tracks/shopper
+    note: 'The TAP signer is <code>tap.ts</code>, the Box Test Store is <code>store.ts</code>, the demo mailbox is <code>inbox.ts</code>.'
+  - label: 'The x402 supply payment from the live run, on Solana Explorer'
+    href: https://explorer.solana.com/tx/5PCwxRVPZ7hzjHaXPLtpbYH2k3nEdkzwjUxZXaVYcm46TsnGqkvGYtbCctcgWdpnAMzgRQu76MKW2HfByAzkcFvB?cluster=devnet
+    note: 'Public, no sign-in. An agent paid $0.03 of devnet USDC (test money) for a report it needed.'
+  - label: "Visa's Trusted Agent Protocol"
+    href: https://github.com/visa/trusted-agent-protocol
+    note: 'The open spec and sample agent the box follows for signing checkouts.'
+  - label: 'Docs: run a shopping agent'
+    href: https://gurtos.com/guides/shopping-agent/
+flow:
+  - zone: you
+    label: Say what you want
+    detail: '"Get me the Chemex filters when they''re under $14." Droid turns it into a watch with <code>shopper.watch</code>. It holds no buy tool.'
+  - zone: task
+    label: A check task, on a schedule
+    detail: 'No network, no secrets. It calls <code>apify.checkPrice</code> or <code>shopper.checkPrice</code>; the result goes in the log.'
+  - zone: core
+    label: The rule, in code
+    detail: 'In stock and at or under your limit? Then the box starts a purchase task with a budget of your limit times the quantity.'
+  - zone: you
+    label: Approve on your phone
+    detail: '"Buy 2 × Hario V60 02 filters for $13.00? ... TEST PAYMENT." Other tasks keep running.'
+  - zone: core
+    label: shopper.buy signs and pays
+    detail: 'Reads the card and the signing key from the vault, signs the order with TAP (RFC 9421, Ed25519, with a content digest), checks out with an idempotency key.'
+  - zone: outside
+    label: The store verifies, then charges
+    detail: 'The Box Test Store checks the signature, the price and the stock, then charges Stripe test mode with a Visa test card.'
+status:
+  - part: Best Buy Canada prices and stock
+    state: live
+    note: "Through Apify's Playwright Scraper, the Apify track's <code>apify.checkPrice</code>. Best Buy Canada doesn't sell Hario filters, so the live watch is on Chemex filters."
+  - part: Matching your words, reading receipts
+    state: live
+    note: Droid with Claude.
+  - part: Visa Trusted Agent Protocol
+    state: live
+    note: "Real signatures and real checks, following Visa's open sample. The key registry is the box's own route, not Visa's."
+  - part: Payments
+    state: test
+    note: 'Stripe test mode with the Visa test card 4242 once a Stripe test key is in the vault; simulated, and labelled so, before that and in offline merge-gate runs. Never real money.'
+  - part: The Box Test Store
+    state: simulated
+    note: 'Ours. It stands in for the merchant, because no real store takes a test card. A Best Buy deal is bought here at Best Buy''s live price.'
+  - part: The household mailbox
+    state: simulated
+    note: 'A demo POP3 mailbox on the box with sample receipts we wrote, standing in for Gmail. We could not make a Gmail account for the demo.'
+  - part: Agents buying supplies over x402
+    state: test
+    note: 'Real x402 payments by the wallet track, in USDC on Solana devnet, which has no value.'
+  - part: CAD prices against US-cent budgets
+    state: simulated
+    note: A fixed rate of 0.73.
+  - part: Visa Intelligent Commerce
+    state: not-built
+    note: Access needs a Visa representative, so nothing here depends on it.
+---
+
+## Evidence
+
+**The live run, Oct 23, on the x86 test VM** (`DEMO_LIVE=shopper ./demo`):
+
+- Stripe test mode charged the Hario filters bought from the watch, and refunded the household reorder when its task
+  was undone.
+- An agent paid $0.03 of devnet USDC for a report over x402
+  ([the transaction](https://explorer.solana.com/tx/5PCwxRVPZ7hzjHaXPLtpbYH2k3nEdkzwjUxZXaVYcm46TsnGqkvGYtbCctcgWdpnAMzgRQu76MKW2HfByAzkcFvB?cluster=devnet)).
+- Droid read the receipts and proposed exactly the filters and paper towels.
+- Apify read the Chemex filters (Best Buy SKU 20220310) at $15.36 CAD, and the box bought them at that price after the
+  OK, as a Stripe test-mode charge.
+- Droid turned "Get me the Chemex coffee filters at Best Buy when they're under $14" into a watch with a $13.99 limit.
+
+**The merge gate, every run.** `./demo` runs this track offline on every merge, with simulated payments. The latest
+run, Oct 24 on the x86 test VM, passed all 22 sections (175 checks, 0 failed). This track's part:
+
+```
+track shopper
+  ok    the box loaded the shopper tools
+  ok    the agent registry serves the box's TAP public key, never the private one
+  ok    the store refuses an unsigned order (an agent without the box's key)
+  ok    a signed order changed in transit is refused: the signature covers the body
+  ok    a captured signature cannot be used twice (the dripper is sold out, so nothing was charged)
+  ok    a check task (no network, no secrets) saw Hario V60 02 paper filters, 100 count at $8.99: above the $7.00 limit, so it keeps watching
+  ok    it dropped to $6.50, and the buy waits for the owner: "Buy 2 × Hario V60 02 paper filters, 100 count for $13.00? $6.50 each, ..."
+  ok    approved from the phone, it paid $13.00 within the $14.00 budget
+  ok    the store verified the TAP signature, then charged a TEST payment: Visa test card ending 4242, simulated pi_sim_…
+  ok    no Stripe call in this run: the payment is simulated and says so (offline demo run: no Stripe call)
+  ok    the watch closed: one purchase, no repeats
+  ok    the agent got 10 receipts from the demo inbox; 2 other emails stayed in the mailbox
+  ok    the receipts show filters and paper towels run out this week
+  ok    it never saw the mailbox login or the sign-in code email
+  ok    the proposal used the store's prices and waits for the owner: Reorder for the household: 1 × Hario V60 02 paper filters, 1...
+  ok    approved, the reorder was paid: $17.99 TEST payment
+  ok    undo on the purchase task refunded the order (re_sim_…)
+  ok    supplies over x402: the task holds only the wallet tools, reaches only the seller, and may spend 3 cents
+  ok    no card, signing key, mailbox password or Stripe key anywhere in the action log
+```
+
+## How it works
+
+<Flow steps={frontmatter.flow} />
+
+**Three things it does.**
+
+1. **Restock and price watcher.** The box checks a store on a schedule. When the item is in stock at or under your
+   price, your phone asks: *Buy 2 × Hario V60 02 paper filters, 100 count for $13.00? $6.50 each, down from $8.99,
+   under your $7.00 limit. TEST PAYMENT.*
+2. **Household reorder.** Claude reads the receipts in the household's mailbox, works out what runs out this week, and
+   proposes one reorder for your OK. It sees the receipts only: never the mailbox login, never your other email. The
+   date arithmetic (how often an item is bought, when it runs out) is code; Claude does the judgment.
+3. **Agents buying their own supplies.** A task pays for an API it needs with the wallet track's x402 payments, within
+   its budget. See the [Coinbase](/tracks/coinbase/) page.
+
+**Why a hijacked model cannot spend your money.**
+
+- The model never holds a buy tool or the card. Droid gets `shopper.watch` (set a rule) and `shopper.propose`
+  (suggest a reorder). Only purchase tasks the box itself starts hold `shopper.buy`, and each one asks you first.
+- Prices come from the store, not the model. `shopper.propose` takes SKUs and quantities and looks up the prices
+  itself.
+- Two gates on money: the tap, then the task's budget. A purchase above the budget stops and asks again.
+- Power cuts do not pay twice. Each checkout carries the broker's stable call key as its Idempotency-Key, at the store
+  and at Stripe.
+- One proposal and one watch per agent task, so a looping agent cannot flood your phone.
+
+**Visa Trusted Agent Protocol.** The box signs every checkout the way Visa's sample agent does: an RFC 9421 HTTP
+message signature with the `sig2` label, Ed25519, `keyId`, `nonce`, `created`, `expires` (8 minutes) and the
+`agent-payer-auth` tag. One addition: it also signs `content-digest` (RFC 9530), so a different item, quantity or
+price fails the check. The store refuses an unsigned order, a changed body, a replayed signature, an expired one, an
+unknown key, and a signature made for another store. The box publishes its public key at
+`GET /t/shopper/keys/box-shopper` in the shape of TAP's registry.
+
+```
+Signature-Input: sig2=("@authority" "@path" "content-digest"); created=1761271440; expires=1761271920;
+                 keyId="box-shopper"; alg="ed25519"; nonce="…"; tag="agent-payer-auth"
+Signature:       sig2=:…:
+Content-Digest:  sha-256=:…:
+```
+
+## Try it
+
+1. On a box, as root: `tracks/shopper/setup.sh`. It adds the Visa test card (`pm_card_visa`), a new Ed25519 signing
+   key and a demo mailbox password to `/etc/box/vault.env`.
+2. Optional: add `STRIPE_SECRET_KEY=sk_test_...` for real Stripe test-mode charges (the store refuses a live key), and
+   `APIFY_TOKEN` for live Best Buy prices.
+3. Open the Shopper app at `/t/shopper/` from the portal's app grid. Say "Get me the Hario V60 filters when they're
+   under $7", or fill the four fields.
+4. Open the Box Test Store at `/t/shopper/store` and drop the price. The next check asks on your phone; approve it.
+5. Undo the purchase task from the portal and watch the store refund the order.
+
+Or run the whole flow: `./demo` (offline, simulated payments) or `DEMO_LIVE=shopper ./demo` (Stripe test mode,
+Apify, Droid and devnet USDC).
+
+<Status rows={frontmatter.status} />
+
+## Limits
+
+- A watch closes after one purchase, or when you deny it. Watch again for another.
+- The running-low estimate assumes each purchase lasts until the next, whatever the quantity.
+- The test store keeps price and stock changes in memory; they reset when the box restarts. Orders are on disk.
+- The store remembers used nonces in memory. After a restart a captured signature could be sent again within its 8
+  minutes, but its Idempotency-Key still returns the first order instead of charging twice.
+- Visa's sample verifier only knows `@authority` and `@path`, so it would not accept our signatures, which also cover
+  the body.

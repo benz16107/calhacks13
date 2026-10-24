@@ -1,0 +1,71 @@
+---
+// Screenshots of the real app. Each opens full size. Tall ones (phones, side panels) sit two to a row.
+import { Image } from 'astro:assets';
+import type { ImageMetadata } from 'astro';
+
+interface Props {
+  shots: { src: ImageMetadata; alt: string; caption?: string; tall?: boolean }[];
+  heading?: string;
+}
+const { shots, heading = 'Screenshots' } = Astro.props;
+---
+
+{
+  shots.length > 0 && (
+    <section aria-labelledby="shots">
+      <h2 id="shots">{heading}</h2>
+      <div class="grid">
+        {shots.map((s) => (
+          <figure class={s.tall ? 'tall' : 'wide'}>
+            <a href={s.src.src} aria-label={`Open full size: ${s.alt}`}>
+              <Image src={s.src} alt={s.alt} widths={[640, 1200, 1800]} sizes="(max-width: 900px) 100vw, 900px" />
+            </a>
+            {s.caption && <figcaption>{s.caption}</figcaption>}
+          </figure>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+<style>
+  section {
+    margin: var(--space-7) 0;
+  }
+  h2 {
+    margin-bottom: var(--space-5);
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: var(--space-6) var(--space-5);
+    align-items: start;
+  }
+  figure {
+    margin: 0;
+  }
+  .wide {
+    grid-column: span 6;
+  }
+  .tall {
+    grid-column: span 3;
+  }
+  figure a {
+    display: block;
+    border: 1px solid var(--color-border-default);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    background: var(--color-bg-surface);
+  }
+  figcaption {
+    margin-top: var(--space-2);
+    font-size: 0.88rem;
+    color: var(--color-text-secondary);
+    max-width: var(--measure);
+  }
+  @media (max-width: 640px) {
+    .tall {
+      grid-column: span 6;
+    }
+  }
+</style>

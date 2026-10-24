@@ -1,0 +1,107 @@
+---
+// What the sponsor asked for, quoted, next to how GurtOS meets it. The status is a word, never only a color.
+interface Props {
+  sponsor: string;
+  source: string;
+  items: { ask: string; how: string; status: 'met' | 'partly' | 'open' }[];
+}
+const { sponsor, source, items } = Astro.props;
+const word = { met: 'Met', partly: 'Partly', open: 'Open' };
+---
+
+<section aria-labelledby="criteria">
+  <h2 id="criteria">What {sponsor} asked for</h2>
+  <p class="source">{source}</p>
+  <ol class="criteria">
+    {
+      items.map((c) => (
+        <li>
+          <blockquote class="ask">{c.ask}</blockquote>
+          <div class="how">
+            <span class={`state ${c.status}`}>{word[c.status]}</span>
+            <p set:html={c.how} />
+          </div>
+        </li>
+      ))
+    }
+  </ol>
+</section>
+
+<style>
+  section {
+    margin: var(--space-7) 0;
+  }
+  h2 {
+    margin-bottom: var(--space-2);
+  }
+  .source {
+    color: var(--color-text-secondary);
+    font-size: 0.9rem;
+    max-width: var(--measure);
+  }
+  .criteria {
+    list-style: none;
+    padding: 0;
+    margin: var(--space-5) 0 0;
+    border-top: 1px solid var(--color-border-strong);
+  }
+  .criteria li {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+    gap: var(--space-5);
+    padding: var(--space-4) 0;
+    border-bottom: 1px solid var(--color-border-default);
+  }
+  .ask {
+    margin: 0;
+    font-size: 0.95rem;
+    color: var(--color-text-secondary);
+    padding-left: var(--space-3);
+    border-left: 3px solid var(--color-border-default);
+  }
+  .ask::before {
+    content: '"';
+  }
+  .ask::after {
+    content: '"';
+  }
+  .how {
+    display: flex;
+    gap: var(--space-3);
+    align-items: flex-start;
+  }
+  .how p {
+    margin: 0;
+    font-size: 0.97rem;
+  }
+  .state {
+    flex: none;
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    padding: 2px 8px;
+    border-radius: var(--radius-sm);
+    margin-top: 2px;
+    min-width: 4.4rem;
+    text-align: center;
+  }
+  .met {
+    background: var(--color-state-done-bg);
+    color: var(--color-state-done-fg);
+  }
+  .partly {
+    background: var(--color-state-waiting-bg);
+    color: var(--color-state-waiting-fg);
+  }
+  .open {
+    background: var(--color-state-neutral-bg);
+    color: var(--color-state-neutral-fg);
+  }
+  @media (max-width: 760px) {
+    .criteria li {
+      grid-template-columns: 1fr;
+      gap: var(--space-3);
+    }
+  }
+</style>

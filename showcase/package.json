@@ -1,0 +1,20 @@
+{
+  "name": "gurtos-calhacks",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "check": "node scripts/privacy-check.mjs dist && node scripts/link-check.mjs dist",
+    "astro": "astro"
+  },
+  "dependencies": {
+    "@astrojs/markdown-satteri": "^0.4.5",
+    "@astrojs/mdx": "^8.1.0",
+    "@fontsource/ibm-plex-mono": "^5.3.0",
+    "@fontsource/instrument-sans": "^5.3.0",
+    "astro": "^7.4.1",
+    "sharp": "^0.35.5"
+  }
+}

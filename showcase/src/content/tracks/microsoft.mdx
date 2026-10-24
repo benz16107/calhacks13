@@ -1,0 +1,188 @@
+---
+order: 6
+sponsor: Microsoft
+prize: Built for the Real World, and the Customer Impact Award
+title: A finance agent with a path to production
+summary: 'The credit desk is a production-minded finance agent for a small wholesaler: a credit analyst agent and a collections clerk agent, with a human controller who signs off on anything large or suspicious. GurtOS is its path to production. Each seat runs as its own Linux user without keys, every action lands in an append-only log, approvals reach a phone, and the box picks up where it was after a power cut.'
+proof: 'Scored from the action log against an answer key, the latest live run caught <strong>14 of 14 planted errors with 0 false alarms</strong> and decided all 6 credit applications as the key does. A simple rule on the same CRS data approves all six for $153,000, including $20,000 to a fake applicant whose $18,500 rush order would have shipped to a freight forwarder.'
+criteriaSource: "From Microsoft's track description and judging criteria, as copied into the project's track plan (docs/tracks.md)."
+video: hyphenate
+clip: moment-3-approval
+criteria:
+  - ask: 'A production-minded AI agent for finance, productivity, healthcare or similar.'
+    how: 'Finance: trade credit and collections at Fogline Supply Co., a made-up Oakland wholesaler with 26 employees, about $8.1M revenue and 38 accounts on trade credit. Two agent seats (Droid running Claude) and a human controller.'
+  - ask: 'Customer understanding.'
+    how: 'A small wholesaler''s credit desk is one or two people doing credit checks and collections by hand, where one fake customer or one misapplied payment costs real money. The case is built from those everyday failures: a synthetic identity, a payment applied to the wrong customer, a post-dated check booked as cash, an invoice billed twice, a limit nobody reviewed in 29 months.'
+  - ask: 'Measurable usefulness.'
+    how: 'Every run is scored from its log: planted errors caught out of 14, false alarms, and decisions matched on 6 applications, 11 customers and 6 orders. Three live Droid runs caught 13, 13 and 14 of 14 and decided all six applications right. The simple rule is the baseline on the same data.'
+  - ask: 'Path to production.'
+    how: 'It runs on GurtOS: each seat is its own Linux user with its own copy of the files, keys stay in a root-only vault, every action is in an append-only log, approvals reach a phone, the box resumes after a power cut, and the OS updates as a whole and rolls itself back. The rules are a file, so the controller changes policy without code.'
+  - ask: 'Responsible design.'
+    how: 'The agent cannot approve its own large proposals, clear a fraud flag, or decide before the checks run. It never sees the answer key. Every decision names the rule and the data behind it. It pulls only what trade credit needs (no criminal or eviction searches) and never tells an applicant which check failed.'
+  - ask: 'End-to-end function.'
+    how: 'Application in, seven CRS checks, a decision by rule, the controller''s approval on a phone, the decision in the log, the run scored. The merge gate runs this path on every merge, live against CRS and Nessie.'
+  - ask: 'Customer Impact Award.'
+    how: 'The customer is the controller at a small business: the desk does the checking and the paperwork, stops the one application that would have cost $20,000 of credit, and brings only the decisions that need a person to their phone, with the reason and the data attached.'
+shots:
+  - src: ../../assets/track/hyphenate/box-fraud-referral.png
+    alt: 'The GurtOS box screen with a fraud referral banner from the credit analyst for APP-1043, with Approve and Deny.'
+    caption: 'The controller''s view: the analyst stopped on the fake applicant and asks, with the reason. From a scripted run of the seats calling the real tools, live against CRS and Nessie.'
+  - src: ../../assets/track/hyphenate/phone-fraud-referral.png
+    alt: 'The fraud referral on a phone with Approve and Deny.'
+    caption: 'The same request on the controller''s phone.'
+    tall: true
+  - src: ../../assets/track/hyphenate/analyst-waiting.png
+    alt: 'The analyst task window: runs as its own Linux user, no network, only the analyst tools, waiting for OK.'
+    caption: 'Each seat is a box task: its own Linux user, no network, only the tools its job allows.'
+  - src: ../../assets/track/hyphenate/analyst-decision.png
+    alt: 'The recorded decision: fraud hold, decided by the controller on the phone, rules FRD-1 and FRD-2, seven CRS request ids.'
+    caption: 'The decision in the log: what, why (rule ids), who approved, and the data it rests on.'
+links:
+  - label: The credit desk's code and README
+    href: https://github.com/benz16107/calhacks13/tree/main/tracks/credit-desk
+  - label: Live run 73c47b (14 of 14)
+    href: https://github.com/benz16107/calhacks13/tree/main/tracks/credit-desk/runs/2026-10-24-live-73c47b-rules-0.2
+    note: 'The analyst''s and clerk''s reports, the score and the run''s action log.'
+  - label: The answer key
+    href: https://github.com/benz16107/calhacks13/blob/main/tracks/credit-desk/cases/fogline-2026-10/answer_key.json
+  - label: 'Full credit desk write-up for Hyphenate'
+    href: /tracks/hyphenate/
+    note: 'The planted errors one by one, the log of the moment, and how to run your own case.'
+  - label: 'Docs: what GurtOS is'
+    href: https://gurtos.com/introduction/overview/
+  - label: 'Docs: system updates and rollback'
+    href: https://gurtos.com/concepts/system-updates/
+flow:
+  - zone: you
+    label: A credit application arrives
+    detail: 'A case folder: the ledger, applications, bank statements.'
+  - zone: task
+    label: The analyst and the clerk work it
+    detail: 'Droid running Claude, two Linux users, no keys, no network.'
+  - zone: core
+    label: Tools hold the keys and the rules
+    detail: 'CRS and Nessie calls run in the core. A decision must cite rules that exist.'
+  - zone: outside
+    label: CRS and Nessie
+    detail: 'Credit, identity and fraud data; the bank''s deposits.'
+  - zone: core
+    label: Pause for the controller
+    detail: 'Above $10,000 or on any fraud hold. Other work keeps running.'
+  - zone: you
+    label: The controller says yes or no
+    detail: 'On the portal or a phone.'
+  - zone: core
+    label: Logged and scored
+    detail: 'Every call, decision and approval in an append-only log; each run scored against the answer key.'
+status:
+  - part: Agent seats
+    state: live
+    note: 'Droid running Claude in the scored runs. The merge gate uses scripted seats that call the same real tools.'
+  - part: CRS and Nessie
+    state: live
+    note: 'Both sandboxes, called live. CRS''s own test identities only.'
+  - part: The controller in scored runs
+    state: simulated
+    note: 'A script answered yes so runs can be scored unattended, and the log says so. On a live box a person answers.'
+  - part: Business credit file
+    state: simulated
+    note: 'The CRS sandbox has no business credit route; the file is made up and labeled.'
+  - part: The company
+    state: simulated
+    note: 'Fogline Supply Co. is fictional. No money moves: the desk decides credit and records collection steps.'
+---
+
+## Evidence
+
+### Measured: three live runs
+
+<div class="table-wrap">
+
+| Run | Rules | Planted errors caught | False alarms | Credit decisions | Collection steps | Orders | Time, model cost |
+|---|---|---|---|---|---|---|---|
+| `88d75b` | 0.1 draft | 13 of 14 | 1 | 6 of 6 | 9 of 11 | 6 of 6 | 9 min, about $1.50 |
+| `6f5c0b` | 0.2 (Mana) | 13 of 14 | 1 | 6 of 6 | 9 of 11 | 6 of 6 | 9 min, about $3.54 |
+| **`73c47b`** | 0.2, seats told to record follow-ups | **14 of 14** | **0** | **6 of 6** | 9 of 11 | 5 of 6 | 13 min, about $4.67 |
+
+</div>
+
+The baseline: the simple rule in the rules file approves all six applications for $153,000. Following the rules,
+the desk approves $8,000 itself, sends $83,500 to the controller at reduced limits, and stops $20,000 as fraud.
+
+### What the controller saw
+
+In run `73c47b` the analyst asked the controller five times. Each question carries the decision, why, and the
+figures. The fraud referral, shortened:
+
+```
+Credit desk [APP-1043 fraud hold 0]: fraud referral. Put Pacific Crest Provisions LLC (APP-1043) on fraud hold,
+no credit, cash in advance only? The analyst found: Four independent fraud stops: (1) FRD-1, TransUnion identity
+returned code 2201 (SSN not associated with name) and code 2202 (DOB mismatch). (2) FRD-2, Fraud Finder risk
+score 88. (3) FRD-3, business registered 2026-09-01 (52 days before the case date) but the application claims
+4 years in business. (4) FRD-4, six compound signals present (threshold is two) ...
+Rules: FRD-1, FRD-2, FRD-3, FRD-4, FRR-1, FRR-2, FRR-3, GEN-1, CHK-1, CHK-3.
+```
+
+### Production checks on every merge
+
+The merge gate, `./demo`, runs the whole box on a fresh test VM before anything reaches main. The Oct 24 run passed
+22 sections and 175 checks with 0 failures, in 102 seconds on the x86 test VM. The parts this agent leans on:
+
+```
+moment 2: the booby-trapped page
+  ok    it could not read the vault: root only
+  ok    no secret anywhere in its environment or files
+moment 3: a pause for your OK
+  ok    another task kept running and finished while P waited
+  ok    only one of the two parallel $0.60 payments went through: $0.60 spent, not $1.20 (atomic budget)
+moment 4: pull the plug
+  ok    the long job carried on from where it was: no step done twice, none skipped
+  ok    the deploy is still waiting for its OK, live in SpacetimeDB
+track credit-desk
+  ok    the fraud referral paused the analyst until the controller answers
+  ok    the analyst cannot approve $40,000 on its own: above its $10,000 authority, nothing is recorded until the controller answers
+  ok    the clerk cannot release a credit hold; that needs the controller
+  ok    no CRS or Nessie key is anywhere in the log
+```
+
+## How it works
+
+<Flow steps={frontmatter.flow} />
+
+**Why the box is the path to production.** A finance agent that runs as a script on someone's laptop has the
+laptop's keys, can write anywhere, and leaves no record a controller can audit. On GurtOS the same agent:
+
+| Production need | What GurtOS does |
+|---|---|
+| Least privilege | Each seat is its own Linux user with no sudo, its own copy of the files, and only its job's tools. Segregation of duties is tool access. |
+| Secrets | CRS and Nessie keys live in a root-only vault. Tools that need them run in the box's core; the seats get results. |
+| Human approval | The tool returns "needs controller"; the box pauses only that task and sends the question to the portal and phone. |
+| Audit | One append-only, fsynced action log: every call, result, approval and cost. Decisions carry rule ids and CRS request ids. |
+| Reliability | After a power cut the box rebuilds every task from the log and resumes it. Updates install to a second system slot and roll back if unhealthy. |
+| Change control | The rules are a YAML file. Swap it per run with `{"rules": "/path/to/rules.yaml"}`; the tools refuse rule ids it does not have. |
+| Regression testing | Every run is scored against an answer key from its log, so a prompt or rules change is measured, not guessed. |
+
+## Try it
+
+On a box with `CRS_USERNAME`, `CRS_PASSWORD` and `NESSIE_API_KEY` in its vault:
+
+```sh
+curl -s -X POST localhost:7700/t/credit-desk/run -d '{"case": "fogline-2026-10"}'
+curl -s localhost:7700/approvals
+curl -s -X POST localhost:7700/approvals/<id> -d '{"approved": true, "by": "controller"}'
+curl -s -X POST localhost:7700/t/credit-desk/score -d '{"run": "<run>"}'
+```
+
+Any case folder that passes `check-case.ts` runs the same way with `{"dir": "/path/to/case"}`. The Hyphenate page
+has the steps for writing your own.
+
+<Status rows={frontmatter.status} />
+
+## Limits
+
+- The scorer checks decisions field by field, but a finding counts as caught by matching its rows, wording and rule
+  ids, not by checking that its conclusion is right.
+- Two collection steps differ from the key in every run: the clerk put two over-limit customers on credit hold
+  (rule COL-3) instead of the aging step the key lists.
+- The business credit file is simulated, and the bank is read, not written.
+- The controller is one role. Routing approvals by amount to different people is planned for GurtOS Business.

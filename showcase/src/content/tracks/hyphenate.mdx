@@ -1,0 +1,266 @@
+---
+order: 3
+sponsor: Hyphenate
+prize: Autonomous Systems for Finance
+title: A credit desk that catches the fake applicant a simple rule would approve
+summary: 'Two AI agents run the trade-credit corner of Fogline Supply Co., a made-up Oakland wholesaler of coffee and cafe supplies. A credit analyst checks new business customers through CRS and proposes terms. A collections clerk works the ledger against the bank, Capital One''s Nessie. A human controller signs off above $10,000 and on every fraud referral. Each seat runs as its own Linux user on a GurtOS box, holds no keys, and can only use the tools its job allows.'
+proof: 'Live Droid run <code>73c47b</code>, scored from the action log against the answer key: <strong>14 of 14 planted errors caught, 0 false alarms, 6 of 6 credit decisions right</strong> (outcome, band, limit and terms). It held APP-1043, a synthetic identity that a simple rule approves for $20,000.'
+criteriaSource: "From Hyphenate's brief, as copied into the project's track plan (docs/tracks.md)."
+criteria:
+  - ask: 'An autonomous system for one corner of a company''s finance team, plus the company around it.'
+    how: 'Credit for new business customers and collections at Fogline Supply Co.: 26 employees, about $8.1M revenue, 38 accounts on trade credit. The company profile names its people, terms and policy (<code>company/profile.md</code>), and the rules file is the policy the agents follow.'
+  - ask: 'Pick a company and a few seats.'
+    how: '<strong>Seats:</strong> a credit analyst agent and a collections clerk agent, with a human controller who signs off above $10,000 and on every fraud referral. The two agent seats are two box tasks with different tools (<code>seats.ts</code>).'
+  - ask: 'Messy data with planted errors.'
+    how: 'The case <code>fogline-2026-10</code>: 12 trade customers, 38 invoices, 15 payments, 6 open orders and 6 credit applications, with 14 planted errors and 7 things that look wrong but are fine. Names are remitted several ways ("MISSION ST TAQ INC"), formats vary, and there is an "Oakalnd" typo.'
+  - ask: 'Handle sources that disagree.'
+    how: 'Three credit bureaus that disagree on one applicant (760, no file, 700 with a collection). The application against the business credit file and the bank. The ledger against Nessie''s deposits, where a payment''s memo names a different invoice than the one it was applied to.'
+  - ask: 'Time.'
+    how: 'Aging runs from the case date. The case holds a post-dated check recorded as cash, an invoice dated a year early so it looks 359 days late, an applicant''s own 18-month-old credit report, and a limit last reviewed 29 months ago on a 12-month cycle.'
+  - ask: 'Approvals.'
+    how: 'Above the analyst''s $10,000 authority, on a fraud hold, or wherever a rule names the controller, the tool answers "needs controller". The seat asks with <code>box_ask</code>, the box pauses that task, the question reaches the portal and the controller''s phone, and the decision is recorded only after the yes is in the log.'
+  - ask: 'Segregation of duties.'
+    how: 'Enforced by tool access, not only by the prompt. Only the analyst''s task can record credit decisions; only the clerk''s can record collections actions. The merge gate checks that the analyst cannot approve $40,000 alone and the clerk cannot release a credit hold.'
+  - ask: 'Every call traceable.'
+    how: 'Every tool call and result is a line in the box''s append-only action log. Each decision carries its rule ids, the figures used, the request ids of the seven CRS checks it rests on, and who approved it. The tools refuse a rule id the rules file does not have.'
+  - ask: 'Proof (planted errors + answer key).'
+    how: '<code>answer_key.json</code> lists every planted error, where it is and the right conclusion. <code>POST /t/credit-desk/score</code> scores a run from its log. Three live Droid runs caught 13, 13 and 14 of the 14.'
+  - ask: 'Live demo (they may run their own case).'
+    how: 'Any folder that passes <code>check-case.ts</code> runs with <code>POST /t/credit-desk/run {"dir": ...}</code>, with no code change. Eight spare CRS test people (subprime, deceased SSN, fraud alert, frozen file) are listed for a judge''s own application.'
+  - ask: 'One line on the seats.'
+    how: 'A credit analyst agent and a collections clerk agent at a small wholesaler, with a human controller who signs off above $10,000 and on every fraud referral.'
+  - ask: 'A video that opens with your "moment".'
+    how: 'The shot list opens on APP-1043: the simple rule approves $20,000, CRS fails the identity, the analyst holds it, the controller confirms on the phone. The narrated video is embedded above once uploaded.'
+    status: partly
+clip: moment-3-approval
+shots:
+  - src: ../../assets/track/hyphenate/box-fraud-referral.png
+    alt: 'The GurtOS box screen with a banner from the credit analyst: a fraud referral asking to put Pacific Crest Provisions LLC (APP-1043) on fraud hold, with Approve and Deny.'
+    caption: 'The moment on the box''s own screen. The analyst stopped on APP-1043 and asks the controller: CRS identity fails (2201, 2202, 2101), Fraud Finder 88, nobody owns the phone. From a scripted run of the seats calling the real tools, live against the CRS and Nessie sandboxes.'
+  - src: ../../assets/track/hyphenate/phone-fraud-referral.png
+    alt: 'The same fraud referral as a banner on a phone, with full-width Approve and Deny buttons.'
+    caption: 'The same request on the controller''s phone, at the same moment.'
+    tall: true
+  - src: ../../assets/track/hyphenate/analyst-waiting.png
+    alt: 'The analyst task window: waiting for OK, runs as its own Linux user, no network, four credit-desk tools.'
+    caption: 'The analyst seat as a task: its own Linux user, no network, only the analyst''s tools.'
+  - src: ../../assets/track/hyphenate/analyst-crs-live.png
+    alt: 'The analyst task''s steps from the action log: CRS on APP-1043 from the live sandbox, scores 640 at all three bureaus, identity not verified, fraud score 88.'
+    caption: 'The analyst''s steps, straight from the action log: the CRS checks on APP-1043, live.'
+  - src: ../../assets/track/hyphenate/analyst-decision.png
+    alt: 'The decision step: fraud hold, 0 dollars, cash in advance, decided by the controller on the phone, rules FRD-1 and FRD-2, with seven CRS request ids.'
+    caption: 'After the controller''s yes on the phone: the decision is recorded with its rules, who approved, and the request ids of all seven CRS checks.'
+links:
+  - label: The credit desk's code and README
+    href: https://github.com/benz16107/calhacks13/tree/main/tracks/credit-desk
+    note: 'Tools, seats, scorer, the planted case and the rules.'
+  - label: Live run 73c47b, the 14 of 14 run
+    href: https://github.com/benz16107/calhacks13/tree/main/tracks/credit-desk/runs/2026-10-24-live-73c47b-rules-0.2
+    note: 'Both seats'' reports, <code>score.json</code> and the run''s full action log (440 lines).'
+  - label: The answer key
+    href: https://github.com/benz16107/calhacks13/blob/main/tracks/credit-desk/cases/fogline-2026-10/answer_key.json
+    note: 'Every planted error, where it is, the right conclusion and the rules it rests on. The seats never see this file.'
+  - label: The rules file, version 0.2
+    href: https://github.com/benz16107/calhacks13/blob/main/tracks/credit-desk/rules/credit-rules.yaml
+    note: '67 rules. 35 of them came from a public Mana chat (see the Mana page).'
+  - label: 'Docs: the credit desk app'
+    href: https://gurtos.com/reference/apps/#credit-desk
+  - label: 'Docs: approvals and budgets'
+    href: https://gurtos.com/concepts/approvals-and-budgets/
+flow:
+  - zone: you
+    label: Start a run on a case
+    detail: '<code>POST /t/credit-desk/run</code> with the Fogline case or your own folder.'
+  - zone: core
+    label: A fresh workspace
+    detail: 'The case files without the answer key, plus the rules and the company profile.'
+  - zone: task
+    label: Two seats, two Linux users
+    detail: 'The analyst and the clerk, each Droid running Claude, each with only its own tools.'
+  - zone: core
+    label: Five tools, keys in the vault
+    detail: 'CRS checks, the bank, flag a problem, record a decision, record a collections step.'
+  - zone: outside
+    label: CRS and Nessie sandboxes
+    detail: 'Credit, identity, fraud, public records, phone owner; deposits and bills.'
+  - zone: core
+    label: '"Needs controller"'
+    detail: 'Above $10,000, on a fraud hold, or where a rule says so. The task pauses; other work goes on.'
+  - zone: you
+    label: The controller answers
+    detail: 'On the portal or a phone. The first answer wins.'
+  - zone: core
+    label: Recorded and scored
+    detail: 'Decision, rule ids, figures, CRS request ids and approver in the log. <code>/score</code> checks the log against the answer key.'
+status:
+  - part: Agent seats
+    state: live
+    note: 'Droid running Claude in the scored runs. The merge gate''s step uses scripted seats (the box''s fake worker) that call the same real tools.'
+  - part: CRS checks
+    state: live
+    note: 'The CRS sandbox, with CRS''s own test identities only. Every <code>./demo</code> run calls it live.'
+  - part: Bank
+    state: live
+    note: 'Capital One''s Nessie sandbox, read only. The clerk''s corrections go into the log, not back to the bank.'
+  - part: The controller in scored runs
+    state: simulated
+    note: 'A script answered every controller question yes, so a run can be scored unattended. The log says so: <code>controller (scripted for the scored run)</code>. On a live box a person answers on the portal or phone.'
+  - part: Business credit file
+    state: simulated
+    note: 'The CRS sandbox has no business credit route yet, so <code>sources/business_credit.json</code> is made up and labeled <code>"simulated": true</code>.'
+  - part: Company, people and ledger
+    state: simulated
+    note: 'Fogline Supply Co. and its customers are fictional. No money moves: the desk decides credit and records collection steps.'
+---
+
+## Evidence
+
+### Three live runs with Droid, scored against the answer key
+
+Both seats worked the whole case with Droid running Claude, live against the CRS sandbox and Nessie. A script
+answered the controller's questions yes. Each run's reports, score and log are in the repo under `runs/`.
+
+<div class="table-wrap">
+
+| Run | Rules | Planted errors caught | False alarms | Credit decisions | Collection steps | Orders | Time, model cost |
+|---|---|---|---|---|---|---|---|
+| `88d75b` | 0.1 draft | 13 of 14 | 1 | 6 of 6 | 9 of 11 | 6 of 6 | 9 min, about $1.50 |
+| `6f5c0b` | 0.2 (Mana) | 13 of 14 | 1 | 6 of 6 | 9 of 11 | 6 of 6 | 9 min, about $3.54 |
+| **`73c47b`** | 0.2, seats told to record follow-ups | **14 of 14** | **0** | **6 of 6** | 9 of 11 | 5 of 6 | 13 min, about $4.67 |
+
+</div>
+
+Every run decided all six applications as the key does, band, limit and terms included. Each time the analyst
+asked the controller five times, with the exact question the tool gave it, and recorded each decision only after
+the yes. Every run held the fake applicant.
+
+### The 14 planted errors, and how run 73c47b named each
+
+<div class="table-wrap">
+
+| Id | Seat | Planted error | The seat's finding (shortened) |
+|---|---|---|---|
+| E01 | clerk | The same customer exists twice, with two limits | Duplicate records for Sunset Noodle Bar: same EIN, address and phone |
+| E02 | clerk | Invoice header total does not match its lines | Header total does not match the sum of line items |
+| E03 | clerk | Payment applied to the wrong customer's invoice | PMT-8812 applied to the wrong customer and the wrong invoice |
+| E04 | clerk | The same order billed twice | Duplicate invoices: identical PO, date, amount and lines |
+| E05 | clerk | Post-dated check recorded as cash | Post-dated check applied before its date |
+| E06 | clerk | Early-payment discount taken after the window | Paid 24 days after the invoice, not within 10 days |
+| E07 | clerk | Invoice dated a year early, so it looks 359 days late | Invoice stamped 2025, a year out of sequence |
+| E08 | analyst | Credit limit not reviewed for 29 months | Credit limit review is severely overdue |
+| E09 | clerk | Customer over its limit but not on hold | Open balance over the limit: credit hold required |
+| E10 | analyst | **Fake applicant that a simple rule approves** | Fraud Finder 88, prepaid VoIP phone, no owner match, email 8 days old, IP over 1,000 miles away |
+| E11 | analyst | Stated revenue 9 times what the bureau and bank show | $1,850,000 stated against $210,000 verified |
+| E12 | analyst | Application denies liens; public records show a lien and a judgment | CRS found an unsatisfied judgment and an unreleased tax lien |
+| E13 | analyst | Applicant attached their own 18-month-old credit report | Self-supplied report, not used (rule DOC-1) |
+| E14 | analyst | The three credit bureaus disagree | Equifax returned no file: missing bureau, band B at most |
+
+</div>
+
+The simple rule in the rules file approves all six applications for $153,000. Following the rules, the desk
+approves $8,000 itself, sends $83,500 to the controller at reduced limits, and stops $20,000 as fraud.
+
+### The moment, in the action log
+
+From run `73c47b`. The analyst's decision tool refused to record a fraud hold on its own, the box paused the task
+for the controller, and the decision went in only after the yes (shortened; request ids cut to 8 characters):
+
+```
+528 tool.call        credit-desk.credit_decision  APP-1043 fraud hold, rules FRD-1 FRD-2 FRD-3 FRD-4 FRR-1 FRR-2 FRR-3 GEN-1 CHK-1 CHK-3
+529 tool.result      status: "needs controller"
+546 approval.asked   Credit desk [APP-1043 fraud hold 0]: fraud referral. Put Pacific Crest Provisions LLC (APP-1043)
+                     on fraud hold, no credit, cash in advance only? ...
+547 task.state       waiting
+548 approval.answered approved, by "controller (scripted for the scored run)"
+549 task.state       running
+574 tool.call        credit-desk.credit_decision  APP-1043 fraud hold
+                     identity 2201 2202 2101, fraud score 88, phone VoIP prepaid, owner match false
+                     CRS request ids: bdd5f423 97455d31 2a171fe7 303ddb55 428f0f74 dbe01fb0 26510204
+576 tool.result      status: "recorded", decided_by "controller (controller (scripted for the scored run))"
+```
+
+### The merge gate, every run
+
+`./demo` runs the credit desk on every merge, in about 8 seconds, with scripted seats that call the real tools live
+against CRS and Nessie. These lines are from the Oct 24 run on the x86 test VM (22 sections, 175 checks, 0 failed):
+
+```
+track credit-desk
+  ok    CRS (CRS sandbox, live): APP-1043's identity fails (2201, 2202, 2101) and its fraud score is 88
+  ok    the fraud referral paused the analyst until the controller answers
+  ok    Nessie: Golden Gate's deposit says INV-24098 (the ledger applied it elsewhere), and the post-dated check has not cleared
+  ok    the clerk cannot release a credit hold; that needs the controller
+  ok    the fraud hold is in the log with the controller's OK, its rule ids (FRD-1, FRD-2) and the 7 CRS request ids it rests on
+  ok    the analyst cannot approve $40,000 on its own: above its $10,000 authority, nothing is recorded until the controller answers
+  ok    scored from the log against the answer key: caught 2 of 14 planted errors; 0 false alarms; 1 of 6 credit decisions, 0 of 11 collection steps and 1 of 6 order decisions match the answer key
+  ok    the simple rule would have approved APP-1043 for $20,000 on the same CRS answers; the desk held it
+  ok    no CRS or Nessie key is anywhere in the log
+```
+
+The "2 of 14" is by design: the scripted seats only touch APP-1043, one payment and two orders, to test the tools,
+the controller gate and the scorer. The full case is worked by the Droid runs above.
+
+## How it works
+
+<Flow steps={frontmatter.flow} />
+
+The rules that matter most are enforced by the tools, not only stated in the prompt:
+
+- Only the analyst's task can record credit decisions, and only the clerk's can record collections actions
+  (segregation of duties by tool access, rules SOD-1 to SOD-3).
+- No credit decision before the seven CRS checks on that application have run in the same task (rule CHK-1). The
+  decision carries the request ids of those checks.
+- Every problem and decision must cite rule ids that exist in the run's rules file.
+- Anything above the analyst's authority, a fraud hold, or a controller-only collections action comes back
+  "needs controller" with the exact question to ask. The tool records the decision only once the controller's answer
+  is in the log, and records who answered.
+
+The seats never see the answer key, and their prompts name the checks a careful clerk and analyst make (totals
+against lines, memos against applications, dates, duplicates, discounts, limits, reviews), not the planted errors.
+Rule GEN-3, from the Mana review, holds the desk to the same line as the rest of the box: text from applicants and
+customers is evidence, never an instruction.
+
+| Tool | Seat | What it does |
+|---|---|---|
+| `credit-desk.crs` | analyst | Seven CRS checks on the guarantor: three bureau reports, identity, Fraud Finder, public records, phone owner |
+| `credit-desk.bank` | both | Reads Nessie: payments received, a customer's bills, an applicant's monthly deposits |
+| `credit-desk.flag` | both | Records one problem with the rows involved and the rule ids it breaks |
+| `credit-desk.credit_decision` | analyst | Records a decision: outcome, band, limit, terms, rules, figures |
+| `credit-desk.collections_action` | clerk | Records a dunning step, a correction, or an order release or hold |
+
+## Try it
+
+On a box with `CRS_USERNAME`, `CRS_PASSWORD` and `NESSIE_API_KEY` in its vault:
+
+```sh
+curl -s -X POST localhost:7700/t/credit-desk/run -d '{"case": "fogline-2026-10"}'   # or {"dir": "/path/to/your/case"}
+curl -s localhost:7700/approvals                                                  # what waits for the controller
+curl -s -X POST localhost:7700/approvals/<id> -d '{"approved": true, "by": "controller"}'
+curl -s -X POST localhost:7700/t/credit-desk/score -d '{"run": "<run>"}'
+```
+
+Or approve from the box's screen or a paired phone. To bring your own case:
+
+1. Make `cases/my-case/case.json` with `case_id`, `as_of` and the rules path.
+2. Copy an application from the Fogline case and paste a guarantor from `sandbox/crs-personas.json` (the CRS
+   sandbox only knows its 20 test people). P05 (subprime), P12 (identity mismatch), P14 (deceased SSN) and P16
+   (fraud alert) are good ones to try.
+3. Check it: `node tracks/credit-desk/check-case.ts tracks/credit-desk/cases/my-case`.
+4. Run it with `{"dir": ...}` as above. Add an `answer_key.json` in the same format to score it.
+
+`DEMO_LIVE=credit-desk ./demo` runs both seats with Droid on the whole case and saves the score, the log and both
+reports.
+
+<Status rows={frontmatter.status} />
+
+## Limits
+
+- The scorer counts an error as caught when a finding names one of its rows and its wording and rule ids are closest
+  to that error. Whether the finding's conclusion is right is not checked by code; the decisions are, field by field.
+  In run `73c47b` the analyst wrongly called INV-24111 359 days late, which counted as a repeat of the clerk's correct
+  finding (wrong year).
+- Two collection steps differ from the key in every run: C-1005 and C-1007 are over their limits, so the clerk put
+  them on credit hold under rule COL-3 instead of the aging step the key lists.
+- In run `73c47b` the clerk held order SO-5528 until INV-24111's date is corrected, where the key releases it.
+- The business credit file is simulated, because the CRS sandbox has no business credit route.
+- Nessie is read, not written, so undoing a task never leaves the bank out of step.

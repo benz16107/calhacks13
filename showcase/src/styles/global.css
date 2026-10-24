@@ -1,0 +1,366 @@
+/* GurtOS design tokens (docs/figma.md, direction A). Night sky for the top band, Paper for reading. */
+@import '@fontsource/instrument-sans/400.css';
+@import '@fontsource/instrument-sans/500.css';
+@import '@fontsource/instrument-sans/600.css';
+@import '@fontsource/ibm-plex-mono/400.css';
+@import '@fontsource/ibm-plex-mono/500.css';
+
+:root {
+  --color-desktop-sky: #27313f;
+  --color-desktop-moon: #e9dfc8;
+  --color-desktop-hill-far: #46586b;
+  --color-desktop-hill-mid: #36475a;
+  --color-desktop-hill-near: #28343f;
+  --color-desktop-hill-front: #1c252d;
+  --color-desktop-glass: #141a21;
+  --color-desktop-text: #f2efe8;
+  --color-desktop-text-secondary: #b9c0c8;
+  --color-desktop-accent: #f2b544;
+  --color-desktop-on-accent: #1a1206;
+
+  --color-bg-canvas: #f3f1ea;
+  --color-bg-surface: #fbfaf6;
+  --color-bg-sunken: #e6e7e1;
+  --color-border-default: #d3d6cf;
+  --color-border-strong: #6b726c;
+  --color-text-primary: #1c201d;
+  --color-text-secondary: #535a54;
+  --color-action-primary: #1c201d;
+  --color-action-on-primary: #fbfaf6;
+  --color-focus: #2d5784;
+  --color-state-running-fg: #2d5784;
+  --color-state-running-bg: #dde8f2;
+  --color-state-waiting-fg: #7f4c00;
+  --color-state-waiting-bg: #f8ebd0;
+  --color-state-done-fg: #2e6338;
+  --color-state-done-bg: #dfeddc;
+  --color-state-failed-fg: #9c3326;
+  --color-state-failed-bg: #f6e0da;
+  --color-state-neutral-fg: #535a54;
+  --color-state-neutral-bg: #e6e7e1;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+
+  --font-sans: 'Instrument Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  --measure: 46rem;
+  --page: 76rem;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-bg-canvas);
+  color: var(--color-text-primary);
+  font: 400 17px/1.6 var(--font-sans);
+  font-kerning: normal;
+}
+
+img,
+video {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+a {
+  color: var(--color-focus);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.18em;
+}
+a:hover {
+  text-decoration-thickness: 2px;
+}
+:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  margin: 0;
+  text-wrap: balance;
+}
+h1 {
+  font-size: clamp(2rem, 4.2vw, 3rem);
+  letter-spacing: -0.02em;
+}
+h2 {
+  font-size: 1.6rem;
+}
+h3 {
+  font-size: 1.15rem;
+}
+p {
+  margin: 0 0 var(--space-4);
+  text-wrap: pretty;
+}
+
+code,
+kbd,
+pre,
+samp {
+  font-family: var(--font-mono);
+  font-size: 0.86em;
+}
+:not(pre) > code {
+  background: var(--color-bg-sunken);
+  padding: 0.1em 0.35em;
+  border-radius: var(--radius-sm);
+  overflow-wrap: anywhere;
+}
+pre,
+pre.astro-code {
+  background: var(--color-bg-surface) !important;
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  overflow-x: auto;
+  line-height: 1.55;
+  font-size: 0.8rem;
+  margin: 0 0 var(--space-5);
+  tab-size: 2;
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.94rem;
+  margin: 0 0 var(--space-5);
+}
+th,
+td {
+  text-align: left;
+  vertical-align: top;
+  padding: var(--space-3) var(--space-3) var(--space-3) 0;
+  border-bottom: 1px solid var(--color-border-default);
+}
+th {
+  font-weight: 600;
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+  border-bottom-color: var(--color-border-strong);
+}
+.table-wrap {
+  overflow-x: auto;
+  margin: 0 0 var(--space-5);
+}
+.table-wrap table {
+  margin: 0;
+}
+
+.wrap {
+  max-width: var(--page);
+  margin: 0 auto;
+  padding: 0 var(--space-5);
+}
+.measure {
+  max-width: var(--measure);
+}
+
+.kicker {
+  font-size: 0.78rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+  margin: 0 0 var(--space-2);
+}
+
+.lead {
+  font-size: 1.2rem;
+  line-height: 1.55;
+  color: var(--color-text-primary);
+}
+
+.mono {
+  font-family: var(--font-mono);
+}
+
+.skip {
+  position: absolute;
+  left: -999px;
+  top: 0;
+  background: var(--color-bg-surface);
+  padding: var(--space-2) var(--space-4);
+  z-index: 10;
+}
+.skip:focus {
+  left: var(--space-4);
+}
+
+/* Markdown bodies of track pages and the overview's prose. */
+.prose h2 {
+  margin: var(--space-8) 0 var(--space-4);
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--color-border-default);
+}
+.prose h3 {
+  margin: var(--space-6) 0 var(--space-3);
+}
+.prose ul,
+.prose ol {
+  padding-left: 1.3em;
+  margin: 0 0 var(--space-5);
+}
+.prose li {
+  margin-bottom: var(--space-2);
+}
+.prose li > p {
+  margin: 0;
+}
+.prose blockquote {
+  margin: 0 0 var(--space-5);
+  padding: var(--space-2) var(--space-4);
+  border-left: 3px solid var(--color-border-strong);
+  color: var(--color-text-secondary);
+}
+.prose > p,
+.prose > ul,
+.prose > ol,
+.prose > h2,
+.prose > h3,
+.prose > blockquote {
+  max-width: var(--measure);
+}
+
+@media (max-width: 640px) {
+  body {
+    font-size: 16px;
+  }
+  .wrap {
+    padding: 0 var(--space-4);
+  }
+  th,
+  td {
+    padding-right: var(--space-2);
+  }
+}
+
+/* Diagrams from the docs site: inline SVG that takes its colours from these variables (Paper). */
+.diagram {
+  --diagram-ink: #1c201d;
+  --diagram-muted: #535a54;
+  --diagram-line: #6b726c;
+  --diagram-fill: #fbfaf6;
+  --diagram-fill-strong: #e6e7e1;
+  --diagram-accent: #2d5784;
+  --diagram-accent-fill: #dde8f2;
+  --diagram-danger: #9c3326;
+  --diagram-danger-fill: #f6e0da;
+  --diagram-ok: #2e6338;
+  --diagram-ok-fill: #dfeddc;
+  margin: 0 0 var(--space-6);
+}
+.diagram svg {
+  width: 100%;
+  height: auto;
+  font-family: var(--font-sans);
+}
+.diagram svg text {
+  fill: var(--diagram-ink);
+  font-size: 14px;
+}
+.diagram svg .muted {
+  fill: var(--diagram-muted);
+  font-size: 12px;
+}
+.diagram svg .mono {
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+.diagram svg .node {
+  fill: var(--diagram-fill);
+  stroke: var(--diagram-line);
+  stroke-width: 1.25;
+}
+.diagram svg .node-strong {
+  fill: var(--diagram-fill-strong);
+  stroke: var(--diagram-line);
+  stroke-width: 1.25;
+}
+.diagram svg .zone {
+  fill: none;
+  stroke: var(--diagram-line);
+  stroke-width: 1.25;
+  stroke-dasharray: 6 5;
+}
+.diagram svg .accent {
+  fill: var(--diagram-accent-fill);
+  stroke: var(--diagram-accent);
+  stroke-width: 1.5;
+}
+.diagram svg .danger {
+  fill: var(--diagram-danger-fill);
+  stroke: var(--diagram-danger);
+  stroke-width: 1.5;
+}
+.diagram svg .ok {
+  fill: var(--diagram-ok-fill);
+  stroke: var(--diagram-ok);
+  stroke-width: 1.5;
+}
+.diagram svg .line {
+  fill: none;
+  stroke: var(--diagram-line);
+  stroke-width: 1.5;
+}
+.diagram svg .line-danger {
+  fill: none;
+  stroke: var(--diagram-danger);
+  stroke-width: 1.5;
+  stroke-dasharray: 5 4;
+}
+.diagram svg .arrowhead {
+  fill: var(--diagram-line);
+}
+.diagram svg .arrowhead-danger {
+  fill: var(--diagram-danger);
+}
+.diagram svg .text-danger {
+  fill: var(--diagram-danger);
+}
+.diagram svg .text-accent {
+  fill: var(--diagram-accent);
+}
+.diagram figcaption {
+  margin-top: var(--space-3);
+  font-size: 0.88rem;
+  color: var(--color-text-secondary);
+  max-width: var(--measure);
+}
+
+/* Phones: wide tables in a page body scroll sideways instead of overflowing. */
+@media (max-width: 760px) {
+  .prose table {
+    display: block;
+    overflow-x: auto;
+  }
+}

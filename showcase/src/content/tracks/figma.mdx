@@ -1,0 +1,272 @@
+---
+order: 19
+sponsor: Figma
+prize: 'Best Workflow, Stage Log, Best Design and Most Creative'
+title: From a FigJam board to the box's own screen
+summary: 'Figma ran every stage of GurtOS: a FigJam board for the architecture and the four demo moments, two rounds of OS research, three directions, a design system with every token as a variable, two prototype flows, a 14-slide Figma Slides deck, and a handoff through Figma''s MCP server that became the real portal and the GNOME desktop layer. 21 working sessions, 212 minutes, all logged.'
+proof: 'The portal the box runs today was generated from the design through Figma''s MCP server, and keeps Figma''s variable names as its CSS custom properties: <code>var(--color-state-waiting-fg)</code> in the design file is <code>var(--color-state-waiting-fg)</code> in the shipped CSS. The screenshots below put each design next to the running app.'
+criteriaSource: "From Figma's Cal Hacks brief, as copied into the project's track plan. Figma judges four prizes: Best Workflow, Stage Log, Best Design and Most Creative."
+criteria:
+  - ask: 'Going from idea to demo with Figma.'
+    how: 'Every stage is in Figma and lands in the repo: FigJam for ideation and architecture, Figma Design for tokens, components and screens, prototype reactions and Figma Make for the flows, Figma Slides for the deck, and Figma''s MCP server for the handoff that generated <code>portal/</code>. The path is the flow diagram below.'
+  - ask: 'A stage log (up to 200 words each for ideation, prototyping, handoff, code generation: tool, minutes, 1 to 5 rating).'
+    how: 'In full on this page, under <a href="#stage-log">Stage log</a>: four stages, each with its tools, minutes and rating, each under 200 words. Every session is also a line in <code>docs/stagelog.md</code>, with how its output reached the project.'
+  - ask: 'Figma Slides (required).'
+    how: 'The pitch deck is a 14-slide Figma Slides file in the design''s look, with real OS screens in its image slots. It opens signed out.'
+  - ask: 'An embedded Make or prototype.'
+    how: 'The Figma Design prototype is embedded on this page, both flows: approve from a phone notification, and undo one task on the box. A Figma Make file holds the same flows as a small web page.'
+  - ask: "Files shared with 'Anyone'."
+    how: 'The FigJam board, the design file, the deck and both prototype flows open in a signed-out browser (checked Oct 24). The Make file opens too, but its live preview did not load signed out.'
+  - ask: 'Demo video, 3 minutes at most.'
+    how: 'Shot list in the repo''s <code>docs/videos.md</code>; the video goes at the top of this page once uploaded.'
+    status: partly
+clip: moment-3-approval
+video: figma
+shots:
+  - src: ../../assets/repo/figma/ideation-board.png
+    alt: 'The FigJam ideation board: how the box works as a diagram, the four demo moments as flow charts, and the 25 sponsor tracks as stickies grouped by the slot each plugs into.'
+    caption: 'Ideation in FigJam: the architecture, the four demo moments, and the 25 tracks by the slot each plugs into. The two moodboards sit on the same board.'
+  - src: ../../assets/repo/figma/directions/a-home-server-box.png
+    alt: 'Direction A, the home-server OS: a night wallpaper with hills and a moon, a greeting, widgets, an app grid, a dock, and an approval banner.'
+    caption: 'Direction A, the home-server OS, one of three directions drawn on the box screen and the phone. Ben picked it.'
+  - src: ../../assets/repo/figma/os/box-task-detail.png
+    alt: 'Design: the task window for Find me a road bike, with a red summary of four blocked attempts, the steps from the action log, and the files it changed.'
+    caption: 'Design: one task as a window, from the Figma file.'
+    tall: true
+  - src: ../../assets/shots/box-blocked.png
+    alt: 'The running portal: the same task window with a blocked attempt summary, facts, steps from the action log, files changed and a diff.'
+    caption: 'The real portal, generated from that frame, on a live box.'
+    tall: true
+  - src: ../../assets/repo/figma/os/phone-approval.png
+    alt: 'Design: an approval on a phone lock screen with full-width Approve and Deny buttons.'
+    caption: 'Design: an approval arrives on the phone.'
+    tall: true
+  - src: ../../assets/shots/phone-approval.png
+    alt: 'The running portal on a phone: an approval banner to spend 15 dollars of test money, with Approve and Deny, over the phone home screen.'
+    caption: 'The real phone view. The banner arrives live through SpacetimeDB.'
+    tall: true
+  - src: ../../assets/repo/figma/personal/6-review-keep-or-undo.png
+    alt: 'Design for GurtOS Personal: a finished task''s review window with what moved, what was added, the cost, and Undo and Keep.'
+    caption: 'Design for GurtOS Personal: review a finished task, then Keep or Undo.'
+    tall: true
+  - src: ../../assets/repo/personal/8-review.png
+    alt: 'The real GNOME review window: two changed files, the diff, the cost of 3 cents of a 1 dollar budget, and Undo and Keep buttons.'
+    caption: 'The real GTK 4 and libadwaita window, built from that frame, after a real Droid task.'
+    tall: true
+  - src: ../../assets/track/figma/v2-4-desktop-tasks.png
+    alt: 'GurtOS system v2 design: the desktop with Tasks as a window in the manner of Activity Monitor, one row per task with the user it runs as, its state, what it is doing now and its cost.'
+    caption: 'Design only: the GurtOS system v2 checkpoint, one design system under every screen, with Tasks as an activity monitor. Waiting for Ben''s review; the portal still uses direction A.'
+  - src: ../../assets/track/figma/v2-2-setup-apps.png
+    alt: 'GurtOS system v2 design: setup step 7, choose apps, where each app lists the hosts it can reach and the keys it needs.'
+    caption: 'Design only: first-boot setup, step 7 of 12. Each app shows the hosts it can reach and the keys it needs before you turn it on.'
+links:
+  - label: Ideation board (FigJam)
+    href: https://www.figma.com/board/KvHiDv5HIJuGYOZDDkp8VG
+    note: 'Opens signed out. The architecture, the four moments, the 25 tracks, and both moodboards.'
+  - label: Design system and screens (Figma Design)
+    href: https://www.figma.com/design/oppzH621OOOMA31rgLbxbM
+    note: 'Opens signed out. Pages: GurtOS system and screens v2, OS screens (direction A, what the portal is built from), Personal (GNOME), Design system, Directions.'
+  - label: Pitch deck (Figma Slides)
+    href: https://www.figma.com/slides/SBrJtJiY20k88X3IGzKwZW
+    note: 'Opens signed out. 14 slides.'
+  - label: 'Prototype, phone: approve from a notification'
+    href: https://www.figma.com/proto/oppzH621OOOMA31rgLbxbM/?node-id=23-304&starting-point-node-id=23%3A304
+    note: 'Opens signed out. Wait 1.2 seconds for the approval to drop in.'
+  - label: 'Prototype, box: undo one task'
+    href: https://www.figma.com/proto/oppzH621OOOMA31rgLbxbM/?node-id=24-454&starting-point-node-id=24%3A454
+    note: 'Opens signed out.'
+  - label: Prototype (Figma Make)
+    href: https://www.figma.com/make/PuKKW48akjbEKogpI59pdL
+    note: 'Opens signed out, but its live preview did not load in a signed-out browser on Oct 24.'
+  - label: The handoff document
+    href: https://github.com/benz16107/calhacks13/blob/main/docs/figma.md
+    note: 'Every screen''s node ID and the API data behind it, the tokens as CSS, the rules the screens follow.'
+  - label: The full stage log
+    href: https://github.com/benz16107/calhacks13/blob/main/docs/stagelog.md
+    note: 'One line per session: stage, tool, minutes, rating, how the output reached the project.'
+flow:
+  - zone: outside
+    label: FigJam ideation board
+    detail: Architecture and the four moments with <code>generate_diagram</code>, the 25 tracks, two rounds of OS research.
+  - zone: you
+    label: Ben picks direction A, the home-server OS
+    detail: Out of three directions drawn on the box screen and the phone.
+  - zone: outside
+    label: Figma Design
+    detail: Every color, size and radius a variable with a CSS name; components with data-named properties; the screens with real data.
+  - zone: outside
+    label: Prototype and Figma Make
+    detail: Approve from a phone notification; undo one task on the box.
+  - zone: outside
+    label: Handoff through Figma's MCP server
+    detail: <code>get_design_context</code> returns reference code that already uses the token names.
+  - zone: core
+    label: The portal the box serves
+    detail: One Preact app for the box's own kiosk screen, a laptop and a phone, on live data.
+  - zone: you
+    label: GurtOS Personal on your GNOME desktop
+    detail: GTK 4 and libadwaita windows built from the Personal frames.
+status:
+  - part: FigJam board, design file, deck, prototypes
+    state: live
+    note: 'All open in a signed-out browser, checked Oct 24.'
+  - part: The portal generated from the design
+    state: live
+    note: '<code>portal/</code>, served by every box. Every screen shows the box''s real state.'
+  - part: The GNOME desktop layer from the Personal frames
+    state: live
+    note: '<code>personal/</code>, tested on Ubuntu 24.04 with GNOME 46.'
+  - part: A published Figma Make site
+    state: not-built
+    note: 'The Make file exists and opens, but has no published URL yet, and its preview did not load signed out. The Figma Design prototype is embedded instead.'
+  - part: GurtOS system v2 in the code
+    state: not-built
+    note: 'The design system and four checkpoint screens are in Figma, waiting for Ben''s review. The portal still uses direction A.'
+  - part: Weave art
+    state: not-built
+    note: 'Weave refused because the Figma account is not linked to it yet, so the wallpaper and boot art are flat vector layers.'
+  - part: A Figma Sites landing page
+    state: not-built
+    note: 'The landing page is the docs at gurtos.com instead.'
+---
+
+## Stage log
+
+The four stages Figma asks for, as submitted. Each is under 200 words. Minutes are the sum of the sessions in
+`docs/stagelog.md` for that stage; every session there names its tool, its minutes, its rating, and how its output
+reached the project.
+
+**Ideation (FigJam and Figma Design, 32 minutes, 4 of 5).** Claude Code built the FigJam board through Figma's MCP
+server: the architecture and the four demo moments with `generate_diagram`, and the 25 sponsor tracks grouped by the
+slot each plugs into. When the first screens looked like a B2B dashboard, it collected 15 OS references from
+official pages into a moodboard on the same board, then drew three OS directions (home-server OS, across-the-room
+console, hardware OS) on the box screen and the phone. Ben picked the home-server OS. Output reached the project as
+`docs/figma/refs/` and `docs/figma/directions/`. When the built screens still read as a SaaS product, a second round
+collected 15 references from GNOME, elementary OS, macOS, Windows 11, Ubuntu, Synology DSM, umbrelOS and iOS, each
+with one rule to take from it, into `docs/figma/refs/os-system/` and a new section of the board. Those rules became
+the GurtOS design system in `docs/figma/system.md`.
+
+**Prototyping (Figma Design and Figma Make, 6 minutes, 4 of 5).** Two flows wired between the real screens with
+prototype reactions: an approval arriving on the phone, Approve, the task running again; and undo one task on the
+box, with a confirm step. The same flows went into a Figma Make file as a small web page in the design's tokens,
+tested in a browser first. Links are in `docs/figma.md`.
+
+**Handoff (Figma's MCP server and exported frames, 19 minutes, 4 of 5).** Every color and size is a variable with
+CSS code syntax, every screen and component is named, and `docs/figma.md` lists each screen's node ID and the API
+data behind it. The portal thread reads them with `get_design_context`. The GNOME frames for GurtOS Personal went
+the other way: native GTK and libadwaita widgets have no web code, so the desktop layer was built from the exported
+frames and their notes. The indicator took the frames' "Needs you" and "Running" sections, the notification its
+"Approve $8.00" button, and the review its Undo and Keep.
+
+**Code generation (Figma's MCP server, 67 minutes, 4 of 5).** Claude Code read the screens with
+`get_design_context` (box home, phone home, Notification Center, the task window) and adapted the React and
+Tailwind reference into the portal's own Preact components and CSS, keeping Figma's variable names as CSS custom
+properties so every token stays traceable. Assets came from the same responses: both wallpapers, and the glyphs,
+which collapsed from 33 exports into one path set because Figma draws every size with the same 3 px stroke. Every
+mockup value the box can't back up changed: progress bars became "working" bars, the daily limit became "on tools
+and models", and Activity's spend bars are computed from the real log. The result reached the project as
+`portal/`: one web app the box serves as its own kiosk screen, as the portal, and on a phone, checked against the
+PNGs in `docs/figma/os/`. The Shopper app came first, from the approval card on screen g and the Paper tokens. Two
+Figma frames have no web equivalent: Live Activities and the Dynamic Island.
+
+| Stage | Sessions | Minutes | Rating |
+|---|---|---|---|
+| Ideation | 4 | 32 | 4 of 5 |
+| Prototyping | 1 | 6 | 4 of 5 |
+| Handoff | 2 | 19 | 4 of 5 |
+| Code generation | 3 | 67 | 4 of 5 |
+| Design itself: screens, components, tokens, the deck and the boot art | 11 | 88 | 4 of 5, boot art 3 of 5 |
+| **All logged work** | **21** | **212** | |
+
+## Evidence
+
+### The prototype, embedded
+
+Both flows run here, from the Figma Design file. Click through them: Approve, Deny, Undo and Keep it are live.
+
+<iframe
+  title="Figma prototype, phone: an approval arrives and is approved"
+  src="https://embed.figma.com/proto/oppzH621OOOMA31rgLbxbM/calhacks13-2.-Design-system-and-screens?node-id=23-304&starting-point-node-id=23%3A304&embed-host=share"
+  width="100%"
+  height="640"
+  loading="lazy"
+  allowFullScreen
+  style={{ border: '1px solid #D3D6CF', borderRadius: '6px', display: 'block', marginBottom: '24px', background: '#1C252D' }}
+/>
+
+<iframe
+  title="Figma prototype, box: undo one task"
+  src="https://embed.figma.com/proto/oppzH621OOOMA31rgLbxbM/calhacks13-2.-Design-system-and-screens?node-id=24-454&starting-point-node-id=24%3A454&embed-host=share"
+  width="100%"
+  height="600"
+  loading="lazy"
+  allowFullScreen
+  style={{ border: '1px solid #D3D6CF', borderRadius: '6px', display: 'block', marginBottom: '24px', background: '#1C252D' }}
+/>
+
+### What the files hold
+
+| File | What is in it |
+|---|---|
+| Design system | 25 color variables (Paper and Night modes) and 14 desktop colors, 11 size and 2 radius variables, 11 text styles, 10 glyphs drawn on a 48 px grid, and 19 components (StatusPill, Button, TaskRow, ApprovalCard, LogStep, DiffLine, RuleChip, AppTile, Badge, Widget, Banner, MenuBar, WindowChrome, Dock, PhoneDock, Wallpaper and more) |
+| OS screens, direction A | 13 box screens (home, Tasks, task detail, Notification Center, Activity, Time Machine, Credit desk, Shopper, Wallet, Find, pairing, after a power cut, boot) and 4 phone screens, plus 4 in-between prototype frames |
+| Personal (GNOME) | 9 frames: the top-bar indicator, an approval notification, the GurtOS app, Ask an Agent in Files and its dialog, review with Keep and Undo, Time Machine, the first-run welcome, and one approval in three places |
+| GurtOS system v2 | 79 variables in Light and Dark, 11 text styles in Atkinson Hyperlegible Next, 4 elevations, 51 symbolic icons, 11 app icons, 18 components, and 4 checkpoint screens built only from them |
+| Pitch deck | 14 slides: the wordmark, OpenClaw's demand and security record with sources, doing it by hand, the box, the three editions, the four moments with real screens, architecture, tracks, the Figma workflow |
+
+All text in the direction A tokens passes WCAG AA, checked before drawing: the lowest pair on Paper is 5.7:1, and
+text on the desktop's glass is 14.1:1.
+
+### The same token in the design and the code
+
+The design file's variables have CSS code syntax, so `get_design_context` returns code that already uses the
+portal's names. The shipped CSS keeps them:
+
+```css
+/* portal/src/style.css, lines 17, 36 and 42, named after the Figma variables */
+  --color-desktop-accent: #f2b544;
+  --color-state-waiting-fg: #7f4c00; --color-state-waiting-bg: #f8ebd0;
+  --radius-sm: 4px; --radius-md: 6px; --radius-window: 14px; --radius-widget: 24px;
+```
+
+**What changed between mockup and code, on purpose.** Values the box cannot back up were changed, not faked:
+progress bars became "working" bars because the box does not know how many steps a task will take, Figma's "of a
+$5.00 daily limit" became "on tools and models" because the box has no daily limit, and Activity's spend bars are
+computed from the real action log.
+
+## How it works
+
+<Flow steps={frontmatter.flow} title="From FigJam to the running OS" />
+
+Claude Code did the Figma work through Figma's MCP server: `generate_diagram` for the FigJam architecture,
+`use_figma` for the boards, tokens, components, screens, prototype reactions and the deck, `upload_assets` for
+the moodboard images, `send_code_to_figma` for the Make file, and `get_design_context` plus `download_assets` to
+bring the screens back out as code. Ben made the calls a designer makes: which direction, what to cut, and when the
+built screens still looked like a SaaS product.
+
+The handoff is designed to be read by a machine. Every frame is named, auto layout is used throughout, components
+carry data-named text properties, and `docs/figma.md` maps each screen's node ID to the API data behind it. The
+portal is one Preact app the box serves itself, so the box screen, a laptop and a phone need one address and no
+internet: the two fonts, Instrument Sans and IBM Plex Mono, are self-hosted.
+
+## Try it
+
+1. Open the [ideation board](https://www.figma.com/board/KvHiDv5HIJuGYOZDDkp8VG) and the
+   [design file](https://www.figma.com/design/oppzH621OOOMA31rgLbxbM). No sign-in needed.
+2. Run the prototypes above, or open them full size from the links.
+3. With Figma's MCP server: `get_design_context` on file `oppzH621OOOMA31rgLbxbM`, node `23:84` (the box home) or
+   `24:554` (the task window). The returned code uses the same `--color-*` names as `portal/src/style.css`.
+4. Build the portal from the repo: `cd portal && npm ci && npm run build`, then compare it with
+   `docs/figma/os/*.png`.
+
+<Status rows={frontmatter.status} />
+
+## Limits
+
+- Live Activities and the Dynamic Island are drawn in Figma but have no web equivalent, because they belong to the
+  phone's own OS.
+- The Make prototype has no published URL, and its preview did not load signed out. The embedded prototype above
+  is the Figma Design one.
+- The GurtOS system v2 is design only so far. The portal will be rebuilt from it after Ben's review.
+- The portal was checked against the Figma PNGs by eye, not with an automated visual diff.
+- Weave was not used: the Figma account is not linked to it, so no Weave run happened.

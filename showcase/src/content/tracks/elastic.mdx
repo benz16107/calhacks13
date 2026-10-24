@@ -1,0 +1,155 @@
+---
+order: 11
+sponsor: Elastic
+prize: Best use of Elastic Agent Builder on Serverless
+title: Ask what your agents did this week
+summary: Every step, tool call, cost, approval, blocked connection, undo and failure on a GurtOS box streams into an Elasticsearch Serverless project. An Elastic Agent Builder agent named Box log answers questions about it in plain words, from six ES|QL tools and an index search tool that live in the repo as code.
+proof: 'Asked "Why did the job routine fail?", the box had recorded only "worker exited with 1". The agent read the task''s timeline and found the cause itself: the routine was allowed to reach only boards.greenhouse.io, tried www.linkedin.com, the box blocked it, and the worker gave up right after. The live run shipped all 156 events of a demo run to Serverless, each exactly once.'
+criteriaSource: 'Elastic had not published judging criteria when this was built (Oct 23, 8 PM PT). The track asks for an Elastic Agent Builder agent on a Serverless instance; each part of that is a row below.'
+criteria:
+  - ask: 'An Elastic Agent Builder agent.'
+    how: 'A custom agent, <code>box-log</code>, with seven custom tools: six parameterized ES|QL tools and one index search tool. The agent, its instructions and its tools are code in <code>tracks/elastic/agent.ts</code>, created or updated with one command through the Agent Builder API, and asked through Kibana''s chat and the <code>converse</code> API.'
+  - ask: 'On a Serverless instance.'
+    how: 'An Elasticsearch Serverless project on GCP us-east4. The <code>box-actions</code> index, the data and the agent all live there.'
+  - ask: 'Real data, used for something that matters.'
+    how: 'Every document comes from the box''s own action log during real runs: Droid tasks running Claude, the credit desk, and the four demo moments. The questions are the ones an owner asks the morning after: what changed, what it cost, why something failed, and what got blocked.'
+video: main
+shots:
+  - src: ../../assets/repo/elastic/3-job-routine.png
+    alt: 'Kibana Agent Builder chat: asked why the job routine failed, the Box log agent explains that the box blocked www.linkedin.com because the task could only reach boards.greenhouse.io, and the worker exited right after.'
+    caption: '"Why did the job routine fail?" The box recorded only "worker exited with 1". The agent found the cause in the task''s timeline.'
+  - src: ../../assets/repo/elastic/4-blocked.png
+    alt: 'Kibana Agent Builder chat answering what got blocked this week, by host, task and app, including attacker.example.'
+    caption: '"What got blocked this week, and from where?" attacker.example is the exfiltration attempt from the booby-trapped page.'
+  - src: ../../assets/repo/elastic/2-costs.png
+    alt: 'Kibana Agent Builder chat with a table of costs this week by app and by task, split into model and tool spending.'
+    caption: '"What did it cost this week, by task and by app?" Model spending is real Claude token prices; tool spending is test money, and the agent says so.'
+  - src: ../../assets/repo/elastic/1-changes.png
+    alt: 'Kibana Agent Builder chat listing the files each task changed this week, which changes were undone, and which tasks failed.'
+    caption: '"What did my agents change this week?" It separates changes that stuck from changes that were undone and from failed tasks.'
+links:
+  - label: The agent and its tools as code, tracks/elastic/agent.ts
+    href: https://github.com/benz16107/calhacks13/blob/main/tracks/elastic/agent.ts
+    note: 'The Kibana project itself needs a sign-in to Ben''s Elastic account. The screenshots above are from it.'
+  - label: The log reader and mapping, tracks/elastic/track.ts
+    href: https://github.com/benz16107/calhacks13/blob/main/tracks/elastic/track.ts
+  - label: The track README
+    href: https://github.com/benz16107/calhacks13/tree/main/tracks/elastic
+  - label: 'Docs: send the log to Elastic'
+    href: https://gurtos.com/guides/send-the-log-to-elastic/
+flow:
+  - zone: core
+    label: The action log
+    detail: Every event a task causes, in order, fsynced line by line.
+  - zone: core
+    label: Log reader
+    detail: Turns each event into one flat document that stands on its own, and appends it to an outbox file.
+  - zone: core
+    label: elastic.bulk job
+    detail: The only code that reads the Elastic key. Sends the outbox in <code>_bulk</code> batches of up to 4 MB.
+  - zone: outside
+    label: box-actions index, Serverless
+    detail: Document id <code>&lt;host&gt;:&lt;run&gt;:&lt;seq&gt;</code>, so a resend overwrites itself.
+  - zone: outside
+    label: Agent Builder agent "Box log"
+    detail: Picks one of six ES|QL tools or the index search for each question.
+  - zone: you
+    label: You ask in plain words
+    detail: In Kibana's chat, or through the <code>converse</code> API.
+status:
+  - part: Elasticsearch Serverless and Agent Builder
+    state: live
+    note: 'A real Serverless project. <code>DEMO_LIVE=elastic ./demo</code> ships a run, installs the agent and asks the four questions.'
+  - part: The data
+    state: live
+    note: 'From two real <code>./demo</code> runs on Oct 24, including real Droid tasks and the credit desk.'
+  - part: Tool spending in the answers
+    state: test
+    note: 'Tool spending is test money. Model spending is real token cost.'
+  - part: Offline merge gate
+    state: simulated
+    note: 'Plain <code>./demo</code> writes documents to the outbox file and checks them without calling Elastic.'
+---
+
+## Evidence
+
+The live run (`DEMO_LIVE=elastic ./demo`) shipped a whole demo run to Serverless, installed the agent and asked it four
+questions. Every answer used the right tool:
+
+```
+track elastic
+  ok    the offline tests pass
+  ok    all 156 log events became documents, none lost to the hard kill in moment 4
+  ok    the blocked connection is a document with its task, app and allowed hosts: "The box blocked "Job routine: apply to new postings" from reaching www.linkedin.com:443; it may reach only boards.greenhouse.io"
+  ok    the tool spending is in cost_cents with the tool name ($0.35, test money)
+  ok    a done task's document lists the files it changed: "Task "B adds b.txt" is done, changing 3 files: b.txt (added), done-b.txt (added), who-b.txt (added)"
+  ok    no vault secret is in any document
+  ok    DEMO_LIVE=elastic: ELASTIC_URL, KIBANA_URL and ELASTIC_API_KEY are in /etc/box/vault.env
+  ok    the Agent Builder agent and its 7 tools are installed from agent.ts
+  ok    Elastic Serverless has all 156 events of run 5785b5, each once
+  ok    the agent answered "What did my agents change this week?" with box.changes*
+  ok    the agent answered "What did it cost this week, by task and by app?" with box.costs_by*
+  ok    the agent answered "Why did the job routine fail?" with box.task_timeline*
+  ok    the agent answered "What got blocked this week, and from where?" with box.blocked*
+```
+
+The offline checks run on every merge. In the Oct 24 run on the x86 test VM (175 checks, 0 failed), all 255 log events
+of that run became documents, again with none lost to the hard kill in moment 4.
+
+The four screenshots above are the agent's answers in Kibana, on Kibana's default model, from the data of two real
+demo runs on Oct 24. Every number and name in them comes from the log.
+
+## How it works
+
+<Flow steps={frontmatter.flow} />
+
+**Documents built for an agent.** Each document stands on its own, so no query needs a join. The task's title,
+source, allowed hosts and budget are copied onto every one of its events, and `message` is one plain sentence, such as
+`The box blocked "Job routine: apply to new postings" from reaching www.linkedin.com:443; it may reach only
+boards.greenhouse.io`. The mapping is explicit (`dynamic: false`), and a unit test checks every field a document can
+have is in it.
+
+**Keeping up.** Serverless confirms a write only once it is durable, about 0.4 s per request, so one request per event
+fell behind. In batches of up to 4 MB the reader keeps up with a whole demo run as it happens. If Elastic is down, it
+retries every 5 s from where it stopped.
+
+**The key stays in the core.** Only the `elastic.bulk` model job reads `ELASTIC_URL` and `ELASTIC_API_KEY`, inside the
+box service. Tasks never see the key, and log readers have no vault access at all.
+
+| Tool | Type | Answers |
+|---|---|---|
+| `box.changes` | ES\|QL, `days` | Tasks done, undone or failed, with the files each done task changed |
+| `box.costs_by_app` | ES\|QL, `days` | Dollars per app: total, model, tools, number of tasks |
+| `box.costs_by_task` | ES\|QL, `days` | Dollars per task, with the paid tools it used |
+| `box.failures` | ES\|QL, `days` | Failed tasks and the error the box recorded |
+| `box.task_timeline` | ES\|QL, `task_id` | Everything one task did, in order. Used to explain a failure |
+| `box.blocked` | ES\|QL, `days` | Refused hosts, by task and app, with counts, times and allowed hosts |
+| `box.search` | index search | Free text over the log, to find a task by a word |
+
+The agent's instructions say which tool answers which question, that model spending is real Claude token prices while
+tool spending is test money, and that a failed task's recorded error is often generic, so the cause comes from what
+happened just before it.
+
+## Try it
+
+From the repo root, with `ELASTIC_URL`, `KIBANA_URL` and `ELASTIC_API_KEY` for your own Serverless project:
+
+```sh
+node tracks/elastic/agent.ts install                        # create or update the 7 tools and the agent
+node tracks/elastic/agent.ts ask "Why did the job routine fail?"
+DEMO_LIVE=elastic ./demo                                     # ship a full run and ask all four questions
+```
+
+On a box, put the same three keys in `/etc/box/vault.env`. The track ships the box's whole log on its first boot and
+then follows it live. In Kibana, open **Agents**, then **Box log**.
+
+<Status rows={frontmatter.status} />
+
+## Limits
+
+- `tool.result` events carry no tool name, so the reader takes it from the `tool.call` just before. A restart between
+  the two loses the name on that one result. The cost and the task stay right.
+- The box records some failures only as "worker exited with N". The agent works around it from the timeline. Newer
+  boxes add the worker's own last error line, which makes answers sharper.
+- The Elastic trial ends about Oct 30, 2026.
+- Judges cannot open the Kibana project without a sign-in, so this page shows the answers as screenshots.

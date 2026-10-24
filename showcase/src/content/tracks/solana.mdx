@@ -1,0 +1,146 @@
+---
+order: 16
+sponsor: Solana
+prize: 'MLH: Best use of Solana'
+title: Agents pay in USDC on Solana devnet, without ever holding the key
+summary: 'GurtOS gives every box an agent wallet on Solana. When an agent needs a paid API, the box signs an SPL token transfer of devnet USDC from a wallet in its root-only vault, a facilitator pays the network fee and submits it, and the box checks the transaction is confirmed on chain before it records the receipt. Agents only ever see results. All of it is devnet USDC, which has no value.'
+proof: 'The wallet''s whole history is public on Solana Explorer: one 20 USDC faucet deposit, then 29 x402 payments of $0.01 or $0.03 made by agents on the box, 0.59 USDC in all, every one a finalized SPL TransferChecked whose fee was paid by the facilitator, never by the wallet.'
+criteriaSource: "MLH's Solana prize asks only that the project uses Solana. Quoted from the project's track plan."
+criteria:
+  - ask: 'Use Solana in the project.'
+    how: 'Every agent payment on the box is an SPL <code>TransferChecked</code> of Circle''s devnet USDC (mint <code>4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU</code>), signed by the box''s wallet through <code>@x402/svm</code>, submitted by a facilitator, and checked for confirmation on devnet before the box logs it.'
+  - ask: 'Best use of Solana.'
+    how: 'Solana''s fee-payer model is what lets an agent wallet hold only USDC: the facilitator signs as fee payer, so the box never needs SOL. Cent-sized transfers that settle in about 1.5 s from the 402 to the 200 fit pay-per-call APIs; the box''s budget and approval sit on top.'
+clip: moment-3-approval
+video: main
+shots:
+  - src: ../../assets/track/solana/explorer-urd99.png
+    alt: 'Solana Explorer showing a finalized devnet transaction: status Success, the facilitator as fee payer, and the token section with 0.03 USDC leaving the box wallet and 0.03 arriving at the payee.'
+    caption: 'One agent payment on Solana Explorer: finalized, the facilitator paid the 0.000010001 SOL fee, and 0.03 devnet USDC moved from the box''s wallet (6Pyi...) to the test API''s payee (39w7...).'
+  - src: ../../assets/shots/app-wallet.png
+    alt: 'The Agent wallet app on the box screen, in plain text: the public devnet address, a balance of 19.41 USDC on Solana devnet marked test money, and a Solana Explorer link.'
+    caption: 'The Agent wallet app on the box, running on Oct 24: the public devnet address, 19.41 USDC of test money, and a link to its history on Solana Explorer. The box holds the key; no task does.'
+links:
+  - label: "The box's agent wallet on Solana Explorer"
+    href: https://explorer.solana.com/address/6PyiR71c9aw3e8bgnxmcLvJECL5zHE5jMSWqJoVjPTxU/tokens?cluster=devnet
+    note: 'Public, no sign-in. Address <code>6PyiR71c9aw3e8bgnxmcLvJECL5zHE5jMSWqJoVjPTxU</code>; its USDC balance and every transfer.'
+  - label: 'A $0.03 payment settled by Coinbase''s CDP facilitator'
+    href: https://explorer.solana.com/tx/Urd99HESxbkSQ4ppVCfQtJXhKNo7TteQUe1ErfnGduJRyp7dnoK6mTJfk9kGDPJKwo3QwmkonFJGBLiKaL3T2CK?cluster=devnet
+  - label: 'A $0.03 report an agent bought while shopping'
+    href: https://explorer.solana.com/tx/5PCwxRVPZ7hzjHaXPLtpbYH2k3nEdkzwjUxZXaVYcm46TsnGqkvGYtbCctcgWdpnAMzgRQu76MKW2HfByAzkcFvB?cluster=devnet
+  - label: 'The 20 USDC faucet deposit that funded the wallet'
+    href: https://explorer.solana.com/tx/2nwnmYgwnHx5qBiYJAU7y8HhDFNoazovDjWi1S7zFHAJep6gDEWgwDtqTQtHh3ew8nxx8aE4mA5gxRFFm1DsEJ5L?cluster=devnet
+  - label: The wallet track's code and README
+    href: https://github.com/benz16107/calhacks13/tree/main/tracks/wallet
+  - label: 'Docs: let agents pay for APIs'
+    href: https://gurtos.com/guides/agent-payments/
+flow:
+  - zone: task
+    label: An agent needs a paid API
+    detail: 'It calls <code>wallet.quote</code> and <code>wallet.pay</code> through its broker. No key, no route to the vault.'
+  - zone: you
+    label: Over budget? Your OK
+    detail: 'Within the task''s budget it goes straight through. Above it, the task waits for you on the portal or phone.'
+  - zone: core
+    label: The box builds the transfer
+    detail: 'An SPL <code>TransferChecked</code> of devnet USDC from its wallet to the payee''s token account, at exactly the quoted price, with a random memo nonce. Signed with the key from the vault.'
+  - zone: outside
+    label: The facilitator submits it
+    detail: 'It adds its signature as fee payer, pays the fee and sends the transaction to Solana devnet.'
+  - zone: outside
+    label: Solana devnet confirms
+    detail: 'The transaction is finalized. The API gets paid and returns its content.'
+  - zone: core
+    label: Receipt with an explorer link
+    detail: 'The box records the amount, payee, task and signature in the action log, labelled devnet test money.'
+status:
+  - part: Solana transactions
+    state: test
+    note: 'Real, finalized transactions on Solana devnet. Devnet USDC has no value.'
+  - part: Wallet funding
+    state: test
+    note: "Circle's devnet USDC faucet, 20 USDC per address every 2 hours."
+  - part: Network fees
+    state: live
+    note: "Paid by the facilitator (Coinbase's CDP facilitator, or x402.org without CDP keys). The wallet holds no SOL."
+  - part: The paid API
+    state: simulated
+    note: 'Our own x402 test API, standing in for a real paid API: $0.01 for a joke, $0.03 for a report.'
+  - part: Mainnet
+    state: not-built
+    note: 'Devnet only, by design. Mainnet needs a different network and asset in the wallet code, real USDC and a review.'
+---
+
+## Evidence
+
+**On chain, checked Oct 23 at 10:40 PM PT.** We read the wallet's history from devnet RPC
+(`getSignaturesForAddress`, then `getTransaction` for each one) and checked every transaction:
+
+| What | Count | Detail |
+|---|---|---|
+| Faucet deposit | 1 | 20 USDC from Circle's faucet, Oct 23, 6:58 PM PT |
+| Agent payments | 29 | $0.01 or $0.03 each to the test API's payee, 0.59 USDC in all, every one finalized |
+| Fee paid by the wallet | 0 | Every payment's fee payer is a facilitator account |
+| Balance | 19.41 USDC | Devnet USDC, test money |
+
+A few of them:
+
+| Time (PT, Oct 23) | Amount | What | Transaction |
+|---|---|---|---|
+| 7:58 PM | $0.03 | A shopping agent buys a report it needs | [5PCwxRVP...](https://explorer.solana.com/tx/5PCwxRVPZ7hzjHaXPLtpbYH2k3nEdkzwjUxZXaVYcm46TsnGqkvGYtbCctcgWdpnAMzgRQu76MKW2HfByAzkcFvB?cluster=devnet) |
+| 8:26 PM | $0.01 | Wallet live run: a joke, within budget | [423EmHPv...](https://explorer.solana.com/tx/423EmHPvH9qmzABzgYL4Sp7XJdWmx6ou9N9UKhHe6e4CC1T8Yd9Pa3eTpy3VTf23t3UUnD5d2enDY2jV2CyUsxVn?cluster=devnet) |
+| 8:26 PM | $0.03 | Wallet live run: a report, after the owner's OK | [Urd99HES...](https://explorer.solana.com/tx/Urd99HESxbkSQ4ppVCfQtJXhKNo7TteQUe1ErfnGduJRyp7dnoK6mTJfk9kGDPJKwo3QwmkonFJGBLiKaL3T2CK?cluster=devnet) |
+| 8:46 PM | $0.03 | The latest payment | [4CyWjmnQ...](https://explorer.solana.com/tx/4CyWjmnQcytGfgM1GFKi3QyqqnPcSnP27zLyxUCaJAV9aZVJ8q6U9UM2UPUF4SC5Mwvcq7GPLStyJ6i5kn26vKCC?cluster=devnet) |
+
+Each payment we opened has four instructions: two Compute Budget instructions, the token program's `TransferChecked`,
+and a Memo with a 32-character nonce. The fee was 0.000010001 SOL in each.
+
+**The live merge-gate run**, `DEMO_LIVE=wallet ./demo`, passed on Oct 23 on the x86 and ARM64 test VMs. Its last
+checks read the chain:
+
+```
+  ok    the box's agent wallet 6PyiR71c9aw3e8bgnxmcLvJECL5zHE5jMSWqJoVjPTxU holds 19.65 USDC on Solana devnet (test money)
+  ok    GET /joke answered 402 Payment Required: $0.01 devnet USDC to 39w7W3SB...
+  ok    the wallet paid $0.01 and got the joke: An agent walks into a bar. The bar answers 402.
+  ok    the $0.03 report is over the $0.02 budget, so the task waits: "Spend $0.03 on wallet.pay? Budget $0.02, spent $0.01."
+  ok    approved, it paid $0.03 and got the report
+  ok    both transactions, settled by Coinbase's CDP facilitator, are confirmed on Solana devnet: https://explorer.solana.com/tx/Urd99HES...?cluster=devnet
+  ok    neither the wallet's key nor the CDP secret is anywhere in the task's log
+```
+
+## How it works
+
+<Flow steps={frontmatter.flow} />
+
+**Why an agent wallet on Solana can hold only USDC.** In an x402 payment on Solana, the facilitator names itself as
+the fee payer (`extra.feePayer`) and signs the transaction as fee payer. The box signs only the token transfer. So the
+wallet needs no SOL, which matters for a box running unattended: there is one balance to watch, in dollars.
+
+**What the box refuses to sign.** The wallet pays only the `exact` scheme on Solana devnet in devnet USDC, at exactly
+the price the agent quoted and the owner saw. It reaches only hosts on the task's list and refuses redirects. Before
+signing it writes a durable mark for the call, so a box that loses power mid-payment never pays twice.
+
+**Where the key lives.** `WALLET_SOLANA_KEY` is in `/etc/box/vault.env`, readable by root only. Only the
+`wallet.pay` tool, inside the box's own process, reads it. Tasks run as their own Linux users and get back the
+content and a receipt with the signature. The merge gate checks the key is nowhere in the task's log.
+
+## Try it
+
+1. Make a wallet on a box:
+   `node --experimental-strip-types tracks/wallet/keygen.ts | sudo sh -c 'cat >> /etc/box/vault.env'`.
+   It prints the address on stderr.
+2. Fund it at faucet.circle.com: USDC, Solana Devnet, Send 20 USDC. No SOL needed.
+3. Run `DEMO_LIVE=wallet ./demo` from the repo root. It pays $0.01 and $0.03, waits for an approval on the second,
+   and checks both are confirmed on devnet.
+4. Open the wallet's address on Solana Explorer (devnet) and find the two new transfers.
+
+<Status rows={frontmatter.status} />
+
+## Limits
+
+- Devnet only. The network and the asset are fixed in `tracks/wallet/track.ts`.
+- x402 cannot pay an address that has no USDC token account yet. The test API's payee got one from the faucet.
+- After a power cut mid-payment, the call fails instead of checking the chain for whether the payment went through.
+  The owner checks the wallet on the explorer.
+- The box holds the key. A CDP wallet would let Coinbase hold it; that needs a CDP wallet secret the box does not
+  have.

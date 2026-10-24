@@ -1,0 +1,95 @@
+---
+// What is live, what is test money, what is simulated, and what is not built. Labelled honestly.
+interface Props {
+  rows: { part: string; state: 'live' | 'test' | 'simulated' | 'not-built'; note: string }[];
+}
+const { rows } = Astro.props;
+const word = { live: 'Live', test: 'Test money', simulated: 'Simulated', 'not-built': 'Not built' };
+---
+
+{
+  rows.length > 0 && (
+    <section aria-labelledby="status">
+      <h2 id="status">Live, test and simulated</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Part</th>
+              <th scope="col">State</th>
+              <th scope="col">Details</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => (
+              <tr>
+                <td class="part">{r.part}</td>
+                <td>
+                  <span class={`state ${r.state}`}>{word[r.state]}</span>
+                </td>
+                <td set:html={r.note} />
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  )
+}
+
+<style>
+  section {
+    margin: var(--space-7) 0;
+  }
+  h2 {
+    margin-bottom: var(--space-4);
+  }
+  .part {
+    font-weight: 500;
+    min-width: 9rem;
+  }
+  .state {
+    display: inline-block;
+    white-space: nowrap;
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    padding: 2px 8px;
+    border-radius: var(--radius-sm);
+  }
+  .live {
+    background: var(--color-state-done-bg);
+    color: var(--color-state-done-fg);
+  }
+  .test {
+    background: var(--color-state-waiting-bg);
+    color: var(--color-state-waiting-fg);
+  }
+  .simulated {
+    background: var(--color-state-running-bg);
+    color: var(--color-state-running-fg);
+  }
+  .not-built {
+    background: var(--color-state-neutral-bg);
+    color: var(--color-state-neutral-fg);
+  }
+  /* Phones: each row becomes a small block so the details get the full width. */
+  @media (max-width: 640px) {
+    thead {
+      display: none;
+    }
+    tr,
+    td {
+      display: block;
+    }
+    tr {
+      padding: var(--space-3) 0;
+      border-bottom: 1px solid var(--color-border-default);
+    }
+    td {
+      border: 0;
+      padding: 2px 0;
+    }
+  }
+</style>

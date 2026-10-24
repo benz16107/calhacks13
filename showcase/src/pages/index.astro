@@ -1,0 +1,653 @@
+---
+import { getCollection } from 'astro:content';
+import { Image } from 'astro:assets';
+import Base from '../layouts/Base.astro';
+import VideoSlot from '../components/VideoSlot.astro';
+import { LINKS, repoTree } from '../data/site';
+import { VIDEOS } from '../data/videos';
+import clips from '../data/clips.json';
+import demoLog from '../data/demo-latest.txt?raw';
+import Architecture from '../assets/diagrams/architecture.svg';
+
+import shotUndo from '../assets/shots/box-time-machine.png';
+import shotBlocked from '../assets/shots/box-blocked.png';
+import shotApproval from '../assets/shots/box-home.png';
+import shotPowerCut from '../assets/shots/box-after-power-cut.png';
+import shotPhone from '../assets/shots/phone-approval.png';
+import shotPersonal from '../assets/repo/personal/2-approval.png';
+import shotPersonalReview from '../assets/repo/personal/8-review.png';
+
+const tracks = (await getCollection('tracks')).sort((a, b) => a.data.order - b.data.order);
+const hasClip = (name: string) => (clips as { name: string }[]).some((c) => c.name === name);
+
+// The merge gate's own words for each moment, from the Oct 24 run in src/data/demo-latest.txt.
+const section = (title: string, n = 99) => {
+  const lines = demoLog.split('\n');
+  const start = lines.findIndex((l) => l === title);
+  if (start < 0) return '';
+  const body = [];
+  for (const l of lines.slice(start + 1)) {
+    if (!l.startsWith('  ')) break;
+    body.push(l);
+  }
+  return [title, ...body.slice(0, n)].join('\n');
+};
+const summary = demoLog.trim().split('\n').at(-1) ?? '';
+const passed = (demoLog.match(/^ {2}ok /gm) ?? []).length;
+const skipped = (demoLog.match(/^ {2}skip /gm) ?? []).length;
+
+const moments = [
+  {
+    n: 1,
+    id: 'undo',
+    title: 'Undo one task',
+    line: 'Each task runs as its own Linux user, in its own copy of the files. Undo takes out one task\'s changes and leaves every other task\'s work in place, outside git.',
+    clip: 'moment-1-undo',
+    shot: shotUndo,
+    alt: 'Time Machine on the box screen: a stack of task layers, with what comes back and what stays if one is undone.',
+    log: section('moment 1: undo one task'),
+  },
+  {
+    n: 2,
+    id: 'booby-trap',
+    title: 'The booby-trapped page',
+    line: 'An agent reads a page with hidden instructions to steal keys. There are none to steal: the vault is root only, and the task\'s network reaches only its allowed host. The attempt is blocked, logged, and the task undone.',
+    clip: 'moment-2-blocked',
+    shot: shotBlocked,
+    alt: 'A task window with a red summary: it tried to reach attacker.example and may only reach example.com, so the box stopped it.',
+    log: section('moment 2: the booby-trapped page'),
+  },
+  {
+    n: 3,
+    id: 'approval',
+    title: 'A pause for your OK',
+    line: 'A task that wants to spend over its budget stops and asks. The request reaches the box screen and your phone live, other tasks keep running, and the first answer wins.',
+    clip: 'moment-3-approval',
+    shot: shotApproval,
+    alt: 'The box screen with an approval banner: Spend $15.00 to Test Vendor? Approve or Deny.',
+    log: section('moment 3: a pause for your OK'),
+  },
+  {
+    n: 4,
+    id: 'power-cut',
+    title: 'Pull the plug',
+    line: 'Hard-kill the box mid-task. It boots, rebuilds every task from its append-only log, and resumes each one where it stopped: no step done twice, none skipped, approvals still waiting.',
+    clip: 'moment-4-power-cut',
+    shot: shotPowerCut,
+    alt: 'The box screen after a restart: Welcome back, with a banner listing the tasks it resumed.',
+    log: section('moment 4: pull the plug'),
+  },
+].map((m) => ({ ...m, hasClip: hasClip(m.clip) }));
+
+const prizes = [
+  {
+    name: 'Overall',
+    ask: 'Judged on application, intentionality, functionality, creativity and technical complexity.',
+    how: 'Every claim on this site is a check in the merge gate, a live run or a public link. The four moments run on a real box, live, at the table.',
+  },
+  {
+    name: 'Most Technically Advanced',
+    ask: 'Deepest engineering.',
+    how: 'The safety lives in the operating system, not in a prompt: a Linux user per task, an overlayfs layer per task, nftables rules per uid, a proxy that swaps in keys on the way out, systemd sandboxing, an fsynced append-only log that rebuilds every task after a hard kill, and a bootable image with A/B system slots that roll back by themselves.',
+  },
+  {
+    name: 'Most Creative',
+    ask: 'Most original idea or combination.',
+    how: 'A computer whose main users are agents. It is shaped like a home-server OS (wallpaper, widgets, an app grid, a dock), and its apps are approvals, undo and an activity monitor for agent work.',
+  },
+  {
+    name: 'Best Solo Hack',
+    ask: 'Best project by one person.',
+    how: 'One person, Ben Zhou. He ran parallel Claude Code agent threads, one per part, and each merged only after the full merge gate passed on a test VM. The core, 10 apps, the portal, the bootable image, the GNOME desktop layer, the docs site and this page came out of one weekend.',
+  },
+  {
+    name: "Hacker's Choice",
+    ask: "Other hackers' favourite.",
+    how: 'At the table: scan the QR code on the box\'s screen with your own phone, send the box a task, and approve its spending from your phone while the box screen shows the same request.',
+  },
+];
+---
+
+<Base
+  title="GurtOS: an OS where AI agents work safely | Cal Hacks 13.0"
+  description="GurtOS is an operating system where AI agents do real work with real access, and never hold your keys. Every task runs as its own Linux user, in its own copy of your files. Undo any one task, approve spending from your phone, pull the plug without losing work."
+>
+  <section class="hero">
+    <div class="wrap hero-in">
+      <p class="hero-kicker">Cal Hacks 13.0 · Solo project by Ben Zhou</p>
+      <h1 class="mark"><span class="g">Gurt</span><span class="o">OS</span></h1>
+      <p class="tag">An operating system where AI agents work safely: real access, never your keys.</p>
+      <p class="sub">
+        Every task runs as its own Linux user, in its own copy of your files, and reaches only the hosts it needs.
+        You can undo any one task, approve its spending from your phone, and pull the plug without losing work.
+      </p>
+      <p class="actions">
+        <a href="#video">Watch it</a>
+        <a href="#moments">The four moments</a>
+        <a href="#tracks">Sponsor tracks</a>
+        <a href={LINKS.docs}>Product docs</a>
+        <a href={LINKS.repo}>Code</a>
+      </p>
+    </div>
+    <svg class="hills" viewBox="0 0 1920 260" preserveAspectRatio="none" aria-hidden="true">
+      <path d="M0 80C300 0 520 40 760 10C1000 -20 1250 -40 1500 20C1750 80 1800 0 1920 30V260H0Z" fill="#46586B" />
+      <path d="M0 160C260 90 520 140 820 100C1120 60 1300 130 1560 80C1820 30 1820 120 1920 100V260H0Z" fill="#36475A" />
+      <path d="M0 230C300 170 640 210 960 180C1280 150 1500 210 1920 160V260H0Z" fill="#28343F" />
+    </svg>
+  </section>
+
+  <div class="wrap">
+    <section id="video" class="main-video" aria-label="Video">
+      {
+        VIDEOS.main ? (
+          <VideoSlot video="main" label="GurtOS in 3 minutes" />
+        ) : hasClip('moment-3-approval') ? (
+          <VideoSlot clip="moment-3-approval" />
+        ) : (
+          <figure class="still">
+            <Image src={shotApproval} alt="The box's own screen as an approval arrives: a greeting, widgets for approvals, running tasks, spending and Time Machine, the app grid and the dock." widths={[800, 1400, 1920]} sizes="(max-width: 1200px) 100vw, 1200px" />
+            <figcaption>The box's own screen, running, as a task asks for an OK.</figcaption>
+          </figure>
+        )
+      }
+    </section>
+
+    <section class="proofs" aria-labelledby="proofs">
+      <h2 id="proofs" class="kicker">Proof, in numbers</h2>
+      <dl>
+        <div>
+          <dt>{passed} checks, 0 failed</dt>
+          <dd>The merge gate on Oct 24: the four moments, then every app, on a fresh box on an x86 test VM. {skipped} paid live calls skipped, run separately.</dd>
+        </div>
+        <div>
+          <dt>14 of 14</dt>
+          <dd>Planted finance errors caught by the credit desk, a Droid and Claude agent, with 0 false alarms and all 6 credit decisions right.</dd>
+        </div>
+        <div>
+          <dt>0 keys</dt>
+          <dd>Reached a real agent's task. 240 process samples of a running Droid task held only a placeholder key.</dd>
+        </div>
+        <div>
+          <dt>No step twice</dt>
+          <dd>After a hard kill, the box came back, resumed the long job where it was, and kept the approval waiting.</dd>
+        </div>
+      </dl>
+    </section>
+
+    <section class="why" aria-labelledby="why">
+      <h2 id="why">Why it needs to exist</h2>
+      <div class="why-grid">
+        <div>
+          <p class="big">392,891</p>
+          <p>GitHub stars for OpenClaw, an agent that runs on your own computer and does things for you. Its first commit was on Nov 24, 2025. <span class="src">GitHub API, read Oct 23, 2026.</span></p>
+        </div>
+        <div>
+          <p class="big">21,639</p>
+          <p>OpenClaw instances anyone on the internet could reach. <span class="src">Censys, Jan 31, 2026, reported by eSecurity Planet.</span></p>
+        </div>
+        <div>
+          <p class="big">341 of 2,857</p>
+          <p>Skills on ClawHub that were malicious, installing keyloggers and stealers. <span class="src">Koi Security, "ClawHavoc" audit.</span></p>
+        </div>
+        <div>
+          <p class="big">1 click</p>
+          <p>On a crafted link made OpenClaw connect to an attacker and send its token. <span class="src">CVE-2026-25253 (NVD), fixed in 2026.1.29.</span></p>
+        </div>
+      </div>
+      <p class="measure">
+        Ben already runs agents unattended on an always-on Linux box at home: a job-application pipeline that fills forms
+        every 15 minutes, watchers on timers, bots that buzz his phone. Every one of them runs as him, with his keys and
+        his files. There is no way to undo one job and keep the rest, no budget that pauses before spending, and after a
+        power cut he checks by hand what broke. GurtOS is the computer he wanted for that work.
+      </p>
+    </section>
+
+    <section id="moments" aria-labelledby="moments-h">
+      <h2 id="moments-h">The four moments</h2>
+      <p class="measure">Each one runs live at the table, and each one is a section of the merge gate, <code>./demo</code>, which every change must pass before it merges.</p>
+      {
+        moments.map((m) => (
+          <article class="moment" id={m.id}>
+            <div class="m-text">
+              <p class="kicker">Moment {m.n}</p>
+              <h3>{m.title}</h3>
+              <p set:html={m.line} />
+              <details>
+                <summary>What the merge gate checked</summary>
+                <pre>{m.log}</pre>
+              </details>
+            </div>
+            <div class="m-media">
+              {m.hasClip ? (
+                <VideoSlot clip={m.clip} />
+              ) : (
+                <figure>
+                  <Image src={m.shot} alt={m.alt} widths={[640, 1200]} sizes="(max-width: 900px) 100vw, 640px" />
+                </figure>
+              )}
+            </div>
+          </article>
+        ))
+      }
+    </section>
+
+    <section aria-labelledby="how">
+      <h2 id="how">How it works</h2>
+      <figure class="diagram arch">
+        <Architecture />
+        <figcaption>Your devices talk to the core's API. Each task runs as its own Linux user in its own copy of the files. It reaches the core only through its broker socket, and the internet only through the proxy. Tools that need a key run inside the core.</figcaption>
+      </figure>
+      <div class="cols measure-wide">
+        <p><strong>A task never holds a secret.</strong> The vault is a root-only file. A task asks its broker to run a tool by name; the tool runs inside the core, reads the keys it declared, and returns only the result. Droid's own model key is a placeholder that the proxy swaps for the real one on the way out.</p>
+        <p><strong>The network is an allowlist per task.</strong> An nftables rule sends every task user's traffic to the box's proxy, which lets each task reach only the hosts in its spec. Every refusal is a <code>net.blocked</code> event in the log.</p>
+        <p><strong>Undo is a layer.</strong> Each task writes to its own overlayfs layer. When it finishes, the layer goes on top of the workspace. Undo takes one layer out of the stack; the base files are never written.</p>
+        <p><strong>The log is the truth.</strong> One append-only file, fsynced per line, holds every step, tool call, approval, cost and blocked connection. At boot the core rebuilds every task from it. SpacetimeDB mirrors live status and approvals to every screen.</p>
+      </div>
+    </section>
+
+    <section aria-labelledby="editions">
+      <h2 id="editions">Three editions</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th scope="col">Edition</th><th scope="col">For</th><th scope="col">State</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>GurtOS Server</strong></td>
+              <td>An always-on box at home or in the cloud. Its screen is a home-server OS; it has no human login and no sudo. A bootable ISO installs it in about a minute and updates it as a whole, with automatic rollback.</td>
+              <td>Built. The ISO is tested in QEMU on x86 (BIOS and UEFI) and ARM64; the box runs on x86 and ARM64 test VMs and a Vultr VM.</td>
+            </tr>
+            <tr>
+              <td><strong>GurtOS Personal</strong></td>
+              <td>Your own laptop. Ubuntu's GNOME desktop with your account and sudo. Agents work beside you as separate users on copies of your folders: approvals as notifications, a top-bar indicator, "Ask an Agent" on a folder in Files, then Keep or Undo.</td>
+              <td>Built: the GNOME layer, tested on Ubuntu 24.04 with GNOME 46, and its own install ISO, tested in QEMU (an account made at first boot gets sudo and survives an update).</td>
+            </tr>
+            <tr>
+              <td><strong>GurtOS Business</strong></td>
+              <td>One box shared by a team, with roles for who may approve what and how much, routed approvals and per-person budgets.</td>
+              <td>Planned. Approvals already record who answered.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="pair">
+        <figure>
+          <Image src={shotPhone} alt="The same approval on a phone: Spend $15.00 to Test Vendor, with Approve and Deny." widths={[390, 780]} sizes="320px" />
+          <figcaption>Server: the request on a phone, live.</figcaption>
+        </figure>
+        <figure>
+          <Image src={shotPersonal} alt="GurtOS Personal: an approval as a GNOME notification, with the top-bar indicator counting running tasks." widths={[640, 1280]} sizes="(max-width: 900px) 100vw, 560px" />
+          <figcaption>Personal: the same kind of request as a GNOME notification.</figcaption>
+        </figure>
+        <figure>
+          <Image src={shotPersonalReview} alt="GurtOS Personal: review a finished task's changes to a folder, with Undo and Keep." widths={[640, 1280]} sizes="(max-width: 900px) 100vw, 560px" />
+          <figcaption>Personal: a real Droid task fixed a thesis chapter. Nothing in the folder changed until Keep.</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section aria-labelledby="prizes">
+      <h2 id="prizes">Cal Hacks prizes</h2>
+      <ol class="criteria-list">
+        {
+          prizes.map((p) => (
+            <li>
+              <h3>{p.name}</h3>
+              <blockquote>{p.ask}</blockquote>
+              <p set:html={p.how} />
+            </li>
+          ))
+        }
+      </ol>
+    </section>
+
+    <section id="tracks" aria-labelledby="tracks-h">
+      <h2 id="tracks-h">Sponsor tracks</h2>
+      <p class="measure">One page per track: what the sponsor asked for and how each item is met, the video, screenshots, live links, evidence, how it works, how to try it, and what is live or test.</p>
+      <ol class="track-list">
+        {
+          tracks.map((t) => (
+            <li>
+              <a href={`/tracks/${t.id}/`}>
+                <span class="t-sponsor">{t.data.sponsor}</span>
+                <span class="t-title">{t.data.title}</span>
+              </a>
+              <span class="t-prize">{t.data.prize}</span>
+            </li>
+          ))
+        }
+      </ol>
+    </section>
+
+    <section aria-labelledby="live">
+      <h2 id="live">Live, test and simulated</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th scope="col">Part</th><th scope="col">State</th></tr></thead>
+          <tbody>
+            <tr><td>The box: users, layers, network rules, broker, vault, log, resume, SpacetimeDB</td><td>Live on every test VM and the always-on boxes.</td></tr>
+            <tr><td>Agents</td><td>Live: Factory's Droid running Claude does the real tasks. The merge gate also uses a scripted worker so each check gives the same result every run, and pages say which one they show.</td></tr>
+            <tr><td>Money</td><td>Test only: Stripe test mode with a Visa test card, USDC on Solana devnet, and a test spend tool that moves nothing.</td></tr>
+            <tr><td>CRS, Nessie, Apify, Jira, Elastic, Agentverse and ASI:One, Moss, Mana</td><td>Live against each service (CRS and Nessie in their sandboxes, with test identities).</td></tr>
+            <tr><td>The business credit file in the credit desk, the household mailbox in the shopper</td><td>Simulated: CRS has no business credit route, and the mailbox is a demo POP3 server with receipts we wrote.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section aria-labelledby="evidence">
+      <h2 id="evidence">The whole merge gate</h2>
+      <p class="measure">
+        <code>./demo</code> ships a checkout to a test VM, starts a fresh box with every app loaded, and runs the four moments
+        and every app's demo step. Exit 0 is the only way to merge. This is the run from Oct 24 on the x86 test VM:{' '}
+        <strong>{summary.replace('demo: ', '')}</strong>, {passed} checks passed.
+      </p>
+      <details class="gate">
+        <summary>Show the full output</summary>
+        <pre>{demoLog.trim()}</pre>
+      </details>
+      <p class="measure"><a href={repoTree('core')}>The core's code</a> and its <a href={`${LINKS.repo}/blob/main/core/README.md`}>README</a> say how each part works.</p>
+    </section>
+
+    <section aria-labelledby="limits">
+      <h2 id="limits">Known limits</h2>
+      <ul class="measure">
+        <li>Undo takes back a task's file changes. It cannot recall what a task already sent out through a tool, such as a payment; those are in the log for a person to follow up, and the shopper's undo refunds the order.</li>
+        <li>The bootable image is tested in QEMU (x86 with BIOS and UEFI, ARM64 emulated). It has not run on real Apple hardware, a real PC or Vultr's own ISO boot yet.</li>
+        <li>System slots are writable ext4 without dm-verity, and updates are signed with one key with no rotation.</li>
+        <li>Agents are Droid with Claude. Other agents would need a worker adapter in the core.</li>
+        <li>GurtOS Business is not built.</li>
+      </ul>
+    </section>
+  </div>
+</Base>
+
+<style>
+  .hero {
+    margin-top: 0;
+    background: var(--color-desktop-sky);
+    color: var(--color-desktop-text);
+    position: relative;
+    padding-top: var(--space-7);
+  }
+  .hero-in {
+    position: relative;
+    z-index: 1;
+    padding-bottom: var(--space-5);
+  }
+  .hero-kicker {
+    color: var(--color-desktop-text-secondary);
+    font-size: 0.95rem;
+    margin-bottom: var(--space-3);
+  }
+  .mark {
+    font-size: clamp(4rem, 12vw, 8rem);
+    letter-spacing: -0.03em;
+    line-height: 0.95;
+    margin-bottom: var(--space-5);
+  }
+  .mark .g {
+    font-weight: 600;
+  }
+  .mark .o {
+    font-weight: 400;
+  }
+  .tag {
+    font-size: clamp(1.4rem, 2.6vw, 2rem);
+    font-weight: 500;
+    line-height: 1.25;
+    max-width: 34ch;
+    letter-spacing: -0.01em;
+  }
+  .sub {
+    color: var(--color-desktop-text-secondary);
+    font-size: 1.1rem;
+    max-width: 44rem;
+  }
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2) var(--space-5);
+    margin-top: var(--space-5);
+  }
+  .actions a {
+    color: var(--color-desktop-text);
+    font-weight: 500;
+  }
+  .actions a:first-child {
+    background: var(--color-desktop-accent);
+    color: var(--color-desktop-on-accent);
+    text-decoration: none;
+    padding: var(--space-2) var(--space-4);
+    border-radius: var(--radius-md);
+  }
+  .actions a:focus-visible {
+    outline-color: var(--color-desktop-accent);
+  }
+  .hills {
+    display: block;
+    width: 100%;
+    height: clamp(90px, 14vw, 220px);
+    margin-top: calc(-1 * var(--space-6));
+  }
+  .main-video {
+    margin-top: calc(-1 * clamp(60px, 10vw, 170px));
+    position: relative;
+    z-index: 2;
+    max-width: 68rem;
+  }
+  .still {
+    margin: 0;
+  }
+  .still img {
+    border-radius: var(--radius-md);
+  }
+  .still figcaption {
+    margin-top: var(--space-2);
+    color: var(--color-text-secondary);
+    font-size: 0.88rem;
+  }
+  section {
+    margin-top: var(--space-8);
+  }
+  section > h2 {
+    margin-bottom: var(--space-4);
+  }
+  .proofs {
+    margin-top: var(--space-6);
+  }
+  .proofs dl {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+    gap: var(--space-5) var(--space-6);
+    margin: 0;
+    border-top: 1px solid var(--color-border-strong);
+    padding-top: var(--space-5);
+  }
+  .proofs dt {
+    font-size: 1.6rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    line-height: 1.2;
+    margin-bottom: var(--space-2);
+  }
+  .proofs dd {
+    margin: 0;
+    color: var(--color-text-secondary);
+    font-size: 0.95rem;
+  }
+  .why-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+    gap: var(--space-5) var(--space-6);
+    margin-bottom: var(--space-6);
+  }
+  .why-grid p {
+    margin: 0;
+  }
+  .big {
+    font-family: var(--font-mono);
+    font-size: 2.1rem;
+    line-height: 1.2;
+    margin-bottom: var(--space-2) !important;
+    color: var(--color-text-primary);
+  }
+  .src {
+    display: block;
+    margin-top: var(--space-1);
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--color-text-secondary);
+  }
+  .moment {
+    display: grid;
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    gap: var(--space-6);
+    align-items: start;
+    padding: var(--space-6) 0;
+    border-top: 1px solid var(--color-border-default);
+  }
+  .moment h3 {
+    font-size: 1.5rem;
+    margin-bottom: var(--space-3);
+  }
+  .moment figure {
+    margin: 0;
+  }
+  .moment figure img {
+    border-radius: var(--radius-md);
+    border: 1px solid var(--color-border-default);
+  }
+  details summary {
+    cursor: pointer;
+    font-weight: 500;
+    color: var(--color-focus);
+  }
+  details pre {
+    margin-top: var(--space-3);
+    font-size: 0.74rem;
+    white-space: pre-wrap;
+  }
+  .gate pre {
+    max-height: 36rem;
+    overflow: auto;
+    white-space: pre;
+  }
+  .arch {
+    max-width: 52rem;
+  }
+  .cols {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));
+    gap: 0 var(--space-6);
+    max-width: 64rem;
+  }
+  .pair {
+    display: grid;
+    grid-template-columns: 1fr 2fr 2fr;
+    gap: var(--space-5);
+    align-items: start;
+  }
+  .pair figure {
+    margin: 0;
+  }
+  .pair img {
+    border-radius: var(--radius-md);
+    border: 1px solid var(--color-border-default);
+  }
+  .pair figcaption {
+    margin-top: var(--space-2);
+    font-size: 0.88rem;
+    color: var(--color-text-secondary);
+  }
+  .criteria-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    border-top: 1px solid var(--color-border-strong);
+  }
+  .criteria-list li {
+    display: grid;
+    grid-template-columns: 14rem minmax(0, 1fr) minmax(0, 2fr);
+    gap: var(--space-5);
+    padding: var(--space-4) 0;
+    border-bottom: 1px solid var(--color-border-default);
+  }
+  .criteria-list h3 {
+    font-size: 1.05rem;
+  }
+  .criteria-list blockquote {
+    margin: 0;
+    color: var(--color-text-secondary);
+    font-size: 0.95rem;
+    padding-left: var(--space-3);
+    border-left: 3px solid var(--color-border-default);
+  }
+  .criteria-list blockquote::before {
+    content: '"';
+  }
+  .criteria-list blockquote::after {
+    content: '"';
+  }
+  .criteria-list p {
+    margin: 0;
+  }
+  .track-list {
+    list-style: none;
+    padding: 0;
+    margin: var(--space-5) 0 0;
+    border-top: 1px solid var(--color-border-strong);
+    counter-reset: t;
+  }
+  .track-list li {
+    display: grid;
+    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+    gap: var(--space-2) var(--space-5);
+    padding: var(--space-3) 0;
+    border-bottom: 1px solid var(--color-border-default);
+    align-items: baseline;
+  }
+  .track-list a {
+    display: flex;
+    gap: var(--space-3);
+    align-items: baseline;
+    text-decoration: none;
+    color: var(--color-text-primary);
+  }
+  .track-list a:hover .t-title {
+    text-decoration: underline;
+  }
+  .t-sponsor {
+    font-weight: 600;
+    min-width: 8.5rem;
+    color: var(--color-focus);
+  }
+  .t-title {
+    font-weight: 500;
+  }
+  .t-prize {
+    font-size: 0.85rem;
+    color: var(--color-text-secondary);
+  }
+  @media (max-width: 900px) {
+    .moment,
+    .pair {
+      grid-template-columns: 1fr;
+    }
+    .pair figure:first-child img {
+      max-width: 320px;
+    }
+    .criteria-list li {
+      grid-template-columns: 1fr;
+      gap: var(--space-2);
+    }
+    .track-list li {
+      grid-template-columns: 1fr;
+    }
+    .track-list a {
+      flex-direction: column;
+      gap: 0;
+    }
+  }
+</style>
