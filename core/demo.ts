@@ -36,6 +36,8 @@ async function stdbRows(sql: string): Promise<Record<string, any>[]> {
 }
 
 let box: ReturnType<typeof spawn> | undefined;
+const mountsUnder = (dir: string) =>
+  fs.readFileSync('/proc/self/mountinfo', 'utf8').split('\n').map((l) => l.split(' ')[4]).filter((m) => m?.startsWith(dir + '/'));
 
 async function startBox() {
   const out = fs.openSync(path.join(HOME, 'box.log'), 'a');
@@ -214,7 +216,41 @@ await moment('moment 3: a pause for your OK', async () => {
   check(answered?.type === 'approval.answered' && answered.by === 'phone', 'the OK from the phone came back through SpacetimeDB into the log');
   check(p.costCents === 800 && view('shop', 'bought.txt') === 'yes', 'P carried on, spent $8.00 (test money) and finished');
 });
-await moment('moment 4: pull the plug');
+await moment('moment 4: pull the plug', async () => {
+  workspace('long', {});
+  const base = { workspace: 'long', worker: 'fake', source: 'demo' };
+  const R = await api<Task>('POST', '/tasks', {
+    ...base,
+    title: 'Long job',
+    prompt: ['append progress.txt 1', 'sleep 0.3', 'append progress.txt 2', 'sleep 3', 'append progress.txt 3', 'append progress.txt 4'].join('\n'),
+  });
+  const W = await api<Task>('POST', '/tasks', { ...base, title: 'Deploy', prompt: 'ask Deploy the new build?\nwrite deployed.txt yes' });
+  await waitFor('R to be mid-job and W to wait', async () => {
+    const { events } = await api<{ events: LogEvent[] }>('GET', `/tasks/${R.id}`);
+    const mid = events.some((e) => e.type === 'task.step' && (e.data as { n?: number })?.n === 3);
+    return mid && (await task(W.id)).state === 'waiting';
+  });
+
+  // The plug: every process of the box and its tasks dies at once, mounts are gone, half a line is written.
+  process.kill(-box!.pid!, 'SIGKILL');
+  for (const t of [R, W]) spawnSync('pkill', ['-KILL', '-u', t.user]);
+  await sleep(200);
+  for (const m of mountsUnder(HOME)) execFileSync('umount', ['-l', m]);
+  fs.appendFileSync(path.join(HOME, 'log.jsonl'), '{"seq":');
+  check(mountsUnder(HOME).length === 0 && (await api('GET', '/health').catch(() => 'down')) === 'down', 'the box is down hard: no processes, no mounts, a torn last line');
+
+  await startBox();
+  const r = await task(R.id);
+  check(r.state === 'running' || r.state === 'done', `the box came back and picked up the long job (${r.state})`);
+  await settled([R.id]);
+  check(view('long', 'progress.txt') === '1\n2\n3\n4', 'the long job carried on from where it was: no step done twice, none skipped');
+  const ask = (await stdbRows(`SELECT * FROM approval WHERE task = '${W.id}'`))[0];
+  check((await task(W.id)).state === 'waiting' && ask?.state === 'pending', 'the deploy is still waiting for its OK, live in SpacetimeDB');
+  await stdb('/call/answer', JSON.stringify([ask.id, true, 'phone']));
+  await settled([W.id]);
+  check(view('long', 'deployed.txt') === 'yes', 'approved after the restart, it finished');
+  check(view('notes', 'b.txt') === 'made by B' && view('notes', 'a.txt') === 'original a', 'earlier work survived too: B kept, A still undone');
+});
 
 // ---------- each track's own steps: tracks/<name>/demo.ts ----------
 
@@ -234,8 +270,7 @@ const users = fs.existsSync(path.join(HOME, 'log.jsonl'))
 if (box?.pid) process.kill(-box.pid, 'SIGKILL');
 for (const u of users) spawnSync('pkill', ['-KILL', '-u', u]);
 await sleep(200);
-const mounts = fs.readFileSync('/proc/self/mountinfo', 'utf8').split('\n').map((l) => l.split(' ')[4]).filter((m) => m?.startsWith(HOME + '/'));
-for (const m of mounts) execFileSync('umount', ['-l', m]);
+for (const m of mountsUnder(HOME)) execFileSync('umount', ['-l', m]);
 for (const u of users) spawnSync('userdel', [u]); // most are gone already
 spawnSync('spacetime', ['delete', '--server', 'local', '-y', DB]);
 if (failed) console.log(`\nkept ${HOME} for a look (box.log, log.jsonl, tasks/*/worker.log)`);
