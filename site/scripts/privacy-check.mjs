@@ -20,7 +20,7 @@ const checks = [
   ['secret prefix', /sk_(live|test)_[A-Za-z0-9]{6,}|\bpi_[A-Za-z0-9]{12,}|\bre_[A-Za-z0-9]{12,}|AKIA[0-9A-Z]{12,}|ghp_[A-Za-z0-9]{10,}|xox[bp]-[A-Za-z0-9-]+|-----BEGIN [A-Z ]*PRIVATE/g],
   ['long hex', /\b[0-9a-f]{32,}\b/g, (m) => /^(0123456789abcdef)+$/.test(m) || PUBLIC_SUMS.includes(m)],
   ['uuid', /\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/gi],
-  ['event word', /hackathon|cal ?hacks|sponsor|devpost|demo moment/gi, (m, at) => /benz16107\/calhacks13|calhacks\.gurtos\.com\//.test(at)],
+  ['event word', /hackathon|cal ?hacks|sponsor|devpost|demo moment/gi, (m, at) => /benz16107\/calhacks13|calhacks\.gurtos\.com/.test(at)],
   ['private link', /mana\.space|figma\.com|docs\.google|one-atlas/gi],
 ];
 let hits = 0;
