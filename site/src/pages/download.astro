@@ -1,0 +1,189 @@
+---
+import Landing from '../layouts/Landing.astro';
+import { NAME, REPO } from '../product.ts';
+
+const RELEASE = `${REPO}/releases/download/v0.1.0-preview`;
+const MIRROR = 'https://sjc1.vultrobjects.com/gurtos/v0.1.0-preview';
+const SUMS: Record<string, string> = {
+  'gurtos-server-x86_64.iso': '1676fa7183f35b3ab7b5a9c695adb6d795efc0925aef32c314c884ba42d08c0a',
+  'gurtos-server-arm64.iso': '07e3daca006faf892b9a3c2574536303888f36dbf29f38c8651f6a195b712377',
+  'gurtos-personal-x86_64.iso': '0ba7ff5caa1bcc73073c94435131b48434a2128a46576320878ea77b2616bca3',
+  'gurtos-personal-arm64.iso': '4d78deb9c879b9cc5325208d2e9e18c1d63e0620a7ebbbd2a559449ba8e7bbce',
+};
+const editions = [
+  { id: 'server', name: `${NAME} Server`, size: { x86_64: '1.37 GB', arm64: '1.36 GB' } },
+  { id: 'personal', name: `${NAME} Personal`, size: { x86_64: '1.78 GB', arm64: '1.77 GB' } },
+] as const;
+const archs = [
+  { id: 'x86_64', name: 'x86_64', note: 'Intel or AMD PC, server or cloud VM' },
+  { id: 'arm64', name: 'arm64', note: 'Apple silicon Mac in UTM or Parallels, or an arm64 server' },
+] as const;
+const file = (e: string, a: string) => `gurtos-${e}-${a}.iso`;
+const url = (e: string, a: string) => `${RELEASE}/${file(e, a)}`;
+---
+
+<Landing title="Download GurtOS" description="Download GurtOS v0.1.0-preview, the signed install images for GurtOS Server and GurtOS Personal, with checksums, minimum hardware and install steps." prose={false}>
+  <div class="wrap dl-page">
+    <section class="top" aria-labelledby="dl-h">
+      <h1 id="dl-h">Download {NAME} v0.1.0-preview</h1>
+      <p class="lead">Signed install images. Use a spare machine or a virtual machine, because the installer takes the whole disk.</p>
+
+      <div class="big">
+        {editions.map((e) => (
+          <a class="pick" href={url(e.id, 'x86_64')} data-edition={e.id}>
+            <span class="pick-name">{e.name}</span>
+            <span class="pick-meta"><span class="pick-arch">x86_64</span> · <span class="pick-size">{e.size.x86_64}</span></span>
+          </a>
+        ))}
+      </div>
+      <p class="detected" id="detected">Showing x86_64, for an Intel or AMD computer. Other options are below.</p>
+    </section>
+
+    <section aria-labelledby="all-h">
+      <h2 id="all-h">All downloads</h2>
+      <div class="table-wrap">
+        <table class="chooser">
+          <thead>
+            <tr>
+              <th scope="col"><span class="sr">Edition</span></th>
+              {archs.map((a) => <th scope="col">{a.name}<span class="hint">{a.note}</span></th>)}
+            </tr>
+          </thead>
+          <tbody>
+            {editions.map((e) => (
+              <tr>
+                <th scope="row">{e.name}</th>
+                {archs.map((a) => (
+                  <td><a class="btn" href={url(e.id, a.id)}>Download <span class="size">{e.size[a.id]}</span></a></td>
+                ))}
+              </tr>
+            ))}
+            <tr>
+              <th scope="row">{NAME} Business</th>
+              <td colspan="2">Turn it on from Server or Personal. <a href="/docs/guides/turn-on-business/">How</a></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section aria-labelledby="apps-h">
+      <h2 id="apps-h">Apps</h2>
+      <p>Open <a href="https://app.gurtos.com">app.gurtos.com</a> on your iPhone, Android phone, Mac or Windows PC and install it from the browser (Add to Home Screen, or Install in Edge). It approves, denies and undoes tasks on any paired box. <a href="/docs/guides/reach-your-box-from-anywhere/">Set it up</a>.</p>
+    </section>
+
+    <section aria-label="Details" class="details">
+      <details id="verify-it">
+        <summary>Verify the download</summary>
+        <p>Put the ISO, <a href={`${MIRROR}/SHA256SUMS`}>SHA256SUMS</a>, <a href={`${MIRROR}/SHA256SUMS.sig`}>SHA256SUMS.sig</a> and <a href={`${MIRROR}/allowed_signers`}>allowed_signers</a> in one folder, then run:</p>
+        <pre>{`ssh-keygen -Y verify -f allowed_signers -I gurtos -n gurtos-release -s SHA256SUMS.sig < SHA256SUMS
+sha256sum -c SHA256SUMS --ignore-missing          # Linux
+shasum -a 256 -c SHA256SUMS --ignore-missing      # macOS`}</pre>
+        <p>The first line must say <code>Good "gurtos-release" signature for gurtos with ED25519 key SHA256:FWKFb1eAvEBmMhVJwMwTnLnhrmZ5yQZ5947pDvFKcpY</code>. That fingerprint is also at <code>release/allowed_signers</code> in the repository. On Windows, compare <code>Get-FileHash &lt;file&gt;.iso</code> with the line in <code>SHA256SUMS</code>. Every file is also on the <a href={`${REPO}/releases/tag/v0.1.0-preview`}>release page</a> and at a <a href={`${MIRROR}/`}>mirror</a>.</p>
+        <pre>{Object.entries(SUMS).map(([f, s]) => `${s}  ${f}`).join('\n')}</pre>
+      </details>
+
+      <details>
+        <summary>Minimum hardware</summary>
+        <ul>
+          <li>2 cores (4 recommended) and 4 GB of memory. 20 GB of disk for Server, 32 GB for Personal.</li>
+          <li>x86_64 with BIOS or UEFI, or arm64 with UEFI. Secure Boot off, because the boot loader is not signed.</li>
+          <li>Internet on first start. The box downloads Factory's Droid CLI, about 300 MB. Personal also downloads its voice model, about 490 MB.</li>
+        </ul>
+      </details>
+
+      <details>
+        <summary>Install steps</summary>
+        <ol>
+          <li>Write the ISO to a USB stick (balenaEtcher, or <code>sudo dd if=&lt;file&gt;.iso of=/dev/sdX bs=4M status=progress</code>), or attach it to a VM as its disc. On a cloud VM such as Vultr, add the ISO by its URL as a custom ISO.</li>
+          <li>Start from it. On a blank disk it installs in a few minutes. A disk with data is erased only after you type <code>erase</code>.</li>
+          <li>Setup asks for one model key, an Anthropic or a Factory API key. Agents never see it.</li>
+          <li>Open Tasks, then New task.</li>
+        </ol>
+        <p>Full guides: <a href="/docs/get-started/install-server/">Install GurtOS Server</a>, <a href="/docs/get-started/install-personal/">Install GurtOS Personal</a> and <a href="/docs/get-started/first-task/">Your first task</a>.</p>
+      </details>
+
+      <details>
+        <summary>Known limits</summary>
+        <ul>
+          <li>On Server, the first-boot setup clock reads UTC until the wizard's time zone step.</li>
+          <li>On Personal, GNOME's first "Welcome!" page still shows Ubuntu's wallpaper behind it.</li>
+          <li>Both editions include <code>age</code> for encrypted backups. The owner holds the key.</li>
+        </ul>
+      </details>
+
+      <details>
+        <summary>Build it from source</summary>
+        <p>On an Ubuntu 24.04 machine or VM with root and about 10 GB free per image:</p>
+        <pre>{`git clone ${REPO}.git gurtos && cd gurtos
+image/build                 # GurtOS Server for this machine's architecture
+image/build personal        # GurtOS Personal`}</pre>
+        <p>About 6 minutes on a 4-core, 8 GB VM. See <a href={`${REPO}/blob/main/release/README.md`}>release/README.md</a>.</p>
+      </details>
+    </section>
+  </div>
+</Landing>
+
+<script>
+  // Pick the downloads for this computer. A Mac is assumed to be Apple silicon, because Intel Macs cannot run an
+  // arm64 VM and the user agent does not say which Mac it is. Nothing is stored or sent.
+  const RELEASE = 'https://github.com/benz16107/calhacks13/releases/download/v0.1.0-preview';
+  const SIZES: Record<string, Record<string, string>> = {
+    server: { x86_64: '1.37 GB', arm64: '1.36 GB' },
+    personal: { x86_64: '1.78 GB', arm64: '1.77 GB' },
+  };
+  const ua = navigator.userAgent;
+  const mac = /Macintosh|Mac OS X/.test(ua);
+  const arm = mac || /aarch64|arm64|\barm\b/i.test(ua);
+  const arch = arm ? 'arm64' : 'x86_64';
+  document.querySelectorAll<HTMLAnchorElement>('.pick').forEach((a) => {
+    const e = a.dataset.edition!;
+    a.href = `${RELEASE}/gurtos-${e}-${arch}.iso`;
+    a.querySelector('.pick-arch')!.textContent = arch;
+    a.querySelector('.pick-size')!.textContent = SIZES[e][arch];
+  });
+  document.getElementById('detected')!.textContent = mac
+    ? 'Showing arm64, for an Apple silicon Mac. Other options are below.'
+    : arm
+      ? 'Showing arm64, for an arm64 computer. Other options are below.'
+      : 'Showing x86_64, for an Intel or AMD computer. Other options are below.';
+  // A link to #verify-it opens the section.
+  const open = () => {
+    const d = document.querySelector<HTMLDetailsElement>(`details${location.hash || '#none'}`);
+    if (d) d.open = true;
+  };
+  open();
+  addEventListener('hashchange', open);
+</script>
+
+<style>
+  .dl-page { padding-bottom: 2rem; }
+  .top { padding: 3.5rem 0 2rem; }
+  .top h1, .top .lead { max-width: 52rem; }
+  .top h1 { margin-bottom: 1rem; }
+  .lead { font-size: var(--gw-text-lg); color: var(--gw-ink-2); }
+  .big { display: grid; gap: 1rem; margin-top: 2rem; }
+  .pick { display: flex; flex-direction: column; gap: 0.35rem; padding: 1.8rem 1.8rem; border-radius: var(--gw-radius); background: var(--gw-action); color: var(--gw-on-action); text-decoration: none; }
+  .pick:hover { text-decoration: underline; }
+  .pick:focus-visible { outline-color: var(--gw-link); }
+  .pick-name { font-size: var(--gw-h2); font-weight: 700; }
+  .pick-meta { font-family: var(--gw-mono); font-size: var(--gw-text-sm); opacity: 0.85; }
+  .detected { margin-top: 0.9rem; color: var(--gw-ink-2); font-size: var(--gw-text-sm); }
+  section h2 { font-size: var(--gw-h3); margin: 2.5rem 0 1rem; padding-top: 1.5rem; border-top: 1px solid var(--gw-rule); }
+  .chooser th[scope='col'] { vertical-align: top; }
+  .chooser .hint { display: block; font-weight: 400; font-size: var(--gw-text-sm); color: var(--gw-ink-2); max-width: 16rem; }
+  .chooser tbody th { font-weight: 600; white-space: nowrap; }
+  .chooser td, .chooser th { padding: 0.8rem 0.8rem 0.8rem 0; }
+  .size { font-family: var(--gw-mono); font-size: var(--gw-text-sm); opacity: 0.8; margin-left: 0.3rem; }
+  .sr { position: absolute; left: -999px; }
+  .details { margin-top: 2.5rem; border-bottom: 1px solid var(--gw-rule); }
+  details { border-top: 1px solid var(--gw-rule); }
+  summary { cursor: pointer; padding: 1rem 0; font-weight: 600; font-size: var(--gw-text-lg); }
+  summary:focus-visible { outline: 3px solid var(--gw-link); outline-offset: 2px; }
+  details[open] { padding-bottom: 1rem; }
+  details p, details ul, details ol { max-width: 46rem; }
+  details pre { font-size: 0.78rem; }
+  @media (min-width: 900px) {
+    .big { grid-template-columns: 1fr 1fr; }
+  }
+</style>
