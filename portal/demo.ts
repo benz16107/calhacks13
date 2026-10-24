@@ -2,6 +2,7 @@
 // serves the built portal, its files and the kit for track apps, client routes load the app, every API the portal
 // reads answers (including the live log stream), and the setup wizard's round trip works with keys kept write-only
 // and changes kept to the owner. Screenshots of the real app running are in portal/README.md.
+import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import type { DemoKit } from '../core/contract.ts';
@@ -11,6 +12,10 @@ import { PRODUCT } from './src/product.ts';
 export default async (d: DemoKit) => {
   const built = fs.readFileSync(new URL('./dist/source.txt', import.meta.url), 'utf8').trim();
   d.check(built === sourceHash(), 'portal/dist is built from the current portal/src and SpacetimeDB bindings (if not: cd portal && npm ci && npm run build)');
+
+  // The kit's tokens are the Figma variables (docs/figma/tokens): a value changed on one side only fails here.
+  const drift = spawnSync(process.execPath, [...process.execArgv, new URL('../docs/figma/tokens/sync.ts', import.meta.url).pathname, '--check'], { encoding: 'utf8' });
+  d.check(drift.status === 0, `the kit's tokens match the Figma variables${drift.status ? `: ${drift.stdout.trim().split('\n').slice(1, -2).join('; ')}` : ''}`);
 
   const base = `http://127.0.0.1:${fs.readFileSync(path.join(d.home, 'api.port'), 'utf8').trim()}`;
   const get = (p: string, accept = '*/*') => fetch(base + p, { headers: { accept } });

@@ -293,7 +293,7 @@ html.is-dragging iframe { pointer-events: none; }
   .gos-home-ask .gos-home-row { padding: 0; }
   .gos-home-row .g-app-icon { border-radius: 10px; }
   .gos-home-row .g-progress { margin-top: 6px; }
-  .gos-home-buttons > .g-btn, .gos-home-buttons > .gos-answered { flex: 1; }
+  .gos-home-buttons > .g-btn, .gos-home-buttons > .gos-answered, .gos-home-buttons > .gos-faceid-note { flex: 1; }
   .gos-home-buttons .gos-answered { min-height: var(--size-control-large); border-radius: var(--radius-full); }
   .gos-launcher.is-home { position: static; background: none; padding: 0; gap: 0; animation: none; color: var(--color-text-primary); }
   .gos-launcher.is-home .gos-launcher-grid { grid-template-columns: repeat(4, 1fr); gap: var(--space-sm) var(--space-xs); width: 100%; }
@@ -337,7 +337,7 @@ html.is-dragging iframe { pointer-events: none; }
 .gos-row-ask { display: none; }
 @keyframes gos-slide-in { from { translate: 0 24px; opacity: 0; } }
 .gos-setup-wait { width: min(560px, 100%); }
-.gos-answered { flex: 1; display: flex; align-items: center; justify-content: center; gap: var(--space-xs); min-height: var(--size-control); margin: 0; border-radius: var(--radius-sm); background: var(--color-button-bg); color: var(--color-text-secondary); font-weight: 600; animation: g-fade var(--duration-base) var(--ease-out); }
+.gos-answered, .gos-faceid-note { flex: 1; display: flex; align-items: center; justify-content: center; gap: var(--space-xs); min-height: var(--size-control); margin: 0; border-radius: var(--radius-sm); background: var(--color-button-bg); color: var(--color-text-secondary); font-weight: 600; animation: g-fade var(--duration-base) var(--ease-out); }
 .gos-answered.is-ok { background: var(--color-success-subtle); color: var(--color-success-fg); }
 
 /* ---------- the installable app: Add to Home Screen, Install ---------- */

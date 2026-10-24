@@ -39,7 +39,8 @@
   --color-destructive-on: #ffffff;
   --color-destructive-subtle: #f8e1dd;
   --color-switch-knob: #ffffff;
-  --color-scrim: rgb(0 0 5 / 0.45);
+  --color-scrim: #0b0e1273;
+  --color-card-hover: #f2f0eb;
   --shadow-1: 0 0 0 1px rgb(0 0 5 / 0.04), 0 1px 3px 1px rgb(0 0 5 / 0.07);
   --shadow-2: 0 0 0 1px rgb(0 0 5 / 0.1), 0 2px 8px rgb(0 0 5 / 0.18);
   --shadow-3: 0 2px 6px rgb(0 0 5 / 0.18), 0 12px 32px rgb(0 0 5 / 0.3);
@@ -68,15 +69,23 @@
   --color-app-find: #4b5f86;
   --color-app-jira: #2b4f7e;
   --color-app-asi-one: #3e4148;
+  --color-app-elastic: #7a4e6b;
+  --color-app-mana: #2f6e73;
+  --color-app-web: #5c6b2e;
   --color-app-other: #4f5866;
   --color-app-waiting: #5c4a7d;
   --color-app-audit: #47604f;
+  --color-desktop-hill-far: #46586b;
+  --color-desktop-hill-mid: #36475a;
+  --color-desktop-hill-near: #28343f;
+  --color-desktop-hill-front: #1c252d;
 
   --space-xxs: 3px; --space-xs: 6px; --space-sm: 12px; --space-md: 18px; --space-lg: 24px; --space-xl: 36px; --space-xxl: 48px;
   --radius-sm: 6px; --radius-md: 12px; --radius-lg: 15px; --radius-xl: 24px; --radius-full: 999px;
-  --size-control: 34px; --size-control-large: 44px; --size-headerbar: 47px; --size-topbar: 32px;
+  --size-control: 34px; --size-control-large: 44px; --size-row: 52px; --size-row-two-line: 64px; --size-headerbar: 47px; --size-topbar: 32px;
   --duration-fast: 100ms; --duration-base: 200ms; --duration-slow: 300ms;
   --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1); --ease-in: cubic-bezier(0.5, 0, 0.75, 0);
+  --easing-standard: cubic-bezier(0.4, 0, 0.2, 1); --easing-enter: cubic-bezier(0.25, 0.46, 0.45, 0.94); --easing-exit: cubic-bezier(0.55, 0.06, 0.68, 0.19);
 
   /* Type: Atkinson Hyperlegible Next and Mono. Larger text scales every style by 1.25. */
   --text-scale: 1;
@@ -96,28 +105,28 @@
 /* Dark: the same names, new values. The portal sets data-theme; a page without it follows the system. */
 [data-theme='dark'] {
   --color-window-bg: #1e2228; --color-view-bg: #262b32; --color-sidebar-bg: #181b20; --color-headerbar-bg: #2b3038;
-  --color-card-bg: #2c3139; --color-popover-bg: #30363f; --color-button-bg: #3a404a; --color-button-bg-hover: #444b56;
+  --color-card-bg: #2c3139; --color-card-hover: #343a43; --color-popover-bg: #30363f; --color-button-bg: #3a404a; --color-button-bg-hover: #444b56;
   --color-border-default: #3b414b; --color-border-strong: #737a84;
   --color-text-primary: #eeece7; --color-text-secondary: #aeb4bc; --color-text-disabled: #6c727a;
-  --color-accent-bg: #78a9e6; --color-accent-fg: #8db8ee; --color-accent-on: #0f1720; --color-accent-subtle: #2c4361;
+  --color-accent-bg: #78a9e6; --color-accent-fg: #8db8ee; --color-accent-on: #0f1b2a; --color-accent-subtle: #2c4361;
   --color-attention-fg: #f2c063; --color-attention-subtle: #4a3a1a;
   --color-success-fg: #7cc48a; --color-success-subtle: #233a28;
-  --color-destructive-bg: #e06a5b; --color-destructive-fg: #f08a7d; --color-destructive-on: #1c0d0b; --color-destructive-subtle: #4a2420;
-  --color-switch-knob: #f4f2ee;
+  --color-destructive-bg: #e06a5b; --color-destructive-fg: #f08a7d; --color-destructive-on: #2a0b07; --color-destructive-subtle: #4a2420;
+  --color-switch-knob: #f4f2ee; --color-scrim: #0000008c;
   --shadow-1: 0 0 0 1px rgb(0 0 5 / 0.2), 0 1px 3px 1px rgb(0 0 5 / 0.2);
   color-scheme: dark;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme]) {
     --color-window-bg: #1e2228; --color-view-bg: #262b32; --color-sidebar-bg: #181b20; --color-headerbar-bg: #2b3038;
-    --color-card-bg: #2c3139; --color-popover-bg: #30363f; --color-button-bg: #3a404a; --color-button-bg-hover: #444b56;
+    --color-card-bg: #2c3139; --color-card-hover: #343a43; --color-popover-bg: #30363f; --color-button-bg: #3a404a; --color-button-bg-hover: #444b56;
     --color-border-default: #3b414b; --color-border-strong: #737a84;
     --color-text-primary: #eeece7; --color-text-secondary: #aeb4bc; --color-text-disabled: #6c727a;
-    --color-accent-bg: #78a9e6; --color-accent-fg: #8db8ee; --color-accent-on: #0f1720; --color-accent-subtle: #2c4361;
+    --color-accent-bg: #78a9e6; --color-accent-fg: #8db8ee; --color-accent-on: #0f1b2a; --color-accent-subtle: #2c4361;
     --color-attention-fg: #f2c063; --color-attention-subtle: #4a3a1a;
     --color-success-fg: #7cc48a; --color-success-subtle: #233a28;
-    --color-destructive-bg: #e06a5b; --color-destructive-fg: #f08a7d; --color-destructive-on: #1c0d0b; --color-destructive-subtle: #4a2420;
-    --color-switch-knob: #f4f2ee;
+    --color-destructive-bg: #e06a5b; --color-destructive-fg: #f08a7d; --color-destructive-on: #2a0b07; --color-destructive-subtle: #4a2420;
+    --color-switch-knob: #f4f2ee; --color-scrim: #0000008c;
     color-scheme: dark;
   }
 }
@@ -261,7 +270,7 @@ textarea.g-field { height: auto; min-height: 96px; padding: 8px var(--space-sm);
 .g-row-trail { flex: none; display: flex; align-items: center; gap: var(--space-xs); color: var(--color-text-secondary); }
 /* Rows that do something when you press them: disclosure, combo, add. */
 :is(a, button, label).g-row { cursor: pointer; text-decoration: none; transition: background var(--duration-fast); }
-:is(a, button, label).g-row:hover { background: color-mix(in srgb, var(--color-card-bg), var(--color-text-primary) 4%); }
+:is(a, button, label).g-row:hover { background: var(--color-card-hover); }
 .g-row-add { color: var(--color-accent-fg); }
 .g-row-add .g-row-title { color: var(--color-accent-fg); }
 /* A combo row: the select fills the row's end, styled as its value with a pan-down. */

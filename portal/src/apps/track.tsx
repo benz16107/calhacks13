@@ -33,7 +33,7 @@ export function TrackApp({ arg }: { arg: string }) {
       />
       <div class="g-window-content gos-track">
         {a ? (
-          <iframe ref={frame} class="gos-track-frame" title={a.title} src={load} onLoad={applyTheme} />
+          <iframe ref={frame} class="gos-track-frame" title={a.title} src={load} onLoad={applyTheme} allow="publickey-credentials-get; publickey-credentials-create" />
         ) : (
           <StatusPage icon="preferences-desktop-apps" title="This app is off or not installed">
             Turn it on in App Center to open it here.

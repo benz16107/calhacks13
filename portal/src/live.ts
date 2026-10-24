@@ -242,6 +242,11 @@ export function useBox() {
 }
 
 export async function api<T = any>(method: string, path: string, body?: unknown, timeoutMs = 15_000): Promise<T> {
+  // app.gurtos.com has no API of its own: with no machine, there is nothing to ask, only pairing.
+  if (noMachine()) {
+    if (!box.unpaired) ((box.unpaired = true), changed());
+    throw Object.assign(new Error('No box is paired with this app'), { status: 401 });
+  }
   const token = pairing()?.token;
   const r = await fetch(`${base()}/api${path}`, {
     method,
@@ -345,12 +350,14 @@ let retryFollow = 0;
 function follow() {
   clearTimeout(retryFollow);
   es?.close();
+  if (noMachine() && !box.unpaired) ((box.unpaired = true), changed());
   if (box.unpaired) return;
   // Start one line back: the box sends the stream's headers with its first event, so a replayed line opens it at once.
   const stream = new EventSource(`${base()}/api/log/stream?after=${Math.max(0, (box.events.at(-1)?.seq ?? 0) - 1)}${tokenQuery('&')}`);
   es = stream;
   stream.onmessage = (m) => take(JSON.parse(m.data));
   stream.onopen = () => {
+    retries = 0;
     // Opened offline from the app's cache: read the whole log now that the box answers, so totals are whole.
     if (!box.logLoaded) void api<LogEvent[]>('GET', '/log?after=0').then((l) => (l.forEach(take), (box.logLoaded = true), changed()), () => {});
     if (activeBeforeDrop) void cameBack(activeBeforeDrop);
@@ -377,17 +384,26 @@ function drop() {
   es?.close();
   es = undefined;
   clearTimeout(retryFollow);
-  retryFollow = setTimeout(follow, 1000);
+  // Try again soon after a power cut, then less often: 1 s, 2 s, 4 s, up to 30 s while the box stays away.
+  retryFollow = setTimeout(follow, Math.min(30_000, 1000 * 2 ** retries++));
 }
+let retries = 0;
 // A hard power-off leaves the stream's connection hanging without an error. Ask the box every 4 seconds; two misses
 // in a row mean it is out of reach, so a phone shows that within about 10 seconds.
 let misses = 0;
 function heartbeat() {
   setInterval(async () => {
+    if (noMachine()) {
+      // The machine was forgotten while this page was open: stop following it and show pairing.
+      es?.close();
+      es = undefined;
+      if (!box.unpaired) ((box.unpaired = true), changed());
+      return;
+    }
     const ok = await fetch(`${base()}/api/health`, { cache: 'no-store', signal: AbortSignal.timeout(3500) }).then((r) => r.ok, () => false);
     if (ok) {
       misses = 0;
-      if (box.down && !es) follow();
+      if (box.down && !es) ((retries = 0), follow());
     } else if (++misses >= 2 && !box.down) drop();
   }, 4000);
 }
@@ -489,6 +505,9 @@ export const machine = (): Machine | undefined => machines().find((m) => m.box.i
 export const pairing = (): Pairing | undefined => machine();
 /** Where this page's machine answers: '' (this page's own origin) on a box, its https address on app.gurtos.com. */
 export const base = () => (hosted ? (machine()?.url ?? '') : '');
+const noMachine = () => hosted && !machine();
+// Another tab (or Forget) removed the machine this page shows: go to pairing or the next machine.
+addEventListener('storage', (e) => hosted && e.key === 'gurtos.machines' && !machines().some((m) => m.box.id === localStorage.getItem('gurtos.machine')) && location.replace('/'));
 // app.gurtos.com with no machine yet: straight to pairing, from the first frame.
 if (hosted && !machine()) box.unpaired = true;
 
