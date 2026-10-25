@@ -32,11 +32,11 @@ Checked against main `7fe6651`, Sat Oct 24 08:09 PT. `./demo` from a clean workt
 |---|---|
 | verified (ISO) | 3 |
 | verified | 56 |
-| merged | 171 |
+| merged | 181 |
 | building | 1 |
 | planned | 1 |
 | not pursued | 6 |
-| **Total** | **238** |
+| **Total** | **248** |
 
 **Collisions** (detail below): none open at 03:27. The three found at 02:25 are resolved and Business is on main. Still
 watched: portal/dist rebuilt from merged sources (C-4).
@@ -91,6 +91,16 @@ watched: portal/dist rebuilt from merged sources (C-4).
 | MCP setup mode: an agent sets a computer up with only the code on its screen | core | merged (main 077d09b; gate 38 passed, 0 failed; not deployed, the UX lead batches deploys) | 077d09b | same step | all |
 | Setup doctor | core | merged (main 077d09b; gate 38 passed, 0 failed; not deployed, the UX lead batches deploys) | 077d09b | same step | all |
 | `AGENT-SETUP.md` (core wrote it, release owns the root file). In the repo; the disc and the docs site still need it (image, docs) | core | merged in the repo (main 077d09b; gate 38 passed, 0 failed; not deployed, the UX lead batches deploys) | 077d09b | none | all |
+| Flight recorder, the Replay screen: open a finished task and choose Replay in its header (also the Tasks list's right-click menu). It shows "Replay: <title>", a timeline of every point, and the current point with "N of M · time · $x spent so far" | portal | merged (main 220ac4d; QA has not run it by hand) | 220ac4d | none | Anthropic |
+| Replay plays: Play runs to the end on its own and stops; Step back and forward; dragging the scrubber moves the point | portal | merged (main 220ac4d; QA has not run it by hand) | 220ac4d | none | Anthropic |
+| Replay's Next event jumps to the next request, block, error, Keep or Undo. Marks on the scrubber show where they are (red for blocks and errors, amber for requests, green for approvals) | portal | merged (main 220ac4d; QA has not run it by hand) | 220ac4d | none | Anthropic |
+| Replay's spending so far only climbs and ends at the task's own cost; a paid tool call shows its amount | portal | merged (main 220ac4d; QA has not run it by hand) | 220ac4d | none | Anthropic |
+| Replay shows who decided: a request reads "Approved by <who>" (or Denied) at its point, and a blocked attempt reads "Blocked: reaching <host>, not one of this task's hosts" | portal | merged (main 220ac4d; QA has not run it by hand) | 220ac4d | none | Anthropic |
+| Replay's files: until core records per-point files, it shows "The task's final changes. This computer keeps a task's files at the end only." with the final diff; an undone task says its changes left the workspace | portal | merged (main 220ac4d; QA has not run it by hand) | 220ac4d | none | Anthropic |
+| Replay by keyboard and screen reader: Space plays or pauses, the arrows step, Home and End jump, N goes to the next event and Shift+N back; a screen reader hears "6 of 19. Request. Asks: ... $0.00 spent so far." | portal | merged (main 220ac4d; QA has not run it by hand) | 220ac4d | none | Anthropic |
+| Replay on a phone (390 px): controls on top, then the current point and its files, then the timeline; nothing runs off the edge. Light and dark | portal | merged (main 220ac4d; QA has not run it by hand) | 220ac4d | none | Anthropic |
+| Replay in Business: a person opens Replay only for tasks their role lets them open | portal | merged (main 220ac4d; QA has not run it by hand) | 220ac4d | none | Anthropic |
+| Replay is not offered on a running or queued task (no Replay button) | portal | merged (main 220ac4d; QA has not run it by hand) | 220ac4d | none | Anthropic |
 | Docs site gurtos.com | docs | verified Oct 24 01:00 (82+ pages, links, privacy scan) | 212c817 | site `npm run check` | all |
 | Showcase calhacks.gurtos.com | submission | verified Oct 24 01:30 | 52fb7f7, 213622e | showcase link checker | all |
 
