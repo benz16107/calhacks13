@@ -32,11 +32,11 @@ Checked against main `7fe6651`, Sat Oct 24 08:09 PT. `./demo` from a clean workt
 |---|---|
 | verified (ISO) | 3 |
 | verified | 56 |
-| merged | 165 |
+| merged | 171 |
 | building | 1 |
 | planned | 1 |
 | not pursued | 6 |
-| **Total** | **232** |
+| **Total** | **238** |
 
 **Collisions** (detail below): none open at 03:27. The three found at 02:25 are resolved and Business is on main. Still
 watched: portal/dist rebuilt from merged sources (C-4).
@@ -85,6 +85,12 @@ watched: portal/dist rebuilt from merged sources (C-4).
 | The per-task sandbox: a seccomp filter, kernel protections, 2 cores, plus the existing 2 GB with no swap and 512 processes. No Landlock (write limits come from `ProtectSystem=strict` and `ReadWritePaths`). No disk quota. On Vultr: Seccomp 2, `cpu.max 200000 100000`, and 14 of 14 Armadin attacks still caught | core | merged (deployed to Vultr, the laptop and the x86 test host; gate on Vultr 35 passed, 0 failed) | c51c8c7 | the sandbox: a system-call filter and a CPU cap on every task (passes on Vultr) | Armadin |
 | The GurtOS MCP server for Claude Code and Desktop (`core/claude-mcp.ts`): start, list, log, diff, undo, keep, pending approvals, answer, with a paired device token | core | merged (deployed to Vultr, the laptop and the x86 test host; gate on Vultr 35 passed, 0 failed) | c51c8c7 | the GurtOS MCP server: Claude Code drives the box | Anthropic |
 | Claude Code as a second worker | core | not pursued (cut for now as the conductor's cut-first item; revisit only if time remains before 9 PM Saturday) | | | Anthropic |
+| Setup code on the screen: `POST /api/setup/code` only from the computer itself; 8 characters, one use, 30 minutes. The portal and Personal panels that show it are still building | core | merged in core (main 077d09b; gate 38 passed, 0 failed; not deployed, the UX lead batches deploys) | 077d09b | command setup: an agent sets a computer up through MCP with only the code on its screen | all |
+| Setup channel and token: port 7701 during setup only; the token ends at finish, Stop or 2 hours; requests through it count as from the network | core | merged (main 077d09b; gate 38 passed, 0 failed; not deployed, the UX lead batches deploys) | 077d09b | same step | all |
+| `gurtos setup` command line (`core/gurtos.ts`; the on-disc wrapper is image's). Shares `core/setup-client.ts` with the MCP server | core | merged (main 077d09b; gate 38 passed, 0 failed; not deployed, the UX lead batches deploys) | 077d09b | none of its own | all |
+| MCP setup mode: an agent sets a computer up with only the code on its screen | core | merged (main 077d09b; gate 38 passed, 0 failed; not deployed, the UX lead batches deploys) | 077d09b | same step | all |
+| Setup doctor | core | merged (main 077d09b; gate 38 passed, 0 failed; not deployed, the UX lead batches deploys) | 077d09b | same step | all |
+| `AGENT-SETUP.md` (core wrote it, release owns the root file). In the repo; the disc and the docs site still need it (image, docs) | core | merged in the repo (main 077d09b; gate 38 passed, 0 failed; not deployed, the UX lead batches deploys) | 077d09b | none | all |
 | Docs site gurtos.com | docs | verified Oct 24 01:00 (82+ pages, links, privacy scan) | 212c817 | site `npm run check` | all |
 | Showcase calhacks.gurtos.com | submission | verified Oct 24 01:30 | 52fb7f7, 213622e | showcase link checker | all |
 
