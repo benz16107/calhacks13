@@ -595,7 +595,13 @@ export function Qr({ text, label }: { text: string; label: string }) {
   const q = qrcode(0, 'M');
   q.addData(text);
   q.make();
-  return <div role="img" aria-label={label} dangerouslySetInnerHTML={{ __html: q.createSvgTag({ cellSize: 6, margin: 0, scalable: true }) }} />;
+  // Remote access off: the link goes through app.gurtos.com, which reaches this computer over the internet.
+  return (
+    <>
+      <div role="img" aria-label={label} dangerouslySetInnerHTML={{ __html: q.createSvgTag({ cellSize: 6, margin: 0, scalable: true }) }} />
+      {/[?&]rv=/.test(text) && <p class="t-caption t-secondary">Your phone doesn't need to be on the same Wi-Fi.</p>}
+    </>
+  );
 }
 
 function Devices() {

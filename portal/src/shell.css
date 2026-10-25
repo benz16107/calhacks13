@@ -400,3 +400,5 @@ html.is-dragging iframe { pointer-events: none; }
 @media (max-width: 699px), (pointer: coarse) {
   .gos-home-box, .gos-home-row { min-height: 44px; }
 }
+/* The pairing page's longer link buttons wrap on a phone instead of widening the page. */
+.gos-pair a.g-btn { height: auto; min-height: 44px; padding-block: 10px; white-space: normal; text-align: center; }

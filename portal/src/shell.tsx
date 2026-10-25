@@ -14,7 +14,7 @@ import { Alert, AppIcon, Badge, Button, Icon, Menu, Popover, Progress, Switch } 
 import { focus, focused, minimize, open, phone, wm } from './wm.tsx';
 import { launchable, type Launchable } from './apps/index.tsx';
 import { PRODUCT } from './product.ts';
-import { appOf, asks, boxList, dollars, hhmm, ofState, pending, plural, selfBox, taskTitle, trackOf, useNow, zone, spentToday } from './util.ts';
+import { appOf, asks, boxList, dollars, hhmm, ofState, pending, plural, selfBox, sentence, taskTitle, trackOf, useNow, zone, spentToday } from './util.ts';
 
 /** Which shell overlay is open. One at a time, like a real desktop. */
 export const shell = { open: '' as '' | 'notifications' | 'control' | 'apps' | 'menu' | 'boxes' | 'person', locked: false };
@@ -1061,12 +1061,98 @@ async function pairWith(url: string, body: { code: string; name: string }) {
   addMachine({ token: p.token, device: p.device, box: p.box, url, edition: sys.edition });
 }
 
+/** The relay's rendezvous for a computer without its own address yet (POST /api/pair/start with remote access off). */
+const RV = 'https://box.gurtos.com/v1/rv';
+const HOST = /^[a-z0-9-]{3,30}\.box\.gurtos\.com$/;
+/** Ask the computer to turn on remote access, then wait for its address (or its reason) for up to 3 minutes. */
+async function rendezvous(rv: string): Promise<string> {
+  const at = `${RV}/${encodeURIComponent(rv)}`;
+  const put = await fetch(`${at}/ask`, { method: 'PUT', headers: { 'content-type': 'application/json' }, body: '{}' }).catch(() => undefined);
+  if (!put?.ok) throw new Error("This phone couldn't reach GurtOS's relay. Check its internet connection and try again.");
+  const end = Date.now() + 180_000;
+  while (Date.now() < end) {
+    const ctl = new AbortController();
+    const poll = (what: 'host' | 'error') =>
+      fetch(`${at}/${what}?wait=25`, { signal: ctl.signal }).then(
+        async (r) => (r.status === 200 ? ((await r.json()) as { host?: string; error?: string }) : undefined),
+        () => undefined,
+      );
+    const started = Date.now();
+    // The first of the two to answer 200 wins; both answering without news means ask again.
+    const got = await new Promise<{ host?: string; error?: string } | undefined>((done) => {
+      let left = 2;
+      for (const p of [poll('host'), poll('error')]) void p.then((v) => (v ? done(v) : --left || done(undefined)));
+    });
+    ctl.abort();
+    if (got?.error) throw new Error(got.error);
+    if (got?.host) {
+      if (!HOST.test(got.host)) throw new Error('The relay answered with an address that is not a GurtOS address.');
+      return got.host;
+    }
+    if (Date.now() - started < 2000) await new Promise((r) => setTimeout(r, 2000)); // the relay answered at once: don't spin
+  }
+  throw new Error("It didn't answer within 3 minutes.");
+}
+
+/** app.gurtos.com/pair?rv=…&n=…&lan=…#<code>: the phone can't reach the computer yet. Ask it to get an address. */
+function MeetBox({ rv, code, name, lan, onHost }: { rv?: string; code: string; name: string; lan?: string; onHost: (host: string) => void }) {
+  const [state, setState] = useState<'ask' | 'busy' | string>('ask');
+  const go = () => {
+    if (!rv) return;
+    setState('busy');
+    rendezvous(rv).then(onHost, (e) => setState((e as Error).message));
+  };
+  return (
+    <div class="gos-setup-layer">
+      <section class="g-window gos-pair-first" aria-labelledby="meet-title">
+        <div class="gos-pair">
+          <span class="gos-pair-icon">
+            <Icon name="phone" size={32} />
+          </span>
+          <h1 class="t-title2" id="meet-title">
+            Pair with {name}
+          </h1>
+          <p class="t-body t-secondary">
+            {rv
+              ? `This phone can't reach ${name} directly yet. It can ask ${name} for its own address and pair over the internet.`
+              : `This phone can't reach ${name} from here. On ${name}'s screen, open Settings, Remote access, and turn it on. Then scan its code again.`}
+          </p>
+          {!rv ? null : state === 'busy' ? (
+            <p class="t-body" role="status">
+              Asking {name} to turn on its address… about 10 to 60 seconds.
+            </p>
+          ) : (
+            <>
+              <Button kind="suggested" large onClick={go}>
+                Pair over the internet
+              </Button>
+              <p class="t-caption t-secondary">{name} turns on Remote access, so this phone can reach it and get notifications.</p>
+            </>
+          )}
+          {state !== 'ask' && state !== 'busy' && (
+            <p class="gos-error" role="alert">
+              {sentence(state)} On {name}'s screen, open Settings, Remote access.
+            </p>
+          )}
+          {lan && (
+            <a class="g-btn g-btn-large" href={`http://${lan}/pair#${code}`}>
+              Same Wi-Fi as {name}? Open it on this network
+            </a>
+          )}
+        </div>
+      </section>
+    </div>
+  );
+}
+
 /** Off the box's own screen the box answers only paired devices. Pair with the code from the box's screen. */
 export function PairFirst() {
   const guess = /iPhone/.test(navigator.userAgent) ? 'iPhone' : /Android/.test(navigator.userAgent) ? 'Android phone' : 'Laptop';
-  // The QR opens /pair#<code> (or /#pair/<code>): the code is already in the address.
+  // The QR opens /pair#<code> (or /#pair/<code>): the code is already in the address. A computer without its own
+  // address puts its details in the fragment, where no server log sees them: /pair#code=…&rv=…&lan=…&n=….
   const h = location.hash.slice(1);
-  const fromLink = h.startsWith('pair/') ? h.slice(5) : location.pathname === '/pair' ? h : '';
+  const frag = location.pathname === '/pair' && h.includes('=') ? new URLSearchParams(h) : undefined;
+  const fromLink = frag ? (frag.get('code') ?? '') : h.startsWith('pair/') ? h.slice(5) : location.pathname === '/pair' ? h : '';
   const [code, setCode] = useState(decodeURIComponent(fromLink));
   const [name, setName] = useState(guess);
   const [state, setState] = useState<'ask' | 'busy' | string>('ask');
@@ -1075,6 +1161,10 @@ export function PairFirst() {
   // On app.gurtos.com the link names the box: /pair?box=rosa.box.gurtos.com#<code>.
   const [boxAddr, setBoxAddr] = useState(new URLSearchParams(location.search).get('box') ?? '');
   const adding = hosted && machines().length > 0;
+  // Remote access off: the link names no address, only the computer (n), its home address (lan) and, during setup, a
+  // rendezvous (rv). The first shape had them in the query string.
+  const q = frag ?? new URLSearchParams(location.search);
+  const meet = hosted && !boxAddr && !!fromLink && ['rv', 'n', 'lan'].some((k) => q.has(k));
   // GurtOS Business: sign in with a work account. The box comes back to /#sso/<one-time code>, redeemed here for this device's token.
   const [work, setWork] = useState<{ on: boolean; name?: string }>();
   const [workError, setWorkError] = useState('');
@@ -1099,6 +1189,19 @@ export function PairFirst() {
       .catch((err) => setState((err as Error).message));
   };
   const go = (e: Event) => (e.preventDefault(), redeem(code));
+  if (meet) {
+    const lan = q.get('lan') ?? '';
+    const rv = q.get('rv') ?? '';
+    return (
+      <MeetBox
+        rv={/^[\w-]{4,64}$/.test(rv) ? rv : undefined}
+        code={fromLink}
+        name={(q.get('n') ?? '').slice(0, 60) || 'Your computer'}
+        lan={/^[\w.-]+(:\d{1,5})?$/.test(lan) ? lan : undefined}
+        onHost={(host) => (history.replaceState(null, '', `/pair?box=${encodeURIComponent(host)}#${fromLink}`), setBoxAddr(host))}
+      />
+    );
+  }
   // An iPhone's Home Screen app keeps its own storage, so a code redeemed in Safari wouldn't carry over to it.
   if (fromLink && ios() && !standalone() && !inSafari) return <AddToHomeScreen pairCode={decodeURIComponent(fromLink)} box={hosted ? boxAddr : undefined} onSafari={() => (setInSafari(true), redeem(code))} />;
   return (
