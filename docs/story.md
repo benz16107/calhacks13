@@ -666,8 +666,8 @@ here, and off every page, until its code is merged and its check passes. Batch t
 |---|---|---|---|---|
 | Try GurtOS live (a throwaway computer in the browser, public address once Ben OKs it) | mcp:6032eb14-4718-4a33-9d29-2a6983bbbce4 | building | Devpost main text and Try it out first; showcase home; Anthropic, Armadin, Factory | no |
 | Attack it yourself (paste an injection or pick an attack, watch each defence stop it) | to be named | building | Devpost; showcase home; Armadin, Anthropic | no |
-| The flight recorder (replay a task step by step, with files and approvals, then Keep or Undo) | portal | merged 220ac4d (QA has not run it by hand); files per step not recorded yet, shows the final changes | Devpost (done); Anthropic, Factory; Hyphenate, Microsoft, CRS, Atlassian (writers asked) | Devpost only |
-| Agent permissions (the OS enforces each app's manifest; allow, deny, revoke) | core | merged 4b473ea (gate 39/0); Settings screens still landing | Devpost; Hyphenate, Microsoft, CRS, Atlassian; Visa, Apify | Devpost, Hyphenate, Microsoft, CRS, Atlassian (Visa, Apify asked) |
+| The flight recorder (replay a task step by step, with files and approvals, then Keep or Undo) | portal | merged 220ac4d (QA has not run it by hand); files per step not recorded yet, shows the final changes | Devpost (done); Anthropic, Factory; Hyphenate, Microsoft, CRS, Atlassian (writers asked) | Devpost, Hyphenate, Microsoft, CRS, Atlassian; Anthropic and Factory asked |
+| Agent permissions (the OS enforces each app's manifest; allow, deny, revoke) | core | merged 4b473ea (gate 39/0); Settings screens still landing | Devpost; Hyphenate, Microsoft, CRS, Atlassian; Visa, Apify | all shown: Devpost, Hyphenate, Microsoft, CRS, Atlassian, Visa, Apify |
 | Signed receipts with a QR code and a public verify page (log and Solana anchored) | Elastic and wallet threads | building | Devpost; Elastic, Coinbase, Solana | no |
 
 ## Not entered
