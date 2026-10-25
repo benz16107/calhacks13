@@ -49,6 +49,7 @@ const jumps = [
         </header>
         {/* the track's own narrated video, when one is set for its slug in src/data/videos.ts */}
         <VideoSlot video={entry.id} label={`${d.sponsor} video`} />
+        <VideoSlot video={`${entry.id}-t1`} label={`${d.sponsor} Track 1 video`} />
         <div class="kit" data-track-body>
           <Content components={kit} />
         </div>
