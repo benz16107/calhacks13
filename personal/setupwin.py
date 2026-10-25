@@ -593,80 +593,78 @@ def section_list(box, title):
 
 
 class RemoteSetup(Adw.Window):
-    """Set up from another computer: a one-time code, the addresses, the sentence to give the agent, who is connected,
-    and Stop. POST /api/setup/code opens it; GET /api/setup's channel follows it; POST /api/setup/stop ends it."""
+    """Set up from another computer, in the portal's words (portal/src/setup.tsx, AgentSetup): a one-time code, the
+    sentence to give the agent, who is connected, New code and Stop. POST /api/setup/code makes the code; GET
+    /api/setup's channel follows who connects and where it answers; POST /api/setup/stop ends it."""
 
     def __init__(self, parent):
-        super().__init__(transient_for=parent, modal=True, title='Set up from another computer', default_width=620, default_height=560)
+        super().__init__(transient_for=parent, modal=True, title='Set up from another computer', default_width=620, default_height=540)
         self.parent_win = parent
-        self.timer = 0
-        self.body = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=14, margin_top=18, margin_bottom=18, margin_start=24, margin_end=24)
+        self.made, self.live, self.timer, self.error = None, None, 0, ''
+        self.body = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12, margin_top=18, margin_bottom=18, margin_start=24, margin_end=24)
         view = Adw.ToolbarView(content=Gtk.ScrolledWindow(child=self.body, hscrollbar_policy=Gtk.PolicyType.NEVER))
         header = Adw.HeaderBar()
-        self.stop = Gtk.Button(label='Stop', css_classes=['destructive-action'], sensitive=False)
+        fresh = Gtk.Button(label='New code')  # a code works once, and a failed try uses it up too
+        fresh.connect('clicked', lambda _b: self.fresh())
+        header.pack_start(fresh)
+        self.stop = Gtk.Button(label='Stop')
         self.stop.connect('clicked', lambda _b: self.end())
         header.pack_end(self.stop)
         view.add_top_bar(header)
         self.toasts = Adw.ToastOverlay(child=view)
         self.set_content(self.toasts)
         self.connect('close-request', lambda _w: (self.timer and GLib.source_remove(self.timer), False)[1])
-        self.body.append(Gtk.Label(label='Getting a code…', xalign=0, css_classes=['gurt-secondary']))
         self.present()
-        background(lambda: api('POST', '/api/setup/code', {}), self.opened)
-
-    def clear(self):
-        while (c := self.body.get_first_child()) is not None:
-            self.body.remove(c)
-
-    def opened(self, out, err):
-        self.clear()
-        if err:
-            self.body.append(Gtk.Label(label=f"GurtOS couldn't open setup to another computer: {err}", xalign=0, wrap=True))
-            return
-        self.stop.set_sensitive(True)
-        urls = out.get('urls') or []
-        code = out.get('code', '')
-        sentence = f"Set up the new GurtOS computer at {urls[0] if urls else 'this computer'} with code {code}, by following AGENT-SETUP.md"
-        self.body.append(Gtk.Label(label='Give this to the agent on your other computer', xalign=0, css_classes=['heading']))
-        say = Gtk.Label(label=sentence, xalign=0, wrap=True, selectable=True, css_classes=['card'], margin_bottom=2)
-        say.set_margin_start(0)
-        self.body.append(say)
-        copy = Gtk.Button(label='Copy', halign=Gtk.Align.START)
-        copy.connect('clicked', lambda _b: (self.get_clipboard().set(sentence), self.toasts.add_toast(Adw.Toast(title='Copied.'))))
-        self.body.append(copy)
-        lst = boxed()
-        r = row('Code', f"Works once. Ends {when_text(out.get('expiresAt'))}." if out.get('expiresAt') else 'Works once.', 'dialog-password-symbolic')
-        r.add_suffix(Gtk.Label(label=code, selectable=True, css_classes=['gurt-mono', 'gurt-title-3']))
-        lst.append(r)
-        for u in urls:
-            a = row('Address', None, 'network-server-symbolic')
-            a.add_suffix(Gtk.Label(label=u, selectable=True, css_classes=['gurt-mono'], ellipsize=3, max_width_chars=40))
-            lst.append(a)
-        self.body.append(lst)
-        self.body.append(Gtk.Label(label='Connected', xalign=0, css_classes=['heading'], margin_top=6))
-        self.who = boxed()
-        self.body.append(self.who)
-        self.show_who(out.get('devices') or [])
-        self.body.append(Gtk.Label(label='The agent can only do setup: keys, folders, permissions, apps. Stop ends it at once, and it ends by itself when '
-                                         'setup is done.', xalign=0, wrap=True, css_classes=['gurt-caption', 'gurt-secondary']))
+        self.fresh()
         self.timer = GLib.timeout_add_seconds(3, self.follow)
 
-    def show_who(self, devices):
-        while (c := self.who.get_first_child()) is not None:
-            self.who.remove(c)
-        for d in devices:
-            self.who.append(row(d.get('name') or 'An agent', f"Connected {when_text(d.get('since'))}" if d.get('since') else '', 'computer-symbolic'))
-        if not devices:
-            self.who.append(row('Nothing yet', 'It appears here when the agent connects.', 'computer-symbolic'))
+    def fresh(self):
+        def done(out, err):
+            self.error = str(err) if err else ''
+            if not err:
+                self.made = out
+            self.render()
+        background(lambda: api('POST', '/api/setup/code', {}), done)
+
+    def render(self):
+        while (c := self.body.get_first_child()) is not None:
+            self.body.remove(c)
+        self.body.append(Gtk.Label(label='An AI agent on another computer, like Claude Code, can do every step for you. This screen follows along.',
+                                   xalign=0, wrap=True, css_classes=['gurt-secondary']))
+        ch = dict(self.made or {})
+        if self.live:  # the code is ours; who is connected and where it answers are live
+            ch.update({k: self.live.get(k) for k in ('urls', 'remote', 'devices')})
+        urls, devices = ch.get('urls') or [], ch.get('devices') or []
+        url = ch.get('remote') or (urls[0] if urls else None)
+        if ch.get('code'):
+            expired = bool(ch.get('expiresAt')) and when_passed(ch['expiresAt'])
+            self.body.append(Gtk.Label(label=ch['code'], xalign=0, selectable=True, css_classes=['gurt-mono', 'gurt-title-1']))  # exactly as issued
+            self.body.append(Gtk.Label(label='This code ran out.' if expired else f"Works once, until {clock_text(ch.get('expiresAt'))}.",
+                                       xalign=0, css_classes=['gurt-caption', 'gurt-secondary']))
+            if url and not expired:
+                self.body.append(Gtk.Label(label='Tell your agent:', xalign=0, css_classes=['heading'], margin_top=6))
+                sentence = f"Set up the new GurtOS computer at {url} with code {ch['code']}, by following AGENT-SETUP.md"
+                self.body.append(Gtk.Label(label=sentence, xalign=0, wrap=True, selectable=True, css_classes=['card', 'gurt-say']))
+                copy = Gtk.Button(label='Copy', halign=Gtk.Align.START)
+                copy.connect('clicked', lambda _b: (self.get_clipboard().set(sentence), self.toasts.add_toast(Adw.Toast(title='Copied.'))))
+                self.body.append(copy)
+                others = urls if ch.get('remote') else urls[1:]
+                if others:
+                    self.body.append(Gtk.Label(label=f"Also at {', '.join(others)}", xalign=0, wrap=True, selectable=True,
+                                               css_classes=['gurt-caption', 'gurt-secondary']))
+            self.body.append(Gtk.Label(label=f"Connected: {', '.join(d.get('name') or 'an agent' for d in devices)}" if devices else 'No agent connected yet.',
+                                       xalign=0, wrap=True, margin_top=6))
+        if self.error:
+            self.body.append(Gtk.Label(label=self.error, xalign=0, wrap=True, css_classes=['error']))
+        self.stop.set_css_classes(['destructive-action'] if devices else [])
 
     def follow(self):
         def done(setup, err):
             if err:
                 return
             ch = setup.get('channel') or {}
-            if not ch.get('open'):
+            if not ch.get('open') and self.made and setup.get('done'):
                 self.timer = 0
-                self.stop.set_sensitive(False)
                 win = self.parent_win
 
                 def reloaded(state, err):  # show what the agent set, on Done, and let the owner press Start using GurtOS
@@ -680,7 +678,8 @@ class RemoteSetup(Adw.Window):
                 background(lambda: (api('GET', '/api/setup'), api('GET', '/api/settings'), api('GET', '/api/vault'), api('GET', '/api/apps?all=1'),
                                     api('GET', '/api/boxes'), api('GET', '/api/devices')), reloaded)
                 return
-            self.show_who(ch.get('devices') or [])
+            self.live = ch if ch.get('open') else None
+            self.render()
             self.timer = GLib.timeout_add_seconds(3, self.follow)
         self.timer = 0
         background(lambda: api('GET', '/api/setup'), done)
@@ -689,7 +688,8 @@ class RemoteSetup(Adw.Window):
     def end(self):
         def done(_out, err):
             if err:
-                return self.toasts.add_toast(Adw.Toast(title=f'Not stopped: {err}'))
+                self.error = str(err)
+                return self.render()
             if self.timer:
                 GLib.source_remove(self.timer)
                 self.timer = 0
@@ -697,12 +697,20 @@ class RemoteSetup(Adw.Window):
         background(lambda: api('POST', '/api/setup/stop', {}), done)
 
 
-def when_text(iso):
+def clock_text(iso):
     from datetime import datetime
     try:
-        return 'at ' + datetime.fromisoformat(iso.replace('Z', '+00:00')).astimezone().strftime('%-I:%M %p')
+        return datetime.fromisoformat(iso.replace('Z', '+00:00')).astimezone().strftime('%-I:%M %p')
     except (ValueError, AttributeError):
-        return 'soon'
+        return 'it runs out'
+
+
+def when_passed(iso):
+    from datetime import datetime, timezone
+    try:
+        return datetime.fromisoformat(iso.replace('Z', '+00:00')) < datetime.now(timezone.utc)
+    except (ValueError, AttributeError):
+        return False
 
 
 def qr_image(text):
