@@ -32,11 +32,12 @@ Checked against main `7fe6651`, Sat Oct 24 08:09 PT. `./demo` from a clean workt
 |---|---|
 | verified (ISO) | 3 |
 | verified | 69 |
-| merged | 182 |
+| merged | 185 |
 | building | 1 |
 | planned | 1 |
 | not pursued | 6 |
-| **Total** | **262** |
+| superseded | 1 |
+| **Total** | **266** |
 
 **Collisions** (detail below): none open at 03:27. The three found at 02:25 are resolved and Business is on main. Still
 watched: portal/dist rebuilt from merged sources (C-4).
@@ -96,7 +97,11 @@ watched: portal/dist rebuilt from merged sources (C-4).
 | Replay's Next event jumps to the next request, block, error, Keep or Undo. Marks on the scrubber show where they are (red for blocks and errors, amber for requests, green for approvals) | portal | merged (main 220ac4d; QA has not run it by hand) | 220ac4d | none | Anthropic |
 | Replay's spending so far only climbs and ends at the task's own cost; a paid tool call shows its amount | portal | merged (main 220ac4d; QA has not run it by hand) | 220ac4d | none | Anthropic |
 | Replay shows who decided: a request reads "Approved by <who>" (or Denied) at its point, and a blocked attempt reads "Blocked: reaching <host>, not one of this task's hosts" | portal | merged (main 220ac4d; QA has not run it by hand) | 220ac4d | none | Anthropic |
-| Replay's files: until core records per-point files, it shows "The task's final changes. This computer keeps a task's files at the end only." with the final diff; an undone task says its changes left the workspace | portal | merged (main 220ac4d; QA has not run it by hand) | 220ac4d | none | Anthropic |
+| Replay's files, the first version: it showed "The task's final changes. This computer keeps a task's files at the end only." with the final diff; an undone task said its changes left the workspace. Replaced by the four rows below | portal | superseded (by 095514a, f7539b8, b16094c) | 220ac4d | none | Anthropic |
+| Replay's files at each step: core records a task's files at each step (095514a) and the portal (f7539b8) and Personal's native app (b16094c) show them. For a task run after that commit, each point shows the files as they were then (the demo task's plan.md reads "first draft" at the first write and "final plan" at the end). Before any file changes it reads "No files changed yet." | portal, core, personal | merged (QA has not run it by hand) | 095514a, f7539b8, b16094c | none | Anthropic |
+| Replay of a task from before that commit shows its final changes, with "This task ran before GurtOS kept its files at each step, so this shows its final changes." | portal, core, personal | merged (QA has not run it by hand) | f7539b8, b16094c | none | Anthropic |
+| Replay of an undone task whose files were purged (this can happen as soon as the next task finishes) reads "This task's files are gone." Replay of undone tasks isn't promised | portal, core, personal | merged (QA has not run it by hand) | f7539b8, b16094c | none | Anthropic |
+| Replay's size limits: over 50 MB it reads "Recording stopped at 50 MB for this task, so this shows the last files it kept."; a file over 1 MB reads "(added, over 1 MB, not kept)" | portal, core, personal | merged (QA has not run it by hand) | 095514a, f7539b8, b16094c | none | Anthropic |
 | Replay by keyboard and screen reader: Space plays or pauses, the arrows step, Home and End jump, N goes to the next event and Shift+N back; a screen reader hears "6 of 19. Request. Asks: ... $0.00 spent so far." | portal | merged (main 220ac4d; QA has not run it by hand) | 220ac4d | none | Anthropic |
 | Replay on a phone (390 px): controls on top, then the current point and its files, then the timeline; nothing runs off the edge. Light and dark | portal | merged (main 220ac4d; QA has not run it by hand) | 220ac4d | none | Anthropic |
 | Replay in Business: a person opens Replay only for tasks their role lets them open | portal | merged (main 220ac4d; QA has not run it by hand) | 220ac4d | none | Anthropic |
