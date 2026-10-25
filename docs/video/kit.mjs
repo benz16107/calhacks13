@@ -344,7 +344,8 @@ export function kit({ C, W, H, FRAME, esc, r3, scene, fit, dims, lowerThird, not
         #root .mg.them { align-self: flex-start; background: ${C.surface}; border-bottom-left-radius: 8px; }
         #root .mg .who { display: block; font-size: 28px; font-weight: 700; color: ${C.ink2}; margin-bottom: 6px; } #root .mg.me .who { color: rgba(23,30,37,0.7); }
         #root .mg.quote .q { border-left: 6px solid ${C.accent}; padding-left: 18px; font-style: italic; }
-        #root .mg.bad { background: ${C.blockedBg}; border: 2px solid ${C.blocked}; } #root .mg.ok { background: ${C.doneBg}; border: 2px solid ${C.done}; }`;
+        #root .mg.bad { background: ${C.blockedBg}; border: 2px solid ${C.blocked}; color: ${C.ink}; } #root .mg.ok { background: ${C.doneBg}; border: 2px solid ${C.done}; color: ${C.ink}; }
+        #root .mg.bad .who, #root .mg.ok .who { color: ${C.ink2}; }`;
       const body = `<div id="${id}-w">${msgs.map((m, i) => `<div class="mg ${m.from === 'me' ? 'me' : 'them'}${m.kind ? ` ${m.kind}` : ''}" id="${id}-m${i}">${m.who ? `<span class="who">${esc(m.who)}</span>` : ''}${m.kind === 'quote' ? `<div class="q">${esc(m.text)}</div>` : esc(m.text)}</div>`).join('')}</div>`;
       // Later messages push earlier ones up: each bubble takes no space until it arrives.
       const js = msgs.map((m, i) => { const t = ctx.t(m, 0.3 + i * 0.9); return `tl.set("#${id}-m${i}", { display: "none" }, 0); tl.set("#${id}-m${i}", { display: "block" }, ${r3(t)}); tl.fromTo("#${id}-m${i}", { opacity: 0, y: 30, scale: 0.92, transformOrigin: "${m.from === 'me' ? '100% 100%' : '0% 100%'}" }, { opacity: 1, y: 0, scale: 1, duration: 0.3, ease: "back.out(1.6)" }, ${r3(t)});`; }).join('\n');
