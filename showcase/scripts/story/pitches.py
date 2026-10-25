@@ -60,7 +60,6 @@ def write_short(d):
                 secs[key] = '\n'.join(l for l in sec.split('\n') if l.strip() and not l.startswith('[Full write-up')).replace('\n', '\n\n', 0)
     here = os.path.dirname(os.path.abspath(__file__))
     short = open(os.path.join(here, 'devpost-about.md')).read().strip()
-    short = short.replace('{{CRS}}', secs['CRS']).replace('{{FIGMA}}', secs['Figma'])
     block = f"{SHORT_HEAD}\n\n{SHORT_START}\n\n{short}\n\n{SHORT_END}\n\n"
     if SHORT_START in d:
         x = d.index(SHORT_HEAD); y = d.index(SHORT_END) + len(SHORT_END) + 2
