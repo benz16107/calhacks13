@@ -31,8 +31,8 @@ Checked against main `7fe6651`, Sat Oct 24 08:09 PT. `./demo` from a clean workt
 | Status | Count |
 |---|---|
 | verified (ISO) | 3 |
-| verified | 70 |
-| merged | 181 |
+| verified | 69 |
+| merged | 182 |
 | building | 1 |
 | planned | 1 |
 | not pursued | 6 |
@@ -114,7 +114,7 @@ watched: portal/dist rebuilt from merged sources (C-4).
 | try.gurtos.com Start a task: "Tidy a notes folder" runs and completes in the portal's action log; its diff opens line by line; Undo removes its files: the public live demo (branch `try-live`, folder `try/`; a throwaway host, delete after Sun Oct 25; scripted worker, no keys) | try | verified Oct 25 03:05 PT by hand from outside (9 log steps, 2 files added, Undo confirmed and the task shows Undone; see P2-34 for one wrong duration) | | `sudo node try/demo.ts` (24 checks) | Anthropic, Armadin, Vultr |
 | try.gurtos.com Attack it yourself: a prepared page (marketplace listing with a hidden block) runs and shows every defence card with its log line: vault EACCES, net.blocked, firewall drop, database unreachable, no other task, decoy-only environment, tripwire and undo, plus the honest "not covered" notes: the public live demo (branch `try-live`, folder `try/`; a throwaway host, delete after Sun Oct 25; scripted worker, no keys) | try | verified Oct 25 03:05 PT by hand from outside for the marketplace listing only; the other two prepared pages and pasted text were not run (see P2-35: its disk-fill note is out of date) | | `sudo node try/demo.ts` (24 checks) | Anthropic, Armadin, Vultr |
 | try.gurtos.com Pull the plug during a long job: the box is hard-killed and resumes; the job finishes with no step skipped or repeated: the public live demo (branch `try-live`, folder `try/`; a throwaway host, delete after Sun Oct 25; scripted worker, no keys) | try | verified Oct 25 03:05 PT by hand from outside on the second try: "Welcome back", Resumed 1, Paid twice 0, steps 1 to 4 once each, then Done. The first try lost the session's box (see P2-36) | | `sudo node try/demo.ts` (24 checks) | Anthropic, Armadin, Vultr |
-| try.gurtos.com security from outside: another box's token is rejected (401); the gateway refuses `/api/vault`, `/api/settings`, `/api/owner` and `POST /api/tasks` (403); the host firewall blocks egress to the relay, other boxes and private ranges: the public live demo (branch `try-live`, folder `try/`; a throwaway host, delete after Sun Oct 25; scripted worker, no keys) | try | partly verified Oct 25: the 401 and the four 403s confirmed with curl; the egress firewall can't be tested from outside and `sudo node try/demo.ts` (24 checks) was not run by QA | | `sudo node try/demo.ts` (24 checks) | Anthropic, Armadin, Vultr |
+| try.gurtos.com security from outside: another box's token is rejected (401); the gateway refuses `/api/vault`, `/api/settings`, `/api/owner` and `POST /api/tasks` (403); the host firewall blocks egress to the relay, other boxes and private ranges: the public live demo (branch `try-live`, folder `try/`; a throwaway host, delete after Sun Oct 25; scripted worker, no keys) | try | merged (partly verified Oct 25: the 401 and the four 403s confirmed with curl; the egress firewall can't be tested from outside and `sudo node try/demo.ts` (24 checks) was not run by QA) | | `sudo node try/demo.ts` (24 checks) | Anthropic, Armadin, Vultr |
 | Docs site gurtos.com | docs | verified Oct 24 01:00 (82+ pages, links, privacy scan) | 212c817 | site `npm run check` | all |
 | Showcase calhacks.gurtos.com | submission | verified Oct 24 01:30 | 52fb7f7, 213622e | showcase link checker | all |
 
