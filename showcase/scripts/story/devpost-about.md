@@ -3,7 +3,7 @@
 - Try it live: https://try.gurtos.com (your own throwaway GurtOS computer in the browser; paste an attack and watch it stopped)
 - Every track in detail: https://calhacks.gurtos.com
 - Code (Apache-2.0): https://github.com/benz16107/calhacks13
-- Video: https://youtu.be/GMR41DPjbpw
+- Video: https://youtu.be/0ZlE6Z8VvKM
 
 ## Operating systems built for AI agents
 
@@ -83,7 +83,7 @@ Every track has its own page with the criteria, evidence, screenshots and limits
 | Microsoft | The credit desk as a path to production: roles, routed approvals, audit, kill switch | 10 agents frozen within 271 ms; a bad batch undone in 48 ms | [page](https://calhacks.gurtos.com/tracks/microsoft/) |
 | Visa | A shopping agent that buys by standing instruction after your tap, signed with Visa's Trusted Agent Protocol | Live: a $15.36 CAD price at Best Buy Canada, bought on a Stripe test card, refunded on Undo | [page](https://calhacks.gurtos.com/tracks/visa/) |
 | Coinbase | Agents pay and earn over x402; the wallet key never reaches the agent | A real agent paid $0.01 and $0.03 through CDP, confirmed on Solana devnet | [page](https://calhacks.gurtos.com/tracks/coinbase/) |
-| Fetch.ai | Every GurtOS box is an agent on Agentverse, reachable from an ASI:One chat | Live: a Droid task fixed a failing test for $0.05; a $0.50 search paused for approval | [page](https://calhacks.gurtos.com/tracks/fetch/) |
+| Fetch.ai | Every GurtOS box is an agent on Agentverse, reachable from an ASI:One chat | Live: a Droid task fixed a failing test for $0.05; a $0.50 search paused for approval. [Video](https://youtu.be/YkLOewsE2yw) | [page](https://calhacks.gurtos.com/tracks/fetch/) |
 | SpacetimeDB | One SpacetimeDB per computer as the live state: queue, approvals, status | 3 agents made 15 claims on 12 jobs: 12 distinct, none twice | [page](https://calhacks.gurtos.com/tracks/spacetime/) |
 | Elastic | A copy of the log the box cannot rewrite, and an agent that answers "what did my agents do?" | The agent named a failed routine's root cause; a receipt matched 18 entries to Elastic's copy | [page](https://calhacks.gurtos.com/tracks/elastic/) |
 | Moss | Memory your agents use and a web page cannot poison; fast answers | A memory planted by a web page was refused; search 3.1 ms; answers in 329 ms (opt-in) | [page](https://calhacks.gurtos.com/tracks/moss/) |
@@ -138,7 +138,7 @@ The decision tool refuses to record anything until those checks have run (rule C
 **One design system for the whole ecosystem:** the box screen and portal for Server, the native GNOME layer for Personal, the Business screens from approved frames, and the phone app, all from the same Figma variables, with a check that fails when the code drifts. Page: https://calhacks.gurtos.com/tracks/figma/
 
 **The three deliverables**
-- **Demo video:** https://youtu.be/GMR41DPjbpw
+- **Demo video:** https://youtu.be/0ZlE6Z8VvKM
 - **Figma Slides** (with the stage log, the video, the embedded files and the repo link): https://www.figma.com/slides/SBrJtJiY20k88X3IGzKwZW
 - **Stage log:** the table below, 57 sessions and 755 minutes in all, in `docs/stagelog.md` with one line per session.
 

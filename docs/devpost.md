@@ -15,20 +15,18 @@ Operating systems built for AI agents: each task runs as its own Linux user, in 
 
 ## Video
 
-https://youtu.be/GMR41DPjbpw ("GurtOS: operating systems built for AI agents", 2:58, unlisted, English captions). Paste this link in the Video field.
+https://youtu.be/0ZlE6Z8VvKM ("GurtOS: operating systems built for AI agents", 2:58, unlisted, English captions). Paste this link in the Video field.
 
 ## Image gallery (upload in this order)
 
-All in `showcase/public/devpost/`:
+Six images, all in `showcase/public/devpost/`. The first one is the thumbnail.
 
-1. `1-box-screen.png`: the box's own screen as an approval arrives (the thumbnail).
-2. `2-blocked.png`: the booby-trapped page, blocked and logged, with Undo.
-3. `4-editions.png`: Server, Business and Personal side by side.
-4. `5-try-live.png`: https://try.gurtos.com, an attack pasted and each defence shown with its log line.
-5. `6-replay.png`: Replay of a task, step by step.
-6. `7-devices.png`: the iPhone, Watch and Mac approving a request.
-7. `8-receipt.png`: gurtos.com/verify checking a real signed receipt.
-8. `9-permissions.png`: a refusal by the owner's permission setting, logged in plain words.
+1. `edition-server.png`: GurtOS Server on gurtos.com (box screen and iPhone), 2x, dark.
+2. `edition-personal.png`: GurtOS Personal (desktop, iPhone and Watch).
+3. `edition-business.png`: GurtOS Business (portal and iPhone).
+4. `docs-home.png`: gurtos.com/docs home with its sidebar, 2x, dark.
+5. `5-try-live.png`: https://try.gurtos.com, an attack pasted and each defence shown with its log line.
+6. `2-blocked.png`: the booby-trapped page, blocked and logged, with Undo.
 
 ## Try it out (links)
 
@@ -69,7 +67,7 @@ Opt in to every eligible category at the Devpost step that lists them. Anthropic
 - Try it live: https://try.gurtos.com (your own throwaway GurtOS computer in the browser; paste an attack and watch it stopped)
 - Every track in detail: https://calhacks.gurtos.com
 - Code (Apache-2.0): https://github.com/benz16107/calhacks13
-- Video: https://youtu.be/GMR41DPjbpw
+- Video: https://youtu.be/0ZlE6Z8VvKM
 
 ## Operating systems built for AI agents
 
@@ -149,7 +147,7 @@ Every track has its own page with the criteria, evidence, screenshots and limits
 | Microsoft | The credit desk as a path to production: roles, routed approvals, audit, kill switch | 10 agents frozen within 271 ms; a bad batch undone in 48 ms | [page](https://calhacks.gurtos.com/tracks/microsoft/) |
 | Visa | A shopping agent that buys by standing instruction after your tap, signed with Visa's Trusted Agent Protocol | Live: a $15.36 CAD price at Best Buy Canada, bought on a Stripe test card, refunded on Undo | [page](https://calhacks.gurtos.com/tracks/visa/) |
 | Coinbase | Agents pay and earn over x402; the wallet key never reaches the agent | A real agent paid $0.01 and $0.03 through CDP, confirmed on Solana devnet | [page](https://calhacks.gurtos.com/tracks/coinbase/) |
-| Fetch.ai | Every GurtOS box is an agent on Agentverse, reachable from an ASI:One chat | Live: a Droid task fixed a failing test for $0.05; a $0.50 search paused for approval | [page](https://calhacks.gurtos.com/tracks/fetch/) |
+| Fetch.ai | Every GurtOS box is an agent on Agentverse, reachable from an ASI:One chat | Live: a Droid task fixed a failing test for $0.05; a $0.50 search paused for approval. [Video](https://youtu.be/YkLOewsE2yw) | [page](https://calhacks.gurtos.com/tracks/fetch/) |
 | SpacetimeDB | One SpacetimeDB per computer as the live state: queue, approvals, status | 3 agents made 15 claims on 12 jobs: 12 distinct, none twice | [page](https://calhacks.gurtos.com/tracks/spacetime/) |
 | Elastic | A copy of the log the box cannot rewrite, and an agent that answers "what did my agents do?" | The agent named a failed routine's root cause; a receipt matched 18 entries to Elastic's copy | [page](https://calhacks.gurtos.com/tracks/elastic/) |
 | Moss | Memory your agents use and a web page cannot poison; fast answers | A memory planted by a web page was refused; search 3.1 ms; answers in 329 ms (opt-in) | [page](https://calhacks.gurtos.com/tracks/moss/) |
@@ -204,7 +202,7 @@ The decision tool refuses to record anything until those checks have run (rule C
 **One design system for the whole ecosystem:** the box screen and portal for Server, the native GNOME layer for Personal, the Business screens from approved frames, and the phone app, all from the same Figma variables, with a check that fails when the code drifts. Page: https://calhacks.gurtos.com/tracks/figma/
 
 **The three deliverables**
-- **Demo video:** https://youtu.be/GMR41DPjbpw
+- **Demo video:** https://youtu.be/0ZlE6Z8VvKM
 - **Figma Slides** (with the stage log, the video, the embedded files and the repo link): https://www.figma.com/slides/SBrJtJiY20k88X3IGzKwZW
 - **Stage log:** the table below, 57 sessions and 755 minutes in all, in `docs/stagelog.md` with one line per session.
 
@@ -468,7 +466,7 @@ Agents (all mailbox agents on Agentverse; the three TEST agents are ours and sta
 
 Also built and live-verified: a team of agents (GurtOS routes a request over the chat protocol to its Shopper, Find or Credit Desk agent); strangers' replies treated as data (the live run blocked our test trap's hidden instruction, described in plain words and logged, never quoted, and relayed Fetch.ai's real Weather Agent); the Payment Protocol in test FET on Fetch's Dorado testnet, both ways, through the `fetch.pay` tool and the box's one budget path (the box paid 0.5 test FET after the owner's OK, and a test stranger paid the Shopper 0.05; Dorado's explorer stopped indexing new blocks, so receipts link to the raw transaction); richer cards; a restart notice in the chat; machines linked with an HMAC proof and named by their GurtOS edition; guest requests through the Mana app's one guest path; and a team of box agents on a SpacetimeDB queue (3 Droid agents shared one queue, each job went to exactly one, and 3 of 3 finished with a price). The Agentverse agents are the front door and the box's agents are the team behind it.
 
-Badges: ![tag:innovationlab](https://img.shields.io/badge/innovationlab-3D8BD3) ![tag:hackathon](https://img.shields.io/badge/hackathon-5F43F1). Uses the Agent Chat Protocol (uAgents, Agentverse mailbox). The main flow runs inside the ASI:One chat. Real tool use: Droid edits and tests code; Apify `rag-web-browser` searches the web. Run steps are in `tracks/fetch/README.md`. Video: produced by the team after the build (screen recordings and animation).
+Badges: ![tag:innovationlab](https://img.shields.io/badge/innovationlab-3D8BD3) ![tag:hackathon](https://img.shields.io/badge/hackathon-5F43F1). Uses the Agent Chat Protocol (uAgents, Agentverse mailbox). The main flow runs inside the ASI:One chat. Real tool use: Droid edits and tests code; Apify `rag-web-browser` searches the web. Run steps are in `tracks/fetch/README.md`. Video: https://youtu.be/YkLOewsE2yw.
 
 GurtOS is open source (Apache-2.0): anyone can run it, customise it and reuse this Agentverse agent in their own agents.
 
