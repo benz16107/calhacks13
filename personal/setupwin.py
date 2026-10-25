@@ -508,7 +508,8 @@ class SetupWindow(Adw.ApplicationWindow):
     def phone(self):
         scroller, box = page('Pair a phone (optional)', 'Approvals and running agents can come to your phone when you are away from this computer.')
         self.summary.set_label('You can pair a phone later in GurtOS settings.')
-        # The code's link always opens app.gurtos.com, which reaches this computer through the relay, so any phone works.
+        # The code's link always opens app.gurtos.com. During setup it can reach this computer through the relay from any network;
+        # afterwards that needs Reach this computer from anywhere (Settings, Phone), or the same Wi-Fi.
         card = Gtk.Box(spacing=24, css_classes=['card'], margin_top=6)
         steps = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10, margin_top=18, margin_bottom=18, margin_start=18, margin_end=18, valign=Gtk.Align.START)
         for n, line in enumerate(("Point your phone's camera at the code.", 'Check that the phone shows the same code.',
@@ -524,7 +525,11 @@ class SetupWindow(Adw.ApplicationWindow):
             if qr:
                 card.prepend(qr)
             steps.append(Gtk.Label(label=code['code'], xalign=0, selectable=True, css_classes=['gurt-mono', 'gurt-title-2']))
-            steps.append(Gtk.Label(label="Your phone doesn't need to be on the same Wi-Fi.", xalign=0, wrap=True, css_classes=['gurt-caption', 'gurt-secondary']))
+            remote = getattr(self, 'remote', None) or {}  # Settings reads GET /api/remote; Setup has none
+            anywhere = SHOW_TITLES or remote.get('state') == 'connected'  # during setup the phone can turn remote access on itself
+            steps.append(Gtk.Label(label="Your phone doesn't need to be on the same Wi-Fi." if anywhere else
+                                   'Your phone needs to be on the same Wi-Fi as this computer, unless you turn on Reach this computer from anywhere above.',
+                                   xalign=0, wrap=True, css_classes=['gurt-caption', 'gurt-secondary']))
         background(lambda: api('POST', '/api/pair/start', {'owner': True}), show)
         return scroller
 
