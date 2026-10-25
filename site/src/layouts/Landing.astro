@@ -20,7 +20,7 @@ const title = Astro.props.title ?? frontmatter?.title ?? NAME;
 const description = Astro.props.description ?? frontmatter?.description ?? '';
 const image = Astro.props.image ?? '/og/index.png';
 const canonical = new URL(Astro.url.pathname, Astro.site);
-const full = title === NAME ? `${NAME}: an operating system where AI agents work safely` : `${title} | ${NAME}`;
+const full = title === NAME ? `${NAME}: operating systems built for AI agents` : `${title} | ${NAME}`;
 ---
 
 <!doctype html>

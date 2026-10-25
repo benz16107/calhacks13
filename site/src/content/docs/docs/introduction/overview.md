@@ -1,10 +1,11 @@
 ---
 title: What is GurtOS?
-description: GurtOS is a suite for running AI agents safely, built around an operating system where each task runs as its own user, in its own copy of your files, without your keys.
+description: GurtOS is a suite of operating systems built for AI agents. Each task runs as its own user, in its own copy of your files, without your keys.
 ---
 
-GurtOS is a suite for running AI agents safely. At its center is an operating system for a computer whose main users
-are AI agents. You give it tasks in plain words. An agent does each task, and GurtOS decides what that agent can
+GurtOS is a suite of operating systems built for AI agents: GurtOS Server, GurtOS Personal and GurtOS Business. Each is
+an operating system for a computer whose main users are AI agents, and agents get real access to files, the web and
+money without ever holding your keys. You give it tasks in plain words. An agent does each task, and GurtOS decides what that agent can
 touch, what it can reach, and what it must ask you about first. Everything that happens goes into one log, and you
 can undo any single task.
 

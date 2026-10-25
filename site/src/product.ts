@@ -11,7 +11,7 @@ export const LICENSE_URL = `${REPO}/blob/main/LICENSE`;
 /** The word the docs are written with. Leave it alone when renaming; change NAME instead. */
 const WRITTEN = 'GurtOS';
 
-export const DESCRIPTION = `${NAME} is an operating system for computers where AI agents do real work. Each task runs as its own Linux user, in its own copy of your files, without your keys.`;
+export const DESCRIPTION = `${NAME}: operating systems built for AI agents. Each task runs as its own Linux user, in its own copy of your files, without your keys.`;
 
 const pattern = new RegExp(`\\b${WRITTEN}\\b`, 'g');
 

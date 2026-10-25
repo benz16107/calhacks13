@@ -1,10 +1,11 @@
 ---
 title: GurtOS documentation
-description: Documentation for GurtOS, an operating system where AI agents do real work. Install it, learn how it works, look up the API and read the security model.
+description: Documentation for GurtOS, operating systems built for AI agents. Install it, learn how it works, look up the API and read the security model.
 ---
 
-GurtOS is an operating system for computers where AI agents do real work. Every task runs as its own Linux user, in
-its own copy of your files, without your keys, and you can undo any one of them. It comes as GurtOS Server, GurtOS
+GurtOS is a set of operating systems built for AI agents. Agents get real access to files, the web and money, and never
+hold your keys. Every task runs as its own Linux user, in
+its own copy of your files, and you can undo any one of them. It comes as GurtOS Server, GurtOS
 Personal and GurtOS Business. The [home page](/) has the downloads.
 
 | If you want to | Start with |
