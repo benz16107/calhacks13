@@ -532,30 +532,33 @@ function AgentSetup({ onStop }: { onStop: () => void }) {
     const t = setInterval(() => void loadSetup(), 3000);
     return () => clearInterval(t);
   }, []);
-  const ch = b.setup?.channel?.code === made?.code ? (b.setup?.channel ?? made) : made;
+  // The code is ours; who is connected and where it answers are live from GET /api/setup.
+  const live = b.setup?.channel?.open ? b.setup.channel : undefined;
+  const ch = made && { ...made, ...(live ? { urls: live.urls, remote: live.remote, devices: live.devices } : {}) };
   const stop = () => api('POST', '/setup/stop').then(() => (void loadSetup(), onStop()), (e) => setError((e as Error).message));
-  const url = ch?.remote ?? ch?.urls[0];
-  const expired = !!ch && Date.parse(ch.expiresAt) < now;
+  const urls = ch?.urls ?? [];
+  const devices = ch?.devices ?? [];
+  const url = ch?.remote ?? urls[0];
+  const expired = !!ch?.expiresAt && Date.parse(ch.expiresAt) < now;
   return (
     <>
       <p class="t-caption t-secondary">An AI agent on another computer, like Claude Code, can do every step for you. This screen follows along.</p>
-      {ch && (
+      {ch?.code && (
         <>
-          <p class="gos-setup-code">{formatCode(ch.code)}</p>
-          <p class="t-caption t-secondary">{expired ? 'This code ran out.' : `Works once, until ${hhmm(ch.expiresAt)}.`}</p>
+          {/* Exactly as the agent must type it: core matches the code as it is. */}
+          <p class="gos-setup-code">{ch.code}</p>
+          <p class="t-caption t-secondary">{expired ? 'This code ran out.' : `Works once, until ${hhmm(ch.expiresAt!)}.`}</p>
           {url && !expired && (
             <>
               <p class="t-caption-strong">Tell your agent:</p>
               <p class="gos-agent-say">
                 Set up the new {PRODUCT} computer at {url} with code {ch.code}, by following AGENT-SETUP.md
               </p>
-              {ch.urls.length + (ch.remote ? 1 : 0) > 1 && (
-                <p class="t-caption t-secondary">Also at {[...(ch.remote ? ch.urls : ch.urls.slice(1))].join(', ')}</p>
-              )}
+              {urls.length + (ch.remote ? 1 : 0) > 1 && <p class="t-caption t-secondary">Also at {(ch.remote ? urls : urls.slice(1)).join(', ')}</p>}
             </>
           )}
           <p class="t-caption" role="status">
-            {ch.devices.length ? `Connected: ${ch.devices.map((d) => d.name ?? d.id).join(', ')}` : 'No agent connected yet.'}
+            {devices.length ? `Connected: ${devices.map((d) => d.name).join(', ')}` : 'No agent connected yet.'}
           </p>
         </>
       )}
@@ -565,8 +568,9 @@ function AgentSetup({ onStop }: { onStop: () => void }) {
         </p>
       )}
       <span class="gos-actions">
-        {expired && <Button onClick={() => void fresh()}>New code</Button>}
-        <Button kind={ch?.devices.length ? 'destructive' : 'default'} onClick={() => void stop()}>
+        {/* A code works once, and a failed try uses it up too. */}
+        <Button onClick={() => void fresh()}>New code</Button>
+        <Button kind={devices.length ? 'destructive' : 'default'} onClick={() => void stop()}>
           Stop
         </Button>
       </span>

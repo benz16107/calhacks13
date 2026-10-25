@@ -95,7 +95,8 @@ export interface Settings {
   appearance: { theme: 'light' | 'dark' | 'system'; accent: string };
 }
 /** Command setup: an agent on another computer sets this one up with a one-time code (core's /api/setup/code). */
-export interface SetupChannel { code: string; expiresAt: string; open: boolean; port: number; urls: string[]; remote?: string; devices: { id?: string; name?: string }[] }
+/** The code and its time limit come only from POST /api/setup/code; GET /api/setup carries the rest ({open: false} when closed). */
+export interface SetupChannel { code?: string; expiresAt?: string; open: boolean; port?: number; urls?: string[]; remote?: string; devices?: { name: string; since?: string }[] }
 export interface SetupState { done: boolean; finishedAt?: string; migrated?: boolean; steps: Record<string, { at: string; data?: any }>; suggested: string[]; channel?: SetupChannel | null }
 export interface System {
   product: string;
