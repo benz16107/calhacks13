@@ -1,3 +1,4 @@
+import os
 # One source for every track's "Best shown in" line and pitch. Writes them into each track page's frontmatter and
 # docs/devpost.md. Usage: python3 showcase/scripts/story/pitches.py <repo root>
 import re, json
@@ -46,24 +47,20 @@ md = lambda t: re.sub(r'<a href="([^"]+)">(.*?)</a>', r'[\2](\1)', t).replace('<
 SHORT_START, SHORT_END = '<!-- DEVPOST SHORT START -->', '<!-- DEVPOST SHORT END -->'
 SHORT_HEAD = '## About the project, short version (PASTE THIS ONE: Devpost caps the field at 50,000 characters)'
 def write_short(d):
-    """The Devpost "About the project" field holds 50,000 characters. Build a short version from the full one:
-    the summary, then each sponsor section cut to its pitch, proof and link (the track pages hold the rest).
-    Figma keeps its whole section (its stage log is a deliverable) and so does CRS (its team asked for a self-contained written write-up for their judges)."""
-    d = d.replace('## About the project, full version (over the 50,000 character limit; the source the short version is made from)', '## About the project (paste from here to the end)')
-    a = d.index('<!-- SUMMARY START -->') + len('<!-- SUMMARY START -->'); b = d.index('<!-- SUMMARY END -->')
-    summary = d[a:b].strip()
+    """The Devpost "About the project" field holds 50,000 characters and Ben wants it short and scannable. The short
+    version is the hand-written template devpost-about.md (links, 30 seconds, hotel, table, proof, questions, a sponsor
+    table), plus the whole CRS section (their team asked for a written write-up) and the whole Figma section (its
+    stage log is a deliverable), both taken from the full version below."""
+    d = re.sub(r'## About the project, full version[^\n]*', '## About the project (paste from here to the end)', d)
     c = d.index('<!-- SPONSORS START -->') + len('<!-- SPONSORS START -->'); e = d.index('<!-- SPONSORS END -->')
-    out = [summary, '', '## Sponsor tracks', '', 'Every track has its own page with the criteria, evidence, screenshots and limits: https://calhacks.gurtos.com', '']
+    secs = {}
     for sec in re.split(r'\n(?=### )', d[c:e].strip()):
-        lines = [l for l in sec.split('\n') if l.strip()]
-        head = lines[0]
-        if head.startswith('### Figma') or head.startswith('### CRS'):  # their sponsors asked for a written write-up
-            out += ['\n'.join(lines), '']; continue
-        # in order: the pitch, proof and link, the "Fits ..." line, and every short labelled line (problem, awards, our Actor, feedback)
-        keep = [l for l in lines[1:] if l.startswith('**Best shown in:**') or l.startswith('**Proof:**') or l.startswith('[Full write-up')
-                or l.startswith('Fits ') or (l.startswith('**') and len(l) <= 600)]
-        out += [head, ''] + [x + '\n' for x in keep]
-    short = '\n'.join(out).strip()
+        for key in ('CRS', 'Figma'):
+            if sec.startswith('### ' + key):
+                secs[key] = '\n'.join(l for l in sec.split('\n') if l.strip() and not l.startswith('[Full write-up')).replace('\n', '\n\n', 0)
+    here = os.path.dirname(os.path.abspath(__file__))
+    short = open(os.path.join(here, 'devpost-about.md')).read().strip()
+    short = short.replace('{{CRS}}', secs['CRS']).replace('{{FIGMA}}', secs['Figma'])
     block = f"{SHORT_HEAD}\n\n{SHORT_START}\n\n{short}\n\n{SHORT_END}\n\n"
     if SHORT_START in d:
         x = d.index(SHORT_HEAD); y = d.index(SHORT_END) + len(SHORT_END) + 2
@@ -71,7 +68,7 @@ def write_short(d):
     else:
         x = d.index('## About the project (paste from here to the end)')
         d = d[:x] + block + d[x:]
-    d = d.replace('## About the project (paste from here to the end)', '## About the project, full version (over the 50,000 character limit; the source the short version is made from)')
+    d = d.replace('## About the project (paste from here to the end)', '## About the project, full version (over the 50,000 character limit; the long reference the CRS and Figma sections come from)')
     print('short version', len(short), 'characters')
     return d
 
