@@ -166,8 +166,8 @@ const prizes = [
           </p>
           <h3>Light, and secure where others can't be</h3>
           <p>
-            One Node service on Ubuntu 24.04, no GPU. GurtOS Server's documented minimum is 4 GB of memory and 17 GB of disk on any
-            x86_64 or arm64 machine. Installed on an existing Ubuntu 24.04 machine, it measured 1 GB of RAM running one task at a time in a QEMU VM, so a spare computer you own is enough. Keys stay in a root-only vault the agent
+            One Node service on Ubuntu 24.04, no GPU. GurtOS Server is built from 40 named Ubuntu packages (440 with dependencies), with no desktop, snapd, cloud-init, sudo or apt, and its install disc is 1.37 GB. The disc's documented minimum is 4 GB of memory and 17 GB of disk on any
+            x86_64 or arm64 machine. Installed from source on an existing Ubuntu 24.04 machine, the box ran one task at a time in 1 GB of RAM in a QEMU VM. That run was not the Server image, and it was on a fast host, so an older laptop will be slower. GurtOS Personal idles at about 903 MB with its full desktop, about 150 MB less than stock Ubuntu 24.04 Desktop. Keys stay in a root-only vault the agent
             never reaches, and each task's network reaches only its allowed hosts.
           </p>
         </div>
