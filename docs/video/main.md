@@ -50,7 +50,7 @@ clause.
 ## Narration (exact text for ElevenLabs)
 
 The spelling "Gurt O.S." is on purpose: it makes the clone say "Gurt O S" instead of "Girdos" (`narration.md`).
-**Oct 25 cut:** "The agent runs as you" is out; the editions and filesystem lines are shorter; "You can try it today" (real discs, measured weight, where it installs) replaces "And it's light"; a docs line follows it. The shot list above is the first cut; `films/main.mjs` is the current one.
+**Oct 25 cut:** "The agent runs as you" is out; the editions and filesystem lines are shorter; "You can try it today" (real discs, measured weight, where it installs) replaces "And it's light"; a docs line follows it. Story order restored at Ben's request (Oct 25): a 2.8 s montage of real product shots under the title, the problem, why an OS, GurtOS and the editions, moments 1 to 4 in order, security, light, phone and portal, try it, documented, open source. The shot list above is the first cut; `films/main.mjs` is the current one.
 404 words, about 2,350 characters.
 
 ```text
@@ -62,21 +62,23 @@ So I built Gurt O.S.: operating systems built for AI agents. Every task runs as 
 
 It comes in three editions: Server, an always-on box; Personal, your own laptop with agents built into the desktop; and Business, one box for a team, with roles and an audit trail.
 
-A task wants to spend eight dollars on a five-dollar budget. It stops and asks, on the box and on my phone at once, while other tasks keep running. I approve, and it carries on.
+Two tasks changed the same folder. Undo takes out exactly one of them, and the other task's work stays. No git, no backups.
 
 This agent reads a page with hidden instructions to steal my keys. The task has none to steal. It tries to send data out anyway, and the box blocks it, logs it, and undoes it.
 
-Two tasks changed the same folder. Undo takes out exactly one of them, and the other task's work stays. No git, no backups.
+A task wants to spend eight dollars on a five-dollar budget. It stops and asks, on the box and on my phone at once, while other tasks keep running. I approve, and it carries on.
 
 Now pull the plug. The box boots, rebuilds every task from its log, and picks up where it stopped. Nothing runs twice, and the approval is still waiting.
 
 Security comes from the OS, whatever the model does. We publish our attack test: sixteen attacks, fourteen stopped, and two we don't cover yet. A real agent held only a placeholder key in two hundred forty out of two hundred forty checks.
 
-You can try it today: signed install discs for Server and Personal are at gurtos dot com slash download. It's light enough for almost any computer, even an old one: Server runs in one gigabyte of memory, and Personal uses less than stock Ubuntu. It installs on regular PCs, Apple-silicon Macs in a virtual machine, and cloud servers.
-
-Every part is documented at gurtos dot com slash docs, from the architecture to the security model, so anyone can check it or build on it.
+And it's light enough for almost any computer, even an old one: Server runs in one gigabyte of memory, and Personal uses less memory than stock Ubuntu.
 
 You watch and answer from anywhere: the portal at app dot gurtos dot com, and apps for iPhone, Apple Watch, Mac and Android.
+
+You can try it today: signed install discs for Server and Personal are at gurtos dot com slash download. It installs on regular PCs, Apple-silicon Macs in a virtual machine, and cloud servers.
+
+Every part is documented at gurtos dot com slash docs, from the architecture to the security model, so anyone can check it or build on it.
 
 It's a whole suite: the OS, the apps, remote access, and an app platform that Jira, ASI One, a shopper and a finance desk plug into. All of it is open source. Gurt O.S.: real access, never your keys.
 ```

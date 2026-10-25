@@ -42,8 +42,6 @@ Word count: 185 (about 1:20 at 2.3 words a second; cut beat 2 if the render runs
 ```text
 The customer is a small business controller. The FBI logged over three billion dollars in reported losses to business email compromise in 2025.
 
-Pilots stay pilots when an agent holds the owner's keys, approves its own work, and leaves no undo.
-
 On Gurt O.S. Business, people have roles and limits, and each agent seat is its own Linux user.
 
 A one-week pilot starts a seat in shadow. It suggests, a person decides, and the box counts agreement. The clerk is at five of six, not ready.

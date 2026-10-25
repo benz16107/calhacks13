@@ -178,6 +178,24 @@ const V = {
     });
   },
 
+  // The opening hook: real product shots cut quickly under the title.
+  montage(id, v, dur, ctx) {
+    const n = v.items.length, seg = dur / n;
+    return scene(id, dur, {
+      css: `#root .mv { position: absolute; left: 0; top: 0; width: ${W}px; height: ${H}px; object-fit: cover; }
+        #${id}-shade { position: absolute; inset: 0; background: radial-gradient(ellipse 62% 46% at 50% 46%, rgba(23,30,37,0.9) 0%, rgba(23,30,37,0.72) 55%, rgba(23,30,37,0.35) 100%); }
+        #${id}-b { position: absolute; left: 0; right: 0; top: 330px; display: flex; flex-direction: column; align-items: center; gap: 26px; }
+        #${id}-lock { display: flex; align-items: center; gap: 34px; } #${id}-logo { width: 140px; height: 140px; }
+        #${id}-word { font-size: 140px; font-weight: 700; line-height: 1; } #${id}-sub { font-size: 50px; color: ${C.ink}; }`,
+      body: v.items.map((it, i) => `<video id="${id}-v${i}" class="clip mv" src="${ctx.media(it.src)}" data-start="${r3(i * seg)}" data-duration="${r3(seg)}" data-media-start="${it.from ?? 0}" data-track-index="${2 + i}" muted playsinline></video>`).join('') +
+        `<div id="${id}-shade"></div><div id="${id}-b"><div id="${id}-lock"><img id="${id}-logo" src="assets/brand/logo.svg" alt="GurtOS" /><div id="${id}-word">GurtOS</div></div><div id="${id}-sub">${esc(v.subtitle ?? 'Operating systems built for AI agents')}</div></div>`,
+      js: `tl.fromTo("#${id}-logo", { opacity: 0, scale: 0.88 }, { opacity: 1, scale: 1, duration: 0.4, ease: "back.out(1.6)" }, 0.05);
+        tl.fromTo("#${id}-word", { clipPath: "inset(0 100% 0 0)" }, { clipPath: "inset(0 0% 0 0)", duration: 0.5, ease: "power3.inOut" }, 0.15);
+        tl.fromTo("#${id}-sub", { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.4, ease: "power3.out" }, 0.45);
+        tl.to("#${id}-b", { opacity: 0, duration: 0.25, ease: "power2.in" }, ${r3(dur - 0.27)});`,
+    });
+  },
+
   // A cut to black: the power cut.
   black(id, v, dur) { return scene(id, dur, { ground: false, css: `#root { background: #000; }` }); },
 
@@ -553,7 +571,7 @@ else if (id) {
     fs.mkdirSync(dst, { recursive: true });
     const raw = path.join(out, `${name}.raw.mp4`), fin = path.join(dst, `${name}.mp4`);
     // One render or check at a time on this machine (spec writers share it): the lock in /tmp.
-    execFileSync('flock', ['/tmp/gurtos-hf.lock', 'npx', '--yes', HF, 'render', '--output', raw], { cwd: out, stdio: 'inherit' });
+    execFileSync('flock', ['/tmp/gurtos-hf.lock', 'npx', '--yes', HF, 'render', '--workers', '2', '--output', raw], { cwd: out, stdio: 'inherit' }); // 2 Chrome workers keep a shared build machine from running out of memory
     // One linear gain to about -16 LUFS, never past -1.5 dBTP; the picture is copied untouched.
     const probeLoud = execFileSync('bash', ['-c', `ffmpeg -hide_banner -nostats -i "${raw}" -af loudnorm=I=-16:TP=-1.5:print_format=json -f null - 2>&1 | sed -n '/^{/,/^}/p'`]).toString();
     const { input_i, input_tp } = JSON.parse(probeLoud);

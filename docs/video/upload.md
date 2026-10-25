@@ -10,7 +10,7 @@ bed, in case a platform or judge prefers it.
 
 ## Main video: Devpost
 
-**File:** `out/main.mp4` (2:58.8). **Thumbnail:** `out/main-thumb.jpg`. **Captions:** `out/main.srt`.
+**File:** `out/main.mp4` (2:58.7). **Thumbnail:** `out/main-thumb.jpg`. **Captions:** `out/main.srt`.
 
 **Title:** GurtOS: operating systems built for AI agents
 
@@ -31,18 +31,18 @@ Code (Apache-2.0): https://github.com/benz16107/calhacks13
 Every Cal Hacks track, with its evidence: https://calhacks.gurtos.com
 Home: https://gurtos.com
 
-0:00 The problem
-0:14 Why an operating system
-0:31 GurtOS: each task its own user and copy of your files
-0:46 Three editions: Server, Personal, Business
-0:57 Moment 3: a pause for your OK
-1:11 Moment 2: the booby-trapped page
-1:23 Moment 1: undo one task
-1:33 Moment 4: pull the plug
-1:45 Security, with the score published
-2:00 Try it: signed discs, light enough for old hardware
-2:23 Every part documented, and live from any device
-2:41 A suite, open source
+0:00 GurtOS, and the problem
+0:16 Why an operating system
+0:33 GurtOS: each task its own user and copy of your files
+0:48 Three editions: Server, Personal, Business
+0:59 Moment 1: undo one task
+1:09 Moment 2: the booby-trapped page
+1:21 Moment 3: a pause for your OK
+1:34 Moment 4: pull the plug
+1:46 Security, with the score published
+2:01 Light, and live from any device
+2:20 Try it: signed discs at gurtos.com/download
+2:33 Every part documented, a suite, open source
 ```
 
 ## Armadin: Best Security Hack
