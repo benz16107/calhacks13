@@ -9,6 +9,8 @@ import clips from '../data/clips.json';
 import demoLog from '../data/demo-latest.txt?raw';
 import Architecture from '../assets/diagrams/architecture.svg';
 
+import shotRcptOk from '../assets/native/receipt-verify-ok.png';
+import shotRcptBad from '../assets/native/receipt-verify-bad.png';
 import shotNApprove from '../assets/native/iphone-approval-light.png';
 import shotNNotify from '../assets/native/iphone-notification-actions.png';
 import shotNWatch from '../assets/native/watch-small.png';
@@ -254,6 +256,28 @@ const prizes = [
         <p><strong>Undo is a layer.</strong> Each task writes to its own overlayfs layer. When it finishes, the layer goes on top of the workspace. Undo takes one layer out of the stack; the base files are never written.</p>
         <p><strong>The log is the truth.</strong> One append-only file, fsynced per line, holds every step, tool call, approval, cost and blocked connection. At boot the core rebuilds every task from it. SpacetimeDB mirrors live status and approvals to every screen.</p>
       </div>
+    </section>
+
+    <section aria-labelledby="receipts">
+      <h2 id="receipts">Signed receipts anyone can check</h2>
+      <p class="measure-wide">
+        Every finished task can get a signed receipt with a QR code. <a href="https://gurtos.com/verify">gurtos.com/verify</a> checks it in your own
+        browser, and nothing is uploaded: the box's signature, every link of the log's hash chain, and, when the daily fingerprint covers the
+        task, the fingerprint written to Solana devnet. Change one character and it fails in red.
+      </p>
+      <div class="devices">
+        <figure>
+          <Image src={shotRcptOk} alt="gurtos.com/verify checking a real receipt from the cloud box: Signature, Signing key, Chain and Entries pass, and the Elastic line says the box compared 18 of these entries with Elastic's add-only copy and they matched." widths={[480, 960]} sizes="(max-width: 700px) 100vw, 420px" />
+          <figcaption>A real receipt from the cloud box checks out. Solana reads "Not checked" here because the receipt was made after the day's audit. When the daily fingerprint covers the task, the Solana line passes too.</figcaption>
+        </figure>
+        <figure>
+          <Image src={shotRcptBad} alt="gurtos.com/verify after one character of the receipt's title was changed: the Signature check fails in red and the banner says This receipt does NOT check out." widths={[480, 960]} sizes="(max-width: 700px) 100vw, 420px" />
+          <figcaption>The same receipt with one character of the title changed: the Signature check fails and the page says so.</figcaption>
+        </figure>
+      </div>
+      <p class="measure-wide">
+        A receipt proves the entries are the ones the box wrote and were not changed afterward. It does not prove the agent was right, or that the box told the truth when it wrote them. The page cannot ask Elastic itself, so the Elastic line is what the box found when it made the receipt. Solana is devnet, not a legal record.
+      </p>
     </section>
 
     <section aria-labelledby="devices">
