@@ -81,3 +81,54 @@ func phoneKey() throws -> P256.KeyAgreement.PrivateKey { try P256.KeyAgreement.P
   #expect(a.costCents == 13)
   #expect(Money.dollars(2.6) == "$0.03")
 }
+
+@Test func readsARendezvousLink() {
+  let r = Rendezvous.parse("https://app.gurtos.com/pair?rv=Ab3_kq9Z&lan=192.168.1.20:7700&n=Home%20box#ab12cd34")
+  #expect(r == Rendezvous(id: "Ab3_kq9Z", code: "ab12cd34", name: "Home box", lan: "192.168.1.20:7700"))
+  #expect(r?.lanLink?.box.absoluteString == "http://192.168.1.20:7700")
+  #expect(PairingLink.parse("https://app.gurtos.com/pair?rv=Ab3_kq9Z#ab12cd34") == nil, "an rv link is not a direct pairing link")
+  #expect(Rendezvous.parse("https://evil.example/pair?rv=Ab3_kq9Z#ab12cd34") == nil)
+  #expect(Rendezvous.parse("https://app.gurtos.com/pair?rv=a/b#ab12cd34") == nil)
+  #expect(Rendezvous.parse("https://app.gurtos.com/pair?rv=Ab3_kq9Z&lan=x@evil.com/y#ab12cd34")?.lan == nil, "a lan value that isn't host:port is dropped")
+}
+
+@Test func acceptsOnlyABoxNameFromTheRelay() {
+  #expect(Rendezvous.checkedHost("rosa.box.gurtos.com")?.absoluteString == "https://rosa.box.gurtos.com")
+  for bad in ["evil.com", "rosa.box.gurtos.com.evil.com", "x.rosa.box.gurtos.com", "rosa.box.gurtos.com/path", "a.box.gurtos.com", "-ab.box.gurtos.com", "ROSA.box.gurtos.com"] {
+    #expect(Rendezvous.checkedHost(bad) == nil, "\(bad)")
+  }
+}
+
+/** A stand-in relay: answers by path, so resolve() runs without the network. */
+final class StubRelay: URLProtocol {
+  nonisolated(unsafe) static var answer: (URLRequest) -> (Int, String) = { _ in (404, "") }
+  override class func canInit(with request: URLRequest) -> Bool { true }
+  override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
+  override func startLoading() {
+    let (status, body) = StubRelay.answer(request)
+    client?.urlProtocol(self, didReceive: HTTPURLResponse(url: request.url!, statusCode: status, httpVersion: nil, headerFields: nil)!, cacheStoragePolicy: .notAllowed)
+    client?.urlProtocol(self, didLoad: Data(body.utf8))
+    client?.urlProtocolDidFinishLoading(self)
+  }
+  override func stopLoading() {}
+  static var session: URLSession { let c = URLSessionConfiguration.ephemeral; c.protocolClasses = [StubRelay.self]; return URLSession(configuration: c) }
+}
+
+@Test func rendezvousWaitsForTheAddressOrTheError() async throws {
+  let r = Rendezvous(id: "Ab3_kq9Z", code: "ab12cd34", name: "Home box", lan: nil)
+  nonisolated(unsafe) var hostPolls = 0
+  StubRelay.answer = { req in
+    let p = req.url!.path
+    if p.hasSuffix("/ask") { return req.httpMethod == "PUT" ? (200, "{}") : (405, "") }
+    if p.hasSuffix("/host") { hostPolls += 1; return hostPolls < 3 ? (204, "") : (200, #"{"host":"home-box.box.gurtos.com"}"#) }
+    return (204, "")
+  }
+  let link = try await r.resolve(session: StubRelay.session)
+  #expect(link == PairingLink(box: URL(string: "https://home-box.box.gurtos.com")!, code: "ab12cd34") && hostPolls == 3)
+
+  StubRelay.answer = { req in req.url!.path.hasSuffix("/error") ? (200, #"{"error":"The owner said no."}"#) : req.url!.path.hasSuffix("/ask") ? (200, "{}") : (204, "") }
+  await #expect(throws: BoxError.self) { try await r.resolve(session: StubRelay.session) }
+
+  StubRelay.answer = { req in req.url!.path.hasSuffix("/host") ? (200, #"{"host":"evil.example"}"#) : req.url!.path.hasSuffix("/ask") ? (200, "{}") : (204, "") }
+  await #expect(throws: BoxError.self, "an address outside box.gurtos.com is refused") { try await r.resolve(session: StubRelay.session) }
+}

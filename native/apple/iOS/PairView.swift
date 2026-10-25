@@ -50,6 +50,9 @@ struct PairSheet: View {
   @Environment(AppState.self) var app
   @Environment(\.dismiss) var dismiss
   @State var link: PairingLink?
+  /** A computer with remote access off: the relay's rendezvous finds it (Rendezvous in GurtKit). */
+  @State var rendezvous: Rendezvous?
+  @State var asking = false
   @State var typing = false
   @State var address = ""
   @State var code = ""
@@ -57,12 +60,15 @@ struct PairSheet: View {
   @State var busy = false
   @State var error: String?
 
-  init(link: PairingLink?) { _link = State(initialValue: link) }
+  init(link: PairingLink?, rendezvous: Rendezvous? = nil) {
+    _link = State(initialValue: link)
+    _rendezvous = State(initialValue: rendezvous)
+  }
 
   var body: some View {
     NavigationStack {
       Group {
-        if let link { confirm(link) } else if typing { typed } else { scanner }
+        if let link { confirm(link) } else if let rendezvous { over(rendezvous) } else if typing { typed } else { scanner }
       }
       .navigationTitle(link == nil ? "Add a computer" : "Pair")
       .navigationBarTitleDisplayMode(.inline)
@@ -74,7 +80,7 @@ struct PairSheet: View {
     VStack(spacing: 0) {
       if DataScannerViewController.isSupported && DataScannerViewController.isAvailable {
         QRScanner { text in
-          if let l = PairingLink.parse(text) { link = l } else { error = "That QR code isn't a GurtOS pairing code." }
+          if let l = PairingLink.parse(text) { link = l } else if let r = Rendezvous.parse(text) { rendezvous = r } else { error = "That QR code isn't a GurtOS pairing code." }
         }
         .ignoresSafeArea(edges: .horizontal)
       } else {
@@ -108,6 +114,60 @@ struct PairSheet: View {
     .font(.g(.body))
   }
 
+  func pair(_ l: PairingLink) {
+    busy = true
+    Task {
+      do {
+        try await app.model.pair(l, name: name.isEmpty ? "iPhone" : name)
+        await app.subscribeAll()
+        dismiss()
+      } catch {
+        self.error = (error as? BoxError)?.message ?? "Couldn't reach \(l.box.host ?? "the computer"). Is it on, and on this network?"
+      }
+      busy = false
+    }
+  }
+
+  /** Remote access is off on the computer: pair through the relay's rendezvous, or on the same Wi-Fi. */
+  func over(_ r: Rendezvous) -> some View {
+    Form {
+      Section {
+        VStack(spacing: 10) {
+          Image(systemName: "server.rack").font(.system(size: 28, weight: .semibold)).foregroundStyle(Color.gGlyph)
+            .frame(width: 60, height: 60).background(Color.gTile, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+          Text("Pair with \(r.name ?? "this computer")?").font(.g(.title2, .bold)).multilineTextAlignment(.center)
+          Text("Check that this code is the one on the computer's screen.").font(.g(.subheadline)).foregroundStyle(Color.gSecondary).multilineTextAlignment(.center)
+          Text(r.code.uppercased()).font(.g(.title, .bold).monospaced()).padding(.top, 4)
+            .accessibilityLabel("Code \(r.code.map(String.init).joined(separator: " "))")
+        }
+        .frame(maxWidth: .infinity)
+        .listRowBackground(Color.clear)
+      }
+      Section("Name this phone") { TextField("Name this phone", text: $name) }
+      Section {
+        Button {
+          asking = true
+          error = nil
+          Task {
+            do { pair(try await r.resolve()) } catch { self.error = (error as? BoxError)?.message ?? "Couldn't reach the GurtOS relay. Check this phone's connection." }
+            asking = false
+          }
+        } label: {
+          HStack { Spacer(); if asking || busy { ProgressView(); Text("Asking \(r.name ?? "the computer")…").font(.g(.headline)) } else { Text("Pair over the internet").font(.g(.headline)) }; Spacer() }
+        }
+        .disabled(asking || busy)
+        if let lan = r.lanLink {
+          Button { pair(lan) } label: { HStack { Spacer(); Text("Same Wi-Fi? Pair on this network").font(.g(.headline)); Spacer() } }
+            .disabled(asking || busy)
+        }
+        if let error { Text(error).foregroundStyle(Color.gDestructiveFg) }
+      } footer: {
+        Text("Over the internet, the GurtOS relay asks \(r.name ?? "your computer") to open a secure address for this phone. It never sees what the two of you send.")
+      }
+    }
+    .font(.g(.body))
+  }
+
   func confirm(_ l: PairingLink) -> some View {
     Form {
       Section {
@@ -128,19 +188,7 @@ struct PairSheet: View {
         Text("A paired phone can approve, deny and undo. It never holds a key. Revoke it any time in the computer's Settings, Devices.")
       }
       Section {
-        Button {
-          busy = true
-          Task {
-            do {
-              try await app.model.pair(l, name: name.isEmpty ? "iPhone" : name)
-              await app.subscribeAll()
-              dismiss()
-            } catch {
-              self.error = (error as? BoxError)?.message ?? "Couldn't reach \(l.box.host ?? "the computer"). Is it on, and on this network?"
-            }
-            busy = false
-          }
-        } label: {
+        Button { pair(l) } label: {
           HStack { Spacer(); if busy { ProgressView() } else { Text("Pair").font(.g(.headline)) }; Spacer() }
         }
         .disabled(busy)

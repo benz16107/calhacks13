@@ -73,7 +73,10 @@ final class AppState {
 
   /** The approval or task a notification, widget or link points at, on the machine it names. */
   func open(url: URL) {
-    if let link = PairingLink.parse(url.absoluteString) { pending = link; showPair = true; return }
+    if let link = PairingLink.parse(url.absoluteString) { pending = link; pendingRendezvous = nil; showPair = true; return }
+    if let r = Rendezvous.parse(url.absoluteString) { pending = nil; pendingRendezvous = r; showPair = true; return }
+    // An app.gurtos.com link this app can't read: the web app, in Safari, rather than nothing.
+    if url.host == "app.gurtos.com" { safari = url; return }
     guard url.scheme == "gurtos", let parts = URLComponents(url: url, resolvingAgainstBaseURL: false) else { return }
     let machine = parts.queryItems?.first { $0.name == "machine" }?.value
     if let machine, let m = model.machines.first(where: { $0.id == machine || $0.boxId == machine }) { model.select(m) }
@@ -89,6 +92,9 @@ final class AppState {
 
   /** A link scanned with the Camera app, waiting for the person to confirm. */
   var pending: PairingLink?
+  var pendingRendezvous: Rendezvous?
+  /** A link opened in Safari inside the app. */
+  var safari: URL?
 
   // MARK: Notifications
 
@@ -218,7 +224,8 @@ struct RootView: View {
       }
     }
     .sheet(isPresented: $app.showMachines) { MachinesSheet() }
-    .sheet(isPresented: $app.showPair) { PairSheet(link: app.pending) }
+    .sheet(isPresented: $app.showPair) { PairSheet(link: app.pending, rendezvous: app.pendingRendezvous) }
+    .sheet(item: $app.safari) { SafariView(url: $0).ignoresSafeArea() }
     .task { app.model.start() }
   }
 }

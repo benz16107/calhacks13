@@ -276,7 +276,9 @@ struct MacPairView: View {
       HStack {
         Spacer()
         Button("Cancel") { dismissWindow(id: "pair") }.keyboardShortcut(.cancelAction)
-        Button("Pair") { pair(PairingLink.parse(address) ?? PairingLink.typed(address: address, code: code)) }
+        Button("Pair") {
+          if let r = Rendezvous.parse(address), PairingLink.parse(address) == nil { pairOver(r) } else { pair(PairingLink.parse(address) ?? PairingLink.typed(address: address, code: code)) }
+        }
           .keyboardShortcut(.defaultAction).disabled(address.isEmpty || busy)
       }
     }
@@ -290,9 +292,18 @@ struct MacPairView: View {
         guard let img = obj as? NSImage, let cg = img.cgImage(forProposedRect: nil, context: nil, hints: nil) else { return }
         let found = CIDetector(ofType: CIDetectorTypeQRCode, context: nil, options: nil)?.features(in: CIImage(cgImage: cg)).compactMap { ($0 as? CIQRCodeFeature)?.messageString }.first
         Task { @MainActor in
-          if let found, let link = PairingLink.parse(found) { pair(link) } else { error = "No GurtOS pairing QR code in that picture." }
+          if let found, let link = PairingLink.parse(found) { pair(link) } else if let found, let r = Rendezvous.parse(found) { pairOver(r) } else { error = "No GurtOS pairing QR code in that picture." }
         }
       }
+    }
+  }
+
+  /** Remote access is off on that computer: the relay's rendezvous finds it first. */
+  func pairOver(_ r: Rendezvous) {
+    busy = true
+    error = nil
+    Task {
+      do { let l = try await r.resolve(); busy = false; pair(l) } catch { self.error = (error as? BoxError)?.message ?? "Couldn't reach the GurtOS relay."; busy = false }
     }
   }
 
