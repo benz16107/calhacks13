@@ -668,7 +668,7 @@ here, and off every page, until its code is merged and its check passes. Batch t
 | Attack it yourself (paste an injection or pick an attack, watch each defence stop it) | to be named | building | Devpost; showcase home; Armadin, Anthropic | no |
 | The flight recorder (replay a task step by step, with files and approvals, then Keep or Undo) | portal | merged 220ac4d (QA has not run it by hand); files per step not recorded yet, shows the final changes | Devpost (done); Anthropic, Factory; Hyphenate, Microsoft, CRS, Atlassian (writers asked) | Devpost, Hyphenate, Microsoft, CRS, Atlassian; Anthropic and Factory asked |
 | Agent permissions (the OS enforces each app's manifest; allow, deny, revoke) | core | merged 4b473ea (gate 39/0); Settings screens still landing | Devpost; Hyphenate, Microsoft, CRS, Atlassian; Visa, Apify | all shown: Devpost, Hyphenate, Microsoft, CRS, Atlassian, Visa, Apify |
-| Signed receipts with a QR code and a public verify page (log and Solana anchored) | Elastic and wallet threads | building | Devpost; Elastic, Coinbase, Solana | no |
+| Signed receipts with a QR code and a public verify page (log and Solana anchored) | receipts thread | merged 7ca2941, live on all three boxes; Solana anchor shows only after a daily audit has run (wallet memo carries head=, 9123468), not yet shown end to end; public verify page placement pending with docs | Devpost (done); Elastic, Coinbase, Solana, Microsoft (writers asked, Solana claim held) | Devpost only |
 
 ## Not entered
 
