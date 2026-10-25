@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Receipts</title>
+<link rel="stylesheet" href="/kit/gurtos.css">
+<script type="module" src="/kit/gurtos.js"></script>
+<script src="/t/receipts/qrcode.js"></script>
+<style>
+  main { max-width: 760px; margin: 0 auto; padding: var(--space-lg); }
+  .row { display: grid; grid-template-columns: 1fr auto; gap: var(--space-sm); align-items: center; padding: var(--space-sm) 0; border-top: 1px solid var(--color-border, rgba(128,128,128,.25)); }
+  .row:first-child { border-top: 0; }
+  .btns { display: flex; gap: var(--space-xs); flex-wrap: wrap; }
+  .share { grid-column: 1 / -1; display: grid; grid-template-columns: auto 1fr; gap: var(--space-md); align-items: start; }
+  .share svg { width: 160px; height: 160px; background: #fff; padding: 8px; border-radius: 4px; }
+  .share a, .share code { overflow-wrap: anywhere; }
+  footer { margin-top: var(--space-lg); }
+</style>
+<body class="g-page">
+<main>
+  <h1 class="t-title">Receipts</h1>
+  <p class="t-secondary">A receipt says what one finished task did. Anyone you give it to can check it in a browser. Choose "Redacted" to leave out the text of steps, file names and amounts.</p>
+  <div id="list" aria-live="polite"><p class="t-secondary">Loading...</p></div>
+  <footer class="t-caption t-secondary">A receipt shows that these entries are the ones this box wrote and that they were not changed afterward. It does not show that the agent was right.</footer>
+</main>
+<script>
+  const $ = (id) => document.getElementById(id);
+  const el = (tag, cls, text) => Object.assign(document.createElement(tag), cls ? { className: cls } : {}, text != null ? { textContent: text } : {});
+  const usd = (c) => `$${(c / 100).toFixed(2)}`;
+
+  function qr(text) {
+    const q = qrcode(0, 'M');
+    q.addData(text);
+    q.make();
+    const wrap = document.createElement('div');
+    wrap.innerHTML = q.createSvgTag({ cellSize: 4, margin: 0, scalable: true });
+    const svg = wrap.firstChild;
+    svg.setAttribute('role', 'img');
+    svg.setAttribute('aria-label', 'QR code that opens the receipt check');
+    return svg;
+  }
+
+  async function share(task, mode, row) {
+    row.querySelector('.share')?.remove();
+    const box = el('div', 'share g-card');
+    box.append(el('p', 't-secondary', 'Making the receipt...'));
+    row.append(box);
+    try {
+      const r = await fetch('/t/receipts/share', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ task: task.id, mode }) });
+      const b = await r.json();
+      if (!r.ok) throw new Error(b.error || `HTTP ${r.status}`);
+      box.replaceChildren();
+      // The QR opens the public page when the box is reachable from the internet, else the box's own copy of the page.
+      const link = location.protocol === 'https:' ? b.publicVerifyUrl : b.verifyUrl;
+      box.append(qr(link));
+      const text = el('div');
+      text.append(el('p', null, `${mode === 'redacted' ? 'Redacted receipt' : 'Receipt'} for "${task.title}": ${b.entries} entries, chain of ${b.chainLines} log lines.`));
+      text.append(el('p', 't-secondary', `Anchored: Solana ${b.anchors.solana ? 'yes' : 'not yet (written daily)'}, Elastic ${b.anchors.elastic ? 'yes' : 'not on this box'}.`));
+      const a = el('a', null, 'Open the check page');
+      a.href = link; a.target = '_blank'; a.rel = 'noopener';
+      text.append(a);
+      text.append(el('p', 't-caption t-secondary', 'Whoever holds this link can read the receipt.'));
+      box.append(text);
+    } catch (e) {
+      box.replaceChildren(el('p', 't-secondary', `Could not make the receipt: ${e.message}`));
+    }
+  }
+
+  async function load() {
+    const r = await fetch('/t/receipts/tasks');
+    const tasks = await r.json();
+    const list = $('list');
+    list.replaceChildren();
+    if (!tasks.length) return list.append(el('p', 't-secondary', 'No finished tasks yet.'));
+    for (const t of tasks) {
+      const row = el('div', 'row');
+      const info = el('div');
+      info.append(el('div', null, t.title), el('div', 't-caption t-secondary', `${t.state}, ${t.source}, ${usd(t.costCents)}`));
+      const btns = el('div', 'btns');
+      for (const [mode, label] of [['full', 'Receipt'], ['redacted', 'Redacted']]) {
+        const b = el('button', 'g-btn', label);
+        b.type = 'button';
+        b.addEventListener('click', () => share(t, mode, row));
+        btns.append(b);
+      }
+      row.append(info, btns);
+      list.append(row);
+    }
+  }
+  load().catch((e) => ($('list').textContent = `Could not load tasks: ${e.message}`));
+</script>

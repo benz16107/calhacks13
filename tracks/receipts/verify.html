@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src https: http://127.0.0.1:* http://localhost:*; base-uri 'none'; form-action 'none'">
+<title>Verify a GurtOS receipt</title>
+<style>
+  :root { color-scheme: light dark; --bg: #f6f5f1; --fg: #1d1d1b; --muted: #5d5d57; --line: #d8d6cc; --ok: #1f6b45; --bad: #a3271f; --warn: #7a5b00; --card: #fff; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #14150f; --fg: #ecebe4; --muted: #a2a299; --line: #2e2f27; --ok: #6fc79a; --bad: #ff8a80; --warn: #e3c262; --card: #1b1c15; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 860px; margin: 0 auto; padding: 24px 16px 64px; }
+  h1 { font-size: 1.5rem; margin: 0 0 4px; } h2 { font-size: 1.1rem; margin: 28px 0 8px; }
+  p { margin: 6px 0; } .muted { color: var(--muted); font-size: .9rem; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 6px; padding: 14px 16px; margin-top: 14px; }
+  .banner { border-left: 6px solid var(--muted); } .banner.ok { border-color: var(--ok); } .banner.bad { border-color: var(--bad); }
+  .banner b { font-size: 1.15rem; }
+  ul.checks { list-style: none; margin: 0; padding: 0; }
+  ul.checks li { padding: 8px 0; border-top: 1px solid var(--line); display: grid; grid-template-columns: 7.5rem 1fr; gap: 10px; }
+  ul.checks li:first-child { border-top: 0; }
+  .tag { font-weight: 600; font-size: .85rem; } .tag.ok { color: var(--ok); } .tag.bad { color: var(--bad); } .tag.skip { color: var(--warn); }
+  table { width: 100%; border-collapse: collapse; font-size: .92rem; } th, td { text-align: left; padding: 6px 8px; border-top: 1px solid var(--line); vertical-align: top; } th { color: var(--muted); font-weight: 600; }
+  td.t { white-space: nowrap; color: var(--muted); } td.txt { overflow-wrap: anywhere; }
+  input[type=text], textarea { width: 100%; padding: 8px; font: inherit; background: var(--card); color: var(--fg); border: 1px solid var(--line); border-radius: 4px; }
+  textarea { min-height: 90px; font-family: ui-monospace, monospace; font-size: .85rem; }
+  button { font: inherit; padding: 8px 14px; border: 1px solid var(--fg); background: var(--fg); color: var(--bg); border-radius: 4px; cursor: pointer; margin-top: 8px; }
+  button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 3px solid var(--warn); outline-offset: 2px; }
+  code { font-family: ui-monospace, monospace; font-size: .85em; overflow-wrap: anywhere; }
+  .drop { border: 2px dashed var(--line); padding: 16px; text-align: center; border-radius: 6px; }
+  .drop.over { border-color: var(--fg); }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Verify a GurtOS receipt</h1>
+  <p class="muted">A receipt says what one agent task did. This page checks it on your device. Nothing is uploaded.</p>
+
+  <section id="input" class="card">
+    <p><label for="src">Receipt address, or the receipt itself</label></p>
+    <textarea id="src" spellcheck="false" placeholder="https://.../t/receipts/r?id=...   or paste the receipt's JSON"></textarea>
+    <button id="go" type="button">Check this receipt</button>
+    <p class="drop" id="drop" tabindex="0">Or drop a receipt file here</p>
+  </section>
+
+  <section id="out" hidden>
+    <div id="banner" class="card banner" role="status" aria-live="polite"></div>
+    <h2>What was checked</h2>
+    <div class="card"><ul class="checks" id="checks"></ul></div>
+    <h2>The task</h2>
+    <div class="card" id="task"></div>
+    <h2>What the agent did</h2>
+    <div class="card"><table><thead><tr><th>#</th><th>When</th><th>What</th><th>Who</th></tr></thead><tbody id="rows"></tbody></table></div>
+    <p class="muted" id="note"></p>
+  </section>
+</main>
+
+<script type="module" id="verifier">
+// ---- the check: the same code the tests run. It touches nothing but the receipt and one optional Solana lookup. ----
+const enc = new TextEncoder();
+const hex = (buf) => [...new Uint8Array(buf)].map((x) => x.toString(16).padStart(2, '0')).join('');
+const sha256 = async (s) => hex(await crypto.subtle.digest('SHA-256', enc.encode(s)));
+const unb64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
+
+// JSON with sorted keys and no spaces: what the box signed.
+export function canonical(v) {
+  if (Array.isArray(v)) return `[${v.map(canonical).join(',')}]`;
+  if (v && typeof v === 'object') return `{${Object.keys(v).filter((k) => v[k] !== undefined).sort().map((k) => `${JSON.stringify(k)}:${canonical(v[k])}`).join(',')}}`;
+  return JSON.stringify(v) ?? 'null';
+}
+
+/** Looks up a Solana devnet memo transaction. Returns { memo, time } or throws. */
+export async function solanaMemo(tx, rpc = 'https://api.devnet.solana.com') {
+  const r = await fetch(rpc, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'getTransaction', params: [tx, { encoding: 'jsonParsed', maxSupportedTransactionVersion: 0, commitment: 'confirmed' }] }) });
+  const j = await r.json();
+  const t = j.result;
+  if (!t) throw new Error('Solana has no such transaction');
+  const ix = [...(t.transaction?.message?.instructions ?? [])].find((i) => i.program === 'spl-memo');
+  return { memo: typeof ix?.parsed === 'string' ? ix.parsed : undefined, time: t.blockTime ? new Date(t.blockTime * 1000).toISOString() : undefined };
+}
+
+/** Check a receipt. Returns { ok, checks: [{ name, ok: true | false | null, detail }] }. null means "not checked here". */
+export async function verifyReceipt(r, { memo = solanaMemo } = {}) {
+  const checks = [];
+  const add = (name, ok, detail) => checks.push({ name, ok, detail });
+  try {
+    if (r?.v !== 1 || !r.box?.key || !r.chain || !Array.isArray(r.entries) || typeof r.sig !== 'string') throw new Error('this is not a GurtOS receipt (version 1)');
+
+    // 1. The box's signature over everything else in the receipt.
+    const { sig, ...body } = r;
+    let signed = false;
+    try {
+      const key = await crypto.subtle.importKey('jwk', r.box.key, { name: 'ECDSA', namedCurve: 'P-256' }, false, ['verify']);
+      signed = await crypto.subtle.verify({ name: 'ECDSA', hash: 'SHA-256' }, key, unb64(sig), enc.encode(canonical(body)));
+    } catch {}
+    add('Signature', signed, signed ? `The box "${r.box.name}" signed exactly this receipt. Nothing in it was changed afterward.` : 'The signature does not match this receipt. Something in it was changed, or it was not signed by this key.');
+
+    // 2. The key's short name, which the box also wrote into its own log.
+    const fp = (await sha256(canonical({ crv: r.box.key.crv, kty: r.box.key.kty, x: r.box.key.x, y: r.box.key.y }))).slice(0, 16);
+    add('Signing key', fp === r.box.keyFingerprint, fp === r.box.keyFingerprint ? `Key ${fp}. The box wrote this name into its log when it made the key, and Elastic's add-only copy holds it.` : 'The key does not match the name in the receipt.');
+
+    // 3. Every entry points at the hash of the one before it.
+    const lines = r.chain.lines;
+    const breaks = [];
+    let chained = false;
+    for (let i = 0; i < lines.length; i++) {
+      const [seq, prev] = lines[i];
+      if (prev == null && !chained) continue;
+      chained = true;
+      if (i > 0 && prev !== lines[i - 1][2]) breaks.push(seq);
+      if (i > 0 && seq !== lines[i - 1][0] + 1) breaks.push(seq);
+    }
+    add('Chain', breaks.length === 0, breaks.length ? `The chain is broken at entry ${breaks.slice(0, 5).join(', ')}. The log was changed there.` : `${lines.length} log entries (${lines[0]?.[0]} to ${lines.at(-1)?.[0]}) each hold the fingerprint of the one before. The task's ${r.entries.length} are among them.`);
+
+    // 4. The task's own entries are the ones in the chain, and (in the full receipt) their text is what was hashed.
+    const byseq = new Map(lines.map((l) => [l[0], l]));
+    const wrong = [];
+    for (const e of r.entries) {
+      const l = byseq.get(e.seq);
+      if (!l || l[2] !== e.hash) { wrong.push(e.seq); continue; }
+      if (e.line !== undefined) {
+        let p;
+        try { p = JSON.parse(e.line); } catch { wrong.push(e.seq); continue; }
+        if ((await sha256(e.line)) !== e.hash || p.seq !== e.seq || p.task !== r.task.id || (p.prev ?? null) !== l[1]) wrong.push(e.seq);
+      }
+    }
+    const hidden = r.entries.filter((e) => e.line === undefined).length;
+    add('Entries', wrong.length === 0, wrong.length ? `Entry ${wrong.slice(0, 5).join(', ')} is not what the box logged.` : r.mode === 'redacted' ? `${hidden} entries, with their text left out by the owner. Each one's fingerprint is in the chain, so none can be swapped.` : `${r.entries.length} entries. Each line is hashed here and matches the chain.`);
+
+    // 5. The daily Solana fingerprint.
+    const s = r.anchors?.solana;
+    if (!s) add('Solana', null, 'No daily fingerprint covers this task yet. It is written once a day.');
+    else {
+      const at = byseq.get(s.seq);
+      const inChain = !!at && at[2] === s.head;
+      let line = inChain ? `The chain reaches the logged fingerprint at entry ${s.seq}.` : `The chain does not reach entry ${s.seq}'s fingerprint.`;
+      let ok = inChain, lookedUp = false;
+      if (inChain) {
+        try {
+          const m = await memo(s.tx);
+          const want = `gurtos-audit v1 seq=${s.seq} sha256=${s.sha256} prev=${s.prev} head=${s.head}`;
+          lookedUp = true;
+          ok = m.memo === want;
+          line += ok ? ` Solana (devnet) holds the same fingerprint${m.time ? `, written ${m.time}` : ''}.` : ' Solana holds a different fingerprint.';
+        } catch (e) {
+          line += ` Solana could not be reached from here (${e.message}), so the on-chain copy was not compared.`;
+        }
+      }
+      add('Solana', ok ? (lookedUp ? true : null) : false, line);
+    }
+
+    // 6. What Elastic said when the receipt was made. This page cannot ask Elastic itself.
+    const el = r.anchors?.elastic;
+    add('Elastic', el ? (el.matched ? null : false) : null, el ? (el.matched ? `When the receipt was made, the box compared ${el.checked} of these entries with Elastic's add-only copy and they matched (${el.at}). This page cannot ask Elastic itself.` : `The box found entries that differ from Elastic's copy (${el.at}).`) : 'This box does not send its log to Elastic.');
+  } catch (e) {
+    add('Receipt', false, e.message);
+  }
+  return { ok: checks.length > 0 && checks.every((c) => c.ok !== false), checks };
+}
+
+// ---- the page ----
+if (typeof document !== 'undefined') {
+  const $ = (id) => document.getElementById(id);
+  const el = (tag, cls, text) => Object.assign(document.createElement(tag), cls ? { className: cls } : {}, text != null ? { textContent: text } : {});
+  const b64url = (s) => atob(s.replace(/-/g, '+').replace(/_/g, '/'));
+
+  async function load(text) {
+    text = text.trim();
+    if (/^https?:\/\//.test(text)) {
+      const u = new URL(text);
+      if (u.protocol === 'http:' && !['127.0.0.1', 'localhost'].includes(u.hostname)) throw new Error('only https addresses are fetched');
+      const r = await fetch(u, { credentials: 'omit' });
+      if (!r.ok) throw new Error(`the box answered ${r.status}`);
+      return r.json();
+    }
+    return JSON.parse(text);
+  }
+
+  async function run(text) {
+    $('out').hidden = false;
+    const banner = $('banner');
+    banner.className = 'card banner';
+    banner.textContent = 'Checking...';
+    $('checks').replaceChildren(); $('rows').replaceChildren(); $('task').replaceChildren();
+    let r;
+    try { r = await load(text); } catch (e) { banner.className = 'card banner bad'; banner.replaceChildren(el('b', null, 'Could not read the receipt'), el('p', null, e.message)); return; }
+    const v = await verifyReceipt(r);
+    banner.className = `card banner ${v.ok ? 'ok' : 'bad'}`;
+    banner.replaceChildren(el('b', null, v.ok ? 'This receipt checks out' : 'This receipt does NOT check out'), el('p', null, v.ok ? 'It was signed by the box and its log entries match the chain. The list below says what was and was not checked.' : 'Do not rely on it. The failed checks are marked below.'));
+    for (const c of v.checks) {
+      const li = el('li');
+      li.append(el('span', `tag ${c.ok === true ? 'ok' : c.ok === false ? 'bad' : 'skip'}`, `${c.ok === true ? 'Passed' : c.ok === false ? 'Failed' : 'Not checked'}: ${c.name}`), el('span', null, c.detail));
+      $('checks').append(li);
+    }
+    const t = r.task ?? {};
+    const facts = [['Task', t.title], ['Outcome', t.state], ['Started by', t.requestedBy ?? t.source], ['Agent seat', t.seat], ['Cost', t.costCents == null ? 'hidden by the owner' : `$${(t.costCents / 100).toFixed(2)} (test money)`], ['From', t.createdAt], ['To', t.endedAt], ['Box', r.box?.name], ['Receipt made', r.issuedAt], ['Shown as', r.mode === 'redacted' ? 'Redacted: text and amounts left out' : 'Full']];
+    for (const [k, val] of facts) if (val) $('task').append(el('p', null, `${k}: ${val}`));
+    for (const e of r.entries ?? []) {
+      const tr = el('tr');
+      tr.append(el('td', 't', String(e.seq)), el('td', 't', (e.at ?? '').replace('T', ' ').replace(/\.\d+Z$/, 'Z')), el('td', 'txt', e.text ?? e.type), el('td', null, e.who ?? ''));
+      $('rows').append(tr);
+    }
+    $('note').textContent = 'A receipt shows that these entries are the ones the box wrote and that they were not changed afterward. It does not show that the agent was right, or that the box told the truth when it wrote them.';
+  }
+
+  $('go').addEventListener('click', () => run($('src').value));
+  const drop = $('drop');
+  drop.addEventListener('dragover', (e) => { e.preventDefault(); drop.classList.add('over'); });
+  drop.addEventListener('dragleave', () => drop.classList.remove('over'));
+  drop.addEventListener('drop', async (e) => { e.preventDefault(); drop.classList.remove('over'); const f = e.dataTransfer.files[0]; if (f) { $('src').value = await f.text(); run($('src').value); } });
+  const h = location.hash.slice(1);
+  if (h.startsWith('r=')) { $('src').value = decodeURIComponent(h.slice(2)); run($('src').value); }
+  else if (h.startsWith('d=')) { try { $('src').value = b64url(h.slice(2)); run($('src').value); } catch {} }
+}
+</script>
+</body>
+</html>
