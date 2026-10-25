@@ -307,7 +307,7 @@ Content-Digest:  sha-256=:...:
 - The GurtOS Test Store stands in for every merchant, and the household mailbox is a demo POP3 mailbox with sample receipts we wrote, standing in for Gmail. Prices in CAD count against US-cent budgets at a fixed rate of 0.73.
 - Visa Intelligent Commerce: the adapter has never been called; its request values are placeholders until Visa onboards us.
 - The iPhone and Watch app is on TestFlight for internal testers only; it is not in the App Store. The Watch and iPhone shots are from the iOS simulator against a test computer.
-- Per-app permissions: the Settings screen is still landing, so today the owner sets a daily limit or turns an item off through the API. Until the owner does, apps keep working as before.
+- Per-app permissions: the owner sets a daily limit or turns an item off in Settings, Permissions ("What each app may do"), or through the API; the captures on this page were made through the API, before that screen landed. Until the owner does, apps already on keep working as before.
 - Face ID approvals use real WebAuthn passkeys verified on the computer. The merge gate and our screenshots use a software authenticator; QA has not tried it on a real phone.
 - A watch closes after one purchase, or when you deny it. Watch again for another.
 - The test store keeps price and stock changes in memory, which reset when the computer restarts. After a restart a captured signature could be sent again within its 8 minutes, but its Idempotency-Key still returns the first order instead of charging twice.
