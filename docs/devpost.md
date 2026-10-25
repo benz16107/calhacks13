@@ -15,7 +15,7 @@ Operating systems built for AI agents: each task runs as its own Linux user, in 
 
 ## Video
 
-https://youtu.be/GRx8n4Ic_EY ("GurtOS: operating systems built for AI agents", 2:58, unlisted, English captions). Paste this link in the Video field.
+https://youtu.be/GRx8n4Ic_EY ("GurtOS: operating systems built for AI agents", 3:00, unlisted, English captions). Paste this link in the Video field.
 
 ## Image gallery (upload in this order)
 
@@ -30,13 +30,14 @@ Six images, all in `showcase/public/devpost/`. The first one is the thumbnail.
 
 ## Try it out (links)
 
+In this order, so gurtos.com is first. Devpost labels each link by its host name, so the roadmap and security
+policy (linked in the About) are left out here: they showed as two more "GitHub Repo" links.
+
+- https://gurtos.com (the product: editions, downloads and docs)
 - https://try.gurtos.com (try it live: your own throwaway GurtOS computer in the browser, with an "Attack it yourself" page)
 - https://calhacks.gurtos.com (the showcase: one page per sponsor track, with evidence)
-- https://gurtos.com/docs/ (the product docs)
 - https://github.com/benz16107/calhacks13 (the code, open source under the Apache License 2.0)
 - https://www.figma.com/slides/SBrJtJiY20k88X3IGzKwZW (the pitch deck, Figma Slides)
-- https://github.com/benz16107/calhacks13/blob/main/ROADMAP.md (the roadmap)
-- https://github.com/benz16107/calhacks13/blob/main/SECURITY.md (the security policy)
 - https://plum-fabric-10136193.figma.site (the landing page, published on Figma Sites)
 
 ## Built with
@@ -49,12 +50,21 @@ Left out for the limit: node.js, nftables, preact, python, gtk, libadwaita, gnom
 
 ## Prizes to select on the submission form
 
-Overall, Most Technically Advanced, Most Creative, Best Solo Hack, Hacker's Choice, Anthropic, Atlassian (Track 1 and Track 2),
-Hyphenate, Factory (Droid SDK), Armadin (Best Security Hack), Microsoft (Built for the Real World, and the Customer
-Impact Award), Visa, Coinbase (Payment Agents), Fetch.ai, Spacetime, Elastic, Moss, Apify, CRS (Overall, Financial AI
-Agent, Identity/Fraud, Unexpected), MLH Solana, MLH Vultr, Figma (select "[Figma] Best Figma Workflow Hack"; the track page covers Workflow, Stage Log, Best Design, Most Creative), Mana.
+The 22 categories to tick, by their exact names in the Devpost list (checked logged out on Sun Oct 25, 6:15 AM PT):
 
-Opt in to every eligible category at the Devpost step that lists them. Anthropic and Spacetime were not in the Devpost list yet on Sat Oct 24 at 5:45 PM PT ("Devpost will also be updated soon"): check again before submitting and opt in if they appear. Each category's rubric is at hive.hackberkeley.org/prizes. Use the email Ben signed up with. Sponsor notes from Slack: CRS added a 3rd place ($500); Moss has 2 winners (good use of Moss, best engagement); no Microsoft product is required to enter Microsoft.
+Cal Hacks Most Creative Hack, Cal Hacks Most Technically Complex Hack, Cal Hacks Best Solo Hack,
+[Anthropic] Claude for Public Benefit, [MLH] Best Use of Solana, [MLH] Best Use of Vultr,
+[Hyphenate] The Hyphenated Enterprise: Autonomous Systems for Finance, [Visa] Best use of Reimagining Shopping sponsored by Visa,
+[Fetch.ai] Best Use of Fetch.ai, [Microsoft] Built for the Real World (1st), Customer Impact Award (2nd),
+[Factory] Best Use of the Factory Droid SDK, [Armadin] Best Security Hack, [Apify] Best Use of Apify,
+[Apify] Best Actor sponsored by Apify, [Elastic] Best use of the Elastic Agent Builder on a Serverless Instance,
+[CRS] Best Use of CRS API, [Moss] Best Use of Moss, [Figma] Best Figma Workflow Hack, [Coinbase] Best Use of x402 by Coinbase,
+[Spacetime] Best Use of Spacetime, [Mana] Best Use of Mana, [Atlassian] Best Agent / Best Security Solution for Agents.
+
+Do not tick: [Meta], [SpaceXSI], [Capital One] Best Use of Nessie, [MLH] Best Domain Name from GoDaddy Registry, or any other
+category. Overall and Hacker's Choice are not in the list; every project is in them.
+
+Opt in to every eligible category at the Devpost step that lists them. Anthropic and Spacetime were missing from the list on Sat Oct 24 at 5:45 PM PT; both are in it on Sun Oct 25. Each category's rubric is at hive.hackberkeley.org/prizes. Use the email Ben signed up with. Sponsor notes from Slack: CRS added a 3rd place ($500); Moss has 2 winners (good use of Moss, best engagement); no Microsoft product is required to enter Microsoft.
 
 ---
 
@@ -140,15 +150,15 @@ Every track has its own page with the criteria, evidence, screenshots and limits
 
 | Track | What we built | Strongest proof | Page |
 |---|---|---|---|
-| Anthropic | Claude, through Droid, runs each task as its own Linux user with no keys, undoable and costed from real tokens | 240 of 240 process samples held only a placeholder key; an MCP server for Claude Code [Video](https://youtu.be/a2nhBj9DhbI) | [page](https://calhacks.gurtos.com/tracks/anthropic/) |
+| Anthropic | For solo developers who leave agents running at home overnight: Claude, through Droid, runs each task as its own Linux user with no keys, undoable and costed from real tokens | 240 of 240 process samples held only a placeholder key; a Haiku check on risky steps; the attack test is published with its limits; an MCP server for Claude Code [Video](https://youtu.be/a2nhBj9DhbI) | [page](https://calhacks.gurtos.com/tracks/anthropic/) |
 | Atlassian | Every agent task becomes a Jira issue with Approve, Deny and Roll back | BOX-29: blocked, approved from Jira, rolled back, its three configs restored [Video, Track 2](https://youtu.be/VRVofDW0668) [Video, Track 1](https://youtu.be/VEFBW-LRM94) | [page](https://calhacks.gurtos.com/tracks/atlassian/) |
 | Hyphenate | A credit desk of agents (analyst, clerk, controller) on GurtOS Business | 16 of 17 planted errors caught, 6 of 6 decisions right, 12 minutes, $5.24 [Video](https://youtu.be/90iEnbJtJoU) | [page](https://calhacks.gurtos.com/tracks/hyphenate/) |
-| Factory | Droid is the worker inside every task: plans first, never holds a key | 240 of 240 samples held only a placeholder key; Replay of a real Droid task [Video](https://youtu.be/xH2J2BOVlK8) | [page](https://calhacks.gurtos.com/tracks/factory/) |
+| Factory | Droid is the worker inside every task, started from ASI:One, a GitHub issue or a folder in Files: plans first, never holds a key | You approve Droid's plan on your phone before it starts, a read-only reviewer droid checks the diff, and Replay shows every step; 240 of 240 samples held only a placeholder key [Video](https://youtu.be/xH2J2BOVlK8) | [page](https://calhacks.gurtos.com/tracks/factory/) |
 | Armadin | Real attacks against a real box: poisoned package, hijacked payment, hidden instructions | 15 of 16 OS-level attacks stopped on two machines; the one miss (exfiltration through an allowed host) is published [Video](https://youtu.be/3hDnLuUqmjM) | [page](https://calhacks.gurtos.com/tracks/armadin/) |
-| Microsoft | The credit desk as a path to production: roles, routed approvals, audit, kill switch | 10 agents frozen within 271 ms; a bad batch undone in 48 ms [Video](https://youtu.be/gGdqKNtvopw) | [page](https://calhacks.gurtos.com/tracks/microsoft/) |
+| Microsoft | The credit desk as a path to production: shadow mode, roles, routed approvals, audit, kill switch | 16 of 17 planted errors caught and a $20,000 fake applicant held that a simple rule approves; 10 agents frozen within 271 ms; a bad batch undone in 48 ms [Video](https://youtu.be/gGdqKNtvopw) | [page](https://calhacks.gurtos.com/tracks/microsoft/) |
 | Visa | A shopping agent that buys by standing instruction after your tap, signed with Visa's Trusted Agent Protocol | Live: a $15.36 CAD price at Best Buy Canada, bought on a Stripe test card, refunded on Undo [Video](https://youtu.be/iYQ-_am3c2g) | [page](https://calhacks.gurtos.com/tracks/visa/) |
-| Coinbase | Agents pay and earn over x402; the wallet key never reaches the agent | A real agent paid $0.01 and $0.03 through CDP, confirmed on Solana devnet [Video](https://youtu.be/DnD78KAapMo) | [page](https://calhacks.gurtos.com/tracks/coinbase/) |
-| Fetch.ai | Every GurtOS box is an agent on Agentverse, reachable from an ASI:One chat | Live: a Droid task fixed a failing test for $0.05; a $0.50 search paused for approval. [Video](https://youtu.be/J9bLpDGtFEc) | [page](https://calhacks.gurtos.com/tracks/fetch/) |
+| Coinbase | Agents pay and earn over x402; the wallet key never reaches the agent | A real agent paid $0.01 and $0.03 through CDP, confirmed on Solana devnet; [builder feedback](https://github.com/benz16107/calhacks13/blob/main/tracks/wallet/FEEDBACK.md) [Video](https://youtu.be/DnD78KAapMo) | [page](https://calhacks.gurtos.com/tracks/coinbase/) |
+| Fetch.ai | Every GurtOS box is an agent on Agentverse, reachable from an ASI:One chat | Live: a Droid task fixed a failing test for $0.05; a $0.50 search paused for approval. [Agent on Agentverse](https://agentverse.ai/agents/details/agent1qvuk46tnt9lnscher0pawl7pr5y525mak66ptwsrvg4kff0pfy9m2sy0us6/profile), [ASI:One chat](https://asi1.ai/shared-chat/d47d985a-01d8-49f6-9011-15a8eae87399) [Video](https://youtu.be/J9bLpDGtFEc) | [page](https://calhacks.gurtos.com/tracks/fetch/) |
 | SpacetimeDB | One SpacetimeDB per computer as the live state: queue, approvals, status | 3 agents made 15 claims on 12 jobs: 12 distinct, none twice [Video](https://youtu.be/Jypa31_HdrM) | [page](https://calhacks.gurtos.com/tracks/spacetime/) |
 | Elastic | A copy of the log the box cannot rewrite, and an agent that answers "what did my agents do?" | The agent named a failed routine's root cause; a receipt matched 18 entries to Elastic's copy [Video](https://youtu.be/riaswviHD50) | [page](https://calhacks.gurtos.com/tracks/elastic/) |
 | Moss | Memory your agents use and a web page cannot poison; fast answers | A memory planted by a web page was refused; search 3.1 ms; answers in 329 ms (opt-in) [Video](https://youtu.be/hRFm65ZLO-g) | [page](https://calhacks.gurtos.com/tracks/moss/) |
@@ -157,7 +167,7 @@ Every track has its own page with the criteria, evidence, screenshots and limits
 | Solana | Agents pay in devnet USDC; a daily fingerprint of the log goes to Solana | 109 devnet transactions, none failed; a receipt checked against the memo [Video](https://youtu.be/DnD78KAapMo) | [page](https://calhacks.gurtos.com/tracks/solana/) |
 | Vultr | The public always-on box, the relay, the build machine and the download mirror | The real Server disc installed on a 1 GB instance in about 5 minutes [Video](https://youtu.be/EH7kyUofUOs) | [page](https://calhacks.gurtos.com/tracks/vultr/) |
 | Figma | One design system from FigJam to the box's screen, the apps and the Business screens, with a check that fails when the code drifts | The portal was generated from the Figma frames; the drift check finds 0 drifts. [Video](https://youtu.be/JI8PBEVwaCw). **Figma Slides deck** (stage log, video, embedded Make and repo link): https://www.figma.com/slides/SBrJtJiY20k88X3IGzKwZW | [page](https://calhacks.gurtos.com/tracks/figma/) |
-| Mana | A Mana chat that rewrote the credit desk's rules | It found two records adding up to $20,000 of credit; rules REL-1 and SOD-5 now cite them [Video](https://youtu.be/BrA67CzIOYg) | [page](https://calhacks.gurtos.com/tracks/mana/) |
+| Mana | A Mana chat that rewrote the credit desk's rules | It found two records adding up to $20,000 of credit; rules REL-1 and SOD-5 now cite them. [The public Mana chat](https://www.mana.space/shared-chats/x5CqxyjcOgVCAyrvUBqK2LNRcMJ2/001792810018092cc50381027f1410c8fcb), [Ask GurtOS, an app inside Mana](https://www.mana.space/home/x5CqxyjcOgVCAyrvUBqK2LNRcMJ2/apps/box-status) [Video](https://youtu.be/BrA67CzIOYg) | [page](https://calhacks.gurtos.com/tracks/mana/) |
 
 <!-- DEVPOST SHORT END -->
 
