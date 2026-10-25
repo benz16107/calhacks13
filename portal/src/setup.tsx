@@ -545,14 +545,13 @@ function AgentSetup({ onStop }: { onStop: () => void }) {
       <p class="t-caption t-secondary">An AI agent on another computer, like Claude Code, can do every step for you. This screen follows along.</p>
       {ch?.code && (
         <>
-          {/* Exactly as the agent must type it: core matches the code as it is. */}
-          <p class="gos-setup-code">{ch.code}</p>
+          <p class="gos-setup-code">{formatCode(ch.code)}</p>
           <p class="t-caption t-secondary">{expired ? 'This code ran out.' : `Works once, until ${hhmm(ch.expiresAt!)}.`}</p>
           {url && !expired && (
             <>
               <p class="t-caption-strong">Tell your agent:</p>
               <p class="gos-agent-say">
-                Set up the new {PRODUCT} computer at {url} with code {ch.code}, by following AGENT-SETUP.md
+                Set up the new {PRODUCT} computer at {url} with code {formatCode(ch.code)}, by following AGENT-SETUP.md
               </p>
               {urls.length + (ch.remote ? 1 : 0) > 1 && <p class="t-caption t-secondary">Also at {(ch.remote ? urls : urls.slice(1)).join(', ')}</p>}
             </>

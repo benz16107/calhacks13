@@ -32,7 +32,8 @@ const TONE: Partial<Record<Kind, string>> = { blocked: 'is-bad', denied: 'is-bad
 
 interface Recorded {
   seq: number;
-  changes: Diff['changes'];
+  /** big: over 1 MB, so not kept. */
+  changes: (Diff['changes'][number] & { big?: boolean })[];
 }
 
 export function ReplayApp({ id }: { id: string }) {
@@ -41,6 +42,7 @@ export function ReplayApp({ id }: { id: string }) {
   const [final, setFinal] = useState<Diff & { undone?: boolean }>();
   // The file state at each point, where this computer records it (GET /api/tasks/:id/replay); else the final files only.
   const [recorded, setRecorded] = useState<Recorded[] | null>();
+  const [capped, setCapped] = useState(false); // core stops recording a task at 50 MB
   const [diffs, setDiffs] = useState<Record<number, Diff>>({});
   const [error, setError] = useState('');
   const [i, setI] = useState(0);
@@ -49,7 +51,7 @@ export function ReplayApp({ id }: { id: string }) {
   useEffect(() => {
     api<{ task: Task; events: LogEvent[] }>('GET', `/tasks/${id}`).then(setDetail, (e) => setError((e as Error).message));
     api<Diff & { undone?: boolean }>('GET', `/tasks/${id}/diff`).then(setFinal, () => setFinal({ changes: [], diff: '' }));
-    api<{ points: Recorded[] }>('GET', `/tasks/${id}/replay`).then((r) => setRecorded(r.points), () => setRecorded(null));
+    api<{ points: Recorded[]; capped?: boolean }>('GET', `/tasks/${id}/replay`).then((r) => (setRecorded(r.points), setCapped(!!r.capped)), () => setRecorded(null));
   }, [id]);
   const points = useMemo(() => (detail ? replayPoints(detail.events) : []), [detail]);
   const last = points.length - 1;
@@ -118,7 +120,15 @@ export function ReplayApp({ id }: { id: string }) {
   const files = recorded
     ? at === undefined
       ? { note: 'No files changed yet.' }
-      : { diff: diffs[at], note: keptOrUndone?.kind === 'undone' ? 'As they were before Undo removed them.' : `Files in the task's own layer at this point, against your files.` }
+      : {
+          diff: diffs[at],
+          note:
+            keptOrUndone?.kind === 'undone'
+              ? 'As they were before Undo removed them.'
+              : capped && at === recorded.at(-1)?.seq && p.seq > at
+                ? 'Recording stopped at 50 MB for this task, so this shows the last files it kept.'
+                : `Files in the task's own layer at this point, against your files.`,
+        }
     : final?.undone
       ? { note: 'Undone: its changes left the workspace. This computer keeps a task\'s files at the end only, so there is nothing to show.' }
       : { diff: final, note: i < last ? "The task's final changes. This computer keeps a task's files at the end only." : "The task's final changes, against your files." };
@@ -174,7 +184,9 @@ export function ReplayApp({ id }: { id: string }) {
             <p class="t-caption t-secondary">{files.note}</p>
             {files.diff && files.diff.changes.length > 0 && (
               <>
-                <p class="t-caption">{plural(files.diff.changes.length, 'file')}: {files.diff.changes.map((c) => `${c.path} (${c.change})`).join(', ')}</p>
+                <p class="t-caption">
+                  {plural(files.diff.changes.length, 'file')}: {files.diff.changes.map((c) => `${c.path} (${c.change}${(c as { big?: boolean }).big ? ', over 1 MB, not kept' : ''})`).join(', ')}
+                </p>
                 <DiffView text={files.diff.diff} />
               </>
             )}
