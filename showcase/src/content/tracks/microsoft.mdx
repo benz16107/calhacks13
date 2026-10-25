@@ -311,7 +311,7 @@ track credit-desk
 <Limits title="What this does not cover">
 
 - Signed receipts prove the entries are the ones the box wrote and were not changed afterward. They do not prove the agent was right, or that the box told the truth when writing them, and they are not a legal-compliance claim. The daily Solana fingerprint (devnet) shows only after the daily audit runs; the receipts shown here say "not anchored yet" for it.
-- The flight recorder replays the action log step by step. It shows a task's final changes, not its files at each step: this computer keeps a task's files at the end only.
+- The flight recorder replays the action log step by step. On a computer with core 095514a the box keeps the task's changes at each step and Replay shows them; the screenshot here and any task that ran earlier show the final changes only. Files over 1 MB are noted, not kept, and recording stops at 50 MB a task.
 - Agent permissions: Not enforced yet: limiting hosts before an app first uses them, an allow-once question for a new host, and a first-run prompt that blocks the app until the owner answers (until then, apps keep working as today). Business roles are not part of the permissions list, and Business's own rules still route approvals. Only the owner changes permissions.
 - The scored runs used one controller seat on GurtOS Server. Routing by amount to different people is GurtOS Business, shown on a seeded box with scripted seats and sandbox data, not in a scored run.
 - Shadow mode has not been run for a real week at a real company. The 83% on the screenshot is a seeded box.

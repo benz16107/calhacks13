@@ -285,7 +285,7 @@ The full steps are in the [track README](https://github.com/benz16107/calhacks13
 
 <Limits title="What this does not cover">
 
-- The flight recorder replays the action log step by step. It shows a task's final changes, not its files at each step: this computer keeps a task's files at the end only. It does not link to a Jira issue.
+- The flight recorder replays the action log step by step. On a computer with core 095514a the box keeps the task's changes at each step and Replay shows them; the screenshot here and any task that ran earlier show the final changes only. Files over 1 MB are noted, not kept, and recording stops at 50 MB a task. It does not link to a Jira issue.
 - Agent permissions: Not enforced yet: limiting hosts before an app first uses them, an allow-once question for a new host, and a first-run prompt that blocks the app until the owner answers (until then, apps keep working as today). We did not capture a Jira refusal; the Jira list above is from the API.
 - Roll back undoes the task's **file changes**. It cannot recall something a task already sent out through a tool, such as a payment. Those show in the issue so a person can follow up.
 - One shared secret guards the box's three Jira routes. Forge Remote's signed invocation tokens would let the box check each call came from this app and this user. That is the next step.

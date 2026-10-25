@@ -402,7 +402,7 @@ At our table on Sunday we run any case you bring. The code, the key and every ru
 <Limits title="What this does not cover">
 
 - Signed receipts prove the entries are the ones the box wrote and were not changed afterward. They do not prove the agent was right, or that the box told the truth when writing them, and they are not a legal-compliance claim. The daily Solana fingerprint (devnet) shows only after the daily audit runs; the receipts shown here say "not anchored yet" for it.
-- The flight recorder replays the action log step by step. It shows a task's final changes, not its files at each step: this computer keeps a task's files at the end only.
+- The flight recorder replays the action log step by step. On a computer with core 095514a the box keeps the task's changes at each step and Replay shows them; the screenshot here and any task that ran earlier show the final changes only. Files over 1 MB are noted, not kept, and recording stops at 50 MB a task.
 - Agent permissions: Not enforced yet: limiting hosts before an app first uses them, an allow-once question for a new host, and a first-run prompt that blocks the app until the owner answers (until then, apps keep working as today). The permission screens in Settings are still landing, so this page shows the refusal, not the switch.
 - The scorer counts an error as caught when a finding names one of its rows and its wording and rule ids are closest to that error. Whether the finding's conclusion is right is not checked by code, but the decisions are, field by field.
 - The one planted error missed in the headline run is E14, the three disagreeing bureaus on Castellanos.
