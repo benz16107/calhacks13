@@ -193,6 +193,7 @@ On an ordinary system a shopping agent runs as you. The card, the mailbox login 
   { what: 'The agent never sees your card: the card and the signing key stay in the root-only vault, and only the buy tool in the core reads them', why: 'Trust (15)', os: 'The vault and the broker', track: 'The buy tool that reads the card', status: 'Built. The merge gate checks no card, key or password is anywhere in the log' },
   { what: 'Every purchase waits for your tap, with the price against your limit', why: 'Trust (15), UX (25)', os: 'The approval pause and the task budget', track: 'The question text and the price rule', status: 'Built' },
   { what: 'Approve with Face ID: a WebAuthn passkey signs the exact question and amount, and a purchase approved without one is refused', why: 'Trust (15), UX (25)', os: 'The approval pause, the box verifying the signature, and the rule that an Apple Watch never approves a Shopper purchase', track: 'The passkey flow in the Shopper app', status: 'Built. The demo uses a software authenticator; QA has not tried it on a real phone; a passkey belongs to the https address it was made on, and there is no remove button yet' },
+  { what: 'Per-app permissions: the owner sets how much the Shopper may spend per day, and a spend over it becomes an approval question', why: 'Trust (15)', os: 'Each app\'s manifest (the keys it declares, money because a tool spends, and what it was seen using), enforced by the OS: money in the broker, keys at the vault and in tools; every refusal logged in plain words', track: 'The Shopper\'s tools that spend and the keys it declares', status: 'Built (core 4b473ea). It adds to the per-purchase tap, it does not replace it. The Settings screen is still landing, so today the owner sets it through the API' },
   { what: 'Each checkout is signed with Visa\'s Trusted Agent Protocol, including the order body', why: 'Commerce impact (15), Technical (20)', os: 'The signing key in the vault', track: 'The signer and the store that verifies it', status: 'Built. The store refuses unsigned, changed and replayed orders' },
   { what: 'A signed shopping mandate: item words, stores, price per item, quantity, total and an expiry of at most 30 days, enforced by the store', why: 'Innovation (25), Trust (15)', os: 'The box\'s agent key in the vault', track: 'The mandate and the store\'s checks', status: 'Built. It mirrors the payment instruction in Visa Intelligent Commerce with open tools; it is not a Visa product' },
   { what: 'Undo refunds the order', why: 'UX (25), Trust (15)', os: 'Undo of one task', track: 'The refund at the store', status: 'Built' },
@@ -204,6 +205,10 @@ On an ordinary system a shopping agent runs as you. The card, the mailbox login 
   { what: 'Price protection for 30 days and unused subscriptions found and cancelled with your OK', why: 'Innovation (25)', os: 'The approval pause', track: 'The Shopper app', status: 'Built at the GurtOS Test Store, which knows its own price; the subscriptions are three samples in a demo mailbox' },
   { what: 'Payments behind one interface: Stripe test mode, the Cybersource sandbox and a Visa Intelligent Commerce adapter', why: 'Technical (20)', os: 'The vault holds each processor\'s keys', track: 'The adapters', status: 'Built for Stripe test mode and Cybersource (a charge, a partial refund and a full refund tested live on Oct 24). The Visa Intelligent Commerce adapter has never been called, because it needs onboarding with Visa' },
 ]} />
+
+**A daily limit per app.** Like a phone's app permissions, each app has a manifest: the keys it declares, money if a tool spends, and what its tasks were seen using. The owner can turn any item off, or set money per day, and the OS enforces it. Here the owner set the Shopper to $5.00 a day. The reorder's own question was approved with a tap, and the $13.00 payment then went to the owner again because it is over the day's limit.
+
+<Shot src="track/visa/permissions-daily-limit.png" alt="A GurtOS task window, Reorder: Hario V60 02 paper filters, Needs you: Spend $13.00 to GurtOS Test Store on shopper.buy (TEST purchase: 2 × Hario V60 02 paper filters, 100 count)? Shopper (test payments) has spent $0.00 today, over its $5.00 a day. Deny and Approve $13.00. The steps show the reorder question approved by portal, then the second question." caption="The owner set the Shopper's money to $5.00 a day (<code>PUT /api/permissions/shopper</code>). Step 13 is the purchase approved with a tap; step 16 is the daily limit asking again. The wording is the computer's own. Test money, a scripted agent and a throwaway computer on main; the request was denied, so nothing was paid." />
 
 ## Real attacks on financial companies
 
@@ -218,7 +223,7 @@ A shopping agent holds money and card details, so it is a target for the same at
 
 </Details>
 
-<Evidence title="Evidence" run="Run of this track's merge-gate step (<code>DEMO_ONLY=shopper ./demo</code>) on main, x86 test VM, Oct 24, 4:37 PM PT, before core's fix <code>1afca16</code>: the first 10 checks pass and the log below stops there. After the fix core reports the full gate at 35 passed, 0 failed with the Shopper included; this page's log was not re-run after it. The live run on Oct 23 used <code>DEMO_LIVE=shopper</code> with Stripe test mode, Apify, Droid and devnet USDC." numbers={[{ value: '$15.36 CAD', label: 'Chemex filters, live Best Buy Canada price, bought after the tap (test money)' }, { value: '$0.03', label: 'devnet USDC an agent paid over x402 for a report (test money)' }, { value: '0', label: 'cards, keys or passwords in the action log' }]} sources={[{ label: 'Tracks README', href: 'https://github.com/benz16107/calhacks13/tree/main/tracks/shopper' }]}>
+<Evidence title="Evidence" run="This track's merge-gate step on main (<code>DEMO_ONLY=shopper ./demo</code>), x86 test VM, Oct 25: 32 checks, 0 failed, offline with simulated payments. The live run on Oct 23 used <code>DEMO_LIVE=shopper</code> with Stripe test mode, Apify, Droid and devnet USDC." numbers={[{ value: '$15.36 CAD', label: 'Chemex filters, live Best Buy Canada price, bought after the tap (test money)' }, { value: '$0.03', label: 'devnet USDC an agent paid over x402 for a report (test money)' }, { value: '0', label: 'cards, keys or passwords in the action log' }]} sources={[{ label: 'Tracks README', href: 'https://github.com/benz16107/calhacks13/tree/main/tracks/shopper' }]}>
 
 - Stripe test mode charged the Hario filters bought from the watch, and refunded the household reorder when its task was undone.
 - An agent paid $0.03 of devnet USDC for a report over x402 ([the transaction](https://explorer.solana.com/tx/5PCwxRVPZ7hzjHaXPLtpbYH2k3nEdkzwjUxZXaVYcm46TsnGqkvGYtbCctcgWdpnAMzgRQu76MKW2HfByAzkcFvB?cluster=devnet)).
@@ -237,9 +242,32 @@ track shopper
   ok    approved with a tap (no passkey yet), the box signed the mandate and started watching
   ok    a check saw $8.99, above the $7.00 limit, so it keeps watching ($8.99 each is over your limit of $7.00)
   ok    it dropped to $6.50 and the buy waits for you: "Buy 2 × Hario V60 02 paper filters, 100 count from GurtOS Test Store for $13.00?..."
+  ok    paid $13.00 as a TEST payment (Visa test card ending 4242, simulated); the store checked the TAP signature and mandate w8862c0
+  ok    no payment network in this run: the payment is simulated and says so (offline demo run: no network call)
+  ok    the purchase tells the portal's Undo button what undo does: "Undo refunds this $13.00 test payment."
+  ok    a paired phone that is not the owner's cannot set up the first Face ID
+  ok    Face ID set up on "Demo phone"; adding another passkey needs this one first (A passkey is already set up. Confirm with it first to add another.)
+  ok    the agent read 10 receipts from the demo inbox (2 other emails stayed behind): filters and paper towels run out this week
+  ok    it never saw the mailbox login or the sign-in code email
+  ok    a plain tap with a pairing token approved it, but the box refused to pay: "shopper.buy: approved without Face ID: this box has a passkey, so a purchase needs it. App..."
+  ok    approved with Face ID, the box checked the signature and paid $17.99 (TEST); the order carries "approved with Face ID on Demo phone"
+  ok    the same Face ID signature cannot be used again
+  ok    undo on the purchase task refunded the order (re_sim_104a622d50ef3096)
+  ok    with a valid TAP signature but outside the mandate, the store refused: a higher price, another item, more items
+  ok    a mandate with its limit edited no longer verifies, so the store refused it too
+  ok    changing the spending rules needs Face ID; saved with it: a $100 monthly cap, $30 at Best Buy, no electronics, never gift cards
+  ok    the box would not even ask: "shopper.propose: not proposing it: your rule blocks the electronics category"
+  ok    the price fell to $5.75 inside the 30 days, so the box asked and the store refunded $1.50 (TEST): "Price protection: HV60-100 dropped from $6.50 to $5.75, so the store r..."
+  ok    the receipts showed one unused subscription, Streaming Plus (74 days); approved with Face ID, a signed request cancelled it (TEST)
+  ok    the merchant's dashboard: 2 verified agent orders (1 with Face ID), 7 refused requests (1 unsigned (unknown bot), 1 changed in transit, 1 replayed signature, 1 over price, 1 wrong item, 1 over quantity, 1 bad mandate signature), 0 chargebacks
+  ok    conversion from agent shoppers: 2 of 2 shopping sessions ordered; every order keeps its mandate and approval as evidence
+  ok    supplies over x402: it asked the price ($0.03), above its 2 cent budget, so it asks first: "Spend $0.03 to 39w7W3SBxE62zsS7VQY5dgZQXGWko2EkBXMfHg2sLtKV on wallet.pay (http://api.localhost:33135/report in devnet USDC (test money))? Budget $0.02, spent $0.00."
+  ok    denied: the wallet never ran and nothing was spent
+  ok    no card, signing key, mailbox password or payment key anywhere in the action log
+  skip  real test-mode payments, the Best Buy and Gold Roast comparison, and x402: DEMO_LIVE=shopper ./demo runs them
 ```
 
-**The double ask, fixed.** After the owner approved "Buy 2 × Hario V60 02 paper filters ... for $13.00?", the core asked a second question, "Spends above $5.00 always ask", because a UX-audit change (`baeabc5`) lowered that default from $100 to $5. Core fixed it in `1afca16`: an approved question that names the amount now covers the task's spends up to it, the budget still caps them, and the Shopper's buy asks with the total. The $5 default stays, so a purchase waits for the owner once.
+**The double ask, fixed.** After the owner approved "Buy 2 × Hario V60 02 paper filters ... for $13.00?", the core asked a second question, "Spends above $5.00 always ask", because a UX-audit change (`baeabc5`) lowered that default from $100 to $5. Core fixed it in `1afca16`: an approved question that names the amount now covers the task's spends up to it, the budget still caps them, and the Shopper's buy asks with the total. The $5 default stays, so a purchase waits for the owner once, unless the owner set a daily limit for the Shopper and the purchase goes over it (shown above).
 
 </Evidence>
 
@@ -279,10 +307,10 @@ Content-Digest:  sha-256=:...:
 - The GurtOS Test Store stands in for every merchant, and the household mailbox is a demo POP3 mailbox with sample receipts we wrote, standing in for Gmail. Prices in CAD count against US-cent budgets at a fixed rate of 0.73.
 - Visa Intelligent Commerce: the adapter has never been called; its request values are placeholders until Visa onboards us.
 - The iPhone and Watch app is on TestFlight for internal testers only; it is not in the App Store. The Watch and iPhone shots are from the iOS simulator against a test computer.
+- Per-app permissions: the Settings screen is still landing, so today the owner sets a daily limit or turns an item off through the API. Until the owner does, apps keep working as before.
 - Face ID approvals use real WebAuthn passkeys verified on the computer. The merge gate and our screenshots use a software authenticator; QA has not tried it on a real phone.
 - A watch closes after one purchase, or when you deny it. Watch again for another.
 - The test store keeps price and stock changes in memory, which reset when the computer restarts. After a restart a captured signature could be sent again within its 8 minutes, but its Idempotency-Key still returns the first order instead of charging twice.
 - Visa's sample verifier only knows `@authority` and `@path`, so it would not accept our signatures, which also cover the body.
-- Since core's 3:45 PM change, a spend above $5.00 asks a second time after the purchase's own approval, and this track's merge-gate step has not been updated for it (see Evidence). The walk-through screenshots, apart from the Shopper app itself, were taken before that change and show one question.
 
 </Limits>
