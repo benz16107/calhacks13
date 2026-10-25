@@ -1,6 +1,7 @@
 #!/bin/sh
 # Drive DeviceShots (UITests/DeviceShots.swift) in the booted iPhone simulator. Build first with scripts/build.sh.
 #   scripts/device-shots.sh <out dir> scrolled <name> <gurtos://approval/...>
+#   scripts/device-shots.sh <out dir> tap <name> <gurtos://approval/...>
 #   scripts/device-shots.sh <out dir> faceid <name> <gurtos://approval/...> <task id>
 set -eu
 cd "$(dirname "$0")/.."
@@ -16,6 +17,7 @@ run() {
 }
 case $what in
   scrolled) run testScrolledRequest ;;
+  tap) run testTapApprove ;;
   faceid)
     # Enroll a face in the simulator, then match it when the test shows the sheet.
     xcrun simctl spawn "$dev" notifyutil -s com.apple.BiometricKit.enrollmentChanged 1

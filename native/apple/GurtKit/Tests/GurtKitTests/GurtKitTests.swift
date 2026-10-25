@@ -72,3 +72,12 @@ func phoneKey() throws -> P256.KeyAgreement.PrivateKey { try P256.KeyAgreement.P
 @Test func apnsEndpointNamesTopicAndEnvironment() {
   #expect(apnsEndpoint(topic: "com.benzhou.gurtos", deviceToken: Data([0xab, 0x01]), sandbox: true) == "https://box.gurtos.com/v1/apns/com.benzhou.gurtos/sandbox/ab01")
 }
+
+@Test func decodesFractionalCents() throws {
+  // A Droid task's cost counts model spending in fractions of a cent; one such task must not drop the whole list.
+  let tasks = try JSONDecoder().decode([BoxTask].self, from: Data(#"[{"id":"t1","title":"Fix add()","state":"waiting","costCents":2.02415},{"id":"t2","title":"x","state":"done","costCents":3}]"#.utf8))
+  #expect(tasks.count == 2 && tasks[0].costCents == 2.02415)
+  let a = try JSONDecoder().decode(Approval.self, from: Data(#"{"id":"a","task":"t1","question":"q","costCents":12.2,"state":"pending"}"#.utf8))
+  #expect(a.costCents == 13)
+  #expect(Money.dollars(2.6) == "$0.03")
+}

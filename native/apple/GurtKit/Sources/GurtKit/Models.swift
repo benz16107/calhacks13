@@ -8,8 +8,9 @@ public struct BoxTask: Codable, Identifiable, Hashable, Sendable {
   public var state: String
   public var source: String?
   public var workspace: String?
-  public var costCents: Int?
-  public var budgetCents: Int?
+  /** Model spending makes these fractional (2.02415 cents); a whole-number decode would drop the whole list. */
+  public var costCents: Double?
+  public var budgetCents: Double?
   public var step: String?
   public var summary: String?
   public var error: String?
@@ -42,7 +43,7 @@ public struct Approval: Codable, Identifiable, Hashable, Sendable {
   public var id: String
   public var task: String
   public var question: String
-  public var costCents: Int
+  @WholeCents public var costCents: Int
   public var payee: String?
   public var purpose: String?
   public var state: String
@@ -108,7 +109,7 @@ public struct LogEvent: Codable, Identifiable, Hashable, Sendable {
   public var host: String?
   public var tool: String?
   public var ok: Bool?
-  public var cents: Int?
+  public var cents: Double?
   public var what: String?
   public var track: String?
   public var result: String?
@@ -143,7 +144,24 @@ public struct PairResult: Codable, Sendable {
   public var edition: String?
 }
 
+/** A cents value the box may send as a fraction: rounded up, so a request never shows less than it spends. */
+@propertyWrapper
+public struct WholeCents: Codable, Hashable, Sendable {
+  public var wrappedValue: Int
+  public init(wrappedValue: Int) { self.wrappedValue = wrappedValue }
+  public init(from decoder: Decoder) throws {
+    let c = try decoder.singleValueContainer()
+    if let i = try? c.decode(Int.self) { wrappedValue = i } else { wrappedValue = Int(try c.decode(Double.self).rounded(.up)) }
+  }
+  public func encode(to encoder: Encoder) throws {
+    var c = encoder.singleValueContainer()
+    try c.encode(wrappedValue)
+  }
+}
+
 public enum Money {
+  public static func dollars(_ cents: Double) -> String { dollars(Int(cents.rounded())) }
+
   /** "$40", "$12.50": whole dollars without cents, as the portal writes them. */
   public static func dollars(_ cents: Int) -> String {
     let f = NumberFormatter()

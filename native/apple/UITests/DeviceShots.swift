@@ -42,6 +42,17 @@ final class DeviceShots: XCTestCase {
     shot(env["NAME"] ?? "scrolled")
   }
 
+  /** Tap Approve and capture what opens (a Shopper purchase opens the box's own passkey page). */
+  func testTapApprove() throws {
+    let app = launch(["GURTOS_OPEN": env["OPEN"] ?? ""])
+    let approve = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Approve'")).firstMatch
+    XCTAssert(approve.waitForExistence(timeout: 20))
+    Thread.sleep(forTimeInterval: 1)
+    approve.tap()
+    Thread.sleep(forTimeInterval: 6)
+    shot(env["NAME"] ?? "tapped")
+  }
+
   /** Approve with Face ID: the sheet, the match, then the task and Activity with how it was answered. */
   func testApproveWithFaceID() throws {
     let app = launch(["GURTOS_OPEN": env["OPEN"] ?? ""])

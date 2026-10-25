@@ -61,9 +61,9 @@ public final class BoxModel {
   }
 
   /** Spent today, counted from the log: model costs and paid tool calls. */
-  public var spentToday: Int {
+  public var spentToday: Double {
     let start = Calendar.current.startOfDay(for: .now)
-    return events.reduce(0) { sum, e in
+    return events.reduce(0.0) { sum, e in
       guard (e.type == "cost" || e.type == "tool.result"), let c = e.cents, let d = ISO8601DateFormatter.box.date(from: e.at), d >= start else { return sum }
       return sum + c
     }
