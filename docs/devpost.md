@@ -15,7 +15,7 @@ Operating systems built for AI agents: each task runs as its own Linux user, in 
 
 ## Video
 
-The main video is produced by the team after the build (screen recordings and animation). Its unlisted YouTube link goes here when it is ready.
+https://youtu.be/-AEckaYf5yE ("GurtOS: operating systems built for AI agents", 2:58, unlisted, English captions). Paste this link in the Video field.
 
 ## Image gallery (upload in this order)
 

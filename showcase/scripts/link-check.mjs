@@ -49,7 +49,8 @@ if (external) {
   await Promise.all(list.map(async (u) => {
     try {
       const r = await fetch(u, { redirect: 'follow', signal: AbortSignal.timeout(15000), headers: { 'user-agent': 'Mozilla/5.0 link-check' } });
-      if (r.status >= 400 && ![401, 403, 429].includes(r.status)) { console.log(`external ${r.status}: ${u} (on ${outside.get(u)})`); bad++; }
+      // the live demo answers 503 with a friendly page when every demo computer is in use (it caps visitors on purpose)
+      if (r.status >= 400 && ![401, 403, 429].includes(r.status) && !(r.status === 503 && new URL(u).hostname === 'try.gurtos.com')) { console.log(`external ${r.status}: ${u} (on ${outside.get(u)})`); bad++; }
     } catch (e) { console.log(`external error: ${u} (${e.message}) (on ${outside.get(u)})`); bad++; }
   }));
   console.log(`${list.length} outside links fetched`);
