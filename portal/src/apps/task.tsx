@@ -59,6 +59,11 @@ export function TaskApp({ id }: { id: string }) {
       title={t?.title ?? taskTitle(id)}
       end={
         <>
+          {t && !['running', 'queued'].includes(t.state) && (
+            <Button icon="media-playback-start" onClick={() => open(`replay/${id}`)}>
+              Replay
+            </Button>
+          )}
           {undoable && (
             <Button kind="destructive" onClick={() => setConfirm(true)}>
               Undo task

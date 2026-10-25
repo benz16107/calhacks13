@@ -131,5 +131,46 @@ async function setupFlow(d: DemoKit, base: string) {
 
   const done = (await call('POST', '/setup/finish')).body;
   d.check(done.done === true && done.steps?.welcome, `Start using ${PRODUCT}: setup is done and the desktop shows`);
+
+  // The flight recorder: a finished task replays in order, with its block, its request and who answered, its spending
+  // so far, and (where this computer records them) the files as they were at each point.
+  const { replayPoints, nextInteresting, filesAt } = await import('./src/apps/replay-model.ts');
+  const made = await call('POST', '/tasks', {
+    title: 'Write the trip plan',
+    worker: 'fake',
+    source: 'portal-demo',
+    tools: ['example.spend'],
+    budgetCents: 500,
+    prompt: ['write plan.md first draft', 'fetch https://blocked.example/upload out.txt', 'ask Publish the plan to the family calendar?', 'call example.spend {"cents":120,"on":"a test print"}', 'write plan.md final plan', 'say Wrote plan.md'].join('\n'),
+  });
+  let task: { state: string; costCents: number } | undefined;
+  let events: any[] = [];
+  for (let n = 0; n < 60 && !['done', 'failed'].includes(task?.state ?? ''); n++) {
+    await new Promise((r) => setTimeout(r, 500));
+    const got = (await call('GET', `/tasks/${made.body.id}`)).body;
+    task = got.task;
+    events = got.events ?? [];
+    for (const a of got.approvals ?? []) if (a.state === 'pending') await call('POST', `/approvals/${encodeURIComponent(a.id)}`, { approved: true, by: 'portal demo' });
+  }
+  const points = replayPoints(events);
+  const kinds = points.map((x) => x.kind);
+  const ordered = points.every((x, j) => !j || points[j - 1].seq < x.seq);
+  const costs = points.map((x) => x.costCents);
+  const firstMatter = points[nextInteresting(points, 0)]?.kind;
+  d.check(
+    task?.state === 'done' && ordered && ['start', 'blocked', 'ask', 'approved', 'spend', 'done'].every((k) => kinds.includes(k as never)) && firstMatter === 'blocked' && costs.every((c, j) => !j || c >= costs[j - 1]) && costs.at(-1) === task.costCents,
+    `Replay: a finished task plays back in order as ${points.length} points (${[...new Set(kinds)].join(', ')}); Next event jumps to the block first; spending so far climbs to the task's ${task?.costCents ?? 0} cents`,
+  );
+  const rec = await call('GET', `/tasks/${made.body.id}/replay`);
+  if (rec.status === 200) {
+    const firstWrite = points.find((x) => x.kind === 'step' && /first draft/.test((x.event as { text: string }).text));
+    const at = firstWrite && filesAt(rec.body.points.map((x: { seq: number }) => x.seq), firstWrite.seq);
+    const then = at === undefined ? undefined : (await call('GET', `/tasks/${made.body.id}/diff?at=${at}`)).body;
+    const now = (await call('GET', `/tasks/${made.body.id}/diff`)).body;
+    d.check(/first draft/.test(then?.diff ?? '') && !/final plan/.test(then?.diff ?? '') && /final plan/.test(now.diff), 'Replay: at the first write, plan.md reads "first draft"; at the end it reads "final plan"');
+  }
+  const appJs = await (await fetch(base + '/app.js')).text();
+  d.check(appJs.includes('Replay: ') && appJs.includes('Next event'), 'The Replay window is in the app: a timeline, play, step and Next event, from the Task window and the Tasks menu');
+
   if (!before.done) await call('POST', '/setup/reopen'); // leave the box as it was
 }

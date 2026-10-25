@@ -12,10 +12,12 @@ import { TrackApp, trackTitle } from './track.tsx';
 import { PairApp } from './pair.tsx';
 import { AuditApp } from './audit.tsx';
 import { RequestApp, WaitingApp } from './business.tsx';
+import { ReplayApp } from './replay.tsx';
 
 wm.apps = {
   tasks: { title: () => 'Tasks', icon: 'tasks', size: [1480, 689], render: (arg) => <TasksApp view={arg} />, single: true },
   task: { title: (id) => taskTitle(id), icon: 'tasks', size: [1400, 660], render: (id) => <TaskApp id={id} key={id} /> },
+  replay: { title: (id) => `Replay: ${taskTitle(id)}`, icon: 'tasks', size: [1480, 820], render: (id) => <ReplayApp id={id} key={id} /> },
   activity: { title: () => 'Activity', icon: 'activity', size: [1560, 900], render: () => <ActivityApp />, single: true },
   'time-machine': { title: () => 'Time Machine', icon: 'time-machine', size: [1480, 680], render: () => <TimeMachineApp />, single: true },
   settings: { title: () => 'Settings', icon: 'settings', size: [1240, 920], render: (page) => <SettingsApp page={page} />, single: true },

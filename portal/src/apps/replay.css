@@ -1,0 +1,37 @@
+/* The flight recorder (replay.tsx): controls on top, the timeline beside what this point was. */
+.gos-rp { display: grid; grid-template-rows: auto 1fr; min-height: 0; padding: 0; }
+.gos-rp-transport { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-sm) var(--space-md); padding: 10px 16px; border-bottom: 1px solid var(--color-border-default); }
+.gos-rp-buttons { display: flex; align-items: center; gap: 4px; }
+.gos-rp-scrub { position: relative; flex: 1 1 260px; display: flex; align-items: center; min-width: 200px; }
+.gos-rp-range { width: 100%; margin: 0; accent-color: var(--color-accent-fg); cursor: pointer; }
+/* The points that matter, as ticks under the track (the thumb is about 16 px wide). */
+.gos-rp-marks { position: absolute; left: 8px; right: 8px; bottom: -6px; height: 6px; pointer-events: none; }
+.gos-rp-mark { position: absolute; width: 3px; height: 6px; margin-left: -1px; border-radius: 1px; background: var(--color-attention-fg); }
+.gos-rp-mark.is-bad { background: var(--color-destructive-fg); }
+.gos-rp-mark.is-ok { background: var(--color-success-fg); }
+.gos-rp-mark.is-undone { background: var(--color-text-secondary); }
+.gos-rp-pos { white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+.gos-rp-body { display: grid; grid-template-columns: minmax(300px, 440px) minmax(0, 1fr); min-height: 0; }
+.gos-rp-list { grid-column: 1; grid-row: 1; margin: 0; padding: 6px; list-style: none; overflow: auto; border-right: 1px solid var(--color-border-default); }
+.gos-rp-row { display: grid; grid-template-columns: 64px 16px minmax(0, 1fr) auto; align-items: start; gap: 8px; width: 100%; padding: 8px 10px; border: 0; border-radius: var(--radius-sm); background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.gos-rp-row:hover { background: var(--color-button-bg); }
+.gos-rp-row[aria-current] { background: var(--color-accent-subtle); }
+.gos-rp-row .g-icon { margin-top: 2px; }
+.gos-rp-time { font-variant-numeric: tabular-nums; padding-top: 1px; }
+.gos-rp-text { overflow-wrap: anywhere; }
+.gos-rp-row.is-bad .g-icon, .gos-rp-kind.is-bad { color: var(--color-destructive-fg); }
+.gos-rp-row.is-ask .g-icon, .gos-rp-kind.is-ask { color: var(--color-attention-fg); }
+.gos-rp-row.is-ok .g-icon, .gos-rp-kind.is-ok { color: var(--color-success-fg); }
+
+.gos-rp-now { grid-column: 2; grid-row: 1; display: flex; flex-direction: column; gap: 8px; min-width: 0; padding: 20px 24px; overflow: auto; }
+.gos-rp-now > p { margin: 0; }
+.gos-rp-kind { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; }
+.gos-rp-files-head { margin: 12px 0 0; }
+
+/* A phone: the controls, this point, then the timeline, one under the other (the page order). */
+.gos-rp.is-phone { display: flex; flex-direction: column; overflow: auto; }
+.gos-rp.is-phone .gos-rp-body { display: flex; flex-direction: column; }
+.gos-rp.is-phone .gos-rp-list { border-right: 0; border-top: 1px solid var(--color-border-default); overflow: visible; }
+.gos-rp.is-phone .gos-rp-now { overflow: visible; padding: 16px; }
+.gos-rp.is-phone .gos-rp-transport { position: sticky; top: 0; z-index: 1; background: var(--color-window-bg); }

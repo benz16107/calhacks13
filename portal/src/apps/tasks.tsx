@@ -75,6 +75,7 @@ export function TasksApp({ view }: { view: string }) {
     { label: 'Open', icon: 'document-open-recent', run: () => open(`task/${t.id}`) },
     { label: 'Copy task ID', icon: 'edit-copy', run: () => void navigator.clipboard?.writeText(t.id).then(() => win?.toast(`Copied ${t.id}`)) },
     'sep',
+    { label: 'Replay', icon: 'media-playback-start', disabled: t.state === 'running' || t.state === 'queued', run: () => open(`replay/${t.id}`) },
     { label: 'Undo task…', icon: 'edit-undo', destructive: true, disabled: t.state === 'undone' || t.state === 'running' || t.state === 'queued', run: () => setConfirm(t) },
   ];
   const keys = (e: KeyboardEvent) => {
