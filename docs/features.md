@@ -32,11 +32,11 @@ Checked against main `7fe6651`, Sat Oct 24 08:09 PT. `./demo` from a clean workt
 |---|---|
 | verified (ISO) | 3 |
 | verified | 56 |
-| merged | 181 |
+| merged | 184 |
 | building | 1 |
 | planned | 1 |
 | not pursued | 6 |
-| **Total** | **248** |
+| **Total** | **251** |
 
 **Collisions** (detail below): none open at 03:27. The three found at 02:25 are resolved and Business is on main. Still
 watched: portal/dist rebuilt from merged sources (C-4).
@@ -101,6 +101,9 @@ watched: portal/dist rebuilt from merged sources (C-4).
 | Replay on a phone (390 px): controls on top, then the current point and its files, then the timeline; nothing runs off the edge. Light and dark | portal | merged (main 220ac4d; QA has not run it by hand) | 220ac4d | none | Anthropic |
 | Replay in Business: a person opens Replay only for tasks their role lets them open | portal | merged (main 220ac4d; QA has not run it by hand) | 220ac4d | none | Anthropic |
 | Replay is not offered on a running or queued task (no Replay button) | portal | merged (main 220ac4d; QA has not run it by hand) | 220ac4d | none | Anthropic |
+| App permissions: a manifest plus the owner's answers (`GET` and `PUT /api/permissions`). The portal and Personal screens for it are the UI owners' work | core | merged (main 4b473ea; gate 39 passed, 0 failed; not deployed) | 4b473ea | permissions: an app does only what the owner allowed | all |
+| Permission enforcement: keys, money, shell, hosts, folders and strangers. Money and a key are refused and logged; a daily limit becomes a question. Not built: limiting hosts before first use, allow-once for a new host, a blocking first-run prompt | core | merged (main 4b473ea; gate 39 passed, 0 failed; not deployed) | 4b473ea | same step | all |
+| Setup codes forgive capitals and dashes, and a wrong kind of code keeps the code | core | merged (main 4b473ea; gate 39 passed, 0 failed; not deployed) | 4b473ea | command setup step | all |
 | Docs site gurtos.com | docs | verified Oct 24 01:00 (82+ pages, links, privacy scan) | 212c817 | site `npm run check` | all |
 | Showcase calhacks.gurtos.com | submission | verified Oct 24 01:30 | 52fb7f7, 213622e | showcase link checker | all |
 
