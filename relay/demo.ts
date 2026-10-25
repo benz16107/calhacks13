@@ -151,6 +151,8 @@ export default async function (d: DemoKit) {
     d.check((await raw('POST', '/api/quickstart/send', send, plainPhone)).status === 403 && (await raw('POST', '/api/quickstart/send', { ...send, pk: 'x' }, ownerPhone)).status === 400, 'only a phone paired as the owner can send a setup, and a bad request is refused by field');
     await raw('DELETE', '/api/pair/self', undefined, plainPhone);
     d.check((await d.api('POST', '/quickstart/stop', {})).state === 'stopped', 'Stop on the new computer ends the session');
+    const page = await fetch(`${d.url}/quickstart`, { headers: { accept: 'text/html' } });
+    d.check((page.headers.get('content-type') ?? '').startsWith('text/html'), "a browser opening /quickstart on the computer's own address gets the app's page, not the API");
   } finally {
     await d.api('POST', '/setup/finish', {});
   }

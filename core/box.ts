@@ -1913,7 +1913,10 @@ class Core {
 
   /** GET, POST and DELETE /api/remote, GET /api/remote/name/<name>; GET, PUT and DELETE /api/push, POST /api/push/test. */
   remoteRoutes(req: http.IncomingMessage, res: http.ServerResponse) {
-    const p = new URL(req.url ?? '/', 'http://box').pathname.replace(/^\/api(?=\/)/, '');
+    const raw = new URL(req.url ?? '/', 'http://box').pathname;
+    // A browser page load without /api (the app's own /quickstart page) gets the app, not this API.
+    if (req.method === 'GET' && !raw.startsWith('/api/') && (req.headers.accept ?? '').includes('text/html')) return false;
+    const p = raw.replace(/^\/api(?=\/)/, '');
     const m = req.method ?? 'GET';
     const name = p.match(/^\/remote\/name\/([^/]+)$/)?.[1];
     const d = this.deviceOf(req);
