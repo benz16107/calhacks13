@@ -65,8 +65,8 @@ test('linking another box needs proof of its code', () => {
 });
 
 test("ASI:One's @mention is not part of the message, and only words of a check make a status check", () => {
-  const r = py(`print(json.dumps([brain.AT_ME.sub('', t).strip() for t in ['@agent1qvuk46tnt9lnscher0pawl7pr5y525mak66ptwsrvg4kff0pfy9m2sy0us6 Is the Hario V60 filter back in stock?', '@gurtos {"action": "approve"}', 'email me@home.com']]))`);
-  assert.deepEqual(r, ['Is the Hario V60 filter back in stock?', '{"action": "approve"}', 'email me@home.com']);
+  const r = py(`print(json.dumps([brain.AT_ME.sub('', t).strip() for t in ['@agent1qvuk46tnt9lnscher0pawl7pr5y525mak66ptwsrvg4kff0pfy9m2sy0us6 Is the Hario V60 filter back in stock?', '@gurtos {"action": "approve"}', 'email me@example.com']]))`);
+  assert.deepEqual(r, ['Is the Hario V60 filter back in stock?', '{"action": "approve"}', 'email me@example.com']);
   const s = py(`print(json.dumps([brain.STATUS.search(t.lower()) is not None for t in ['Is the Hario V60 filter back in stock?', 'Status check: how is the fix going?', 'Follow up: has the test fix completed?']]))`);
   assert.deepEqual(s, [false, true, true]);
 });
