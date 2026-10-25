@@ -18,13 +18,14 @@ How it was walked:
 
 ## Status
 
-**Fixed 89, closed 1, open 2** (92 findings: 19 web, 22 Server, 36 Personal, 15 parity). Each fixed
+**Fixed 89, closed 2, open 10** (101 findings: 19 web, 22 Server, 36 Personal, 15 parity, 9 from the test disc). Each fixed
 finding gets a **Fixed** line with the commit and an after-screenshot in `after/`.
 
 | Owner | Open |
 |---|---|
-| image and release | P-1: the rebuild from 4a44586, go after the test-disc walk |
-| personal | E-14 (measured once on the rebuilt ISO) |
+| image | I-1 (P1), I-7, I-8, I-9 |
+| personal | I-2 (P1), I-3, I-4, I-5, I-6 |
+| image and release | P-1: the one rebuild, after I-1 and I-2 |
 
 Release (P-1): one rebuild of all four ISOs from one main commit, about 75 minutes to a verified release plus 20 for
 the download pages. The UX thread sends the commit once the Personal, image and core P0 and P1 fixes are in. Target
@@ -605,6 +606,47 @@ plain-zero alternate, so the only fix is a second typeface for numbers. Recommen
   ("Agent wallet"). Owner: personal.
 
 ![](after/personal-sidebar-apps.png)
+
+## Personal test disc on benmac (arm64, main 167f46e, before the release rebuild)
+
+A fresh install of image's arm64 test disc in QEMU with HVF on benmac, 39 screenshots in `after/iso/`. It predates
+P-4 and E-6 (4a44586), so those are checked on the release discs.
+
+**Confirmed on an installed system:** P-17 (blue login ring, "GurtOS Personal" on the boot splash, `03`, `37`),
+E-15 (the menu says it erases the whole disk, `01`), E-1 printing (`13`), E-2 GNOME Software with Flathub, a Flatpak
+installed (`30`, `31`, `33`), E-3 no Ubuntu upgrade offer and the "System update" row reads "GurtOS 0.1.0 is up to
+date" (`20`, `34`), E-4 Google sign-in opens (`16`, `17`), E-5 Sharing (`15`), E-7 zram and oomd, E-8 Orca, E-9 Power
+Mode (`14`), E-10 H.264 decoder, E-11 kernel 7.0.0-38, E-13 GurtOS logo on About and one terminal in search (`18`,
+`32`), P-2 a fake key refused and not saved, "Skip for now" when empty (`06`, `07`, `05`), P-10 seven personal apps,
+only Find on (`09`), P-13 $5.00 and $1.00 (`08`), P-29 plain zeros (`35`), P-33 (`12`), P-3 Start with no folder
+(`23`, `24`), P-5 counts agree (`25`, `26`), P-9 offline and back (`27` to `29`), the real build id on About (`22`).
+
+![](after/iso/06-setup-fake-key-refused.png) ![](after/iso/30-software-search-flathub.png)
+![](after/iso/20-gurtos-settings.png) ![](after/iso/28-offline-popover.png)
+
+**E-14 closed: not the GurtOS session.** On a quiet host, the GurtOS session and the same install in Ubuntu's session
+mode are within 0.05 s (warm first change: Files 0.63 against 0.67 s, Settings 0.61 against 0.69, Console 0.56
+against 0.57, Text Editor 0.67 against 0.65). The earlier 0.2 s against stock Ubuntu was measured on a swapping host
+and is not reproduced.
+
+**New on the installed system:**
+- **I-1. P1, image.** `box-droid.service` downloads Droid with no timeout. On this install it stalled at 21 MB for
+  50 minutes, held boot unfinished, and every task failed with "Droid is still downloading". Fix: `curl --max-time`,
+  `--speed-limit` with retries, `TimeoutStartSec`, and not blocking `multi-user.target`.
+- **I-2. P1, personal.** With no model key, or Droid not there yet, New task creates a task that fails at once. Fix:
+  say it before Start: "Add a model key in GurtOS Settings first" with Open Settings, or "Agents can start in a
+  minute: GurtOS is still getting ready."
+- **I-3. P2, personal.** The first notice says "An agent is working on a task" for a task that already failed.
+- **I-4. P2, personal.** The dock badge stays at 1 when nothing runs or needs you (`38`).
+- **I-5. P2, personal.** Offline, a request notice still offers Approve and Deny, and the menu offers "Talk to your
+  computer". Fix: disable both while offline, like New task.
+- **I-6. P2, personal.** Setup keeps "Anthropic didn't accept this key" in its footer after the field is cleared.
+- **I-7. P2, image.** Settings' sidebar still has an "Ubuntu Desktop" panel.
+- **I-8. P2, image.** The computer name typed in first run is ignored; the hostname stays `gurt-21c0fb`.
+- **I-9. P2, image.** The arm64 disc menu wraps its second line to the left edge with wide letter spacing (`01`), and
+  the installer's status is two lines, not one (`02`).
+
+**Still Ben's call:** "Time Machine" is Apple's product name, and Setup's last page and both apps use it.
 
 ## Everyday use against stock Ubuntu
 
