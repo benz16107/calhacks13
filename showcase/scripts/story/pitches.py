@@ -42,6 +42,39 @@ E = {
 }
 q = lambda t: "'" + t.replace("'", "''") + "'"
 md = lambda t: re.sub(r'<a href="([^"]+)">(.*?)</a>', r'[\2](\1)', t).replace('<code>', '`').replace('</code>', '`')
+
+SHORT_START, SHORT_END = '<!-- DEVPOST SHORT START -->', '<!-- DEVPOST SHORT END -->'
+SHORT_HEAD = '## About the project, short version (PASTE THIS ONE: Devpost caps the field at 50,000 characters)'
+def write_short(d):
+    """The Devpost "About the project" field holds 50,000 characters. Build a short version from the full one:
+    the summary, then each sponsor section cut to its pitch, proof and link (the track pages hold the rest).
+    Figma keeps its whole section, because its stage log is a deliverable."""
+    d = d.replace('## About the project, full version (over the 50,000 character limit; the source the short version is made from)', '## About the project (paste from here to the end)')
+    a = d.index('<!-- SUMMARY START -->') + len('<!-- SUMMARY START -->'); b = d.index('<!-- SUMMARY END -->')
+    summary = d[a:b].strip()
+    c = d.index('<!-- SPONSORS START -->') + len('<!-- SPONSORS START -->'); e = d.index('<!-- SPONSORS END -->')
+    out = [summary, '', '## Sponsor tracks', '', 'Every track has its own page with the criteria, evidence, screenshots and limits: https://calhacks.gurtos.com', '']
+    for sec in re.split(r'\n(?=### )', d[c:e].strip()):
+        lines = [l for l in sec.split('\n') if l.strip()]
+        head = lines[0]
+        if head.startswith('### Figma'):
+            out += ['\n'.join(lines), '']; continue
+        # in order: the pitch, proof and link, the "Fits ..." line, and every short labelled line (problem, awards, our Actor, feedback)
+        keep = [l for l in lines[1:] if l.startswith('**Best shown in:**') or l.startswith('**Proof:**') or l.startswith('[Full write-up')
+                or l.startswith('Fits ') or (l.startswith('**') and len(l) <= 600)]
+        out += [head, ''] + [x + '\n' for x in keep]
+    short = '\n'.join(out).strip()
+    block = f"{SHORT_HEAD}\n\n{SHORT_START}\n\n{short}\n\n{SHORT_END}\n\n"
+    if SHORT_START in d:
+        x = d.index(SHORT_HEAD); y = d.index(SHORT_END) + len(SHORT_END) + 2
+        d = d[:x] + block + d[y:]
+    else:
+        x = d.index('## About the project (paste from here to the end)')
+        d = d[:x] + block + d[x:]
+    d = d.replace('## About the project (paste from here to the end)', '## About the project, full version (over the 50,000 character limit; the source the short version is made from)')
+    print('short version', len(short), 'characters')
+    return d
+
 if __name__ == '__main__':
     # Since the track-page redesign the pitch and "Best shown in" live in each page's frontmatter (the page writers own them).
     # This script now only copies them into docs/devpost.md; it never writes the pages.
@@ -51,6 +84,8 @@ if __name__ == '__main__':
     fm = json.loads(subprocess.run(['node', os.path.join(here, 'frontmatter.mjs'), root], check=True, capture_output=True, text=True).stdout)
     E = {k: (v['editions'], v['pitch']) for k, v in fm.items()}
     p = f'{root}/docs/devpost.md'; d = open(p).read()
+    if SHORT_START in d:  # work on the full version only; the short one is rebuilt from it below
+        d = d[:d.index(SHORT_HEAD)] + d[d.index(SHORT_END) + len(SHORT_END) + 2:]
     d = re.sub(r"\n\*\*Best shown in:\*\*.*\n", "\n", d)
     for slug, (ed, pitch) in E.items():
         link = f"(https://calhacks.gurtos.com/tracks/{slug}/)"
@@ -70,5 +105,6 @@ if __name__ == '__main__':
         new = '**Proof:** ' + plain(v['proof']).strip() + ''.join(f' {u}' for u in keep)
         a = h + m.start(); d = d[:a] + new + d[a + len(m.group(0)):]
     d = re.sub(r'\n{3,}', '\n\n', d)
+    d = write_short(d)
     open(p, 'w').write(d)
     print('ok', len(E))
