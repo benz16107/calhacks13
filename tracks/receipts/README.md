@@ -8,6 +8,12 @@ and they do not have to trust the box, GurtOS or you.
 Open **Receipts** in the app list (portal, Personal or phone), pick a finished task, and choose **Receipt** or
 **Redacted**. The page shows a QR code. Scanning it opens the public check page, `gurtos.com/verify`.
 
+![gurtos.com/verify checking a receipt from the cloud box: signature, key, chain and entries pass](screenshots/verify-ok.png)
+
+The same receipt with one character of the title changed: the signature fails, and the page says so.
+
+![The same receipt after one changed character: the signature check fails](screenshots/verify-bad.png)
+
 ## What a receipt proves
 
 | It proves | How |

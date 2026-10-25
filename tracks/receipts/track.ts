@@ -121,7 +121,8 @@ export default {
         const receipt = buildReceipt({ lines, taskId: task, mode, box: { name: boxName(box), machine }, key, id, anchors: { solana, elastic } });
         fs.mkdirSync(DIR, { recursive: true, mode: 0o700 });
         fs.writeFileSync(path.join(DIR, `${id}.json`), JSON.stringify(receipt), { mode: 0o600 });
-        box.note({ kind: 'receipts.share', id, mode, entries: receipt.entries.length, fingerprint: receipt.box.keyFingerprint }, task);
+        // Not tagged with the task: a note on the task would extend the next receipt's range past the Solana audit that covers it.
+        box.note({ kind: 'receipts.share', task, id, mode, entries: receipt.entries.length, fingerprint: receipt.box.keyFingerprint });
         const origin = originOf(req);
         const address = `${origin}/t/receipts/r?id=${id}`;
         return json({ id, mode, entries: receipt.entries.length, chainLines: receipt.chain.lines.length, anchors: { solana: !!solana, elastic: !!elastic }, address, verifyUrl: `${origin}/t/receipts/verify#r=${encodeURIComponent(address)}`, publicVerifyUrl: `https://gurtos.com/verify#r=${encodeURIComponent(address)}` });

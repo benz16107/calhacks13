@@ -65,6 +65,10 @@ export default async function (d: DemoKit) {
   now[at] = original;
   fs.writeFileSync(file, now.join('\n'));
 
+  // Making receipts must not add entries to the task, or each receipt would reach further than the last.
+  const again = await d.api<any>('GET', `/t/receipts/r?id=${(await d.api<Shared>('POST', '/t/receipts/share', { task: t.id, mode: 'full' })).id}`);
+  d.check(again.chain.to === fetched.chain.to, `a second receipt for the same task ends at the same entry (${again.chain.to}), so a Solana audit that covers the first covers it too`);
+
   const gone = await fetch(`http://127.0.0.1:${fs.readFileSync(path.join(d.home, 'api.port'), 'utf8').trim()}/t/receipts/r?id=${'0'.repeat(32)}`);
   d.check(gone.status === 404, 'a receipt address that does not exist answers 404');
   const key = (await d.api<{ type: string; data?: { kind?: string; fingerprint?: string } }[]>('GET', '/log')).find((e) => e.type === 'note' && e.data?.kind === 'receipts.key');
