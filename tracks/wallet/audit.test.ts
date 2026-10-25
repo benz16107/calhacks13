@@ -6,7 +6,8 @@ import path from 'node:path';
 import { test } from 'node:test';
 
 process.env.BOX_HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'audit-test-'));
-const { audits, fingerprint, latestAudit, verify } = await import('./audit.ts');
+const { audits, fingerprint, latestAudit, memoText, verify } = await import('./audit.ts');
+const { createHash } = await import('node:crypto');
 const { walletDir } = await import('./lib.ts');
 
 const log = path.join(process.env.BOX_HOME, 'log.jsonl');
@@ -32,4 +33,31 @@ test('verify matches untouched history, and catches an edited old line', async (
   const v = await verify(log, false);
   assert.equal(v.ok, false);
   assert.deepEqual(v.checks.map((c) => c.matches), [false, false]);
+});
+
+test('head is the hash of line N as written, the value the next chained line carries as prev', () => {
+  const sha = (t: string) => createHash('sha256').update(t).digest('hex');
+  const chain = path.join(process.env.BOX_HOME!, 'chain.jsonl');
+  const l1 = JSON.stringify({ seq: 1, type: 'note', prev: '0'.repeat(64) });
+  const l2 = JSON.stringify({ seq: 2, type: 'note', prev: sha(l1) });
+  const l3 = JSON.stringify({ seq: 3, type: 'note', prev: sha(l2) });
+  fs.writeFileSync(chain, [l1, l2, l3].map((l) => l + '\n').join(''));
+  assert.equal(fingerprint(chain, 2).head, sha(l2));
+  assert.equal(fingerprint(chain, 2).head, JSON.parse(l3).prev);
+  assert.equal(fingerprint(chain).head, sha(l3));
+  assert.equal(fingerprint(path.join(process.env.BOX_HOME!, 'none.jsonl')).head, undefined);
+});
+
+test('the memo puts head last, and is unchanged for records without one', () => {
+  const r = { seq: 7, sha256: 'a'.repeat(64), prev: 'b'.repeat(64) };
+  assert.equal(memoText(r), `gurtos-audit v1 seq=7 sha256=${r.sha256} prev=${r.prev}`);
+  assert.equal(memoText({ ...r, head: 'c'.repeat(64) }), `gurtos-audit v1 seq=7 sha256=${r.sha256} prev=${r.prev} head=${'c'.repeat(64)}`);
+  assert.ok(memoText({ ...r, head: 'c'.repeat(64) }).length < 566); // the Memo program takes up to 566 bytes
+});
+
+test('verify also catches an edit that keeps the record, via head', async () => {
+  const a = fingerprint(log, 2);
+  assert.ok(a.head);
+  fs.writeFileSync(path.join(walletDir(), 'audit.jsonl'), JSON.stringify({ date: 'd', ...a, head: 'f'.repeat(64), prev: '0'.repeat(64) }) + '\n');
+  assert.equal((await verify(log, false)).checks[0].matches, false);
 });

@@ -230,6 +230,9 @@ once from a different wallet (a wallet can't pay itself).
   **The hash:** SHA-256 over the raw bytes of lines 1 to N of `log.jsonl`, each with its trailing newline. An
   auditor can check it with standard tools: `head -n N /var/lib/box/log.jsonl | sha256sum` gives the same hex.
   `prev` is the previous fingerprint's hex (64 zeros for the first), so editing any old line breaks every later one.
+  The memo reads `gurtos-audit v1 seq=<N> sha256=<hex> prev=<hex> head=<hex>`. `head` is the SHA-256 of log line N
+  as written, without its newline: the value line N+1 carries as its own `prev` in the core's hash chain. It lets a
+  receipt for one task be tied to the memo without the whole log. Memos from before `head` end after `prev=`.
 
 ### Known limits
 

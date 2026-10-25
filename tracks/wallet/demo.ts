@@ -4,6 +4,7 @@
 // a joke (402), pays $0.01 within its $0.02 budget and gets the joke. Then a $0.03 report is over budget, so
 // it waits for an OK, and goes through once approved. Both payments are checked on chain. The test API settles
 // through Coinbase's CDP facilitator when the vault has CDP keys, else through x402.org.
+import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import http from 'node:http';
 import type { AddressInfo } from 'node:net';
@@ -206,4 +207,11 @@ export default async function (d: DemoKit) {
   d.check(rec.tx && check.ok, `the action log's fingerprint (seq ${rec.seq}) is on Solana devnet and still matches the log: ${rec.explorer}`);
   const logged = (await d.api<LogEvent[]>('GET', '/log')).find((e) => e.type === 'note' && (e.data as any)?.audit?.tx === rec.tx);
   d.check(logged && (logged.type === 'note') && (logged.data as any).audit.sha256 === rec.sha256 && (logged.data as any).audit.cluster === 'devnet' && (logged.data as any).audit.seq === rec.seq, 'the audit is itself in the action log: a note with seq, hash, transaction id and cluster devnet');
+  // head: the hash of log line `seq` as written, which the next line carries as its `prev`. It is also in the memo on chain.
+  const logLines = fs.readFileSync(path.join(d.home, 'log.jsonl'), 'utf8').split('\n').filter(Boolean);
+  const head = createHash('sha256').update(logLines[rec.seq - 1]).digest('hex');
+  d.check(
+    rec.head === head && (logged as any)?.data.head === head && (logged as any).data.kind === 'audit' && check.chain?.memo?.endsWith(` head=${head}`),
+    `the fingerprint carries head=${head.slice(0, 12)}... (line ${rec.seq}'s hash) in the log note and in the Solana memo, so one receipt can be tied to it`,
+  );
 }

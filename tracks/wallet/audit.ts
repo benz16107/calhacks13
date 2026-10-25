@@ -15,9 +15,12 @@ import { RPC, explorer, signer, walletDir } from './lib.ts';
 const MEMO = address('MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr');
 const ZERO = '0'.repeat(64);
 const MIN_LAMPORTS = 20_000n; // a memo transaction costs 5,000
-const memoText = (r: { seq: number; sha256: string; prev: string }) => `gurtos-audit v1 seq=${r.seq} sha256=${r.sha256} prev=${r.prev}`;
+/** `head` goes last, so readers that match `seq= sha256= prev=` keep working; records made before it have none. */
+export const memoText = (r: { seq: number; sha256: string; prev: string; head?: string }) =>
+  `gurtos-audit v1 seq=${r.seq} sha256=${r.sha256} prev=${r.prev}${r.head ? ` head=${r.head}` : ''}`;
 
-export type AuditRecord = { date: string; seq: number; sha256: string; prev: string; tx?: string; explorer?: string };
+/** `head` is the hash of line `seq` as written, without its newline: the value the next log line carries as `prev`. */
+export type AuditRecord = { date: string; seq: number; sha256: string; prev: string; head?: string; tx?: string; explorer?: string };
 
 const logFile = () => path.join(process.env.BOX_HOME ?? '/var/lib/box', 'log.jsonl');
 const auditFile = () => path.join(walletDir(), 'audit.jsonl');
@@ -47,7 +50,9 @@ export function fingerprint(logPath: string, n = Infinity) {
   const hash = createHash('sha256');
   const all = lines(logPath).slice(0, n);
   for (const l of all) hash.update(l);
-  return { seq: all.length, sha256: hash.digest('hex') };
+  const last = all.at(-1);
+  const head = last && createHash('sha256').update(last.subarray(0, -1)).digest('hex');
+  return { seq: all.length, sha256: hash.digest('hex'), head };
 }
 
 /** Stored records, newest first. */
@@ -85,10 +90,10 @@ async function ensureSol(ctx: Pick<Ctx, 'secret'>, rpc: any, addr: string) {
 /** Fingerprint the log now and write it to devnet. Nothing new since the last record returns that record. */
 export async function writeAudit(secretCtx: Pick<Ctx, 'secret'>, logPath = logFile(), note?: (data: unknown) => void): Promise<AuditRecord> {
   const last = await latestAudit();
-  const { seq, sha256 } = fingerprint(logPath);
+  const { seq, sha256, head } = fingerprint(logPath);
   if (seq === 0) throw new Error('the action log is empty; nothing to fingerprint');
   if (last && last.seq === seq && last.sha256 === sha256) return last;
-  const rec: AuditRecord = { date: new Date().toISOString(), seq, sha256, prev: last?.sha256 ?? ZERO };
+  const rec: AuditRecord = { date: new Date().toISOString(), seq, sha256, prev: last?.sha256 ?? ZERO, head };
 
   const payer = await signer(secretCtx as Ctx);
   const rpc = createSolanaRpc(devnet(RPC));
@@ -107,7 +112,8 @@ export async function writeAudit(secretCtx: Pick<Ctx, 'secret'>, logPath = logFi
   const done = { ...rec, tx: sig, explorer: explorer('tx', sig) };
   fs.appendFileSync(auditFile(), JSON.stringify(done) + '\n');
   // The audit is itself in the action log: hash and transaction id (a devnet network fee, no owner money).
-  note?.({ audit: { seq: done.seq, sha256: done.sha256, prev: done.prev, tx: sig, explorer: done.explorer, cluster: 'devnet' } });
+  // `kind, seq, head, tx` is for receipts (Elastic); `audit` is for the Audit app (Business).
+  note?.({ kind: 'audit', seq: done.seq, head: done.head, tx: sig, audit: { seq: done.seq, sha256: done.sha256, prev: done.prev, head: done.head, tx: sig, explorer: done.explorer, cluster: 'devnet' } });
   return done;
 }
 
@@ -130,7 +136,7 @@ export async function verify(logPath = logFile(), checkChain = true) {
   const checks = recs.map((r, i) => {
     const now = fingerprint(logPath, r.seq);
     const chained = r.prev === (recs[i - 1]?.sha256 ?? ZERO);
-    return { seq: r.seq, date: r.date, tx: r.tx, matches: now.seq === r.seq && now.sha256 === r.sha256 && chained };
+    return { seq: r.seq, date: r.date, tx: r.tx, matches: now.seq === r.seq && now.sha256 === r.sha256 && (!r.head || now.head === r.head) && chained };
   });
   const latest = recs.at(-1);
   let chain: { ok: boolean; memo?: string } | { error: string } | undefined;
