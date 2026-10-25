@@ -1,10 +1,10 @@
 # GurtOS
 
-GurtOS is an operating system for a computer where AI agents do work for you, safely. Each agent task runs as
-its own Linux user in its own copy of your files. Agents never hold your keys. Their network reaches only the
-hosts a task needs. Anything that spends money or needs your judgement stops and asks you, on the box's screen
-or your phone. You can undo one task without touching any other, and a box that loses power picks every task
-back up when it boots.
+**Operating systems built for AI agents.** Agents get real access to files, the web and money, and never hold your
+keys. GurtOS comes in three editions: Server, Personal and Business (see below). Each agent task runs as its own
+Linux user in its own copy of your files. Their network reaches only the hosts a task needs. Anything that spends
+money or needs your judgement stops and asks you, on the box's screen or your phone. You can undo one task without
+touching any other, and a box that loses power picks every task back up when it boots.
 
 **Status: preview (v0.1.0-preview).** GurtOS was built in a weekend at Cal Hacks 13.0. It works end to end and
 has been installed from its own ISO on cloud VMs and QEMU, but it has not had a security audit.
