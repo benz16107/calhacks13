@@ -32,9 +32,9 @@ Checked against main `7fe6651`, Sat Oct 24 08:09 PT. `./demo` from a clean workt
 |---|---|
 | verified (ISO) | 3 |
 | verified | 60 |
-| merged | 185 |
+| merged | 186 |
 | building | 1 |
-| planned | 2 |
+| planned | 1 |
 | not pursued | 6 |
 | **Total** | **257** |
 
@@ -108,7 +108,7 @@ watched: portal/dist rebuilt from merged sources (C-4).
 | Public verify page: the check runs in the browser and nothing is uploaded (each box serves it at `/t/receipts/verify`; gurtos.com/verify is being placed by docs). The app's own page is not in the gate | receipts | merged | 7ca2941 | tracks/receipts/receipts.test.ts runs the page's own checker | Elastic, Coinbase, Solana, Microsoft |
 | Redacted receipt: no step text, questions, tool inputs, file names or amounts | receipts | merged | 7ca2941 | tracks/receipts/demo.ts | Business, Elastic |
 | Receipt anchored by the Elastic add-only copy (the box compares the task's entries and signs the result) | receipts | merged (tried by hand on the cloud box, 5 of 5 matched; needs live Elastic, so not in the gate) | 7ca2941 | none | Elastic |
-| Receipt anchored by the daily Solana fingerprint | receipts, wallet | planned (waiting on wallet: the audit memo needs `head=`, asked and not on main; the Solana line says "not anchored yet" until it lands) |  | tracks/receipts/receipts.test.ts covers the check with a stand-in | Solana, Coinbase |
+| Receipt anchored by the daily Solana fingerprint | receipts, wallet | merged (tried by hand, not by QA: on the cloud box, task tne9kyp30c0, entries 671 to 675, anchored by the seq-685 audit; the page's checker run from linuxbox against live Solana devnet passes Signature, Signing key, Chain, Entries and Solana; the Solana line reads "Solana (devnet) holds the same fingerprint, written 2026-10-25T06:07:17Z". A task finished after the latest audit shows "not anchored yet" until the next daily audit at 03:00 box time or an owner `POST /t/wallet/audit`. The QR in the Receipts app opens the box's own check page until gurtos.com/verify is live; one flag flips then, in 661dffa) | 7ca2941, 9123468 | tracks/receipts/receipts.test.ts (the stand-in check); live by hand | Solana, Coinbase |
 | Per-task disk cap: a task that fills its disk space is stopped and undone. Default 5 GB; per app with `PUT /api/permissions/<app> {diskBytes}`; `BOX_TASK_DISK_CAP` for a whole box. A watcher checks every 2 s, so it is not a hard quota | core | merged (gate 41 passed, 0 failed on x86 and arm64; the step took 1 s on x86 and 2 s on arm64) | 3824c78 | the disk cap: a task that fills its disk space is stopped and undone | Armadin, all |
 | Docs site gurtos.com | docs | verified Oct 24 01:00 (82+ pages, links, privacy scan) | 212c817 | site `npm run check` | all |
 | Showcase calhacks.gurtos.com | submission | verified Oct 24 01:30 | 52fb7f7, 213622e | showcase link checker | all |
