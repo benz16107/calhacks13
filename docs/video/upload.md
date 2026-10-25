@@ -34,17 +34,17 @@ Every Cal Hacks track, with its evidence: https://calhacks.gurtos.com
 Home: https://gurtos.com
 
 0:00 GurtOS, and the problem
-0:20 Why an operating system
-0:37 GurtOS: each task its own user and copy of your files
-0:52 Three editions: Server, Personal, Business
-1:03 Moment 1: undo one task
-1:12 Moment 2: the booby-trapped page
-1:24 Moment 3: a pause for your OK
-1:37 Moment 4: pull the plug
-1:50 Security, with the score published
-2:06 Light, and live from any device
-2:25 Try it: signed discs at gurtos.com/download, and every part documented
-2:42 A suite, open source
+0:16 Why an operating system
+0:33 GurtOS: each task its own user and copy of your files
+0:48 Three editions: Server, Personal, Business
+0:59 Moment 1: undo one task
+1:09 Moment 2: the booby-trapped page
+1:20 Moment 3: a pause for your OK
+1:33 Moment 4: pull the plug
+1:47 Security, with the score published
+2:03 Light, and live from any device
+2:22 Try it: signed discs at gurtos.com/download, and every part documented
+2:39 A suite, open source
 ```
 
 ## Armadin: Best Security Hack
