@@ -3,6 +3,7 @@
   "type": "module",
   "scripts": {
     "dev": "astro dev",
+    "prebuild": "node -e \"const f=require('fs');f.mkdirSync('public/verify',{recursive:true});f.copyFileSync('../tracks/receipts/verify.html','public/verify/index.html')\"",
     "build": "astro build",
     "preview": "astro preview",
     "check": "node scripts/link-check.mjs dist && node scripts/privacy-check.mjs dist",

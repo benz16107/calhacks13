@@ -82,6 +82,7 @@ The log is append-only. Nothing in the core edits or deletes a line. It is root-
 
 ## Related
 
+- [Verify a receipt](/docs/guides/verify-a-receipt/)
 - [Log events](/docs/reference/log-events/)
 - [Resume after power loss](/docs/concepts/resume-after-power-loss/)
 - [Cost](/docs/concepts/cost/)

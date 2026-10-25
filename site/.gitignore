@@ -19,3 +19,6 @@ pnpm-debug.log*
 
 # macOS-specific files
 .DS_Store
+
+# copied from tracks/receipts/verify.html at build (npm run build)
+public/verify/

@@ -115,6 +115,9 @@ Every state change, step, tool call and result, approval and answer, cost and re
 
 **Gives you:** a record of what each agent did, which person approved what and from which device, and the base for undo and resume. The log is append-only by design but not tamper-evident: root on the box can edit it. See [The action log](/docs/concepts/action-log/).
 
+A task's part of the log can also leave the box as a signed receipt that anyone can check in a browser. See
+[Verify a receipt](/docs/guides/verify-a-receipt/).
+
 ## 9. Only paired devices reach the API
 
 On the Ubuntu install and GurtOS Personal, the box's HTTP API listens on `127.0.0.1` unless you set `BOX_LISTEN`. GurtOS Server from the ISO listens on every address behind an inbound firewall (below). Wherever it listens, it sorts each request:

@@ -111,6 +111,7 @@ export default defineConfig({
             'docs/guides/update-and-roll-back',
             'docs/guides/connect-jira',
             'docs/guides/send-the-log-to-elastic',
+            'docs/guides/verify-a-receipt',
             'docs/guides/agent-payments',
             'docs/guides/shopping-agent',
             'docs/guides/asi-one',
