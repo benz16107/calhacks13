@@ -394,6 +394,13 @@ if [[ $edition == personal ]]; then in_root bash -euo pipefail -c '
   ln -sf "$(ls initrd.img-* | sort -V | tail -1)" initrd.img
 '
 fi
+if [[ -f $src/core/gurtos.ts ]]; then
+  # Command setup (core/gurtos.ts): the guide for an agent, and a `gurtos` command for one that has a shell here.
+  [[ -f $src/AGENT-SETUP.md ]] || { echo "build: core/gurtos.ts is here but AGENT-SETUP.md is not" >&2; exit 1; }
+  install -D -m 644 "$src/AGENT-SETUP.md" "$root/usr/share/doc/gurtos/AGENT-SETUP.md"
+  printf '#!/bin/sh\nexec node --experimental-strip-types --disable-warning=ExperimentalWarning /opt/box/core/gurtos.ts "$@"\n' > "$root/usr/local/bin/gurtos"
+  chmod 755 "$root/usr/local/bin/gurtos"
+fi
 if [[ $edition == personal ]]; then
   # Personal only: the ports of the Settings, Sharing services that are on (box-sharing-fw fills the two sets).
   sed -i -e 's|^\t# personal: sharing sets|\tset sharing_tcp { type inet_service; }\n\tset sharing_udp { type inet_service; }|' \
