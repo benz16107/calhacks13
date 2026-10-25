@@ -70,3 +70,8 @@ test("ASI:One's @mention is not part of the message, and only words of a check m
   const s = py(`print(json.dumps([brain.STATUS.search(t.lower()) is not None for t in ['Is the Hario V60 filter back in stock?', 'Status check: how is the fix going?', 'Follow up: has the test fix completed?']]))`);
   assert.deepEqual(s, [false, true, true]);
 });
+
+test("the Shopper drops a store's hit that does not share most of what was asked for", () => {
+  const r = py(`import apps; print(json.dumps([apps.matches(q, n) for q, n in [('hario v60 filters', '1PCS VHF-6010+ 6300-15000MHZ for RF High-Pass Filter'), ('hario v60 filters', 'Hario V60 02 Paper Coffee Filters, 100 count'), ('airpods pro', 'Apple AirPods Pro 3')]]))`);
+  assert.deepEqual(r, [false, true, true]);
+});

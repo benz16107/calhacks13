@@ -58,6 +58,12 @@ Two public agents by Fetch.ai that GurtOS talks to: the **Weather Agent**
 
 ## A chat, start to finish
 
+**The real chat:** [GurtOS in ASI:One](https://asi1.ai/shared-chat/d47d985a-01d8-49f6-9011-15a8eae87399), a shared
+ASI:One chat with the installed box (Oct 24, 11:37 to 11:58 PM PT). It shows pairing, the failing test fixed with
+its diff card, the Shopper's reply, the trap's instruction blocked, the oracle's payment approved with its receipt
+(tx `2D54F68D...69F1`), and the test buyer paying the Shopper 0.05 test FET (tx `DA84E229...4FA2`), all on Fetch's
+testnet.
+
 A shortened chat, with the messages the agents send (the demo checks each of them). `>` marks another agent's
 words, relayed as a quote.
 
@@ -333,7 +339,7 @@ Shopper on chain. `DEMO_LIVE=fetch,droid` adds a Droid task that fixes the faili
 |---|---|
 | An agent on Agentverse | seven per box, above |
 | Agent Chat Protocol | `agent.py`, every agent |
-| The main flow inside an ASI:One chat | pairing, work, routing, approvals, payments, results, undo, guests: all in the chat |
+| The main flow inside an ASI:One chat | pairing, work, routing, approvals, payments, results, undo, guests: all in the chat. [The shared chat](https://asi1.ai/shared-chat/d47d985a-01d8-49f6-9011-15a8eae87399) |
 | Real tool use | Droid, Apify, CRS, Fetch's testnet, Fetch.ai's public agents |
 | Public repo with run steps | "Run it", above |
 | README with agent names, addresses and badges | this file, and each profile in `profiles/` |

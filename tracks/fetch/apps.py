@@ -39,7 +39,7 @@ class Shopper(App):
     def request(self, sender, session, text):
         if WORKER == 'fake':  # tests: the GurtOS Test Store, no model
             return self.task(sender, session, {'title': title(text), 'worker': 'fake', 'workspace': 'guest', 'tools': ['shopper.checkPrice'],
-                                               'budgetCents': 1, 'prompt': f'call shopper.checkPrice {json.dumps({"product": product(text)})}'}, price=True)
+                                               'budgetCents': 1, 'prompt': f'call shopper.checkPrice {json.dumps({"product": product(text)})}'}, price=True, query=product(text))
         t = call('POST', '/t/shopper/ask', {'text': text})  # Droid finds the product and sets up the watch; it cannot buy
         if t.get('error'):
             return self.say(sender, session, f"The shopper could not start: {t['error']}")
@@ -56,18 +56,27 @@ class Shopper(App):
         args = {'product': sale['args']['product'], **({'max': 2} if tool == 'apify.checkPrice' else {})}
         self.task(sale['to'], sale['session'], {'title': f"Paid price check: {sale['args']['product']}"[:60], 'worker': 'fake',
                                                 'workspace': 'guest', 'tools': [tool], 'budgetCents': 2, 'source': 'asi1:paid',
-                                                'prompt': f'call {tool} {json.dumps(args)}'}, sale=ref, price=True, wait=None)
+                                                'prompt': f'call {tool} {json.dumps(args)}'}, sale=ref, price=True, query=args['product'], wait=None)
 
     def done(self, tid, chat):
         if not chat.get('price'):
             return super().done(tid, chat)  # a watch Droid set up: its summary and diff
         out = self.tool_output(tid) or {}
-        found = out.get('products') or []
+        found = [p for p in out.get('products') or [] if matches(chat.get('query', ''), p.get('name', ''))]
         if not found:
-            return self.reply(chat, f"{chat['title']}: nothing matched at {out.get('store', 'the store')}.")
+            return self.reply(chat, f"{chat['title']}: nothing at {out.get('store', 'the store')} matched \"{chat.get('query', '')}\""
+                                    + (' (its search returned only unrelated items).' if out.get('products') else '.'))
         lines = [f"- {p.get('name')}: {p.get('price')} {out.get('currency', '')}, {'in stock' if p.get('inStock') else 'not in stock'}"
                  for p in found[:3]]
         self.reply(chat, f"{chat['title']} at {out.get('store')}:\n" + '\n'.join(lines))
+
+
+def matches(query, name):
+    """Does a store's hit share most of what was asked for? A search for "hario v60 filters" once returned an RF filter."""
+    stem = lambda w: w[:-1] if w.endswith('s') and len(w) > 3 else w
+    words = {stem(w) for w in re.findall(r'[a-z0-9]{2,}', query.lower())} - {'the', 'and', 'for', 'with', 'pack', 'count'}
+    have = {stem(w) for w in re.findall(r'[a-z0-9]{2,}', name.lower())}
+    return not words or len(words & have) * 2 > len(words)
 
 
 def product(text):
