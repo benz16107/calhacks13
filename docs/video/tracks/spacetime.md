@@ -2,6 +2,12 @@
 
 **Track:** SpacetimeDB, SpacetimeDB as the core real-time backend. **Edition:** all three, strongest in GurtOS Business. **Shares footage with:** main (A02, A30), Hyphenate (A30). **Status:** draft for Ben's approval.
 
+## Creative brief
+
+A live multiplayer film. Several screens and people are on at once, each labelled by a hand-drawn callout with its name, because the claim is that every screen sees the same state at the same moment. After the card, full-bleed `st-live.png` (the real Live board) carries the problem as a footnote while the callouts draw on (paragraph 1). Paragraph 2 plays `a02-desktop.mp4` with `a02-phone.mp4` as a picture-in-picture inset, and a match cut from the phone's tap to the box's toast. Paragraph 3 rolls scoreboard counters (3 agents, 15 claims, 12 jobs, 12 different) over `st-agents.png`. Paragraph 4 splits Rosa's request in `a30.mp4` from two struck-out kinetic rows, Priya and a stranger. Paragraph 5 returns to `a02.mp4` from 12.4 and circles the real "Already approved" toast, then shows the recorded name in `a33.mp4` and stamps REFUSED on the stranger line. Paragraph 6 uses `st-computers.png`. Whip pans move from device to device; cuts are quick. No zoom. Music bed: multiplayer.
+
+Footage: st-live.png, a02-desktop.mp4, a02-phone.mp4, a02.mp4, st-agents.png, a30.mp4, a33.mp4, st-computers.png
+
 **Goal.** A judge sees that SpacetimeDB is not a mirror bolted on the side. It is the box's live state, and the rules are in the database: agents claim shared work atomically, each person is sent only their own requests, the first answer wins, and the answer is recorded under a name the box vouched for. The problem comes first (the usual stack is heavy and fragile), then why an OS: the box is the one place that can vouch for who is asking.
 
 **Rubric map.**

@@ -4,6 +4,12 @@
 and Business; the clips come from a Server clip box, with the hijacked-payment case on the Business credit desk).
 **Shares footage with:** the main video (A03, G05), Anthropic (A03). **Status:** draft for Ben's approval.
 
+## Creative brief
+
+A red-team thriller. Live attacks, a terminal and alarm flashes count each block, and the film ends on the published score. After the card, full-bleed `ar03.mp4` from 7.6 shows the road-bike task starting and the Blocked toast dropping, then full-bleed `a06.mp4` from 4 shows the task's own Linux user, under a typewriter header naming each attack (paragraph 1). Paragraph 2 pins the CISA alert to an evidence board, with string to full-bleed `ar01.mp4` and a flash when the red notice opens. Paragraph 3 plays `ar03.mp4` from 13 with a hand-drawn circle on each red row as the voice says vault, proxy, firewall and approving, then a BLOCKED stamp. Paragraph 4 sets the two phone shots as tilted 3D cards. Paragraph 5 splits `ar04.mp4` into the AP-4 refusal and the over-limit bill, under a TEST MONEY stamp. Paragraph 6 types the sandbox lines in a terminal, then two amber NOT BUILT stamps. Paragraph 7 rolls scoreboard counters to 15 of 16. Hard cuts on action, one long hold on the score. One zoom, on the host list in `ar01.mp4`. Music bed: redteam.
+
+Footage: ar03.mp4, ar01.mp4, ar04.mp4, a06.mp4, showcase/src/assets/track/armadin/iphone-tripwire-task.png, native/screenshots/iphone-tripwire-notification.png
+
 **Goal.** A security judge sees a real attack stopped at the operating system, step by step, and then sees the score
 with its misses. The video says exactly what is built (a system-call filter and a CPU cap) and what is not (Landlock, a
 per-task disk quota), because an honest scoreboard is the argument.
@@ -18,7 +24,7 @@ follows the questions a security judge asks.
 | What exactly stops each step? | Beat 3 (vault, proxy, firewall, refused self-approval) |
 | Does a hunter for keys give itself away? | Beat 4 (tripwire keys) |
 | What is built, and what is not? | Beat 6 (sandbox, with the two things not built) |
-| Is the score honest? | Beat 7 (16 attacks, 14 caught, 2 published as not covered, two machines) |
+| Is the score honest? | Beat 7 (16 attacks, 15 caught, 1 published as not covered, two machines) |
 
 ## Shot list
 
@@ -33,7 +39,7 @@ steps every take".
 | 4 | 0:37 to 0:45 | T-AR-03: the iPhone lock screen banner "An agent tried to leak a key", then the app's Task page, Undone. Small footnote under it | Tripwire: a decoy AWS key in every task. Sent out, the task ends undone and the owner's phone is alerted. Looks in plain HTTP requests, tool inputs and the log, not HTTPS bodies. iOS simulator: this is the notice the box builds, not a push received over the air | "Every task holds decoy cloud keys. Send one out, and the task ends and your phone is alerted." | Tripwire keys (features: merged c51c8c7); limits on the showcase page |
 | 5 | 0:45 to 0:54 | T-AR-04: the credit desk (Business) on the BEC case: the lookalike-sender invoice "we changed banks" refused with rule AP-4 before any approval is asked; the second bill, over the AP clerk's $5,000 limit, waits in Waiting for me, the controller taps No. Neither paid | Lookalike bank change: refused in code, AP-4. Over-limit bill: controller says no. Nothing paid. Test bank (Capital One Nessie), made-up company. FBI IC3, 2025: 24,768 BEC complaints, $3,046,598,558 lost | "A lookalike email says we changed banks. A rule refuses it. An over-limit bill waits for a person, who says no. Test money." | Hijacked payment (features: Armadin row, merged af40b1c); the controller's refusal; IC3 source on the showcase page |
 | 6 | 0:54 to 1:02 | T-AR-05: a terminal in the clip box VM beside a running task: `Seccomp: 2`, `cpu.max 200000 100000`, `MemoryMax 2G`, `MemorySwapMax 0`, `TasksMax 512`. Then G-AR-3: two amber lines, "Landlock" and "per-task disk quota", each marked Not built | Per-task sandbox: system-call filter, 2 CPU cores, 2 GB with no swap, 512 processes. Not built: Landlock. Not built: a per-task disk quota | "Each task has a system-call filter, a CPU cap, and memory with no swap. Not built: Landlock, and a disk quota." | The sandbox (features: merged c51c8c7); the limits are from the same row |
-| 7 | 1:02 to 1:15 | G05: the scoreboard, 16 rows fill, 14 green "caught", 2 amber "not covered" (disk fill; data sent to a host the task may reach); lower third "Run on two machines, Oct 24". Then G08 end card | 16 OS-level attacks: 14 caught, 2 published as not covered. Laptop VM (no swap) and cloud box (8 GB swap): same score. GurtOS · open source, Apache-2.0 | "We publish the score: sixteen OS-level attacks, fourteen caught, two not covered, on two machines, in every edition. Gurt O.S. is open source." | Scoreboard (`tracks/armadin/SCOREBOARD.md`; showcase Numbers 14/16 and 2 of 2) |
+| 7 | 1:02 to 1:15 | G05: the scoreboard, 16 rows fill, 15 green "caught", 1 amber "not covered" (data sent to a host the task may reach); lower third "Run on two machines, Oct 24". Then G08 end card | 16 OS-level attacks: 15 caught, 1 published as not covered. Laptop VM (no swap) and cloud box (8 GB swap): same score. GurtOS · open source, Apache-2.0 | "We publish the score: sixteen OS-level attacks, fifteen caught, one not covered, on two machines, in every edition. Gurt O.S. is open source." | Scoreboard (`tracks/armadin/SCOREBOARD.md`; showcase Numbers 14/16 and 2 of 2) |
 
 **Cut list if long:** beat 5's IC3 line (keep the refusal), beat 6's terminal (keep the amber lines), beat 4's footnote
 (it must stay on screen even if the narration is cut).
@@ -55,7 +61,7 @@ A lookalike email says we changed banks. A rule refuses it. An over-limit bill w
 
 Each task has a system-call filter, a CPU cap, and memory with no swap. Not built: Landlock, and a disk quota.
 
-We publish the score: sixteen OS-level attacks, fourteen caught, two not covered, on two machines, in every edition. Gurt O.S. is open source.
+We publish the score: sixteen OS-level attacks, fifteen caught, one not covered, on two machines, in every edition. Gurt O.S. is open source.
 ```
 
 ## Captures this video needs
@@ -73,9 +79,8 @@ source card), G-AR-3 (the two "not built" lines). Its own captures:
 
 ## Check before render
 
-- The scoreboard still reads 16 attacks, 14 caught, 2 not covered, and `tracks/armadin/SCOREBOARD.md` still says "both
-  machines" on the render day. `docs/features.md` still lists the older 15 and 13; the showcase page and SCOREBOARD.md
-  say 16 and 14 (the memory-hog row was added Oct 24).
+- The scoreboard reads 16 attacks, 15 caught, 1 not covered (SCOREBOARD.md on main, Oct 25: the disk fill is now
+  caught by a watcher, not a hard quota). Re-check `tracks/armadin/SCOREBOARD.md` on the render day.
 - Beat 2 says "ten of eleven": the poisoned package's own page says the 11th step read only decoy keys. Say nothing
   stronger than that.
 - Beat 3 and beat 2 both show the scripted agent; the footnote is on screen the whole time. Real Claude refused the same

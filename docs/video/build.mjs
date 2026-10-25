@@ -8,6 +8,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
+import { kit } from './kit.mjs';
 
 const HERE = import.meta.dirname, REPO = path.resolve(HERE, '../..'), STUDIO = path.join(HERE, 'studio');
 const HF = 'hyperframes@0.8.193';
@@ -153,6 +154,49 @@ function note(id, text, left, top) { // bottom-left inside the frame: the box sc
 }
 
 const V = {
+  // The title card every track video opens with; its frame at 1.9 s is the thumbnail.
+  trackcard(id, v, dur) {
+    const eds = ['server', 'personal', 'business'], name = { server: 'Server', personal: 'Personal', business: 'Business' };
+    return scene(id, dur, { hills: true,
+      css: `#${id}-b { position: absolute; left: 0; right: 0; top: 150px; display: flex; flex-direction: column; align-items: center; gap: 22px; text-align: center; }
+        #${id}-k { font-size: 30px; color: ${C.ink2}; letter-spacing: 0.02em; }
+        #${id}-lock { display: flex; align-items: center; gap: 30px; } #${id}-logo { width: 120px; height: 120px; }
+        #${id}-t { font-size: ${v.size ?? 118}px; font-weight: 700; line-height: 1.02; }
+        #${id}-s { font-size: 46px; color: ${C.ink}; font-weight: 600; max-width: 1500px; line-height: 1.2; }
+        #${id}-e { display: flex; align-items: center; gap: 16px; margin-top: 18px; font-size: 30px; color: ${C.ink2}; }
+        #root .chip { display: flex; align-items: center; gap: 12px; padding: 10px 22px; border-radius: 999px; background: rgba(23,30,37,0.78); border: 2px solid rgba(242,239,232,0.16); font-size: 30px; font-weight: 700; color: ${C.ink}; }
+        #root .chip.off { opacity: 0.38; } #root .chip i { width: 16px; height: 16px; border-radius: 50%; display: block; }`,
+      body: `<div id="${id}-b"><div id="${id}-k" class="mono">${esc(v.kicker ?? 'Cal Hacks 13')}</div>
+        <div id="${id}-lock"><img id="${id}-logo" src="assets/brand/logo.svg" alt="GurtOS" /><div id="${id}-t">GurtOS for ${esc(v.sponsor)}</div></div>
+        <div id="${id}-s">${esc(v.track)}</div>
+        <div id="${id}-e"><span>Best shown in</span>${eds.map((e) => `<div class="chip${v.editions.includes(e) ? '' : ' off'}" id="${id}-${e}"><i style="background:${C.edition[e]}"></i>${name[e]}</div>`).join('')}</div></div>`,
+      js: `tl.fromTo("#${id}-k", { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 0.35, ease: "power3.out" }, 0.05);
+        tl.fromTo("#${id}-logo", { opacity: 0, scale: 0.85 }, { opacity: 1, scale: 1, duration: 0.45, ease: "back.out(1.6)" }, 0.1);
+        tl.fromTo("#${id}-t", { clipPath: "inset(0 100% 0 0)" }, { clipPath: "inset(0 0% 0 0)", duration: 0.55, ease: "power3.inOut" }, 0.2);
+        tl.fromTo("#${id}-s", { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.4, ease: "power3.out" }, 0.55);
+        tl.fromTo("#${id}-e", { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.4, ease: "power3.out" }, 0.75);
+        tl.to("#${id}-b", { opacity: 0, duration: 0.3, ease: "power2.in" }, ${r3(dur - 0.32)});`,
+    });
+  },
+
+  // The opening hook: real product shots cut quickly under the title.
+  montage(id, v, dur, ctx) {
+    const n = v.items.length, seg = dur / n;
+    return scene(id, dur, {
+      css: `#root .mv { position: absolute; left: 0; top: 0; width: ${W}px; height: ${H}px; object-fit: cover; }
+        #${id}-shade { position: absolute; inset: 0; background: radial-gradient(ellipse 62% 46% at 50% 46%, rgba(23,30,37,0.9) 0%, rgba(23,30,37,0.72) 55%, rgba(23,30,37,0.35) 100%); }
+        #${id}-b { position: absolute; left: 0; right: 0; top: 330px; display: flex; flex-direction: column; align-items: center; gap: 26px; }
+        #${id}-lock { display: flex; align-items: center; gap: 34px; } #${id}-logo { width: 140px; height: 140px; }
+        #${id}-word { font-size: 140px; font-weight: 700; line-height: 1; } #${id}-sub { font-size: 50px; color: ${C.ink}; }`,
+      body: v.items.map((it, i) => `<video id="${id}-v${i}" class="clip mv" src="${ctx.media(it.src)}" data-start="${r3(i * seg)}" data-duration="${r3(seg)}" data-media-start="${it.from ?? 0}" data-track-index="${2 + i}" muted playsinline></video>`).join('') +
+        `<div id="${id}-shade"></div><div id="${id}-b"><div id="${id}-lock"><img id="${id}-logo" src="assets/brand/logo.svg" alt="GurtOS" /><div id="${id}-word">GurtOS</div></div><div id="${id}-sub">${esc(v.subtitle ?? 'Operating systems built for AI agents')}</div></div>`,
+      js: `tl.fromTo("#${id}-logo", { opacity: 0, scale: 0.88 }, { opacity: 1, scale: 1, duration: 0.4, ease: "back.out(1.6)" }, 0.05);
+        tl.fromTo("#${id}-word", { clipPath: "inset(0 100% 0 0)" }, { clipPath: "inset(0 0% 0 0)", duration: 0.5, ease: "power3.inOut" }, 0.15);
+        tl.fromTo("#${id}-sub", { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.4, ease: "power3.out" }, 0.45);
+        tl.to("#${id}-b", { opacity: 0, duration: 0.25, ease: "power2.in" }, ${r3(dur - 0.27)});`,
+    });
+  },
+
   // A cut to black: the power cut.
   black(id, v, dur) { return scene(id, dur, { ground: false, css: `#root { background: #000; }` }); },
 
@@ -247,7 +291,8 @@ const V = {
       css: parts.map(({ i, c, f, k }) => `#${id}-f${i} { position: absolute; left: ${f.x}px; top: ${f.y}px; width: ${f.w}px; height: ${f.h}px; border-radius: ${c.radius ?? 15}px; overflow: hidden; border: 2px solid rgba(242,239,232,0.14); box-shadow: 0 30px 80px rgba(0,0,0,0.45); }
         #${id}-v${i} { position: absolute; left: ${r3(-c.x * k)}px; top: ${r3(-c.y * k)}px; width: ${r3(sw * k)}px; height: ${r3(sh * k)}px; }`).join('\n') + lt.css + nt.css,
       body: parts.map(({ i }) => `<div id="${id}-f${i}" data-layout-allow-overflow><video id="${id}-v${i}" class="clip" src="${ctx.media(v.src)}" data-start="0" data-duration="${r3(dur)}" data-media-start="${v.from ?? 0}" data-track-index="${2 + i}" muted playsinline></video></div>`).join('') + lt.body + nt.body,
-      js: parts.map(({ i }) => `tl.fromTo("#${id}-f${i}", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.5, ease: "power3.out" }, ${0.1 * i});`).join('\n') + lt.js + nt.js,
+      // enter: false starts the picture already in place (the video's first frame, which players show).
+      js: (v.enter === false ? '' : parts.map(({ i }) => `tl.fromTo("#${id}-f${i}", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.5, ease: "power3.out" }, ${0.1 * i});`).join('\n')) + lt.js + nt.js,
     });
   },
 
@@ -355,6 +400,9 @@ const V = {
   },
 };
 
+// The track formats (kit.mjs): shot, pair, caseboard, dossier, exhibit, timeline, scoreboard, terminal, chat, ledger.
+Object.assign(V, kit({ C, W, H, FRAME, esc, r3, scene, fit, dims, lowerThird, note, moves }));
+
 function captionsScene(groups, dur) {
   const body = groups.map((g, i) => `<div id="cap-${i}" class="cap clip" data-start="${g.start}" data-duration="${r3(g.end - g.start)}" data-track-index="0"><span class="pill">${g.words.map((w) => `<b>${esc(w.text)}</b>`).join(' ')}</span></div>`).join('\n    ');
   const times = JSON.stringify(groups.map((g) => g.words.map((w) => r3(w.start))));
@@ -411,8 +459,10 @@ export async function build(id, { noMusic = false } = {}) {
   const on = (sid) => sid in SLOTS;
   const fill = (o) => JSON.parse(JSON.stringify(o).replace(/\{url\}/g, (s) => SLOTS['try-live']?.url ?? s).replace(/"slot:([a-z-]+)"/g, (_, k) => JSON.stringify(SLOTS[k]?.media ?? `slot:${k}`)));
   let t = 0, para = 0;
-  const hosts = [], audio = [], allWords = [], voWindows = [], used = [];
-  const beats = spec.beats.filter((x) => !x.insert || on(x.insert));
+  const hosts = [], audio = [], allWords = [], voWindows = [], deadWindows = [], used = [];
+  // The title card: 2.6 s, or 3 s when the track name is long enough that 2.6 s is too short to read it.
+  const cardDur = spec.card && spec.card.track.split(/\s+/).length > 5 ? 3.0 : 2.6;
+  const beats = [...(spec.card ? [{ dur: cardDur, v: { type: 'trackcard', ...spec.card } }] : []), ...spec.beats].filter((x) => !x.insert || on(x.insert));
   for (const [bi, beat0] of beats.entries()) {
     let beat = beat0, voName = null;
     if (beat.insert) { voName = `slot-${beat.insert}`; used.push(beat.insert); }
@@ -428,12 +478,21 @@ export async function build(id, { noMusic = false } = {}) {
       if (!fs.existsSync(base + '.json')) throw new Error(`${id}: no narration ${base}.json (run narration/say.py${voName ? ' --slots' : ''})`);
       const { alignment } = JSON.parse(fs.readFileSync(base + '.json', 'utf8'));
       const len = probe(base + '.wav'), pre = b.pre ?? (bi === 0 ? 0.6 : 0.3);
-      vo = { start: t + pre, len, wav: base + '.wav' };
+      vo = { start: t + pre, len, wav: base + '.wav', gap: 0 };
       words = wordsOf(alignment, vo.start);
+      // gap: { after: word, dur }: hold silence inside the line after that word (main's power cut); later words move.
+      if (b.gap) {
+        const i = words.findIndex((w) => w.text.toLowerCase().replace(/[^a-z0-9]/g, '') === b.gap.after);
+        if (i < 0 || i + 1 >= words.length) throw new Error(`${id} beat ${bi + 1}: no spoken word "${b.gap.after}" to hold after`);
+        vo.split = r3((words[i].end + words[i + 1].start) / 2 - vo.start);
+        vo.gap = b.gap.dur;
+        for (const w of words.slice(i + 1)) { w.start += vo.gap; w.end += vo.gap; }
+        deadWindows.push([vo.start + vo.split, vo.start + vo.split + vo.gap]);
+      }
       allWords.push(...words);
-      voWindows.push([vo.start, vo.start + len]);
+      voWindows.push([vo.start, vo.start + len + vo.gap]);
     }
-    const dur = r3(b.dur ?? (vo.start - t) + vo.len + (b.post ?? 0.45) + (b.hold ?? 0));
+    const dur = r3(b.dur ?? (vo.start - t) + vo.len + vo.gap + (b.post ?? 0.45) + (b.hold ?? 0));
     // Resolve a visual's time: `at` (seconds into the part) or `cue` (the first spoken word starting with it, after `after`).
     const cueAbs = (o) => {
       if (o.cue == null) return null;
@@ -445,13 +504,17 @@ export async function build(id, { noMusic = false } = {}) {
     const starts = b.parts.map((p, pi) => (pi === 0 ? t : (cueAbs(p) ?? t + p.at)));
     b.parts.forEach((p, pi) => {
       const s = starts[pi], e = pi + 1 < b.parts.length ? starts[pi + 1] : t + dur, sid = `b${String(bi + 1).padStart(2, '0')}${String.fromCharCode(97 + pi)}`;
-      const ctx = { edition: spec.edition, file, media: media_, t: (o, def) => { const a = cueAbs(o ?? {}); return Math.max(0, a != null ? a - s : (o?.at ?? def)); } };
+      const ctx = { edition: spec.edition, style: spec.style, file, media: media_, t: (o, def) => { const a = cueAbs(o ?? {}); return Math.max(0, a != null ? a - s : (o?.at ?? def)); } };
       const fn = V[p.v.type];
       if (!fn) throw new Error(`${id}: no visual type ${p.v.type}`);
       fs.writeFileSync(path.join(comp, `${sid}.html`), fn(sid, p.v, e - s, ctx));
       hosts.push(`<div id="${sid}" data-composition-id="${sid}" data-composition-src="compositions/${sid}.html" data-start="${r3(s)}" data-duration="${r3(e - s)}" data-track-index="1" data-track-kind="graphics" data-width="${W}" data-height="${H}"></div>`);
     });
-    if (vo) audio.push(`<audio id="vo-${para}" class="clip" src="${media_('cap:' + path.relative(path.join(STUDIO, 'assets/capture'), vo.wav))}" data-start="${r3(vo.start)}" data-duration="${r3(vo.len)}" data-track-index="3" data-volume="1"></audio>`);
+    if (vo) {
+      const src = media_('cap:' + path.relative(path.join(STUDIO, 'assets/capture'), vo.wav)), cut = vo.gap ? vo.split : vo.len;
+      audio.push(`<audio id="vo-${bi + 1}" class="clip" src="${src}" data-start="${r3(vo.start)}" data-duration="${r3(cut)}" data-track-index="3" data-volume="1"></audio>`);
+      if (vo.gap) audio.push(`<audio id="vo-${bi + 1}b" class="clip" src="${src}" data-start="${r3(vo.start + cut + vo.gap)}" data-duration="${r3(vo.len - cut)}" data-media-start="${cut}" data-track-index="3" data-volume="1"></audio>`);
+    }
     t = r3(t + dur);
   }
   const total = r3(t);
@@ -465,12 +528,16 @@ export async function build(id, { noMusic = false } = {}) {
   let music = '';
   if (spec.music && !fs.existsSync(path.join(STUDIO, 'assets/music', spec.music))) console.warn(`${id}: WARNING no music file ${spec.music}; building without a bed`);
   else if (spec.music) {
-    const under = spec.musicUnder ?? 0.2, open = spec.musicOpen ?? 0.42, pts = [{ t: 0, v: open }];
+    const under = spec.musicUnder ?? 0.14, open = spec.musicOpen ?? 0.3, // 3 dB under the first mix (Ben, Oct 25)
+    pts = [{ t: 0, v: open }];
     for (const [a, b] of voWindows) {
       if (a - 0.4 > (pts.at(-1)?.t ?? 0) + 0.4) pts.push({ t: r3(a - 0.45), v: open });
       pts.push({ t: r3(Math.max(0.01, a - 0.15)), v: under }, { t: r3(b + 0.2), v: under });
     }
     pts.push({ t: r3(Math.min(total, voWindows.at(-1)[1] + 0.9)), v: open });
+    // A held silence is a dead moment: the bed nearly drops out, then comes back with the voice.
+    for (const [a, b] of deadWindows) pts.push({ t: r3(a + 0.05), v: under }, { t: r3(a + 0.35), v: 0.04 }, { t: r3(b - 0.5), v: 0.04 }, { t: r3(b - 0.05), v: under });
+    pts.sort((x, y) => x.t - y.t);
     const auto = JSON.stringify({ version: 1, lanes: [{ target: 'volume', points: pts.filter((p, i) => i === 0 || p.t > pts[i - 1].t) }] });
     music = `<audio id="music" class="clip" src="${media_('brand:../music/' + spec.music)}" data-start="0" data-duration="${total}" data-media-start="${spec.musicFrom ?? 0}" data-track-index="4" data-volume="1" data-fade-in="1.5" data-fade-out="3" data-automation='${auto}'></audio>`;
   }
@@ -524,7 +591,8 @@ else if (id) {
     const dst = path.join(HERE, 'out');
     fs.mkdirSync(dst, { recursive: true });
     const raw = path.join(out, `${name}.raw.mp4`), fin = path.join(dst, `${name}.mp4`);
-    execFileSync('npx', ['--yes', HF, 'render', '--output', raw], { cwd: out, stdio: 'inherit' });
+    // One render or check at a time on this machine (spec writers share it): the lock in /tmp.
+    execFileSync('flock', ['/tmp/gurtos-hf.lock', 'npx', '--yes', HF, 'render', '--workers', '2', '--output', raw], { cwd: out, stdio: 'inherit' }); // 2 Chrome workers keep a shared build machine from running out of memory
     // One linear gain to about -16 LUFS, never past -1.5 dBTP; the picture is copied untouched.
     const probeLoud = execFileSync('bash', ['-c', `ffmpeg -hide_banner -nostats -i "${raw}" -af loudnorm=I=-16:TP=-1.5:print_format=json -f null - 2>&1 | sed -n '/^{/,/^}/p'`]).toString();
     const { input_i, input_tp } = JSON.parse(probeLoud);
@@ -532,6 +600,7 @@ else if (id) {
     execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', raw, '-c:v', 'copy', '-af', `volume=${gain.toFixed(2)}dB`, '-c:a', 'aac', '-b:a', '192k', '-ar', '48000', fin]);
     fs.rmSync(raw);
     console.log(`${name}: loudness ${input_i} LUFS, peak ${input_tp} dBTP, gain ${gain.toFixed(2)} dB`);
+    if (spec.card && !noMusic) execFileSync('ffmpeg', ['-v', 'error', '-y', '-ss', '1.9', '-i', fin, '-frames:v', '1', '-vf', 'scale=1280:-1', '-q:v', '2', path.join(dst, `${id}-thumb.jpg`)]);
     fs.copyFileSync(path.join(out, `${id}.srt`), path.join(dst, `${id}.srt`));
     console.log(`${id}: rendered ${path.join(dst, `${name}.mp4`)} (${spec.title})`);
   }

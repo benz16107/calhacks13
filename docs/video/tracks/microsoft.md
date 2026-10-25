@@ -4,6 +4,12 @@
 runs on GurtOS Server; the Business screens from the box seeded as the made-up Fogline Supply, with scripted seats).
 **Shares footage with:** Hyphenate (#1), CRS (#3). **Status:** draft for Ben's approval.
 
+## Creative brief
+
+An enterprise pilot briefing. A one-week pilot runs along the top as a progress bar, and each beat is a readiness check with a stamp. After the card, full-bleed `a30-fraud.mp4` from 12.7 shows the controller's real screen, with a hand-drawn circle on the Fraud flag as the voice says "controller". Then `ar04.mp4` from 7.2 plays under counters rolling to 24,768 complaints and $3,046,598,558 (paragraph 1). Paragraph 2 is `a31.mp4` with the seat's own-user screenshot as an inset. Paragraph 3 builds a bar to 5 of 6 on `shadow-people.png` and stops short, under a NOT READY stamp. Paragraph 4 is `a30.mp4` from 13.5, then a TEST PROVIDER stamp on the sign-in line. Paragraph 5 flashes on the switch in `a34.mp4`, then scoreboard counters read 10 agents, 271 ms and 48 ms. Paragraph 6 pairs `hy.mp4` with $20,000 and 16 of 17. Paragraph 7 lights six principle rows one at a time. Directional wipes move the week forward. One zoom, on the 5 of 6 count. Music bed: enterprise.
+
+Footage: a30-fraud.mp4, ar04.mp4, a31.mp4, showcase/src/assets/track/hyphenate/analyst-crs-live.png, showcase/src/assets/repo/business/shadow-people.png, a30.mp4, a34.mp4, hy.mp4
+
 **Goal.** Answer one question for a judge: could a real company switch this on? Hyphenate is about decision quality;
 this video is about the path to production. The customer is named, the pilot starts in shadow, approvals reach the
 right person, work-account sign-in is ready (and honestly labelled as tested with a test provider), a bad hour is a
@@ -41,8 +47,6 @@ Word count: 185 (about 1:20 at 2.3 words a second; cut beat 2 if the render runs
 
 ```text
 The customer is a small business controller. The FBI logged over three billion dollars in reported losses to business email compromise in 2025.
-
-Pilots stay pilots when an agent holds the owner's keys, approves its own work, and leaves no undo.
 
 On Gurt O.S. Business, people have roles and limits, and each agent seat is its own Linux user.
 

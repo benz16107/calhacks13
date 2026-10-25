@@ -39,13 +39,11 @@ by the OS, and ends on the scored proof against the answer key.
 ```text
 This applicant has clean numbers and a credit score of six-forty. A simple rule approves twenty thousand dollars. Our analyst agent checked it live with CRS: the identity fails, the fraud score is eighty-eight, and nine credit checks landed in three weeks. It put the account on fraud hold, and the controller confirmed it.
 
-On an ordinary computer, a finance agent runs as you, holds your keys and can approve its own work. At Equifax, the FTC says, admin credentials sat in a plain-text file.
+At Equifax, the FTC says, admin credentials sat in a plain-text file.
 
 Gurt O.S. is an operating system for AI employees. At Fogline Supply, a made-up wholesaler, three agent seats work beside a human controller. Each seat is its own Linux user, with its own files and no passwords.
 
 The clerk has no credit tools. The analyst can't approve forty thousand dollars alone, so it goes to the controller with the rule and the reason. Nobody approves their own request.
-
-The data is messy on purpose, with planted errors and traps. The clerk checks the ledger against the bank and finds a payment on the wrong invoice.
 
 Every decision keeps its rules, its data and its approver in one append-only log, ready for an auditor.
 

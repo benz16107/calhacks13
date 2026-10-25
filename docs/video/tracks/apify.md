@@ -4,6 +4,12 @@
 GurtOS Server (watches that run while the laptop is closed). **Shares footage with:** Visa (T-VI-01 reads a live price
 through Apify), the main video (A06). **Status:** draft for Ben's approval.
 
+## Creative brief
+
+A crawl desk with a checkpoint. Pages pass through the Agent-Safe Page Reader, and the one trap page is caught. After the card, full-bleed `a03.mp4` from 8.0 shows a task meeting a booby-trapped page, with a hand-drawn circle on the Blocked banner (paragraph 1). Paragraph 2 insets `a06.mp4` from 4 and types "No network" and "No Apify token". Paragraph 3 splits two big-number cards that arrive at the same instant, AirPods Pro 3 at $299.99 CAD and Cole Coffee Café, then a counter lands on 0 token copies. Paragraph 4 is a terminal typing the detector's line (risk high, score 100, display:none), then a flash and a WITHHELD stamp. Paragraph 5 shows `apify-window.png` with callouts on the Counted and Apify cost columns as the voice says budget and cap, then a $0.10 counter. Paragraph 6 draws two dots on a timeline, schedule and webhook. Steady crawl ticks, with downward wipes like a page feed. One zoom, on the window's rows. Music bed: crawl.
+
+Footage: a03.mp4, a06.mp4, showcase/src/assets/track/apify/apify-window.png
+
 **Goal.** Apify's Actors are the way every agent on the computer reaches the web, and the agent never holds the token.
 A judge sees two tasks with no network read live data at once, a scraped page treated as untrusted data, the cost
 capped twice and shown, and, on a Server box, a schedule and a webhook starting tasks.

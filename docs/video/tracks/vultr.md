@@ -2,6 +2,12 @@
 
 **Track:** MLH, Best use of Vultr. **Edition:** GurtOS Server. **Shares footage with:** main (O01, A05). **Status:** draft for Ben's approval.
 
+## Creative brief
+
+A build-and-boot timelapse on a cloud box. An elapsed clock and a progress bar run through the whole film, from install to boot to restore, so it reads as one clock. After the card, full-bleed `vultr-box.png` shows the real Server screen on the Vultr instance, with the ordinary server's problem as a typewriter header (paragraph 1). Paragraph 2 types the instance size, then plays `disc-install.mp4` at about 2x with the clock climbing toward five minutes and the real installer progress as the build bar, labelled "Disc in a VM. Sped up". A directional wipe and a flash land on `vultr-installer.png` and `disc-booted.png`. Paragraph 3 builds a backup bar, rolls 2.8 s, and holds the waiting task in `a05.mp4` from 21.2. Paragraph 4 types the Vultr jobs line by line in a terminal. Paragraph 5 whips to `mana-live.png`, stamps CLOSED on the rest of the API, and rolls 3 tests and under $0.20. One zoom, on the installer line in `disc-install.mp4`. Music bed: build.
+
+Footage: vultr-box.png, disc-install.mp4, vultr-installer.png, showcase/src/assets/track/vultr/disc-booted.png, a05.mp4, showcase/src/assets/track/vultr/mana-live.png
+
 **Goal.** Show that GurtOS Server is a real operating system that installs and runs on a small Vultr instance, and that Vultr runs the pieces that have to be public or big. A judge sees the real release disc install on 1 vCPU and 1 GB, an encrypted backup restored with a waiting task still waiting, and the cloud box answering its public routes while the rest of its API stays closed. All three live tests cost under $0.20.
 
 **Rubric map.**

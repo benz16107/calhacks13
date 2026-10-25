@@ -35,7 +35,7 @@ Times are targets; the voice sets the final cut. Shot IDs point to `capture.md` 
 | 7 | 1:22 to 1:35 | **Moment 2.** A03: the road-bike task; red Blocked banner; open the task, red rows for attacker.example and 1.1.1.1; press Undo | Lower third: Moment 2 · The booby-trapped page. Footnote: Scripted agent, same steps every take | "This agent reads a page with hidden instructions to steal my keys. The task has none to steal. It tries to send data out anyway, and the box blocks it, logs it, and undoes it." | Moment 2, verified Oct 24 00:54 |
 | 8 | 1:35 to 1:45 | **Moment 1.** A04: Time Machine, two task layers on one workspace; select one; "What comes back" and "What stays"; Undo | Lower third: Moment 1 · Undo one task | "Two tasks changed the same folder. Undo takes out exactly one of them, and the other task's work stays. No git, no backups." | Moment 1, verified Oct 23 23:15 |
 | 9 | 1:45 to 1:58 | **Moment 4.** A05: a long task running; cut to the VM window, force stop, black; start; boot splash; "Welcome back" with the task resuming | Lower third: Moment 4 · Pull the plug | "Now pull the plug. The box boots, rebuilds every task from its log, and picks up where it stopped. Nothing runs twice, and the approval is still waiting." | Moment 4, verified Oct 23 23:21 |
-| 10 | 1:58 to 2:12 | G05: the attack scoreboard, 16 rows filling, 14 green "stopped", 2 amber "not covered", then A06 task detail "What it can reach" with the placeholder key | 16 OS-level attacks: 14 stopped, 2 not covered (published). A real Droid task: 240 of 240 samples held only a placeholder key | "Security comes from the OS, whatever the model does. We publish our attack test: sixteen attacks, fourteen stopped, and two we don't cover yet. A real agent held only a placeholder key in two hundred forty out of two hundred forty checks." | Armadin row; Anthropic and Factory demo proof |
+| 10 | 1:58 to 2:12 | G05: the attack scoreboard, 16 rows filling, 15 green "stopped", 1 amber "not covered", then A06 task detail "What it can reach" with the placeholder key | 16 OS-level attacks: 15 stopped, 1 not covered (published). A real Droid task: 240 of 240 samples held only a placeholder key | "Security comes from the OS, whatever the model does. We publish our attack test: sixteen attacks, fifteen stopped, and one we don't cover yet. A real agent held only a placeholder key in two hundred forty out of two hundred forty checks." | Armadin row; Anthropic and Factory demo proof |
 | 11 | 2:12 to 2:25 | O01 timelapse: the Server disc boots in a VM, installs, first boot to the box screen; spec lines type in beside it | 1.37 GB disc · 40 Ubuntu packages, no desktop · 4 GB memory, 17 GB disk minimum · no GPU · x86_64 and arm64 | "And it's light. The Server disc is under one and a half gigabytes, with no desktop and no GPU. It runs on the old computer you already own, and it installed on a one-gigabyte cloud machine." | Principle 10 (`docs/story.md`); Vultr install on vc2-1c-1gb |
 | 12 | 2:25 to 2:37 | Quick cuts, 2 s each: D01 iPhone Approve with Face ID, D02 Apple Watch approve on the wrist, D03 Mac menu bar, A07 app.gurtos.com on a laptop, D04 Android | app.gurtos.com · iPhone · Apple Watch · Mac · Android | "You watch and answer from anywhere: the portal at app dot gurtos dot com, and apps for iPhone, Apple Watch, Mac and Android." | Native apps rows (merged), remote access (merged) |
 | 13 | 2:37 to 2:55 | G07 suite map: the OS core in the middle, editions, apps, remote access, the app platform with the sponsor apps around it; then G08 end card: logo performed in, gurtos.com, github link, Apache-2.0 | GurtOS · gurtos.com · github.com/benz16107/calhacks13 · Open source, Apache-2.0 | "It's a whole suite: the OS, the apps, remote access, and an app platform that Jira, ASI One, a shopper and a finance desk plug into. All of it is open source. Gurt O.S.: real access, never your keys." | Principle 13; repo public Oct 24 |
@@ -50,32 +50,35 @@ clause.
 ## Narration (exact text for ElevenLabs)
 
 The spelling "Gurt O.S." is on purpose: it makes the clone say "Gurt O S" instead of "Girdos" (`narration.md`).
+**Oct 25 cut:** "The agent runs as you" is out; the editions and filesystem lines are shorter; "You can try it today" (real discs, measured weight, where it installs) replaces "And it's light"; a docs line follows it. Story order restored at Ben's request (Oct 25): a 2.8 s montage of real product shots under the title, the problem, why an OS, GurtOS and the editions, moments 1 to 4 in order, security, light, phone and portal, try it, documented, open source. The shot list above is the first cut; `films/main.mjs` is the current one.
 404 words, about 2,350 characters.
 
 ```text
 Almost four hundred thousand people starred OpenClaw, an AI agent that runs on your own computer. Then twenty-one thousand copies were found open to the internet, three hundred forty-one of its skills were malware, and one click could steal its token.
 
-The agent runs as you: your keys, your files, your network.
-
 The problem isn't the agent. Our operating systems were built for one person at a keyboard. Permissions are per user, not per task. Any process can read your secrets. The network is all or nothing. And there's no approval, no budget, no record and no undo.
 
-So I built Gurt O.S.: operating systems built for AI agents. Every task runs as its own Linux user, in its own copy-on-write copy of your files, and reaches only the sites it needs. Agents work side by side without colliding, and nothing is copied twice. Factory's Droid, running Claude, does the work.
+So I built Gurt O.S.: operating systems built for AI agents. Every task runs as its own Linux user, in its own copy-on-write copy of your files, and reaches only the sites it needs. Factory's Droid, running Claude, does the work.
 
-It comes in three editions. Server is an always-on box with no human login. Personal is your own laptop, with agents built into the desktop. Business shares one box across a team, with roles, routed approvals and an audit trail.
-
-A task wants to spend eight dollars on a five-dollar budget. It stops and asks, on the box and on my phone at once, while other tasks keep running. I approve, and it carries on.
-
-This agent reads a page with hidden instructions to steal my keys. The task has none to steal. It tries to send data out anyway, and the box blocks it, logs it, and undoes it.
+It comes in three editions: Server, an always-on box; Personal, your own laptop with agents built into the desktop; and Business, one box for a team, with roles and an audit trail.
 
 Two tasks changed the same folder. Undo takes out exactly one of them, and the other task's work stays. No git, no backups.
 
+This agent reads a page with hidden instructions to steal my keys. The task has none to steal. It tries to send data out anyway, and the box blocks it, logs it, and undoes it.
+
+A task wants to spend eight dollars on a five-dollar budget. It stops and asks, on the box and on my phone at once, while other tasks keep running. I approve, and it carries on.
+
 Now pull the plug. The box boots, rebuilds every task from its log, and picks up where it stopped. Nothing runs twice, and the approval is still waiting.
 
-Security comes from the OS, whatever the model does. We publish our attack test: sixteen attacks, fourteen stopped, and two we don't cover yet. A real agent held only a placeholder key in two hundred forty out of two hundred forty checks.
+Security comes from the OS, whatever the model does. We publish our attack test: sixteen attacks, fifteen stopped, and one we don't cover yet. A real agent held only a placeholder key in two hundred forty out of two hundred forty checks.
 
-And it's light. The Server disc is under one and a half gigabytes, with no desktop and no GPU. It runs on the old computer you already own, and it installed on a one-gigabyte cloud machine.
+And it's light enough for almost any computer, even an old one: Server runs in one gigabyte of memory, and Personal uses less memory than stock Ubuntu.
 
 You watch and answer from anywhere: the portal at app dot gurtos dot com, and apps for iPhone, Apple Watch, Mac and Android.
+
+You can try it today: signed install discs for Server and Personal are at gurtos dot com slash download.
+
+Every part is documented at gurtos dot com slash docs, from the architecture to the security model, so anyone can check it or build on it.
 
 It's a whole suite: the OS, the apps, remote access, and an app platform that Jira, ASI One, a shopper and a finance desk plug into. All of it is open source. Gurt O.S.: real access, never your keys.
 ```
@@ -108,7 +111,7 @@ The flight recorder, agent permissions and signed receipts belong in track video
 #### attack-yourself
 
 ```text
-Security comes from the OS, whatever the model does. We publish our attack test: sixteen attacks, fourteen stopped, and two we don't cover yet. And you can attack it yourself: paste an injection, and watch each defence stop it.
+Security comes from the OS, whatever the model does. We publish our attack test: sixteen attacks, fifteen stopped, and one we don't cover yet. And you can attack it yourself: paste an injection, and watch each defence stop it.
 ```
 
 #### try-live

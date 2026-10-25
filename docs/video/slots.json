@@ -1,1 +1,4 @@
-{}
+{
+  "flight-recorder": { "media": "cap:fr.mp4", "merged": "portal 220ac4d (Replay)" },
+  "permissions": { "media": "repo:showcase/src/assets/track/hyphenate/perm-blocked.png", "merged": "core 4b473ea" }
+}

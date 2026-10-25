@@ -1,7 +1,7 @@
 # GurtOS videos
 
 Everything needed to make the Cal Hacks 13 videos: the list, the scripts, the capture plan, the narration plan and a
-HyperFrames project with GurtOS's look. **Status (Oct 25): the main video and Armadin are rendered** (`out/INDEX.md`, `REVIEW.md`, `upload.md`).
+HyperFrames project with GurtOS's look. **Status (Oct 25): all 19 videos are published** (links below; `upload.md` has the descriptions).
 The other 17 wait for Ben's feedback on those two.
 
 **Ben's decisions (Oct 24):** the narration says "Gurt O.S."; the clone's pace stays as it is; Ben records the ASI:One
@@ -19,6 +19,33 @@ shots for the Fetch.ai video himself; he added ElevenLabs credits.
 | `qc.py`, `slots.json` | The render check; the standout features that are ready to drop in (empty until one merges) |
 | `studio/` | The HyperFrames project: GurtOS look, title card, lower third, captions, the 10-second test render |
 | `../videos.md` | The first shot notes, written before the build finished. These scripts replace them |
+
+## Published (Oct 25, all Unlisted on Ben's channel)
+
+Every track video has its own format (its `## Creative brief` in `tracks/`, built with `kit.mjs`). Uploads after the API's
+daily limit went through YouTube Studio; superseded uploads are deleted. Local copies and QC reports: `out/` (git-ignored).
+
+| Video | Link | Spec |
+|---|---|---|
+| GurtOS: operating systems built for AI agents | https://youtu.be/rREjU2ddIyo | `films/main.mjs` |
+| GurtOS for Fetch.ai: ASI:One Agent Challenge | https://youtu.be/tcNbHb6XZuc | `films/fetch.mjs` |
+| GurtOS for Figma: Best Workflow, Stage Log, Best Design and Most Creative | https://youtu.be/JI8PBEVwaCw | `films/figma.mjs` |
+| GurtOS for Hyphenate: Autonomous Systems for Finance | https://youtu.be/90iEnbJtJoU | `films/hyphenate.mjs` |
+| GurtOS for Armadin: Best Security Hack | https://youtu.be/3hDnLuUqmjM | `films/armadin.mjs` |
+| GurtOS for Anthropic: Claude used well for a specific group of people | https://youtu.be/a2nhBj9DhbI | `films/anthropic.mjs` |
+| GurtOS for Microsoft: Built for the Real World | https://youtu.be/gGdqKNtvopw | `films/microsoft.mjs` |
+| GurtOS for CRS: Best Identity/Fraud | https://youtu.be/691r_JcBD0c | `films/crs.mjs` |
+| GurtOS for Visa: Reimagining Shopping | https://youtu.be/iYQ-_am3c2g | `films/visa.mjs` |
+| GurtOS for Coinbase and Solana: x402 Payment Agents · Best use of Solana | https://youtu.be/DnD78KAapMo | `films/coinbase-solana.mjs` |
+| GurtOS for Factory: Droid SDK | https://youtu.be/xH2J2BOVlK8 | `films/factory.mjs` |
+| GurtOS for Elastic: Agent Builder on Serverless | https://youtu.be/riaswviHD50 | `films/elastic.mjs` |
+| GurtOS for Moss: Agents that remember you | https://youtu.be/hRFm65ZLO-g | `films/moss.mjs` |
+| GurtOS for Apify: Best Use of Apify | https://youtu.be/j6_SIkMPQYw | `films/apify.mjs` |
+| GurtOS for Atlassian: Agentic Workforce Challenge, Track 1: agents that do the work | https://youtu.be/VEFBW-LRM94 | `films/atlassian-t1.mjs` |
+| GurtOS for Atlassian: Agentic Workforce Challenge, Track 2: security for agents acting for a user | https://youtu.be/VRVofDW0668 | `films/atlassian-t2.mjs` |
+| GurtOS for Mana: Building with Mana | https://youtu.be/BrA67CzIOYg | `films/mana.mjs` |
+| GurtOS for SpacetimeDB: The core real-time backend | https://youtu.be/Jypa31_HdrM | `films/spacetime.mjs` |
+| GurtOS for Vultr: MLH, Best use of Vultr | https://youtu.be/EH7kyUofUOs | `films/vultr.mjs` |
 
 ## Rules for every video
 

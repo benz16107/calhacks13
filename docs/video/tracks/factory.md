@@ -4,6 +4,12 @@
 away) and GurtOS Personal (Droid works on a copy of your folder until you press Keep). **Shares footage with:** Anthropic
 (T-FA-01), the main video (A03). **Status:** draft for Ben's approval.
 
+## Creative brief
+
+A code review of Droid's own work. Each beat adds a review note, a hand-drawn box and a short label, on the real task, and a timeline of dots (plan, approve, code, review, keep) fills along the bottom. After the card, full-bleed `task-done.png` shows the real Droid task while a mono typewriter header names it and the Nx line plays (paragraph 1). Paragraph 2 boxes "Runs as", "Sites it may reach: none" and the Claude line, with a 240 of 240 counter. Paragraph 3 types the five triggers in a terminal. Paragraph 4 sets `plan-phone.png` and `iphone-plan-actions.png` as tilted 3D cards, then stamps APPROVED on the replay. Paragraph 5 is `replay-approved-dark.png` full-bleed, with a note on each diff line and "Reviewer: approved", plus `factory-task-card.png` for $0.12 of $1.00. Paragraph 6 is `app-top.png` with an `ar03.mp4` inset of blocked hosts. Paragraph 7 splits Server from `14-review.png`. Downward wipes scroll through the diff, and the pace is a methodical review pass. One zoom, on the diff. Music bed: code.
+
+Footage: showcase/src/assets/track/factory/task-done.png, showcase/src/assets/track/factory/plan-phone.png, showcase/src/assets/track/factory/iphone-plan-actions.png, showcase/src/assets/track/factory/replay-approved-dark.png, factory-task-card.png, showcase/src/assets/track/factory/app-top.png, ar03.mp4, showcase/src/assets/repo/personal/14-review.png, site/src/assets/home/server-screen.png
+
 **Goal.** Droid does real work through the Droid SDK, and a judge can see every plan, step and diff. The OS, not Droid's
 good behaviour, sets the limits: its own Linux user, no key, a plan approved on the phone, a read-only reviewer, and an
 autonomy level the firewall and budget hold even if Droid ignores it. Not a chatbot wrapper: nothing here is a chat box.
