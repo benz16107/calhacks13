@@ -324,7 +324,7 @@ export class Rendezvous {
   }
 }
 
-const limits = { rvPut: new Limit(30, 60_000), rvGet: new Limit(240, 60_000), enroll: new Limit(5, 3600_000), enrollAll: new Limit(200, 3600_000), check: new Limit(60, 60_000), push: new Limit(600, 3600_000), bad: new Limit(20, 600_000), logins: new Limit(30, 60_000) };
+const limits = { rvPut: new Limit(30, 60_000), rvGet: new Limit(240, 60_000), enroll: new Limit(20, 3600_000), enrollAll: new Limit(200, 3600_000), check: new Limit(60, 60_000), push: new Limit(600, 3600_000), bad: new Limit(20, 600_000), logins: new Limit(30, 60_000) };
 
 type Answer = { status: number; body: unknown };
 

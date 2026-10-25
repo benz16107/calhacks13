@@ -56,7 +56,7 @@ answers both HTTP-01 and TLS-ALPN-01 through the tunnel.
 | Request | Does |
 |---|---|
 | `GET /v1/names/<name>` | `{name, available, reason?}`. 60 a minute per address. |
-| `POST /v1/names {name}` | Enroll. Returns `{name, host, secret, tunnel: {host, port, serverName, ca}}`. 5 an hour per address, 200 an hour in all. The relay keeps only a SHA-256 hash of the secret. |
+| `POST /v1/names {name}` | Enroll. Returns `{name, host, secret, tunnel: {host, port, serverName, ca}}`. 20 an hour per address, 200 an hour in all. The relay keeps only a SHA-256 hash of the secret. |
 | `DELETE /v1/names/<name>` | Release, with `Authorization: Bearer <name>.<secret>`. The tunnel is cut at its next heartbeat. |
 | `GET /v1/tunnel` | The tunnel's address and the CA the box pins for it. Fetched over HTTPS (Let's Encrypt), so a box on a hostile network can't be pointed at a fake relay. |
 | `GET /v1/push/key` | The app's VAPID public key, for `pushManager.subscribe()`. |

@@ -35,8 +35,8 @@ test('enroll, check a secret, refuse a second claim, release with the secret onl
 test('enrollment is rate limited per address', async () => {
   const r = fresh();
   const codes = [];
-  for (let i = 0; i < 7; i++) codes.push((await api(r, 'POST', u('/v1/names'), { name: `box-${i}x` }, undefined, '198.51.100.9')).status);
-  assert.deepEqual(codes, [200, 200, 200, 200, 200, 429, 429]);
+  for (let i = 0; i < 22; i++) codes.push((await api(r, 'POST', u('/v1/names'), { name: `box-${i}x` }, undefined, '198.51.100.9')).status);
+  assert.deepEqual(codes, [...Array(20).fill(200), 429, 429]); // 20 an hour per address: test machines behind one address enroll often
 });
 
 test('a name nobody used for 30 days is free again', () => {
