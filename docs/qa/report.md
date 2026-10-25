@@ -416,7 +416,7 @@ is save" with an arrow, because the GRUB box is 80 columns wide at that size. Th
 "Add an Anthropic API key in GurtOS Settings before your first task". The model-key step accepts a Factory key too, and the
 Server wizard says "Anthropic or Factory". Not wrong for most people, but it will confuse the Factory path.
 
-**Final discs, install pass Oct 25 (02:00 to 03:00 PT).** Server x86_64 and Personal x86_64 on Vultr, Server arm64 on benmac. All three
+**Final discs, install pass Oct 25 (02:00 to 03:00 PT).** Server x86_64 and Personal x86_64 on Vultr, Server arm64 on the laptop. All three
 installed from the public mirror and reached setup. The setup QR from each parses with the app's own parser (`PairingLink` and
 `Rendezvous` from `Pairing.swift`, through `/tmp/qa-scripts/qrcheck.sh`): the id, the home-network address and the box name come out.
 The console of a Vultr instance stops redrawing during the install (noVNC shows a stale frame until a key is pressed): that is the
@@ -559,4 +559,4 @@ on the pages or in OCR of all 61 images; no em dashes; every page fits 390 x 844
 | 02:05 | Final Server x86_64 disc on the Vultr QA instance: disc menu, Install, `erase`, installed in about 4 min, boots into setup | |
 | 02:15 | Setup, About (P2-33 fixed), QR parsed with the app's parser | |
 | 02:20 | Final Personal x86_64 disc on the same instance: GNOME first run, GurtOS Setup, the native app opens | |
-| 02:35 | Final Server arm64 disc on benmac: installed and booted to setup in about a minute; serial log "box: up and healthy on slot a" | |
+| 02:35 | Final Server arm64 disc on the laptop: installed and booted to setup in about a minute; serial log "box: up and healthy on slot a" | |
