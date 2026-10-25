@@ -99,6 +99,17 @@ Open source under Apache-2.0. Scan this to attack a live GurtOS yourself." Show 
 
 ## GurtOS Personal
 
-Personal is a full Ubuntu desktop, so show it only if a judge asks, and only if its VM is booted and signed in
-before judging starts. Otherwise show the Personal part of the main video and the Personal page on
-calhacks.gurtos.com.
+Show it when a judge asks about using GurtOS on their own laptop. A Personal VM was installed from the arm64 test
+disc through the real first-run screens and left signed in and idle on the laptop at 6:43 AM PT. It runs in QEMU
+with the same hardware virtualization UTM uses, and takes 6 GB of the laptop's memory.
+
+1. Open it: double-click `Show GurtOS Personal.command` in the `personal-demo` folder next to the test discs. It
+   opens in macOS Screen Sharing. Glance at it before 10:30. The folder's `TABLE.md` has the login and how to restart
+   it if the Mac restarts.
+2. **GurtOS** in the dock: Agents shows two finished tasks under "Ready to review". One was a real Claude run ($0.04)
+   that added two files to a copy of Documents.
+3. **Files**, right-click **Documents**: **Keep Changes** on one task, **Undo Task** on the other. "Documents stays
+   empty until you choose Keep. The agent never touched your real folder."
+
+That disc predates Replay and the permissions screen, so show those on the laptop box instead. Starting a new task
+there needs internet and model credit, so treat it as optional.
