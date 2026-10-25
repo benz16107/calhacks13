@@ -99,7 +99,7 @@ async function startBox() {
   box = spawn(process.execPath, [...process.execArgv, new URL('./box.ts', import.meta.url).pathname], {
     detached: true,
     stdio: ['ignore', out, out],
-    env: { ...process.env, BOX_HOME: HOME, BOX_PORT: 'auto', BOX_VAULT: path.join(HOME, 'vault.env'), BOX_STDB_DB: DB, BOX_PROXY_PORT: 'auto', BOX_APPROVAL_WAIT_MS: String(WINDOW), BOX_OWNER: 'owner', BOX_NO_DROID: LIVE_DROID ? '' : '1', BOX_HOSTS: JSON.stringify({ 'shop.demo': '127.0.0.1' }), BOX_DEMO: '1', BOX_ID: 'demo-box', BOX_NAME: 'Demo box', BOX_PEERS: JSON.stringify([{ id: 'vultr', name: 'Vultr box', stdb: 'box' }]) },
+    env: { ...process.env, BOX_HOME: HOME, BOX_PORT: 'auto', BOX_VAULT: path.join(HOME, 'vault.env'), BOX_STDB_DB: DB, BOX_PROXY_PORT: 'auto', BOX_SETUP_PORT: 'auto', BOX_APPROVAL_WAIT_MS: String(WINDOW), BOX_OWNER: 'owner', BOX_NO_DROID: LIVE_DROID ? '' : '1', BOX_HOSTS: JSON.stringify({ 'shop.demo': '127.0.0.1' }), BOX_DEMO: '1', BOX_ID: 'demo-box', BOX_NAME: 'Demo box', BOX_PEERS: JSON.stringify([{ id: 'vultr', name: 'Vultr box', stdb: 'box' }]) },
   });
   for (let i = 0; i < 300; i++) {
     if (await api('GET', '/health').catch(() => undefined)) {
@@ -374,6 +374,60 @@ await moment('tripwire keys: a decoy key that leaves a task stops it', async () 
   const events2 = await api<LogEvent[]>('GET', '/log');
   const key = JSON.stringify(events2).match(/AKIA[0-9A-F]{16}/);
   check(!key && !env.includes('AKIA'), 'the decoy key itself is nowhere in the log or the task output');
+});
+
+await moment('command setup: an agent sets a computer up through MCP with only the code on its screen', async () => {
+  const wasDone = (await api<{ done: boolean }>('GET', '/api/setup')).done;
+  if (wasDone) await api('POST', '/api/setup/reopen');
+  const before = await api<{ approvalThresholdCents: number }>('GET', '/api/settings');
+  const fromOutside = await viaTcp('POST', '/api/setup/code', {}, RELAYED);
+  check([401, 403].includes(fromOutside.status), `a setup code is only for this computer's own screen (${fromOutside.status} from the network)`);
+  const ch = await api<{ code: string; port: number; open: boolean }>('POST', '/api/setup/code');
+  const url = `http://127.0.0.1:${ch.port}`; // the setup channel: requests through it count as coming from the network
+  const noToken = await fetch(`${url}/api/settings`).then((r) => r.status);
+  check(ch.open && /^[0-9a-f]{8}$/.test(ch.code) && noToken === 401, `the screen shows an 8-character code and opens the setup channel, which gives nothing without a token (${noToken})`);
+  const asPhone = await fetch(`${url}/api/pair`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ code: ch.code, name: 'x' }) }).then((r) => r.status);
+  check(asPhone === 400, 'a setup code pairs only as a setup agent, not as a phone');
+  const ch2 = await api<{ code: string }>('POST', '/api/setup/code'); // the failed try above used that code up
+  const mcp = spawn(process.execPath, ['--experimental-strip-types', '--disable-warning=ExperimentalWarning', new URL('./claude-mcp.ts', import.meta.url).pathname], { env: { ...process.env, BOX_URL: url, BOX_SETUP_CODE: ch2.code, BOX_TOKEN: '' }, stdio: ['pipe', 'pipe', 'inherit'] });
+  const waiting = new Map<number, (v: any) => void>();
+  let buf = '', n = 0;
+  mcp.stdout!.on('data', (c) => {
+    buf += c;
+    for (let i; (i = buf.indexOf('\n')) >= 0; buf = buf.slice(i + 1)) {
+      const m = JSON.parse(buf.slice(0, i));
+      waiting.get(m.id)?.(m);
+    }
+  });
+  const rpc = (method: string, params: object = {}) => new Promise<any>((r) => (waiting.set(++n, r), mcp.stdin!.write(JSON.stringify({ jsonrpc: '2.0', id: n, method, params }) + '\n')));
+  const tool = async (name: string, args: object = {}) => {
+    const m = await rpc('tools/call', { name, arguments: args });
+    return { error: !!m.result?.isError, value: m.result?.isError ? m.result.content[0].text : JSON.parse(m.result.content[0].text) };
+  };
+  const secret = `demo-setup-${Date.now()}`;
+  try {
+    await rpc('initialize', { protocolVersion: '2025-06-18' });
+    const names = (await rpc('tools/list')).result.tools.map((t: { name: string }) => t.name);
+    check(['setup_status', 'setup_set_key', 'setup_settings', 'setup_app', 'setup_pair_phone', 'setup_doctor', 'setup_finish'].every((x) => names.includes(x)), `in setup mode Claude sees the setup tools (${names.filter((x: string) => x.startsWith('setup_')).length})`);
+    const key = await tool('setup_set_key', { name: 'DEMO_SETUP_KEY', value: secret });
+    const settings = await tool('setup_settings', { patch: { approvalThresholdCents: 700 } });
+    const app = await tool('setup_app', { id: 'example', on: true });
+    check(!key.error && !settings.error && settings.value.approvalThresholdCents === 700 && !app.error, 'the agent set a key, a setting and an app through the same setup path as the screen');
+    const paired = (await tool('setup_pair_phone')).value as { code: string };
+    const phone = await api<{ device: { id: string } }>('POST', '/api/pair', { code: paired.code, name: "Owner's phone" });
+    const doctor = (await tool('setup_doctor')).value as { missing: { id: string }[] };
+    check(!!phone.device && !doctor.missing.some((x) => x.id === 'phone'), `the owner's phone paired from the agent's code, and doctor no longer asks for one (missing: ${doctor.missing.map((x) => x.id).join(', ') || 'nothing'})`);
+    const log = JSON.stringify(await api<LogEvent[]>('GET', '/log'));
+    check(!log.includes(secret) && /Key saved: DEMO_SETUP_KEY/.test(log) && /Setup from another computer/.test(log), 'every step is in the action log, and the key is there by name only');
+    const done = await tool('setup_finish');
+    const after = await tool('setup_status');
+    const closed = await fetch(`${url}/api/setup`).then(() => 'open', () => 'closed');
+    check(!done.error && after.error && closed === 'closed', `finishing setup ended the agent's access (${after.value}) and closed the setup channel (${closed})`);
+  } finally {
+    mcp.kill();
+    await api('PATCH', '/api/settings', { approvalThresholdCents: before.approvalThresholdCents });
+    if (!wasDone) await api('POST', '/api/setup/reopen');
+  }
 });
 
 await moment('the GurtOS MCP server: Claude Code drives the box', async () => {

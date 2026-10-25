@@ -71,7 +71,8 @@ function listenSocket(server: http.Server, file: string, owner?: { uid: number; 
 
 const dollars = (cents: number) => `$${(cents / 100).toFixed(2)}`;
 const BOX_ID = process.env.BOX_ID ?? os.hostname();
-const BOX_NAME = process.env.BOX_NAME ?? BOX_ID; // the name setup gives wins: see boxName()
+const BOX_NAME = process.env.BOX_NAME ?? BOX_ID;
+const SETUP_TOKEN_MS = 2 * 60 * 60_000; // a setup token and its network way in last two hours at most // the name setup gives wins: see boxName()
 
 interface Device {
   id: string;
@@ -88,7 +89,7 @@ interface Device {
   /** Business: the person this phone signs in as (paired with a code an admin made for them). */
   person?: string;
   /** What the device says it is: the web app (unset), the iPhone or Mac app. Not proof of anything. */
-  kind?: 'iphone' | 'mac' | 'watch';
+  kind?: 'iphone' | 'mac' | 'watch' | 'setup';
   /** A Watch: the iPhone token that made it. Only the box sets kind 'watch', so the Watch rules can rely on it. */
   parent?: string;
   /** When it last called this computer. */
@@ -134,7 +135,7 @@ class Core {
   devicesPath = path.join(HOME, 'devices.json');
   devices: Device[] = fs.existsSync(this.devicesPath) ? JSON.parse(fs.readFileSync(this.devicesPath, 'utf8')) : [];
   screens = new Map<string, string>(); // SpacetimeDB identity -> name, for the box's own screen(s); lost on restart, re-sent on the next page load
-  pairCodes = new Map<string, { expiry: number; owner: boolean; person?: string }>(); // one-time code -> expiry (ms), whether it pairs an owner device, and for whom (Business)
+  pairCodes = new Map<string, { expiry: number; owner: boolean; person?: string; setup?: boolean }>(); // one-time code -> expiry (ms), whether it pairs an owner device, and for whom (Business)
   ownerPath = path.join(HOME, 'owner.json');
   // The human with sudo on a Personal box: set at runtime (the image does it after the desktop's own setup
   // makes the account), else BOX_OWNER, else none (a Server box).
@@ -232,6 +233,65 @@ class Core {
     return typeof n === 'string' && n.trim() && n.trim().length <= 40 ? n.trim() : BOX_NAME;
   }
 
+  // ---------- command setup: a code on the screen, then an agent on another computer (AGENT-SETUP.md) ----------
+  setupChannel?: { server: http.Server; until: number; port: number; timer: NodeJS.Timeout };
+
+  /** The screen's "Set up from another computer": a one-time code and the addresses an agent can reach. */
+  async openSetupChannel() {
+    if (this.setup.done) throw Object.assign(new Error('Setup is finished. Open it again first.'), { status: 409 });
+    const code = randomBytes(4).toString('hex');
+    this.pairCodes.set(code, { expiry: Date.now() + 30 * 60_000, owner: true, setup: true });
+    if (!this.setupChannel) {
+      // The network's way in while setup is open. It hands each request to the API marked as coming from outside,
+      // so nothing on the network is ever treated as this computer's own screen: every call needs the setup token.
+      const server = http.createServer((req, res) => {
+        const up = http.request({ host: '127.0.0.1', port: this.apiPort, path: req.url, method: req.method, headers: { ...req.headers, 'x-forwarded-for': req.socket.remoteAddress ?? 'network' } }, (r) => {
+          res.writeHead(r.statusCode ?? 502, r.headers);
+          r.pipe(res);
+        });
+        up.on('error', () => res.destroy());
+        req.pipe(up);
+      });
+      const want = process.env.BOX_SETUP_PORT ?? '7701';
+      await new Promise<void>((ok, no) => server.once('error', no).listen(want === 'auto' ? 0 : Number(want), '0.0.0.0', () => ok()));
+      const until = Date.now() + SETUP_TOKEN_MS;
+      const timer = setTimeout(() => this.closeSetupChannel('two hours passed'), SETUP_TOKEN_MS).unref();
+      this.setupChannel = { server, until, port: (server.address() as { port: number }).port, timer };
+      this.write({ type: 'note', track: 'setup', data: { channel: 'open' }, text: 'Setup from another computer: a code is on the screen' });
+    }
+    return { code, expiresAt: new Date(Date.now() + 30 * 60_000).toISOString(), ...this.channelView() };
+  }
+
+  /** Close the network's way in and end every setup token. */
+  closeSetupChannel(why: string) {
+    const devs = this.devices.filter((d) => d.kind === 'setup' && !d.revoked);
+    for (const d of devs) d.revoked = true;
+    if (devs.length) this.saveDevices();
+    for (const [code, e] of this.pairCodes) if (e.setup) this.pairCodes.delete(code);
+    if (!this.setupChannel) return this.channelView();
+    clearTimeout(this.setupChannel.timer);
+    this.setupChannel.server.close();
+    this.setupChannel = undefined;
+    this.write({ type: 'note', track: 'setup', data: { channel: 'closed', why }, text: `Setup from another computer closed: ${why}` });
+    return this.channelView();
+  }
+
+  channelView() {
+    const c = this.setupChannel;
+    if (!c) return { open: false };
+    const ips = Object.values(os.networkInterfaces()).flat().filter((a) => a && a.family === 'IPv4' && !a.internal).map((a) => a!.address);
+    return { open: true, until: new Date(c.until).toISOString(), port: c.port, urls: ips.map((ip) => `http://${ip}:${c.port}`), ...(this.remote.saved ? { remote: this.remote.saved.url } : {}), devices: this.devices.filter((d) => d.kind === 'setup' && !d.revoked).map((d) => ({ name: d.name, since: d.pairedAt })) };
+  }
+
+  /** What's still missing before this computer is ready. */
+  doctor() {
+    const missing: { id: string; text: string }[] = [];
+    if (!this.modelVia()) missing.push({ id: 'key', text: 'No model key yet: set ANTHROPIC_API_KEY or FACTORY_API_KEY.' });
+    if (system.edition(this.owner, this.business.on) === 'personal' && !this.owner) missing.push({ id: 'owner', text: 'No owner yet.' });
+    if (!this.devices.some((d) => !d.revoked && d.kind !== 'setup' && d.kind !== 'watch')) missing.push({ id: 'phone', text: 'No phone paired yet: run pair and scan the code.' });
+    return { ok: !missing.length, missing };
+  }
+
   // ---------- setup: one path for the wizard, command setup and Quick Start ----------
   // Every way of setting up a computer calls these (and setOwner, enableApp, disableApp, remote.enable), so the
   // checks and the log are the same whichever screen, command or phone did it. Callers check who may.
@@ -246,6 +306,7 @@ class Core {
       if (kind === 'finish') this.setup.finishedAt = new Date().toISOString();
       else delete this.setup.finishedAt;
       this.write({ type: 'note', track: 'setup', data: kind === 'finish' ? { finished: true } : { reopened: true } });
+      if (kind === 'finish') this.closeSetupChannel('setup finished');
     }
     saveSetup(HOME, this.setup);
     return this.setupView();
@@ -1600,7 +1661,7 @@ class Core {
 
   /** The setup state with the suggested step order. Until `done`, the box's screen shows the wizard. */
   setupView() {
-    return { model: { ready: !!this.modelVia(), via: this.modelVia() }, modelKey: !!this.modelVia(), done: this.setup.done, finishedAt: this.setup.finishedAt ?? null, migrated: this.setup.migrated ?? false, steps: this.setup.steps, suggested: SETUP_STEPS };
+    return { model: { ready: !!this.modelVia(), via: this.modelVia() }, modelKey: !!this.modelVia(), done: this.setup.done, finishedAt: this.setup.finishedAt ?? null, migrated: this.setup.migrated ?? false, steps: this.setup.steps, suggested: SETUP_STEPS, channel: this.channelView() };
   }
 
   // ---------- pairing a phone, and listing every box ----------
@@ -1646,7 +1707,7 @@ class Core {
   /** A phone redeems the code for a durable device token. */
   wrongCodes: number[] = [];
   pair(body: { code?: string; name?: string; identity?: string; kind?: unknown }) {
-    if (body.kind !== undefined && !['web', 'iphone', 'mac'].includes(body.kind as string)) throw new Error('kind: web, iphone or mac');
+    if (body.kind !== undefined && !['web', 'iphone', 'mac', 'setup'].includes(body.kind as string)) throw new Error('kind: web, iphone or mac');
     // Pairing is reachable from outside the box, so guessing codes is limited: 10 wrong ones a minute, from everyone together.
     this.wrongCodes = this.wrongCodes.filter((at) => Date.now() - at < 60_000);
     if (this.wrongCodes.length >= 10) throw Object.assign(new Error('too many wrong pairing codes; wait a minute and ask this computer\'s screen for a new one'), { status: 429 });
@@ -1656,10 +1717,12 @@ class Core {
       throw Object.assign(new Error('bad or expired pairing code'), { status: 400 });
     }
     this.pairCodes.delete(String(body.code)); // one-time
+    // A setup code pairs only as `setup` (an owner that lasts until setup finishes), and only a setup code does.
+    if ((body.kind === 'setup') !== !!entry.setup) throw Object.assign(new Error(entry.setup ? 'a setup code pairs as kind setup' : 'kind setup needs a setup code from the screen'), { status: 400 });
     const person = this.person(entry.person);
     if (entry.person && !person) throw Object.assign(new Error('the person this code was for has been removed'), { status: 400 });
     const name = String(body.name || (person ? `${person.name}'s phone` : 'phone')).slice(0, 40);
-    const kind = body.kind === 'iphone' || body.kind === 'mac' ? body.kind : undefined;
+    const kind = body.kind === 'iphone' || body.kind === 'mac' || body.kind === 'setup' ? body.kind : undefined;
     const device: Device = { id: 'd' + randomBytes(5).toString('hex'), name, token: randomBytes(24).toString('hex'), pairedAt: new Date().toISOString(), ...(kind ? { kind } : {}), ...(entry.owner ? { owner: true } : {}), ...(person ? { person: person.id } : {}), ...(typeof body.identity === 'string' && /^[0-9a-f]{64}$/i.test(body.identity) ? { identity: body.identity.toLowerCase() } : {}) };
     this.devices.push(device);
     this.saveDevices();
@@ -2033,6 +2096,12 @@ class Core {
   deviceByToken(token?: string): Device | undefined {
     const t = (token ?? '').replace(/^Bearer /i, '');
     const d = t ? this.devices.find((x) => x.token === t && !x.revoked) : undefined;
+    // A setup token ends when setup finishes or two hours after it was made, whichever is first.
+    if (d?.kind === 'setup' && (this.setup.done || Date.now() - Date.parse(d.pairedAt) > SETUP_TOKEN_MS)) {
+      d.revoked = true;
+      this.saveDevices();
+      return undefined;
+    }
     if (d) d.lastSeen = new Date().toISOString(); // saved with the next device change; shown as "seen <time>"
     return d;
   }
@@ -2236,8 +2305,18 @@ class Core {
             return this.systemFacts();
           case 'GET /setup':
             return this.setupView();
-          case 'POST /setup/:id': {
+          case 'GET /setup/:id':
+            if (id !== 'doctor') return undefined;
             this.requireOwner(req);
+            return this.doctor();
+          case 'POST /setup/:id': {
+            // The code is only for someone at this computer's own screen.
+            if (id === 'code') {
+              if (!(this.isLocal(req) && !this.serviceCaller(req))) throw Object.assign(new Error("A setup code is shown on this computer's own screen."), { status: 403 });
+              return this.openSetupChannel();
+            }
+            this.requireOwner(req);
+            if (id === 'stop') return this.closeSetupChannel('stopped from the screen');
             if (id !== 'step' && id !== 'finish' && id !== 'reopen') return undefined;
             return this.setupStep(id, body?.id ?? body?.step, body?.data);
           }

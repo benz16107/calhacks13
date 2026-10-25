@@ -117,6 +117,16 @@ first; the value is never returned or logged), `changeSettings` (applyPatch's va
 `enableApp` and `disableApp`, `remote.enable`, and `setupStep('step' | 'finish' | 'reopen')`. The routes call them
 after checking who may; a new way of setting up calls them too, never a copy of a route.
 
+**Setup from another computer.** `POST /api/setup/code` (only from the computer's own screen, during setup) returns
+`{code, expiresAt, open, until, port, urls, remote?, devices}`: an 8-character code, one use, 30 minutes, and the setup
+channel, a listener on port 7701 (`BOX_SETUP_PORT`) that forwards to this API and marks every request as coming
+from the network. `POST /api/pair {code, kind: 'setup'}` trades the code for a setup token (an owner device of kind
+`setup`; only a setup code pairs as `setup`). The token and the channel end at `POST /api/setup/finish`, at
+`POST /api/setup/stop` (the screen's Stop), or two hours after they were made. `GET /api/setup` has `channel`
+(`devices` is `[{name, since}]`). `GET /api/setup/doctor` is `{ok, missing: [{id, text}]}`. Clients:
+`core/gurtos.ts` (the command line) and `core/claude-mcp.ts` with `BOX_SETUP_CODE` (MCP setup tools), both on
+`core/setup-client.ts`. How-to: `AGENT-SETUP.md`; design: `docs/design/agent-setup.md`.
+
 **System update.** `GET /api/update` is `{version, build, state, slot?, last?, lastAt?}`, read from what
 `box-update` leaves behind: `state` is `current`, `ready` (an update is written to the other slot and starts at the
 next restart), `trial` (running an update not yet confirmed), `rolledBack` (the last line says it rolled back or did

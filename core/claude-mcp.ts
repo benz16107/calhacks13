@@ -4,12 +4,19 @@
 //   BOX_URL    the box: https://<name>.box.gurtos.com, or http://127.0.0.1:7700 on the box itself
 //   BOX_TOKEN  a paired device's token (pair a device named "Claude" from the box's screen); not needed on the box
 // claude mcp add gurtos --env BOX_URL=https://<name>.box.gurtos.com --env BOX_TOKEN=<token> -- node <repo>/core/claude-mcp.ts
+// Setup mode, for a new computer (AGENT-SETUP.md): BOX_SETUP_CODE=<the code on its screen> instead of BOX_TOKEN.
+// The code is traded for a setup token on first use, and the setup tools appear.
 import readline from 'node:readline';
+import { connect, steps, type Api } from './setup-client.ts';
 
 const URL_ = (process.env.BOX_URL ?? 'http://127.0.0.1:7700').replace(/\/$/, '');
-const TOKEN = process.env.BOX_TOKEN ?? '';
+let TOKEN = process.env.BOX_TOKEN ?? '';
+const SETUP_CODE = !TOKEN ? (process.env.BOX_SETUP_CODE ?? '') : '';
+let connecting: Promise<void> | undefined;
+const ready = () => (SETUP_CODE && !TOKEN ? (connecting ??= connect(URL_, SETUP_CODE, process.env.BOX_SETUP_NAME ?? 'Claude (setup)').then((r) => void (TOKEN = r.token))) : Promise.resolve());
 
 async function api(method: string, path: string, body?: unknown) {
+  await ready();
   const r = await fetch(`${URL_}/api${path}`, {
     method,
     headers: { 'content-type': 'application/json', ...(TOKEN ? { authorization: `Bearer ${TOKEN}` } : {}) },
@@ -74,6 +81,25 @@ const tools: { name: string; description: string; inputSchema: object; run: (a: 
     run: (a) => api('POST', `/tasks/${encodeURIComponent(a.id)}/keep`),
   },
 ];
+
+const setupApi: Api = api;
+if (SETUP_CODE) {
+  const obj = (properties: object, required: string[] = []) => ({ type: 'object', properties, required });
+  tools.push(
+    { name: 'setup_status', description: "The new computer's setup: which steps are done, whether a model key is set, and the setup channel.", inputSchema: obj({}), run: () => steps.status(setupApi) },
+    { name: 'setup_doctor', description: 'What is still missing before setup can finish (model key, owner, a paired phone). Clean means ready.', inputSchema: obj({}), run: () => steps.doctor(setupApi) },
+    { name: 'setup_set_key', description: "Write a key into the computer's vault (ANTHROPIC_API_KEY or FACTORY_API_KEY first). It is checked, never shown again and never logged. Ask the owner for it; if they would rather not share it with you, they can paste it on the computer's screen instead.", inputSchema: obj({ name: str, value: str }, ['name', 'value']), run: (a) => steps.setKey(setupApi, a.name, a.value) },
+    { name: 'setup_keys', description: 'The names of the keys already in the vault (never their values).', inputSchema: obj({}), run: () => steps.keys(setupApi) },
+    { name: 'setup_owner', description: 'GurtOS Personal: the account that owns this computer.', inputSchema: obj({ user: str }, ['user']), run: (a) => steps.owner(setupApi, a.user) },
+    { name: 'setup_folders', description: 'GurtOS Personal: the folders agents may be handed (absolute paths).', inputSchema: obj({ folders: { type: 'array', items: str } }, ['folders']), run: (a) => steps.folders(setupApi, a.folders) },
+    { name: 'setup_settings', description: 'Change settings, for example {"approvalThresholdCents":500,"defaultBudgetCents":100}. The computer checks each one.', inputSchema: obj({ patch: { type: 'object' } }, ['patch']), run: (a) => steps.settings(setupApi, a.patch) },
+    { name: 'setup_apps', description: 'Every app and whether it is on.', inputSchema: obj({}), run: () => steps.apps(setupApi) },
+    { name: 'setup_app', description: 'Turn an app on or off.', inputSchema: obj({ id: str, on: { type: 'boolean' } }, ['id', 'on']), run: (a) => steps.app(setupApi, a.id, a.on === true) },
+    { name: 'setup_remote', description: 'Turn on its https address at <name>.box.gurtos.com.', inputSchema: obj({ name: str }), run: (a) => steps.remote(setupApi, a.name) },
+    { name: 'setup_pair_phone', description: "A link and code for the owner's phone. Give the link to the owner: scanning or opening it pairs their phone as the owner's.", inputSchema: obj({}), run: () => steps.pair(setupApi) },
+    { name: 'setup_finish', description: 'Finish setup. This ends your setup access, so run setup_doctor first and finish only when it is clean.', inputSchema: obj({}), run: () => steps.finish(setupApi) },
+  );
+}
 
 async function handle(method: string, params: any) {
   switch (method) {
