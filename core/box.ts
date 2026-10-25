@@ -1885,7 +1885,8 @@ class Core {
     const apps = () => [...this.installed.keys()].filter((a) => !this.disabled.has(a) && a !== 'example');
     if (!id) {
       const p = quick.parseSend(body);
-      const keys = this.sendableKeys().filter((k) => quick.MODEL_KEYS.includes(k));
+      // The keys are fixed here, from the owner's ticks (default: the model keys), so the OK always names what leaves.
+      const keys = this.sendableKeys().filter((k) => (Array.isArray(body.keys) ? body.keys.includes(k) : quick.MODEL_KEYS.includes(k)));
       const sid = randomBytes(9).toString('base64url');
       this.quickSends.set(sid, { ...p, keys, at: Date.now(), by: d.name });
       return { id: sid, phrase: quick.phrase(p.pk), question: quick.question({ keys, apps: apps().length, n: p.n, pk: p.pk }), keys: this.sendableKeys().map((k) => ({ name: k, chosen: keys.includes(k) })) };
@@ -1894,7 +1895,7 @@ class Core {
     if (!p) throw Object.assign(new Error('that Quick Start request expired; scan the new computer\'s code again'), { status: 404 });
     this.quickSends.delete(id); // one answer
     if (body?.approve !== true) return { sent: false };
-    const keys = Array.isArray(body.keys) ? this.sendableKeys().filter((k) => body.keys.includes(k)) : p.keys;
+    const keys = p.keys.filter((k) => this.vault.has(k)); // exactly the keys the question named; `keys` on the answer is ignored
     const b = quick.bundle({ from: this.boxName(), keys: Object.fromEntries(keys.map((k) => [k, this.vault.get(k)!])), settings: this.settings as never, apps: apps(), phonePk: p.phonePk });
     return quick.deliver(RELAY, p, b).then(() => {
       // Names only, never values; and the new computer's key, so the owner can match it later.

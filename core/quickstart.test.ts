@@ -33,4 +33,5 @@ test('a send is checked at the boundary, and the bundle copies only the settings
   const b = bundle({ from: 'GurtOS Cloud', keys: {}, settings: { approvalThresholdCents: 500, paused: true, agentFolders: ['/home/a'], quietHours: { enabled: false } }, apps: ['shopper'], phonePk: good.phonePk });
   assert.deepEqual(Object.keys(b.settings).sort(), ['approvalThresholdCents', 'quietHours'], 'never paused, never folder paths');
   assert.match(question({ keys: ['ANTHROPIC_API_KEY'], apps: 6, n: 'GurtOS Laptop', pk: good.pk }), /^Send your Anthropic key, 6 apps and your spending rules to "GurtOS Laptop" \(check phrase: \w+ \w+ \w+ \w+\)\?$/);
+  assert.match(question({ keys: [], apps: 1, n: 'X', pk: good.pk }), /^Send 1 app and your spending rules \(no keys\) to "X"/);
 });

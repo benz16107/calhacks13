@@ -787,6 +787,23 @@ says `auth: "wrist"` (what the Watch reports, not proof). So a Watch can approve
 Business and not Shopper. Anything else is a `403` with `needs: "iphone"`, and the request keeps waiting. A Watch may
 always deny. core/demo.ts checks each of these; native/demo.ts checks every call the apps make.
 
+## Quick Start: set up a new computer from one you own
+
+The phone is the bridge (`core/quickstart.ts`). The new computer shows a QR with its one-time X25519 key, a secret and a
+relay rendezvous id, all after `#`. The owner's phone asks a computer it owns to send. That computer's core seals the
+bundle to the new computer's key mixed with the secret, and the new computer applies it with the same setup functions
+as the wizard. The relay sees only ciphertext.
+
+| Request | Does |
+|---|---|
+| `POST /api/quickstart/start` | The new computer's own screen, during setup only: `{url, phrase, state, expiresAt}`. Show `url` as a QR and the four-word `phrase`. |
+| `GET /api/quickstart`, `POST /api/quickstart/stop` | Owner. `{state: waiting, applying, done, stopped or error, steps, error?}`. Stop refuses any bundle that arrives later. |
+| `POST /api/quickstart/send {rv, pk, s, n, phonePk, keys?}` | A phone paired as the owner, on the source: `{id, question, phrase, keys}`. `keys` are the owner's ticks (default: the model keys; never `BOX_*`). `question` names exactly what leaves. |
+| `POST /api/quickstart/send/<id> {approve}` | The named OK, one answer. On approve, core seals and sends exactly the keys the question named (a `keys` field here is ignored), the apps that are on and the settings meant to travel (never `paused` or `agentFolders`). 409: the new computer stopped. |
+
+Face ID is enforced by the iPhone app before it sends the approval; the box does not verify it (no passkeys in core
+yet). On the web, the owner's tap approves.
+
 ## Running it
 
 ```

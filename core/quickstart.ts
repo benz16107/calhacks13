@@ -71,8 +71,9 @@ export function parseSend(b: any) {
 
 /** The approval's sentence: exactly what leaves, to where, with the phrase to compare. */
 export function question(o: { keys: string[]; apps: number; n: string; pk: string }) {
-  const keys = o.keys.length ? o.keys.map(label).join(', ') : 'no keys';
-  return `Send your ${keys}, ${o.apps} app${o.apps === 1 ? '' : 's'} and your spending rules to "${o.n}" (check phrase: ${phrase(o.pk)})?`;
+  const apps = `${o.apps} app${o.apps === 1 ? '' : 's'}`;
+  const what = o.keys.length ? `your ${o.keys.map(label).join(', ')}, ${apps} and your spending rules` : `${apps} and your spending rules (no keys)`;
+  return `Send ${what} to "${o.n}" (check phrase: ${phrase(o.pk)})?`;
 }
 
 export interface Apply {

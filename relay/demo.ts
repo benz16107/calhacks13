@@ -216,13 +216,16 @@ export default async function (d: DemoKit) {
     const phone = keyPair();
     const asked = await raw('POST', '/api/quickstart/send', { rv: f.get('rv'), pk: f.get('pk'), s: f.get('s'), n: f.get('n'), phonePk: phone.pk }, ownerPhone);
     d.check(asked.status === 200 && asked.body.question.includes(`check phrase: ${st.phrase}`) && /^Send your .* and your spending rules to "/.test(asked.body.question), `live: the source asks its owner, naming what leaves: "${asked.body.question}"`);
-    const sent = await raw('POST', `/api/quickstart/send/${asked.body.id}`, { approve: true }, ownerPhone);
+    const named: string[] = asked.body.keys.filter((k: any) => k.chosen).map((k: any) => k.name);
+    // The answer tries to add every key; only the ones the question named may leave.
+    const sent = await raw('POST', `/api/quickstart/send/${asked.body.id}`, { approve: true, keys: asked.body.keys.map((k: any) => k.name) }, ownerPhone);
     const done = await d.waitFor('Quick Start to finish on the new computer', async () => {
       const v = await d.api('GET', '/quickstart');
       if (v.state === 'error') throw new Error(v.error);
       return v.state === 'done' ? v : undefined;
     }, 200_000);
     d.check(sent.body.sent === true && done.steps.some((x: any) => /app/.test(x.text)) && done.steps.some((x: any) => /^Reach from anywhere/.test(x.text)), `live: after the owner's OK, the new computer applied each step: ${done.steps.map((x: any) => x.text).join('; ')}`);
+    d.check(done.steps.filter((x: any) => / added \(from /.test(x.text)).length === named.length, `live: only the keys the question named left the source (${named.join(', ') || 'none'}), though the answer asked for all ${asked.body.keys.length}`);
     const sealedOwner = await (await fetch(`https://box.gurtos.com/v1/rv/${f.get('rv')}/owner`)).json();
     const { host: qhost, code: qcode } = openSealed(phone.privateKey, f.get('s')!, sealedOwner as any);
     const qp = (await (await fetch(`https://${qhost}/api/pair`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ code: qcode, name: 'Phone from Quick Start' }) })).json()) as any;
