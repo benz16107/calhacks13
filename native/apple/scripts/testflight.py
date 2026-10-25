@@ -68,7 +68,10 @@ elif cmd == "group":
     for u in users:
         at = u["attributes"]
         have = call("GET", f"/v1/betaTesters?filter[email]={urllib.parse.quote(at['username'])}&filter[apps]={a}")["data"]
-        if have:
+        in_group = [t["id"] for t in call("GET", f"/v1/betaGroups/{g['id']}/betaTesters?limit=200")["data"]]
+        if have and have[0]["id"] in in_group:
+            pass  # already a tester in this group
+        elif have:
             call("POST", f"/v1/betaGroups/{g['id']}/relationships/betaTesters", {"data": [{"type": "betaTesters", "id": have[0]["id"]}]})
         else:
             call("POST", "/v1/betaTesters", {"data": {"type": "betaTesters", "attributes": {"email": at["username"], "firstName": at.get("firstName", ""), "lastName": at.get("lastName", "")},
