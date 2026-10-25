@@ -62,7 +62,7 @@ def app_of(e):
     return tool.split('.', 1)[0] if '.' in tool else None
 
 
-STATE_WORDS = {'queued': 'Queued', 'running': 'Started', 'waiting': 'Waiting for your OK', 'done': 'Finished', 'failed': 'Failed',
+STATE_WORDS = {'queued': 'Queued', 'running': 'Started', 'waiting': 'Needs you', 'done': 'Finished', 'failed': 'Failed',
                'undone': 'Undone'}
 
 
@@ -99,18 +99,20 @@ def event_text(e, me=None):
         app, _, action = (e.get('tool') or 'a tool').partition('.')
         return 'applications-system-symbolic', f"Used {app.capitalize()}" + (f" ({action.replace('_', ' ')})" if action else '')
     if t == 'tool.result':
-        return ('object-select-symbolic', 'It worked') if e.get('ok') else ('dialog-warning-symbolic', f"That did not work. {failure_text(e.get('error'))}")
+        if e.get('ok'):
+            return ('gurtos-money-symbolic', f"Finished, spent {dollars(e['cents'])}") if e.get('cents') else ('object-select-symbolic', 'It worked')
+        return 'process-stop-symbolic', f"Blocked: it was refused. {failure_text(e.get('error'))}"
     if t == 'approval.asked':
-        return 'dialog-question-symbolic', 'Asked: ' + (e.get('approval') or {}).get('question', '')
+        return 'dialog-question-symbolic', 'Asks: ' + (e.get('approval') or {}).get('question', '')
     if t == 'approval.answered':
         return ('object-select-symbolic' if e.get('approved') else 'process-stop-symbolic'), f"{'Approved' if e.get('approved') else 'Denied'} by {who(e.get('by'), me)}"
     if t == 'cost':
         return 'gurtos-money-symbolic', f"Spent {dollars(e.get('cents'))} on {e.get('what', 'the model')}"
     if t == 'net.blocked':
-        return 'security-high-symbolic', f"Blocked a connection to {e.get('host', 'a site')}"
+        return 'security-high-symbolic', f"Blocked: reaching {e.get('host', 'a site')}, not one of this task's hosts"
     if t == 'keep':
         return 'document-save-symbolic', {'pending': 'Changes ready for review', 'kept': 'You kept its changes', 'conflict': 'Keep stopped: you edited the same files',
-                                          'unkept': 'Undone after Keep: the files are back', 'undone': 'Undone'}.get(e.get('result'), 'Changes updated')
+                                          'unkept': 'Undone after Keep: the files are back', 'reverted': 'The Keep was undone', 'undone': 'Undone'}.get(e.get('result'), 'Changes updated')
     if t == 'note':
         return 'document-edit-symbolic', e.get('text') or f"{(e.get('track') or 'An app').capitalize()} made a note"
     return 'emblem-documents-symbolic', 'Something happened'
@@ -198,3 +200,67 @@ def reach(detail):
     folders = t.get('folders') or ([t['folder']] if t.get('folder') else []) or spec.get('folders') or ([spec['folder']] if spec.get('folder') else [])
     return {'folders': folders, 'workspace': t.get('workspace') or spec.get('workspace'), 'hosts': spec.get('hosts') or [],
             'tools': spec.get('tools') or [], 'user': t.get('user') or ''}
+
+
+# ---------- the flight recorder (portal/src/apps/replay-model.ts, the same rules) ----------
+
+KIND_WORDS = {'start': 'Started', 'step': 'Step', 'tool': 'Tool', 'blocked': 'Blocked', 'ask': 'Request', 'approved': 'Approved',
+              'denied': 'Denied', 'spend': 'Spent', 'running': 'Running', 'waiting': 'Needs you', 'done': 'Done', 'failed': 'Failed',
+              'undone': 'Undone', 'kept': 'Kept', 'keep': 'Keep', 'note': 'Note'}
+MATTERS = ('blocked', 'ask', 'approved', 'denied', 'failed', 'undone', 'kept')
+
+
+def kind_of(e):
+    t = e.get('type')
+    if t == 'task.created':
+        return 'start'
+    if t == 'task.step':
+        return 'step'
+    if t == 'tool.call':
+        return 'tool'
+    if t == 'tool.result':
+        return ('spend' if e.get('cents') else 'tool') if e.get('ok') else 'blocked'
+    if t == 'net.blocked':
+        return 'blocked'
+    if t == 'approval.asked':
+        return 'ask'
+    if t == 'approval.answered':
+        return 'approved' if e.get('approved') else 'denied'
+    if t == 'cost':
+        return 'spend'
+    if t == 'task.state':
+        st = e.get('state')
+        return st if st in ('done', 'failed', 'undone', 'waiting') else 'running'
+    if t == 'keep':
+        return {'kept': 'kept', 'reverted': 'undone'}.get(e.get('result'), 'keep')
+    return 'note'
+
+
+def replay_points(events):
+    """Every point of one task, oldest first, with its kind, whether it matters and what was spent by then (cents)."""
+    cost, out = 0, []
+    for e in sorted(events, key=lambda e: e.get('seq', 0)):
+        if e.get('type') == 'task.step' and not e.get('text'):
+            continue  # a scripted wait: nothing to say
+        if e.get('type') == 'cost':
+            cost += e.get('cents') or 0
+        if e.get('type') == 'tool.result':
+            cost += e.get('cents') or 0
+        k = kind_of(e)
+        out.append({'seq': e.get('seq', 0), 'at': e.get('at'), 'kind': k, 'cents': cost, 'matters': k in MATTERS, 'event': e})
+    return out
+
+
+def next_matter(points, i, step=1):
+    """The next (step 1) or previous (step -1) point that matters, or i when there is none."""
+    j = i + step
+    while 0 <= j < len(points):
+        if points[j]['matters']:
+            return j
+        j += step
+    return i
+
+
+def files_at(recorded, seq):
+    """The newest recorded file state at or before a point."""
+    return max((s for s in recorded if s <= seq), default=None)

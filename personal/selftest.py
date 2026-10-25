@@ -258,3 +258,11 @@ check(any(t['id'] == t_app['id'] for t in plan) and [t['updatedAt'] for t in pla
 u = api('GET', '/api/update')
 check(u.get('state') in ('current', 'ready', 'trial', 'rolledBack', 'unknown') and 'version' in u,
       f"Settings' System update row gets box-update's state from the box ({u.get('state')}: hidden unless installed from a GurtOS image)")
+
+# The flight recorder (the native app's Replay): the same rules as the portal's replay-model.ts, on a real task.
+pts = tl.replay_points(api('GET', f"/api/tasks/{t_app['id']}")['events'])
+kinds = [p['kind'] for p in pts]
+first = tl.next_matter(pts, 0)
+check(kinds[0] == 'start' and 'ask' in kinds and 'approved' in kinds and pts[first]['kind'] == 'ask'
+      and tl.next_matter(pts, first) == kinds.index('approved') and all(a['cents'] <= b['cents'] for a, b in zip(pts, pts[1:])),
+      f"Replay: {len(pts)} points from start to done, Next event goes to the request then the answer, spending only rises")

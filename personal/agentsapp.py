@@ -8,7 +8,7 @@ import threading
 import time
 import urllib.request
 
-from gi.repository import Adw, GLib, Gtk, Pango
+from gi.repository import Adw, Gdk, GLib, Gtk, Pango
 
 import tasklogic as tl
 from apptiles import tile
@@ -389,7 +389,9 @@ class AgentsWindow(Adw.ApplicationWindow):
         body = Scroller()
         state = {}
         undo = icon_button('edit-undo-symbolic', 'Undo task', lambda: self.confirm_undo(state['detail']['task']))
-        p = page('Task', '', body, undo)
+        replay = Gtk.Button(label='Replay', valign=Gtk.Align.CENTER, tooltip_text='Play this task back step by step', visible=False)
+        replay.connect('clicked', lambda _b: self.open_replay(task_id))
+        p = page('Task', '', body, undo, replay)
 
         def build():
             def done(result, err):
@@ -398,6 +400,7 @@ class AgentsWindow(Adw.ApplicationWindow):
                 detail, diff = result
                 state['detail'] = detail
                 undo.set_visible(detail['task']['state'] != 'undone' and detail['task'].get('review') != 'undone')
+                replay.set_visible(detail['task']['state'] not in ('running', 'queued'))
                 body.fill(*self.task_widgets(detail, diff, p))
             background(lambda: (api('GET', f'/api/tasks/{quote(task_id)}'), api('GET', f'/api/tasks/{quote(task_id)}/diff')), done)
         self.refreshers[f'task:{task_id}'] = build
@@ -604,6 +607,158 @@ class AgentsWindow(Adw.ApplicationWindow):
             if then:
                 then()
         background(work, finished)
+
+    # ----- the flight recorder: a finished task played back (portal/src/apps/replay.tsx) -----
+
+    def open_replay(self, task_id):
+        st = {'i': 0, 'points': [], 'playing': 0, 'recorded': None, 'final': None, 'diffs': {}, 'task': {}}
+        back = icon_button('media-skip-backward-symbolic', 'Step back', lambda: go(st['i'] - 1))
+        play = icon_button('media-playback-start-symbolic', 'Play', lambda: toggle())
+        fwd = icon_button('media-skip-forward-symbolic', 'Step forward', lambda: go(st['i'] + 1))
+        nxt = button('Next event', lambda: go(tl.next_matter(st['points'], st['i'])))
+        scale = Gtk.Scale(orientation=Gtk.Orientation.HORIZONTAL, hexpand=True, draw_value=False, digits=0)
+        scale.update_property([Gtk.AccessibleProperty.LABEL], ['Point in the task'])
+        where = label('', 'dim-label', 'numeric', wrap=False)
+        controls = Gtk.Box(spacing=6, margin_top=10, margin_bottom=6, margin_start=12, margin_end=12)
+        for w in (back, play, fwd, nxt, scale, where):
+            controls.append(w)
+        timeline = Gtk.ListBox(selection_mode=Gtk.SelectionMode.SINGLE, css_classes=['navigation-sidebar'])
+        timeline.connect('row-activated', lambda _l, r: go(r.get_index()))
+        card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10, margin_top=12, margin_bottom=12, margin_start=16, margin_end=16)
+        split = Gtk.Paned(position=440, vexpand=True, start_child=Gtk.ScrolledWindow(child=timeline, hscrollbar_policy=Gtk.PolicyType.NEVER),
+                          end_child=Gtk.ScrolledWindow(child=card, hscrollbar_policy=Gtk.PolicyType.NEVER))
+        outer = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        outer.append(controls)
+        outer.append(split)
+        p = page('Replay', '', outer)
+        guard = [False]
+
+        def spent(c):
+            return f'{tl.dollars(c)} spent so far'
+
+        def go(i, say=True):
+            pts = st['points']
+            if not pts:
+                return
+            st['i'] = i = max(0, min(i, len(pts) - 1))
+            pt = pts[i]
+            guard[0] = True
+            scale.set_value(i)
+            guard[0] = False
+            where.set_label(f"{i + 1} of {len(pts)} · {tl.clock(pt['at'])} · {spent(pt['cents'])}")
+            row = timeline.get_row_at_index(i)
+            if row and timeline.get_selected_row() is not row:
+                timeline.select_row(row)
+            show(pt)
+            if say and (not st['playing'] or pt['matters']) and hasattr(outer, 'announce'):  # a polite live region
+                outer.announce(f"{i + 1} of {len(pts)}. {tl.KIND_WORDS[pt['kind']]}. {tl.event_text(pt['event'], ME)[1]}. {spent(pt['cents'])}.",
+                               Gtk.AccessibleAnnouncementPriority.MEDIUM)
+
+        def show(pt):
+            while (c := card.get_first_child()) is not None:
+                card.remove(c)
+            icon, line = tl.event_text(pt['event'], ME)
+            card.append(label(tl.KIND_WORDS[pt['kind']], 'heading', 'warning' if pt['matters'] else 'dim-label'))
+            card.append(label(line, 'title-3'))
+            card.append(label(f"{tl.clock(pt['at'])} · {spent(pt['cents'])}", 'dim-label', 'numeric'))
+            card.append(label('Files', 'heading', margin_top=12))
+            rec = st['recorded']
+            if rec is not None:  # this computer records the files at each point
+                at = tl.files_at([r['seq'] for r in rec], pt['seq'])
+                if at is None:
+                    return card.append(label('No files changed yet.', 'dim-label'))
+                if at not in st['diffs']:
+                    background(lambda: api('GET', f'/api/tasks/{quote(task_id)}/diff?at={at}'),
+                               lambda d, err: (st['diffs'].__setitem__(at, d if not err else {'changes': []}), st['points'] and pt is st['points'][st['i']] and show(pt)))
+                    return card.append(label('Loading…', 'dim-label'))
+                changes = st['diffs'][at].get('changes', [])
+            else:
+                changes = (st['final'] or {}).get('changes', [])
+                card.append(label("The task's final changes. This computer keeps a task's files at the end only.", 'dim-label'))
+            g = Gtk.ListBox(selection_mode=Gtk.SelectionMode.NONE, css_classes=['boxed-list'])
+            for c in changes[:40]:
+                r = Adw.ActionRow(title=GLib.markup_escape_text(c['path']), subtitle={'added': 'Added', 'modified': 'Changed', 'deleted': 'Deleted'}.get(c['change'], c['change']))
+                g.append(r)
+            if not changes:
+                g.append(Adw.ActionRow(title='No files changed'))
+            card.append(g)
+
+        def tick():
+            pts = st['points']
+            if st['i'] >= len(pts) - 1:
+                return toggle(False)
+            go(st['i'] + 1)
+            st['playing'] = GLib.timeout_add(1400 if pts[min(st['i'] + 1, len(pts) - 1)]['matters'] else 700, tick)
+            return False
+
+        def toggle(on=None):
+            on = (not st['playing']) if on is None else on
+            if st['playing']:
+                GLib.source_remove(st['playing'])
+                st['playing'] = 0
+            if on:
+                if st['i'] >= len(st['points']) - 1:
+                    go(0, say=False)
+                st['playing'] = GLib.timeout_add(700, tick)
+            play.set_icon_name('media-playback-pause-symbolic' if on else 'media-playback-start-symbolic')
+            play.set_tooltip_text('Pause' if on else 'Play')
+            play.update_property([Gtk.AccessibleProperty.LABEL], ['Pause' if on else 'Play'])
+            return False
+
+        scale.connect('value-changed', lambda sc: guard[0] or go(round(sc.get_value()), say=False))
+        keys = Gtk.EventControllerKey()
+
+        def key(_c, kv, _code, mods):
+            name = Gdk.keyval_name(kv)
+            shift = bool(mods & Gdk.ModifierType.SHIFT_MASK)
+            moves = {'space': lambda: toggle(), 'Left': lambda: go(st['i'] - 1), 'Right': lambda: go(st['i'] + 1), 'Home': lambda: go(0),
+                     'End': lambda: go(len(st['points']) - 1), 'n': lambda: go(tl.next_matter(st['points'], st['i'])),
+                     'N': lambda: go(tl.next_matter(st['points'], st['i'], -1))}
+            if name in ('n', 'N') and shift:
+                name = 'N'
+            if name in moves:
+                moves[name]()
+                return True
+            return False
+        keys.connect('key-pressed', key)
+        outer.add_controller(keys)
+        p.connect('hidden', lambda _p: toggle(False))
+
+        def loaded(result, err):
+            if err:
+                return p.set_child(Adw.StatusPage(icon_name='dialog-error-symbolic', title='Could not load this task', description=GLib.markup_escape_text(str(err))))
+            detail, final, recorded = result
+            st['task'], st['final'], st['recorded'] = detail['task'], final, recorded
+            p.title_widget.set_title(f"Replay: {detail['task']['title']}")
+            p.set_title(f"Replay: {detail['task']['title']}")
+            st['points'] = pts = tl.replay_points(detail.get('events', []))
+            scale.set_range(0, max(1, len(pts) - 1))
+            scale.clear_marks()
+            for i, pt in enumerate(pts):
+                if pt['matters']:
+                    scale.add_mark(i, Gtk.PositionType.BOTTOM, None)
+            for pt in pts:
+                icon, line = tl.event_text(pt['event'], ME)
+                r = Adw.ActionRow(title=GLib.markup_escape_text(line or ' '), subtitle=f"{tl.clock(pt['at'])} · {spent(pt['cents'])}", title_lines=2)
+                r.add_prefix(Gtk.Image(icon_name=icon, accessible_role=Gtk.AccessibleRole.PRESENTATION))
+                timeline.append(r)
+            go(0, say=False)
+            outer.grab_focus()
+
+        def fetch():
+            detail = api('GET', f'/api/tasks/{quote(task_id)}')
+            try:
+                final = api('GET', f'/api/tasks/{quote(task_id)}/diff')
+            except Exception:  # noqa: BLE001
+                final = {'changes': []}
+            try:  # the files at each point, once core records them; else the final files only
+                recorded = api('GET', f'/api/tasks/{quote(task_id)}/replay').get('points')
+            except Exception:  # noqa: BLE001
+                recorded = None
+            return detail, final, recorded
+        background(fetch, loaded)
+        outer.set_focusable(True)
+        self.nav.push(p)
 
     # ----- Activity -----
 
