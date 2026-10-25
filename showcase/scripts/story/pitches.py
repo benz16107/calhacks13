@@ -48,7 +48,7 @@ SHORT_HEAD = '## About the project, short version (PASTE THIS ONE: Devpost caps 
 def write_short(d):
     """The Devpost "About the project" field holds 50,000 characters. Build a short version from the full one:
     the summary, then each sponsor section cut to its pitch, proof and link (the track pages hold the rest).
-    Figma keeps its whole section, because its stage log is a deliverable."""
+    Figma keeps its whole section (its stage log is a deliverable) and so does CRS (its team asked for a self-contained written write-up for their judges)."""
     d = d.replace('## About the project, full version (over the 50,000 character limit; the source the short version is made from)', '## About the project (paste from here to the end)')
     a = d.index('<!-- SUMMARY START -->') + len('<!-- SUMMARY START -->'); b = d.index('<!-- SUMMARY END -->')
     summary = d[a:b].strip()
@@ -57,7 +57,7 @@ def write_short(d):
     for sec in re.split(r'\n(?=### )', d[c:e].strip()):
         lines = [l for l in sec.split('\n') if l.strip()]
         head = lines[0]
-        if head.startswith('### Figma'):
+        if head.startswith('### Figma') or head.startswith('### CRS'):  # their sponsors asked for a written write-up
             out += ['\n'.join(lines), '']; continue
         # in order: the pitch, proof and link, the "Fits ..." line, and every short labelled line (problem, awards, our Actor, feedback)
         keep = [l for l in lines[1:] if l.startswith('**Best shown in:**') or l.startswith('**Proof:**') or l.startswith('[Full write-up')
