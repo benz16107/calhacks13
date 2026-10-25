@@ -141,6 +141,23 @@ The same path a judge would follow, with what each step proves. Every payment he
 
 <Shot src="repo/shopper/face-id-purchase.png" alt="A purchase approval: Buy 1 Chemex Natural Coffee Filters from Best Buy Canada for $15.36 CAD, down from $20.36 CAD, inside your mandate, with the two-store comparison and an Approve with Face ID button." caption="The live Best Buy Canada price through Apify, checked against two stores. Checkout is at the GurtOS Test Store and the charge is Stripe test mode." />
 
+**Under $25, and still not on the Watch.** The computer lets an Apple Watch approve small requests, up to $25, but never a Shopper purchase, whatever the amount. The same $13 purchase arrives on both. The Watch can only deny it. On the iPhone, Approve with Face ID opens the computer's own passkey page, the same one as on the web, and the purchase is paid only after that signature checks out.
+
+<Compare labels={['Apple Watch', 'iPhone']}>
+<div slot="a">
+
+<Shot src="track/visa/watch-shopper.png" alt="The GurtOS Apple Watch app on Home box: Buy 2 × Hario V60 02 paper filters, $13, Approve this on your iPhone with Face ID, and only a deny button." caption="The Watch shows the purchase and offers only Deny. The computer refuses a Watch approval for any Shopper purchase, so this is the rule the computer enforces, not only the Watch app's choice." size="phone" />
+
+</div>
+<div slot="b">
+
+<Shot src="track/visa/iphone-shopper.png" alt="The GurtOS iPhone app, Request: Buy 2 × Hario V60 02 paper filters (100 count), $13, from GurtOS Test Store, $6.50 each, inside your mandate, TEST PAYMENT, with Deny and Approve with Face ID." caption="The iPhone shows the full question with its TEST PAYMENT label, and Approve with Face ID." size="phone" />
+
+</div>
+</Compare>
+
+Both are iOS simulator shots against a test computer. The request is a Shopper purchase request built the way the Shopper app builds one, not a full price watch. The iPhone app is on TestFlight for internal testers, not the App Store.
+
 **4. The store verifies the order.** The box signs each checkout with Visa's Trusted Agent Protocol, including the order body. The store refuses an unsigned order, a changed body, a replayed signature, an expired one, an unknown key, a price over the mandate, the wrong item, too many items, and an edited mandate.
 
 <Shot src="repo/shopper/store-dashboard.png" alt="The GurtOS Test Store merchant's view: 2 verified agent orders, 8 unknown bots kept out, 100% conversion from agent shoppers, 0 chargebacks, 1 price protection and 1 cancellation, and a table of refused requests by reason." caption="The merchant's side, at our own stand-in store with test payments: verified agent orders, bots kept out by reason, and no chargebacks, because every order carried a valid signature, a mandate it fits and a person's approval." />
@@ -175,7 +192,7 @@ On an ordinary system a shopping agent runs as you. The card, the mailbox login 
 <OSvsTrack sponsor="Visa" rows={[
   { what: 'The agent never sees your card: the card and the signing key stay in the root-only vault, and only the buy tool in the core reads them', why: 'Trust (15)', os: 'The vault and the broker', track: 'The buy tool that reads the card', status: 'Built. The merge gate checks no card, key or password is anywhere in the log' },
   { what: 'Every purchase waits for your tap, with the price against your limit', why: 'Trust (15), UX (25)', os: 'The approval pause and the task budget', track: 'The question text and the price rule', status: 'Built' },
-  { what: 'Approve with Face ID: a WebAuthn passkey signs the exact question and amount, and a purchase approved without one is refused', why: 'Trust (15), UX (25)', os: 'The approval pause and the box verifying the signature', track: 'The passkey flow in the Shopper app', status: 'Built. The demo uses a software authenticator; QA has not tried it on a real phone; a passkey belongs to the https address it was made on, and there is no remove button yet' },
+  { what: 'Approve with Face ID: a WebAuthn passkey signs the exact question and amount, and a purchase approved without one is refused', why: 'Trust (15), UX (25)', os: 'The approval pause, the box verifying the signature, and the rule that an Apple Watch never approves a Shopper purchase', track: 'The passkey flow in the Shopper app', status: 'Built. The demo uses a software authenticator; QA has not tried it on a real phone; a passkey belongs to the https address it was made on, and there is no remove button yet' },
   { what: 'Each checkout is signed with Visa\'s Trusted Agent Protocol, including the order body', why: 'Commerce impact (15), Technical (20)', os: 'The signing key in the vault', track: 'The signer and the store that verifies it', status: 'Built. The store refuses unsigned, changed and replayed orders' },
   { what: 'A signed shopping mandate: item words, stores, price per item, quantity, total and an expiry of at most 30 days, enforced by the store', why: 'Innovation (25), Trust (15)', os: 'The box\'s agent key in the vault', track: 'The mandate and the store\'s checks', status: 'Built. It mirrors the payment instruction in Visa Intelligent Commerce with open tools; it is not a Visa product' },
   { what: 'Undo refunds the order', why: 'UX (25), Trust (15)', os: 'Undo of one task', track: 'The refund at the store', status: 'Built' },
@@ -261,6 +278,7 @@ Content-Digest:  sha-256=:...:
 - **Best Buy Canada's Conditions of Use (section 7) prohibit scraping.** The Apify track reads its public product JSON through Apify; we disclose it here and in the app. Gold Roast's robots.txt and terms do not prohibit it.
 - The GurtOS Test Store stands in for every merchant, and the household mailbox is a demo POP3 mailbox with sample receipts we wrote, standing in for Gmail. Prices in CAD count against US-cent budgets at a fixed rate of 0.73.
 - Visa Intelligent Commerce: the adapter has never been called; its request values are placeholders until Visa onboards us.
+- The iPhone and Watch app is on TestFlight for internal testers only; it is not in the App Store. The Watch and iPhone shots are from the iOS simulator against a test computer.
 - Face ID approvals use real WebAuthn passkeys verified on the computer. The merge gate and our screenshots use a software authenticator; QA has not tried it on a real phone.
 - A watch closes after one purchase, or when you deny it. Watch again for another.
 - The test store keeps price and stock changes in memory, which reset when the computer restarts. After a restart a captured signature could be sent again within its 8 minutes, but its Idempotency-Key still returns the first order instead of charging twice.

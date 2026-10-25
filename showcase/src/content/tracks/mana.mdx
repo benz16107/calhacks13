@@ -166,10 +166,30 @@ An AI workspace is a good place to think and a poor place to act. When you want 
 
 <OSvsTrack sponsor="Mana" rows={[
   { what: 'Ask GurtOS: a visitor asks a live computer for a web lookup or a price check', why: 'Meaningful use, +10 for living inside Mana', os: 'The approval on the owner\'s phone, a task with its own user, an empty workspace, no network of its own and a 25 cent budget, the limits, and undo', track: 'The app a visitor uses, built by Mana\'s agent', status: 'Built. Live round trips on Oct 24; a second, on the latest build, found no second question' },
+  { what: 'A guest\'s request reaches the owner\'s iPhone and Apple Watch', why: 'Meaningful use, +10 for living inside Mana', os: 'The request, push to the owner\'s devices, and the Watch limit of $25 the computer enforces', track: 'The guest\'s words, from the Mana app', status: 'Built. Captured in the iOS simulator against a test computer; the iPhone app is on TestFlight for internal testers' },
   { what: 'Rules drafted in a Mana chat become GurtOS Business policy, but only after an owner or admin approves the exact text', why: 'Meaningful use, originality', os: 'Business\'s policy engine and routing, who may approve, and the hash check in the core', track: 'Drafting the rules and sending them to the box', status: 'Built. The merge gate runs the round trip on a throwaway computer; QA has not walked it' },
   { what: 'Four public planning chats, each ending in a code change', why: 'One moment where Mana changed what you built', os: 'The code that changed (the credit desk, Business, the Shopper track, the Fetch track)', track: 'The reviews and the findings', status: 'Built. Each chat names the code it changed' },
   { what: 'The GurtOS guide answers from gurtos.com with links', why: 'Meaningful use, usefulness', os: 'The docs it reads', track: 'The agent, its search and its model', status: 'Built. The page answers 200 signed out; QA has not talked to it' },
 ]} />
+
+## What the owner sees
+
+A stranger's request from Ask GurtOS reaches the owner as an ordinary GurtOS request, with the guest's own words and the spending cap in the question. It can spend at most 25 cents of tools, under the $25 an Apple Watch may approve, so on GurtOS Server or Personal the owner can answer it from the wrist. On GurtOS Business the computer sends every request to the iPhone for Face ID instead.
+
+<Compare labels={['iPhone', 'Apple Watch']}>
+<div slot="a">
+
+<Shot src="track/mana/iphone-guest.png" alt="The GurtOS iPhone app, Request on Home box: Guest asks: a price. A guest (mana:demo-guest) asks for a price in the Mana app: What is the price of a Chemex 6-cup? Run it, with web tools and up to $0.25 of tool spending (the model is extra)? Deny and Approve." caption="The question the computer writes, with the guest's words in quotes and the 25 cent cap. Nothing runs until the owner answers." size="phone" />
+
+</div>
+<div slot="b">
+
+<Shot src="track/mana/watch-guest.png" alt="The GurtOS Apple Watch app on Home box: Guest asks: a price, with a red deny button and a green approve button." caption="The same request on the Watch, with Approve and Deny. A double tap approves it." size="phone" />
+
+</div>
+</Compare>
+
+The request came through the real guest route, `POST /t/mana/guest`, on a test computer, and was captured in the iOS simulator. The iPhone app is on TestFlight for internal testers, not the App Store.
 
 <Details summary="How a visitor's request reaches the computer, step by step">
 
