@@ -264,3 +264,26 @@ def next_matter(points, i, step=1):
 def files_at(recorded, seq):
     """The newest recorded file state at or before a point."""
     return max((s for s in recorded if s <= seq), default=None)
+
+
+GONE = "This task's files are gone."
+BEFORE = "This task ran before GurtOS kept its files at each step, so this shows its final changes."
+
+
+def files_note(points, i, recorded, capped, final):
+    """What the Files part of Replay says at point i: (seq of the recorded files to show, or None for the final diff
+    or nothing, and the line under it). recorded is the seqs core kept, oldest first; [] for a task from before it
+    recorded files, or one whose files were purged."""
+    if not recorded:
+        if (final or {}).get('undone') or not (final or {}).get('changes'):
+            return None, GONE
+        return None, BEFORE
+    at = files_at(recorded, points[i]['seq'])
+    if at is None:
+        return None, 'No files changed yet.'
+    last = next((p['kind'] for p in reversed(points[:i + 1]) if p['kind'] in ('kept', 'undone')), None)
+    if last == 'undone':
+        return at, 'As they were before Undo removed them.'
+    if capped and at == recorded[-1] and points[i]['seq'] > at:
+        return at, 'Recording stopped at 50 MB for this task, so this shows the last files it kept.'
+    return at, None

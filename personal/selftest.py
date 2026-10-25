@@ -266,3 +266,14 @@ first = tl.next_matter(pts, 0)
 check(kinds[0] == 'start' and 'ask' in kinds and 'approved' in kinds and pts[first]['kind'] == 'ask'
       and tl.next_matter(pts, first) == kinds.index('approved') and all(a['cents'] <= b['cents'] for a, b in zip(pts, pts[1:])),
       f"Replay: {len(pts)} points from start to done, Next event goes to the request then the answer, spending only rises")
+
+# Replay's Files line, from core's per-point files (GET /api/tasks/:id/replay): the same cases as the portal.
+rec = api('GET', f"/api/tasks/{t_app['id']}/replay")
+fp = [{'seq': 1, 'kind': 'start'}, {'seq': 5, 'kind': 'step'}, {'seq': 9, 'kind': 'undone'}]
+check(isinstance(rec.get('points'), list)
+      and tl.files_note(fp, 0, [3], False, {}) == (None, 'No files changed yet.') and tl.files_note(fp, 1, [3], False, {}) == (3, None)
+      and tl.files_note(fp, 2, [3], False, {})[1] == 'As they were before Undo removed them.'
+      and tl.files_note(fp, 1, [3], True, {})[1].startswith('Recording stopped at 50 MB')
+      and tl.files_note(fp, 1, [], False, {'changes': [{'path': 'a'}]}) == (None, tl.BEFORE)
+      and tl.files_note(fp, 1, [], False, {'undone': True}) == (None, tl.GONE),
+      f"Replay files: {len(rec['points'])} recorded points; no files yet, the files at a point, after Undo, past 50 MB, an older task, files gone")

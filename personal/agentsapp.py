@@ -611,7 +611,7 @@ class AgentsWindow(Adw.ApplicationWindow):
     # ----- the flight recorder: a finished task played back (portal/src/apps/replay.tsx) -----
 
     def open_replay(self, task_id):
-        st = {'i': 0, 'points': [], 'playing': 0, 'recorded': None, 'final': None, 'diffs': {}, 'task': {}}
+        st = {'i': 0, 'points': [], 'playing': 0, 'recorded': [], 'capped': False, 'final': None, 'diffs': {}, 'task': {}}
         back = icon_button('media-skip-backward-symbolic', 'Step back', lambda: go(st['i'] - 1))
         play = icon_button('media-playback-start-symbolic', 'Play', lambda: toggle())
         fwd = icon_button('media-skip-forward-symbolic', 'Step forward', lambda: go(st['i'] + 1))
@@ -662,22 +662,22 @@ class AgentsWindow(Adw.ApplicationWindow):
             card.append(label(line, 'title-3'))
             card.append(label(f"{tl.clock(pt['at'])} · {spent(pt['cents'])}", 'dim-label', 'numeric'))
             card.append(label('Files', 'heading', margin_top=12))
-            rec = st['recorded']
-            if rec is not None:  # this computer records the files at each point
-                at = tl.files_at([r['seq'] for r in rec], pt['seq'])
-                if at is None:
-                    return card.append(label('No files changed yet.', 'dim-label'))
-                if at not in st['diffs']:
-                    background(lambda: api('GET', f'/api/tasks/{quote(task_id)}/diff?at={at}'),
-                               lambda d, err: (st['diffs'].__setitem__(at, d if not err else {'changes': []}), st['points'] and pt is st['points'][st['i']] and show(pt)))
-                    return card.append(label('Loading…', 'dim-label'))
-                changes = st['diffs'][at].get('changes', [])
-            else:
+            at, note = tl.files_note(st['points'], st['i'], st['recorded'], st['capped'], st['final'])
+            if at is None and note != tl.BEFORE:  # nothing to list: no files yet, or the files are gone
+                return card.append(label(note, 'dim-label'))
+            if at is None:
                 changes = (st['final'] or {}).get('changes', [])
-                card.append(label("The task's final changes. This computer keeps a task's files at the end only.", 'dim-label'))
+            elif at not in st['diffs']:
+                background(lambda: api('GET', f'/api/tasks/{quote(task_id)}/diff?at={at}'),
+                           lambda d, err: (st['diffs'].__setitem__(at, d if not err else {'changes': []}), st['points'] and pt is st['points'][st['i']] and show(pt)))
+                return card.append(label('Loading…', 'dim-label'))
+            else:
+                changes = st['diffs'][at].get('changes', [])
+            if note:
+                card.append(label(note, 'dim-label'))
             g = Gtk.ListBox(selection_mode=Gtk.SelectionMode.NONE, css_classes=['boxed-list'])
             for c in changes[:40]:
-                r = Adw.ActionRow(title=GLib.markup_escape_text(c['path']), subtitle={'added': 'Added', 'modified': 'Changed', 'deleted': 'Deleted'}.get(c['change'], c['change']))
+                r = Adw.ActionRow(title=GLib.markup_escape_text(c['path']), subtitle={'added': 'Added', 'modified': 'Changed', 'deleted': 'Deleted'}.get(c['change'], c['change']) + (', over 1 MB, not kept' if c.get('big') else ''))
                 g.append(r)
             if not changes:
                 g.append(Adw.ActionRow(title='No files changed'))
@@ -727,8 +727,8 @@ class AgentsWindow(Adw.ApplicationWindow):
         def loaded(result, err):
             if err:
                 return p.set_child(Adw.StatusPage(icon_name='dialog-error-symbolic', title='Could not load this task', description=GLib.markup_escape_text(str(err))))
-            detail, final, recorded = result
-            st['task'], st['final'], st['recorded'] = detail['task'], final, recorded
+            detail, final, (recorded, capped) = result
+            st['task'], st['final'], st['recorded'], st['capped'] = detail['task'], final, recorded, capped
             p.title_widget.set_title(f"Replay: {detail['task']['title']}")
             p.set_title(f"Replay: {detail['task']['title']}")
             st['points'] = pts = tl.replay_points(detail.get('events', []))
@@ -751,10 +751,11 @@ class AgentsWindow(Adw.ApplicationWindow):
                 final = api('GET', f'/api/tasks/{quote(task_id)}/diff')
             except Exception:  # noqa: BLE001
                 final = {'changes': []}
-            try:  # the files at each point, once core records them; else the final files only
-                recorded = api('GET', f'/api/tasks/{quote(task_id)}/replay').get('points')
+            try:  # the seqs core kept the task's files at; none for older tasks and purged ones
+                r = api('GET', f'/api/tasks/{quote(task_id)}/replay')
+                recorded = ([p['seq'] for p in r.get('points') or []], bool(r.get('capped')))
             except Exception:  # noqa: BLE001
-                recorded = None
+                recorded = ([], False)
             return detail, final, recorded
         background(fetch, loaded)
         outer.set_focusable(True)
