@@ -41,7 +41,7 @@ and the box's per-task tripwire decoys. Nothing a visitor does can reach a real 
 
 ## Limits (all in `gateway.ts` and `boxpool.ts`)
 
-- At most 5 boxes at once; past that, a "full, try again" page. One live box per IP; 3 new boxes an hour per IP.
+- At most 5 boxes at once; past that, a "full, try again" page. Each browser session gets its own box; up to 10 new boxes an hour per IP (judges may share one venue IP).
 - A box is destroyed after 20 minutes idle and after an hour at most. The host resets (wipes every box) every 6 hours.
 - 100 requests a second and 20 attack runs an hour per IP. Request bodies are capped at 8 KB; pasted attack text at 4 KB.
 - One attack at a time per box; a 30-second cooldown on pull-the-plug.

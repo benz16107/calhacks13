@@ -13,7 +13,7 @@ import { classify, PAGES, visitorPage } from './menu.ts';
 const PORT = Number(process.env.TRY_PORT ?? 7788); // Caddy proxies to this loopback port
 const MAX_BOXES = Number(process.env.TRY_MAX_BOXES ?? 5);
 const BODY_MAX = 8 * 1024;
-const NEW_PER_HOUR = 3; // new boxes per IP per hour
+const NEW_PER_HOUR = 10; // new boxes per IP per hour (judges often share one venue NAT IP); total cap still bounds it
 const ATTACKS_PER_HOUR = 20; // attack runs per IP per hour
 const REQ_PER_SEC = 100; // request burst per IP; a normal portal load is ~25 requests at once (fonts, assets, API)
 const PLUG_COOLDOWN = 30_000;
@@ -234,14 +234,12 @@ const server = http.createServer(async (req, res) => {
       if (method === 'POST' && p === '/try/start') {
         if (!sameSite(req)) return void json(res, 403, { error: 'start the demo from the page' });
         if (!b) {
-          const existing = [...boxesBySid.values()].find((x) => x.ip === ip); // one live box per IP: reuse it
-          if (existing) b = existing;
-          else {
-            if (pool.count() >= MAX_BOXES) return void json(res, 503, { error: 'all demo computers are in use; try again in a moment', count: pool.count(), max: MAX_BOXES });
-            if (!within(newLog, ip, NEW_PER_HOUR)) return void json(res, 429, { error: 'you have started a few already; try again later' });
-            b = await pool.create(ip);
-            note(newLog, ip);
-          }
+          // Each browser session gets its own box (judges often share one venue NAT IP, so never hand a new
+          // visitor someone else's box). The total cap and the per-IP hourly limit still bound abuse.
+          if (pool.count() >= MAX_BOXES) return void json(res, 503, { error: 'all demo computers are in use; try again in a moment', count: pool.count(), max: MAX_BOXES });
+          if (!within(newLog, ip, NEW_PER_HOUR)) return void json(res, 429, { error: 'you have started a few already; try again in a bit' });
+          b = await pool.create(ip);
+          note(newLog, ip);
           const ns = randomBytes(9).toString('hex');
           boxesBySid.set(ns, b);
           setSid(res, ns);
