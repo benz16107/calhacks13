@@ -12,7 +12,7 @@ Try it on a spare machine or a VM, not on a computer whose disk you need: the in
 
 Docs: [gurtos.com](https://gurtos.com) (docs at [gurtos.com/docs](https://gurtos.com/docs/)). Hackathon showcase: [calhacks.gurtos.com](https://calhacks.gurtos.com).
 
-**Try it now:** [try.gurtos.com](https://try.gurtos.com), your own throwaway GurtOS computer in the browser: start a task, approve it, undo it, pull the plug, or paste your own prompt injection and watch each defence stop it. **Video (3 min):** https://youtu.be/GRx8n4Ic_EY
+**Try it now:** [try.gurtos.com](https://try.gurtos.com), your own throwaway GurtOS computer in the browser: start a task, approve it, undo it, pull the plug, or paste your own prompt injection and watch each defence stop it. **Video (3 min):** https://youtu.be/rREjU2ddIyo
 
 ![The box's own screen as a task asks for an OK](docs/images/box-screen.png)
 

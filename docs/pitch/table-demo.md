@@ -29,7 +29,7 @@ Rehearse each once before 10:00 AM (they add four small tasks to its list, which
 4. A terminal with the commands below pasted in, one per line, ready to run with the up arrow. Never press
    **New task** on the screen: it starts a real Claude agent and spends model credit.
 5. A second browser tab on `https://try.gurtos.com`, and its QR code on your phone's screen or on paper, for judges.
-6. The main video downloaded to the laptop, in case the network goes: https://youtu.be/GRx8n4Ic_EY
+6. The main video downloaded to the laptop, in case the network goes: https://youtu.be/rREjU2ddIyo
 
 ### The commands
 
