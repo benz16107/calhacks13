@@ -632,14 +632,14 @@ and is not reproduced.
 - **I-1. P1, image.** `box-droid.service` downloads Droid with no timeout. On this install it stalled at 21 MB for
   50 minutes, held boot unfinished, and every task failed with "Droid is still downloading". Fix: `curl --max-time`,
   `--speed-limit` with retries, `TimeoutStartSec`, and not blocking `multi-user.target`.
-- **I-2. P1, personal. Fixed in a62fa04** (confirm on the release disc). With no model key, or Droid not there yet, New task creates a task that fails at once. Fix:
+- **I-2. P1, personal. Fixed in d48662d** (confirm on the release disc). With no model key, or Droid not there yet, New task creates a task that fails at once. Fix:
   say it before Start: "Add a model key in GurtOS Settings first" with Open Settings, or "Agents can start in a
   minute: GurtOS is still getting ready."
-- **I-3. P2, personal. Fixed in a62fa04** (confirm on the release disc). The first notice says "An agent is working on a task" for a task that already failed.
-- **I-4. P2, personal. Fixed in a62fa04** (confirm on the release disc). The dock badge stays at 1 when nothing runs or needs you (`38`).
-- **I-5. P2, personal. Fixed in a62fa04** (confirm on the release disc). Offline, a request notice still offers Approve and Deny, and the menu offers "Talk to your
+- **I-3. P2, personal. Fixed in d48662d** (confirm on the release disc). The first notice says "An agent is working on a task" for a task that already failed.
+- **I-4. P2, personal. Fixed in d48662d** (confirm on the release disc). The dock badge stays at 1 when nothing runs or needs you (`38`).
+- **I-5. P2, personal. Fixed in d48662d** (confirm on the release disc). Offline, a request notice still offers Approve and Deny, and the menu offers "Talk to your
   computer". Fix: disable both while offline, like New task.
-- **I-6. P2, personal. Fixed in a62fa04** (confirm on the release disc). Setup keeps "Anthropic didn't accept this key" in its footer after the field is cleared.
+- **I-6. P2, personal. Fixed in d48662d** (confirm on the release disc). Setup keeps "Anthropic didn't accept this key" in its footer after the field is cleared.
 - **I-7. P2, image.** Settings' sidebar still has an "Ubuntu Desktop" panel.
 - **I-8. P2, image.** The computer name typed in first run is ignored; the hostname stays `gurt-21c0fb`.
 - **I-9. P2, image.** The arm64 disc menu wraps its second line to the left edge with wide letter spacing (`01`), and
