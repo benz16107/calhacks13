@@ -11,7 +11,7 @@ GurtOS
 
 ## Elevator pitch (200 characters max)
 
-An OS where AI agents do real work safely: each task runs as its own Linux user, in its own copy of your files, with no keys. Undo any task, approve spending from your phone.
+Operating systems built for AI agents: each task runs as its own Linux user, in its own copy of your files, with no keys. Undo any task, approve spending from your phone.
 
 ## Video
 
@@ -55,7 +55,7 @@ Opt in to every eligible category at the Devpost step that lists them. Anthropic
 
 <!-- SUMMARY START -->
 
-**GurtOS is an operating system where AI agents do real work safely: real access, never your keys.**
+**Operating systems built for AI agents.** Agents get real access to files, the web and money, and never hold your keys.
 
 People already leave agents running at home. OpenClaw, an agent that runs on your own computer, has 392,891 GitHub
 stars (GitHub API, Oct 23, 2026). It also had 21,639 instances anyone on the internet could reach (Censys, Jan 2026),

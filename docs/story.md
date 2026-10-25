@@ -5,6 +5,10 @@ this file; when a principle changes, it changes for every track. Generated from 
 (see the end), then reviewed by hand. Tracks marked **to review with Ben** follow the principles but their story
 has not been signed off yet.
 
+**The headline everywhere (Ben, Oct 24):** "Operating systems built for AI agents" (plural, for the three editions), with the line
+ under it "Agents get real access to files, the web and money, and never hold your keys." It replaces "An operating system where
+ AI agents work safely" on gurtos.com, the showcase and the Devpost tagline.
+
 ## Principles for every track
 
 1. **Problem first, then why an OS.** Traditional systems and clouds weren't built for agents: they are heavy, with
