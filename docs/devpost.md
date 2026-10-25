@@ -27,6 +27,7 @@ The thumbnail is image 1.
 
 ## Try it out (links)
 
+- https://try.gurtos.com (try it live: your own throwaway GurtOS computer in the browser, with an "Attack it yourself" page)
 - https://calhacks.gurtos.com (the showcase: one page per sponsor track, with evidence)
 - https://gurtos.com/docs/ (the product docs)
 - https://github.com/benz16107/calhacks13 (the code, open source under the Apache License 2.0)
@@ -59,6 +60,8 @@ Opt in to every eligible category at the Devpost step that lists them. Anthropic
 <!-- DEVPOST SHORT START -->
 
 **Operating systems built for AI agents.** Agents get real access to files, the web and money, and never hold your keys.
+
+**Try it live: https://try.gurtos.com.** Get your own throwaway GurtOS computer in the browser. Start a safe agent task, approve or deny it, undo it, pull the plug (it resumes). Or paste a prompt-injection attack and watch GurtOS stop it live, with the log lines. The agent is scripted, so it does not test a model, and there are no real keys. Each visitor's box is wiped after about 20 minutes, and the host holds nothing private.
 
 People already leave agents running at home. OpenClaw, an agent that runs on your own computer, has 392,891 GitHub
 stars (GitHub API, Oct 23, 2026). It also had 21,639 instances anyone on the internet could reach (Censys, Jan 2026),
@@ -336,6 +339,8 @@ Figma ran every stage: a FigJam board for the architecture and the four demo mom
 <!-- SUMMARY START -->
 
 **Operating systems built for AI agents.** Agents get real access to files, the web and money, and never hold your keys.
+
+**Try it live: https://try.gurtos.com.** Get your own throwaway GurtOS computer in the browser. Start a safe agent task, approve or deny it, undo it, pull the plug (it resumes). Or paste a prompt-injection attack and watch GurtOS stop it live, with the log lines. The agent is scripted, so it does not test a model, and there are no real keys. Each visitor's box is wiped after about 20 minutes, and the host holds nothing private.
 
 People already leave agents running at home. OpenClaw, an agent that runs on your own computer, has 392,891 GitHub
 stars (GitHub API, Oct 23, 2026). It also had 21,639 instances anyone on the internet could reach (Censys, Jan 2026),
@@ -742,5 +747,6 @@ Public links (all open signed out): home page, start here https://www.mana.space
 
 17. **Judging and the Devpost page** (Cal Hacks, Slack, Oct 25): you must be at the venue and checked in by Oct 25, 8 AM PT to submit on Devpost. In live judging each project is shortlisted for the track that best fits, and sponsor tracks are independent, so a project can win several. Anthropic: all four criteria count equally.
 18. **CRS** (Tarik Neradin): a written CRS write-up in the submission helps their CTO and judging team before the demo; they will have about 10 judges. The CRS section in the Devpost paste is the whole write-up (problem, the seven CRS pulls, the fraud and arguer results, the permissible-purpose gate, the track-page link), not the cut-down version.
+19. **The live demo** (https://try.gurtos.com): its code is on the branch `try-live` (folder `try/`), not on main yet; the host is a scripted worker with no real keys and no sponsor keys, each visitor box wiped after about 20 minutes, capped visitors, and it can't reach the real boxes. Delete the host after judging.
 
 <!-- TODO END -->
