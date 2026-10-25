@@ -246,8 +246,8 @@ class Core {
 
   /**
    * The disk cap: every two seconds, each running task's own layer is measured, and a task past its cap (5 GB, or its
-   * app's permission, or BOX_TASK_DISK_CAP) is stopped and undone, logged and told to the owner's phone. A fast writer
-   * can pass the cap by about two seconds of writing before it is stopped.
+   * app's permission, or BOX_TASK_DISK_CAP) is stopped and undone, logged and told to the owner's phone. Not a hard quota:
+   * a writer can pass the cap until the next check. Armadin measured 0 to 3.1 s from the write to the stop (six runs).
    */
   watchDisk() {
     let busy = false;
