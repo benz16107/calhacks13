@@ -83,13 +83,22 @@ func phoneKey() throws -> P256.KeyAgreement.PrivateKey { try P256.KeyAgreement.P
 }
 
 @Test func readsARendezvousLink() {
-  let r = Rendezvous.parse("https://app.gurtos.com/pair?rv=Ab3_kq9Z&lan=192.168.1.20:7700&n=Home%20box#ab12cd34")
+  let r = Rendezvous.parse("https://app.gurtos.com/pair#code=ab12cd34&rv=Ab3_kq9Z&lan=192.168.1.20:7700&n=Home%20box")
   #expect(r == Rendezvous(id: "Ab3_kq9Z", code: "ab12cd34", name: "Home box", lan: "192.168.1.20:7700"))
   #expect(r?.lanLink?.box.absoluteString == "http://192.168.1.20:7700")
-  #expect(PairingLink.parse("https://app.gurtos.com/pair?rv=Ab3_kq9Z#ab12cd34") == nil, "an rv link is not a direct pairing link")
-  #expect(Rendezvous.parse("https://evil.example/pair?rv=Ab3_kq9Z#ab12cd34") == nil)
-  #expect(Rendezvous.parse("https://app.gurtos.com/pair?rv=a/b#ab12cd34") == nil)
-  #expect(Rendezvous.parse("https://app.gurtos.com/pair?rv=Ab3_kq9Z&lan=x@evil.com/y#ab12cd34")?.lan == nil, "a lan value that isn't host:port is dropped")
+  // Out of setup: no rv, the home network only.
+  #expect(Rendezvous.parse("https://app.gurtos.com/pair#code=ab12cd34&lan=192.168.1.20:7700&n=Home%20box") == Rendezvous(id: nil, code: "ab12cd34", name: "Home box", lan: "192.168.1.20:7700"))
+  // A bare code with no box named.
+  #expect(Rendezvous.parse("https://app.gurtos.com/pair#ab12cd34") == Rendezvous(id: nil, code: "ab12cd34"))
+  // Remote access on keeps its own link, and these are not direct pairing links.
+  #expect(Rendezvous.parse("https://app.gurtos.com/pair?box=rosa.box.gurtos.com#ab12cd34") == nil)
+  #expect(PairingLink.parse("https://app.gurtos.com/pair?box=rosa.box.gurtos.com#ab12cd34") != nil)
+  #expect(PairingLink.parse("https://app.gurtos.com/pair#code=ab12cd34&rv=Ab3_kq9Z") == nil)
+  #expect(Rendezvous.parse("https://evil.example/pair#code=ab12cd34&rv=Ab3_kq9Z") == nil)
+  #expect(Rendezvous.parse("https://app.gurtos.com/pair#code=ab12cd34&rv=a/b")?.id == nil, "a bad rv is dropped")
+  #expect(Rendezvous.parse("https://app.gurtos.com/pair#code=ab12cd34&lan=x@evil.com/y")?.lan == nil, "a lan value that isn't host:port is dropped")
+  #expect(Rendezvous.parse("https://app.gurtos.com/pair#rv=Ab3_kq9Z") == nil, "no code, nothing to pair")
+  _ = Rendezvous.parse("https://app.gurtos.com/pair#code=ab12cd34&n=%E2%9C%93%20%25%20#x") // odd bytes in a scanned link must not crash
 }
 
 @Test func acceptsOnlyABoxNameFromTheRelay() {

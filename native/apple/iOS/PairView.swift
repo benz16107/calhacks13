@@ -145,6 +145,7 @@ struct PairSheet: View {
       }
       Section("Name this phone") { TextField("Name this phone", text: $name) }
       Section {
+        if r.id != nil {
         Button {
           asking = true
           error = nil
@@ -156,13 +157,21 @@ struct PairSheet: View {
           HStack { Spacer(); if asking || busy { ProgressView(); Text("Asking \(r.name ?? "the computer")…").font(.g(.headline)) } else { Text("Pair over the internet").font(.g(.headline)) }; Spacer() }
         }
         .disabled(asking || busy)
+        }
         if let lan = r.lanLink {
           Button { pair(lan) } label: { HStack { Spacer(); Text("Same Wi-Fi? Pair on this network").font(.g(.headline)); Spacer() } }
             .disabled(asking || busy)
         }
+        if r.id == nil && r.lan == nil {
+          Button { address = ""; code = r.code; rendezvous = nil; typing = true } label: { HStack { Spacer(); Text("Type the computer's address").font(.g(.headline)); Spacer() } }
+        }
         if let error { Text(error).foregroundStyle(Color.gDestructiveFg) }
       } footer: {
-        Text("Over the internet, the GurtOS relay asks \(r.name ?? "your computer") to open a secure address for this phone. It never sees what the two of you send.")
+        if r.id != nil {
+          Text("Over the internet, the GurtOS relay asks \(r.name ?? "your computer") to open a secure address for this phone. It never sees what the two of you send.")
+        } else {
+          Text("To pair from anywhere, turn on Reach from anywhere on \(r.name ?? "the computer"): Settings, Remote access.")
+        }
       }
     }
     .font(.g(.body))

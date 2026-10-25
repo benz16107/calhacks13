@@ -21,9 +21,10 @@ pairing token of their own. The web app stays the option that needs no install.
 |---|---|---|---|
 | ![](screenshots/iphone-home-dark.png) | ![](screenshots/iphone-biz-home-light.png) | ![](screenshots/iphone-biz-request-light.png) | ![](screenshots/iphone-notification-actions.png) |
 
-- **Pair** by scanning the machine's QR code in the app (VisionKit), or by typing its address and code. When the computer's remote access is off, its QR code is a rendezvous link (`?rv=`): the app shows "Pair over
-  the internet", which asks the GurtOS relay to have the computer open an address for this phone, and, when the link
-  names one, "Same Wi-Fi? Pair on this network", which pairs with the computer's home address directly. Once
+- **Pair** by scanning the machine's QR code in the app (VisionKit), or by typing its address and code. When the computer's remote access is off, its QR code carries its details in the fragment
+  (`#code=…&rv=…&lan=…&n=…`). With `rv` (during setup) the app offers "Pair over the internet": the GurtOS relay asks
+  the computer to open an address for this phone. With `lan` it offers "Same Wi-Fi? Pair on this network", which
+  pairs with the computer's home address directly. Without `rv` it says how to turn on Reach from anywhere. Once
   app.gurtos.com serves its app-site association, the iPhone Camera opens the app straight from the QR code.
 - **Computers**: the title menu and the tile at the top right switch between paired computers (Computers, Add a computer), like switching
   accounts. Every computer keeps its own token, edition and, on Business, the person you are.

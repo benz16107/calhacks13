@@ -300,6 +300,12 @@ struct MacPairView: View {
 
   /** Remote access is off on that computer: the relay's rendezvous finds it first. */
   func pairOver(_ r: Rendezvous) {
+    guard r.id != nil else {
+      if let lan = r.lanLink { return pair(lan) }
+      code = r.code
+      error = "Type \(r.name ?? "the computer")'s address, or turn on Reach from anywhere on it: Settings, Remote access."
+      return
+    }
     busy = true
     error = nil
     Task {

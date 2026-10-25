@@ -97,24 +97,36 @@ public struct PairingLink: Equatable, Sendable {
 }
 
 /**
- * A pairing link from a computer whose remote access is off (core: the QR code when it has no address of its own):
- * https://app.gurtos.com/pair?rv=<id>&lan=<ip:port>&n=<name>#CODE. The relay's rendezvous asks the computer to come
- * online for this pairing, then gives its address; `lan` is its address on the home network.
+ * A pairing link from a computer whose remote access is off. Its details ride in the fragment, so no server log sees
+ * them: https://app.gurtos.com/pair#code=CODE&rv=<id>&lan=<ip:port>&n=<name>. `rv` (only while the computer is in
+ * setup) lets the relay's rendezvous ask the computer to come online; `lan` is its address on the home network.
+ * A bare https://app.gurtos.com/pair#CODE (no box named) parses too, with neither.
  */
 public struct Rendezvous: Equatable, Sendable {
-  public var id: String
+  public var id: String?
   public var code: String
   public var name: String?
   public var lan: String?
 
+  public init(id: String?, code: String, name: String? = nil, lan: String? = nil) {
+    self.id = id
+    self.code = code
+    self.name = name
+    self.lan = lan
+  }
+
   public static func parse(_ text: String) -> Rendezvous? {
     guard let u = URLComponents(string: text.trimmingCharacters(in: .whitespacesAndNewlines)), u.scheme == "https", u.host == "app.gurtos.com",
-          let id = u.queryItems?.first(where: { $0.name == "rv" })?.value, id.range(of: "^[A-Za-z0-9_-]{4,64}$", options: .regularExpression) != nil,
-          let code = u.fragment, PairingLink.isCode(code)
+          !(u.queryItems ?? []).contains(where: { $0.name == "box" }), let fragment = u.fragment, !fragment.isEmpty
     else { return nil }
-    let lan = u.queryItems?.first { $0.name == "lan" }?.value.flatMap { $0.range(of: "^[A-Za-z0-9.:\\[\\]-]{3,64}$", options: .regularExpression) != nil ? $0 : nil }
-    let name = u.queryItems?.first { $0.name == "n" }?.value.map { String($0.prefix(40)) }
-    return Rendezvous(id: id, code: code, name: name, lan: lan)
+    if PairingLink.isCode(fragment) { return Rendezvous(id: nil, code: fragment) }
+    // The fragment as search params. URLComponents(string:) returns nil on a bad link; setting percentEncodedQuery traps.
+    guard let f = URLComponents(string: "?" + (u.percentEncodedFragment ?? "")) else { return nil }
+    let item = { (k: String) in f.queryItems?.first { $0.name == k }?.value }
+    guard let code = item("code"), PairingLink.isCode(code) else { return nil }
+    let id = item("rv").flatMap { $0.range(of: "^[A-Za-z0-9_-]{4,64}$", options: .regularExpression) != nil ? $0 : nil }
+    let lan = item("lan").flatMap { $0.range(of: "^[A-Za-z0-9.:\\[\\]-]{3,64}$", options: .regularExpression) != nil ? $0 : nil }
+    return Rendezvous(id: id, code: code, name: item("n").map { String($0.prefix(40)) }, lan: lan)
   }
 
   /** The same computer on the home network, if the link named one: plain HTTP to its own port. */
@@ -131,6 +143,7 @@ public struct Rendezvous: Equatable, Sendable {
    * each with ?wait=25 until one answers 200. Gives up after about 3 minutes.
    */
   public func resolve(relay: URL = URL(string: "https://box.gurtos.com")!, session: URLSession = .shared) async throws -> PairingLink {
+    guard let id else { throw BoxError(status: 0, message: "This code can't be paired over the internet.") }
     let base = relay.appending(path: "v1/rv/\(id)")
     var ask = URLRequest(url: base.appending(path: "ask"), timeoutInterval: 20)
     ask.httpMethod = "PUT"
