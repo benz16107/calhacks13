@@ -53,7 +53,7 @@ def key_title(name):
         return named[name]
     keep = {'API', 'CRS', 'URL', 'ID', 'ASI', 'USDC', 'IMAP', 'POP3', 'SMTP'}
     words = [w if w in keep else w.lower() for w in name.split('_')]
-    return ' '.join(words)[:1].upper() + ' '.join(words)[1:] if words else name
+    return (' '.join(words)[:1].upper() + ' '.join(words)[1:]).replace('github', 'GitHub').replace('Github', 'GitHub') if words else name
 FOLDER_CHOICES = ['May change', 'Not allowed']  # "May read" waits for the core to tell reading from changing
 
 
@@ -505,7 +505,46 @@ class SetupWindow(Adw.ApplicationWindow):
                 return self.toast(f"{app_title(app)} did not turn {'on' if on else 'off'}: {err}")
             app.update(out)
             self.count_apps()
-        background(lambda: api('POST', f"/api/apps/{app['id']}/{'enable' if on else 'disable'}", {}), done)
+
+        def turn():
+            background(lambda: api('POST', f"/api/apps/{app['id']}/{'enable' if on else 'disable'}", {}), done)
+        if not on:
+            return turn()
+
+        def asked(views, err):  # an app turned on for the first time asks for its permissions, like a phone app
+            view = next((v for v in views or [] if v.get('app') == app['id']), None)
+            if err or not view or view.get('answered') or not view.get('items'):
+                return turn()
+            self.ask_permissions(app, view, switch, turn)
+        background(lambda: api('GET', '/api/permissions'), asked)
+
+    def ask_permissions(self, app, view, switch, then):
+        d = Adw.MessageDialog(transient_for=self, heading=f'{app_title(app)} wants to:',
+                              body="Turn off anything you don't want it to do. You can change this later in GurtOS Settings, Permissions.")
+        lst = boxed()
+        rows = {}
+        for item in by_kind(view['items']):
+            rows[item['id']] = permission_row(item)
+            lst.append(rows[item['id']])
+        d.set_extra_child(lst)
+        d.add_response('cancel', "Don't turn on")
+        d.add_response('on', 'Turn on')
+        d.set_response_appearance('on', Adw.ResponseAppearance.SUGGESTED)
+        d.set_default_response('on')
+
+        def answered(_d, response):
+            if response != 'on':
+                return switch.set_active(False)
+            deny = [i for i, r in rows.items() if not r.get_active()]
+
+            def saved(_out, err):
+                if err:
+                    switch.set_active(False)
+                    return self.toast(f'{app_title(app)} stayed off: its permissions were not saved. {err}')
+                then()
+            background(lambda: api('PUT', f"/api/permissions/{app['id']}", {'deny': deny}), saved)
+        d.connect('response', answered)
+        d.present()
 
     def count_apps(self):
         on = [a for a in self.apps if a.get('enabled') and a['id'] in PERSONAL_APPS]
@@ -568,6 +607,36 @@ class SetupWindow(Adw.ApplicationWindow):
                 done.append(r)
         self.summary.set_label('' if self.model_ready() else 'Add an Anthropic API key in GurtOS Settings before your first task.')
         return scroller
+
+
+DAILY = [None, 100, 500, 1000, 2500, 5000]  # money an app may spend a day, in cents; None is no daily limit
+
+
+def permission_row(item):
+    """One app permission as a switch: a key by its human name, the rest in the box's own words."""
+    if item.get('kind') == 'key':
+        title, sub = key_title(item['id'].split(':', 1)[1]), 'A key it uses through GurtOS. The app never sees it.'
+    elif item.get('kind') == 'money':  # the box's own text names the daily limit, which the row under it sets
+        title, sub = 'Spend money', 'Each task within its budget'
+    else:
+        title, sub = item.get('text', item['id']), ('Seen in its tasks' if item.get('seen') else None)
+    r = Adw.SwitchRow(title=GLib.markup_escape_text(title), active=bool(item.get('allowed', True)))
+    if sub:
+        r.set_subtitle(GLib.markup_escape_text(sub))
+    return r
+
+
+def by_kind(items):
+    """Money, strangers, commands and sites first; an app's keys, often many, after them."""
+    return sorted(items, key=lambda i: i.get('kind') == 'key')
+
+
+def permission_summary(view):
+    off = sum(1 for i in view.get('items', []) if not i.get('allowed', True))
+    line = f'{off} turned off' if off else 'Everything allowed'
+    if view.get('perDayCents') is not None:
+        line += f", up to {dollars(view['perDayCents'])} a day"
+    return line
 
 
 def app_title(a):

@@ -245,7 +245,55 @@ class SettingsWindow(SetupWindow):
                                                                    'Quiet hours saved.'))
         lst.append(quiet)
         lst.append(hours)
+        self.app_permissions(section(box, 'What each app may do', 'Like app permissions on a phone. A change applies at once, and shows in Activity.'))
         return scroller
+
+    def app_permissions(self, lst):
+        """One row per app that is on: each permission a switch, and money per day for an app that spends."""
+        wait = setupwin.row('Loading…')
+        lst.append(wait)
+
+        def done(views, err):
+            lst.remove(wait)
+            on = {a['id']: a for a in self.apps if a.get('enabled') and a['id'] in setupwin.PERSONAL_APPS}
+            views = [v for v in views or [] if v.get('app') in on and v.get('items')]
+            if err or not views:
+                return lst.append(setupwin.row(f'Could not load them: {err}' if err else 'Apps you turn on show here, with what they may do.'))
+            for v in sorted(views, key=lambda v: (v['app'] != 'find', setupwin.app_title(on[v['app']]))):
+                lst.append(self.app_permission_row(on[v['app']], v))
+        background(lambda: api('GET', '/api/permissions'), done)
+
+    def app_permission_row(self, app, view):
+        ex = Adw.ExpanderRow(title=GLib.markup_escape_text(setupwin.app_title(app)), subtitle=setupwin.permission_summary(view))
+        ex.add_prefix(setupwin.tile(app['id'], setupwin.app_title(app), 32))
+        switches = {}
+        daily = None
+        for item in setupwin.by_kind(view['items']):
+            switches[item['id']] = r = setupwin.permission_row(item)
+            r.connect('notify::active', lambda *_: save())
+            ex.add_row(r)
+            if item.get('kind') == 'money':
+                days = list(setupwin.DAILY)
+                if view.get('perDayCents') not in days:
+                    days.append(view['perDayCents'])
+                daily = Adw.ComboRow(title='Money per day', subtitle='Over this, a spend asks you first',
+                                     model=Gtk.StringList.new([setupwin.dollars(c) if c is not None else 'No daily limit' for c in days]))
+                daily.set_selected(days.index(view.get('perDayCents')))
+                daily.connect('notify::selected', lambda *_: save())
+                ex.add_row(daily)
+
+        def save():
+            body = {'deny': [i for i, r in switches.items() if not r.get_active()]}
+            if daily is not None:
+                body['perDayCents'] = days[daily.get_selected()]
+
+            def done(out, err):
+                if err:
+                    return self.toast(f'{setupwin.app_title(app)}: not saved. {err}')
+                ex.set_subtitle(setupwin.permission_summary(out or {}))
+                self.toast(f'{setupwin.app_title(app)}: {setupwin.permission_summary(out or {}).lower()}.')
+            background(lambda: api('PUT', f"/api/permissions/{app['id']}", body), done)
+        return ex
 
     def first_list(self, scroller):
         """The boxed list in a Setup page."""
