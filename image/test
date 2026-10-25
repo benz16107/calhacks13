@@ -109,7 +109,8 @@ vm 'nft list chain inet gurtos input | grep -q "tcp dport 7701 accept"' || { ech
 if vm 'test -f /opt/box/core/gurtos.ts'; then
   vm 'test -x /usr/local/bin/gurtos && test -f /usr/share/doc/gurtos/AGENT-SETUP.md' ||
     { echo "test: FAILED, command setup has no gurtos command or AGENT-SETUP.md on the disc"; exit 1; }
-  if [[ $edition != personal- ]]; then # the setup listener is open on a Server until setup finishes
+  if [[ $edition != personal- ]]; then # the listener opens when someone at the screen asks for a setup code
+    vm 'curl -sf -X POST http://127.0.0.1:7700/api/setup/code' | grep -q expiresAt || { echo "test: FAILED, the box gave no setup code"; exit 1; }
     [[ $(curl -s -o /dev/null -w '%{http_code}' --max-time 8 "http://127.0.0.1:$((port + 5000))/" || true) != 000 ]] ||
       { echo "test: FAILED, nothing answers on the setup port (7701) from outside during setup"; exit 1; }
   fi
