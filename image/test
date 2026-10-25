@@ -109,10 +109,15 @@ vm 'nft list chain inet gurtos input | grep -q "tcp dport 7701 accept"' || { ech
 if vm 'test -f /opt/box/core/gurtos.ts'; then
   vm 'test -x /usr/local/bin/gurtos && test -f /usr/share/doc/gurtos/AGENT-SETUP.md' ||
     { echo "test: FAILED, command setup has no gurtos command or AGENT-SETUP.md on the disc"; exit 1; }
-  if [[ $edition != personal- ]]; then # the listener opens when someone at the screen asks for a setup code
-    vm 'curl -sf -X POST http://127.0.0.1:7700/api/setup/code' | grep -q expiresAt || { echo "test: FAILED, the box gave no setup code"; exit 1; }
-    [[ $(curl -s -o /dev/null -w '%{http_code}' --max-time 8 "http://127.0.0.1:$((port + 5000))/" || true) != 000 ]] ||
-      { echo "test: FAILED, nothing answers on the setup port (7701) from outside during setup"; exit 1; }
+  if [[ $edition != personal- ]]; then # the listener opens only when someone at the screen asks for a setup code
+    code7701() { curl -s -o /dev/null -w '%{http_code}' --max-time 8 "http://127.0.0.1:$((port + 5000))$1" || true; }
+    [[ $(code7701 /api/settings) == 000 ]] || { echo "test: FAILED, the setup port answers before anyone asked for a code"; exit 1; }
+    vm 'curl -sf -X POST --unix-socket /var/lib/box/api.sock http://box/api/setup/code' | grep -q '"code"' ||
+      { echo "test: FAILED, the box gave no setup code"; exit 1; }
+    [[ $(code7701 /api/settings) == 401 ]] || { echo "test: FAILED, the setup port is not the box's API with a token required (got $(code7701 /api/settings))"; exit 1; }
+    vm 'curl -sf -X POST --unix-socket /var/lib/box/api.sock http://box/api/setup/stop' >/dev/null || { echo "test: FAILED, setup/stop did not work"; exit 1; }
+    for _ in $(seq 8); do [[ $(code7701 /api/settings) == 000 ]] && break; sleep 1; done
+    [[ $(code7701 /api/settings) == 000 ]] || { echo "test: FAILED, the setup port stays open after Stop"; exit 1; }
   fi
   echo "test: command setup: gurtos, AGENT-SETUP.md and the setup port are in place"
 fi
