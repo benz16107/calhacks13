@@ -1,12 +1,26 @@
 # Contributing to GurtOS
 
 Thanks for looking. GurtOS is a preview built at Cal Hacks 13.0, so expect rough edges. Issues and pull requests
-are welcome. By contributing you agree that your work is licensed under the [Apache License 2.0](LICENSE), like
-the rest of the project.
+are welcome. Please read the [Code of Conduct](CODE_OF_CONDUCT.md) first, and see the [roadmap](ROADMAP.md) for what
+is planned and what is not.
 
-**Security problems:** report them privately through
-[GitHub security advisories](https://github.com/benz16107/calhacks13/security/advisories/new), not in a public
-issue. Include what you ran and what you saw.
+**Security problems:** report them privately, as [SECURITY.md](SECURITY.md) describes, not in a public issue.
+
+## Sign your work (DCO)
+
+GurtOS uses the [Developer Certificate of Origin](https://developercertificate.org/). It is a short statement that
+you wrote the change or have the right to submit it under the project's licence ([Apache-2.0](LICENSE)). You agree
+to it by signing off each commit:
+
+```sh
+git commit -s -m "Say what changed"      # adds: Signed-off-by: Your Name <you@example.com>
+```
+
+The name and address come from `git config user.name` and `user.email`. If you do not want your email address in a
+public repository, use the private address GitHub gives you (`<id>+<name>@users.noreply.github.com`, in your email
+settings). To sign off commits you already made: `git rebase --signoff origin/main`, then push.
+
+A pull request with unsigned commits will be asked to sign them before it is merged.
 
 ## Set up
 
