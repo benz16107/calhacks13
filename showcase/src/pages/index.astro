@@ -1,6 +1,7 @@
 ---
 import { getCollection } from 'astro:content';
 import Base from '../layouts/Base.astro';
+import VideoSlot from '../components/VideoSlot.astro';
 import { LINKS } from '../data/site';
 
 const tracks = (await getCollection('tracks')).sort((a, b) => a.data.order - b.data.order);
@@ -30,6 +31,7 @@ const shortEd = (text: string) => {
         evidence and what it does not cover. The product, its three editions and the downloads are at{' '}
         <a href={LINKS.site}>gurtos.com</a>. The evidence behind all of them is on the <a href="/evidence/">evidence page</a>.
       </p>
+      <VideoSlot video="main" label="GurtOS in 3 minutes" />
       <div class="table-wrap">
         <table class="ledger">
           <thead>
