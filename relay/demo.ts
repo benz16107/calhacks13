@@ -112,22 +112,35 @@ export default async function (d: DemoKit) {
   // ---------- the setup QR: what a phone gets when it scans it ----------
   // The QR must open somewhere every phone can reach, whatever network it is on and before remote access is on:
   // the GurtOS app, with the code in the fragment and a rendezvous id, never the box's own private address.
-  const start = await d.api('POST', '/pair/start', { owner: true });
-  const qrText = qrRoundTrip(start.url);
-  const link = new URL(qrText ?? start.url);
-  d.check(qrText === undefined || qrText === start.url, qrText === undefined ? '(qrencode and zbarimg are not on this machine: the QR image itself was not decoded)' : 'the pairing QR, drawn and read back, holds exactly the link the box gave');
-  d.check(link.origin === 'https://app.gurtos.com' && link.pathname === '/pair' && (link.searchParams.get('rv') ?? '').length >= 22 && link.hash === `#${start.code}`, 'with remote access off, the QR opens the GurtOS app with a rendezvous id and the code, not an address only the box\'s own network can reach');
-  const viaQr = await raw('POST', '/api/pair', { code: link.hash.slice(1), name: 'Phone from the QR' });
+  const setupDone = (await d.api('GET', '/setup')).done;
+  const frag = (u: URL) => new URLSearchParams(u.hash.slice(1));
+  if (!setupDone) await d.api('POST', '/setup/finish', {});
+  const after = new URL((await d.api('POST', '/pair/start', { owner: true })).url);
+  d.check(after.origin === 'https://app.gurtos.com' && !frag(after).get('rv') && !after.search, 'after setup, a pairing link has no rendezvous id, so no code can switch remote access on, and nothing about the box rides in the query (which reaches server logs)');
+  await d.api('POST', '/setup/reopen', {});
+  let start: any, link: URL, qrText: string | undefined;
+  try {
+    start = await d.api('POST', '/pair/start', { owner: true });
+    qrText = qrRoundTrip(start.url);
+    link = new URL(qrText ?? start.url);
+  } finally {
+    await d.api('POST', '/setup/finish', {});
+  }
+  d.check(qrText === undefined || qrText === start.url, qrText === undefined ? '(qrencode and zbarimg are not on this machine: the QR image itself was not decoded)' : 'the setup QR, drawn and read back, holds exactly the link the box gave');
+  d.check(link.origin === 'https://app.gurtos.com' && link.pathname === '/pair' && !link.search && frag(link).get('code') === start.code && (frag(link).get('rv') ?? '').length >= 22, 'during setup, with remote access off, the QR opens the GurtOS app with the code and a rendezvous id in the fragment, not an address only the box\'s own network can reach');
+  const viaQr = await raw('POST', '/api/pair', { code: frag(link).get('code'), name: 'Phone from the QR' });
   const qrPhone = { authorization: `Bearer ${viaQr.body.token}`, 'x-forwarded-for': '203.0.113.8' };
   d.check(viaQr.status === 200 && (await raw('GET', '/api/tasks', undefined, qrPhone)).status === 200, 'the code read from the QR pairs a phone with the box');
   await raw('DELETE', '/api/pair/self', undefined, qrPhone);
+  if (!setupDone) await d.api('POST', '/setup/reopen', {}); // leave setup as this step found it
 
   if (!LIVE) return console.log('    (DEMO_LIVE=remote runs the real relay: a phone that scanned the QR turns remote access on, then a real certificate and a real push)');
 
   // ---------- live: the real relay ----------
-  // A phone that can't reach the box asks it, through the relay, to turn remote access on, then pairs over https.
+  // During setup, a phone that can't reach the box asks it, through the relay, to turn remote access on, then pairs over https.
+  await d.api('POST', '/setup/reopen', {});
   const scan = await d.api('POST', '/pair/start', { owner: true });
-  const rv = new URL(scan.url).searchParams.get('rv');
+  const rv = new URLSearchParams(new URL(scan.url).hash.slice(1)).get('rv');
   await fetch(`https://box.gurtos.com/v1/rv/${rv}/ask`, { method: 'PUT', headers: { 'content-type': 'application/json' }, body: '{}' });
   let name = '';
   try {
@@ -175,6 +188,7 @@ export default async function (d: DemoKit) {
       tp.close();
     }
   } finally {
+    await d.api('POST', '/setup/finish', {});
     const offAgain = await raw('DELETE', '/api/remote');
     const free = name ? ((await (await fetch(`https://box.gurtos.com/v1/names/${name}`)).json()) as any) : { available: true };
     d.check(offAgain.body.enabled === false && (!name || offAgain.body.released) && free.available, 'live: turning it off released the name');

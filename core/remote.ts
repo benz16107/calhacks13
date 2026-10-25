@@ -68,8 +68,14 @@ export class Remote {
   /** Unit names: plain on the installed box, with a suffix for a demo box so the two never share one. */
   units: { tunnel: string; tls: string };
 
+  /** Present once the owner turned remote access off; cleared when it is turned on again. */
+  offFile: string;
+  /** The one pairing rendezvous being watched; a newer code replaces it. */
+  watching?: AbortController;
+
   constructor(home: string, deps: RemoteDeps) {
     this.file = path.join(home, 'remote.json');
+    this.offFile = path.join(home, 'remote-off');
     this.dir = path.join(home, 'remote');
     this.deps = deps;
     const suffix = path.resolve(home) === '/var/lib/box' ? '' : '-' + createHash('sha256').update(path.resolve(home)).digest('hex').slice(0, 8);
@@ -93,14 +99,22 @@ export class Remote {
    * waits until its address answers, and posts that address back for the phone to pair with. Runs while the code is
    * valid; `alive` turns false once the code is used or expires.
    */
-  async watchPairing(rv: string, alive: () => boolean, boxId: string) {
+  async watchPairing(rv: string, alive: () => boolean, allowed: () => boolean, boxId: string) {
+    this.watching?.abort(); // one watcher at a time: the wizard renews codes, and only the newest QR is on screen
+    const mine = (this.watching = new AbortController());
+    const live = () => alive() && !mine.signal.aborted;
+    const put = (slot: string, body: unknown, headers: Record<string, string> = {}) =>
+      fetch(`${RELAY}/v1/rv/${rv}/${slot}`, { method: 'PUT', headers: { 'content-type': 'application/json', ...headers }, body: JSON.stringify(body), signal: AbortSignal.timeout(10_000) });
     let failures = 0;
-    while (alive() && failures < 3) {
+    while (live() && failures < 3) {
       try {
-        const r = await fetch(`${RELAY}/v1/rv/${rv}/ask?wait=25`, { signal: AbortSignal.timeout(35_000) });
+        const r = await fetch(`${RELAY}/v1/rv/${rv}/ask?wait=25`, { signal: AbortSignal.any([mine.signal, AbortSignal.timeout(35_000)]) });
         if (r.status === 404) continue; // nobody asked yet
         if (!r.ok) throw new Error(`relay answered ${r.status}`);
-        if (!this.saved) await this.enableAuto(boxId);
+        if (!this.saved) {
+          if (!allowed()) throw new Error('this computer is past setup, or its owner turned remote access off: turn it on in Settings, Remote access');
+          await this.enableAuto(boxId);
+        }
         const until = Date.now() + 150_000;
         while (this.state !== 'connected' && Date.now() < until) {
           if (this.state === 'error') throw new Error(this.error ?? 'remote access failed');
@@ -108,14 +122,13 @@ export class Remote {
         }
         if (this.state !== 'connected') throw new Error('the address did not come up in time');
         const s = this.saved!;
-        await fetch(`${RELAY}/v1/rv/${rv}/host`, { method: 'PUT', headers: { authorization: `Bearer ${s.name}.${this.deps.secret()}`, 'content-type': 'application/json' }, body: JSON.stringify({ host: s.host }), signal: AbortSignal.timeout(10_000) });
+        this.deps.note({ remote: 'on', by: 'setup code', text: `Remote access turned on by the phone that scanned the setup code (${s.host})` });
+        await put('host', { host: s.host }, { authorization: `Bearer ${s.name}.${this.deps.secret()}` });
         return;
       } catch (e) {
+        if (mine.signal.aborted) return; // a newer code took over
         failures++;
-        if (failures >= 3 || !alive()) {
-          await fetch(`${RELAY}/v1/rv/${rv}/error`, { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ error: (e as Error).message }), signal: AbortSignal.timeout(10_000) }).catch(() => {});
-          return;
-        }
+        if (failures >= 3 || !live() || /past setup/.test((e as Error).message)) return void (await put('error', { error: (e as Error).message }).catch(() => {}));
         await new Promise((res) => setTimeout(res, 3000));
       }
     }
@@ -160,6 +173,7 @@ export class Remote {
     if (out.host !== `${name}.${new URL(RELAY).host}` || !hostOk(out.tunnel?.host) || !hostOk(out.tunnel?.serverName) || !Number.isInteger(out.tunnel?.port) || !/^[A-Za-z0-9_-]{20,200}$/.test(out.secret ?? ''))
       throw err(502, 'the relay sent an answer this box does not accept');
     this.deps.setSecret(out.secret);
+    fs.rmSync(this.offFile, { force: true });
     this.saved = { name: out.name, host: out.host, url: `https://${out.host}`, tunnel: { host: out.tunnel.host, port: out.tunnel.port, serverName: out.tunnel.serverName }, ports: await freePorts(), at: new Date().toISOString() };
     fs.writeFileSync(this.file, JSON.stringify(this.saved, null, 2), { mode: 0o600 });
     this.deps.note({ remote: 'on', name: out.name, url: this.saved.url });
@@ -184,6 +198,7 @@ export class Remote {
     this.saved = undefined;
     this.state = 'off';
     this.error = undefined;
+    fs.writeFileSync(this.offFile, new Date().toISOString()); // the owner chose off: the setup rendezvous must not turn it back on
     this.deps.note({ remote: 'off', name: s.name, released });
     return { ...this.view(), released };
   }

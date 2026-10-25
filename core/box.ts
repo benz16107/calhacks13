@@ -1620,20 +1620,22 @@ class Core {
     const code = randomBytes(4).toString('hex');
     const expiry = Date.now() + 5 * 60 * 1000;
     this.pairCodes.set(code, { expiry, owner, ...(person ? { person } : {}) });
-    // The QR always opens the GurtOS app (app.gurtos.com), which any phone can reach, with the code in the fragment.
-    // With remote access on it carries the box's https address. Without it, the box's address on its own network
-    // (`lan`, which a phone on another network, or a VM's private address, can't reach) plus a rendezvous id: the
-    // app can then ask this box, through the relay, to turn remote access on, and pair over https (watchPairing).
-    // `boxUrl` is the box's own copy of the pairing page.
+    // The QR always opens the GurtOS app (app.gurtos.com), which any phone can reach. Everything after `#` stays on
+    // the phone: the code, and, with remote access off, the box's address on its own network (`lan`, which a phone
+    // elsewhere, or a VM's private address, can't reach) and its name. During setup it also carries a rendezvous id
+    // (`rv`): the app can ask this box, through the relay, to turn remote access on and pair over https
+    // (watchPairing). Never after setup, or once the owner turned remote access off: other codes (Business people,
+    // new phones) must not be able to switch it on. `boxUrl` is the box's own copy of the pairing page.
     const remote = this.remote.saved;
     const base = this.boxUrl();
     let url: string;
     if (remote) url = `${APP}/pair?box=${remote.host}#${code}`;
     else {
-      const rv = randomBytes(16).toString('base64url');
+      const allowed = () => !this.setup.done && !fs.existsSync(this.remote.offFile);
+      const rv = allowed() ? randomBytes(16).toString('base64url') : '';
       const lan = /^https?:\/\//.test(base) ? new URL(base).host : '';
-      url = `${APP}/pair?rv=${rv}${lan ? `&lan=${encodeURIComponent(lan)}` : ''}&n=${encodeURIComponent(this.boxName())}#${code}`;
-      void this.remote.watchPairing(rv, () => (this.pairCodes.get(code)?.expiry ?? 0) > Date.now(), BOX_ID);
+      url = `${APP}/pair#${new URLSearchParams({ code, ...(rv ? { rv } : {}), ...(lan ? { lan } : {}), n: this.boxName() })}`;
+      if (rv) void this.remote.watchPairing(rv, () => (this.pairCodes.get(code)?.expiry ?? 0) > Date.now(), allowed, BOX_ID);
     }
     const own = remote ? remote.url : /^https?:\/\//.test(base) ? base : '';
     return { code, url, ...(own ? { boxUrl: `${own}/pair#${code}` } : {}), expiresAt: new Date(expiry).toISOString(), box: { id: BOX_ID, name: this.boxName() } };
