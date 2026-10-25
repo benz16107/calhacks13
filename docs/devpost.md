@@ -168,6 +168,8 @@ Every track has its own page with the criteria, evidence, screenshots and limits
 
 **From the OS, not the desk:** separate users and file copies per seat, keys in a root-only vault, the approval pause, the append-only log, undo, resume after a crash, and pause-all. **From the desk:** the credit rules, tool-level segregation of duties, the planted case and the scorer.
 
+**Video:** https://youtu.be/w63vbqz6H8w (GurtOS for Hyphenate, 1:29, opens on the APP-1043 moment).
+
 [Full write-up, video and evidence →](https://calhacks.gurtos.com/tracks/hyphenate/)
 
 ### Factory: Droid SDK
@@ -464,6 +466,8 @@ Forge app: `jira:issuePanel` (UI Kit), a resolver that reads the task as the sig
 Answer key: `tracks/credit-desk/cases/fogline-2026-10/answer_key.json` (the planted errors and the false-alarm traps; the key has grown since the first scored run). Try it in the Credit desk window: Quick run (scripted seats, live CRS and Nessie, 10 seconds) stops on APP-1043 for your OK. Bring your own case: drop the folder under `cases/` on the box and pick it in the window. The video opens on the APP-1043 moment.
 
 GurtOS is open source (Apache-2.0): anyone can run it, customise it and reuse this desk in their own agents.
+
+**Video:** https://youtu.be/w63vbqz6H8w (GurtOS for Hyphenate, 1:29, opens on the APP-1043 moment).
 
 [Full write-up, video and evidence →](https://calhacks.gurtos.com/tracks/hyphenate/)
 

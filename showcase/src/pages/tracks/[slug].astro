@@ -47,6 +47,8 @@ const jumps = [
           <p class="sponsor">{d.sponsor} · {d.prize}</p>
           <p class="kbest">Best shown in <strong>{d.editions}</strong> <span aria-hidden="true">·</span> <a href={LINKS.site}>The product: gurtos.com</a> <span aria-hidden="true">·</span> <a href={LINKS.try}>Try it live: try.gurtos.com</a></p>
         </header>
+        {/* the track's own narrated video, when one is set for its slug in src/data/videos.ts */}
+        <VideoSlot video={entry.id} label={`${d.sponsor} video`} />
         <div class="kit" data-track-body>
           <Content components={kit} />
         </div>
