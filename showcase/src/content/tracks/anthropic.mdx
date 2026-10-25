@@ -117,6 +117,10 @@ Every task's worker is Droid running Claude. This run is real, not scripted: Cla
 
 <Shot src="track/factory/task-done.png" alt="A GurtOS task window for Fix add() so its test passes. It is done in 1 minute, $0.12 of a $1.00 budget. Claude's summary says the reviewer's last verdict is APPROVE. The model is claude-sonnet-5-5, the agent is Claude, and the task ran as its own user with no sites it may reach." caption="The finished task: <code>claude-sonnet-5-5</code>, <strong>$0.12</strong> of a $1.00 budget, one file changed, the reviewer's verdict in the summary and every tool call in the steps. It could reach no site. Real Claude through Droid, test data only." />
 
+Afterwards you can play the whole task back. Replay steps through its action log: each tool call, the plan, who approved it, the spending so far and the result.
+
+<Shot src="track/factory/replay-approved-light.png" dark="track/factory/replay-approved-dark.png" alt="The GurtOS Replay window for Fix add() so its test passes, at point 12 of 33. The scrubber marks the request and the approval. The left list shows Droid's plan, Needs you and Approved, then the coder droid's steps. The right side shows Approved, the time, $0.00 spent so far, and the task's final change to add.js, a - b becoming a + b, with the note that this computer keeps a task's files at the end only." caption="Replay of the same Claude task, stopped at the approval. The scrubber marks the request and the answer. Files show the task's final change, because GurtOS keeps a task's files at the end only, not at each step. Approved through the box's API for this capture." />
+
 Other tracks' live runs show Claude on work that matters: two Claude seats worked a planted finance case against live CRS and bank data and caught 16 of 17 planted errors with 1 false alarm ([Hyphenate](/tracks/hyphenate/)), and "fix the failing test" from an ASI:One chat came back as a diff for $0.05 ([Fetch.ai](/tracks/fetch/)). On GurtOS Personal, Claude fixed the spelling in a thesis chapter for 3 cents, and the folder stayed as it was until the owner chose Keep.
 
 <Details summary="Choosing the model per task, and what it costs">
@@ -187,6 +191,7 @@ The 12 cases include a hidden comment in a page asking for `.env`, invisible pag
 </Details>
 
 <OSvsTrack sponsor="Anthropic" rows={[
+  { what: "The flight recorder: Replay plays a finished task back step by step, with every tool call, block, request, who answered, the spending so far, and Done or Failed", why: "Knowing what an unattended agent did, after the fact", os: "The action log and the Replay window in the portal, on desktop and phone", track: "Claude's steps are what it replays", status: "Shipped. It shows the task's final changes, not the files at each step: GurtOS keeps a task's files at the end only" },
   { what: "Claude does every task, inside Droid, as its own Linux user in its own copy-on-write copy of the files", why: "Real work with no way to touch another task's files", os: "The worker, the task space, the log and the cost", track: "Claude, through Droid and Factory's SDK", status: "Shipped" },
   { what: "Keys never reach the agent: a placeholder in the task, the real key swapped in by the proxy", why: "A hijacked or confused Claude has no key to leak", os: "The vault and proxy", track: "Nothing", status: "Shipped" },
   { what: "A page with hidden instructions fails: the task reaches only its allowed hosts", why: "Prompt injection cannot send anything out", os: "The network rule", track: "Nothing", status: "Shipped" },

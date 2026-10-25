@@ -96,6 +96,7 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 
 | Feature | Serves | From GurtOS (the OS) | From Anthropic | Status |
 |---|---|---|---|---|
+| The flight recorder: Replay plays a finished task back step by step, with every tool call, block, request, who answered, the spending so far, and Done or Failed | Knowing what an unattended agent did, after the fact | The action log and the Replay window in the portal, on desktop and phone | Claude's steps are what it replays | Shipped. It shows the task's final changes, not the files at each step: GurtOS keeps a task's files at the end only |
 | Claude does every task, inside Droid, as its own Linux user in its own copy-on-write copy of the files | Real work with no way to touch another task's files | The worker, the task space, the log and the cost | Claude, through Droid and Factory's SDK | Shipped |
 | Keys never reach the agent: a placeholder in the task, the real key swapped in by the proxy | A hijacked or confused Claude has no key to leak | The vault and proxy | Nothing | Shipped |
 | A page with hidden instructions fails: the task reaches only its allowed hosts | Prompt injection cannot send anything out | The network rule | Nothing | Shipped |
@@ -201,6 +202,7 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 
 | Feature | Serves | From GurtOS (the OS) | From Factory | Status |
 |---|---|---|---|---|
+| The flight recorder: Replay plays a finished task's action log back step by step, with every tool call, block, request, who answered, the spending so far, and Done or Failed | Visible plans, steps and diffs | The action log and the Replay window in the portal, on desktop and phone | Droid's tool calls and its plan are the steps it replays | Shipped. It shows the task's final changes, not the files at each step: GurtOS keeps a task's files at the end only |
 | Droid is the worker in every task, started through the Droid SDK with Claude | Droid SDK does real work | Creates the task user, copy and unit, resumes the session after a power cut, prices the usage | Droid, spec mode, custom droids, Factory's SDK and billing endpoint | Shipped |
 | Plan first, then approve | Visible plans | The approval on the portal and phone, kept in the log | Spec mode writes the plan, ExitSpecMode asks | Shipped |
 | A team of custom droids: coder, reviewer (read-only), credit analyst, shopper | Careful limits on what each droid touches | The task's tools and hosts bound every droid | The droid definitions and the Task tool | Shipped |
@@ -431,6 +433,7 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 
 | Feature | Serves | From GurtOS (the OS) | From Elastic | Status |
 |---|---|---|---|---|
+| Signed receipts: a task's steps, approvals and cost, signed by the box, with the chain of log hashes and what the box found against Elastic's add-only copy | Hand the record to someone who does not trust the box | The signed receipt, the key, the hash chain, the QR code and the check page | The add-only copy the box compares the task's entries with (5 of 5 matched on the cloud box) | Shipped. The check page cannot ask Elastic itself and says so. It proves the entries are the ones the box wrote, not that the agent was right |
 | One append-only action log of every step, tool call, cost, approval, block, undo and failure | One place to ask, not scattered files | The log | Nothing | Shipped |
 | The log streams into a Serverless index, each event once, with the Elastic key held by one core job | The record lives outside the box and no task can reach the key | The vault, the core job, the outbox | The Serverless index and the create-only key | Shipped |
 | An Agent Builder agent, GurtOS log, with 14 ES/QL tools, a workflow tool and an index search tool | Plain-words answers to what changed, what it cost, why it failed | The data it reads | Agent Builder, ES/QL, the agent as code in agent.ts | Shipped |
