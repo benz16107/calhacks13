@@ -102,6 +102,12 @@ def find(query):
     words_ = [w for w in words(query) if w not in FILLER]
     if not words_:
         return 'What should I look for?'
+    try:  # /find's own answer: it finds the notes and says it in a sentence, on this computer or with Moss
+        out = api('GET', '/t/find/answer?' + urllib.parse.urlencode({'q': query, 'engine': 'auto', 'fast': 1}), timeout=8)
+        if out.get('answer'):
+            return f"{out['answer'].strip()} ({(out.get('ms') or {}).get('total', '?')} ms)"
+    except Exception:  # noqa: BLE001 (an older /find without the answer call: search and say the top result)
+        pass
     t = time.time()
     out = api('GET', '/t/find/search?' + urllib.parse.urlencode({'q': ' '.join(words_), 'k': 4, 'mode': 'fast'}), timeout=4)  # fast: never waits for Moss to open
     hits = [r for r in out.get('results', []) if r.get('kind') != 'task'] or out.get('results', [])
@@ -123,7 +129,8 @@ def answer(text, user='owner'):
     if not w:
         return "I didn't catch that. " + HELP
     first = next((x for x in w if x not in FILLER), '')
-    verbs = {'approve': True, 'allow': True, 'accept': True, 'deny': False, 'decline': False, 'reject': False, 'refuse': False}
+    verbs = {'approve': True, 'allow': True, 'accept': True, 'deny': False, 'decline': False, 'reject': False, 'refuse': False,
+             'approved': True, 'denied': False}  # speech to text often hears "approve the" as "approved a"
     verb = next((x for x in w if x in verbs), None)
     if verb:
         target = [x for x in w if x != verb]

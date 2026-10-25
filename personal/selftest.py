@@ -222,6 +222,9 @@ check(done and by.startswith('voice:') and reply.startswith('Approved'), f'an ap
 api('POST', f"/api/approvals/{quote(a['id'])}", {'approved': False, 'by': 'desktop:demo'})
 summary = voice.answer('what did my agents do today')
 check(summary.startswith('Today your agents handled') and 'task' in summary, f'what did my agents do today answers from the box: "{summary[:70]}..."')
+heard = voice.answer('approved a grocery order')
+check(not heard.startswith("I didn't understand") and not heard.startswith('Approved'),
+      f'speech heard as "approved a …" is still a request to approve, and voice still never spends ({heard[:50]})')
 check(voice.answer('mumble').startswith("I didn't understand") and voice.answer('').startswith("I didn't catch"), 'speech that is not a request gets a short help line, never an action')
 speech_to_answer = round(time.time() - t0, 2)
 print(json.dumps({'ok': True, 'what': f'voice: four requests answered from the box in {speech_to_answer} s of code (speech to text is measured on the test VM, see README)'}), flush=True)
