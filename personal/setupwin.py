@@ -507,16 +507,8 @@ class SetupWindow(Adw.ApplicationWindow):
 
     def phone(self):
         scroller, box = page('Pair a phone (optional)', 'Approvals and running agents can come to your phone when you are away from this computer.')
-        remote = getattr(self, 'remote', None) or {}  # Settings reads GET /api/remote; Setup does not offer it
-        url = next((b.get('url') for b in self.boxes if b.get('self')), '') or (remote.get('url') if remote.get('state') == 'connected' else '')
         self.summary.set_label('You can pair a phone later in GurtOS settings.')
-        if not url:
-            lst = boxed()
-            later = ('Turn on Reach this computer from anywhere above, then pair here.' if remote else
-                     'Skip this step. Pair later in GurtOS settings, once it has one.')
-            lst.append(row('This computer has no address your phone can reach yet', later, 'phone-symbolic'))
-            box.append(lst)
-            return scroller
+        # The code's link always opens app.gurtos.com, which reaches this computer through the relay, so any phone works.
         card = Gtk.Box(spacing=24, css_classes=['card'], margin_top=6)
         steps = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10, margin_top=18, margin_bottom=18, margin_start=18, margin_end=18, valign=Gtk.Align.START)
         for n, line in enumerate(("Point your phone's camera at the code.", 'Check that the phone shows the same code.',
@@ -528,10 +520,11 @@ class SetupWindow(Adw.ApplicationWindow):
         def show(code, err):
             if err:
                 return steps.append(Gtk.Label(label=f'No pairing code: {err}', xalign=0, wrap=True))
-            qr = qr_image(code['url'])
+            qr = qr_image(code['url']) if code.get('url', '').startswith('http') else None
             if qr:
                 card.prepend(qr)
             steps.append(Gtk.Label(label=code['code'], xalign=0, selectable=True, css_classes=['gurt-mono', 'gurt-title-2']))
+            steps.append(Gtk.Label(label="Your phone doesn't need to be on the same Wi-Fi.", xalign=0, wrap=True, css_classes=['gurt-caption', 'gurt-secondary']))
         background(lambda: api('POST', '/api/pair/start', {'owner': True}), show)
         return scroller
 
