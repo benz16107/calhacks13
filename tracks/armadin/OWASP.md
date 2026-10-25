@@ -22,7 +22,7 @@ Security Initiative.
 | LLM07 | System Prompt Leakage | Not covered. GurtOS does not manage prompts; a track writes its own. | — |
 | LLM08 | Vector and Embedding Weaknesses | Not applicable. No vector store or embedding retrieval in the core. | — |
 | LLM09 | Misinformation | Not covered. Output correctness is a model and track concern, not an OS one. | — |
-| LLM10 | Unbounded Consumption | Partially covered. A task's memory and process count are capped (`MemoryMax=2G`, `TasksMax=512`); spending is capped and counted per task. CPU is not capped, and disk is not capped. | `core/sandbox.ts` `HARDENING`; `tracks/armadin/demo.ts` attack scoreboard (fork bomb, memory hog caught; disk fill published as not covered) |
+| LLM10 | Unbounded Consumption | Partially covered. A task's memory and process count are capped (`MemoryMax=2G`, `TasksMax=512`); spending is capped and counted per task. CPU is capped at 200% (`CPUQuota`). Disk is capped by a 2-second watcher (default 5 GB per task) that stops and undoes a task past its cap, not by a hard quota, so a fast writer can pass it by up to two seconds of writing. | `core/sandbox.ts` `HARDENING`; `tracks/armadin/demo.ts` attack scoreboard (fork bomb, memory hog and disk fill caught) |
 
 ## OWASP Top 10 for Agentic Applications (2026)
 
@@ -35,7 +35,7 @@ Security Initiative.
 | ASI05 | Unexpected remote code execution from sandboxing failures | Covered; this is the center of the attack scoreboard. A task's own copy, process view, and network are all bounded regardless of what code the task runs. | `tracks/armadin/README.md` scoreboard (symlink escape, /proc/environ, ptrace, shared /tmp, DNS exfil, IPv4/IPv6 firewall bypass) |
 | ASI06 | Memory and context poisoning of persistent and shared knowledge stores | Not covered, and not applicable today: there is no shared long-term memory or knowledge store across tasks. Each task starts from a fresh copy. If GurtOS grows one, it needs its own review. | — |
 | ASI07 | Insecure inter-agent communication | Covered by having no channel to secure: tasks cannot reach each other at all, over the network or the filesystem. | `tracks/armadin/README.md` scoreboard (/proc/environ of another task, shared /tmp); `core/demo.ts` moment 4 |
-| ASI08 | Cascading failures from blast-radius amplification | Covered for one task's own resource use (memory, process count) and for one task's own files (its own Linux user, its own overlay layer, undo removes exactly its changes). Not covered for disk. | `core/sandbox.ts`; `tracks/armadin/README.md` scoreboard (fork bomb and memory hog contained; disk fill not covered) |
+| ASI08 | Cascading failures from blast-radius amplification | Covered for one task's own resource use (memory, process count) and for one task's own files (its own Linux user, its own overlay layer, undo removes exactly its changes). Disk is bounded by the watcher, not a hard quota. | `core/sandbox.ts`; `tracks/armadin/README.md` scoreboard (fork bomb, memory hog and disk fill contained) |
 | ASI09 | Human-agent trust exploitation and decision-fatigue attacks | Partially covered. The hijacked-payment demo's bank-change attack is refused in code before a person is ever asked, so it cannot wear a controller down; a legitimate over-limit bill still asks each time, with no rate limit on how often a controller is asked. | `tracks/armadin/demo.ts` `hijackedPayment()` |
 | ASI10 | Rogue agent misalignment | Not covered, on purpose. GurtOS's premise is that it does not need to tell an aligned agent from a misaligned one: it bounds what either one can do. | docs/story.md, Armadin's pitch |
 
@@ -44,5 +44,4 @@ Security Initiative.
 LLM04, LLM05, LLM07, LLM08, LLM09, ASI06, ASI10: out of scope for an operating system (model training, output
 sanitization, prompts, retrieval, misinformation, shared agent memory, alignment).
 
-Genuinely open, with a plan: LLM10/ASI08's disk quota (no per-task limit yet; reported to the core thread) and
-ASI02's allowed-host payload inspection (a track-level control, not a core one; see the scoreboard's last row).
+Genuinely open, with a plan: ASI02's allowed-host payload inspection (a track-level control, not a core one; see the scoreboard's last row).

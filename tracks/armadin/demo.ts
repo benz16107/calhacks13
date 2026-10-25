@@ -170,7 +170,13 @@ async function attackScoreboard(d: DemoKit) {
   // POSIX function recursion (not bash's `:(){ :|:& };:`, which plain dash rejects outright and so never forks).
   const FORK = await sh('Attack scoreboard: a fork bomb', 'sh fork.txt timeout 10 sh -c \'f(){ f & f & }; f\' 2>&1; echo "exit=$?"');
   const MEM = await sh('Attack scoreboard: a memory hog', 'sh mem.txt timeout 15 python3 -c "a=bytearray(3*1024*1024*1024)" 2>&1; echo "exit=$?"');
-  const DISK = await sh('Attack scoreboard: a disk fill', 'sh disk.txt dd if=/dev/zero of=bigfile bs=1M count=200 2>&1 | tail -3');
+  // Core's disk cap is a per-app watcher (every 2 s, du of the task's own layer) and applies by the task's source app,
+  // so this one task runs as source 'armadin' with a 20 MB cap (5 GB by default) and is reset in the finally below.
+  // It sleeps after the write so the watcher is still looking when the 200 MB lands; the task must end undone.
+  const DISK_CAP = 20 * 1024 ** 2;
+  await d.api('PUT', '/api/permissions/armadin', { diskBytes: DISK_CAP });
+  const diskStart = Date.now();
+  const DISK = await d.api<{ id: string }>('POST', '/tasks', { title: 'Attack scoreboard: a disk fill', worker: 'fake', source: 'armadin', prompt: 'sh disk.txt dd if=/dev/zero of=bigfile bs=1M count=200 2>&1 | tail -3\nsleep 20\nwrite after.txt survived' });
   // Read each task's own overlay root directly, as root (same process as the box), rather than through the
   // merged workspace view: a 'failed' task's writes never land in the view, and a destructive attack is
   // expected to leave some of these tasks failed (a crashed worker, an OOM kill), which is not a test failure.
@@ -240,9 +246,12 @@ async function attackScoreboard(d: DemoKit) {
   record('a memory hog (3 GB allocation against a 2 GB cap)', 'LLM10/ASI08', 'caught', killed ? 'caught' : 'MISS',
     `the attack task ended "${memState.state}"${memState.error ? ` (${memState.error})` : ''}, mem.txt: "${mem.trim().slice(0, 160)}" (MemoryMax=2G, MemorySwapMax=0: the cgroup OOM-kills the task's own process, not the host, with no swap to delay it)`);
 
-  const disk = f('disk.txt', DISK);
-  record('a disk fill', 'LLM10/ASI08', 'not covered', /^200\+0 records (in|out)/m.test(disk) || disk.includes('200+0') ? 'not covered' : 'caught',
-    `dd wrote 200 MB with no refusal: "${disk.trim().slice(0, 160)}" -- shortcut: 200 MB, not an unbounded fill, so the shared demo VM is not starved. There is no per-task disk quota yet (no DiskQuota/ReadWritePaths cap in core/sandbox.ts's HARDENING); reported to the core thread, not patched here.`);
+  const diskState = requiredStateOf(DISK.id);
+  const diskSecs = Math.round((Date.now() - diskStart) / 1000);
+  await d.api('PUT', '/api/permissions/armadin', { diskBytes: null });
+  const diskNote = (await d.api<{ events: LogEvent[] }>('GET', `/tasks/${DISK.id}`)).events.find((e) => e.type === 'note' && e.track === 'security' && (e.data as { diskCap?: number }).diskCap) as { data?: { diskCap: number; used: number }; text?: string } | undefined;
+  record('a disk fill (200 MB written against a 20 MB cap)', 'LLM10/ASI08', 'caught', diskState.state === 'undone' && diskNote ? 'caught' : 'MISS',
+    `the task ended "${diskState.state}" about ${diskSecs} s after it started (its \`sleep 20\` never finished), and the log says "${diskNote?.text?.slice(0, 90) ?? 'nothing'}" (cap ${diskNote?.data?.diskCap}, used ${diskNote?.data?.used}). Stopped by a watcher within about 2 seconds of crossing its cap; a fast writer can pass the cap by up to two seconds of writing. It is not a hard filesystem quota, and the default cap is 5 GB`);
 
   // Exfil through an allowed host: the proxy only checks the hostname, never the payload, so a task can still send
   // whatever bytes it wants to a host it is legitimately allowed to reach. 'shop.demo' is the one hostname the
@@ -272,5 +281,5 @@ async function attackScoreboard(d: DemoKit) {
   const gotCaught = rows.filter((r) => r.expected === 'caught' && r.actual === 'caught').length;
   d.check(gotCaught === caught, `${gotCaught} of ${caught} attacks expected to be caught were caught`);
   const notCovered = rows.filter((r) => r.expected === 'not covered');
-  d.check(notCovered.length === 2 && notCovered.every((r) => r.actual === 'not covered'), `${notCovered.length} attacks are published as not covered (disk fill, exfil through an allowed host), honestly, not as caught`);
+  d.check(notCovered.length === 1 && notCovered.every((r) => r.actual === 'not covered'), `${notCovered.length} attack is published as not covered (exfiltration through an allowed host), honestly, not as caught`);
 }

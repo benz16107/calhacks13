@@ -52,11 +52,9 @@ The rest are new here. Full table: `tracks/armadin/SCOREBOARD.md` (built from re
 Caught: reading another task's workspace while it runs and after it ends · reading the vault · exfiltration to a
 disallowed host · firewall bypass around the proxy (IPv4) · self-approval via the box's API or SpacetimeDB ·
 symlink to a file outside the task's copy · `/proc/<pid>/environ` of another task · ptrace · reading another
-task's leftovers in `/tmp` · DNS exfiltration (UDP 53) · firewall bypass over IPv6 · a fork bomb · a memory hog (`MemoryMax=2G` with `MemorySwapMax=0`: a hard cap on every host).
+task's leftovers in `/tmp` · DNS exfiltration (UDP 53) · firewall bypass over IPv6 · a fork bomb · a memory hog (`MemoryMax=2G` with `MemorySwapMax=0`: a hard cap on every host) · a disk fill (core's watcher stops and undoes a task that passes its cap, within about 2 seconds; a fast writer can pass the cap by up to two seconds of writing, so it is not a hard quota).
 
 **Not covered**, published as such, not as caught:
-- **A disk fill.** There is no per-task disk quota in `core/sandbox.ts`'s `HARDENING` today. Reported to the
-  core thread; not patched here (track threads don't touch core).
 - **Exfiltration through an allowed host.** The proxy checks which hostname a task may reach, never what it
   sends there. A task can still put arbitrary bytes (a query string, a header, a body) on a request to a host
   it is legitimately allowed to use. The one exception is the decoy cloud key: the proxy looks for it in the
