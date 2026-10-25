@@ -27,7 +27,7 @@ is optional and stays off until you add its keys.
 |---|---|---|
 | CPU | x86_64 or arm64 | 4 cores |
 | Memory | 4 GB, as releases are tested | 8 GB or more. Each task may use up to 2 GB. The box has run one task in 1 GB: see [Why it is light](#why-it-is-light). |
-| Disk | 20 GB | 32 GB. The two system slots take 12 GB. |
+| Disk | 17 GB | 32 GB. The two system slots take 12 GB. |
 | Firmware | BIOS or UEFI, with **Secure Boot off** | |
 | Network | A wired connection with DHCP, and internet on first start: the box downloads Factory's Droid CLI then | |
 

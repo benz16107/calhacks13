@@ -26,7 +26,7 @@ box's address set by hand. See [What is not finished](#what-is-not-finished).
 |---|---|---|
 | CPU | x86_64 | 4 cores |
 | Memory | 4 GB | 8 GB or more. The desktop needs room, and each task may use up to 2 GB. |
-| Disk | 32 GB | 48 GB. The two system slots take 24 GB. |
+| Disk | 29 GB | 48 GB. The two system slots take 24 GB. |
 | Firmware | BIOS or UEFI, with **Secure Boot off** | |
 
 The arm64 image builds natively and was boot-tested in a VM on a Mac.
