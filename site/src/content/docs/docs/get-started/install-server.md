@@ -26,7 +26,7 @@ is optional and stays off until you add its keys.
 | | Minimum | Recommended |
 |---|---|---|
 | CPU | x86_64 or arm64 | 4 cores |
-| Memory | 4 GB | 8 GB or more. Each task may use up to 2 GB. |
+| Memory | 4 GB, as releases are tested | 8 GB or more. Each task may use up to 2 GB. The box has run one task in 1 GB: see [Why it is light](#why-it-is-light). |
 | Disk | 20 GB | 32 GB. The two system slots take 12 GB. |
 | Firmware | BIOS or UEFI, with **Secure Boot off** | |
 | Network | A wired connection with DHCP, and internet on first start: the box downloads Factory's Droid CLI then | |
@@ -38,6 +38,20 @@ with DHCP. Wi-Fi is not set up.
 Installing erases the target disk. A blank disk is used straight away. A disk with anything on it is erased only
 after you type `erase` on the screen, but check which machine you are booting before you do.
 :::
+
+### Why it is light
+
+GurtOS Server ships only what the box needs. The image is built from 40 named Ubuntu 24.04 packages, 440 with their
+dependencies, and has no desktop, snapd, cloud-init, sudo or apt. Its screen is one full-screen view of the box's
+own page ([image/README.md](https://github.com/benz16107/calhacks13/blob/main/image/README.md#what-is-different-from-stock-ubuntu)). The x86_64 install disc is
+1.37 GB.
+
+The box itself is small. Installed from source on Ubuntu 24.04 in a virtual machine with 1 vCPU and 1 GB of memory, it
+used 474 MB at idle (the OS alone used 330 MB). The box service was running 8 seconds after the kernel started, 13.3
+seconds after power on. One real Claude task finished in 11 seconds with 261 MB still free. Two tasks at once left
+38 MB free, so 1 GB means one task at a time, and on 512 MB a task is killed
+([measured minimum](https://github.com/benz16107/calhacks13/blob/main/tracks/anthropic/README.md)). Those runs did not include the Server image's screen, so the
+image itself has not been measured at 1 GB.
 
 ## Get the ISO
 

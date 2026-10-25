@@ -58,7 +58,8 @@ const core = [
         </figure>
         <div class="text">
           <h3><span class="dot server" aria-hidden="true"></span>{NAME} Server</h3>
-          <p>An always-on agent box, at home or in the cloud.</p>
+          <p>An always-on agent box with nothing else on it.</p>
+          <p class="facts"><a href="/docs/get-started/install-server/#why-it-is-light">No desktop · 1.37 GB disc · a task runs in 1 GB of RAM</a></p>
           <p class="dl-label">Download</p>
           <div class="dl">
             {isos('server').map((f) => <a class="btn" href={`${RELEASE}/${f.file}`} data-arch={f.arch}>{f.label}</a>)}
@@ -142,11 +143,19 @@ const core = [
   }
   /* Two equal buttons side by side, or stacked at the same width where the column is narrow. */
   .text { container-type: inline-size; }
-  .dl-label { margin: 1.1rem 0 0.4rem; font-size: var(--gw-text-sm); color: var(--gw-ink-2); }
+  .text p.dl-label { margin: 1.1rem 0 0.4rem; font-size: var(--gw-text-sm); color: var(--gw-ink-2); }
   .dl { display: grid; grid-template-columns: repeat(2, 11.5rem); gap: 0.5rem; margin-top: 1.1rem; }
   .dl-label + .dl { margin-top: 0; }
   .dl .btn { padding: 0.5rem 0.8rem; font-size: 0.9rem; text-align: center; white-space: nowrap; }
   @container (max-width: 23.6rem) { .dl { grid-template-columns: 11.5rem; } }
+  .text h3 { font-size: var(--gw-h3); display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.6rem; }
+  .text p { font-size: var(--gw-text-lg); color: var(--gw-ink-2); }
+  .text p.facts { margin-top: -0.4rem; font-size: var(--gw-text-sm); }
+  .facts a { color: var(--gw-ink-2); }
+  .dot { width: 0.8rem; height: 0.8rem; border-radius: 2px; flex: none; }
+  .dot.server { background: #46586b; outline: 1px solid var(--gw-rule-strong); }
+  .dot.personal { background: var(--gw-amber); }
+  .dot.business { background: var(--gw-link); }
   .more { margin-top: 0.5rem; font-size: var(--gw-text-sm); }
   .core { list-style: none; padding: 0; margin: 0; color: var(--gw-ink-2); }
   .core li { padding: 0.8rem 0; border-top: 1px solid var(--gw-rule); }

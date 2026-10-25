@@ -20,6 +20,7 @@ computer you use every day.
 - Ubuntu 24.04, on x86_64 or arm64.
 - Root access (`sudo`).
 - At least 4 GB of memory and 10 GB of free disk. Each task may use up to 2 GB of memory.
+  The box has run one task at a time in 1 GB, and adds 1.5 GB of disk ([measured](https://github.com/benz16107/calhacks13/blob/main/tracks/anthropic/README.md)).
 - Internet access during the install, to download Node.js, Droid and SpacetimeDB.
 - No other software using user ids 30000 to 39999, TCP port 7700, port 3000, or ports 8800 to 8899.
 - One model key: an Anthropic API key from [console.anthropic.com](https://console.anthropic.com), or a Factory API

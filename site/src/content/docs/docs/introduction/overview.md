@@ -55,8 +55,12 @@ task, a budget, an approval on your phone, or a single record of what every agen
 
 GurtOS closes these gaps in the operating system itself:
 
-- **It is lightweight.** GurtOS Server is built from about 40 named Ubuntu 24.04 packages, with no desktop and no
-  package manager. Each task is a Linux user and a systemd unit, not a virtual machine.
+- **It is lightweight.** GurtOS Server is built from 40 named Ubuntu 24.04 packages, with no desktop and no
+  package manager, on a 1.37 GB disc. Each task is a Linux user and a systemd unit, not a virtual machine. The box
+  ran a real Claude task in a 1 GB virtual machine with 261 MB to spare
+  ([measured](https://github.com/benz16107/calhacks13/blob/main/tracks/anthropic/README.md)). GurtOS Personal idles at about 900 MB with its full desktop, about
+  150 MB less than stock Ubuntu Desktop measured the same way ([parity audit](https://github.com/benz16107/calhacks13/blob/main/docs/ux/parity.md)). See
+  [Why it is light](/docs/get-started/install-server/#why-it-is-light).
 - **Security is built in.** Separate users, a vault, a per-task network allow-list, budgets and approvals are part of
   the OS, not add-ons. See the [security model](/docs/security/model/).
 - **Its filesystem is made for agents.** Each task gets an instant copy-on-write copy of its workspace, built from
