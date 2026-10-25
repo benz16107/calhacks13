@@ -751,6 +751,6 @@ Public links (all open signed out): home page, start here https://www.mana.space
 
 17. **Judging and the Devpost page** (Cal Hacks, Slack, Oct 25): you must be at the venue and checked in by Oct 25, 8 AM PT to submit on Devpost. In live judging each project is shortlisted for the track that best fits, and sponsor tracks are independent, so a project can win several. Anthropic: all four criteria count equally.
 18. **CRS** (Tarik Neradin): a written CRS write-up in the submission helps their CTO and judging team before the demo; they will have about 10 judges. The CRS section in the Devpost paste is the whole write-up (problem, the seven CRS pulls, the fraud and arguer results, the permissible-purpose gate, the track-page link), not the cut-down version.
-19. **The live demo** (https://try.gurtos.com): its code is on the branch `try-live` (folder `try/`), not on main yet; the host is a scripted worker with no real keys and no sponsor keys, each visitor box wiped after about 20 minutes, capped visitors, and it can't reach the real boxes. Delete the host after judging.
+19. **The live demo** (https://try.gurtos.com): its code is on main (folder `try/`, squash commit e503c78); the host is a scripted worker with no real keys and no sponsor keys, each visitor box wiped after about 20 minutes, capped visitors, and it can't reach the real boxes. Delete the host after judging.
 
 <!-- TODO END -->
