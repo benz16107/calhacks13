@@ -32,11 +32,11 @@ Checked against main `7fe6651`, Sat Oct 24 08:09 PT. `./demo` from a clean workt
 |---|---|
 | verified (ISO) | 3 |
 | verified | 56 |
-| merged | 158 |
+| merged | 165 |
 | building | 1 |
 | planned | 1 |
 | not pursued | 6 |
-| **Total** | **225** |
+| **Total** | **232** |
 
 **Collisions** (detail below): none open at 03:27. The three found at 02:25 are resolved and Business is on main. Still
 watched: portal/dist rebuilt from merged sources (C-4).
@@ -336,6 +336,13 @@ Owner: the Anthropic thread (`anthropic-push`). The GurtOS MCP server and Claude
 | One preference works across apps | find | merged (932ec53) | 932ec53 | tracks/find/demo.ts | Moss |
 | Forget removes it from the index and the Moss cloud copy, logged without the content (the cloud half untested: the Moss cloud is over its limit) | find | merged (932ec53) | 932ec53 | tracks/find/demo.ts | Moss |
 | Photos stay home unless the owner opts in (no model runs without its key) | find | merged (the Find page's privacy line; the docs guide and the showcase still say Claude is an automatic backup, which is wrong) | 4351905 | tracks/find/demo.ts | Moss |
+| Moss Inference answers are local by default and say nothing left the computer: `GET /t/find/answer?engine=local` answers from the whiteboard photo's note and its `leaves` field says "Nothing left this computer"; an agent gets the same from the tool `find.answer` through the broker | find | merged (Oct 24; gate offline on Vultr 37 passed, 0 failed; `DEMO_LIVE=moss ./demo vultr` 37 passed, 0 failed) | 6853519 | demo (offline) | Moss |
+| Moss Inference is off until the owner turns it on: it needs a key in the vault and `POST /t/find/inference {on:true}` (owner only). `engine=moss` before that is refused ("No Moss Inference key is set" or "Moss Inference is off"), and the privacy line then says what is sent | find | merged (Oct 24; gate offline on Vultr 37 passed, 0 failed; `DEMO_LIVE=moss ./demo vultr` 37 passed, 0 failed) | 6853519 | demo (offline: refused with no key; live: refused with the key but the switch off) | Moss |
+| What leaves for Moss Inference is the question and the matching notes, nothing else (a stub server sees `X-Moss-Retrieve: off`, `X-Moss-Cache: off`, the question and the matching note, no other file; the page's privacy line and the answer's `leaves` field say it) | find | merged (Oct 24; gate offline on Vultr 37 passed, 0 failed; `DEMO_LIVE=moss ./demo vultr` 37 passed, 0 failed) | 6853519 | find.test.ts | Moss |
+| The Moss Inference key is read only by the box (vault key `MOSS_INFERENCE_API_KEY`, declared in the track's secrets; not in any response or log). Known: the laptop VM's vault may still hold the key from the Find thread's run if the laptop was unreachable when it tried to remove it; the Vultr vault has it on purpose, off by default | find | merged (Oct 24; gate offline on Vultr 37 passed, 0 failed; `DEMO_LIVE=moss ./demo vultr` 37 passed, 0 failed) | 6853519 | code | Moss |
+| Moss Inference answers are priced in the task budget and capped (`find.answerFast` in a task costs 0.15 cents on its budget; 300 Moss answers a day per computer, then refused) | find | merged (Oct 24; gate offline on Vultr 37 passed, 0 failed; `DEMO_LIVE=moss ./demo vultr` 37 passed, 0 failed) | 6853519 | demo (live); find.test.ts | Moss |
+| Moss Inference answers correctly from notes found on the computer: 5 of 5 questions right (whiteboard, receipt total, battery brand, receipt date, a preference) | find | merged (Oct 24; gate offline on Vultr 37 passed, 0 failed; `DEMO_LIVE=moss ./demo vultr` 37 passed, 0 failed) | 6853519 | DEMO_LIVE=moss ./demo | Moss |
+| Moss Inference speed: median 329 ms from question to answer, against 3.1 s for a small local model on CPU (method in `tracks/find/README.md`). Not timed: local against Moss on a GPU or Apple computer (the laptop was asleep). Moss's cloud index search (`X-Moss-Indexes`) is measured but not a product feature | find | merged (Oct 24; gate offline on Vultr 37 passed, 0 failed; `DEMO_LIVE=moss ./demo vultr` 37 passed, 0 failed) | 6853519 | README | Moss |
 | A small local vision model on CPU (qwen3-vl 2b: 22 to 37 s warm, minutes for a new photo) | find | merged (measured by the Find thread; README on main) | | none | Moss |
 
 
