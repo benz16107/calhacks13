@@ -224,7 +224,7 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 
 **Best shown in:** All three editions
 
-**Pitch:** Agents get attacked through the pages they read and the packages they install, and on an ordinary OS a fooled agent can read every key and send it anywhere. GurtOS stops it at the OS, whatever the model does, in every edition, and publishes the score: of 16 OS-level attacks, 14 caught and 2 published as not covered, on two machines. A poisoned package imitating the 2025 npm worm and a hijacked payment both fail. Tripwire keys and a seccomp-filtered, CPU-capped sandbox are built.
+**Pitch:** Agents get attacked through the pages they read and the packages they install, and on an ordinary OS a fooled agent can read every key and send it anywhere. GurtOS stops it at the OS, whatever the model does, in every edition, and publishes the score: of 16 OS-level attacks, 15 stopped and 1 published as not covered, on two machines. A poisoned package imitating the 2025 npm worm and a hijacked payment both fail. Tripwire keys, a seccomp-filtered, CPU-capped sandbox and a per-task disk cap are built.
 
 **The problem:** Agents get attacked through the pages they read and the packages they install, and on an ordinary OS a fooled agent can read every key and send it anywhere.
 
@@ -238,7 +238,7 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 | Approvals, an append-only log and undo of one task | A fooled agent cannot approve its own action, and the damage is removable | The approval path and the log | Nothing; this is the OS | Shipped |
 | The poisoned npm package, run with a real npm install | The September 2025 worm | Task user, vault, network rule, undo | The harmless imitation package and its test | Shipped |
 | Tripwire keys: a decoy AWS key pair in every task, derived per task and never logged | A hijacked agent that hunts for keys gives itself away | The proxy looks for the decoy, ends the task undone, writes a security note and alerts the owner's phones | Nothing | Shipped, with limits |
-| A deeper per-task sandbox: a seccomp filter, kernel protections, two CPU cores, 2 GB of memory with no swap, 512 processes | A task that tries to widen its own reach in the kernel | The sandbox settings in core | The tests that check it on every merge | Shipped |
+| A deeper per-task sandbox: a seccomp filter, kernel protections, two CPU cores, 2 GB of memory with no swap, 512 processes, and a disk cap (5 GB by default) enforced by a watcher | A task that tries to widen its own reach in the kernel | The sandbox settings in core | The tests that check it on every merge | Shipped |
 | The 16-attack scoreboard with the misses published | A score you can check, not a claim | Controls under test | The attacks, the runs on two machines, SCOREBOARD.md | Shipped |
 | The hijacked payment: a lookalike-sender bank change and an over-limit bill | Fraud by fooling an agent or a person about where money goes | Approvals | The credit desk's AP clerk rules (AP-4, AP-2) | Shipped |
 | OWASP Top 10 mapping for LLM Applications 2025 and Agentic Applications 2026, with a not-covered column | A checklist a security reviewer already knows | Nothing | OWASP.md | Shipped |
