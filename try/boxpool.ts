@@ -37,6 +37,7 @@ export function startFakeWeb(): http.Server {
 
 const IDLE_MS = 20 * 60_000; // destroy a box after 20 minutes with no visitor request
 const MAX_MS = 60 * 60_000; // and after an hour no matter what
+const UNUSED_MS = 2 * 60_000; // free a box no real browser ever drove within 2 min (a dropped Start, a bot, a preview)
 const BOOT_MS = 30_000;
 
 export interface Box {
@@ -54,6 +55,7 @@ export interface Box {
   plugAt: number; // last pull-the-plug, for the per-box cooldown
   page?: string; // the visitor's own attack text, served by the fake web at /u/<id>
   busyAttack: boolean;
+  interacted: boolean; // did a real browser ever drive this box (an /api call or a menu/attack action)?
 }
 
 const boxes = new Map<string, Box>();
@@ -124,7 +126,7 @@ export async function create(ip: string): Promise<Box> {
   // Skip the first-run wizard: a visitor should land on the desktop, not "GurtOS is being set up".
   fs.writeFileSync(path.join(home, 'setup.json'), JSON.stringify({ done: true, finishedAt: new Date().toISOString(), steps: {} }));
   const now = Date.now();
-  const b: Box = { id, home, sock: path.join(home, 'api.sock'), port: 0, token: '', name: 'Your GurtOS', createdAt: now, lastSeen: now, ip, attacks: 0, plugAt: 0, busyAttack: false };
+  const b: Box = { id, home, sock: path.join(home, 'api.sock'), port: 0, token: '', name: 'Your GurtOS', createdAt: now, lastSeen: now, ip, attacks: 0, plugAt: 0, busyAttack: false, interacted: false };
   spawnProc(b);
   await waitHealthy(b);
   // Mint a non-owner web device token over the socket (local = the box's own screen can mint pairing codes).
@@ -264,7 +266,8 @@ export function destroyAll() {
 export function reap() {
   const now = Date.now();
   for (const b of [...boxes.values()]) {
-    if (now - b.lastSeen > IDLE_MS || now - b.createdAt > MAX_MS) destroy(b);
+    const dead = now - b.lastSeen > IDLE_MS || now - b.createdAt > MAX_MS || (!b.interacted && now - b.createdAt > UNUSED_MS);
+    if (dead) destroy(b);
   }
 }
 

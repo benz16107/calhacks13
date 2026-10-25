@@ -39,6 +39,17 @@ function rateOk(ip: string): boolean {
 }
 
 const clientIp = (req: http.IncomingMessage) => String(req.headers['x-forwarded-for'] ?? '').split(',')[0].trim() || req.socket.remoteAddress || 'unknown';
+
+// A request the browser marks as coming from our own page: the fetch Metadata header, or an Origin matching the
+// host. A cross-site form post, a crawler or a bare curl fails this, so none of them can allocate or drive a box.
+function sameSite(req: http.IncomingMessage): boolean {
+  const sf = req.headers['sec-fetch-site'];
+  if (typeof sf === 'string') return sf === 'same-origin' || sf === 'same-site';
+  const origin = req.headers.origin;
+  if (!origin) return false;
+  const host = String(req.headers['x-forwarded-host'] ?? req.headers.host ?? '').split(',')[0].trim();
+  return origin === `https://${host}` || origin === `http://${host}`;
+}
 const cookies = (req: http.IncomingMessage) => Object.fromEntries(String(req.headers.cookie ?? '').split(';').map((c) => c.trim().split('=').map(decodeURIComponent)).filter((p) => p[0]));
 
 async function readBody(req: http.IncomingMessage): Promise<string> {
@@ -110,11 +121,66 @@ async function serveConsole(b: pool.Box, req: http.IncomingMessage, res: http.Se
   }).end(out);
 }
 
-function busyPage(res: http.ServerResponse) {
-  res.writeHead(503, { 'content-type': 'text/html; charset=utf-8', 'retry-after': '120' }).end(
-    `<!doctype html><meta charset=utf-8><title>GurtOS demo is full</title><style>body{font:16px/1.6 system-ui;max-width:32rem;margin:15vh auto;padding:0 1.5rem;color:#1a1a1a;background:#f6f5f2}a{color:#0a5}</style>
-<h1>The live demo is full right now</h1><p>Every demo computer is in use (we cap how many run at once so each one stays fast). Try again in a couple of minutes.</p><p>Meanwhile: <a href="https://calhacks.gurtos.com">see the walkthrough and video</a>.</p>`,
-  );
+/** The landing page. Served on a plain GET with no box: it allocates nothing, so a crawler, a link preview or a
+ * health check never claims a slot. A box is created only when the visitor clicks a button (a same-site POST). */
+function landingPage(count: number): string {
+  const full = count >= MAX_BOXES;
+  return `<!doctype html><html lang=en><head><meta charset=utf-8><meta name=viewport content="width=device-width, initial-scale=1">
+<title>GurtOS live demo</title><meta name=robots content="noindex">
+<style>
+ :root{color-scheme:dark}
+ body{font:16px/1.6 system-ui,sans-serif;margin:0;background:#141414;color:#f2f2f2}
+ .wrap{max-width:40rem;margin:0 auto;padding:4rem 1.5rem 3rem}
+ h1{font-size:2rem;margin:0 0 .5rem} .tag{color:#9a9a9a;margin:0 0 2rem}
+ .row{display:flex;gap:.75rem;flex-wrap:wrap;margin:1.5rem 0}
+ button{font:600 15px system-ui;border-radius:.5rem;padding:.7rem 1.1rem;border:1px solid #333;cursor:pointer;background:#2a2a2a;color:#f2f2f2}
+ button.go{background:#0a5c3a;border-color:#0d7a4d} button.atk{background:#1e1e1e}
+ button:disabled{opacity:.5;cursor:not-allowed}
+ .slots{color:#9a9a9a;font-size:14px;margin:.5rem 0 0}
+ .care{margin-top:2.5rem;border-top:1px solid #2a2a2a;padding-top:1.25rem;color:#b9b9b9;font-size:14px}
+ .care li{margin:.35rem 0} a{color:#4ab88a}
+ #msg{min-height:1.4em;color:#e6a;margin-top:.5rem}
+</style></head><body><div class=wrap>
+ <h1>GurtOS live demo</h1>
+ <p class=tag>Get your own throwaway GurtOS computer in the browser. It is wiped after you leave.</p>
+ <div class=row>
+   <button class=go id=start ${full ? 'disabled' : ''}>Start the demo</button>
+   <button class=atk id=attack ${full ? 'disabled' : ''}>Attack it yourself</button>
+ </div>
+ <p class=slots id=slots>${count} of ${MAX_BOXES} demo computers in use.${full ? ' All in use right now, try again in a moment.' : ''}</p>
+ <div id=msg></div>
+ <div class=care>
+   <b>What this is</b>
+   <ul>
+     <li>A real GurtOS box, just for you. Start a task, approve or deny it, undo it, or pull the plug.</li>
+     <li>Or attack it: paste prompt-injection text and watch each defence stop it, with the log lines.</li>
+     <li>The worker is scripted. No AI model runs, and there are no real keys anywhere on this host.</li>
+     <li>The defences are the real operating system. The agent is acted out, so this does not test the model itself.</li>
+   </ul>
+   <p>More: <a href="https://calhacks.gurtos.com">the walkthrough and video</a>.</p>
+ </div>
+</div>
+<script>
+ async function start(where){
+   var m=document.getElementById('msg'); m.textContent='Starting your computer...';
+   document.getElementById('start').disabled=true; document.getElementById('attack').disabled=true;
+   try{
+     var r=await fetch('/try/start',{method:'POST',headers:{'content-type':'application/json'}});
+     var d=await r.json().catch(function(){return {};});
+     if(r.ok){ location.href=where; return; }
+     m.textContent=d.error||'could not start'; refresh();
+   }catch(e){ m.textContent='could not start'; refresh(); }
+ }
+ async function refresh(){
+   try{ var d=await (await fetch('/try/slots')).json();
+     document.getElementById('slots').textContent=d.count+' of '+d.max+' demo computers in use.'+(d.count>=d.max?' All in use right now, try again in a moment.':'');
+     var f=d.count>=d.max; document.getElementById('start').disabled=f; document.getElementById('attack').disabled=f;
+   }catch(e){}
+ }
+ document.getElementById('start').onclick=function(){start('/')};
+ document.getElementById('attack').onclick=function(){start('/attack')};
+ refresh();
+</script></body></html>`;
 }
 
 // ---------- the server ----------
@@ -136,29 +202,40 @@ const server = http.createServer(async (req, res) => {
     if (b && !pool.get(b.id)) ((b = undefined), sid && boxesBySid.delete(sid)); // its box was reaped
     if (b) b.lastSeen = Date.now();
 
-    // The console page: create a box if this visitor has none.
+    // A plain GET never allocates a box (so a crawler, a link preview or a health check cannot claim a slot):
+    // with a live box it shows the console, otherwise the landing page. HEAD is answered empty, never allocating.
+    if (method === 'HEAD') return void res.writeHead(b ? 200 : 200).end();
     if (method === 'GET' && (p === '/' || p === '/attack')) {
-      if (!b) {
-        if (pool.count() >= MAX_BOXES) return busyPage(res);
-        const live = [...boxesBySid.values()].some((x) => x.ip === ip);
-        if (!live && !within(newLog, ip, NEW_PER_HOUR)) return busyPage(res);
-        if (live) {
-          b = [...boxesBySid.values()].find((x) => x.ip === ip)!; // one live box per IP: reuse it
-        } else {
-          b = await pool.create(ip);
-          note(newLog, ip);
-        }
-        const ns = randomBytes(9).toString('hex');
-        boxesBySid.set(ns, b);
-        setSid(res, ns);
-      }
-      return void (await serveConsole(b, req, res, ip));
+      if (b) return void (await serveConsole(b, req, res, ip));
+      return void res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'referrer-policy': 'no-referrer' }).end(landingPage(pool.count()));
     }
 
     // Our own control endpoints.
     if (p.startsWith('/try/')) {
       if (method === 'GET' && p === '/try/menu') return void json(res, 200, { menu: pool.menu(), pages: pool.pages() });
+      if (method === 'GET' && p === '/try/slots') return void json(res, 200, { count: pool.count(), max: MAX_BOXES });
+      // Allocate a box only here: an explicit same-site POST from the landing's "Start" or "Attack" button.
+      if (method === 'POST' && p === '/try/start') {
+        if (!sameSite(req)) return void json(res, 403, { error: 'start the demo from the page' });
+        if (!b) {
+          const existing = [...boxesBySid.values()].find((x) => x.ip === ip); // one live box per IP: reuse it
+          if (existing) b = existing;
+          else {
+            if (pool.count() >= MAX_BOXES) return void json(res, 503, { error: 'all demo computers are in use; try again in a moment', count: pool.count(), max: MAX_BOXES });
+            if (!within(newLog, ip, NEW_PER_HOUR)) return void json(res, 429, { error: 'you have started a few already; try again later' });
+            b = await pool.create(ip);
+            note(newLog, ip);
+          }
+          const ns = randomBytes(9).toString('hex');
+          boxesBySid.set(ns, b);
+          setSid(res, ns);
+        }
+        b.interacted = true; // an explicit Start is a real interaction, so the 2-minute sweep won't reclaim it
+        return void json(res, 200, { ok: true });
+      }
       if (!b) return void json(res, 409, { error: 'reload the page' });
+      if (!sameSite(req)) return void json(res, 403, { error: 'use the demo from the page' });
+      b.interacted = true;
       if (method === 'POST' && p === '/try/task') {
         const { id } = JSON.parse((await readBody(req)) || '{}');
         const taskId = await pool.startMenu(b, String(id));
@@ -199,6 +276,7 @@ const server = http.createServer(async (req, res) => {
       return;
     }
     if (!allowedToBox(method, p)) return void json(res, 403, { error: 'that is not part of the live demo' });
+    if (p.startsWith('/api/') || p.startsWith('/t/')) b.interacted = true; // a real browser driving the box
     const body = method === 'POST' ? await readBody(req) : undefined;
     proxyToBox(b, req, res, ip, body);
   } catch (e) {
@@ -229,5 +307,5 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
   pool.reapRoot();
   pool.startFakeWeb();
   server.listen(PORT, '127.0.0.1', () => console.log(`try gateway on 127.0.0.1:${PORT}`));
-  setInterval(() => pool.reap(), 60_000);
+  setInterval(() => pool.reap(), 30_000); // often enough for the 2-minute no-interaction sweep to free slots
 }
