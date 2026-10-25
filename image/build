@@ -12,6 +12,8 @@
 #      BOX_UPDATE_KEY  an ed25519 private key file (PEM) to sign updates with; the image trusts its public half.
 #                      Default: a key the build machine makes once, in /var/lib/box-image/update-signing.key.
 #      BOX_TIMEZONE    the time zone until someone changes it (default UTC)
+#      BOX_TEST_DISC_HOST  an ssh host name (a laptop). When set with BUILD_SHELL 'ssh <host> <command in a VM there>', the
+#                      disc is copied to ~/box-os/<name>-test.iso on that host and its checksum checked. Unset for releases.
 #      BOX_SSH_KEY     a public key file. Adds sshd with that key for root. Debug builds only.
 # Outputs on the build machine, in /var/lib/box-image/out: gurtos-<edition>-<arch>.iso, the install disc, and
 # gurtos-<edition>-<arch>.sqfs (+ .sha256, .sig), the update image. Edition is server or personal. Debug builds end
@@ -45,15 +47,17 @@ if [[ ${1:-} != --here ]]; then
         "${BOX_TIMEZONE:-}" "${BOX_VERSION:-}" "${ukey:+$k}" "$dest/image/build" "$arch" "$edition"
     done
   } | ${BUILD_SHELL:-} sudo bash -s || exit
-  # Built in benmac's VM: put the disc in ~/box-os on the laptop as <name>-test.iso, and check it arrived whole.
-  if [[ ${BUILD_SHELL:-} == *benmac* && ${1:-x86_64} != all ]]; then
+  # BOX_TEST_DISC_HOST=<ssh host>: BUILD_SHELL runs commands on that host (ssh <host> <command in the VM>). Put the
+  # disc in ~/box-os on that host as <name>-test.iso, and check it arrived whole. Release builds leave it unset.
+  if [[ -n ${BOX_TEST_DISC_HOST:-} && ${1:-x86_64} != all ]]; then
+    host=$BOX_TEST_DISC_HOST
     iso=gurtos-${edition:-server}-${1:-x86_64}${key:+-debug}
     want=$(${BUILD_SHELL} sudo sha256sum /var/lib/box-image/out/$iso.iso | cut -d' ' -f1)
-    ssh benmac "${BUILD_SHELL##*benmac }" sudo cat /var/lib/box-image/out/$iso.iso '>' '~/box-os/'$iso-test.iso.part \
+    ssh "$host" "${BUILD_SHELL##* $host }" sudo cat /var/lib/box-image/out/$iso.iso '>' '~/box-os/'$iso-test.iso.part \
       '&&' mv '~/box-os/'$iso-test.iso.part '~/box-os/'$iso-test.iso
-    got=$(ssh benmac "shasum -a 256 ~/box-os/$iso-test.iso" | cut -d' ' -f1)
-    [[ $want == "$got" ]] || { echo "build: ~/box-os/$iso-test.iso on benmac does not match the build ($got, not $want)" >&2; exit 1; }
-    echo "build: benmac:~/box-os/$iso-test.iso, sha256 ${got:0:12}"
+    got=$(ssh "$host" "shasum -a 256 ~/box-os/$iso-test.iso" | cut -d' ' -f1)
+    [[ $want == "$got" ]] || { echo "build: ~/box-os/$iso-test.iso on the laptop does not match the build ($got, not $want)" >&2; exit 1; }
+    echo "build: ~/box-os/$iso-test.iso on the laptop, sha256 ${got:0:12}"
   fi
   exit
 fi

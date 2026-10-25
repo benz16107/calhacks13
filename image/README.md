@@ -30,7 +30,8 @@ image/build personal arm64       # GurtOS Personal for arm64
 It builds on this machine (it asks for sudo). To build on another machine instead, give it a shell there:
 `BUILD_SHELL='ssh my-vm' image/build`. It copies this checkout over and builds there as root. Build each
 architecture on a machine of that architecture: arm64 on an x86_64 machine works, under emulation, but takes
-about an hour (`BUILD_SHELL='ssh my-arm-vm' image/build arm64`).
+about an hour (`BUILD_SHELL='ssh my-arm-vm' image/build arm64`). To get the disc onto a laptop whose VM builds it, also set
+`BOX_TEST_DISC_HOST=<the laptop's ssh name>`: the disc lands in `~/box-os/<name>-test.iso` there, checksum checked.
 
 How long, measured from a fresh `git clone` (so including Ubuntu's base) on a Vultr vc2-4c-8gb (4 vCPU, 8 GB):
 
