@@ -110,7 +110,7 @@ const url = (e: string, a: string) => `${RELEASE}/${file(e, a)}`;
         <pre>{`ssh-keygen -Y verify -f allowed_signers -I gurtos -n gurtos-release -s SHA256SUMS.sig < SHA256SUMS
 sha256sum -c SHA256SUMS --ignore-missing          # Linux
 shasum -a 256 -c SHA256SUMS --ignore-missing      # macOS`}</pre>
-        <p>The first line must say <code>Good "gurtos-release" signature for gurtos with ED25519 key SHA256:FWKFb1eAvEBmMhVJwMwTnLnhrmZ5yQZ5947pDvFKcpY</code>. That fingerprint is also at <code>release/allowed_signers</code> in the repository. On Windows, compare <code>Get-FileHash &lt;file&gt;.iso</code> with the line in <code>SHA256SUMS</code>. Every file is also on the <a href={`${REPO}/releases/tag/v0.1.0-preview`}>release page</a> and at a <a href={`${MIRROR}/`}>mirror</a>.</p>
+        <p>The first line must say <code>Good "gurtos-release" signature for gurtos with ED25519 key SHA256:FWKFb1eAvEBmMhVJwMwTnLnhrmZ5yQZ5947pDvFKcpY</code>. That fingerprint is also at <code>release/allowed_signers</code> in the repository. On Windows, compare <code>Get-FileHash &lt;file&gt;.iso</code> with the line in <code>SHA256SUMS</code>. Every file is also on the <a href={`${REPO}/releases/tag/v0.1.0-preview`}>release page</a> and on a mirror on Vultr, whose <a href={`${MIRROR}/SHA256SUMS`}>SHA256SUMS</a> lists every file.</p>
         <pre>{Object.entries(SUMS).map(([f, s]) => `${s}  ${f}`).join('\n')}</pre>
       </details>
 
