@@ -36,7 +36,7 @@ GitHub Releases and on a mirror; both have the same checksums and signature.
 | Personal on an Apple silicon Mac (UTM or Parallels) | `gurtos-personal-arm64.iso` | [download](https://github.com/benz16107/calhacks13/releases/download/v0.1.0-preview/gurtos-personal-arm64.iso) | [download](https://sjc1.vultrobjects.com/gurtos/v0.1.0-preview/gurtos-personal-arm64.iso) |
 | Checksums, signature, public key | `SHA256SUMS`, `SHA256SUMS.sig`, `allowed_signers` | [release page](https://github.com/benz16107/calhacks13/releases/tag/v0.1.0-preview) | [SHA256SUMS](https://sjc1.vultrobjects.com/gurtos/v0.1.0-preview/SHA256SUMS), [.sig](https://sjc1.vultrobjects.com/gurtos/v0.1.0-preview/SHA256SUMS.sig), [allowed_signers](https://sjc1.vultrobjects.com/gurtos/v0.1.0-preview/allowed_signers) |
 
-The ISOs are 1.37 GB (Server x86_64), 1.36 GB (Server arm64), 1.78 GB (Personal x86_64) and 1.77 GB (Personal arm64).
+The ISOs are 1.37 GB (Server x86_64), 1.37 GB (Server arm64), 2.01 GB (Personal x86_64) and 1.99 GB (Personal arm64).
 Checksums are in the [release notes](release/notes/v0.1.0-preview.md).
 
 ### Minimum hardware
