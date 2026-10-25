@@ -72,7 +72,7 @@ def main():
         sys.exit(f"upload failed: {json.dumps(up)[:800]}")
     url = f"https://youtu.be/{video_id}"
     print("uploaded", url)
-    if srt.exists():
+    if srt.exists() and "--no-captions" not in sys.argv:  # captions are burned in; the separate track costs 400 quota units
         c = composio("YOUTUBE_UPLOAD_CAPTION_TRACK", {"videoId": video_id, "language": "en", "name": "English"}, srt)
         print("captions:", "ok" if c.get("successful") else json.dumps(c)[:300])
     if thumb.exists():

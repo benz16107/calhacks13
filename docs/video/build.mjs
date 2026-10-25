@@ -272,7 +272,8 @@ const V = {
       css: parts.map(({ i, c, f, k }) => `#${id}-f${i} { position: absolute; left: ${f.x}px; top: ${f.y}px; width: ${f.w}px; height: ${f.h}px; border-radius: ${c.radius ?? 15}px; overflow: hidden; border: 2px solid rgba(242,239,232,0.14); box-shadow: 0 30px 80px rgba(0,0,0,0.45); }
         #${id}-v${i} { position: absolute; left: ${r3(-c.x * k)}px; top: ${r3(-c.y * k)}px; width: ${r3(sw * k)}px; height: ${r3(sh * k)}px; }`).join('\n') + lt.css + nt.css,
       body: parts.map(({ i }) => `<div id="${id}-f${i}" data-layout-allow-overflow><video id="${id}-v${i}" class="clip" src="${ctx.media(v.src)}" data-start="0" data-duration="${r3(dur)}" data-media-start="${v.from ?? 0}" data-track-index="${2 + i}" muted playsinline></video></div>`).join('') + lt.body + nt.body,
-      js: parts.map(({ i }) => `tl.fromTo("#${id}-f${i}", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.5, ease: "power3.out" }, ${0.1 * i});`).join('\n') + lt.js + nt.js,
+      // enter: false starts the picture already in place (the video's first frame, which players show).
+      js: (v.enter === false ? '' : parts.map(({ i }) => `tl.fromTo("#${id}-f${i}", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.5, ease: "power3.out" }, ${0.1 * i});`).join('\n')) + lt.js + nt.js,
     });
   },
 
@@ -437,7 +438,9 @@ export async function build(id, { noMusic = false } = {}) {
   const fill = (o) => JSON.parse(JSON.stringify(o).replace(/\{url\}/g, (s) => SLOTS['try-live']?.url ?? s).replace(/"slot:([a-z-]+)"/g, (_, k) => JSON.stringify(SLOTS[k]?.media ?? `slot:${k}`)));
   let t = 0, para = 0;
   const hosts = [], audio = [], allWords = [], voWindows = [], used = [];
-  const beats = [...(spec.card ? [{ dur: 2.6, v: { type: 'trackcard', ...spec.card } }] : []), ...spec.beats].filter((x) => !x.insert || on(x.insert));
+  // The title card: 2.6 s, or 3 s when the track name is long enough that 2.6 s is too short to read it.
+  const cardDur = spec.card && spec.card.track.split(/\s+/).length > 5 ? 3.0 : 2.6;
+  const beats = [...(spec.card ? [{ dur: cardDur, v: { type: 'trackcard', ...spec.card } }] : []), ...spec.beats].filter((x) => !x.insert || on(x.insert));
   for (const [bi, beat0] of beats.entries()) {
     let beat = beat0, voName = null;
     if (beat.insert) { voName = `slot-${beat.insert}`; used.push(beat.insert); }
@@ -476,7 +479,7 @@ export async function build(id, { noMusic = false } = {}) {
       fs.writeFileSync(path.join(comp, `${sid}.html`), fn(sid, p.v, e - s, ctx));
       hosts.push(`<div id="${sid}" data-composition-id="${sid}" data-composition-src="compositions/${sid}.html" data-start="${r3(s)}" data-duration="${r3(e - s)}" data-track-index="1" data-track-kind="graphics" data-width="${W}" data-height="${H}"></div>`);
     });
-    if (vo) audio.push(`<audio id="vo-${para}" class="clip" src="${media_('cap:' + path.relative(path.join(STUDIO, 'assets/capture'), vo.wav))}" data-start="${r3(vo.start)}" data-duration="${r3(vo.len)}" data-track-index="3" data-volume="1"></audio>`);
+    if (vo) audio.push(`<audio id="vo-${bi + 1}" class="clip" src="${media_('cap:' + path.relative(path.join(STUDIO, 'assets/capture'), vo.wav))}" data-start="${r3(vo.start)}" data-duration="${r3(vo.len)}" data-track-index="3" data-volume="1"></audio>`);
     t = r3(t + dur);
   }
   const total = r3(t);
