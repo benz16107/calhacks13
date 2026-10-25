@@ -32,11 +32,11 @@ Checked against main `7fe6651`, Sat Oct 24 08:09 PT. `./demo` from a clean workt
 |---|---|
 | verified (ISO) | 3 |
 | verified | 60 |
-| merged | 184 |
+| merged | 185 |
 | building | 1 |
 | planned | 2 |
 | not pursued | 6 |
-| **Total** | **256** |
+| **Total** | **257** |
 
 **Collisions** (detail below): none open at 03:27. The three found at 02:25 are resolved and Business is on main. Still
 watched: portal/dist rebuilt from merged sources (C-4).
@@ -109,6 +109,7 @@ watched: portal/dist rebuilt from merged sources (C-4).
 | Redacted receipt: no step text, questions, tool inputs, file names or amounts | receipts | merged | 7ca2941 | tracks/receipts/demo.ts | Business, Elastic |
 | Receipt anchored by the Elastic add-only copy (the box compares the task's entries and signs the result) | receipts | merged (tried by hand on the cloud box, 5 of 5 matched; needs live Elastic, so not in the gate) | 7ca2941 | none | Elastic |
 | Receipt anchored by the daily Solana fingerprint | receipts, wallet | planned (waiting on wallet: the audit memo needs `head=`, asked and not on main; the Solana line says "not anchored yet" until it lands) |  | tracks/receipts/receipts.test.ts covers the check with a stand-in | Solana, Coinbase |
+| Per-task disk cap: a task that fills its disk space is stopped and undone. Default 5 GB; per app with `PUT /api/permissions/<app> {diskBytes}`; `BOX_TASK_DISK_CAP` for a whole box. A watcher checks every 2 s, so it is not a hard quota | core | merged (gate 41 passed, 0 failed on x86 and arm64; the step took 1 s on x86 and 2 s on arm64) | 3824c78 | the disk cap: a task that fills its disk space is stopped and undone | Armadin, all |
 | Docs site gurtos.com | docs | verified Oct 24 01:00 (82+ pages, links, privacy scan) | 212c817 | site `npm run check` | all |
 | Showcase calhacks.gurtos.com | submission | verified Oct 24 01:30 | 52fb7f7, 213622e | showcase link checker | all |
 
@@ -298,7 +299,7 @@ failed, 1 pending). QA has not walked these by hand.
 | Feature | Owner | Status | Commit | Demo step | Tracks |
 |---|---|---|---|---|---|
 | The poisoned package: a harmless imitation of the Shai-Hulud npm worm run by a real `npm install` in a task; its postinstall's 10 attempts (env, dotfiles, vault, cloud metadata, exfil, raw connect, publish, other tasks' files, persistence) are blocked or contained; undo removes it; no canary secret in the log | armadin | merged (af40b1c) | af40b1c | tracks/armadin/demo.ts | Armadin |
-| Attack scoreboard: 16 OS-level attacks, 14 caught, 2 published as not covered, on two machines (laptop VM and Vultr) (no per-task disk quota; an allowed host's payload isn't inspected, reported to core) | armadin | merged (af40b1c) | af40b1c | tracks/armadin/demo.ts | Armadin |
+| Attack scoreboard: 16 OS-level attacks, 14 caught, 2 published as not covered, on two machines (laptop VM and Vultr) (no per-task disk quota; an allowed host's payload isn't inspected, reported to core) | armadin | merged (af40b1c) (core's disk cap, 3824c78, now covers the disk fill, so one of the two "not covered" rows is out of date; Armadin owns the scoreboard and has not re-run it, so 16 and 14 stand until it does) | af40b1c | tracks/armadin/demo.ts | Armadin
 | Hijacked payment: a lookalike-sender bank-change invoice refused in code (AP-4) before anyone is asked; a second over-limit bill pauses for the controller, who says no | armadin, credit desk | merged (af40b1c) | af40b1c | tracks/armadin/demo.ts | Armadin, Hyphenate |
 | OWASP mapping (LLM Top 10 2025 and Agentic Top 10 2026, with a not-covered column) | armadin | merged (af40b1c) | af40b1c | none | Armadin |
 
