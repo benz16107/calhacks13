@@ -136,6 +136,12 @@ money in the broker (over the daily limit becomes an approval), shell, hosts and
 strangers at its open routes. Each refusal is a `permissions` note. Nothing changes for an app until the owner turns
 something off. Not covered yet: limiting hosts before an app first uses them, and an "allow once" question for a new one.
 
+**The flight recorder.** At each step and tool result of a running task, the box keeps what changed in the task's
+own layer since the last record, beside the layer (`tasks/<id>/replay/<seq>/`, `replay.json`), never in the log.
+Files over 1 MB are noted as `big`, not kept; recording stops at 50 MB a task (`capped`). `GET /api/tasks/:id/replay`
+is `{points: [{seq, changes: [{path, change, big?}]}], capped?}`; `GET /api/tasks/:id/diff?at=<seq>` is the usual
+`{changes, diff}` for the layer as it was right after that event. Purging the layer removes the recording too.
+
 **System update.** `GET /api/update` is `{version, build, state, slot?, last?, lastAt?}`, read from what
 `box-update` leaves behind: `state` is `current`, `ready` (an update is written to the other slot and starts at the
 next restart), `trial` (running an update not yet confirmed), `rolledBack` (the last line says it rolled back or did

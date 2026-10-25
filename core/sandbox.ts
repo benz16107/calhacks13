@@ -255,6 +255,98 @@ export function diff(task: Task, maxBytes = 200_000): { changes: Change[]; diff:
 }
 const changesOf = changes;
 
+// ---------- the flight recorder: a task's own layer at each step, for replay ----------
+type ReplayChange = Change & { big?: true };
+type Replay = { points: { seq: number; changes: ReplayChange[] }[]; capped?: true; state: Record<string, string>; bytes: number };
+const BIG = 1024 ** 2; // files over 1 MB are noted, not kept
+const CAP = 50 * 1024 ** 2; // per task
+const replayFile = (id: string) => path.join(dirs.task(id), 'replay.json');
+const readReplay = (id: string): Replay => {
+  try {
+    return JSON.parse(fs.readFileSync(replayFile(id), 'utf8'));
+  } catch {
+    return { points: [], state: {}, bytes: 0 };
+  }
+};
+const lowersOf = (task: Task) => [...task.layers.map(dirs.upper), isLinked(task.workspace) && fs.existsSync(taskBase(task.id)) ? taskBase(task.id) : dirs.workspace(task.workspace)];
+
+/** After event `seq`, keep what changed in the task's layer since the last record (beside it, never in the log). */
+export function recordReplay(task: Task, seq: number) {
+  const upper = dirs.upper(task.id);
+  if (!fs.existsSync(upper)) return;
+  const r = readReplay(task.id);
+  if (r.capped) return;
+  const now: Record<string, string> = {};
+  const walk = (rel: string) => {
+    for (const name of fs.readdirSync(path.join(upper, rel))) {
+      const p = path.join(rel, name);
+      const st = fs.lstatSync(path.join(upper, p));
+      if (st.isCharacterDevice() && st.rdev === 0) now[p] = 'deleted'; // overlayfs whiteout
+      else if (st.isDirectory()) walk(p);
+      else if (st.isFile()) now[p] = `${st.size}:${st.mtimeMs}`;
+    }
+  };
+  walk('');
+  const lowers = lowersOf(task);
+  const below = (rel: string) => lowers.some((l) => fs.existsSync(path.join(l, rel)));
+  const out: ReplayChange[] = [];
+  for (const [p, stamp] of Object.entries(now)) {
+    if (r.state[p] === stamp) continue;
+    if (stamp === 'deleted') {
+      out.push({ path: p, change: 'deleted' });
+      continue;
+    }
+    const size = Number(stamp.split(':')[0]);
+    const change = below(p) ? 'modified' : 'added';
+    if (size > BIG) {
+      out.push({ path: p, change, big: true });
+      continue;
+    }
+    if (r.bytes + size > CAP) {
+      r.capped = true;
+      break;
+    }
+    const dst = path.join(dirs.task(task.id), 'replay', String(seq), p);
+    fs.mkdirSync(path.dirname(dst), { recursive: true, mode: 0o700 });
+    fs.copyFileSync(path.join(upper, p), dst, fs.constants.COPYFILE_FICLONE);
+    r.bytes += size;
+    out.push({ path: p, change });
+  }
+  for (const p of Object.keys(r.state)) if (!(p in now)) out.push({ path: p, change: 'deleted' }); // a file it made, then removed
+  if (!out.length && !r.capped) return;
+  if (out.length) r.points.push({ seq, changes: out });
+  r.state = now;
+  fs.writeFileSync(replayFile(task.id), JSON.stringify(r), { mode: 0o600 });
+}
+
+/** The recorded points: which event changed which files. */
+export function replayPoints(task: Task) {
+  const r = readReplay(task.id);
+  return { points: r.points, ...(r.capped ? { capped: true } : {}) };
+}
+
+/** What the task's layer held right after event `seq`, as a diff against the files it started from. */
+export function diffAt(task: Task, seq: number, maxBytes = 200_000): { changes: ReplayChange[]; diff: string } {
+  const view = new Map<string, { change: Change['change']; file?: string; big?: true }>();
+  for (const pt of readReplay(task.id).points) {
+    if (pt.seq > seq) break;
+    for (const c of pt.changes) view.set(c.path, c.change === 'deleted' ? { change: 'deleted' } : { change: c.change, ...(c.big ? { big: true } : { file: path.join(dirs.task(task.id), 'replay', String(pt.seq), c.path) }) });
+  }
+  const lowers = lowersOf(task);
+  const below = (rel: string) => lowers.map((l) => path.join(l, rel)).find((f) => fs.existsSync(f));
+  const changes: ReplayChange[] = [];
+  let text = '';
+  for (const [p, v] of [...view.entries()].sort(([a], [b]) => a.localeCompare(b))) {
+    const before = below(p);
+    if (v.change === 'deleted' && !before) continue; // made and removed within the task: nothing to show
+    changes.push({ path: p, change: v.change === 'deleted' ? 'deleted' : before ? 'modified' : 'added', ...(v.big ? { big: true } : {}) });
+    if (v.big || text.length > maxBytes) continue;
+    const r = spawnSync('diff', ['-u', '--label', `a/${p}`, '--label', `b/${p}`, before ?? '/dev/null', v.file ?? '/dev/null'], { encoding: 'utf8' });
+    text += r.stdout;
+  }
+  return { changes, diff: text.slice(0, maxBytes) };
+}
+
 const sha = (file: string) => createHash('sha256').update(fs.readFileSync(file)).digest('hex');
 const exec = promisify(execFile);
 // A file's size and modification time: enough to tell an owner's edit, without reading the file.
@@ -477,6 +569,8 @@ export function seal(task: Task) {
 
 /** Delete an undone task's files: its layer, scratch space and copy. The caller makes sure nothing still reads them. */
 export function purge(task: Task) {
+  fs.rmSync(path.join(dirs.task(task.id), 'replay'), { recursive: true, force: true }); // the recording goes with the layer
+  fs.rmSync(replayFile(task.id), { force: true });
   for (const d of ['upper', 'work', 'base', 'root']) {
     const dir = path.join(dirs.task(task.id), d);
     if (!fs.existsSync(dir)) continue;

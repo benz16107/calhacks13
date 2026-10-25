@@ -127,6 +127,7 @@ class Core {
   readers: (() => void)[] = [];
   listeners = new Set<(e: LogEvent) => void>();
   workers = new Map<string, ChildProcess>();
+  endedAt = new Map<string, number>(); // when each task's worker exited, this run
   brokers = new Map<string, http.Server>();
   waiters = new Map<string, ((approved: boolean) => void)[]>();
   reserved = new Map<string, number>(); // cents a task has in-flight tool calls committed but not yet logged
@@ -289,7 +290,7 @@ class Core {
 
   /** Refuse something the owner turned off for this app: logged, and said plainly. */
   permRefuse(app: string, id: string, what: string): never {
-    const title = this.installed.get(app)?.track?.title ?? app;
+    const title = this.appEntry(app).title; // the name App Center shows
     this.write({ type: 'note', track: 'permissions', data: { app, id, refused: true }, text: `${title} wasn't allowed to ${what}` });
     throw Object.assign(new Error(`${title} isn't allowed to ${what}. The owner can allow it in Settings, Permissions.`), { status: 403 });
   }
@@ -300,8 +301,9 @@ class Core {
       const t = r.track!;
       const g = perms.grant(this.grants, name);
       const spends = [...this.tools.values()].some((e) => e.track === name && !!e.tool.cost);
-      const items = perms.manifest({ title: t.title ?? name, keys: this.appEntry(name).access.secrets.map((k: { name: string }) => k.name), spends, strangers: !!t.openRoutes?.length }, g);
-      return { app: name, title: t.title ?? name, answered: !!g.answered, perDayCents: g.perDayCents ?? null, diskBytes: g.diskBytes ?? 5 * 1024 ** 3, items: items.map((i) => ({ ...i, allowed: !g.deny.includes(i.id) })) };
+      const title = this.appEntry(name).title;
+      const items = perms.manifest({ title, keys: this.appEntry(name).access.secrets.map((k: { name: string }) => k.name), spends, strangers: !!t.openRoutes?.length }, g);
+      return { app: name, title, answered: !!g.answered, perDayCents: g.perDayCents ?? null, diskBytes: g.diskBytes ?? 5 * 1024 ** 3, items: items.map((i) => ({ ...i, allowed: !g.deny.includes(i.id) })) };
     });
   }
 
@@ -463,6 +465,17 @@ class Core {
     }
     const full = this.log.append(e);
     apply(this.state, full);
+    // The flight recorder: what the task's layer held after each step and tool result (beside the layer, for replay).
+    if ((full.type === 'task.step' || full.type === 'tool.result') && this.workers.has(full.task)) {
+      const t = this.state.tasks.get(full.task);
+      if (t) {
+        try {
+          sandbox.recordReplay(t, full.seq);
+        } catch (err) {
+          console.error(`replay: could not record ${full.task} at ${full.seq}: ${(err as Error).message}`);
+        }
+      }
+    }
     // Tripwire: the task's decoy key in anything it wrote (a step, a tool's input or output, a note).
     if (full.task && ['task.step', 'tool.call', 'tool.result', 'note'].includes(full.type) && (full as { track?: string }).track !== 'security') {
       const t = this.state.tasks.get(full.task);
@@ -672,6 +685,7 @@ class Core {
       this.workers.set(t.id, child);
       child.on('exit', (code, signal) => {
         this.workers.delete(t.id);
+        this.endedAt.set(t.id, Date.now()); // for refusals that reach the kernel log a moment late
         if (t.state === 'running' || t.state === 'waiting') {
           const why = code === 0 ? undefined : sandbox.workerError(t);
           this.move(t, code === 0 ? 'done' : 'failed', code === 0 ? {} : { error: system.failureText(why, signal ?? code, this.modelVia() ?? undefined, t.worker) });
@@ -718,6 +732,9 @@ class Core {
         const dpt = /DPT=(\d+)/.exec(line)?.[1];
         const task = this.state.tasks.get(this.uidTask.get(uid) ?? '');
         if (!task || !dst) continue; // not one of this box's tasks (another box on the machine, or a stray)
+        // A finished task's user is gone, and after a few seconds its uid may belong to another box's task on the same
+        // machine. Refusals logged within 10 s of the end are still the task's (the kernel log can lag).
+        if (!this.workers.has(task.id) && Date.now() - (this.endedAt.get(task.id) ?? 0) > 10_000) continue;
         if (dst.startsWith('127.0.0.53') && dpt === '53') continue; // the tool's own resolver lookup: refused, but not an attack to show anyone
         // Other DNS lookups (a task asking a resolver itself; the proxy resolves names for tasks) are refused and logged
         // once per task, so a run of them can't flood the log but an attempt still shows.
@@ -2306,8 +2323,15 @@ class Core {
               approvals: [...this.state.approvals.values()].filter((x) => x.task === id),
               events: this.log.events.filter((e) => e.task === id),
             };
+          case 'GET /tasks/:id/replay':
+            return sandbox.replayPoints(this.must(id));
           case 'GET /tasks/:id/diff': {
             const t = this.must(id);
+            const at = q('at');
+            if (at !== null && at !== undefined && at !== '') {
+              if (!/^\d+$/.test(at)) throw new Error('at: an event number');
+              return sandbox.diffAt(t, Number(at)); // the layer as it was right after that event (the flight recorder)
+            }
             if (t.state === 'undone') return { changes: [], diff: '', undone: true }; // an undone task's changes are gone
             const roots = sandbox.multiRoots(t.workspace); // several folders: each change path starts with its label
             return { ...sandbox.diff(t), ...(roots ? { roots } : {}) };
@@ -2450,7 +2474,7 @@ class Core {
             }
             g.answered = true;
             perms.save(HOME, this.grants);
-            const title = this.installed.get(id)!.track!.title ?? id;
+            const title = this.appEntry(id).title;
             this.write({ type: 'note', track: 'permissions', data: { app: id, deny: g.deny, perDayCents: g.perDayCents ?? null }, text: `Permissions for ${title}: ${g.deny.length ? `${g.deny.length} turned off` : 'all allowed'}${g.perDayCents !== undefined ? `, up to ${dollars(g.perDayCents)} a day` : ''}`, ...(this.actor(req).who ? { who: this.actor(req).who } : {}) });
             return this.permissionsView().find((a) => a.app === id);
           }

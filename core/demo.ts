@@ -471,6 +471,19 @@ await moment('the disk cap: a task that fills its disk space is stopped and undo
   }
 });
 
+await moment('the flight recorder: replay a finished task, with its files at each step', async () => {
+  workspace('replay', { 'notes.md': 'notes\n' });
+  const T = await api<Task>('POST', '/tasks', { title: 'Write a plan', workspace: 'replay', worker: 'fake', source: 'demo', prompt: 'write plan.md first draft\nappend notes.md more\nwrite plan.md final plan' });
+  await settled([T.id]);
+  const r = await api<{ points: { seq: number; changes: { path: string; change: string }[] }[] }>('GET', `/tasks/${T.id}/replay`);
+  const first = r.points[0], last = r.points[r.points.length - 1];
+  check(r.points.length >= 3 && first.changes.some((c) => c.path === 'plan.md' && c.change === 'added'), `each step that changed files is a point (${r.points.length}), starting with plan.md added`);
+  const atFirst = await api<{ diff: string; changes: { path: string }[] }>('GET', `/tasks/${T.id}/diff?at=${first.seq}`);
+  const atLast = await api<{ diff: string; changes: { path: string; change: string }[] }>('GET', `/tasks/${T.id}/diff?at=${last.seq}`);
+  check(/\+first draft/.test(atFirst.diff) && !/notes\.md/.test(atFirst.diff) && /\+final plan/.test(atLast.diff) && atLast.changes.some((c) => c.path === 'notes.md' && c.change === 'modified'),
+    'the files at each point: the first draft at the first step, the final plan and the changed notes at the end');
+});
+
 await moment('the GurtOS MCP server: Claude Code drives the box', async () => {
   workspace('claude', {});
   const { code } = await api<{ code: string }>('POST', '/api/pair/start');
