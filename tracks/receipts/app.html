@@ -50,8 +50,10 @@
       const b = await r.json();
       if (!r.ok) throw new Error(b.error || `HTTP ${r.status}`);
       box.replaceChildren();
-      // The QR opens the public page when the box is reachable from the internet, else the box's own copy of the page.
-      const link = location.protocol === 'https:' ? b.publicVerifyUrl : b.verifyUrl;
+      // The QR opens the box's own copy of the check page: the same file as gurtos.com/verify, and it works today.
+      // When gurtos.com/verify is live, set PUBLIC_VERIFY_LIVE to true and the QR opens the public page instead.
+      const PUBLIC_VERIFY_LIVE = false;
+      const link = PUBLIC_VERIFY_LIVE ? b.publicVerifyUrl : b.verifyUrl;
       box.append(qr(link));
       const text = el('div');
       text.append(el('p', null, `${mode === 'redacted' ? 'Redacted receipt' : 'Receipt'} for "${task.title}": ${b.entries} entries, chain of ${b.chainLines} log lines.`));
@@ -59,6 +61,7 @@
       const a = el('a', null, 'Open the check page');
       a.href = link; a.target = '_blank'; a.rel = 'noopener';
       text.append(a);
+      if (!PUBLIC_VERIFY_LIVE) text.append(el('p', 't-caption t-secondary', `The same page will be at ${b.publicVerifyUrl.split('#')[0]} on gurtos.com.`));
       text.append(el('p', 't-caption t-secondary', 'Whoever holds this link can read the receipt.'));
       box.append(text);
     } catch (e) {
