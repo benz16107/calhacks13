@@ -274,7 +274,7 @@ failed, 1 pending). QA has not walked these by hand.
 | Feature | Owner | Status | Commit | Demo step | Tracks |
 |---|---|---|---|---|---|
 | The poisoned package: a harmless imitation of the Shai-Hulud npm worm run by a real `npm install` in a task; its postinstall's 10 attempts (env, dotfiles, vault, cloud metadata, exfil, raw connect, publish, other tasks' files, persistence) are blocked or contained; undo removes it; no canary secret in the log | armadin | merged (af40b1c) | af40b1c | tracks/armadin/demo.ts | Armadin |
-| Attack scoreboard: 15 OS-level attacks, 13 caught, 2 published as not covered (no per-task disk quota; an allowed host's payload isn't inspected, reported to core) | armadin | merged (af40b1c) | af40b1c | tracks/armadin/demo.ts | Armadin |
+| Attack scoreboard: 16 OS-level attacks, 14 caught, 2 published as not covered, on two machines (laptop VM and Vultr) (no per-task disk quota; an allowed host's payload isn't inspected, reported to core) | armadin | merged (af40b1c) | af40b1c | tracks/armadin/demo.ts | Armadin |
 | Hijacked payment: a lookalike-sender bank-change invoice refused in code (AP-4) before anyone is asked; a second over-limit bill pauses for the controller, who says no | armadin, credit desk | merged (af40b1c) | af40b1c | tracks/armadin/demo.ts | Armadin, Hyphenate |
 | OWASP mapping (LLM Top 10 2025 and Agentic Top 10 2026, with a not-covered column) | armadin | merged (af40b1c) | af40b1c | none | Armadin |
 
