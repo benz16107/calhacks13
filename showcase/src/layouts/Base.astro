@@ -1,6 +1,6 @@
 ---
 import '../styles/global.css';
-import { LINKS } from '../data/site';
+import { LINKS, repoFile } from '../data/site';
 import ThemeScript from '../../../site/src/theme/ThemeScript.astro';
 import SiteHeader from '../../../site/src/theme/SiteHeader.astro';
 import SiteFooter from '../../../site/src/theme/SiteFooter.astro';
@@ -42,7 +42,8 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
       <p>
         GurtOS is a solo project by Ben Zhou for Cal Hacks 13.0 (Oct 23 to 25, 2026), open source under the Apache
         License 2.0. Every payment on this site is test money: Stripe test mode, a Visa test card, or USDC on Solana
-        devnet. Pages say which parts are live and which are simulated.
+        devnet. Pages say which parts are live and which are simulated. The project's <a href={repoFile('ROADMAP.md')}>roadmap</a>
+        and <a href={repoFile('SECURITY.md')}>security policy</a> are in the repository.
       </p>
     </div>
     <SiteFooter origin={LINKS.site} />

@@ -31,6 +31,8 @@ The thumbnail is image 1.
 - https://gurtos.com/docs/ (the product docs)
 - https://github.com/benz16107/calhacks13 (the code, open source under the Apache License 2.0)
 - https://www.figma.com/slides/SBrJtJiY20k88X3IGzKwZW (the pitch deck, Figma Slides)
+- https://github.com/benz16107/calhacks13/blob/main/ROADMAP.md (the roadmap)
+- https://github.com/benz16107/calhacks13/blob/main/SECURITY.md (the security policy)
 - https://plum-fabric-10136193.figma.site (the landing page, published on Figma Sites)
 
 ## Built with
@@ -120,7 +122,7 @@ alarms. A running Droid task held only a placeholder key in 240 of 240 process s
 **Every sponsor track has its own page, with the criteria, video, screenshots, live links and evidence:
 https://calhacks.gurtos.com**
 
-Built solo by Ben Zhou. Open source under the Apache License 2.0. All payments are test money: Stripe test mode with a Visa test card, or USDC on Solana devnet.
+Built solo by Ben Zhou. Open source under the Apache License 2.0, with a [roadmap](https://github.com/benz16107/calhacks13/blob/main/ROADMAP.md) and a [security policy](https://github.com/benz16107/calhacks13/blob/main/SECURITY.md). All payments are test money: Stripe test mode with a Visa test card, or USDC on Solana devnet.
 
 <!-- SUMMARY END -->
 
