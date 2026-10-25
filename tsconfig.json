@@ -11,6 +11,6 @@
     "erasableSyntaxOnly": true,
     "types": ["node"]
   },
-  "include": ["core/**/*.ts", "relay/*.ts", "tracks/*/*.ts"],
+  "include": ["core/**/*.ts", "relay/*.ts", "tracks/*/*.ts", "try/*.ts"],
   "exclude": ["**/node_modules"]
 }
