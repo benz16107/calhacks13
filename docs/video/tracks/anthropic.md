@@ -72,6 +72,9 @@ G-AN-3 (the install line). Its own captures:
 | T-AN-02 | Three tasks, three models, with their costs | Clip box (Server) with a Factory key in the vault (real model spend, a few cents) | Start the same one-line task three times with `model` haiku, sonnet and opus; open each finished task window; capture the Model row and the cost. Costs differ by run: say the numbers from the capture |
 | T-AN-03 | The Second look on a real run | Clip box with a Factory key; `DEMO_LIVE=droid,anthropic` style run of one risky-step case (the README setup case) | Open the finished task; hold on the "Second look" line in the facts column; open the approval if the check made one. If the take shows no off-goal step, say "N checked, 0 off goal" and keep the test card |
 | T-AN-04 | Claude Code driving the box through the GurtOS MCP server | the Linux build machine (Claude Code on the Max plan) against the clip box, using a paired device's token | In a terminal, ask Claude Code to list the box's tasks, start "Tidy my notes", read its diff, then undo it. Record the real session, note the date, crop the token and any machine name with `media-treatment`, never CSS |
+| T-AN-S1 | Flight recorder replay of the finished Claude task (slot: only once the flight recorder is merged) | Clip box (Server) with a Factory key, on a build where the flight recorder is merged; the finished task from T-FA-01 | Open the flight recorder on that task; step through it, hold on a step with a file and on an approval, then press Keep. Show only what the recorder lists One take, note the date and the model id |
+| T-AN-S2 | Attack it yourself: one pasted injection and one picked attack (slot: only once Attack it yourself is merged) | Clip box on a build where Attack it yourself is merged | Open the page; paste an injection and run it; pick one attack and run it; hold on each result until every defence that stopped it is on screen |
+| T-AN-S3 | The public link opening a throwaway GurtOS (slot: only once Try GurtOS live is merged) | A clean browser profile on any laptop, no sign-in, recorded only after Ben OKs the public address | Open the public link; wait for the throwaway GurtOS to load; hold 4 s on its first screen. The on-screen address stays `<live address>` until Ben OKs the real one. Also used by the Factory video (T-FA-S2): record once |
 
 ## Check before render
 
@@ -86,3 +89,35 @@ G-AN-3 (the install line). Its own captures:
 - The $0.12 run is Claude Sonnet 5.5 through Droid, Oct 24. The merge gate's $0.5378 (the $0.50 test spend plus the
   model) is not used here.
 - iPhone and Watch clips come from simulators; footnote them as the Anthropic page does. All amounts are test money.
+
+## Slots: standout features (use only once merged)
+
+These beats stay out of the video until the feature is merged on main and its check passes. When one is ready, record its capture, add its line to `docs/video/slots.json`, generate its narration with `narration/say.py <script> --slots`, and rebuild: later beats move by themselves.
+
+| Slot id | Feature | Goes after beat | Picture (the capture to record) | On-screen text | Narration | Seconds | Rubric it serves | What to cut to stay in length |
+|---|---|---|---|---|---|---|---|---|
+| `flight-recorder` | The flight recorder | Beat 4 (Personal: my folder changes only on Keep) | T-AN-S1: the flight recorder open on the finished real Claude task from beat 3 (T-FA-01). Step through it, open a changed file and the approval, end on Keep | Flight recorder: replay a task step by step · its files · its approvals · then Keep or Undo | I can replay the task step by step, with its files and approvals. Then I press Keep or Undo. | 9.3 | Claude doing something that matters (beats 3 and 4): a person sees the steps before keeping them | Beat 4 (7 s): drop "On Personal, my folder changes only when I press Keep." and its A20 clip. The slot says Keep, and beat 8's chip still names Personal |
+| `attack-yourself` | Attack it yourself | Beat 6 (the published attack test) | T-AN-S2: the Attack it yourself page on the clip box. Paste one injection and run it, then pick one attack and run it; hold on each result with the defence that stopped it | Attack it yourself · paste an injection or pick an attack · each defence that stops it is shown | You can attack it yourself. Paste an injection, or pick an attack, and watch each defence stop it. | 8.8 | Knowing where it could go wrong (beats 5 and 6): a judge runs an attack instead of reading ours | Beat 7 (7 s): drop "Claude Code drives the box through an MCP server, and I answer from my phone." and the D01, D02, D03 cuts. Beat 7 is not in this video's rubric map |
+| `try-live` | Try GurtOS live | Beat 7 (Claude Code through the MCP server), just before beat 8's install line and end card | T-AN-S3: a clean browser opens the public link and a throwaway Gurt O.S. loads; hold on its first screen | Try it now: `<live address>` · a throwaway GurtOS in your browser | You can try a throwaway Gurt O.S. in your browser, at the link below. | 7.5 | One thing usable Monday (beat 8): a judge can try it before installing anything | Beat 5 (8 s): drop "Before a risky step, a Haiku check compares it to my goal. It is inconsistent on one case." and T-AN-03. Add "Second look: inconsistent on one case" as a fourth amber line on beat 6's card so the admission stays on screen |
+
+Length: target 1:15. Every slot in adds about 25.6 s and the cuts above take out about 22 s, so the video runs about 1:19. Cut sizes are estimates from each beat's window; the build's length check has the final say.
+
+### Slot narration
+
+#### flight-recorder
+
+```text
+I can replay the task step by step, with its files and approvals. Then I press Keep or Undo.
+```
+
+#### attack-yourself
+
+```text
+You can attack it yourself. Paste an injection, or pick an attack, and watch each defence stop it.
+```
+
+#### try-live
+
+```text
+You can try a throwaway Gurt O.S. in your browser, at the link below.
+```

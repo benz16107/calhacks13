@@ -3,7 +3,7 @@
 **For:** Devpost's video field (3 minutes or less) and the Overall, Most Technically Advanced, Most Creative, Best Solo
 and Hacker's Choice judges. **Edition:** all three. **Voice:** Ben's clone. **Status:** draft for Ben's approval.
 
-**Goal.** A judge who watches only this knows that GurtOS is an operating system for agents, sees the four moments
+**Goal.** A judge who watches only this knows that GurtOS is operating systems built for AI agents, sees the four moments
 work on the real product, and knows it is light, controlled live from the phone and open source. MLH's advice is a
 demo-focused video, since the live demo at the table is the pitch, so 1:45 of the 2:55 is the product on screen.
 
@@ -29,7 +29,7 @@ Times are targets; the voice sets the final cut. Shot IDs point to `capture.md` 
 | 1 | 0:00 to 0:15 | G01: numbers count up on the night Hills, one per line, each with its source in small mono below | 392,891 GitHub stars. 21,639 open to the internet. 341 malicious skills. 1 click to steal its token. Sources: GitHub API, Oct 23 2026 · Censys, Jan 2026 · Koi Security · CVE-2026-25253 | "Almost four hundred thousand people starred OpenClaw, an AI agent that runs on your own computer. Then twenty-one thousand copies were found open to the internet, three hundred forty-one of its skills were malware, and one click could steal its token." | The problem, sourced (`docs/devpost.md`, summary) |
 | 2 | 0:15 to 0:22 | G01 continued: a terminal-free diagram, one agent icon wired to "your keys", "your files", "your network" | Runs as you | "The agent runs as you: your keys, your files, your network." | Principle 12 |
 | 3 | 0:22 to 0:38 | G02: the list builds line by line, each line crossed out amber as it is said | Built for one person at a keyboard. Permissions per user, not per task. Secrets any process can read. Network all or nothing. No approvals, no budgets, no record, no undo. | "The problem isn't the agent. Our operating systems were built for one person at a keyboard. Permissions are per user, not per task. Any process can read your secrets. The network is all or nothing. And there's no approval, no budget, no record and no undo." | Why an OS (principle 12) |
-| 4 | 0:38 to 0:54 | A01 box screen at rest, push in; cut to G03: the overlay diagram, three task layers stacking on one folder, each labelled `box-<id>` | Title card: **GurtOS**. Lower third: Each task: its own Linux user, its own copy-on-write copy, only the hosts it needs | "So I built Gurt O.S., an operating system for agents. Every task runs as its own Linux user, in its own copy-on-write copy of your files, and reaches only the sites it needs. Agents work side by side without colliding, and nothing is copied twice. Factory's Droid, running Claude, does the work." | The task space, overlayfs, Droid with Claude (moments 1 to 4 rows; Factory and Anthropic rows) |
+| 4 | 0:38 to 0:54 | A01 box screen at rest, push in; cut to G03: the overlay diagram, three task layers stacking on one folder, each labelled `box-<id>` | Title card: **GurtOS**, "Operating systems built for AI agents". Lower third: Each task: its own Linux user, its own copy-on-write copy, only the hosts it needs | "So I built Gurt O.S.: operating systems built for AI agents. Every task runs as its own Linux user, in its own copy-on-write copy of your files, and reaches only the sites it needs. Agents work side by side without colliding, and nothing is copied twice. Factory's Droid, running Claude, does the work." | The task space, overlayfs, Droid with Claude (moments 1 to 4 rows; Factory and Anthropic rows) |
 | 5 | 0:54 to 1:08 | G04: three panes slide in, each a real capture: A01 Server box screen, A20 Personal desktop on the Hills with the native GurtOS app, A30 Business "Waiting for me" | GurtOS Server · GurtOS Personal · GurtOS Business (edition chips in their colours) | "It comes in three editions. Server is an always-on box with no human login. Personal is your own laptop, with agents built into the desktop. Business shares one box across a team, with roles, routed approvals and an audit trail." | Editions (features: Server, Personal, Business sections, verified) |
 | 6 | 1:08 to 1:22 | **Moment 3.** A02 split screen: box screen left, iPhone right. The amber request lands on both; tap Approve; the task finishes | Lower third: Moment 3 · A pause for your OK | "A task wants to spend eight dollars on a five-dollar budget. It stops and asks, on the box and on my phone at once, while other tasks keep running. I approve, and it carries on." | Moment 3, verified Oct 24 00:09 |
 | 7 | 1:22 to 1:35 | **Moment 2.** A03: the road-bike task; red Blocked banner; open the task, red rows for attacker.example and 1.1.1.1; press Undo | Lower third: Moment 2 · The booby-trapped page. Footnote: Scripted agent, same steps every take | "This agent reads a page with hidden instructions to steal my keys. The task has none to steal. It tries to send data out anyway, and the box blocks it, logs it, and undoes it." | Moment 2, verified Oct 24 00:54 |
@@ -59,7 +59,7 @@ The agent runs as you: your keys, your files, your network.
 
 The problem isn't the agent. Our operating systems were built for one person at a keyboard. Permissions are per user, not per task. Any process can read your secrets. The network is all or nothing. And there's no approval, no budget, no record and no undo.
 
-So I built Gurt O.S., an operating system for agents. Every task runs as its own Linux user, in its own copy-on-write copy of your files, and reaches only the sites it needs. Agents work side by side without colliding, and nothing is copied twice. Factory's Droid, running Claude, does the work.
+So I built Gurt O.S.: operating systems built for AI agents. Every task runs as its own Linux user, in its own copy-on-write copy of your files, and reaches only the sites it needs. Agents work side by side without colliding, and nothing is copied twice. Factory's Droid, running Claude, does the work.
 
 It comes in three editions. Server is an always-on box with no human login. Personal is your own laptop, with agents built into the desktop. Business shares one box across a team, with roles, routed approvals and an audit trail.
 
@@ -87,3 +87,32 @@ It's a whole suite: the OS, the apps, remote access, and an app platform that Ji
 - Moment 2's footage shows the scripted agent; the footnote must be on screen.
 - The phone in beat 6 is paired from Settings first, so the log names it.
 - Nothing private on screen (`../videos.md`, "Never on screen").
+
+## Slots: standout features (use only once merged)
+
+Ben approved five standout features on Oct 24. None was on main when this cut was made, so none is shown or said. Two
+belong in the main video. Each slot **replaces** a paragraph instead of adding one, so the video stays under 3:00
+when both are in. When one is ready: record its capture, add it to `docs/video/slots.json`, run
+`narration/say.py main.md --slots`, then `node build.mjs main --render`. Later beats move by themselves.
+
+| Slot id | Feature | Replaces | Picture | On-screen text | Seconds | What leaves |
+|---|---|---|---|---|---|---|
+| `attack-yourself` | Attack it yourself | Paragraph 10 (security) | The board, then T-MAIN-S1: someone pastes an injection into the live attack page and each defence lights up as it stops it (`cap:slot-attack-yourself.mp4`) | Attack it yourself · Paste an injection, watch each defence stop it | about 14, same as now | The "240 of 240 placeholder key" line (it stays in the Anthropic and Factory videos) |
+| `try-live` | Try GurtOS live | Paragraph 13 (suite and end card) | Same suite map; the end card's first line becomes "Try GurtOS live: <live address>" | Try GurtOS live: <live address> | about 15, two more than now | Nothing; the end hold covers it |
+
+`slots.json` entries: `"attack-yourself": { "media": "cap:slot-attack-yourself.mp4" }` and `"try-live": { "url": "<the public address>" }`.
+The flight recorder, agent permissions and signed receipts belong in track videos (`tracks/*.md`, "Slots").
+
+### Slot narration
+
+#### attack-yourself
+
+```text
+Security comes from the OS, whatever the model does. We publish our attack test: sixteen attacks, fourteen stopped, and two we don't cover yet. And you can attack it yourself: paste an injection, and watch each defence stop it.
+```
+
+#### try-live
+
+```text
+It's a whole suite: the OS, the apps, remote access, and an app platform that Jira, ASI One, a shopper and a finance desk plug into. All of it is open source, and you can try it live at the link below. Gurt O.S.: real access, never your keys.
+```

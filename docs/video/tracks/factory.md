@@ -67,6 +67,8 @@ lines), G-FA-3 (the five triggers). Its own captures (T-FA-01 is also used by th
 | T-FA-02 | The approved and the denied card | Same box | Run the job twice, deny the plan the second time; capture the Factory app's task list. The denied card is labelled "The plan you approved" by mistake (a known bug in the Limits list): crop it or fix the label first |
 | T-FA-03 | A new file starts a Droid task | Same box, a watched folder set through `core/triggers.ts` | Drop a file into the folder; capture the task appearing on the box screen with Droid as its agent |
 | T-FA-04 | Autonomy low and a hook pause | Same box, real Droid | Start one task at low autonomy and show What it can reach (no sites). Start another and give it a prompt that makes it run `git push` in a scratch repo; capture the paused approval on the phone and its log line. If the pause cannot be provoked in a take, show `core/hook.test.ts` passing and drop the phone shot |
+| T-FA-S1 | Flight recorder replay of the T-FA-01 Droid task (slot: only once the flight recorder is merged) | Same box as T-FA-01 (Server, Factory key), on a build where the flight recorder is merged | After T-FA-01's task is done, open the flight recorder on it; step through it, hold on the plan approval and on a changed file, then press Keep. One take, note the date and the model id. Show only what the recorder lists |
+| T-FA-S2 | The public link opening a throwaway GurtOS (slot: only once Try GurtOS live is merged) | A clean browser profile on any laptop, no sign-in, recorded only after Ben OKs the public address | Same take as T-AN-S3 in the Anthropic video: record once, use in both. The on-screen address stays `<live address>` until Ben OKs the real one |
 
 ## Check before render
 
@@ -79,3 +81,28 @@ lines), G-FA-3 (the five triggers). Its own captures (T-FA-01 is also used by th
   and the GitHub issue label are merged. The GitHub pull request path is not set up on every box, so no PR clip.
 - The phone notification is a simulator image, footnoted. The Watch is not used here.
 - The reviewer is read-only by tool list, not by trust; do not say it "cannot be fooled".
+
+## Slots: standout features (use only once merged)
+
+These beats stay out of the video until the feature is merged on main and its check passes. When one is ready, record its capture, add its line to `docs/video/slots.json`, generate its narration with `narration/say.py <script> --slots`, and rebuild: later beats move by themselves.
+
+| Slot id | Feature | Goes after beat | Picture (the capture to record) | On-screen text | Narration | Seconds | Rubric it serves | What to cut to stay in length |
+|---|---|---|---|---|---|---|---|---|
+| `flight-recorder` | The flight recorder | Beat 5 (coder, read-only reviewer, every step in the log) | T-FA-S1: the flight recorder on T-FA-01's finished Droid task. Step through it, hold on the plan approval and a changed file, press Keep | Flight recorder: a Droid task, step by step · its files · its approvals · then Keep or Undo | You can replay a Droid task step by step, with its files and approvals. Then Keep or Undo. | 8.8 | Visible plans, steps and diffs; invisible actions score badly (beats 4 and 5) | Beat 5's last sentence "Every step is in the log, and the cost comes from Droid's own token counts." (about 6 s; the recorder shows the steps and the on-screen line keeps $0.12), and beat 7's "Personal changes my folder only on Keep." (about 3 s; the slot says Keep) |
+| `try-live` | Try GurtOS live | Beat 6 (autonomy levels and hooks), just before beat 7's end card | T-FA-S2: a clean browser opens the public link and a throwaway Gurt O.S. loads; hold on its first screen (the same take as T-AN-S3) | Try it now: `<live address>` · a throwaway GurtOS in your browser | You can try a throwaway Gurt O.S. in your browser, at the link below. | 7.5 | Not a chatbot wrapper: a judge opens the real OS. Claim nothing about Droid inside the throwaway unless the take shows it | Beat 3's T-FA-03 clip (about 5 s; the five-trigger card already outlasts the one-sentence voice) and beat 7's A20 second (1 s) |
+
+Length: target 1:15. Every slot in adds about 16.3 s and the cuts above take out about 15 s, so the video runs about 1:16. Cut sizes are estimates from each beat's window; the build's length check has the final say.
+
+### Slot narration
+
+#### flight-recorder
+
+```text
+You can replay a Droid task step by step, with its files and approvals. Then Keep or Undo.
+```
+
+#### try-live
+
+```text
+You can try a throwaway Gurt O.S. in your browser, at the link below.
+```

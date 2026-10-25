@@ -60,6 +60,7 @@ Shared (see `capture.md`): A06, A20, G08. Its own animation card: G-AP-1 (the pr
 | T-AP-02 | The trap page read through Agent-Safe Page Reader | Same box | Read the trap page (the road-bike listing with the hidden line) through `apify.readPage`; hold on the risk line, the findings and "withheld" 4 s. Call the Actor by its ID, as `track.ts` now does |
 | T-AP-03 | The Apify window and an Apify approval | Personal VM on the laptop (final Personal disc) or the clip box, after T-AP-01; iOS simulator for the phone | Open the Apify window and hold on the per-task rows; fire a call that goes over the task budget and capture the phone approval "to Apify (run X)" |
 | T-AP-04 | A schedule and a webhook start a task | Clip box with `APIFY_WEBHOOK_URL` and `APIFY_WEBHOOK_SECRET` in its vault, reachable from Apify | `POST /t/apify/watch` for a product; show the schedule and webhook in the Apify Console (crop the account menu with `media-treatment`); show the log line when the webhook starts a task. If a real delivery is not possible, post Apify's payload shape to the route and keep the on-screen sentence "delivery tested with Apify's payload shape" |
+| T-AP-S1 | The Apify app's permissions: Allow, Deny, revoke (slot: only once agent permissions are merged) | Clip box (Server) with the Apify token in its vault, on a build where agent permissions are merged | Open the Apify app's permissions and hold on its manifest; Allow one permission, Deny one, revoke one; then trigger the revoked use and hold on the OS refusing it. Use only the labels the screen shows No Apify account name or token on screen |
 
 ## Check before render
 
@@ -73,3 +74,21 @@ Shared (see `capture.md`): A06, A20, G08. Its own animation card: G-AP-1 (the pr
   price). The cost screen keeps the word "estimate".
 - The trap-page agent is scripted; the footnote is on screen. Webhook delivery is not claimed as tested end to end.
 - No Apify account name or token on screen.
+
+## Slots: standout features (use only once merged)
+
+These beats stay out of the video until the feature is merged on main and its check passes. When one is ready, record its capture, add its line to `docs/video/slots.json`, generate its narration with `narration/say.py <script> --slots`, and rebuild: later beats move by themselves.
+
+| Slot id | Feature | Goes after beat | Picture (the capture to record) | On-screen text | Narration | Seconds | Rubric it serves | What to cut to stay in length |
+|---|---|---|---|---|---|---|---|---|
+| `permissions` | Agent permissions | Beat 2 (the agent is its own Linux user with no network and no Apify token) | T-AP-S1: the Apify app's permissions on the clip box. Allow one, Deny one, revoke one, then the OS refuses the revoked use | Agent permissions · the OS enforces the Apify app's manifest · Allow · Deny · revoke | The OS enforces the Apify app's manifest. Like phone app permissions, you can Allow, Deny or revoke. | 8.4 | Meaningful use of Apify and overall quality: what the Apify app may do is the OS's call | Beat 3's second sentence "They came back with AirPods Pro three at two ninety-nine ninety-nine Canadian, and Cole Coffee Café in Oakland." (about 8 s; the two result cards keep the price and the place on screen; regenerate beat 3 with `--only 3`) |
+
+Length: target 1:05. Every slot in adds about 8.4 s and the cuts above take out about 8 s, so the video runs about 1:05. Cut sizes are estimates from each beat's window; the build's length check has the final say.
+
+### Slot narration
+
+#### permissions
+
+```text
+The OS enforces the Apify app's manifest. Like phone app permissions, you can Allow, Deny or revoke.
+```

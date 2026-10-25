@@ -68,6 +68,7 @@ Shared (see `capture.md`): A06, A30, D01 (the iPhone simulator paired to the cli
 | T-CB-04 | Earn, Bazaar, metered | Terminal on a test machine against the public Vultr box | `curl -i` the audit route (402, $0.01); run `listX402DiscoveryMerchant({ payTo })` for the box's pay-to address and hold on both routes; then a metered search task's payments row (cap $0.02, charged $0.002) |
 | T-CB-05 | One-command reuse | A clean Linux user or throwaway VM, not a real Claude config | Run the install line from `tracks/wallet/README.md`; start Claude Code; ask it to buy a joke; hold on the "Spend $0.01?" prompt and the answer; then open `tracks/wallet/FEEDBACK.md` on GitHub and scroll |
 | T-CB-06 | Solana Explorer | Chromium in Xvfb on the Linux build machine, public pages, no sign-in | Open the wallet address page (devnet) and scroll; open one payment (`.../tx/Urd99...` has the fee payer and memo); open the fingerprint (`.../tx/ucAyk...`, memo `gurtos-audit v1 seq=595`); links are in `solana.mdx` |
+| T-CB-S1 | A signed receipt: scan, verify, tamper, fail (slot: only once signed receipts are merged) | Server clip box with the wallet track on, on a build where signed receipts are merged; a phone or the simulator's camera for the scan | Open one receipt and hold on its QR code; scan it and hold on the public verify page; change the receipt and run the check again; hold on the failure. Label TEST MONEY if it is a devnet payment's. Use only the labels the page shows |
 
 ## Check before render
 
@@ -87,3 +88,21 @@ Shared (see `capture.md`): A06, A30, D01 (the iPhone simulator paired to the cli
   up to 109.
 - Beat 7 shows general routing, not a wallet payment. If a wallet payment over a person's limit on Business is not
   verified by capture time, cut beat 7's first sentence.
+
+## Slots: standout features (use only once merged)
+
+These beats stay out of the video until the feature is merged on main and its check passes. When one is ready, record its capture, add its line to `docs/video/slots.json`, generate its narration with `narration/say.py <script> --slots`, and rebuild: later beats move by themselves.
+
+| Slot id | Feature | Goes after beat | Picture (the capture to record) | On-screen text | Narration | Seconds | Rubric it serves | What to cut to stay in length |
+|---|---|---|---|---|---|---|---|---|
+| `receipts` | Signed receipts | Beat 6 (Solana makes it checkable; a log fingerprint on Explorer) | T-CB-S1: a signed receipt from the clip box with its QR code (for a devnet payment if the build offers one); a phone scans it and the public verify page says it checks out; then the receipt is tampered with and the same check fails | Signed receipt · QR code · public verify page · log and Solana anchored · tampered: fails · TEST MONEY if the receipt is for a payment | Each signed receipt has a QR code. A public page verifies it against the log and Solana, and a tampered receipt fails. | 10.6 | Solana: real use of Solana (beat 6); Coinbase: technical design (payments anyone can check) | Beat 7's first sentence "On Business, any request over a limit goes to the person the rules name." with the A30 shot (about 5 s), beat 5's "We kept twenty-eight points of builder feedback." with the FEEDBACK.md scroll (about 4 s), and beat 4's metered row (about 2 s), all on the script's cut list |
+
+Length: target 1:30. Every slot in adds about 10.6 s and the cuts above take out about 11 s, so the video runs about 1:30. Cut sizes are estimates from each beat's window; the build's length check has the final say.
+
+### Slot narration
+
+#### receipts
+
+```text
+Each signed receipt has a QR code. A public page verifies it against the log and Solana, and a tampered receipt fails.
+```

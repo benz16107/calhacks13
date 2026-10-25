@@ -64,6 +64,8 @@ Shared (see `capture.md`): T-HY-01 (the APP-1043 quick run), A06, A30, G08. Its 
 | T-CRS-01 | Pull reasons and the pull limit | Clip box (Business on, Fogline seed) with the CRS keys in its vault, after the credit desk's CRS step | Run the pulls step of `tracks/credit-desk/demo-crs.ts` on the clip box; open Activity, filter to the analyst task; hold on a `credit-application` pull, the refused "curiosity" pull and the refused 5th pull |
 | T-CRS-02 | Stranger's agent refused; fraud case page | Same box | `POST /t/mana/guest {kind:'credit'}` for P13 (screen the reply: 403 in plain words, no task made); then open `GET /t/credit-desk/case?application=APP-1043` (the case page); then A30 on the controller's phone |
 | T-CRS-03 | The fraudster who argues | Same box | Run the arguer step of `demo-crs.ts` (scripted); Activity filtered to `fraud.stop` notes; open one refusal with FRD-1 and GEN-3; show the count of 9 |
+| T-CRS-S1 | Credit desk app permissions: Allow, Deny, revoke (slot: only once agent permissions are merged) | Clip box (Business on, Fogline seed) on a build where agent permissions are merged | Open the credit desk app's permissions and hold on its manifest; Allow one permission, Deny one, revoke one; then trigger the revoked use and hold on the OS refusing it. Use only the labels the screen shows |
+| T-CRS-S2 | Flight recorder replay of the APP-1043 task (slot: only once the flight recorder is merged) | Same box as T-HY-01, after the Quick run, on a build where the flight recorder is merged | Open the flight recorder on the APP-1043 task; step through it, hold on a step with a file and on an approval, then press Keep. Show only what the recorder lists |
 
 ## Check before render
 
@@ -74,3 +76,28 @@ Shared (see `capture.md`): T-HY-01 (the APP-1043 quick run), A06, A30, G08. Its 
 - The scored runs were on Server and the Business screens come from the seeded Fogline box. "Fogline Supply (made up)"
   stays on screen in beat 3.
 - No SSN or last name of a test person on screen; blur the case page's guarantor line if it shows one.
+
+## Slots: standout features (use only once merged)
+
+These beats stay out of the video until the feature is merged on main and its check passes. When one is ready, record its capture, add its line to `docs/video/slots.json`, generate its narration with `narration/say.py <script> --slots`, and rebuild: later beats move by themselves.
+
+| Slot id | Feature | Goes after beat | Picture (the capture to record) | On-screen text | Narration | Seconds | Rubric it serves | What to cut to stay in length |
+|---|---|---|---|---|---|---|---|---|
+| `permissions` | Agent permissions | Beat 4 (every pull needs a stated reason and stays under a limit) | T-CRS-S1: the credit desk app's permissions on the Fogline box. Allow one, Deny one, revoke one, then the OS refuses the revoked use | Agent permissions · the OS enforces the credit desk's manifest · Allow · Deny · revoke | The OS enforces the credit desk's manifest. Like phone app permissions, you can Allow, Deny or revoke. | 8.4 | Best Financial AI Agent (beat 4): limits on what a seat may do | Beat 4's third row, the fifth-pull refusal (about 3 s, on the script's cut list), and beat 3's A06 hold (about 3 s; "each seat is its own Linux user" stays over G-CRS-2) |
+| `flight-recorder` | The flight recorder | Beat 5 (stranger's agent checked first; a fraud hold waits for a person) | T-CRS-S2: the flight recorder on the APP-1043 task. Step through the CRS pulls, the fraud hold and the controller's yes, with the files; end on Keep | Flight recorder · replay the whole task step by step · its files and approvals · then Keep or Undo | You can replay the whole task step by step, with its files and approvals. Then Keep or Undo. | 8.8 | Best Identity/Fraud and Best Financial AI Agent (beat 5): the evidence and the person's yes, in order | Beat 5's guest-path half: "A stranger's agent is identity-checked first." and its T-CRS-02 403 shot (about 5 s, on the script's cut list), and beat 2's "On an ordinary computer, an agent doing these checks holds the login." (about 5 s; G-CRS-2 in beat 3 shows it) |
+
+Length: target 1:05. Every slot in adds about 17.2 s and the cuts above take out about 16 s, so the video runs about 1:06. Cut sizes are estimates from each beat's window; the build's length check has the final say.
+
+### Slot narration
+
+#### permissions
+
+```text
+The OS enforces the credit desk's manifest. Like phone app permissions, you can Allow, Deny or revoke.
+```
+
+#### flight-recorder
+
+```text
+You can replay the whole task step by step, with its files and approvals. Then Keep or Undo.
+```

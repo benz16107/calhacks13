@@ -1,8 +1,8 @@
 # GurtOS videos
 
 Everything needed to make the Cal Hacks 13 videos: the list, the scripts, the capture plan, the narration plan and a
-HyperFrames project with GurtOS's look. **Status: Ben is editing the scripts.** No captures, narration or renders
-until he hands back his edits.
+HyperFrames project with GurtOS's look. **Status (Oct 25): the main video and Armadin are rendered** (`out/INDEX.md`, `REVIEW.md`, `upload.md`).
+The other 17 wait for Ben's feedback on those two.
 
 **Ben's decisions (Oct 24):** the narration says "Gurt O.S."; the clone's pace stays as it is; Ben records the ASI:One
 shots for the Fetch.ai video himself; he added ElevenLabs credits.
@@ -15,6 +15,8 @@ shots for the Fetch.ai video himself; he added ElevenLabs credits.
 | `capture/` | `x11rec.sh` (record any command's windows at 1920 x 1080, 60 fps), `shots.mjs` (the shared web shots against the clip box), `seed-business.ts` (Fogline Supply on the clip box) |
 | `capture.md` | Every screen recording: machine, data, state and exact steps. Shots are shared across videos by ID |
 | `narration.md`, `narration/say.py` | Ben's cloned voice on ElevenLabs: settings, pronunciation, credit budget; the script that makes each video's voice |
+| `films/<id>.mjs`, `build.mjs` | One spec per video, and the builder that turns it and the voice into a HyperFrames project (`build/<id>/`) and a render (`out/<id>.mp4`) |
+| `qc.py`, `slots.json` | The render check; the standout features that are ready to drop in (empty until one merges) |
 | `studio/` | The HyperFrames project: GurtOS look, title card, lower third, captions, the 10-second test render |
 | `../videos.md` | The first shot notes, written before the build finished. These scripts replace them |
 

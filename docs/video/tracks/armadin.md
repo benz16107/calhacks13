@@ -31,7 +31,7 @@ steps every take".
 | 2 | 0:12 to 0:23 | G-AR-2: a source card, "Shai-Hulud, September 2025", the CISA sentence in two lines, link in small mono. Cut to T-AR-01: the task "Add a colour helper to the project", state Undone, red notice listing the npm registry, cloud metadata address, webhook.attacker.example, 1.1.1.1 | CISA, Sept 23, 2025: over 500 packages compromised; tokens and cloud keys sent to an endpoint the actor controlled. Ours: gurt-chalk-utils, a harmless imitation, real `npm install`. 10 of 11 steps blocked or contained | "CISA says a September twenty twenty-five worm compromised over five hundred npm packages. We ran a harmless copy: ten of eleven steps were blocked or contained." | Poisoned package (features: Armadin row, merged af40b1c; showcase Numbers 10/11); source `showcase/src/content/tracks/armadin.mdx` |
 | 3 | 0:23 to 0:37 | A03: the road-bike task, Blocked banner, open the task. T-AR-02: Activity filtered to that task, rows appear one at a time, each with a red tag: vault read EACCES, `net.blocked` attacker.example, `net.blocked` 1.1.1.1:443, self-approval to the box's API refused. Undo, then "Undone" | Moment 2 · the booby-trapped page. Vault read: EACCES. attacker.example: proxy refused. 1.1.1.1: firewall refused. Self-approval: refused. Scripted agent: same steps every take | "Now the booby-trapped page. The scripted agent obeys its hidden orders. The vault read fails. The proxy and the firewall refuse the sends. Approving itself is refused." | Moment 2, verified Oct 24 00:54 (scripted agent); the refused self-approval is in the same 10 of 10 checks |
 | 4 | 0:37 to 0:45 | T-AR-03: the iPhone lock screen banner "An agent tried to leak a key", then the app's Task page, Undone. Small footnote under it | Tripwire: a decoy AWS key in every task. Sent out, the task ends undone and the owner's phone is alerted. Looks in plain HTTP requests, tool inputs and the log, not HTTPS bodies. iOS simulator: this is the notice the box builds, not a push received over the air | "Every task holds decoy cloud keys. Send one out, and the task ends and your phone is alerted." | Tripwire keys (features: merged c51c8c7); limits on the showcase page |
-| 5 | 0:45 to 0:54 | T-AR-04: the credit desk (Business) on the BEC case: the lookalike-sender invoice "we changed banks" refused with rule AP-4 before any approval is asked; the second bill, over the AP clerk's $5,000 limit, waits in Waiting for me, the controller taps No. Neither paid | Lookalike bank change: refused in code, AP-4. Over-limit bill: controller says no. Nothing paid. Test bank (Capital One Nessie), made-up company. FBI IC3, 2025: 24,768 BEC complaints, $3,046,598,558 lost | "A lookalike email says we changed banks. A rule refuses it. An over-limit bill waits for the controller, who says no. Test money." | Hijacked payment (features: Armadin row, merged af40b1c); the controller's refusal; IC3 source on the showcase page |
+| 5 | 0:45 to 0:54 | T-AR-04: the credit desk (Business) on the BEC case: the lookalike-sender invoice "we changed banks" refused with rule AP-4 before any approval is asked; the second bill, over the AP clerk's $5,000 limit, waits in Waiting for me, the controller taps No. Neither paid | Lookalike bank change: refused in code, AP-4. Over-limit bill: controller says no. Nothing paid. Test bank (Capital One Nessie), made-up company. FBI IC3, 2025: 24,768 BEC complaints, $3,046,598,558 lost | "A lookalike email says we changed banks. A rule refuses it. An over-limit bill waits for a person, who says no. Test money." | Hijacked payment (features: Armadin row, merged af40b1c); the controller's refusal; IC3 source on the showcase page |
 | 6 | 0:54 to 1:02 | T-AR-05: a terminal in the clip box VM beside a running task: `Seccomp: 2`, `cpu.max 200000 100000`, `MemoryMax 2G`, `MemorySwapMax 0`, `TasksMax 512`. Then G-AR-3: two amber lines, "Landlock" and "per-task disk quota", each marked Not built | Per-task sandbox: system-call filter, 2 CPU cores, 2 GB with no swap, 512 processes. Not built: Landlock. Not built: a per-task disk quota | "Each task has a system-call filter, a CPU cap, and memory with no swap. Not built: Landlock, and a disk quota." | The sandbox (features: merged c51c8c7); the limits are from the same row |
 | 7 | 1:02 to 1:15 | G05: the scoreboard, 16 rows fill, 14 green "caught", 2 amber "not covered" (disk fill; data sent to a host the task may reach); lower third "Run on two machines, Oct 24". Then G08 end card | 16 OS-level attacks: 14 caught, 2 published as not covered. Laptop VM (no swap) and cloud box (8 GB swap): same score. GurtOS · open source, Apache-2.0 | "We publish the score: sixteen OS-level attacks, fourteen caught, two not covered, on two machines, in every edition. Gurt O.S. is open source." | Scoreboard (`tracks/armadin/SCOREBOARD.md`; showcase Numbers 14/16 and 2 of 2) |
 
@@ -51,7 +51,7 @@ Now the booby-trapped page. The scripted agent obeys its hidden orders. The vaul
 
 Every task holds decoy cloud keys. Send one out, and the task ends and your phone is alerted.
 
-A lookalike email says we changed banks. A rule refuses it. An over-limit bill waits for the controller, who says no. Test money.
+A lookalike email says we changed banks. A rule refuses it. An over-limit bill waits for a person, who says no. Test money.
 
 Each task has a system-call filter, a CPU cap, and memory with no swap. Not built: Landlock, and a disk quota.
 
@@ -84,3 +84,22 @@ source card), G-AR-3 (the two "not built" lines). Its own captures:
 - "Not built" lines match the showcase's sandbox note: no Landlock, no disk quota.
 - The payment shown is the made-up Fogline company and the Nessie test bank, labelled test money.
 - Nothing private on screen (`../capture.md`, "Never on screen"): no machine name in the terminal, no vault path.
+
+## Slots: standout features (use only once merged)
+
+None of these was on main when this cut was made, so none is shown or said. When one is ready: record its capture,
+add it to `docs/video/slots.json`, run `narration/say.py tracks/armadin.md --slots`, then rebuild. Later beats move
+by themselves. With both in, the video runs about 1:24, inside 1:30.
+
+| Slot id | Feature | Goes after beat | Picture | On-screen text | Narration | Seconds | Rubric it serves |
+|---|---|---|---|---|---|---|---|
+| `attack-yourself` | Attack it yourself | 3 (the booby-trapped page) | T-AR-S1: paste an injection into the live attack page; each defence lights up as it stops it (`cap:slot-attack-yourself.mp4`, shared with the main video) | Attack it yourself · Paste an injection, watch each defence stop it | See below | about 7 | Does the defence hold when the model does not? A judge can test it |
+| `try-live` | Try GurtOS live | 7 (end card) | The end card's first line: "Try GurtOS live: <live address>" | Try GurtOS live: <live address> | None (picture only) | 0 | A judge can try it |
+
+### Slot narration
+
+#### attack-yourself
+
+```text
+You can try this yourself. Paste an injection into a live box, and watch each defence stop it, one by one.
+```

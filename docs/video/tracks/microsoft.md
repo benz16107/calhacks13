@@ -68,6 +68,8 @@ Shared (see `capture.md`): A31, A33, A34, G02, G08, G11, and the second half of 
 | T-MS-02 | Work-account sign-in, test provider | Any machine with Node 22.18+ (not the clip box) | Run the sign-in demo (`core/sso-demo.ts`), record its output: PKCE and nonce checks, the person in no mapped group refused, forged tokens refused. Put "Test provider, not a real Entra tenant" on screen |
 | T-MS-03 | Impact view, then the protected-attribute test | Clip box after a Quick run; the repo checkout for the test | (a) Credit desk window > Impact view, hold on "bad credit stopped $20,000". (b) `node --test tracks/credit-desk/fairness.test.ts`, 4 of 4; then RESPONSIBLE.md scrolled past the six headings |
 | T-MS-04 | The adverse-decision letter | Clip box after a Quick run | Open APP-1043's letter in the Credit desk window; hold on "We need to verify some information" (the letter names no check) |
+| T-MS-S1 | One app's permissions: Allow, Deny, revoke (slot: only once agent permissions are merged) | Clip box (Business on, Fogline seed) on a build where agent permissions are merged | Open the app's permissions and hold on its manifest; Allow one permission, Deny one, revoke one; then trigger the revoked use and hold on the OS refusing it. Use only the labels the screen shows |
+| T-MS-S2 | Flight recorder replay of one drill task (slot: only once the flight recorder is merged) | Same box as A34's drill, after it, on a build where the flight recorder is merged | Open the flight recorder on one task from the drill; step through it, hold on a step with a file and on an approval, then press Keep. Show only what the recorder lists Keep the "3 Droid seats on Claude, 7 scripted" note on screen |
 
 ## Check before render
 
@@ -79,3 +81,28 @@ Shared (see `capture.md`): A31, A33, A34, G02, G08, G11, and the second half of 
 - "16 of 17" is the full live run's score. Do not state a minutes-per-application figure: the page states none.
 - "Decline letter": show APP-1043's letter (checked) and say "adverse decision"; the letters are model letters, not a
   claim of legal compliance.
+
+## Slots: standout features (use only once merged)
+
+These beats stay out of the video until the feature is merged on main and its check passes. When one is ready, record its capture, add its line to `docs/video/slots.json`, generate its narration with `narration/say.py <script> --slots`, and rebuild: later beats move by themselves.
+
+| Slot id | Feature | Goes after beat | Picture (the capture to record) | On-screen text | Narration | Seconds | Rubric it serves | What to cut to stay in length |
+|---|---|---|---|---|---|---|---|---|
+| `permissions` | Agent permissions | Beat 3 (roles, limits, seats with no keys) | T-MS-S1: Business on the Fogline box, the permissions of one app. Allow one, Deny one, revoke one, then the OS refuses the revoked use | Agent permissions · the OS enforces each app's manifest · Allow · Deny · revoke · Fogline Supply (made up) | The OS also enforces each app's manifest. You can Allow, Deny or revoke, like phone app permissions. | 8.4 | Responsible design; path to production (a company decides what an app may do) | Beat 2 (9 s): drop "Pilots stay pilots when an agent holds the owner's keys, approves its own work, and leaves no undo." and G02. Beats 1 and 3 already carry the problem. This is the script's own first cut |
+| `flight-recorder` | The flight recorder | Beat 6 (kill-switch drill, bad batch undone) | T-MS-S2: the flight recorder on one task from the drill. Step through it with its files and approvals, then Keep or Undo | Flight recorder · replay a task step by step · its files and approvals · then Keep or Undo · 3 Droid seats on Claude, 7 scripted | A person can replay a task step by step, with its files and approvals. Then Keep or Undo. | 8.8 | Responsible design and path to production: the morning after a bad batch | Beat 6's last sentence "A bad batch was undone in forty-eight." (about 3 s; the on-screen line keeps 48 ms) beat 7's A33 Audit shot (about 3 s, on the script's cut list), and beat 4's last sentence "The clerk is at five of six, not ready." (about 3 s; the on-screen text keeps "5 of 6 agreed, not ready") |
+
+Length: target 1:20. Every slot in adds about 17.2 s and the cuts above take out about 18 s, so the video runs about 1:19. Cut sizes are estimates from each beat's window; the build's length check has the final say.
+
+### Slot narration
+
+#### permissions
+
+```text
+The OS also enforces each app's manifest. You can Allow, Deny or revoke, like phone app permissions.
+```
+
+#### flight-recorder
+
+```text
+A person can replay a task step by step, with its files and approvals. Then Keep or Undo.
+```

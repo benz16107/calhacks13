@@ -68,6 +68,7 @@ Shared (see `capture.md`): A08, A30, G08. Its own:
 | T-EL-03 | The tamper answer | Kibana Agent Builder chat, agent `gurtos-log`; demo run that planted the edit (`DEMO_LIVE=elastic ./demo`) | Ask "Was any log tampered with?", record until the answer names entries 466 to 474. If the new run's entry numbers differ, say the new numbers in the narration and on screen |
 | T-EL-04 | The root-cause question | Same chat | Ask "Why did the job routine fail? Look at demo run a18523.", record the three tool calls and the answer |
 | T-EL-05 | A request becomes an approval | Server clip box with the Elastic track on; the iPhone simulator paired (D01 setup) | Trigger one alert rule (a task that read a page then tried another host), show the `box-requests` row, then the phone's approval and its reason. For the Business version, pick the approver in A30 |
+| T-EL-S1 | A signed receipt: scan, verify, tamper, fail (slot: only once signed receipts are merged) | Server clip box with the Elastic track on, on a build where signed receipts are merged; a phone or the simulator's camera for the scan | Open one receipt and hold on its QR code; scan it and hold on the public verify page; change the receipt and run the check again; hold on the failure. Use only the labels the page shows |
 
 ## Check before render
 
@@ -75,3 +76,21 @@ Shared (see `capture.md`): A08, A30, G08. Its own:
 - The Kibana shots hold no account menu, project name or machine id. Elastic's project ends about Oct 30, so this is the last chance to record it.
 - The limit footnote ("caught, not prevented") stays on screen for beat 6; it comes from the showcase's Limits.
 - "Four oh three" is read as a number in the voice test; if it sounds odd, swap to "a four-zero-three error".
+
+## Slots: standout features (use only once merged)
+
+These beats stay out of the video until the feature is merged on main and its check passes. When one is ready, record its capture, add its line to `docs/video/slots.json`, generate its narration with `narration/say.py <script> --slots`, and rebuild: later beats move by themselves.
+
+| Slot id | Feature | Goes after beat | Picture (the capture to record) | On-screen text | Narration | Seconds | Rubric it serves | What to cut to stay in length |
+|---|---|---|---|---|---|---|---|---|
+| `receipts` | Signed receipts | Beat 4 (a planted edit; Elastic's copy still named the entries) | T-EL-S1: a signed receipt from the clip box with its QR code; a phone scans it and the public verify page says it checks out; then the receipt is tampered with and the same check fails | Signed receipt · QR code · public verify page · checked against the log · tampered: fails | Each signed receipt has a QR code. A public page verifies it against the log, and a tampered receipt fails. | 9.7 | Real data, used for something that matters (beats 2 to 5): anyone can check a record without trusting the box | Beat 5 (10 s, first on the script's cut list): drop "The Agent Builder agent investigates too. Why did the job routine fail? The box blocked a site the routine was never allowed to reach." and T-EL-04. Beat 4 keeps the Agent Builder item |
+
+Length: target 1:10. Every slot in adds about 9.7 s and the cuts above take out about 10 s, so the video runs about 1:10. Cut sizes are estimates from each beat's window; the build's length check has the final say.
+
+### Slot narration
+
+#### receipts
+
+```text
+Each signed receipt has a QR code. A public page verifies it against the log, and a tampered receipt fails.
+```

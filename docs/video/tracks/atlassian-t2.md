@@ -71,6 +71,8 @@ adds T-AT-08 to T-AT-13):
 | T-AT-05 | Rovo: what got blocked, roll back | Same, Rovo chat | Ask "@GurtOS what got blocked this week?"; then "Roll back everything the shopper did today"; hold on the Please review box; Confirm; hold on the report. Needs two fresh `shopper` tasks (the old BOX-17 and BOX-18 are already rolled back) |
 | T-AT-06 | JQL search and bulk roll back | Same, two fresh overnight tasks | Search `project = BOX AND boxBlocked > 0`; tick two issues; Apps, Roll back with GurtOS; hold on the "2 of 2 rolled back" report |
 | T-AT-07 | The dashboard gadget | Same, Jira dashboard with the GurtOS agents gadget | Open the dashboard; hold on the totals and the latest blocked attempts |
+| T-AT-S3 | Flight recorder replay of the BOX-29 task (slot: only once the flight recorder is merged) | Same shoot as T-AT-01 (scripted agent, `worker: fake`), on a build where the flight recorder is merged | Open the flight recorder on the BOX-29 task; step through it, hold on a step with a file and on an approval, then press Keep. Show only what the recorder lists Keep the scripted-agent footnote on screen |
+| T-AT-S1 | The Atlassian track app's permissions: Allow, Deny, revoke (slot: only once agent permissions are merged) | The always-on Server box on a build where agent permissions are merged. Same take as Track 1's T-AT-S1: record once | Open the Atlassian track app's permissions and hold on its manifest; Allow one permission, Deny one, revoke one; then trigger the revoked use and hold on the OS refusing it. Use only the labels the screen shows |
 
 ## Check before render
 
@@ -81,3 +83,28 @@ adds T-AT-08 to T-AT-13):
   text says so and the person picker is a Business shot, not Jira's.
 - No site name, account email, avatar or accountId on screen; the box's address does not appear.
 - Roll back removes file changes only: the Limits line stays on screen in beat 5.
+
+## Slots: standout features (use only once merged)
+
+These beats stay out of the video until the feature is merged on main and its check passes. When one is ready, record its capture, add its line to `docs/video/slots.json`, generate its narration with `narration/say.py <script> --slots`, and rebuild: later beats move by themselves.
+
+| Slot id | Feature | Goes after beat | Picture (the capture to record) | On-screen text | Narration | Seconds | Rubric it serves | What to cut to stay in length |
+|---|---|---|---|---|---|---|---|---|
+| `flight-recorder` | The flight recorder | Beat 3 (every task becomes a Jira issue, written from the box's own log) | T-AT-S3: the flight recorder on the BOX-29 scripted task. Step through the three config changes and the blocked paste attempt, with the files and the waiting approval, then Keep or Undo | Flight recorder · replay the task step by step · its files and approvals · then Keep or Undo · Scripted agent: same steps every take | You can replay that task step by step, with its files and approvals. Then Keep or Undo. | 8.4 | Track 2: audit, the morning after | Beat 2's sentence "Its record is its own story, and the only undo restores everyone's work." (about 5 s; the recorder now shows the record) and beat 7's "A dashboard gadget keeps score." with T-AT-07 (about 3 s, on the script's cut list) |
+| `permissions` | Agent permissions | Beat 4 (JSM approval; in Business the company's role must allow it too) | T-AT-S1: the permissions of the Atlassian track's app on the Server box. Allow one, Deny one, revoke one, then the OS refuses the revoked use (shared with Atlassian Track 1) | Agent permissions · the OS enforces each app's manifest · Allow · Deny · revoke | The OS enforces each app's manifest. Like phone app permissions, you can Allow, Deny or revoke. | 8.0 | Track 2: injection defence and usefulness (what an app may do is set before the agent runs) | The Rovo half of beat 6: "The Rovo agent answers from the log and asks before it rolls back." with T-AT-05 (about 6 s, on the script's cut list), and beat 4's person-picker second (1 s). If the length check still fails, beat 6's "Any issue search can roll several issues back together." with T-AT-06 (about 5 s) |
+
+Length: target 1:30. Every slot in adds about 16.4 s and the cuts above take out about 15 s, so the video runs about 1:31. Cut sizes are estimates from each beat's window; the build's length check has the final say.
+
+### Slot narration
+
+#### flight-recorder
+
+```text
+You can replay that task step by step, with its files and approvals. Then Keep or Undo.
+```
+
+#### permissions
+
+```text
+The OS enforces each app's manifest. Like phone app permissions, you can Allow, Deny or revoke.
+```

@@ -63,9 +63,36 @@ Shared (see `capture.md`): A30, A31, A32, A33, G10, G11. Its own:
 | T-HY-03 | Answer key and the Nessie mismatch | Same box | Open the case folder in the Credit desk window; scroll the answer key; open the ledger view at PMT-8812 |
 | T-HY-04 | One decision, expanded | Same box | Activity, the APP-1043 decision row, expand |
 | T-HY-05 | Bring your own | Same box | Credit desk window, Bring your own tab, pick one of CRS's test people |
+| T-HY-S1 | Credit desk app permissions: Allow, Deny, revoke (slot: only once agent permissions are merged) | Clip box (Business on, Fogline seed) on a build where agent permissions are merged | Open the credit desk app's permissions and hold on its manifest; Allow one permission, Deny one, revoke one; then trigger the revoked use and hold on the OS refusing it. Use only the labels the screen shows |
+| T-HY-S2 | Flight recorder replay of the APP-1043 analyst task (slot: only once the flight recorder is merged) | Same box as T-HY-01, after the Quick run, on a build where the flight recorder is merged | Open the flight recorder on the analyst's APP-1043 task; step through it, hold on a step with a file and on an approval, then press Keep. Show only what the recorder lists The controller's phone is a paired Business person, so the approval names them |
 
 ## Check before render
 
 - The score is the full live run's (16 of 17, 1 false alarm, 6 of 6, 12 min, $5.24), not the older 14-of-14 run.
 - "17 planted errors" matches the answer key at render time.
 - The controller's phone is a paired Business person, so the log names them.
+
+## Slots: standout features (use only once merged)
+
+These beats stay out of the video until the feature is merged on main and its check passes. When one is ready, record its capture, add its line to `docs/video/slots.json`, generate its narration with `narration/say.py <script> --slots`, and rebuild: later beats move by themselves.
+
+| Slot id | Feature | Goes after beat | Picture (the capture to record) | On-screen text | Narration | Seconds | Rubric it serves | What to cut to stay in length |
+|---|---|---|---|---|---|---|---|---|
+| `permissions` | Agent permissions | Beat 4 (the clerk has no credit tools; nobody approves their own request) | T-HY-S1: the credit desk app's permissions on the Fogline box. Allow one, Deny one, revoke one, then the OS refuses the revoked use | Agent permissions · the OS enforces the credit desk's manifest · Allow · Deny · revoke | The OS enforces the credit desk's manifest. Like phone app permissions, you can Allow, Deny or revoke. | 8.4 | Approvals and segregation of duties (beat 4) | Beat 5's second sentence "The clerk checks the ledger against the bank and finds a payment on the wrong invoice." and the Nessie shot (about 6 s) |
+| `flight-recorder` | The flight recorder | Beat 6 (every decision in one append-only log) | T-HY-S2: the flight recorder on the Quick run's analyst task for APP-1043. Step through the CRS results, the fraud hold and the controller's confirmation, with the files; end on Keep | Flight recorder · replay the analyst's task step by step · its files and approvals · then Keep or Undo | Replay the analyst's task step by step, with its files and approvals. Then Keep or Undo. | 8.0 | Every call traceable; proof (beat 6) | Beat 6's A33 Audit and Export CSV shot (about 4 s) and, with permissions also in, the rest of beat 5 (about 5 s), so beat 5 goes whole (beat 7 still says "planted errors"). If the length check still fails, beat 4's A32 403 clip (about 3 s) |
+
+Length: target 1:30. Every slot in adds about 16.4 s and the cuts above take out about 15 s, so the video runs about 1:31. Cut sizes are estimates from each beat's window; the build's length check has the final say.
+
+### Slot narration
+
+#### permissions
+
+```text
+The OS enforces the credit desk's manifest. Like phone app permissions, you can Allow, Deny or revoke.
+```
+
+#### flight-recorder
+
+```text
+Replay the analyst's task step by step, with its files and approvals. Then Keep or Undo.
+```

@@ -1,0 +1,4 @@
+# Generated projects and finished files: rebuilt from films/*.mjs and the git-ignored captures.
+build/
+out/
+__pycache__/

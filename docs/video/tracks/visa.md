@@ -61,9 +61,28 @@ Shared (see `capture.md`): A20, D01, G12, G13. Its own:
 | T-VI-02 | Signed order, three refusals, the mandate | GurtOS Test Store page in the Personal VM's browser | Open the order; run the store's demo refusals (unsigned, changed, replayed) |
 | T-VI-03 | Merchant dashboard | Same store | Open the merchant view after two verified orders |
 | T-VI-04 | Undo refund; stolen session | Personal VM and Stripe test dashboard (test mode only; crop the account name) | Undo the purchase task; show the refund line. Then approve a reorder with a plain tap and show the "approved without Face ID" failure |
+| T-VI-S1 | The Shopper app's permissions: Allow, Deny, revoke (slot: only once agent permissions are merged) | Personal VM on the laptop (final Personal disc) on a build where agent permissions are merged | Open the Shopper app's permissions and hold on its manifest; Allow one permission, Deny one, revoke one; then trigger the revoked use and hold on the OS refusing it. Use only the labels the screen shows |
 
 ## Check before render
 
 - The price on screen is the one Apify returns on the day; say the number from the capture, not $15.36, if it moved.
 - Face ID on the simulator is the software authenticator; the on-screen text must not claim a real device.
 - Best Buy Canada's terms prohibit scraping (noted on the showcase); keep the shot to one read, as in the live run.
+
+## Slots: standout features (use only once merged)
+
+These beats stay out of the video until the feature is merged on main and its check passes. When one is ready, record its capture, add its line to `docs/video/slots.json`, generate its narration with `narration/say.py <script> --slots`, and rebuild: later beats move by themselves.
+
+| Slot id | Feature | Goes after beat | Picture (the capture to record) | On-screen text | Narration | Seconds | Rubric it serves | What to cut to stay in length |
+|---|---|---|---|---|---|---|---|---|
+| `permissions` | Agent permissions | Beat 2 (Personal runs your shopping agent; the card stays in the vault) | T-VI-S1: the Shopper app's permissions in the Personal VM. Allow one, Deny one, revoke one, then the OS refuses the revoked use | Agent permissions · the OS enforces the Shopper app's manifest · Allow · Deny · revoke | The OS enforces the Shopper app's manifest. Like phone app permissions, you can Allow, Deny or revoke. | 8.4 | Trust and responsibility (15) and User experience (25): you stay in control of what the agent may do | Beat 6 (9 s, on the script's cut list): drop "The store sees which orders came from a trusted agent, and turns the bots away." and T-VI-03 |
+
+Length: target 1:25. Every slot in adds about 8.4 s and the cuts above take out about 9 s, so the video runs about 1:24. Cut sizes are estimates from each beat's window; the build's length check has the final say.
+
+### Slot narration
+
+#### permissions
+
+```text
+The OS enforces the Shopper app's manifest. Like phone app permissions, you can Allow, Deny or revoke.
+```

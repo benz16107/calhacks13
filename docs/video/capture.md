@@ -35,6 +35,14 @@ asked to hold all captures until his script edits are in. The recorder itself wa
 | Android | The signed APK in the arm64 emulator | the laptop | Only for the 2-second shot in the main video |
 | Sponsor products (Jira, ASI:One, Agentverse, Elastic, Figma, Mana, Apify Console) | Same Xvfb recorder, with the signed-in browser profile the track thread used | the Linux build machine (the Atlassian thread's signed-in profile) | Crop or blur account menus in the edit with `npx hyperframes media-treatment`, never CSS |
 
+## Recorded so far (Oct 25, from main 282d66d)
+
+Live 60 fps takes in `studio/assets/capture/` (git-ignored): A01, A02 (box screen and phone side by side through
+`capture/split.html`), A03, A04, A05 (with a request left waiting across the power cut), A06, A08, and Armadin's
+AR01 (the poisoned package), AR03 (the booby-trapped page with all four refusals) and AR04 (the lookalike-bank
+payment, answered through the API because of the portal bug in `REVIEW.md`). The rest of section A and the track
+shots wait for Ben's feedback on the first two videos.
+
 ## A. Shared library (record first)
 
 | ID | Shot | Used in | Machine and state | Exact steps |

@@ -1,0 +1,14 @@
+<!doctype html>
+<!-- Two live views of one box in sync, for moment 3: the box's own screen and the phone. Opened by shots.mjs. -->
+<html><head><meta charset="utf-8"><style>
+  html, body { margin: 0; width: 1920px; height: 1080px; background: #171e25; overflow: hidden; }
+  #box { position: absolute; left: 36px; top: 90px; width: 1440px; height: 900px; border: 0; border-radius: 15px; }
+  #phone { position: absolute; left: 1508px; top: 118px; width: 390px; height: 844px; border: 0; border-radius: 44px; zoom: 1; }
+</style></head><body>
+  <iframe id="box"></iframe><iframe id="phone"></iframe>
+  <script>
+    const q = new URLSearchParams(location.search), base = q.get('box') || 'http://127.0.0.1:7795';
+    document.getElementById('box').src = base + '/screen';
+    document.getElementById('phone').src = base + '/';
+  </script>
+</body></html>

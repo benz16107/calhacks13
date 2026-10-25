@@ -63,6 +63,8 @@ Its own:
 | T-AT-11 | An approval from Jira: BOX-30 | Same, scripted agent (`worker: fake`) | Fire a scripted task that asks to spend $3.00 of test money on a $1.00 budget; open the panel; Approve; then show the JSM request for a production push and Approve. Label TEST on screen |
 | T-AT-12 | Rovo: what did agents change this week | Same, Rovo chat | Ask "@GurtOS what did agents change this week?"; hold on the answer |
 | T-AT-13 | The Confluence daily page | Same, Confluence space AGENTS | Open "What our agents did, <date>" for today; the page rewrites every 15 minutes, so record after a run |
+| T-AT-S1 | The Atlassian track app's permissions: Allow, Deny, revoke (slot: only once agent permissions are merged) | The always-on Server box on a build where agent permissions are merged. Shared with Track 2 | Open the Atlassian track app's permissions and hold on its manifest; Allow one permission, Deny one, revoke one; then trigger the revoked use and hold on the OS refusing it. Use only the labels the screen shows |
+| T-AT-S2 | Flight recorder replay of the PLAT-33510 task (slot: only once the flight recorder is merged) | Same shoot as T-AT-10, on a build where the flight recorder is merged | Open the flight recorder on the task T-AT-10 shows (real Droid with Claude); step through it, hold on a step with a file and on an approval, then press Keep. Show only what the recorder lists No site name, email or accountId on screen |
 
 ## Check before render
 
@@ -72,3 +74,28 @@ Its own:
 - The panel's buttons on the take: the page lists Approve, Deny and Roll back. If a Keep button exists in the build,
   say so; the script does not claim one.
 - No site name, email, accountId or box address on screen.
+
+## Slots: standout features (use only once merged)
+
+These beats stay out of the video until the feature is merged on main and its check passes. When one is ready, record its capture, add its line to `docs/video/slots.json`, generate its narration with `narration/say.py <script> --slots`, and rebuild: later beats move by themselves.
+
+| Slot id | Feature | Goes after beat | Picture (the capture to record) | On-screen text | Narration | Seconds | Rubric it serves | What to cut to stay in length |
+|---|---|---|---|---|---|---|---|---|
+| `permissions` | Agent permissions | Beat 3 (own Linux user, no keys, no network, twenty-five cents) | T-AT-S1: the permissions of the Atlassian track's app on the Server box. Allow one, Deny one, revoke one, then the OS refuses the revoked use (shared with Atlassian Track 2) | Agent permissions · the OS enforces each app's manifest · Allow · Deny · revoke | The OS enforces each app's manifest. Like phone app permissions, you can Allow, Deny or revoke. | 8.0 | Track 1 and usefulness: agents inside limits the OS enforces | Beat 2's T-AT-09 Automation editor shot (about 5 s) and the clause "or a Run in Gurt O.S. step in an Automation rule", so the sentence reads "Handing it over is a label or an assignment." (regenerate beat 2) |
+| `flight-recorder` | The flight recorder | Beat 4 (the result comment with the exact diff) | T-AT-S2: the flight recorder on the PLAT-33510 task from T-AT-10. Step through it with its files and approvals, end on Keep | Flight recorder · replay the task step by step · its files and approvals · then Keep or Undo | You can replay the task step by step, with its files and approvals. Then Keep or Undo. | 8.4 | Track 1: the result and the diff, seen step by step | Beat 5's JSM half (T-AT-11's JSM request, about 4 s) beat 4's last sentence "Starting it twice does not run it twice." (about 3 s), and beat 6's "Confluence gets a daily page." with T-AT-13 (about 4 s) |
+
+Length: target 1:20. Every slot in adds about 16.4 s and the cuts above take out about 16 s, so the video runs about 1:20. Cut sizes are estimates from each beat's window; the build's length check has the final say.
+
+### Slot narration
+
+#### permissions
+
+```text
+The OS enforces each app's manifest. Like phone app permissions, you can Allow, Deny or revoke.
+```
+
+#### flight-recorder
+
+```text
+You can replay the task step by step, with its files and approvals. Then Keep or Undo.
+```
