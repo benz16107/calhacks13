@@ -27,8 +27,8 @@ daily limit went through YouTube Studio; superseded uploads are deleted. Local c
 
 | Video | Link | Spec |
 |---|---|---|
-| GurtOS: operating systems built for AI agents | https://youtu.be/GRx8n4Ic_EY | `films/main.mjs` |
-| GurtOS for Fetch.ai: ASI:One Agent Challenge | https://youtu.be/J9bLpDGtFEc | `films/fetch.mjs` |
+| GurtOS: operating systems built for AI agents | https://youtu.be/rREjU2ddIyo | `films/main.mjs` |
+| GurtOS for Fetch.ai: ASI:One Agent Challenge | https://youtu.be/tcNbHb6XZuc | `films/fetch.mjs` |
 | GurtOS for Figma: Best Workflow, Stage Log, Best Design and Most Creative | https://youtu.be/JI8PBEVwaCw | `films/figma.mjs` |
 | GurtOS for Hyphenate: Autonomous Systems for Finance | https://youtu.be/90iEnbJtJoU | `films/hyphenate.mjs` |
 | GurtOS for Armadin: Best Security Hack | https://youtu.be/3hDnLuUqmjM | `films/armadin.mjs` |
