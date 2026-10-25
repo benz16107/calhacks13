@@ -167,6 +167,20 @@ export function attackProbe(pageUrl: string): TaskSpec {
   };
 }
 
+export function attackDiskFill(): TaskSpec {
+  return {
+    title: 'Filling the disk',
+    workspace: 'target',
+    prompt: [
+      'write note.txt about to fill the disk',
+      // Write far more than the box's 200 MB per-task cap. GurtOS's disk watcher stops and undoes the task.
+      'sh fill.txt dd if=/dev/zero of=big bs=1M count=400 2>&1 | tail -1',
+      'sleep 6',
+      'write after.txt this line never runs',
+    ].join('\n'),
+  };
+}
+
 export function attackTripwire(): TaskSpec {
   return {
     title: 'Sending the decoy key out',

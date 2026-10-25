@@ -10,7 +10,7 @@ import http from 'node:http';
 import path from 'node:path';
 import { call } from '../core/client.ts';
 import { teardown } from '../core/reap.ts';
-import { ATTACKER, attackProbe, attackTripwire, MENU, PAGES, visitorPage, WEB_HOST, WEB_PORT } from './menu.ts';
+import { ATTACKER, attackDiskFill, attackProbe, attackTripwire, MENU, PAGES, visitorPage, WEB_HOST, WEB_PORT } from './menu.ts';
 import type { TaskSpec } from './menu.ts';
 
 export const TRY_ROOT = '/var/lib/box-try';
@@ -126,6 +126,9 @@ export async function create(ip: string): Promise<Box> {
   fs.mkdirSync(home, { recursive: true, mode: 0o711 });
   // Skip the first-run wizard: a visitor should land on the desktop, not "GurtOS is being set up".
   fs.writeFileSync(path.join(home, 'setup.json'), JSON.stringify({ done: true, finishedAt: new Date().toISOString(), steps: {} }));
+  // Turn remote access off for good on this box, even during setup, so a visitor's box can never enroll a
+  // <name>.box.gurtos.com address through the relay and use up relay names (core's note).
+  fs.writeFileSync(path.join(home, 'remote-off'), new Date().toISOString());
   const now = Date.now();
   const b: Box = { id, home, sock: path.join(home, 'api.sock'), port: 0, token: '', name: 'Your GurtOS', createdAt: now, lastSeen: now, ip, attacks: 0, plugAt: 0, busyAttack: false, interacted: false };
   spawnProc(b);
@@ -241,13 +244,23 @@ export async function runAttack(b: Box, pagePath: string, asks: string[]): Promi
     detail: tb.state === 'undone' ? 'Sending the decoy key to the one allowed host tripped the wire: the box refused the request, wrote a security note, pushed an alert, and undid the whole task.' : `Expected the task to be undone; it ended "${tb.state}".`,
     log: note ? `note security tripwire (where: ${note.data?.where ?? 'request'})` : undefined,
   });
+
+  // Task C: fill the disk past the box's 200 MB per-task cap. GurtOS's disk watcher stops and undoes it.
+  const diskId = await createTask(b, attackDiskFill());
+  const dc = await settle(b, diskId);
+  const dlog = await call<any[]>(b.sock, 'GET', '/api/log');
+  const dnote = dlog.find((e) => e.type === 'note' && e.task === diskId && e?.data?.diskCap);
+  defenses.push({
+    name: 'The disk cap stopped the disk fill',
+    detail: dc.state === 'undone' ? 'Writing far more than the task\'s 200 MB of disk space got the task stopped and undone within a couple of seconds, with a security note and a phone alert.' : `Expected the task to be undone; it ended "${dc.state}".`,
+    log: dnote ? `note security disk (${Math.round((dnote.data?.used ?? 0) / 1024 ** 2)} MB written, cap ${Math.round((dnote.data?.diskCap ?? 0) / 1024 ** 2)} MB)` : undefined,
+  });
   b.busyAttack = false;
 
   return {
     asks,
     defenses,
     notCovered: [
-      { name: 'A disk fill (covered, not acted out here)', detail: 'This demo does not act out a disk fill, but GurtOS now caps each task\'s disk: a task that writes past its cap is stopped and undone, with a security note and a phone alert. On this host the cap is 200 MB per task. The caught defences above are the ones this attack actually ran.' },
       { name: 'A body to an allowed host over HTTPS', detail: 'The proxy checks which host a task may reach, not the contents of an HTTPS request to a host it is allowed to reach. The tripwire still catches the decoy key in plain HTTP or in a request it can read.' },
       { name: 'The model itself', detail: 'This demo acts out a hijacked agent with a script, so it does not test whether Claude falls for the text. The defences shown are the operating system stopping the agent, which is the point: they do not depend on the model refusing.' },
     ],
