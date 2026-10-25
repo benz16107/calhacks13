@@ -67,6 +67,7 @@ export async function startRun(box: Box, body: any): Promise<Response> {
       for (const n of coordinated ? [1, 2] : [0]) {
         tasks[n > 1 ? 'analyst2' : seat.key] = (await box.createTask({
           title: `${seat.title}: ${meta.case_id}${n > 1 ? ' (2)' : ''}`, workspace: info.workspace, worker, seat: seat.title, source: `credit-desk:${run}`,
+          budgetCents: 0, // every payment asks (the box's default budget is $1); a guest's run must never pay
           tools: withBank([...seat.tools, ...(coordinated ? COORDINATE_TOOLS : [])]), prompt: coordinated ? coordinatedAnalystPrompt(brief, queue, n) + (body.extra ? `\n\n${body.extra}` : '') : prompt,
         })).id;
       }
