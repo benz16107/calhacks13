@@ -157,6 +157,7 @@
     } catch (e) { out.innerHTML = '<p>something went wrong; try again</p>'; }
   }
 
-  if (window.__TRY__ && window.__TRY__.attack) openAttack();
+  // Arrived via /attack: open the attack overlay once the portal has settled (so its routing doesn't close it).
+  if (window.__TRY__ && window.__TRY__.attack) setTimeout(openAttack, 600);
 })();
 </script>
