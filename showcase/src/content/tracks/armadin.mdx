@@ -112,7 +112,7 @@ The package reads environment variables and dotfiles, asks cloud metadata for cr
 </div>
 </Compare>
 
-Both are from a real run of the poisoned package on a demo box, in the iOS simulator. The simulator cannot receive Apple pushes, so the notification was built by the box's own push code, encrypted for the simulator's subscription and shown by the app's normal decrypt path. The tripwire pushes only to owner devices, and only when the box has remote access set up. The iPhone app is in internal TestFlight testing, not on the App Store.
+Both are from a real run of the poisoned package on a demo box, in the iOS simulator. A simulator cannot receive Apple pushes, so the left picture is the notice GurtOS sends, built by the box's own push code from the real tripwire event and shown by the app's normal decrypt path, not a push received over the air. The tripwire pushes only to owner devices, and only when the box has remote access set up. The iPhone app is in internal TestFlight testing, not on the App Store.
 
 ## The scoreboard, with the misses
 

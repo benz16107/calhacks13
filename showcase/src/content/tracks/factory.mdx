@@ -95,7 +95,7 @@ This run was real Droid with Claude Sonnet 5.5, started on Oct 24 from the Facto
 
 **2. Plan, then approve.** Droid starts in Factory's spec mode, which can read but not change anything. Its plan becomes an approval on every screen. Nothing runs until Approve.
 
-The same plan waits on every paired device, and the box decides who may answer. A plan moves no money, so the plain Approve and Deny work from the iPhone notification, and the Watch may approve it too. The Watch is capped at $25 and never approves a Business request or a Shopper purchase.
+The same plan waits on every paired device, and the box decides who may answer. A plan moves no money, so the plain Approve and Deny work from the iPhone notification, and the Watch may approve it too. A Watch approves up to $25 by default, only while it reports being on the wrist, and never a GurtOS Business request or a Shopper purchase; anything else waits for Face ID on the iPhone.
 
 <Compare labels={["iPhone notification", "Apple Watch"]}>
 <div slot="a">
@@ -110,9 +110,9 @@ The same plan waits on every paired device, and the box decides who may answer. 
 </div>
 </Compare>
 
-<Shot src="track/factory/mac-menu-plan.png" size="phone" alt="The GurtOS Mac menu bar menu for Home box, with four requests under Needs you, the last Fix add() so its test passes, then Ask Home box, Computers, Pause all agents, Settings and Quit." caption="On the Mac where you code, the plan sits under Needs you, beside test-money requests from other tasks." />
+<Shot src="track/factory/mac-menu-plan.png" size="phone" alt="The GurtOS Mac menu bar menu for Home box, with four requests under Needs you, the last Fix add() so its test passes, then Ask Home box, Computers, Pause all agents, Settings and Quit." caption="On the Mac where you code, the plan sits under Needs you, beside test-money requests from other tasks. macOS blocks screen capture over ssh, so this menu is drawn by the app's own render mode from its live data." />
 
-The notification and the Watch are from the iOS and watchOS simulators, and the plan is a real Droid plan from the box. The simulator cannot receive Apple pushes, so the notification was built by the box's own push code and shown by the app's normal decrypt path. The iPhone app is in internal TestFlight testing and the Mac app is a notarized download; neither is on an app store.
+The plan is a real Droid plan from the box, denied afterwards. The notification and the Watch are from the iOS and watchOS simulators. A simulator cannot receive Apple pushes, so this is the notice GurtOS sends, built by the box's own push code and shown by the app's normal decrypt path, not a push received over the air. The iPhone app is in internal TestFlight testing and the Mac app is a notarized download; neither is on an app store.
 
 **3. Work, review, diff.** After Approve, a coder droid with edit tools made the change and ran the test. A reviewer droid with read-only tools checked it and answered `VERDICT: APPROVE`. Every tool call is a step in the log.
 
