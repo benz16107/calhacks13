@@ -18,14 +18,13 @@ How it was walked:
 
 ## Status
 
-**Fixed 87, closed 1, open 4** (92 findings: 19 web, 22 Server, 36 Personal, 15 parity). Each fixed
+**Fixed 89, closed 1, open 2** (92 findings: 19 web, 22 Server, 36 Personal, 15 parity). Each fixed
 finding gets a **Fixed** line with the commit and an after-screenshot in `after/`.
 
 | Owner | Open |
 |---|---|
-| image | P-4 (GNOME first-run colours), then P-1 with release |
+| image and release | P-1: the rebuild from 4a44586, go after the test-disc walk |
 | personal | E-14 (measured once on the rebuilt ISO) |
-| Ben | E-6 (firewall: image built the switch, the policy is unchanged) |
 
 Release (P-1): one rebuild of all four ISOs from one main commit, about 75 minutes to a verified release plus 20 for
 the download pages. The UX thread sends the commit once the Personal, image and core P0 and P1 fixes are in. Target
@@ -444,8 +443,8 @@ followed by a 7-step GurtOS Setup (05, 10, 13). Fix: the rebuild brings `1419746
 ready. One more step: set up GurtOS." with Continue. Owner: image.
 
 
-**Partly fixed in 0b9bfcc** (image): the last page says "Your account is ready. One more step: set up GurtOS." The
-orange buttons and aubergine backdrop on GNOME's own first-run pages remain.
+**Fixed in 0b9bfcc and 4a44586** (image): the last page says "Your account is ready. One more step: set up
+GurtOS.", and GNOME's own first-run pages are GurtOS blue on the GurtOS backdrop. Confirm on the rebuilt ISO.
 ### P-5. P1. "Needs you" counts disagree everywhere
 ![](shots/personal/76-many-tasks-popover.png)
 The pill, popover header and app badge add tasks to review to approvals; the sections count approvals only: "2
@@ -653,8 +652,10 @@ kernel), plus E-13's About logo and E-15's "erases the disk". Personal ISO with 
   update-manager and update-notifier; show `box-update` state in GurtOS Settings.
 - **E-4** Online Accounts lists Google and Microsoft but can't sign in (`gnome-online-accounts` missing).
 - **E-5** Settings, Sharing is missing.
-- **E-6** the inbound firewall drops everything a desktop uses (ssh, SMB, remote desktop, mDNS). **Ben's call**:
-  open what the person turns on in Sharing and keep the drop for agent users only, or keep it locked and say so.
+- **E-6** the inbound firewall drops everything a desktop uses (ssh, SMB, remote desktop, mDNS). **Fixed in 4a44586** (image, Ben's decision): a port
+  opens only while the person has that service on in Settings, Sharing (remote desktop, file and media sharing, a
+  shared printer, mDNS, ssh if installed); by default inbound stays dropped, task users never open a port, Server is
+  unchanged.
 - **E-7** no swap, zram or oomd. Fix: `systemd-zram-generator` and `systemd-oomd`.
 - **E-8** no screen reader, braille or input methods (Orca, brltty, ibus).
 - **E-9** laptop packages: power profiles, firmware updates, fingerprint, Thunderbolt, iPhone, NTFS, SMB and network
