@@ -17,6 +17,19 @@ export default async (d: DemoKit) => {
   const drift = spawnSync(process.execPath, [...process.execArgv, new URL('../docs/figma/tokens/sync.ts', import.meta.url).pathname, '--check'], { encoding: 'utf8' });
   d.check(drift.status === 0, `the kit's tokens match the Figma variables${drift.status ? `: ${drift.stdout.trim().split('\n').slice(1, -2).join('; ')}` : ''}`);
 
+  // Quick Start: the phone opens what the new computer seals to it (core/quickstart.ts, once core has it).
+  const quickstart = new URL('../core/quickstart.ts', import.meta.url);
+  if (fs.existsSync(quickstart)) {
+    const core = await import(quickstart.href);
+    const { openSealed, phoneKey } = await import('./src/apps/qs-crypto.ts');
+    const me = await phoneKey();
+    const s = core.keyPair().pk.slice(0, 22); // any 128-bit base64url secret
+    const sealed = core.seal(me.pk, s, { host: 'demo.box.gurtos.com', code: 'a2201f2f' });
+    const got = await openSealed<{ host: string; code: string }>(me.privateKey, s, sealed);
+    const wrong = await openSealed(me.privateKey, 'A'.repeat(22), sealed).then(() => false, () => true);
+    d.check(got.host === 'demo.box.gurtos.com' && got.code === 'a2201f2f' && wrong, "Quick Start: the phone opens the new computer's sealed address and owner code with WebCrypto, and a wrong secret opens nothing");
+  }
+
   const base = `http://127.0.0.1:${fs.readFileSync(path.join(d.home, 'api.port'), 'utf8').trim()}`;
   const get = (p: string, accept = '*/*') => fetch(base + p, { headers: { accept } });
 

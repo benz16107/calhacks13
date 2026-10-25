@@ -12,6 +12,7 @@ import { PRODUCT } from './product.ts';
 import { dollars, hhmm, keyLabel, plural, selfBox, sentence, useNow } from './util.ts';
 import './setup.css';
 import { RemoteAccess } from './apps/remote.tsx';
+import { QuickStartHere, hasQuickStart } from './apps/quickstart.tsx';
 
 interface Step {
   id: string;
@@ -520,6 +521,20 @@ const NoQr = () => <p class="t-caption t-secondary gos-setup-noqr">This screen d
 
 function PhoneHandoff() {
   const p = usePairing();
+  // Quick Start starts on the new computer's own screen only, and only with a core that has it.
+  const [quick, setQuick] = useState<boolean>();
+  const [quickOn, setQuickOn] = useState(false);
+  useEffect(() => void (loopback && hasQuickStart().then(setQuick)), []);
+  if (quickOn)
+    return (
+      <aside class="g-card gos-setup-handoff" aria-label="Quick Start from your phone">
+        <h3 class="t-heading gos-setup-handoff-head">
+          <Icon name="phone" />
+          Quick Start from your phone
+        </h3>
+        <QuickStartHere onBack={() => setQuickOn(false)} onDone={() => void api('POST', '/setup/finish').then(loadSetup, loadSetup)} />
+      </aside>
+    );
   return (
     <aside class="g-card gos-setup-handoff" aria-label="Set up from your phone">
       <h3 class="t-heading gos-setup-handoff-head">
@@ -536,6 +551,12 @@ function PhoneHandoff() {
           <p class="t-caption t-secondary">Check that your phone shows the same code.</p>
           <PairState p={p} />
         </>
+      )}
+      {quick && (
+        <div class="gos-qs-choice">
+          <p class="t-caption t-secondary">Already have GurtOS on another computer? Copy its keys, apps and rules from your phone.</p>
+          <Button onClick={() => setQuickOn(true)}>Quick Start from your phone</Button>
+        </div>
       )}
     </aside>
   );

@@ -14,6 +14,7 @@ import { PRODUCT } from './product.ts';
 import { registerWorker } from './pwa/pwa.tsx';
 import { MachinesSheet } from './apps/machines.tsx';
 import { NotifyFirst, askNotifyFirst, syncPush } from './apps/remote.tsx';
+import { QuickStartPhone } from './apps/quickstart.tsx';
 
 /** The route in the address: #tasks, #task/<id>, #settings/devices, #app/<track>/<name>, and /pair#<code>. */
 const routeOf = () => (location.pathname === '/pair' ? `pair/${location.hash.slice(1)}` : decodeURIComponent(location.hash.slice(1)));
@@ -35,6 +36,8 @@ function App() {
     document.title = w ? `${wm.apps[w.route.split('/')[0]]?.title(w.route.split('/').slice(1).join('/'))} · ${PRODUCT}` : PRODUCT;
   });
 
+  // Quick Start: this phone scanned a new computer's code (app.gurtos.com/quickstart#…).
+  if (location.pathname === '/quickstart') return <QuickStartPhone />;
   // Off the box's own screen the box answers only paired devices.
   // On app.gurtos.com, /pair adds a machine even when others are paired already.
   // A work-account sign-in comes back to /#sso/<code>, even on a device paired as someone else.

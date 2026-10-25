@@ -1051,7 +1051,7 @@ const boxUrl = (a: string) => {
   return /^https?:\/\//.test(t) ? t : `https://${t}`;
 };
 /** app.gurtos.com: redeem a code on that box, ask it which edition it is, and add it to this app's machines. */
-async function pairWith(url: string, body: { code: string; name: string }) {
+export async function pairWith(url: string, body: { code: string; name: string }) {
   const r = await fetch(`${url}/api/pair`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }).catch(() => {
     throw new Error(`nothing answered at ${url}`);
   });
