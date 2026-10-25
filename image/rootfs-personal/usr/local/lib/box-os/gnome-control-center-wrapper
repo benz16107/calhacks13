@@ -1,0 +1,5 @@
+#!/bin/sh
+# Settings without Ubuntu's own "Ubuntu Desktop" panel. The GurtOS session names itself "ubuntu" among its desktops
+# (Ubuntu's defaults for the dock and look depend on it), and Settings shows that panel only for such a session.
+# build puts this in place of /usr/bin/gnome-control-center (dpkg-divert keeps updates from undoing it).
+exec env XDG_CURRENT_DESKTOP=GNOME /usr/libexec/gnome-control-center.real "$@"

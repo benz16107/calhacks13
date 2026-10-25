@@ -229,7 +229,7 @@ else
 fi
 mkdir -p "$root/etc/box-os"
 # The boot menu's large font, from the same DejaVu Sans as the screens (one file for the disc and the installed disk).
-grub-mkfont -s 28 -o "$root/usr/local/lib/box-os/gurtos.pf2" "$root/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
+grub-mkfont -s 22 -o "$root/usr/local/lib/box-os/gurtos.pf2" "$root/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
 
 if [[ $edition == personal ]]; then
   # GNOME's first-boot setup ends on "All done! GurtOS is ready to be used." and a Start button, before the GurtOS
@@ -367,6 +367,9 @@ if [[ $edition == personal ]]; then in_root bash -euo pipefail -c '
   # below puts it in place. `splash` is on the kernel line in grub.cfg.
   grep -q " splash " /usr/local/lib/box-os/grub.cfg
   systemctl enable box-voice
+  dpkg-divert --local --rename --add --divert /usr/libexec/gnome-control-center.real /usr/bin/gnome-control-center
+  install -m 0755 /usr/local/lib/box-os/gnome-control-center-wrapper /usr/bin/gnome-control-center
+  test -x /usr/libexec/gnome-control-center.real
   dconf update
   test -f /etc/dconf/db/gurtos-setup
   systemctl enable nftables box-firstboot box-droid box-confirm box-install box-owner.service box-owner.path box-sharing-fw >/dev/null 2>&1

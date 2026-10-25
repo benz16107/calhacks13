@@ -5,6 +5,13 @@
 # with the right name.
 set -euo pipefail
 cur=$(hostnamectl --static)
+# A computer name typed in first run arrives as the pretty name ("My Laptop"). Make the real hostname from it. Our own
+# first-boot name (gurt-<id>) is also the pretty name, and is left alone.
+pretty=$(hostnamectl --pretty)
+if [ -n "$pretty" ] && [[ $pretty != gurt-* ]]; then
+  name=$(printf '%s' "$pretty" | tr 'A-Z ' 'a-z-' | tr -cd 'a-z0-9-' | cut -c1-63 | sed 's/^-*//; s/-*$//')
+  [ -z "$name" ] || { [ "$cur" = "$name" ] || hostnamectl --static set-hostname "$name"; exit 0; }
+fi
 id=$(openssl pkey -pubin -in /etc/box/identity.pub -outform DER | sha256sum | cut -c1-6)
 for u in $(awk -F: '$3 >= 1000 && $3 < 30000 { print $1 }' /etc/passwd); do
   if [ "$cur" = "$u" ]; then hostnamectl --static set-hostname "gurt-$id"; exit 0; fi

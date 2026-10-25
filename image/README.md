@@ -338,7 +338,7 @@ Stock Ubuntu Server 24.04 has a login prompt, a user with sudo, snapd, cloud-ini
 - **Downloads Droid on first start.** Factory's Droid CLI, the agent worker, may not be shipped inside the
   image, so the build runs `core/setup.sh` with `BOX_NO_DROID=1` and stops if Droid is in the image anyway. Once
   the network is up, `box-droid.service` runs `core/setup.sh droid` (pinned version, checked checksum), retrying
-  every 30 seconds until it works, and keeps a copy in `/data/droid`, so a system update puts it back without
+  every 30 seconds until it works (a download that stalls below 20 KB/s for a minute, or runs over 30 minutes, is cut and retried, and the unit does not hold up the boot), and keeps a copy in `/data/droid`, so a system update puts it back without
   downloading it again. Until then a Droid task waits with a message saying so.
 - **Its screen is the box.** `box-kiosk.service` runs cage, a Wayland compositor that shows one window, with a
   full-screen WebKit view (`rootfs/usr/local/lib/box-os/kiosk.py`) as the `kiosk` user (no password, no shell).

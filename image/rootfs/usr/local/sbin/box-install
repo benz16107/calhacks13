@@ -20,8 +20,8 @@ screen() { # <percent> [message]: the whole screen, cleared and redrawn
   local p=$1 w=$((cols - 4)) n
   n=$((w * p / 100))
   if [ -z "${drawn:-}" ]; then printf '\033[?25l\033[2J'; drawn=1; fi
-  printf '\033[H\n\n  Installing %s. %s%%\033[K\n  %s\033[K\n\n  [%s%s]\033[K\n' "$name" "$p" "${2:-This takes about 2 minutes. Do not turn the computer off.}" \
-    "$(head -c $n </dev/zero | tr '\0' '=')" "$(head -c $((w - n)) </dev/zero | tr '\0' ' ')"
+  printf '\033[H\n\n  Installing %s. %s%%\033[K\n\n  [%s%s]\033[K\n\n  %s\033[K\n' "$name" "$p" \
+    "$(head -c $n </dev/zero | tr '\0' '=')" "$(head -c $((w - n)) </dev/zero | tr '\0' ' ')" "${2:-This takes about 2 minutes. Do not turn the computer off.}"
 }
 fail() {
   say "FAILED: $*"

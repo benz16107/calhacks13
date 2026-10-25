@@ -9,8 +9,11 @@ After=network-online.target
 StartLimitIntervalSec=0
 
 [Service]
-Type=oneshot
+# Type=exec, not oneshot: a oneshot holds multi-user.target (and "Bootup is not yet finished") until it ends, and the
+# download can take minutes on a slow network. A stalled one is cut by curl's own limits (CURL_HOME below), and Restart tries again.
+Type=exec
 RemainAfterExit=yes
+Environment=CURL_HOME=/usr/local/lib/box-os/droid-curl
 ExecStart=/usr/local/lib/box-os/box-droid
 Restart=on-failure
 RestartSec=30

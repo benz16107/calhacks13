@@ -105,6 +105,9 @@ echo "test: SpacetimeDB (3000) does not answer from outside"
 curl -sf --max-time 8 "http://127.0.0.1:$((port + 2000))/api/health" | grep -q '"ok":true' ||
   { echo "test: FAILED, the box's API (7700) does not answer from a private network"; exit 1; }
 echo "test: the box's API (7700) answers from a private network"
+vm 'systemctl show box-droid -p Type --value | grep -qx exec && grep -q max-time /usr/local/lib/box-os/droid-curl/.curlrc && systemctl show box-droid -p Environment --value | grep -q CURL_HOME' ||
+  { echo "test: FAILED, the Droid download has no time limit or holds the boot"; exit 1; }
+echo "test: the Droid download is a background unit with curl time limits"
 
 if [[ $name != *-debug ]]; then
   echo "test: PASSED (a release build has no ssh, so the update steps need --debug)"
@@ -127,6 +130,8 @@ if [[ $edition == personal- ]]; then
   check "a Python error prints apport's second traceback" '! python3 -c "raise ValueError" 2>&1 | grep -q "package manager"'
   check "a computer named after the account is not renamed back" 'hostnamectl --static set-hostname ana && /usr/local/lib/box-os/box-hostname && hostnamectl --static | grep -q "^gurt-"'
   check "a name the person chose is not kept" 'hostnamectl --static set-hostname mycomputer && /usr/local/lib/box-os/box-hostname && [ "$(hostnamectl --static)" = mycomputer ]'
+  check "a computer name typed in first run is not applied" 's=$(hostnamectl --static); p=$(hostnamectl --pretty); hostnamectl --static set-hostname ana && hostnamectl --pretty set-hostname "My Laptop" && /usr/local/lib/box-os/box-hostname; r=$(hostnamectl --static); hostnamectl --pretty set-hostname "$p"; hostnamectl --static set-hostname "$s"; [ "$r" = my-laptop ]'
+  check "Settings still has the Ubuntu Desktop panel (wrapper missing)" 'grep -q XDG_CURRENT_DESKTOP=GNOME /usr/bin/gnome-control-center && test -x /usr/libexec/gnome-control-center.real'
   # What a stock Ubuntu desktop has (docs/ux/parity.md): printing, an app store that survives updates, accounts, zram.
   check "no printing system, or its folders are not on the data partition" 'test -x /usr/sbin/cupsd && findmnt -n -o SOURCE /etc/cups | grep -q cups-etc && findmnt -n -o SOURCE /var/lib/cups | grep -q cups-var'
   check "no Flathub for a new account" 'runuser -u ana -- env HOME=/home/ana flatpak remotes --user | grep -q flathub'
