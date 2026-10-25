@@ -205,20 +205,7 @@ export function QuickStartPhone() {
                       <p class="t-body">{ask.question}</p>
                     </div>
                   </div>
-                  {!!ask.keys.length && (
-                    <Group title="Keys to send" caption="Only what you tick leaves this computer. Model keys are ticked to start.">
-                      {ask.keys.map((k) => (
-                        <SwitchRow
-                          title={keyLabel(k.name)}
-                          sub={k.name}
-                          checked={k.chosen}
-                          disabled={busy}
-                          onChange={(on) => question(ask.keys.filter((x) => (x.name === k.name ? on : x.chosen)).map((x) => x.name))}
-                          key={k.name}
-                        />
-                      ))}
-                    </Group>
-                  )}
+                  {/* The answer sits under the question; the key list can be long (14 keys on a busy computer). */}
                   {!busy && (
                     <span class="gos-actions">
                       <Button large onClick={cancel}>
@@ -247,6 +234,20 @@ export function QuickStartPhone() {
                 <p class="gos-error" role="alert">
                   {error}
                 </p>
+              )}
+              {ask && !!ask.keys.length && (
+                <Group title="Keys to send" caption="Only what you tick leaves this computer. Model keys are ticked to start.">
+                  {ask.keys.map((k) => (
+                    <SwitchRow
+                      title={keyLabel(k.name)}
+                      sub={k.name}
+                      checked={k.chosen}
+                      disabled={busy}
+                      onChange={(on) => question(ask.keys.filter((x) => (x.name === k.name ? on : x.chosen)).map((x) => x.name))}
+                      key={k.name}
+                    />
+                  ))}
+                </Group>
               )}
               <p class="t-caption t-secondary">GurtOS's relay passes only sealed data. The new computer's key and secret stay in its QR code.</p>
             </>
