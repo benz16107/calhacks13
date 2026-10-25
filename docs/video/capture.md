@@ -9,8 +9,10 @@ in each `tracks/<name>.md`, under "Captures this video needs").
 - **What runs on screen.** The four moments and the portal come from a throwaway **clip box**
   (`showcase/scripts/clips/clip-box.sh`): a fresh box on the test VM with a neutral identity ("home box",
   `gurtos.local`), scripted workers and test money. Never the installed box, never a real BOX_HOME.
-- **OS footage** comes from the **final release discs**, built from commit `13629bc`. Do not record OS footage from any
-  earlier disc (not `v0.1.0-preview`). Note the disc file name in the take's log line.
+- **OS footage** comes from the v0.1.0-preview discs. The install timelapse (`disc-install.mp4`, in main and Vultr) was
+  recorded from the `13629bc` build; the published release was rebuilt from `58576a7` (same version, same Server size,
+  1.37 GB; Personal 1.99 GB arm64, 2.01 GB x86_64). Command setup and the live demo are not on that disc, so no
+  caption may present them as part of the download. Note the disc file name in the take's log line.
 - **Never on screen** (`../videos.md`): home paths, machine names, Tailscale addresses, the vault file, `.env`, an
   inbox, the Vultr or Stripe account name, a real person's email. Business people are the seed's made-up names.
 - **Size and rate.** Desktop 1920 x 1080 at 60 fps. Phone 1179 x 2556 (iPhone simulator) or 390 x 844 CSS at 3x for

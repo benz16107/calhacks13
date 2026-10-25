@@ -39,9 +39,9 @@ export function kit({ C, W, H, FRAME, esc, r3, scene, fit, dims, lowerThird, not
       case 'cut': return `tl.fromTo("${sel}", { autoAlpha: 0, rotation: ${rot} }, { autoAlpha: 1, rotation: ${rot}, duration: 0.01 }, ${at});`;
       case 'whip-l': return `tl.fromTo("${sel}", { x: 420, autoAlpha: 0, filter: "blur(22px)", rotation: ${rot} }, { x: 0, autoAlpha: 1, filter: "blur(0px)", rotation: ${rot}, duration: 0.34, ease: "power3.out" }, ${at});`;
       case 'whip-r': return `tl.fromTo("${sel}", { x: -420, autoAlpha: 0, filter: "blur(22px)", rotation: ${rot} }, { x: 0, autoAlpha: 1, filter: "blur(0px)", rotation: ${rot}, duration: 0.34, ease: "power3.out" }, ${at});`;
-      case 'wipe': return `tl.fromTo("${sel}", { autoAlpha: 1, clipPath: "inset(0% 100% 0% 0%)", rotation: ${rot} }, { autoAlpha: 1, clipPath: "inset(0% 0% 0% 0%)", rotation: ${rot}, duration: 0.55, ease: "power3.inOut" }, ${at});`;
-      case 'wipe-down': return `tl.fromTo("${sel}", { autoAlpha: 1, clipPath: "inset(0% 0% 100% 0%)", rotation: ${rot} }, { autoAlpha: 1, clipPath: "inset(0% 0% 0% 0%)", rotation: ${rot}, duration: 0.55, ease: "power3.inOut" }, ${at});`;
-      case 'iris': return `tl.fromTo("${sel}", { autoAlpha: 1, clipPath: "circle(0% at 50% 50%)", rotation: ${rot} }, { autoAlpha: 1, clipPath: "circle(75% at 50% 50%)", rotation: ${rot}, duration: 0.6, ease: "power2.inOut" }, ${at});`;
+      case 'wipe': return `tl.fromTo("${sel}", { autoAlpha: 1, clipPath: "inset(0% 100% 0% 0%)", rotation: ${rot} }, { autoAlpha: 1, clipPath: "inset(0% 0% 0% 0%)", rotation: ${rot}, duration: 0.55, ease: "power3.inOut" }, ${at}); tl.set("${sel}", { clipPath: "none" }, ${r3(at + 0.56)});`;
+      case 'wipe-down': return `tl.fromTo("${sel}", { autoAlpha: 1, clipPath: "inset(0% 0% 100% 0%)", rotation: ${rot} }, { autoAlpha: 1, clipPath: "inset(0% 0% 0% 0%)", rotation: ${rot}, duration: 0.55, ease: "power3.inOut" }, ${at}); tl.set("${sel}", { clipPath: "none" }, ${r3(at + 0.56)});`;
+      case 'iris': return `tl.fromTo("${sel}", { autoAlpha: 1, clipPath: "circle(0% at 50% 50%)", rotation: ${rot} }, { autoAlpha: 1, clipPath: "circle(75% at 50% 50%)", rotation: ${rot}, duration: 0.6, ease: "power2.inOut" }, ${at}); tl.set("${sel}", { clipPath: "none" }, ${r3(at + 0.61)});`;
       case 'drop': return `tl.fromTo("${sel}", { y: -110, autoAlpha: 0, rotation: ${rot - 7}, scale: 1.06 }, { y: 0, autoAlpha: 1, rotation: ${rot}, scale: 1, duration: 0.5, ease: "back.out(1.5)" }, ${at});`;
       case 'slide-up': return `tl.fromTo("${sel}", { y: 140, autoAlpha: 0, rotation: ${rot} }, { y: 0, autoAlpha: 1, rotation: ${rot}, duration: 0.5, ease: "power3.out" }, ${at});`;
       case 'flip': return `tl.fromTo("${sel}", { rotationY: -80, autoAlpha: 0, transformPerspective: 1600, rotation: ${rot} }, { rotationY: 0, autoAlpha: 1, rotation: ${rot}, duration: 0.6, ease: "power3.out" }, ${at});`;
@@ -170,7 +170,7 @@ export function kit({ C, W, H, FRAME, esc, r3, scene, fit, dims, lowerThird, not
     return {
       css: `#${id} { display: inline-flex; height: ${size}px; overflow: hidden; line-height: ${size}px; font-variant-numeric: tabular-nums; }
         #${id} .rl { display: flex; flex-direction: column; } #${id} .rl b { display: block; height: ${size}px; font-weight: 700; }`,
-      body: `<span id="${id}">${digits.map((d, i) => /\d/.test(d) ? `<span class="rl" id="${id}-${i}" data-layout-ignore>${'0123456789'.split('').map((n) => `<b>${n}</b>`).join('')}</span>` : `<b>${esc(d)}</b>`).join('')}</span>`,
+      body: `<span id="${id}">${digits.map((d, i) => /\d/.test(d) ? `<span class="rl" id="${id}-${i}" data-layout-ignore>${'0123456789'.split('').map((n) => `<b>${n}</b>`).join('')}</span>` : `<b>${d === ' ' ? '&nbsp;' : esc(d)}</b>`).join('')}</span>`,
       js: (t) => digits.map((d, i) => /\d/.test(d) ? `tl.fromTo("#${id}-${i}", { y: 0 }, { y: ${-Number(d) * size}, duration: ${r3(0.9 + i * 0.15)}, ease: "power3.out" }, ${r3(t)});` : '').join(''),
     };
   }
@@ -266,7 +266,7 @@ export function kit({ C, W, H, FRAME, esc, r3, scene, fit, dims, lowerThird, not
         #${id}-d .ln { position: relative; font-size: ${v.size ?? 52}px; font-weight: 700; line-height: 1.2; margin-bottom: 22px; }
         #${id}-d .ln.dim { font-weight: 400; color: ${PAPER_DIM}; font-size: ${Math.round((v.size ?? 52) * 0.8)}px; }
         #${id}-d .ln em { position: absolute; left: -8px; right: -8px; top: 12%; bottom: 4%; background: rgba(242,181,68,0.55); transform-origin: 0 50%; z-index: -1; font-style: normal; }
-        #${id}-d .ln span { position: relative; } #${id}-src { font-family: "Atkinson Hyperlegible Mono", monospace; font-size: 28px; color: ${PAPER_DIM}; margin-top: 30px; opacity: 0; }`;
+        #${id}-d .ln span { position: relative; display: inline-block; } #${id}-src { font-family: "Atkinson Hyperlegible Mono", monospace; font-size: 28px; color: ${PAPER_DIM}; margin-top: 30px; opacity: 0; }`;
       const body = `<div id="${id}-d" data-layout-allow-overflow><div id="${id}-lab">${esc(v.label ?? 'EXHIBIT')}</div>${v.lines.map((l, i) => `<div class="ln${l.dim ? ' dim' : ''}" id="${id}-l${i}" style="isolation:isolate">${l.mark ? `<em id="${id}-m${i}"></em>` : ''}<span id="${id}-t${i}">${esc(l.text)}</span></div>`).join('')}${v.source ? `<div id="${id}-src">${esc(v.source)}</div>` : ''}</div>`;
       let js = enter(`#${id}-d`, v.enter ?? 'drop', 0, v.rot ?? -1.2);
       v.lines.forEach((l, i) => { const t = ctx.t(l, 0.5 + i * 0.8); js += typed(`#${id}-t${i}`, l.text, t, 34); if (l.mark) js += `tl.fromTo("#${id}-m${i}", { scaleX: 0 }, { scaleX: 1, duration: 0.45, ease: "power2.inOut" }, ${r3(ctx.t(l.markAt ?? {}, t + l.text.length / 34 + 0.15))});`; });
@@ -317,11 +317,12 @@ export function kit({ C, W, H, FRAME, esc, r3, scene, fit, dims, lowerThird, not
 
     // A terminal: lines typed or printed on their words; `alarm` flashes the frame red on a word.
     terminal(id, v, dur, ctx) {
-      const g = ground(id, v.bg ?? 'night'), lines = v.lines;
-      const css = `#${id}-w { position: absolute; left: 200px; top: 90px; width: 1520px; height: 760px; border-radius: 16px; background: #0d1217; border: 2px solid rgba(242,239,232,0.14); box-shadow: 0 40px 90px rgba(0,0,0,0.6); overflow: hidden; opacity: 0; }
+      const g = ground(id, v.bg ?? 'night'), lines = v.lines, fs = v.size ?? (lines.length <= 6 ? 40 : 34);
+      const wh = Math.min(760, Math.round(58 + 52 + lines.length * fs * 1.5 + 40)), wt = Math.max(70, Math.round((H - 190 - wh) / 2));
+      const css = `#${id}-w { position: absolute; left: 200px; top: ${wt}px; width: 1520px; height: ${wh}px; border-radius: 16px; background: #0d1217; border: 2px solid rgba(242,239,232,0.14); box-shadow: 0 40px 90px rgba(0,0,0,0.6); overflow: hidden; opacity: 0; }
         #${id}-bar { height: 58px; display: flex; align-items: center; gap: 12px; padding: 0 22px; background: #161d24; font-family: "Atkinson Hyperlegible Mono", monospace; font-size: 28px; color: ${C.ink2}; }
         #${id}-bar i { width: 16px; height: 16px; border-radius: 50%; background: #3a4653; display: block; }
-        #${id}-body { padding: 26px 34px; font-family: "Atkinson Hyperlegible Mono", monospace; font-size: ${v.size ?? 34}px; line-height: 1.5; }
+        #${id}-body { padding: 26px 34px; font-family: "Atkinson Hyperlegible Mono", monospace; font-size: ${fs}px; line-height: 1.5; }
         #${id}-body .tl { white-space: pre; opacity: 0; } #${id}-body .tl.cmd { color: ${C.ink}; } #${id}-body .tl.out { color: ${C.ink2}; }
         #${id}-body .tl.bad { color: ${C.blocked}; } #${id}-body .tl.ok { color: ${C.done}; } #${id}-body .tl.warn { color: ${C.amber}; }
         #${id}-al { position: absolute; inset: 0; border: 10px solid ${C.blocked}; box-shadow: inset 0 0 160px rgba(240,164,147,0.35); opacity: 0; pointer-events: none; }`;
@@ -330,7 +331,7 @@ export function kit({ C, W, H, FRAME, esc, r3, scene, fit, dims, lowerThird, not
       let js = enter(`#${id}-w`, v.enter ?? 'fade', 0);
       lines.forEach((l, i) => { const t = ctx.t(l, 0.4 + i * 0.5); js += `tl.set("#${id}-l${i}", { opacity: 1 }, ${r3(t)});` + (l.cmd ? typed(`#${id}-l${i}`, '$ ' + l.text, t, 30) : `tl.fromTo("#${id}-l${i}", { x: -10 }, { x: 0, duration: 0.2 }, ${r3(t)});`); });
       (v.alarms ?? []).forEach((a) => { const t = ctx.t(a, 1); js += `tl.fromTo("#${id}-al", { opacity: 0 }, { keyframes: [{ opacity: 1, duration: 0.08 }, { opacity: 0.2, duration: 0.18 }, { opacity: 0.9, duration: 0.08 }, { opacity: 0, duration: 0.5 }] }, ${r3(t)});`; });
-      const ex = extras(id, v, dur, ctx, { x: 200, y: 90, w: 1520, h: 760 }), lt = lowerThird(id, v.lt, ctx.edition, 230, 170);
+      const ex = extras(id, v, dur, ctx, { x: 200, y: wt, w: 1520, h: wh }), lt = lowerThird(id, v.lt, ctx.edition, 230, wt + 80);
       return scene(id, dur, { css: g.css + css + ex.css + lt.css, body: g.body + body + ex.body + lt.body, js: js + ex.js + lt.js });
     },
 
@@ -353,14 +354,15 @@ export function kit({ C, W, H, FRAME, esc, r3, scene, fit, dims, lowerThird, not
 
     // Ledger rows building: { when, what, amount, status, cue/at }, with a running total.
     ledger(id, v, dur, ctx) {
-      const g = ground(id, v.bg ?? 'grid'), rows = v.rows;
-      const css = `#${id}-k { position: absolute; left: 200px; top: 90px; font-size: 32px; color: ${C.ink2}; }
-        #${id}-tb { position: absolute; left: 200px; right: 200px; top: 160px; }
-        #root .lr { display: grid; grid-template-columns: 210px 1fr 260px 220px; align-items: center; gap: 24px; padding: 20px 26px; border-bottom: 2px solid ${C.rule}; font-size: 34px; opacity: 0; }
+      const g = ground(id, v.bg ?? 'grid'), rows = v.rows, big = rows.length <= 4, rh = big ? 112 : 92;
+      const blockH = 70 + rows.length * rh + (v.total ? 90 : 0) + (v.source ? 80 : 0), top = Math.max(90, Math.round((H - 160 - blockH) / 2));
+      const css = `#${id}-k { position: absolute; left: 200px; top: ${top}px; font-size: 32px; color: ${C.ink2}; }
+        #${id}-tb { position: absolute; left: 200px; right: 200px; top: ${top + 70}px; }
+        #root .lr { display: grid; grid-template-columns: 210px 1fr 260px 220px; align-items: center; gap: 24px; padding: ${big ? 28 : 20}px 26px; border-bottom: 2px solid ${C.rule}; font-size: ${big ? 42 : 34}px; opacity: 0; }
         #root .lr .wh { font-family: "Atkinson Hyperlegible Mono", monospace; font-size: 28px; color: ${C.ink2}; } #root .lr .am { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
         #root .lr .stt { justify-self: end; font-size: 28px; font-weight: 700; padding: 4px 16px; border-radius: 999px; }
-        #${id}-tot { position: absolute; right: 200px; top: ${180 + rows.length * 92}px; font-size: 44px; font-weight: 700; opacity: 0; }
-        #${id}-src { position: absolute; left: 200px; right: 200px; top: ${260 + rows.length * 92}px; font-size: 28px; color: ${C.ink2}; opacity: 0; }`;
+        #${id}-tot { position: absolute; right: 200px; top: ${top + 90 + rows.length * rh}px; font-size: 44px; font-weight: 700; opacity: 0; }
+        #${id}-src { position: absolute; left: 200px; right: 200px; top: ${top + 90 + rows.length * rh + (v.total ? 90 : 0)}px; font-size: 28px; color: ${C.ink2}; opacity: 0; }`;
       const stc = (s) => s === 'blocked' || s === 'refused' ? `color:${C.blocked};background:${C.blockedBg}` : s === 'waiting' || s === 'asks' ? `color:${C.amber};background:#3a3020` : `color:${C.done};background:${C.doneBg}`;
       const body = `${v.kicker ? `<div id="${id}-k" class="mono">${esc(v.kicker)}</div>` : ''}<div id="${id}-tb">${rows.map((r, i) => `<div class="lr" id="${id}-r${i}"><span class="wh">${esc(r.when ?? '')}</span><span>${esc(r.what)}</span><span class="am">${esc(r.amount ?? '')}</span>${r.status ? `<span class="stt" style="${stc(r.statusKind ?? r.status.toLowerCase())}">${esc(r.status)}</span>` : '<span></span>'}</div>`).join('')}</div>
         ${v.total ? `<div id="${id}-tot">${esc(v.total)}</div>` : ''}${v.source ? `<div id="${id}-src" class="mono">${esc(v.source)}</div>` : ''}`;
