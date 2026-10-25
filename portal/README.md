@@ -147,6 +147,18 @@ Differences from the frames, on purpose:
    how many tasks resumed, what still needs you, and "Paid twice: 0", counted from the log. Windows come back where
    they were. A phone shows a red bar within about 10 seconds and won't send an answer until the box is back.
 
+## The flight recorder
+
+Replay (the Task window's Replay button, or the Tasks menu) plays a task's action log back like a video: every step,
+tool call, blocked attempt, request and who answered, spending so far, Done or Failed, and Keep or Undo. Play and
+pause, step, Next event (the next request, block, error, Keep or Undo), and a scrubber with those events marked. At
+each point it shows the task's files: as they were there where this computer records them, else the final changes.
+Space, the arrow keys, Home, End and N work from the keyboard, and a screen reader hears each point.
+
+| Desktop | Dark | Phone |
+|---|---|---|
+| ![](screenshots/replay-desktop.png) | ![](screenshots/replay-desktop-dark.png) | ![](screenshots/replay-phone.png) |
+
 ## Opening it
 
 | From | Address |
