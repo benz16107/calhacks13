@@ -1,0 +1,50 @@
+<!-- From the registry's lt-side-rule, restyled for GurtOS: Atkinson Hyperlegible, the edition's colour on the rule,
+     a mono kicker above a bold title. Set lt-title, lt-kicker and lt-accent per mount with data-variable-values. -->
+<!doctype html>
+<html lang="en" data-composition-variables='[
+  {"id":"lt-title","type":"string","label":"Title","default":"A pause for your OK"},
+  {"id":"lt-kicker","type":"string","label":"Kicker","default":"Moment 3 · GurtOS Server"},
+  {"id":"lt-accent","type":"color","label":"Rule colour (edition)","default":"#8db4dd"}
+]'>
+  <head>
+    <meta charset="UTF-8" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      @font-face { font-family: "Atkinson Hyperlegible Next"; font-weight: 700; src: url("assets/fonts/atkinson-hyperlegible-next-latin-700-normal.woff2") format("woff2"); }
+      @font-face { font-family: "Atkinson Hyperlegible Mono"; font-weight: 400; src: url("assets/fonts/atkinson-hyperlegible-mono-latin-400-normal.woff2") format("woff2"); }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { background: transparent; overflow: hidden; }
+      body { width: 1920px; height: 1080px; }
+      #root .lt { position: absolute; left: 200px; top: 790px; display: flex; align-items: stretch; gap: 24px; }
+      #root .lt-bar { width: 8px; background: var(--lt-accent, #8db4dd); border-radius: 4px; transform-origin: 50% 0%; flex-shrink: 0; }
+      #root .lt-text { display: flex; flex-direction: column; justify-content: center; gap: 8px; }
+      #root .lt-kicker { font-family: "Atkinson Hyperlegible Mono", monospace; font-size: 26px; color: #b9c0c8; letter-spacing: 0.02em; white-space: nowrap; }
+      #root .lt-title { font-family: "Atkinson Hyperlegible Next", sans-serif; font-size: 56px; font-weight: 700; color: #f2efe8; line-height: 1.05; white-space: nowrap; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="lower-third" data-width="1920" data-height="1080" data-start="0" data-duration="4.8">
+      <div id="lt-clip" class="clip" data-start="0" data-duration="4.8" data-track-index="0">
+        <div id="lt" class="lt">
+          <div id="lt-bar" class="lt-bar"></div>
+          <div class="lt-text">
+            <div id="lt-kicker" class="lt-kicker" data-var-text="lt-kicker">Moment 3 · GurtOS Server</div>
+            <div id="lt-title" class="lt-title" data-var-text="lt-title">A pause for your OK</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script>
+      window.__timelines = window.__timelines || {};
+      var tl = gsap.timeline({ paused: true });
+      tl.fromTo("#lt-bar", { scaleY: 0 }, { scaleY: 1, duration: 0.5, ease: "power3.out" }, 0.1);
+      tl.fromTo("#lt-kicker", { x: -24, opacity: 0 }, { x: 0, opacity: 1, duration: 0.5, ease: "power3.out" }, 0.26);
+      tl.fromTo("#lt-title", { x: -24, opacity: 0 }, { x: 0, opacity: 1, duration: 0.5, ease: "power3.out" }, 0.36);
+      tl.to("#lt-kicker", { opacity: 0, duration: 0.3, ease: "power2.in" }, 4.25);
+      tl.to("#lt-title", { y: -14, opacity: 0, duration: 0.32, ease: "power2.in" }, 4.3);
+      tl.to("#lt-bar", { scaleY: 0, duration: 0.32, ease: "power2.in" }, 4.32);
+      tl.set("#lt", { visibility: "hidden" }, 4.75);
+      window.__timelines["lower-third"] = tl;
+    </script>
+  </body>
+</html>

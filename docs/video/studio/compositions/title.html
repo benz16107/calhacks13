@@ -1,0 +1,53 @@
+<template>
+  <style>
+    @font-face { font-family: "Atkinson Hyperlegible Next"; font-weight: 400; src: url("assets/fonts/atkinson-hyperlegible-next-latin-400-normal.woff2") format("woff2"); }
+    @font-face { font-family: "Atkinson Hyperlegible Next"; font-weight: 700; src: url("assets/fonts/atkinson-hyperlegible-next-latin-700-normal.woff2") format("woff2"); }
+    #root { position: absolute; inset: 0; background: var(--color-ground, #171e25); font-family: "Atkinson Hyperlegible Next", sans-serif; overflow: hidden; }
+    #title-hills { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; }
+    #title-block { position: absolute; left: 0; right: 0; top: 250px; display: flex; flex-direction: column; align-items: center; gap: 30px; }
+    #title-lockup { display: flex; align-items: center; gap: 38px; }
+    #title-logo { width: 150px; height: 150px; }
+    #title-word { color: var(--color-ink, #f2efe8); font-size: 150px; font-weight: 700; line-height: 1; letter-spacing: -0.01em; }
+    #title-sub { color: var(--color-ink-2, #b9c0c8); font-size: 44px; font-weight: 400; }
+    #title-chips { display: flex; gap: 22px; margin-top: 16px; }
+    .title-chip { display: flex; align-items: center; gap: 14px; padding: 12px 26px; border-radius: 999px; background: rgba(23, 30, 37, 0.72); border: 2px solid rgba(242, 239, 232, 0.16); color: var(--color-ink, #f2efe8); font-size: 32px; font-weight: 700; }
+    .title-chip i { width: 18px; height: 18px; border-radius: 50%; display: block; }
+    #chip-server i { background: #8a9bad; }
+    #chip-personal i { background: var(--color-attention, #f2b544); }
+    #chip-business i { background: var(--color-accent, #8db4dd); }
+  </style>
+  <div id="root" data-composition-id="title" data-width="1920" data-height="1080"
+    data-composition-variables='[{"id":"title","type":"string","label":"Title","default":"GurtOS"},{"id":"subtitle","type":"string","label":"Subtitle","default":"An operating system where AI agents work safely"}]'>
+    <img id="title-hills" data-layout-allow-overflow class="clip" src="assets/brand/hills-dark.svg" alt="" data-start="0" data-duration="4.2" data-track-index="0" />
+    <div id="title-content" class="clip" data-start="0" data-duration="4.2" data-track-index="1">
+      <div id="title-block">
+        <div id="title-lockup">
+          <img id="title-logo" src="assets/brand/logo.svg" alt="GurtOS" />
+          <div id="title-word" data-var-text="title">GurtOS</div>
+        </div>
+        <div id="title-sub" data-var-text="subtitle">An operating system where AI agents work safely</div>
+        <div id="title-chips">
+          <div class="title-chip" id="chip-server"><i></i>Server</div>
+          <div class="title-chip" id="chip-personal"><i></i>Personal</div>
+          <div class="title-chip" id="chip-business"><i></i>Business</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+    (function () {
+      const vars = (window.__hyperframes && window.__hyperframes.getVariables && window.__hyperframes.getVariables()) || {};
+      const edition = vars.edition || "server";
+      const tl = gsap.timeline({ paused: true });
+      tl.fromTo("#title-hills", { scale: 1.06, transformOrigin: "50% 100%" }, { scale: 1, duration: 4.2, ease: "sine.out" }, 0);
+      tl.fromTo("#title-logo", { opacity: 0, scale: 0.86, y: 18 }, { opacity: 1, scale: 1, y: 0, duration: 0.6, ease: "back.out(1.6)" }, 0.25);
+      tl.fromTo("#title-word", { clipPath: "inset(0 100% 0 0)" }, { clipPath: "inset(0 0% 0 0)", duration: 0.7, ease: "power3.inOut" }, 0.5);
+      tl.fromTo("#title-sub", { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.5, ease: "power3.out" }, 1.1);
+      ["server", "personal", "business"].forEach((e, i) => {
+        tl.fromTo("#chip-" + e, { opacity: 0, y: 14 }, { opacity: e === edition ? 1 : 0.45, y: 0, duration: 0.4, ease: "power3.out" }, 1.5 + i * 0.12);
+      });
+      tl.to("#title-block", { opacity: 0, y: -20, duration: 0.35, ease: "power2.in" }, 3.75);
+      window.__timelines["title"] = tl;
+    })();
+  </script>
+</template>

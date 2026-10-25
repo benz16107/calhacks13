@@ -1,0 +1,31 @@
+<template>
+  <style>
+    @font-face { font-family: "Atkinson Hyperlegible Mono"; font-weight: 400; src: url("assets/fonts/atkinson-hyperlegible-mono-latin-400-normal.woff2") format("woff2"); }
+    #root { position: absolute; inset: 0; background: var(--color-ground, #171e25); overflow: hidden; }
+    /* Product footage sits in a window frame (radius 15, the OS's window radius) on the night ground. */
+    #footage-frame { position: absolute; left: 200px; top: 64px; width: 1520px; height: 671px; border-radius: 15px; overflow: hidden; border: 2px solid rgba(242, 239, 232, 0.14); box-shadow: 0 30px 80px rgba(0, 0, 0, 0.45); }
+    #footage-push { position: absolute; inset: 0; }
+    #footage-video { position: absolute; left: 0; top: 0; width: 1520px; height: 671px; object-fit: cover; }
+    #footage-note { position: absolute; right: 200px; top: 752px; font-family: "Atkinson Hyperlegible Mono", monospace; font-size: 24px; color: var(--color-ink-2, #b9c0c8); opacity: 0.8; }
+  </style>
+  <div id="root" data-composition-id="footage" data-width="1920" data-height="1080"
+    data-composition-variables='[{"id":"src","type":"string","label":"Footage file","default":"assets/footage/moment-3-approval.mp4"},{"id":"note","type":"string","label":"Footnote","default":"Real GurtOS screen recording"}]'>
+    <div id="footage-frame">
+      <div id="footage-push" data-layout-allow-overflow>
+        <video id="footage-video" class="clip" src="assets/footage/moment-3-approval.mp4" data-var-src="src" data-start="0" data-duration="5.9" data-media-start="2" data-track-index="1" muted playsinline></video>
+      </div>
+    </div>
+    <div id="footage-note" class="clip" data-start="0.6" data-duration="5.3" data-track-index="2" data-var-text="note">Real GurtOS screen recording</div>
+  </div>
+  <script>
+    (function () {
+      const tl = gsap.timeline({ paused: true });
+      tl.fromTo("#footage-frame", { opacity: 0, y: 40, scale: 0.96 }, { opacity: 1, y: 0, scale: 1, duration: 0.55, ease: "power3.out" }, 0);
+      // Camera: a slow drift, then a punch-in that lands on the Needs you panel as the request arrives.
+      tl.fromTo("#footage-push", { scale: 1, transformOrigin: "80% 4%" }, { scale: 1.04, duration: 3.4, ease: "none" }, 0);
+      tl.to("#footage-push", { scale: 1.75, duration: 0.55, ease: "power3.inOut" }, 3.5);
+      tl.fromTo("#footage-note", { opacity: 0 }, { opacity: 0.8, duration: 0.4 }, 0.6);
+      window.__timelines["footage"] = tl;
+    })();
+  </script>
+</template>
