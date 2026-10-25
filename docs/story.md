@@ -657,7 +657,7 @@ here, and off every page, until its code is merged and its check passes. Batch t
 | Try GurtOS live (a throwaway computer in the browser, public address once Ben OKs it) | mcp:6032eb14-4718-4a33-9d29-2a6983bbbce4 | building | Devpost main text and Try it out first; showcase home; Anthropic, Armadin, Factory | no |
 | Attack it yourself (paste an injection or pick an attack, watch each defence stop it) | to be named | building | Devpost; showcase home; Armadin, Anthropic | no |
 | The flight recorder (replay a task step by step, with files and approvals, then Keep or Undo) | to be named | building | Devpost; Hyphenate, Microsoft, CRS, Atlassian; Anthropic, Factory | no |
-| Agent permissions (the OS enforces each app's manifest; allow, deny, revoke) | core | building | Devpost; Hyphenate, Microsoft, CRS, Atlassian; Visa, Apify | no |
+| Agent permissions (the OS enforces each app's manifest; allow, deny, revoke) | core | merged 4b473ea (gate 39/0); Settings screens still landing | Devpost (done); Hyphenate, Microsoft, CRS, Atlassian; Visa, Apify (writers asked) | Devpost only |
 | Signed receipts with a QR code and a public verify page (log and Solana anchored) | Elastic and wallet threads | building | Devpost; Elastic, Coinbase, Solana | no |
 
 ## Not entered
