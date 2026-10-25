@@ -14,7 +14,7 @@ import { Alert, AppIcon, Badge, Button, Icon, Menu, Popover, Progress, Switch } 
 import { focus, focused, minimize, open, phone, wm } from './wm.tsx';
 import { launchable, type Launchable } from './apps/index.tsx';
 import { PRODUCT } from './product.ts';
-import { appOf, asks, boxList, dollars, hhmm, ofState, pending, plural, selfBox, sentence, taskTitle, trackOf, useNow, zone, spentToday } from './util.ts';
+import { appOf, asks, boxList, dollars, hhmm, ofState, pending, plural, selfBox, taskTitle, trackOf, useNow, zone, spentToday } from './util.ts';
 
 /** Which shell overlay is open. One at a time, like a real desktop. */
 export const shell = { open: '' as '' | 'notifications' | 'control' | 'apps' | 'menu' | 'boxes' | 'person', locked: false };
@@ -1091,7 +1091,7 @@ async function rendezvous(rv: string): Promise<string> {
     }
     if (Date.now() - started < 2000) await new Promise((r) => setTimeout(r, 2000)); // the relay answered at once: don't spin
   }
-  throw new Error("It didn't answer within 3 minutes.");
+  throw new Error("No answer within 3 minutes. On the computer's screen, open Settings, Remote access.");
 }
 
 /** app.gurtos.com/pair?rv=…&n=…&lan=…#<code>: the phone can't reach the computer yet. Ask it to get an address. */
@@ -1115,7 +1115,7 @@ function MeetBox({ rv, code, name, lan, onHost }: { rv?: string; code: string; n
           <p class="t-body t-secondary">
             {rv
               ? `This phone can't reach ${name} directly yet. It can ask ${name} for its own address and pair over the internet.`
-              : `This phone can't reach ${name} from here. On ${name}'s screen, open Settings, Remote access, and turn it on. Then scan its code again.`}
+              : `To pair from anywhere, turn on Reach from anywhere on ${name}: Settings, Remote access.`}
           </p>
           {!rv ? null : state === 'busy' ? (
             <p class="t-body" role="status">
@@ -1131,7 +1131,7 @@ function MeetBox({ rv, code, name, lan, onHost }: { rv?: string; code: string; n
           )}
           {state !== 'ask' && state !== 'busy' && (
             <p class="gos-error" role="alert">
-              {sentence(state)} On {name}'s screen, open Settings, Remote access.
+              {state}
             </p>
           )}
           {lan && (
@@ -1162,9 +1162,8 @@ export function PairFirst() {
   const [boxAddr, setBoxAddr] = useState(new URLSearchParams(location.search).get('box') ?? '');
   const adding = hosted && machines().length > 0;
   // Remote access off: the link names no address, only the computer (n), its home address (lan) and, during setup, a
-  // rendezvous (rv). The first shape had them in the query string.
-  const q = frag ?? new URLSearchParams(location.search);
-  const meet = hosted && !boxAddr && !!fromLink && ['rv', 'n', 'lan'].some((k) => q.has(k));
+  // rendezvous (rv).
+  const meet = hosted && !boxAddr && !!frag && !!fromLink && ['rv', 'n', 'lan'].some((k) => frag.has(k));
   // GurtOS Business: sign in with a work account. The box comes back to /#sso/<one-time code>, redeemed here for this device's token.
   const [work, setWork] = useState<{ on: boolean; name?: string }>();
   const [workError, setWorkError] = useState('');
@@ -1190,13 +1189,13 @@ export function PairFirst() {
   };
   const go = (e: Event) => (e.preventDefault(), redeem(code));
   if (meet) {
-    const lan = q.get('lan') ?? '';
-    const rv = q.get('rv') ?? '';
+    const lan = frag!.get('lan') ?? '';
+    const rv = frag!.get('rv') ?? '';
     return (
       <MeetBox
         rv={/^[\w-]{4,64}$/.test(rv) ? rv : undefined}
         code={fromLink}
-        name={(q.get('n') ?? '').slice(0, 60) || 'Your computer'}
+        name={(frag!.get('n') ?? '').slice(0, 60) || 'Your computer'}
         lan={/^[\w.-]+(:\d{1,5})?$/.test(lan) ? lan : undefined}
         onHost={(host) => (history.replaceState(null, '', `/pair?box=${encodeURIComponent(host)}#${fromLink}`), setBoxAddr(host))}
       />
