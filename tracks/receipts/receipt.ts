@@ -1,7 +1,7 @@
 // A receipt: what one finished task did, signed by the box, checkable by anyone from the receipt alone.
 // Pure apart from node:crypto. track.ts supplies the log lines, the task, and what Elastic and Solana said.
 // verify.html holds the matching check (it runs in the browser); the demo runs both over the same receipts.
-import { createHash, createPrivateKey, createPublicKey, generateKeyPairSync, sign } from 'node:crypto';
+import { createHash, createPrivateKey, createPublicKey, generateKeyPairSync, sign, type JsonWebKey } from 'node:crypto';
 
 export const sha256 = (s: string) => createHash('sha256').update(s).digest('hex');
 
