@@ -117,7 +117,9 @@ export function ReplayApp({ id }: { id: string }) {
 
   // Files: per point where recorded; else the final changes, said plainly.
   const keptOrUndone = points.slice(0, i + 1).findLast((x) => x.kind === 'kept' || x.kind === 'undone');
-  const files = recorded
+  // Files at each point where core recorded them. No points: a task from before recording, or an undone task whose
+  // files were purged. A finished task still has its final changes; an undone one has nothing left to show.
+  const files = recorded?.length
     ? at === undefined
       ? { note: 'No files changed yet.' }
       : {
@@ -129,9 +131,11 @@ export function ReplayApp({ id }: { id: string }) {
                 ? 'Recording stopped at 50 MB for this task, so this shows the last files it kept.'
                 : `Files in the task's own layer at this point, against your files.`,
         }
-    : final?.undone
-      ? { note: 'Undone: its changes left the workspace. This computer keeps a task\'s files at the end only, so there is nothing to show.' }
-      : { diff: final, note: i < last ? "The task's final changes. This computer keeps a task's files at the end only." : "The task's final changes, against your files." };
+    : final?.undone || (recorded && !final?.changes.length)
+      ? { note: "This task's files are gone." }
+      : recorded
+        ? { diff: final, note: 'This task ran before GurtOS kept its files at each step, so this shows its final changes.' }
+        : { diff: final, note: i < last ? "The task's final changes. This computer keeps a task's files at the end only." : "The task's final changes, against your files." };
   const marks = points.flatMap((x, j) => (x.interesting ? [{ j, kind: x.kind }] : []));
 
   return (

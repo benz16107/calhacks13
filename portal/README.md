@@ -152,7 +152,8 @@ Differences from the frames, on purpose:
 Replay (the Task window's Replay button, or the Tasks menu) plays a task's action log back like a video: every step,
 tool call, blocked attempt, request and who answered, spending so far, Done or Failed, and Keep or Undo. Play and
 pause, step, Next event (the next request, block, error, Keep or Undo), and a scrubber with those events marked. At
-each point it shows the task's files: as they were there where this computer records them, else the final changes.
+each point it shows the task's files as they were there (GET /api/tasks/:id/replay and /diff?at=), against your files. A task
+from before GurtOS kept files at each step shows its final changes; an undone task whose files are gone says so.
 Space, the arrow keys, Home, End and N work from the keyboard, and a screen reader hears each point.
 
 | Desktop | Dark | Phone |
