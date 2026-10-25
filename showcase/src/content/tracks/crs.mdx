@@ -187,8 +187,11 @@ It runs on a computer the lender owns: one Node service, 4 GB of memory and 17 G
   { what: "Nightly re-checks of existing customers at 02:00, off until switched on because a night run costs model credit", why: "A customer's limit can go 29 months without a look", os: "The Server routine, the same pull rules", track: "Fresh CRS reports", status: "Built" },
   { what: "A fraud case for the controller: identity codes, what drove the Fraud Finder score, inquiry dates, phone owner and request ids on one page", why: "A controller needs the evidence, not the agent's summary", os: "The Business request screen and the log", track: "The CRS answers", status: "Built" },
   { what: "A fraudster who argues: an application says to ignore the identity codes, and the desk is tested against it", why: "An agent that reads that text may do as it says", os: "Only a person can answer the controller's question", track: "credit_decision refuses an approval or cash-in-advance terms while the fraud stops apply", status: "Built" },
-  { what: "Agent permissions: the CRS login is in the credit desk's permissions list only, and the owner can turn it off", why: "One switch takes CRS away from the desk; the refusal is logged", os: "The manifest, enforced at the vault and in the desk's tools", track: "The CRS keys the desk declares", status: "Built" }
+  { what: "Agent permissions: the CRS login is in the credit desk's permissions list only, and the owner can turn it off", why: "One switch takes CRS away from the desk; the refusal is logged", os: "The manifest, enforced at the vault and in the desk's tools", track: "The CRS keys the desk declares", status: "Built" },
+  { what: "Flight recorder: the analyst's CRS pulls replay step by step, each with its stated purpose and its number against the pull limit", why: "A lender can show what each pull was for, after the fact", os: "Replay of the append-only log", track: "The CRS answers and request ids the log holds", status: "Built" }
 ]} />
+
+<Shot src="track/crs/replay-pull-light.png" dark="track/crs/replay-pull-dark.png" alt="Replay of the credit analyst task at step 5 of 51: CRS on APP-1043 for credit-application, pull 1 of 7, CRS sandbox live, scores 640, identity not verified, fraud score 88, followed by the identity codes, the Fraud Finder signals and the inquiries." caption="Flight recorder: the first CRS pull of the run, replayed with its purpose (credit-application) and its count against the task's pull limit (pull 1 of 7), then what CRS answered. A scripted run against the live CRS sandbox on a dev box seeded as Fogline Supply." />
 
 <Shot src="track/crs/perm-audit.png" alt="Audit, read-only for the auditor, searched for allowed: the credit analyst's task failed because Credit desk isn't allowed to use the key CRS_PASSWORD." caption="With the CRS password turned off for the credit desk, the analyst's CRS call was refused before any answer came back, and the task stopped. A dev box seeded as Fogline Supply, the key turned back on afterwards." />
 
@@ -307,6 +310,7 @@ track credit-desk
 
 <Limits title="What this does not cover">
 
+- The flight recorder replays the action log step by step. It shows a task's final changes, not its files at each step: this computer keeps a task's files at the end only.
 - Agent permissions: Not enforced yet: limiting hosts before an app first uses them, an allow-once question for a new host, and a first-run prompt that blocks the app until the owner answers (until then, apps keep working as today). The capture shows the analyst's CRS call refused with the password off. We did not test every CRS route one by one.
 - **Not built:** a payment gate for guests (wallet and Shopper payments do not yet ask for a verified guest), the controller's clear-the-flag path (nothing in the box clears a fraud stop, so a real false positive has no way out yet), and an ASI:One chat intent for credit.
 - Checked in the merge gate: no guest task can pay. The guest gates have no tools and a $0 budget, guest web runs have only web tools and at most 25 cents, and the credit analyst holds no wallet, Shopper or x402 tool.

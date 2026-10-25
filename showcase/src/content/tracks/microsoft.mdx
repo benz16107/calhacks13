@@ -253,8 +253,11 @@ Each control is mapped to Microsoft's Responsible AI Standard in `tracks/credit-
   { what: "Each control mapped to the six Responsible AI principles, a protected-attribute test and a plain letter for every adverse decision", why: "A judge can check each claim", os: "The vault, the log and the approvals", track: "RESPONSIBLE.md, fairness.test.ts, letters.ts", status: "Built" },
   { what: "Published, cited facts about the customer, with their scope", why: "The case rests on real failures", os: "None", track: "CUSTOMER.md", status: "Built" },
   { what: "A measured incident drill: kill switch, undo, resume, each timed", why: "The answer to what if it goes wrong is a number", os: "The kill switch, undo and resume", track: "None", status: "Built" },
-  { what: "Agent permissions: each app's list of what it may use, and the owner turns any item off or sets money per day", why: "Least privilege for every app, with every refusal on the record", os: "The manifest: keys at the vault and in tools, money in the broker (over the daily limit becomes a request), shell, hosts and folders when a task starts, strangers at public routes", track: "The keys and tools the desk declares", status: "Built" }
+  { what: "Agent permissions: each app's list of what it may use, and the owner turns any item off or sets money per day", why: "Least privilege for every app, with every refusal on the record", os: "The manifest: keys at the vault and in tools, money in the broker (over the daily limit becomes a request), shell, hosts and folders when a task starts, strangers at public routes", track: "The keys and tools the desk declares", status: "Built" },
+  { what: "Flight recorder: an auditor replays a seat's finished task step by step, with every tool call, request, who answered and spending so far", why: "An auditor can see how a decision was reached, not only its result", os: "Replay of the append-only log, open to a read-only auditor", track: "The desk's decisions and rule ids", status: "Built" }
 ]} />
+
+<Shot src="track/hyphenate/replay-approved-light.png" dark="track/hyphenate/replay-approved-dark.png" alt="Replay of the credit analyst task, signed in as the auditor: the timeline at step 25 of 51, Approved by Rosa Delgado, after the fraud referral for APP-1043 and before the decision is recorded, with $0.00 spent so far and the note that the task's final changes are kept at the end only." caption="An auditor replays the credit analyst's decision on APP-1043: the CRS call, the request, Approved by Rosa Delgado, then the recorded fraud hold. Signed in as Owen Clarke, the auditor. A scripted run on a dev box seeded as Fogline Supply." />
 
 <Shot src="track/crs/perm-audit.png" alt="Audit, read-only for the auditor, searched for allowed: the credit analyst's task failed because Credit desk isn't allowed to use the key CRS_PASSWORD." caption="Least privilege, on the record: the owner turned off the credit desk's CRS password, the analyst's next CRS call was refused, and the auditor finds it in Audit. A dev box seeded as Fogline Supply, the key turned back on afterwards." />
 
@@ -304,6 +307,7 @@ track credit-desk
 
 <Limits title="What this does not cover">
 
+- The flight recorder replays the action log step by step. It shows a task's final changes, not its files at each step: this computer keeps a task's files at the end only.
 - Agent permissions: Not enforced yet: limiting hosts before an app first uses them, an allow-once question for a new host, and a first-run prompt that blocks the app until the owner answers (until then, apps keep working as today). Business roles are not part of the permissions list, and Business's own rules still route approvals. Only the owner changes permissions.
 - The scored runs used one controller seat on GurtOS Server. Routing by amount to different people is GurtOS Business, shown on a seeded box with scripted seats and sandbox data, not in a scored run.
 - Shadow mode has not been run for a real week at a real company. The 83% on the screenshot is a seeded box.
