@@ -15,7 +15,7 @@ Operating systems built for AI agents: each task runs as its own Linux user, in 
 
 ## Video
 
-https://youtu.be/GRx8n4Ic_EY ("GurtOS: operating systems built for AI agents", 3:00, unlisted, English captions). Paste this link in the Video field.
+https://youtu.be/rREjU2ddIyo ("GurtOS: operating systems built for AI agents", 3:00, unlisted, English captions). Paste this link in the Video field.
 
 ## Image gallery (upload in this order)
 
@@ -77,7 +77,7 @@ Opt in to every eligible category at the Devpost step that lists them. Anthropic
 - Try it live: https://try.gurtos.com (your own throwaway GurtOS computer in the browser; paste an attack and watch it stopped)
 - Every track in detail: https://calhacks.gurtos.com
 - Code (Apache-2.0): https://github.com/benz16107/calhacks13
-- Video: https://youtu.be/GRx8n4Ic_EY
+- Video: https://youtu.be/rREjU2ddIyo
 
 ## Operating systems built for AI agents
 

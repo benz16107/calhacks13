@@ -3,7 +3,7 @@
 - Try it live: https://try.gurtos.com (your own throwaway GurtOS computer in the browser; paste an attack and watch it stopped)
 - Every track in detail: https://calhacks.gurtos.com
 - Code (Apache-2.0): https://github.com/benz16107/calhacks13
-- Video: https://youtu.be/GRx8n4Ic_EY
+- Video: https://youtu.be/rREjU2ddIyo
 
 ## Operating systems built for AI agents
 
