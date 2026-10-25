@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { randomBytes } from 'node:crypto';
 import test from 'node:test';
-import { bundle, keyPair, open, parseSend, phrase, question, seal } from './quickstart.ts';
+import { bundle, keyPair, label, open, parseSend, phrase, question, seal } from './quickstart.ts';
 
 const s = randomBytes(16).toString('base64url');
 
@@ -34,4 +34,5 @@ test('a send is checked at the boundary, and the bundle copies only the settings
   assert.deepEqual(Object.keys(b.settings).sort(), ['approvalThresholdCents', 'quietHours'], 'never paused, never folder paths');
   assert.match(question({ keys: ['ANTHROPIC_API_KEY'], apps: 6, n: 'GurtOS Laptop', pk: good.pk }), /^Send your Anthropic key, 6 apps and your spending rules to "GurtOS Laptop" \(check phrase: \w+ \w+ \w+ \w+\)\?$/);
   assert.match(question({ keys: [], apps: 1, n: 'X', pk: good.pk }), /^Send 1 app and your spending rules \(no keys\) to "X"/);
+  assert.deepEqual(['APIFY_TOKEN', 'STRIPE_API_KEY', 'ANTHROPIC_API_KEY', 'ASI_ONE_API_KEY'].map(label), ['Apify token', 'Stripe API key', 'Anthropic key', 'ASI:One API key'], 'people read the question: keys in plain words');
 });

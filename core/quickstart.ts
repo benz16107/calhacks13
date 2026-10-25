@@ -56,7 +56,10 @@ export function open(privateKey: KeyObject, s: string, b: Sealed): any {
 /** Settings a new computer takes from the source. Not `paused` (that takes a person), not `agentFolders` (paths differ). */
 export const COPIED_SETTINGS = ['approvalThresholdCents', 'defaultBudgetCents', 'watchLimitCents', 'networkDefault', 'defaultHosts', 'quietHours', 'logRetentionDays', 'updateChannel', 'autoUpdate', 'appearance'];
 export const MODEL_KEYS = ['FACTORY_API_KEY', 'ANTHROPIC_API_KEY'];
-const label = (k: string) => (k === 'ANTHROPIC_API_KEY' ? 'Anthropic key' : k === 'FACTORY_API_KEY' ? 'Factory key' : k);
+// A key's name in plain words for the owner's question, as the portal writes it (portal/src/util.ts keyLabel).
+const ACRONYMS = new Set(['API', 'ID', 'URL', 'MLE', 'JWT', 'SSH', 'AWS', 'CDP', 'TAP', 'PAT', 'IMAP', 'SMTP', 'POP3', 'RPC', 'MCP', 'CRS', 'SSO', 'PEM', 'RSA', 'ASI', 'X402', 'USDC', 'JSM']);
+const NAMES: Record<string, string> = { ANTHROPIC_API_KEY: 'Anthropic key', FACTORY_API_KEY: 'Factory key', ASI_ONE_API_KEY: 'ASI:One API key', BACKUP_AGE_RECIPIENT: 'Backup encryption key' };
+export const label = (k: string) => NAMES[k] ?? k.split('_').filter(Boolean).map((w, i) => (ACRONYMS.has(w) ? w : i ? w.toLowerCase() : w[0] + w.slice(1).toLowerCase())).join(' ');
 
 /** What a phone sent to start a Quick Start, checked at the trust boundary. */
 export function parseSend(b: any) {
