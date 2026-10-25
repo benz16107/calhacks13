@@ -24,6 +24,7 @@ const words = (k: string) => k.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/[._-
 
 /** A note in the log as a sentence. Core and the apps write notes as data; nobody should read raw JSON on screen. */
 export function noteText(e: Extract<LogEvent, { type: 'note' }>): string {
+  if (e.text) return e.text; // core's own sentence for its notes
   const d = (e.data ?? {}) as Record<string, any>;
   if (typeof e.data === 'string') return `${appName(e.track)}: ${e.data}`;
   if (typeof d.text === 'string') return d.text;

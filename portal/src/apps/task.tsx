@@ -4,7 +4,8 @@ import { useEffect, useState } from 'preact/hooks';
 import { api, box, hosted, machine, onEvent, undo, useBox, type Approval, type LogEvent, type Task } from '../live.ts';
 import { Alert, AppIcon, Badge, Button, Icon, IconButton, Menu, Popover, StatusPage } from '../kit/ui.tsx';
 import { HeaderBar, open, useWin } from '../wm.tsx';
-import { STATE, appOf, clock, dollars, needsModelKey, taskTitle } from '../util.ts';
+import { STATE, appOf, clock, dollars, needsModelKey, sentence, taskTitle } from '../util.ts';
+import { PRODUCT } from '../product.ts';
 import { DiffView, describe, silent, undoCopy, type Diff } from './log.tsx';
 import { AnswerButtons } from './answer.tsx';
 
@@ -15,6 +16,8 @@ interface Detail {
 }
 
 const isBlocked = (e: LogEvent) => e.type === 'net.blocked' || (e.type === 'tool.result' && !e.ok);
+/** The owner's own permission setting refused it (core/permissions.ts says where to allow it): not an attack. */
+const byPermission = (e: LogEvent) => e.type === 'tool.result' && !e.ok && /Settings, Permissions/.test(e.error ?? '');
 const FINISHED: Task['state'][] = ['done', 'failed', 'undone'];
 const CHANGE: Record<string, [string, 'success' | 'neutral' | 'destructive']> = { added: ['Added', 'success'], modified: ['Modified', 'neutral'], deleted: ['Deleted', 'destructive'] };
 const span = (ms: number) => (ms < 60_000 ? `${Math.max(1, Math.round(ms / 1000))} s` : ms < 3_600_000 ? `${Math.round(ms / 60_000)} min` : `${(ms / 3_600_000).toFixed(1)} h`);
@@ -108,7 +111,8 @@ export function TaskApp({ id }: { id: string }) {
     );
 
   const asks = detail.approvals.map((a) => b.approvals.get(a.id) ?? a).filter((a) => a.state === 'pending');
-  const blocked = detail.events.filter(isBlocked);
+  const blocked = detail.events.filter((e) => isBlocked(e) && !byPermission(e));
+  const refused = [...new Set(detail.events.flatMap((e) => (byPermission(e) && e.type === 'tool.result' ? [sentence(e.error ?? '')] : [])))];
   const looks = detail.events.flatMap((e) => (e.type === 'task.step' && (e.data as { review?: { verdict: string } } | undefined)?.review ? [(e.data as { review: { verdict: string } }).review] : []));
   const hostsTried = [...new Set(blocked.flatMap((e) => (e.type === 'net.blocked' ? [e.host] : [])))];
   const created = detail.events.find((e) => e.type === 'task.created');
@@ -162,8 +166,17 @@ export function TaskApp({ id }: { id: string }) {
                   </strong>
                   <p class="t-body">
                     {hostsTried.length > 0 && `It tried to reach ${hostsTried.join(', ')}, and ${t.hosts.length ? `may only reach ${t.hosts.join(', ')}` : 'may not reach any host'}. `}
-                    It never had a key to send: the vault is root only and makes calls for the agent.
+                    It never held a key: {PRODUCT} keeps keys where agents can't read them and makes each call for the agent.
                   </p>
+                </div>
+              </div>
+            )}
+            {refused.length > 0 && (
+              <div class="g-banner" role="note">
+                <Icon name="security-high" />
+                <div>
+                  <p class="t-body-strong">{refused.length === 1 ? 'Your permission settings stopped 1 thing.' : `Your permission settings stopped ${refused.length} things.`}</p>
+                  <p class="t-body">{refused.join(' ')}</p>
                 </div>
               </div>
             )}
