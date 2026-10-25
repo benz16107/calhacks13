@@ -44,6 +44,8 @@ show-trash=false
 show-apps-at-top=false
 running-indicator-style='DOTS'
 custom-theme-shrink=true
+# The top bar counts what needs you; a second count on the dock icon only disagreed with it (I-4).
+show-icons-notifications-counter=false
 
 # Talk to your computer: Super+Alt+Space listens (the same press again ends the sentence early).
 [org/gnome/settings-daemon/plugins/media-keys]

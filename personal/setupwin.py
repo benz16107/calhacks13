@@ -329,7 +329,7 @@ class SetupWindow(Adw.ApplicationWindow):
         for name, label, _hint in MODEL_KEYS:
             entry = Adw.PasswordEntryRow(title=f'{label} · saved' if self.has_key(name) else label, show_apply_button=True)
             entry.connect('apply', lambda e, name=name: self.check_and_save(name, e))
-            entry.connect('changed', lambda _e: self.models_footer())
+            entry.connect('notify::text', lambda e, _p: (e.remove_css_class('error'), self.models_footer()))  # a cleared field drops the old error (I-6)
             self.key_entries[name] = entry
             lst.append(entry)
         box.append(lst)

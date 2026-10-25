@@ -219,7 +219,7 @@ class Indicator extends PanelMenu.Button {
             pause.setSensitive(!off);
             this.menu.addMenuItem(pause);
         }
-        this.menu.addAction('Talk to your computer', () => Util.spawn([VOICE]));
+        this.menu.addAction('Talk to your computer', () => Util.spawn([VOICE])).setSensitive(!off);
         this.menu.addAction('New task…', () => ui('ask')).setSensitive(!off);
         this.menu.addAction('Open GurtOS', () => ui('app'));
         this.menu.addAction('GurtOS Settings', () => ui('settings'));
@@ -477,6 +477,13 @@ export default class GurtOS extends Extension {
 
     offline() {
         this.online = false;
+        // An answer can't reach GurtOS now: withdraw request notices rather than offer buttons that fail (I-5).
+        for (const [key, n] of [...this.shown]) {
+            if (key.startsWith('approval:')) {
+                this.quiet.add(key);
+                n.destroy();
+            }
+        }
         this.indicator?.update();
         this.agents?.toggle.update();
     }

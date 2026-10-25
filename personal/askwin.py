@@ -1,6 +1,8 @@
 # New task: the owner's words, the folders it may change (GNOME's folder chooser, through the portal),
 # its internet and its budget. Opened from the GurtOS app, the dock, the top bar and Files.
 import os
+import subprocess
+import time
 
 from gi.repository import Adw, Gio, GLib, Gtk
 
@@ -60,6 +62,18 @@ class AskWindow(Adw.ApplicationWindow):
         worker.add_suffix(Gtk.Label(label='Claude', css_classes=['gurt-secondary']))
         self.list.append(worker)
         body.append(self.list)
+        # Why Start is off, when it is: no model key yet, or Droid still arriving (I-2). Checked before Start, not after.
+        self.blocked = None
+        self.blocker = Adw.ActionRow(visible=False)
+        self.blocker.add_prefix(Gtk.Image(icon_name='dialog-information-symbolic', accessible_role=Gtk.AccessibleRole.PRESENTATION))
+        self.open_settings = Gtk.Button(label='Open Settings', valign=Gtk.Align.CENTER)
+        self.open_settings.connect('clicked', lambda _b: subprocess.Popen(['/opt/box/personal/box-ui.py', 'settings', 'agents'], start_new_session=True))
+        self.blocker.add_suffix(self.open_settings)
+        blk = Gtk.ListBox(selection_mode=Gtk.SelectionMode.NONE, css_classes=['boxed-list'])
+        blk.append(self.blocker)
+        blk.set_visible(False)
+        self.blocker_box = blk
+        body.prepend(blk)
         self.no_folder = Gtk.Label(label='No folder: the agent works in a space of its own and changes none of your files.',
                                    xalign=0, wrap=True, css_classes=['gurt-caption', 'gurt-secondary'])
         body.append(self.no_folder)
@@ -82,6 +96,25 @@ class AskWindow(Adw.ApplicationWindow):
         self.present()
         self.prompt.grab_focus()
         background(lambda: api('GET', '/api/settings'), self.defaults)
+        background(lambda: api('GET', '/api/setup'), self.readiness)
+
+    def readiness(self, setup, err):
+        if err:
+            return
+        model = setup.get('model') or {}
+        has_key = model.get('ready') if 'ready' in model else setup.get('modelKey')
+        if not has_key:
+            self.blocked = ('Add a model key in GurtOS Settings first.', True)
+        elif not os.path.exists('/usr/local/bin/droid') and os.path.exists('/etc/box-os'):  # an image fetches Droid after first boot
+            self.blocked = ('Agents can start in a minute. GurtOS is still getting ready.', False)
+            GLib.timeout_add_seconds(10, lambda: background(lambda: api('GET', '/api/setup'), self.readiness) and False)
+        else:
+            self.blocked = None
+        self.blocker_box.set_visible(bool(self.blocked))
+        if self.blocked:
+            self.blocker.set_title(GLib.markup_escape_text(self.blocked[0]))
+            self.open_settings.set_visible(self.blocked[1])
+        self.validate()
 
     def defaults(self, s, err):
         """What a new task gets from Settings: its internet, and the budget closest to the default."""
@@ -135,7 +168,7 @@ class AskWindow(Adw.ApplicationWindow):
         return b.get_text(b.get_start_iter(), b.get_end_iter(), False).strip()
 
     def validate(self):
-        self.start.set_sensitive(bool(self.text()))  # no folder: the agent works in a space of its own
+        self.start.set_sensitive(bool(self.text()) and not self.blocked)  # no folder: the agent works in a space of its own
         self.no_folder.set_visible(not self.folders)
         self.add_row.set_visible(len(self.folders) < self.MAX_FOLDERS)
 
@@ -148,9 +181,17 @@ class AskWindow(Adw.ApplicationWindow):
                 self.toasts.add_toast(Adw.Toast(title=f'GurtOS did not start it: {err}', timeout=0))
                 return self.validate()
             names = [os.path.basename(f) for f in self.folders] or ['a task']
-            n = Gio.Notification.new(f"An agent is working on {', '.join(names[:2])}" + (f' and {len(names) - 2} more' if len(names) > 2 else ''))
-            n.set_body(f"{task['title'].rstrip('.')}. GurtOS tells you when it needs you and when its changes are ready.")
-            self.get_application().send_notification(f"started-{task['id']}", n)
+            app = self.get_application()
+            app.hold()  # opened from Files there may be no other window; stay up for the notice
+
+            def started(t, _err):  # only once it is really under way; a task that failed at once gets its own notice (I-3)
+                app.release()
+                if not t or t.get('state') in ('failed', 'undone'):
+                    return
+                n = Gio.Notification.new(f"An agent is working on {', '.join(names[:2])}" + (f' and {len(names) - 2} more' if len(names) > 2 else ''))
+                n.set_body(f"{task['title'].rstrip('.')}. GurtOS tells you when it needs you and when its changes are ready.")
+                app.send_notification(f"started-{task['id']}", n)
+            background(lambda: (time.sleep(2), api('GET', f"/api/tasks/{task['id']}")['task'])[1], started)
             self.close()
             parent = self.get_transient_for()
             if parent is not None and hasattr(parent, 'open_task'):

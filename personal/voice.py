@@ -66,7 +66,7 @@ def pick_approval(pending, tasks, target):
     """The one pending approval the owner means, or a reason there isn't one."""
     names = {t['id']: t['title'] for t in tasks}
     if not pending:
-        return None, 'Nothing is waiting for your OK.'
+        return None, 'Nothing needs you right now.'
     want = [w for w in target if w not in FILLER]
     if not want:
         return (pending[0], None) if len(pending) == 1 else (None, f'{len(pending)} things are waiting. Say which one: ' + '; '.join(names.get(a['task'], 'a task') for a in pending) + '.')
@@ -149,7 +149,7 @@ def answer(text, user='owner'):
     if any(x in w for x in ('waiting', 'needs', 'need')) and any(x in w for x in ('ok', 'okay', 'approval', 'approvals', 'me', 'you')) and 'today' not in w:
         pending = api('GET', '/api/approvals?state=pending')
         names = {t['id']: t['title'] for t in api('GET', '/api/tasks')}
-        return ('Waiting for your OK: ' + '; '.join(names.get(a['task'], 'a task') for a in pending) + '.') if pending else 'Nothing is waiting for your OK.'
+        return ('Needs you: ' + '; '.join(names.get(a['task'], 'a task') for a in pending) + '.') if pending else 'Nothing needs you right now.'
     if 'today' in w or ('what' in w and any(x in w for x in ('did', 'done', 'doing', 'happened', 'running'))) or 'summary' in w or 'status' in w:
         return summary()
     return "I didn't understand that. " + HELP
