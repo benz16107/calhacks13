@@ -47,9 +47,9 @@ Home: https://gurtos.com
 
 ## Armadin: Best Security Hack
 
-**File:** `out/armadin.mp4` (1:16). **Thumbnail:** `out/armadin-thumb.jpg`.
+**File:** `out/armadin.mp4` (1:18.6). **Thumbnail:** `out/armadin-thumb.jpg`.
 
-**Title:** GurtOS for Armadin: attacks GurtOS stops at the OS
+**Title:** GurtOS for Armadin: Best Security Hack
 
 **Description:**
 
@@ -66,11 +66,11 @@ The Armadin page, with every attack and its evidence: https://calhacks.gurtos.co
 Code (Apache-2.0): https://github.com/benz16107/calhacks13
 
 0:00 The problem
-0:13 A real npm worm, and our harmless copy
-0:24 The booby-trapped page, and tripwire keys
-0:43 A hijacked payment
-0:53 The sandbox, and what is not built
-1:03 The published score
+0:15 A real npm worm, and our harmless copy
+0:26 The booby-trapped page, and tripwire keys
+0:45 A hijacked payment
+0:55 The sandbox, and what is not built
+1:05 The published score
 ```
 
 ## When a standout feature lands

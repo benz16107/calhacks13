@@ -549,7 +549,8 @@ else if (id) {
     const dst = path.join(HERE, 'out');
     fs.mkdirSync(dst, { recursive: true });
     const raw = path.join(out, `${name}.raw.mp4`), fin = path.join(dst, `${name}.mp4`);
-    execFileSync('npx', ['--yes', HF, 'render', '--output', raw], { cwd: out, stdio: 'inherit' });
+    // One render or check at a time on this machine (spec writers share it): the lock in /tmp.
+    execFileSync('flock', ['/tmp/gurtos-hf.lock', 'npx', '--yes', HF, 'render', '--output', raw], { cwd: out, stdio: 'inherit' });
     // One linear gain to about -16 LUFS, never past -1.5 dBTP; the picture is copied untouched.
     const probeLoud = execFileSync('bash', ['-c', `ffmpeg -hide_banner -nostats -i "${raw}" -af loudnorm=I=-16:TP=-1.5:print_format=json -f null - 2>&1 | sed -n '/^{/,/^}/p'`]).toString();
     const { input_i, input_tp } = JSON.parse(probeLoud);
