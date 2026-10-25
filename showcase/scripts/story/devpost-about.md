@@ -38,7 +38,7 @@ AI agents now do real work on our computers: booking, buying, coding, filing. To
 
 ### Proof
 
-- **Attacks:** 16 OS-level attacks, 14 stopped, the 2 misses published. A per-task disk cap has since been added for the disk-fill one (not re-scored yet).
+- **Attacks:** 15 of 16 OS-level attacks stopped, each run on two machines. The one not covered is data sent through a host the agent is allowed to reach (only the box's own decoy key is watched for). The disk-fill one is stopped by a watcher within seconds (0 to 3.1 s in our runs), not by a hard quota.
 - **Light:** GurtOS Server is 40 named Ubuntu packages on a 1.37 GB disc, and the box ran one task at a time in 1 GB of RAM (installed from source, QEMU VM). Personal idles about 150 MB below stock Ubuntu Desktop.
 - **Control:** the kill switch froze 10 agents within 271 ms (the call returned in 137 ms); a bad batch was undone in 48 ms.
 - **Real work:** a credit desk of agents caught 16 of 17 planted errors and got 6 of 6 decisions right in 12 minutes for $5.24.
@@ -70,7 +70,7 @@ Every track has its own page with the criteria, evidence, screenshots and limits
 | Atlassian | Every agent task becomes a Jira issue with Approve, Deny and Roll back | BOX-29: blocked, approved from Jira, rolled back, its three configs restored | [page](https://calhacks.gurtos.com/tracks/atlassian/) |
 | Hyphenate | A credit desk of agents (analyst, clerk, controller) on GurtOS Business | 16 of 17 planted errors caught, 6 of 6 decisions right, 12 minutes, $5.24 | [page](https://calhacks.gurtos.com/tracks/hyphenate/) |
 | Factory | Droid is the worker inside every task: plans first, never holds a key | 240 of 240 samples held only a placeholder key; Replay of a real Droid task | [page](https://calhacks.gurtos.com/tracks/factory/) |
-| Armadin | Real attacks against a real box: poisoned package, hijacked payment, hidden instructions | 14 of 16 OS-level attacks stopped, the 2 misses published | [page](https://calhacks.gurtos.com/tracks/armadin/) |
+| Armadin | Real attacks against a real box: poisoned package, hijacked payment, hidden instructions | 15 of 16 OS-level attacks stopped on two machines; the one miss (exfiltration through an allowed host) is published | [page](https://calhacks.gurtos.com/tracks/armadin/) |
 | Microsoft | The credit desk as a path to production: roles, routed approvals, audit, kill switch | 10 agents frozen within 271 ms; a bad batch undone in 48 ms | [page](https://calhacks.gurtos.com/tracks/microsoft/) |
 | Visa | A shopping agent that buys by standing instruction after your tap, signed with Visa's Trusted Agent Protocol | Live: a $15.36 CAD price at Best Buy Canada, bought on a Stripe test card, refunded on Undo | [page](https://calhacks.gurtos.com/tracks/visa/) |
 | Coinbase | Agents pay and earn over x402; the wallet key never reaches the agent | A real agent paid $0.01 and $0.03 through CDP, confirmed on Solana devnet | [page](https://calhacks.gurtos.com/tracks/coinbase/) |
