@@ -31,12 +31,12 @@ Checked against main `7fe6651`, Sat Oct 24 08:09 PT. `./demo` from a clean workt
 | Status | Count |
 |---|---|
 | verified (ISO) | 3 |
-| verified | 60 |
+| verified | 65 |
 | merged | 186 |
 | building | 1 |
 | planned | 1 |
 | not pursued | 6 |
-| **Total** | **257** |
+| **Total** | **262** |
 
 **Collisions** (detail below): none open at 03:27. The three found at 02:25 are resolved and Business is on main. Still
 watched: portal/dist rebuilt from merged sources (C-4).
@@ -110,6 +110,11 @@ watched: portal/dist rebuilt from merged sources (C-4).
 | Receipt anchored by the Elastic add-only copy (the box compares the task's entries and signs the result) | receipts | merged (tried by hand on the cloud box, 5 of 5 matched; needs live Elastic, so not in the gate) | 7ca2941 | none | Elastic |
 | Receipt anchored by the daily Solana fingerprint | receipts, wallet | merged (tried by hand, not by QA: on the cloud box, task tne9kyp30c0, entries 671 to 675, anchored by the seq-685 audit; the page's checker run from the always-on test box against live Solana devnet passes Signature, Signing key, Chain, Entries and Solana; the Solana line reads "Solana (devnet) holds the same fingerprint, written 2026-10-25T06:07:17Z". A task finished after the latest audit shows "not anchored yet" until the next daily audit at 03:00 box time or an owner `POST /t/wallet/audit`. The QR in the Receipts app opens the box's own check page until gurtos.com/verify is live; one flag flips then, in 661dffa) | 7ca2941, 9123468 | tracks/receipts/receipts.test.ts (the stand-in check); live by hand | Solana, Coinbase |
 | Per-task disk cap: a task that fills its disk space is stopped and undone. Default 5 GB; per app with `PUT /api/permissions/<app> {diskBytes}`; `BOX_TASK_DISK_CAP` for a whole box. A watcher checks every 2 s, so it is not a hard quota | core | merged (gate 41 passed, 0 failed on x86 and arm64; the step took 1 s on x86 and 2 s on arm64) | 3824c78 | the disk cap: a task that fills its disk space is stopped and undone | Armadin, all |
+| try.gurtos.com loads the real GurtOS desktop, not the setup wizard, with a top bar: Start a task, Attack it yourself, Pull the plug, (i). TLS is valid (Let's Encrypt): the public live demo (branch `try-live`, folder `try/`; a throwaway host, delete after Sun Oct 25; scripted worker, no keys) | try | verified Oct 25 03:05 PT by hand from outside (200, the certificate's issuer is Let's Encrypt, valid to Jan 23 2027) | | `sudo node try/demo.ts` (24 checks) | Anthropic, Armadin, Vultr |
+| try.gurtos.com Start a task: "Tidy a notes folder" runs and completes in the portal's action log; its diff opens line by line; Undo removes its files: the public live demo (branch `try-live`, folder `try/`; a throwaway host, delete after Sun Oct 25; scripted worker, no keys) | try | verified Oct 25 03:05 PT by hand from outside (9 log steps, 2 files added, Undo confirmed and the task shows Undone; see P2-34 for one wrong duration) | | `sudo node try/demo.ts` (24 checks) | Anthropic, Armadin, Vultr |
+| try.gurtos.com Attack it yourself: a prepared page (marketplace listing with a hidden block) runs and shows every defence card with its log line: vault EACCES, net.blocked, firewall drop, database unreachable, no other task, decoy-only environment, tripwire and undo, plus the honest "not covered" notes: the public live demo (branch `try-live`, folder `try/`; a throwaway host, delete after Sun Oct 25; scripted worker, no keys) | try | verified Oct 25 03:05 PT by hand from outside for the marketplace listing only; the other two prepared pages and pasted text were not run (see P2-35: its disk-fill note is out of date) | | `sudo node try/demo.ts` (24 checks) | Anthropic, Armadin, Vultr |
+| try.gurtos.com Pull the plug during a long job: the box is hard-killed and resumes; the job finishes with no step skipped or repeated: the public live demo (branch `try-live`, folder `try/`; a throwaway host, delete after Sun Oct 25; scripted worker, no keys) | try | verified Oct 25 03:05 PT by hand from outside on the second try: "Welcome back", Resumed 1, Paid twice 0, steps 1 to 4 once each, then Done. The first try lost the session's box (see P2-36) | | `sudo node try/demo.ts` (24 checks) | Anthropic, Armadin, Vultr |
+| try.gurtos.com security from outside: another box's token is rejected (401); the gateway refuses `/api/vault`, `/api/settings`, `/api/owner` and `POST /api/tasks` (403); the host firewall blocks egress to the relay, other boxes and private ranges: the public live demo (branch `try-live`, folder `try/`; a throwaway host, delete after Sun Oct 25; scripted worker, no keys) | try | partly verified Oct 25: the 401 and the four 403s confirmed with curl; the egress firewall can't be tested from outside and `sudo node try/demo.ts` (24 checks) was not run by QA | | `sudo node try/demo.ts` (24 checks) | Anthropic, Armadin, Vultr |
 | Docs site gurtos.com | docs | verified Oct 24 01:00 (82+ pages, links, privacy scan) | 212c817 | site `npm run check` | all |
 | Showcase calhacks.gurtos.com | submission | verified Oct 24 01:30 | 52fb7f7, 213622e | showcase link checker | all |
 

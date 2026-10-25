@@ -19,7 +19,7 @@ a private notes file outside the repo. **Delete them and their custom ISOs after
 
 ## Summary
 
-Status at 02:35 PT Saturday. The feature ledger and merge collisions are tracked in `docs/features.md`. **8 P0 found, all 8 fixed and verified.** 20 P1 and 19 P2 found in the product, plus 7 in
+Status at 02:35 PT Saturday. The feature ledger and merge collisions are tracked in `docs/features.md`. **8 P0 found, all 8 fixed and verified.** 20 P1 and 22 P2 found in the product, plus 7 in
 the docs site and 9 in the showcase. The four moments, Shopper, the wallet, the credit desk and a phone paired over the
 network all work on main as of 717bc3f.
 
@@ -387,6 +387,21 @@ bug report, has no build to quote. Fix: fall back to `/etc/box-os/release` befor
 **Backup needs `age`: fixed in the rebuilt ISOs, not yet seen by QA.** Owner: release. The first v0.1.0-preview ISOs (d8620e9) lacked it. The release thread
 rebuilt all four from e36a6cc and says `/usr/bin/age` is in both editions. QA can't confirm it from the box: a release image has no
 shell and Settings has no Backup section to read. It stays "unverified by QA" until a debug build or the Personal image shows it.
+
+**P2-34. "took 41 s" after an Undo on try.gurtos.com.** Owner: core (the box's task page), found on the live demo. A task that ran for 1 s
+and was undone 41 s later says "took 1 s" before Undo and "took 41 s" after it. Fix: stop the clock at Done.
+
+**P2-35. The live demo's "not covered" note says there is no per-task disk quota.** Owner: try. Core's disk cap (3824c78) is on main.
+"Attack it yourself" still reads "GurtOS has no per-task disk quota yet" and lists the disk fill as not covered. Either the host
+runs older code, or the note needs the new wording. A judge who reads the Armadin page will see two different answers.
+
+**P2-36. After Pull the plug, opening the resumed task can lose the visitor's box.** Owner: try. First try on try.gurtos.com:
+I pulled the plug mid long job, the page showed "Welcome back, Resumed 1" and four tasks, then it said "Your GurtOS is out of reach"
+for a few seconds. Opening a task in that window gave 409 "reload the page", and the reload landed on a fresh empty box (0
+tasks, "no task tnhfrbhaad7"). The second try, where I waited for the banner to clear before opening anything, worked and the
+steps were right. So: either wait out "out of reach" in the page, or keep the box when its token rotates. Also: the console shows
+errors on every load from the blocked routes (403 on `/api/settings`, `/api/owner`, `/api/vault`), a manifest syntax error and a
+service worker script 403; and "Start a task" gives no toast, so a visitor doesn't know to open Tasks.
 
 ## Docs site (gurtos.com)
 
