@@ -137,6 +137,7 @@ Task users (`box-<id>`) are removed when each task ends. Check for leftovers wit
 
 ## Related
 
+- [Run your own relay, push gateway and web app](/docs/guides/self-host/)
 - [Install Server](/docs/get-started/install-server/)
 - [Files and paths](/docs/reference/files-and-paths/)
 - [Environment variables](/docs/reference/environment/)

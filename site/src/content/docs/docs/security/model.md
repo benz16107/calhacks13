@@ -170,6 +170,9 @@ reaches the relay's gateway, and signs it with a key made for that box alone.
 **Stops:** a network or the relay reading a box's traffic, and one box posing as another when they share a push
 subscription. See the [threat model](/docs/security/threat-model/) for what a relay operator could still try.
 
+You can run the relay yourself instead of ours. See
+[Run your own relay, push gateway and web app](/docs/guides/self-host/).
+
 ## What these layers have in common
 
 Every limit is enforced by the kernel, systemd or the box's own core, outside the agent's process. None depends on the model following instructions. The trust that remains is in the core, the apps installed in it, the machine's root account, other software running on the box itself, and the devices you pair. The [threat model](/docs/security/threat-model/) covers those.

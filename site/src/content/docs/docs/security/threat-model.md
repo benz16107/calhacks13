@@ -107,5 +107,6 @@ If you find a way past one of the protections on this page, or a gap that is not
 
 ## Related
 
+- [Run your own relay, push gateway and web app](/docs/guides/self-host/)
 - [Security model](/docs/security/model/)
 - [Trust boundaries](/docs/security/trust-boundaries/)

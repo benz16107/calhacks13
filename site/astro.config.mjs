@@ -117,6 +117,7 @@ export default defineConfig({
             'docs/guides/asi-one',
             'docs/guides/find',
             'docs/guides/reach-your-box-from-anywhere',
+            'docs/guides/self-host',
             'docs/guides/turn-on-business',
             'docs/guides/add-a-second-box',
           ],

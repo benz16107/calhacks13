@@ -105,6 +105,7 @@ phone before it leaves, so the gateway forwards bytes it cannot read.
 
 ## Related
 
+- [Run your own relay, push gateway and web app](/docs/guides/self-host/)
 - [Approve from your phone](/docs/guides/approve-from-your-phone/)
 - [Security model](/docs/security/model/)
 - [Threat model](/docs/security/threat-model/)

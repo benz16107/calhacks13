@@ -196,6 +196,7 @@ Next: [First boot and pairing](/docs/get-started/first-boot/) explains what the 
 
 ## Related
 
+- [Run your own relay, push gateway and web app](/docs/guides/self-host/)
 - [Install on Ubuntu](/docs/get-started/install-on-ubuntu/)
 - [First boot and pairing](/docs/get-started/first-boot/)
 - [Disk layout and updates](/docs/reference/disk-layout/)

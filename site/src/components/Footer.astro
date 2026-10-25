@@ -2,12 +2,21 @@
 // Starlight's pagination, then the footer shared with the other GurtOS sites.
 import Default from '@astrojs/starlight/components/Footer.astro';
 import SiteFooter from '../theme/SiteFooter.astro';
+import { REPO } from '../product.ts';
 ---
 
 <Default />
+<nav class="docs-repo" aria-label="Project files">
+  <a href={`${REPO}/blob/main/ROADMAP.md`}>Roadmap</a>
+  <a href={`${REPO}/blob/main/SECURITY.md`}>Security policy</a>
+  <a href={`${REPO}/blob/main/CODE_OF_CONDUCT.md`}>Code of conduct</a>
+  <a href={`${REPO}/blob/main/release/licenses.md`}>Licence report</a>
+</nav>
 <div class="docs-footer"><SiteFooter /></div>
 
 <style is:global>
+  .docs-repo { display: flex; flex-wrap: wrap; gap: 0.4rem 1.2rem; margin-top: 2rem; font-size: var(--sl-text-sm); }
+  .docs-repo a { color: var(--sl-color-gray-2); }
   /* Run the shared footer edge to edge below the docs' content column. */
   .docs-footer { margin: 2rem calc(-1 * var(--sl-content-pad-x)) calc(-1 * var(--sl-content-pad-x)); }
   .docs-footer .gw-footer { margin-top: 0; }
