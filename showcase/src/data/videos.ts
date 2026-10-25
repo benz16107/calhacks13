@@ -5,6 +5,6 @@ export const VIDEOS: Record<string, string> = {
   fetch: 'YkLOewsE2yw',
   atlassian: '',
   figma: '',
-  hyphenate: 'w63vbqz6H8w',
+  hyphenate: '90iEnbJtJoU',
   visa: '',
 };

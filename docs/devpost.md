@@ -291,7 +291,7 @@ Answer key: `tracks/credit-desk/cases/fogline-2026-10/answer_key.json` (the plan
 
 GurtOS is open source (Apache-2.0): anyone can run it, customise it and reuse this desk in their own agents.
 
-**Video:** https://youtu.be/w63vbqz6H8w (GurtOS for Hyphenate, 1:29, opens on the APP-1043 moment).
+**Video:** https://youtu.be/90iEnbJtJoU (GurtOS for Hyphenate, 1:29, opens on the APP-1043 moment).
 
 [Full write-up, video and evidence →](https://calhacks.gurtos.com/tracks/hyphenate/)
 
