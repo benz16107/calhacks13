@@ -42,6 +42,33 @@ final class DeviceShots: XCTestCase {
     shot(env["NAME"] ?? "scrolled")
   }
 
+  /** Quick Start (TEST_RUNNER_OPEN, a /quickstart link): Continue, review, Face ID (matched by the host), then paired. */
+  func testQuickStart() throws {
+    let app = launch(["GURTOS_OPEN": env["OPEN"] ?? ""])
+    let go = app.buttons["Continue"]
+    XCTAssert(go.waitForExistence(timeout: 20), "no Quick Start sheet")
+    Thread.sleep(forTimeInterval: 1)
+    shot("qs-pick")
+    go.tap()
+    let approve = app.buttons["Approve with Face ID"]
+    XCTAssert(approve.waitForExistence(timeout: 30), "no question from the source")
+    Thread.sleep(forTimeInterval: 1.5)
+    shot("qs-review")
+    approve.tap()
+    let ok = spring.alerts.buttons["OK"]
+    if ok.waitForExistence(timeout: 4) { ok.tap() }
+    Thread.sleep(forTimeInterval: 1)
+    signal("faceid-up")
+    XCTAssert(wait(for: "matched"))
+    Thread.sleep(forTimeInterval: 3)
+    shot("qs-waiting")
+    let end = Date().addingTimeInterval(240)
+    while Date() < end, app.navigationBars["Quick Start"].exists { Thread.sleep(forTimeInterval: 2) }
+    Thread.sleep(forTimeInterval: 5)
+    shot("qs-paired")
+    XCTAssertFalse(app.navigationBars["Quick Start"].exists, "still on Quick Start")
+  }
+
   /** A rendezvous link (TEST_RUNNER_OPEN): Pair over the internet, the wait, then the paired computer's Home. */
   func testRendezvous() throws {
     let app = launch(["GURTOS_OPEN": env["OPEN"] ?? ""])

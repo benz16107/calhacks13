@@ -70,13 +70,18 @@ public struct QuickOffer: Codable, Sendable {
 }
 
 extension BoxClient {
-  /** Owner only: ask this computer to send its setup to the new one. */
-  public func quickstartSend(_ q: QuickStart, phonePk: String) async throws -> QuickOffer {
-    try await call("POST", "/quickstart/send", body: ["rv": q.rv, "pk": q.pk, "s": q.s, "n": q.name, "phonePk": phonePk])
+  /**
+   * Owner only: ask this computer to send its setup to the new one. The keys are fixed here and the question names
+   * exactly them; nil lets the computer choose its model keys. A changed choice needs a fresh send.
+   */
+  public func quickstartSend(_ q: QuickStart, phonePk: String, keys: [String]? = nil) async throws -> QuickOffer {
+    var body: [String: Any] = ["rv": q.rv, "pk": q.pk, "s": q.s, "n": q.name, "phonePk": phonePk]
+    if let keys { body["keys"] = keys }
+    return try await call("POST", "/quickstart/send", body: body)
   }
 
-  /** The owner's answer, with the keys they left ticked. A 409 means the new computer stopped. */
-  public func quickstartAnswer(_ id: String, approve: Bool, keys: [String]) async throws {
-    _ = try await call("POST", "/quickstart/send/\(id)", body: ["approve": approve, "keys": keys], as: Ignored.self)
+  /** The owner's answer to one question. A 409 means the new computer stopped. */
+  public func quickstartAnswer(_ id: String, approve: Bool) async throws {
+    _ = try await call("POST", "/quickstart/send/\(id)", body: ["approve": approve], as: Ignored.self)
   }
 }

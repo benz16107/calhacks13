@@ -79,30 +79,37 @@ struct QuickStartSheet: View {
           Text(offer.phrase).font(.g(.title3, .bold).monospaced())
         }
       } footer: { Text("\(q.name) shows four words too. Approve only if they match.") }
-      if !offer.keys.isEmpty {
-        Section("Keys it sends") {
-          ForEach(offer.keys, id: \.name) { k in
-            Toggle(Self.label(k.name), isOn: Binding(get: { chosen.contains(k.name) }, set: { if $0 { chosen.insert(k.name) } else { chosen.remove(k.name) } }))
-          }
-        }
-      }
       Section {
         Button { answer(true) } label: { HStack { Spacer(); if busy { ProgressView() } else { Label("Approve with Face ID", systemImage: "faceid").font(.g(.headline)) }; Spacer() } }
           .disabled(busy)
         Button("Don't send", role: .destructive) { answer(false) }.disabled(busy)
+      }
+      if !offer.keys.isEmpty {
+        Section("Keys it sends (change before you approve)") {
+          ForEach(offer.keys, id: \.name) { k in
+            Toggle(Self.label(k.name), isOn: Binding(get: { chosen.contains(k.name) }, set: { on in
+              if on { chosen.insert(k.name) } else { chosen.remove(k.name) }
+              ask(keys: Array(chosen)) // the question names exactly these keys, so a change asks again
+            }))
+            .disabled(busy)
+          }
+        }
       }
     }
   }
 
   static func label(_ k: String) -> String { k == "ANTHROPIC_API_KEY" ? "Anthropic key" : k == "FACTORY_API_KEY" ? "Factory key" : k }
 
-  func start() {
+  func start() { ask(keys: nil) }
+
+  /** A fresh question for these keys (nil: the computer's model keys). Only the latest one is ever answered. */
+  func ask(keys: [String]?) {
     guard let m = from else { return }
     busy = true
     error = nil
     Task {
       do {
-        let o = try await BoxClient(machine: m).quickstartSend(q, phonePk: Base64URL.encode(key.publicKey.rawRepresentation))
+        let o = try await BoxClient(machine: m).quickstartSend(q, phonePk: Base64URL.encode(key.publicKey.rawRepresentation), keys: keys)
         offer = o
         chosen = Set(o.keys.filter(\.chosen).map(\.name))
         stage = .review
@@ -121,7 +128,7 @@ struct QuickStartSheet: View {
       defer { busy = false }
       do {
         if approve { _ = try await Check.run("Send your setup to \(q.name)") }
-        try await BoxClient(machine: m).quickstartAnswer(offer.id, approve: approve, keys: Array(chosen))
+        try await BoxClient(machine: m).quickstartAnswer(offer.id, approve: approve)
         guard approve else { return dismiss() }
         stage = .waiting
         let link = try await q.waitForOwnerCode(key)

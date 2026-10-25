@@ -19,12 +19,12 @@ case $what in
   scrolled) run testScrolledRequest ;;
   tap) run testTapApprove ;;
   rendezvous) run testRendezvous ;;
-  faceid)
+  faceid|quickstart)
     # Enroll a face in the simulator, then match it when the test shows the sheet.
     xcrun simctl spawn "$dev" notifyutil -s com.apple.BiometricKit.enrollmentChanged 1
     xcrun simctl spawn "$dev" notifyutil -p com.apple.BiometricKit.enrollmentChanged
     ( for i in $(seq 120); do [ -f "$out/faceid-up" ] && break; sleep 1; done
       xcrun simctl spawn "$dev" notifyutil -p com.apple.BiometricKit_Sim.pearl.match; touch "$out/matched" ) &
-    run testApproveWithFaceID
+    if [ "$what" = quickstart ]; then run testQuickStart; else run testApproveWithFaceID; fi
     wait ;;
 esac
