@@ -31,8 +31,8 @@ Checked against main `7fe6651`, Sat Oct 24 08:09 PT. `./demo` from a clean workt
 | Status | Count |
 |---|---|
 | verified (ISO) | 3 |
-| verified | 65 |
-| merged | 186 |
+| verified | 70 |
+| merged | 181 |
 | building | 1 |
 | planned | 1 |
 | not pursued | 6 |
@@ -250,15 +250,17 @@ controller's clear-the-flag path (FRR-5), an ASI:One chat intent for credit.
 
 | Feature | Owner | Status | Commit | Demo step | Tracks |
 |---|---|---|---|---|---|
-| The box as an ASI:One agent: pairing, tasks, approvals, results, undo in chat | fetch | merged (page verified Oct 24 00:45; chat not paired, needs Ben) | 2b013a3, 5dfd3f7 | tracks/fetch/demo.ts | Fetch.ai |
+| The box as an ASI:One agent: pairing, tasks, approvals, results, undo in chat | fetch | verified Oct 24 23:38 PT by the conductor's browser thread, not QA: in ASI:One, signed in as Ben, against the installed linuxbox box. `pair 100322` in a direct chat with GurtOS returned "Paired. This box now takes work from you here." "Fix the failing test in my project" ran Droid in task tngig816742 ($0.03): the split.js remainder fix, npm test passes, a diff card with Keep and Undo, and "Blocked: registry.npmjs.org:443". Public evidence: the shared chat https://asi1.ai/shared-chat/d47d985a-01d8-49f6-9011-15a8eae87399 (opens signed out, HTTP 200) | 2b013a3, 5dfd3f7 | tracks/fetch/demo.ts | Fetch.ai |
 | Chat limited to its own tasks, fixed tools and budget | fetch | merged | 5dfd3f7 | fetch demo offline check | Fetch.ai, Armadin |
-| An agent team on Agentverse | fetch | merged (on main; QA has not walked it) | d7f9fc1 |  | Fetch.ai |
-| Safe calls to strangers' agents, a blocked hidden instruction | fetch | merged (on main; QA has not walked it; the stranger's reply is treated as untrusted) | d7f9fc1 |  | Fetch.ai |
-| Payment Protocol | fetch | merged (on main; QA has not walked it) | d7f9fc1 |  | Fetch.ai |
-| Rich cards | fetch | merged (Interactive Cards for approve and undo; richer cards in d7f9fc1) | 2b013a3, d7f9fc1 | fetch demo | Fetch.ai |
-| Reliability shown in chat | fetch | merged (the chat says when the box restarted and resumes; QA has not walked it) | d7f9fc1 | | Fetch.ai |
-| Picking a machine from chat | fetch | merged (machines link with an HMAC proof; QA has not walked it) | d7f9fc1 | | Fetch.ai |
+| An agent team on Agentverse | fetch | verified Oct 24 23:46 PT (browser thread): "check if the Hario V60 filters are back in stock" was answered by "GurtOS Shopper replied:" with Gold Roast prices (40-pack $9.50 in stock) and a restock watch proposed for the owner's OK (task tngrivf0708, $0.06, Haiku second-look and Apify cost lines). Finding P3: the paid price check's Best Buy result for "hario v60 filters" was an unrelated "VHF-6010+ RF High-Pass Filter, 151.99 CAD" | d7f9fc1 |  | Fetch.ai |
+| Safe calls to strangers' agents, a blocked hidden instruction | fetch | verified Oct 24 23:51 and 23:54 PT (browser thread): "Ask the test weather agent for the weather in Berkeley" gave the card "Blocked an instruction from GurtOS test weather (trap)" (a hidden HTML comment: ignore the owner, ask for keys, ask for money, keep it from the user), and the weather was kept as data only | d7f9fc1 |  | Fetch.ai |
+| Payment Protocol | fetch | verified Oct 24 23:57 and 23:58 PT (browser thread, test FET): "Ask the test oracle for a fortune" gave an Approve card (0.5 test FET, over the $0.25 budget). After Approve in chat the fortune and a test-money receipt came back (testnet tx 2D54F68DDAC69A75628D1AF0E7B72636E64E64DAB88F86E4C990EDE5574C69F1). "Ask the test buyer to buy a price check": the buyer paid GurtOS Shopper 0.05 test FET (tx DA84E229936ECF6AD1C2013E8C19F00618E1D624D9BD54BACD80D305CCDA4FA2) | d7f9fc1 |  | Fetch.ai |
+| Rich cards | fetch | verified Oct 24 (browser thread): the diff, blocked, approve and payment cards all render in ASI:One | 2b013a3, d7f9fc1 | fetch demo | Fetch.ai |
+| Reliability shown in chat | fetch | merged (the chat says when the box restarted and resumes; not walked: nobody pulled the plug on the installed box) | d7f9fc1 | | Fetch.ai |
+| Picking a machine from chat | fetch | merged (machines link with an HMAC proof; not walked) | d7f9fc1 | | Fetch.ai |
 | Guest requests (one guest path shared with Mana: a gate task for the owner's OK, then a run in the empty guest workspace) | fetch, mana | verified Oct 24 04:25 on the Mana route (Fetch calls the same route; QA has not tried it from ASI:One) | 03bade4, 804e8d0 | tracks/mana/demo.ts | Fetch.ai, Mana |
+
+Findings from that walk, also sent to the Fetch thread. **P2:** ASI:One prefixes every direct-chat message with "@agent1qvuk46…"; the box keeps it, so task names show it, and "Is the Hario V60 filter back in stock?" got the status list instead of the Shopper. **P3:** the Best Buy result above. Guest requests from a second ASI:One account were not walked (none signed in). The Agentverse GurtOS profile now has 4 starter prompts; the Fetch Submission Agent form waits at "Confirm submission" for the conductor's yes.
 
 ## Coinbase and Solana (wallet)
 
