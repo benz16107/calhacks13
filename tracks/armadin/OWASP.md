@@ -22,7 +22,7 @@ Security Initiative.
 | LLM07 | System Prompt Leakage | Not covered. GurtOS does not manage prompts; a track writes its own. | — |
 | LLM08 | Vector and Embedding Weaknesses | Not applicable. No vector store or embedding retrieval in the core. | — |
 | LLM09 | Misinformation | Not covered. Output correctness is a model and track concern, not an OS one. | — |
-| LLM10 | Unbounded Consumption | Partially covered. A task's memory and process count are capped (`MemoryMax=2G`, `TasksMax=512`); spending is capped and counted per task. CPU is capped at 200% (`CPUQuota`). Disk is capped by a 2-second watcher (default 5 GB per task) that stops and undoes a task past its cap, not by a hard quota, so a fast writer can pass it by up to two seconds of writing. | `core/sandbox.ts` `HARDENING`; `tracks/armadin/demo.ts` attack scoreboard (fork bomb, memory hog and disk fill caught) |
+| LLM10 | Unbounded Consumption | Partially covered. A task's memory and process count are capped (`MemoryMax=2G`, `TasksMax=512`); spending is capped and counted per task. CPU is capped at 200% (`CPUQuota`). Disk is bounded by a watcher (default 5 GB per task) that stops and undoes a task past its cap, not by a hard quota: in our six runs, each the only gate run on its machine, the stop came 0 to 3.1 s after the write finished, and a writer can pass the cap before it is stopped. | `core/sandbox.ts` `HARDENING`; `tracks/armadin/demo.ts` attack scoreboard (fork bomb, memory hog and disk fill caught) |
 
 ## OWASP Top 10 for Agentic Applications (2026)
 
