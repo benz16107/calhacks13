@@ -93,6 +93,7 @@ function spawnProc(b: Box) {
       BOX_APPROVAL_WAIT_MS: '3600000', // an approval may wait the box's whole life
       BOX_OWNER: 'owner',
       BOX_NO_DROID: '1', // scripted worker only: no model spend, ever
+      BOX_TASK_DISK_CAP: String(200 * 1024 * 1024), // 200 MB per task: real here, and it protects this small host's disk
       BOX_HOSTS: JSON.stringify({ [WEB_HOST]: '127.0.0.1' }), // the fake web is the only name a task can resolve
       BOX_DEMO: '1',
       BOX_ID: b.id,
@@ -246,7 +247,7 @@ export async function runAttack(b: Box, pagePath: string, asks: string[]): Promi
     asks,
     defenses,
     notCovered: [
-      { name: 'A disk fill', detail: 'GurtOS has no per-task disk quota yet. This demo does not let you reach that: every task here runs a fixed script that writes only a few small files, and the whole host is wiped on a schedule. On a real box a task could still fill the disk. Reported honestly, not as caught.' },
+      { name: 'A disk fill (covered, not acted out here)', detail: 'This demo does not act out a disk fill, but GurtOS now caps each task\'s disk: a task that writes past its cap is stopped and undone, with a security note and a phone alert. On this host the cap is 200 MB per task. The caught defences above are the ones this attack actually ran.' },
       { name: 'A body to an allowed host over HTTPS', detail: 'The proxy checks which host a task may reach, not the contents of an HTTPS request to a host it is allowed to reach. The tripwire still catches the decoy key in plain HTTP or in a request it can read.' },
       { name: 'The model itself', detail: 'This demo acts out a hijacked agent with a script, so it does not test whether Claude falls for the text. The defences shown are the operating system stopping the agent, which is the point: they do not depend on the model refusing.' },
     ],

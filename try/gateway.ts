@@ -65,10 +65,12 @@ const json = (res: http.ServerResponse, status: number, body: unknown) => res.wr
 // ---------- the whitelist: what a browser may ask a box ----------
 export function allowedToBox(method: string, p: string): boolean {
   if (method === 'GET') {
-    if (/^\/(app\.js|app\.css|manifest\.webmanifest|source\.txt)$/.test(p)) return true;
+    if (/^\/(app\.js|app\.css|manifest\.webmanifest|source\.txt|sw\.js)$/.test(p)) return true;
     if (/^\/(icon-\d+\.png)$/.test(p)) return true;
     if (/^\/(assets|kit)\//.test(p)) return true;
     if (p === '/api/health' || p === '/api/system' || p === '/api/setup' || p === '/api/boxes' || p === '/api/apps') return true;
+    // Read-only and not secret: these let the real desktop render fully (no console 403s). Mutating them stays blocked.
+    if (p === '/api/settings' || p === '/api/owner') return true;
     if (p === '/api/tasks' || p === '/api/approvals') return true;
     if (/^\/api\/tasks\/[\w-]+(\/diff)?$/.test(p)) return true;
     if (/^\/api\/log(\/stream)?(\?|$)/.test(p.split('#')[0])) return true;

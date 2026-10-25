@@ -39,6 +39,9 @@
     border: 1px solid #ddd; border-radius: .5rem; box-shadow: 0 8px 30px rgba(0,0,0,.15); padding: .9rem 1.1rem; max-width: 24rem; font-weight: 400; }
   #try-caveat ul { margin: .4rem 0 0; padding-left: 1.1rem; } #try-caveat li { margin: .25rem 0; color: #444; }
   .try-spin { color: #555; }
+  .try-toast { position: fixed; left: 50%; bottom: 6.5rem; transform: translateX(-50%); z-index: 2147483001;
+    background: #141414; color: #f2f2f2; border: 1px solid #333; border-radius: .5rem; padding: .7rem 1rem;
+    max-width: 90vw; box-shadow: 0 8px 30px rgba(0,0,0,.35); font: 500 14px system-ui; transition: opacity .6s; }
 </style>
 <div id="try-bar">
   <span class="try-brand">GurtOS</span><span class="try-tag">live demo &middot; your own throwaway computer</span>
@@ -69,6 +72,19 @@
 (function () {
   var $ = function (id) { return document.getElementById(id); };
   var menuData = null;
+
+  // A brief toast, so a visitor who starts a task knows it happened and where to look.
+  function toast(text) {
+    var t = document.createElement('div'); t.className = 'try-toast'; t.textContent = text;
+    document.body.appendChild(t);
+    setTimeout(function () { t.style.opacity = '0'; }, 4000);
+    setTimeout(function () { t.remove(); }, 4600);
+  }
+  // Best effort: open the portal's Tasks panel so the new task is visible (the portal owns this button).
+  function openTasks() {
+    var b = [...document.querySelectorAll('button')].find(function (x) { return /^Tasks$/.test((x.getAttribute('aria-label') || x.textContent || '').trim()) && !x.closest('#try-bar'); });
+    if (b) try { b.click(); } catch (e) {}
+  }
   function hideAll() { $('try-menu').hidden = true; $('try-caveat').hidden = true; }
   function toggle(el) { var h = el.hidden; hideAll(); el.hidden = !h; }
 
@@ -89,6 +105,8 @@
         m.hidden = true;
         btn.disabled = true;
         await fetch('/try/task', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ id: it.id }) });
+        toast('Task started. Open Tasks in the dock to watch it, approve it, or undo it.');
+        openTasks();
       };
       m.appendChild(btn);
     });
@@ -99,9 +117,13 @@
   $('try-plug').onclick = async function () {
     if (!confirm('Pull the plug? The box is hard-killed and then resumes where it was.')) return;
     $('try-plug').disabled = true; $('try-plug').textContent = 'Killing...';
-    try { await fetch('/try/plug', { method: 'POST' }); $('try-plug').textContent = 'Resumed'; }
-    catch (e) { $('try-plug').textContent = 'Pull the plug'; }
-    setTimeout(function () { $('try-plug').disabled = false; $('try-plug').textContent = 'Pull the plug'; location.reload(); }, 2500);
+    try {
+      // /try/plug returns only after the box is back up and healthy, so reload straight away: the page lands on
+      // the resumed box with the same token. No in-between window where a click could hit a half-restarted box.
+      var r = await fetch('/try/plug', { method: 'POST' });
+      if (r.ok) { $('try-plug').textContent = 'Resumed'; location.reload(); return; }
+      $('try-plug').textContent = 'Pull the plug'; $('try-plug').disabled = false;
+    } catch (e) { $('try-plug').textContent = 'Pull the plug'; $('try-plug').disabled = false; }
   };
 
   function openAttack() { hideAll(); $('try-over').hidden = false; renderPages(); }
