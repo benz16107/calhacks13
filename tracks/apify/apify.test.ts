@@ -170,7 +170,7 @@ test('apify.readPage runs our Actor, withholds a high-risk page and returns the 
     { url: 'https://b.example', ok: true, title: 'B', risk: 'high', score: 100, text: 'SECRET INSTRUCTIONS', findings: [{ type: 'hidden-instruction', evidence: 'ignore your task' }] },
   ];
   const out = (await tool('apify.readPage').run({ urls: ['https://a.example', 'https://b.example'] }, ctx)) as { reader: string; pages: any[] };
-  assert.equal(calls[0].url.pathname, `/v2/acts/${READER.replace('/', '~')}/runs`);
+  assert.equal(calls[0].url.pathname, `/v2/acts/${READER}/runs`);
   assert.deepEqual(inputOf(), { urls: ['https://a.example', 'https://b.example'], maxPages: 2 });
   assert.equal(out.pages[0].text, 'clean text');
   assert.equal(out.pages[1].withheld, true);
@@ -197,7 +197,7 @@ test('apify.mcp lists and calls only allowed tools, through the box, and checks 
   const listed = (await mcp.run({}, ctx)) as { tools: { name: string }[] };
   assert.deepEqual(listed.tools.map((t) => t.name), ['apify--rag-web-browser', 'get-actor-run']); // abort-actor-run is not allowed
   assert.ok(calls.every((c) => c.headers.authorization === `Bearer ${TOKEN}`));
-  assert.equal(calls[0].url.search, `?tools=apify/rag-web-browser,${READER},compass/crawler-google-places,apify/website-content-crawler`);
+  assert.equal(calls[0].url.search, `?tools=apify/rag-web-browser,benz16107/agent-safe-page-reader,compass/crawler-google-places,apify/website-content-crawler`);
   assert.equal(mcp.cost!({}), 0);
   assert.equal(mcp.cost!({ tool: 'x' }), 10);
   const ok = (await mcp.run({ tool: 'apify--rag-web-browser', arguments: { query: 'bikes', waitSecs: 500 } }, ctx)) as any;

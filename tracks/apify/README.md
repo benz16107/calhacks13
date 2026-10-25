@@ -28,7 +28,7 @@ Apify CLI and SDK).
    agent, and no existing Actor checks for that. Every page an agent reads through `apify.readPage` goes through
    it, and a high-risk page is withheld from the agent. *Criteria:* a new, useful Actor that solves a security
    problem of the OS (best Actor), and a deeper use of Apify than calling Actors others wrote (best use).
-   Store page: `https://apify.com/sacrosanct_zing/agent-safe-page-reader` (see "Publishing the Actor" below).
+   Store page: `https://apify.com/benz16107/agent-safe-page-reader` (see "Publishing the Actor" below).
 2. **Apify's MCP server as the web toolkit, through the broker** (`apify.mcp`). The agent gets Apify's own tools
    (web search and read, Google Maps, site crawling, our page reader) without holding the token or any network.
    Four Actors and `get-actor-run` are allowed; the storage tools that can read other runs' data are not. *Why:*

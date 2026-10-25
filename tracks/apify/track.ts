@@ -15,13 +15,15 @@ export { fit, runActor } from './client.ts';
 const BESTBUY = 'https://www.bestbuy.ca/api/v2/json';
 const home = () => process.env.BOX_HOME ?? '/var/lib/box';
 /** Our own Actor, published on the Apify Store. See actor/README.md. */
-export const READER = 'sacrosanct_zing/agent-safe-page-reader';
+export const READER = 'eFq5SSXGg9brb1hIU'; // by ID: the owner name in its address changed once, the ID cannot
+/** The same Actor as Apify's MCP server names it, owner--name. */
+const READER_MCP = 'benz16107/agent-safe-page-reader';
 const MAPS = 'compass/crawler-google-places';
 const CRAWLER = 'apify/website-content-crawler';
 /** Google Maps Scraper refuses a run cap under $0.50. The place count, not the cap, is what keeps a run small. */
 const MAPS_MIN_CAP = 0.5;
 /** What `apify.mcp` may call. Each Actor shows up on Apify's MCP server as owner--name. */
-const MCP_ACTORS = ['apify/rag-web-browser', READER, MAPS, CRAWLER];
+const MCP_ACTORS = ['apify/rag-web-browser', READER_MCP, MAPS, CRAWLER];
 const MCP_ALLOWED = new Set([...MCP_ACTORS.map((a) => a.replace('/', '--')), 'get-actor-run']);
 
 const capUsd = (i: { maxUsd?: unknown } | undefined, dflt = 0.1) => (Number(i?.maxUsd) > 0 ? Number(i!.maxUsd) : dflt);

@@ -64,7 +64,7 @@ export default async function (d: DemoKit) {
     start('Watch AirPods Pro at Best Buy', 'apify.checkPrice', { product: 'airpods pro', max: 2 }),
     start('Find coffee near campus', 'apify.findPlaces', { query: 'coffee', near: 'Berkeley, CA', max: 2 }),
     start('Read two pages', 'apify.readPage', { urls: ['https://example.com', trapUrl] }),
-    start('Read a page over Apify MCP', 'apify.mcp', { tool: 'sacrosanct_zing--agent-safe-page-reader', arguments: { urls: ['https://example.com'] } }),
+    start('Read a page over Apify MCP', 'apify.mcp', { tool: 'benz16107--agent-safe-page-reader', arguments: { urls: ['https://example.com'] } }),
     start('Index a website into search', 'apify.indexSite', { url: 'https://example.com', maxPages: 1 }, 'web'),
   ]);
   const [p, m, r, x, c] = await Promise.all([price, places, read, viaMcp, crawled].map((t) => finish(t.id)));
