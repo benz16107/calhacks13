@@ -36,6 +36,13 @@ Then use the `setup_*` tools: `setup_status`, `setup_set_key`, `setup_owner`, `s
 
 Every command prints JSON: `{"ok": true, "result": ...}`, or `{"ok": false, "error": "..."}` with exit code 1.
 
+**With plain HTTPS** (any language): trade the code for a token, then call the setup API with it:
+
+    curl -s -X POST http://192.168.1.20:7701/api/pair -H 'content-type: application/json' -d '{"code":"a1b2c3d4","name":"My agent","kind":"setup"}'
+    curl -s http://192.168.1.20:7701/api/setup -H "authorization: Bearer <token>"
+
+`kind: "setup"` is required. The routes are in `core/README.md` (Setup from another computer).
+
 The steps, in order:
 
 1. **Model key.** `gurtos key set ANTHROPIC_API_KEY` with the key on stdin (or `FACTORY_API_KEY`). The computer

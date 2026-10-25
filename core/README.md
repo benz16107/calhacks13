@@ -127,6 +127,15 @@ from the network. `POST /api/pair {code, kind: 'setup'}` trades the code for a s
 `core/gurtos.ts` (the command line) and `core/claude-mcp.ts` with `BOX_SETUP_CODE` (MCP setup tools), both on
 `core/setup-client.ts`. How-to: `AGENT-SETUP.md`; design: `docs/design/agent-setup.md`.
 
+**Permissions.** Like a phone's app permissions (`core/permissions.ts`). `GET /api/permissions` lists each app's
+manifest: the keys it declares, money if it has a tool that spends, strangers if it has open routes, and what it was
+seen using (hosts its tasks reach, agents that run commands, copies of the owner's folders), each with `allowed`.
+`PUT /api/permissions/<app> {deny: [ids], perDayCents}` (owner) turns items off and sets money per day; it also marks
+the prompt answered. The box enforces each "off" where it already draws the line: keys at the vault and in tools,
+money in the broker (over the daily limit becomes an approval), shell, hosts and folders when the app starts a task,
+strangers at its open routes. Each refusal is a `permissions` note. Nothing changes for an app until the owner turns
+something off. Not covered yet: limiting hosts before an app first uses them, and an "allow once" question for a new one.
+
 **System update.** `GET /api/update` is `{version, build, state, slot?, last?, lastAt?}`, read from what
 `box-update` leaves behind: `state` is `current`, `ready` (an update is written to the other slot and starts at the
 next restart), `trial` (running an update not yet confirmed), `rolledBack` (the last line says it rolled back or did

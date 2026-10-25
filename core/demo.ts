@@ -387,8 +387,10 @@ await moment('command setup: an agent sets a computer up through MCP with only t
   const noToken = await fetch(`${url}/api/settings`).then((r) => r.status);
   check(ch.open && /^[0-9a-f]{8}$/.test(ch.code) && noToken === 401, `the screen shows an 8-character code and opens the setup channel, which gives nothing without a token (${noToken})`);
   const asPhone = await fetch(`${url}/api/pair`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ code: ch.code, name: 'x' }) }).then((r) => r.status);
-  check(asPhone === 400, 'a setup code pairs only as a setup agent, not as a phone');
-  const ch2 = await api<{ code: string }>('POST', '/api/setup/code'); // the failed try above used that code up
+  check(asPhone === 400, 'a setup code pairs only as a setup agent, not as a phone (and that try does not use the code up)');
+  // Read off the screen to an agent as "AB12-CD34": capitals and a dash still work.
+  const typed = `${ch.code.slice(0, 4).toUpperCase()}-${ch.code.slice(4).toUpperCase()}`;
+  const ch2 = { code: typed };
   const mcp = spawn(process.execPath, ['--experimental-strip-types', '--disable-warning=ExperimentalWarning', new URL('./claude-mcp.ts', import.meta.url).pathname], { env: { ...process.env, BOX_URL: url, BOX_SETUP_CODE: ch2.code, BOX_TOKEN: '' }, stdio: ['pipe', 'pipe', 'inherit'] });
   const waiting = new Map<number, (v: any) => void>();
   let buf = '', n = 0;
@@ -427,6 +429,30 @@ await moment('command setup: an agent sets a computer up through MCP with only t
     mcp.kill();
     await api('PATCH', '/api/settings', { approvalThresholdCents: before.approvalThresholdCents });
     if (!wasDone) await api('POST', '/api/setup/reopen');
+  }
+});
+
+await moment("permissions: an app does only what the owner allowed, like a phone's app permissions", async () => {
+  workspace('perm', {});
+  const view = (await api<{ app: string; items: { id: string; allowed: boolean }[] }[]>('GET', '/api/permissions')).find((a) => a.app === 'example');
+  const ids = view?.items.map((i) => i.id) ?? [];
+  check(ids.includes('key:DEMO_SECRET') && ids.includes('money'), `each app's manifest comes from what it registers (example: ${ids.join(', ')})`);
+  const spend = (cents: number) => api<Task>('POST', '/tasks', { title: 'Spend', workspace: 'perm', worker: 'fake', source: 'demo', tools: ['example.spend'], budgetCents: 10_000, prompt: `call example.spend {"cents":${cents},"on":"a thing"}` });
+  try {
+    await api('PUT', '/api/permissions/example', { deny: ['money', 'key:DEMO_SECRET'] });
+    const T = await spend(50);
+    const t = await waitFor('the refusal', async () => { const x = await task(T.id); return x.state === 'failed' || x.state === 'done' ? x : undefined; });
+    const route = await api('GET', '/t/example/secret-check').then(() => 'allowed', (e: Error) => e.message);
+    const log = JSON.stringify(await api<LogEvent[]>('GET', '/log'));
+    check(t.state === 'failed' && /isn't allowed to spend/.test(t.error ?? '') && /isn't allowed to use the key DEMO_SECRET/.test(route) && /wasn't allowed to spend/.test(log),
+      `with money and its key turned off, the app's spend is refused ("${(t.error ?? '').slice(0, 70)}"), so is the key, and both are in the log`);
+    await api('PUT', '/api/permissions/example', { deny: [], perDayCents: 100 });
+    const D = await spend(150);
+    const ask = await waitFor('the daily-limit question', async () => (await api<{ task: string; question: string }[]>('GET', '/api/approvals?state=pending')).find((a) => a.task === D.id));
+    check(/over its \$1\.00 a day/.test(ask.question), `a daily limit turns a spend over it into a question: "${ask.question.slice(0, 90)}"`);
+    await api('POST', `/api/approvals/${encodeURIComponent((ask as unknown as { id: string }).id)}`, { approved: false });
+  } finally {
+    await api('PUT', '/api/permissions/example', { deny: [], perDayCents: null });
   }
 });
 

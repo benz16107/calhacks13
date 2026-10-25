@@ -24,6 +24,7 @@ import { challenge, checkSso, noGroup, personId, provider, random, roleFor, veri
 import * as push from './push.ts';
 import { APP, RELAY, Remote, SECRET_KEY } from './remote.ts';
 import * as quick from './quickstart.ts';
+import * as perms from './permissions.ts';
 
 type Handler = (method: string, url: URL, body: any, headers: http.IncomingHttpHeaders, req: http.IncomingMessage) => unknown;
 
@@ -231,6 +232,56 @@ class Core {
   boxName(): string {
     const n = (this.setup?.steps?.name?.data as { boxName?: unknown } | undefined)?.boxName;
     return typeof n === 'string' && n.trim() && n.trim().length <= 40 ? n.trim() : BOX_NAME;
+  }
+
+  // ---------- permissions: what each app may do (core/permissions.ts) ----------
+  grants = perms.load(HOME);
+
+  /** A task an app starts: refused where the owner said no; otherwise what it asks for is remembered for Settings. */
+  permitTask(app: string, spec: TaskSpec): TaskSpec {
+    const hosts = spec.hosts ?? [];
+    if (spec.worker === 'droid' && perms.denied(this.grants, app, 'shell')) this.permRefuse(app, 'shell', 'run an agent that can run commands');
+    if ((spec.folder || spec.folders) && perms.denied(this.grants, app, 'folders')) this.permRefuse(app, 'folders', 'give an agent a copy of your folders');
+    for (const h of hosts) if (perms.denied(this.grants, app, `host:${h}`)) this.permRefuse(app, `host:${h}`, `let its agents reach ${h}`);
+    const g = perms.grant(this.grants, app);
+    const newHosts = hosts.filter((h) => !g.seen.hosts.includes(h));
+    const changed = newHosts.length || (spec.worker === 'droid' && !g.seen.shell) || ((spec.folder || spec.folders) && !g.seen.folders);
+    g.seen.hosts.push(...newHosts);
+    if (spec.worker === 'droid') g.seen.shell = true;
+    if (spec.folder || spec.folders) g.seen.folders = true;
+    if (changed) perms.save(HOME, this.grants);
+    return spec;
+  }
+
+  /** Refuse something the owner turned off for this app: logged, and said plainly. */
+  permRefuse(app: string, id: string, what: string): never {
+    const title = this.installed.get(app)?.track?.title ?? app;
+    this.write({ type: 'note', track: 'permissions', data: { app, id, refused: true }, text: `${title} wasn't allowed to ${what}` });
+    throw Object.assign(new Error(`${title} isn't allowed to ${what}. The owner can allow it in Settings, Permissions.`), { status: 403 });
+  }
+
+  /** Each app's manifest and what the owner allowed, for Settings and the first-run prompt. */
+  permissionsView() {
+    return [...this.installed.entries()].filter(([, r]) => r.track).map(([name, r]) => {
+      const t = r.track!;
+      const g = perms.grant(this.grants, name);
+      const spends = [...this.tools.values()].some((e) => e.track === name && !!e.tool.cost);
+      const items = perms.manifest({ title: t.title ?? name, keys: this.appEntry(name).access.secrets.map((k: { name: string }) => k.name), spends, strangers: !!t.openRoutes?.length }, g);
+      return { app: name, title: t.title ?? name, answered: !!g.answered, perDayCents: g.perDayCents ?? null, items: items.map((i) => ({ ...i, allowed: !g.deny.includes(i.id) })) };
+    });
+  }
+
+  /** What one app's tasks spent today (UTC), from the log. */
+  spentToday(app: string) {
+    const today = new Date().toISOString().slice(0, 10);
+    const toolOf = new Map<string, string>();
+    let cents = 0;
+    for (const e of this.log.events) {
+      if (!e.at.startsWith(today)) continue;
+      if (e.type === 'tool.call') toolOf.set(`${e.task}|${e.key}`, e.tool);
+      else if (e.type === 'tool.result' && e.cents && this.tools.get(toolOf.get(`${e.task}|${e.key}`) ?? '')?.track === app) cents += e.cents;
+    }
+    return cents;
   }
 
   // ---------- command setup: a code on the screen, then an agent on another computer (AGENT-SETUP.md) ----------
@@ -1089,6 +1140,7 @@ class Core {
       key: `${task?.id ?? 'box'}.${key}`,
       secret: (name) => {
         if (!secrets.includes(name)) throw new Error(`${name} is not in this tool's secrets`);
+        if (perms.denied(this.grants, track, `key:${name}`)) this.permRefuse(track, `key:${name}`, `use the key ${name}`);
         const v = this.vault.get(name);
         if (v === undefined) throw new Error(`the vault has no ${name}`);
         return v;
@@ -1146,6 +1198,16 @@ class Core {
       if (outcome === 'denied') return result({ ok: false, error: 'Shadow mode: a person decided otherwise, so this was not recorded. Do not ask again; move on.' });
     }
     const cost = entry.tool.cost?.(input) ?? 0;
+    // The owner turned money off for this app, or gave it a daily limit (Settings, Permissions).
+    if (cost > 0 && perms.denied(this.grants, entry.track, 'money')) {
+      try {
+        this.permRefuse(entry.track, 'money', `spend ${dollars(cost)} on ${name}`);
+      } catch (e) {
+        return result({ ok: false, error: (e as Error).message });
+      }
+    }
+    const perDay = this.grants[entry.track]?.perDayCents;
+    const overDay = cost > 0 && perDay !== undefined && this.spentToday(entry.track) + cost > perDay;
     // Count spending this task's other in-flight calls have committed, so two payments at once can't both pass.
     const committed = () => t.costCents + (this.reserved.get(t.id) ?? 0);
     const overBudget = committed() + cost > t.budgetCents;
@@ -1153,9 +1215,9 @@ class Core {
     // least this much (Shopper's "Buy 2 filters for $13.00?"). Spends are counted against it, and the budget still caps.
     const named = [...this.state.approvals.values()].filter((a) => a.task === t.id && a.state === 'approved' && !a.id.includes('.budget.') && a.costCents > 0).reduce((n, a) => n + a.costCents, 0);
     const overThreshold = cost > this.settings.approvalThresholdCents && committed() + cost > named;
-    if (cost > 0 && (overBudget || overThreshold)) {
+    if (cost > 0 && (overBudget || overThreshold || overDay)) {
       const meta = entry.tool.approval?.(input) ?? {};
-      const why = overBudget ? `Budget ${dollars(t.budgetCents)}, spent ${dollars(t.costCents)}.` : `Spends above ${dollars(this.settings.approvalThresholdCents)} always ask.`;
+      const why = overBudget ? `Budget ${dollars(t.budgetCents)}, spent ${dollars(t.costCents)}.` : overDay ? `${this.installed.get(entry.track)?.track?.title ?? entry.track} has spent ${dollars(this.spentToday(entry.track))} today, over its ${dollars(perDay!)} a day.` : `Spends above ${dollars(this.settings.approvalThresholdCents)} always ask.`;
       const q = `Spend ${dollars(cost)}${meta.payee ? ` to ${meta.payee}` : ''} on ${name}${meta.purpose ? ` (${meta.purpose})` : ''}? ${why}`;
       // Approval id keyed by the action, so a retry of the same call reuses it instead of asking again.
       const outcome = await this.askFor(t, `budget.${action}`, { question: q, costCents: cost, payee: meta.payee, purpose: meta.purpose });
@@ -1320,7 +1382,7 @@ class Core {
    */
   boxFor(track: string, person?: Person): Box {
     return {
-      createTask: (spec) => this.createTask({ source: track, ...spec }, person?.id),
+      createTask: (spec) => this.createTask({ source: track, ...this.permitTask(track, spec) }, person?.id),
       workspace: (name, fromDir) => sandbox.workspace(name, fromDir),
       linkWorkspace: (name, realPath) => this.linkWorkspace(name, realPath),
       task: (id) => this.state.tasks.get(id),
@@ -1339,6 +1401,7 @@ class Core {
       setPolicy: (text, approvalId) => this.policyFrom(track, text, approvalId),
       secret: (name) => {
         if (!this.trackSecrets.get(track)?.has(name)) throw new Error(`${name} is not in track ${track}'s secrets`);
+        if (perms.denied(this.grants, track, `key:${name}`)) this.permRefuse(track, `key:${name}`, `use the key ${name}`);
         const v = this.vault.get(name);
         if (v === undefined) throw new Error(`the vault has no ${name}`);
         return v;
@@ -1711,14 +1774,17 @@ class Core {
     // Pairing is reachable from outside the box, so guessing codes is limited: 10 wrong ones a minute, from everyone together.
     this.wrongCodes = this.wrongCodes.filter((at) => Date.now() - at < 60_000);
     if (this.wrongCodes.length >= 10) throw Object.assign(new Error('too many wrong pairing codes; wait a minute and ask this computer\'s screen for a new one'), { status: 429 });
-    const entry = body.code ? this.pairCodes.get(body.code) : undefined;
+    // A code read off a screen may come back as "8120D849" or "8120-D849": letters and digits only, lower case.
+    const code = String(body.code ?? '').replace(/[^0-9a-z]/gi, '').toLowerCase();
+    const entry = code ? this.pairCodes.get(code) : undefined;
     if (!entry || entry.expiry < Date.now()) {
       this.wrongCodes.push(Date.now());
       throw Object.assign(new Error('bad or expired pairing code'), { status: 400 });
     }
-    this.pairCodes.delete(String(body.code)); // one-time
     // A setup code pairs only as `setup` (an owner that lasts until setup finishes), and only a setup code does.
-    if ((body.kind === 'setup') !== !!entry.setup) throw Object.assign(new Error(entry.setup ? 'a setup code pairs as kind setup' : 'kind setup needs a setup code from the screen'), { status: 400 });
+    // Checked before the code is used up, so a wrong kind can try again.
+    if ((body.kind === 'setup') !== !!entry.setup) throw Object.assign(new Error(entry.setup ? 'This is a setup code: pair with kind "setup".' : 'kind setup needs a setup code from the screen'), { status: 400 });
+    this.pairCodes.delete(code); // one-time
     const person = this.person(entry.person);
     if (entry.person && !person) throw Object.assign(new Error('the person this code was for has been removed'), { status: 400 });
     const name = String(body.name || (person ? `${person.name}'s phone` : 'phone')).slice(0, 40);
@@ -2326,6 +2392,29 @@ class Core {
             this.requireOwner(req);
             return this.changeSettings(body, this.actor(req).who, req); // Business: who records the person
           }
+          case 'GET /permissions':
+            this.requireOwner(req);
+            return this.permissionsView();
+          case 'PUT /permissions/:id': {
+            // The owner's answers for one app: items turned off, money per day, and that the prompt was answered.
+            this.requireOwner(req);
+            if (!this.installed.get(id)?.track) throw Object.assign(new Error(`no app ${id}`), { status: 404 });
+            const g = perms.grant(this.grants, id);
+            if (body?.deny !== undefined) {
+              if (!Array.isArray(body.deny) || body.deny.some((x: unknown) => typeof x !== 'string')) throw new Error('deny: a list of permission ids');
+              g.deny = [...new Set(body.deny as string[])];
+            }
+            if (body?.perDayCents !== undefined) {
+              if (body.perDayCents !== null && !(Number.isInteger(body.perDayCents) && body.perDayCents >= 0)) throw new Error('perDayCents: whole cents, 0 or more, or null for no daily limit');
+              if (body.perDayCents === null) delete g.perDayCents;
+              else g.perDayCents = body.perDayCents;
+            }
+            g.answered = true;
+            perms.save(HOME, this.grants);
+            const title = this.installed.get(id)!.track!.title ?? id;
+            this.write({ type: 'note', track: 'permissions', data: { app: id, deny: g.deny, perDayCents: g.perDayCents ?? null }, text: `Permissions for ${title}: ${g.deny.length ? `${g.deny.length} turned off` : 'all allowed'}${g.perDayCents !== undefined ? `, up to ${dollars(g.perDayCents)} a day` : ''}`, ...(this.actor(req).who ? { who: this.actor(req).who } : {}) });
+            return this.permissionsView().find((a) => a.app === id);
+          }
           case 'GET /update':
             // System update (Personal's Settings row): read from what box-update leaves; 'unknown' off an image.
             return system.updateState();
@@ -2467,7 +2556,8 @@ data: ${JSON.stringify(e)}
     if (m === 'OPTIONS' || (m === 'GET' && p === '/health') || (m === 'POST' && p === '/pair') || this.portalTarget(req)) return false;
     if ((m === 'GET' && /^\/sso(\/start|\/callback)?$/.test(p)) || (m === 'POST' && p === '/sso/redeem')) return false; // work-account sign-in
     // A track route that is public on purpose, or checks its own secret, is reachable through a proxy.
-    if (this.routes.get(`${m} ${new URL(req.url ?? '/', 'http://box').pathname}`)?.open) return false;
+    const open = this.routes.get(`${m} ${new URL(req.url ?? '/', 'http://box').pathname}`);
+    if (open?.open && !perms.denied(this.grants, open.track, 'strangers')) return false; // unless the owner turned that off
     if (this.deviceOf(req)) return false;
     res.writeHead(401, { 'content-type': 'application/json' }).end(JSON.stringify({ error: 'pair this phone with this computer first' }));
     return true;
