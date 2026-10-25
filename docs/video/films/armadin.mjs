@@ -74,8 +74,8 @@ export default {
     // 7. The published score on rolling counters, held; then the end card.
     { hold: 3, parts: [
         { v: { type: 'scoreboard', kicker: 'THE PUBLISHED SCORE · 16 OS-level attacks', items: [
-            { n: '14', of: '16', label: 'caught', cue: 'sixteen', color: 'done' },
-            { n: '2', label: 'not covered: fill the disk, send through a host it may reach', cue: 'two', color: 'blocked' },
+            { n: '15', of: '16', label: 'caught', cue: 'sixteen', color: 'done' },
+            { n: '1', label: 'not covered: send through a host it may reach', cue: 'one', after: 'fifteen', color: 'blocked' },
             { n: '2', label: 'machines, same score', cue: 'machines', after: 'two', color: 'accent' }],
           source: 'tracks/armadin/SCOREBOARD.md · Oct 24 · laptop VM (no swap) and cloud box (8 GB swap)', srcTop: 720, sourceAt: { cue: 'attacks' } } },
         { cue: 'gurt', v: { type: 'end', lines: [{ slot: 'try-live', text: 'Try GurtOS live: {url}' }, 'Attacks stop at the OS, whatever the model does.', 'gurtos.com', 'github.com/benz16107/calhacks13', 'Open source, Apache-2.0'] } }] },

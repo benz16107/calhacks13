@@ -40,8 +40,8 @@ Home: https://gurtos.com
 1:20 Moment 3: a pause for your OK
 1:33 Moment 4: pull the plug
 1:47 Security, with the score published
-2:02 Light, and live from any device
-2:21 Try it: signed discs at gurtos.com/download
+2:03 Light, and live from any device
+2:22 Try it: signed discs at gurtos.com/download
 2:34 Every part documented, a suite, open source
 ```
 
@@ -54,7 +54,7 @@ Home: https://gurtos.com
 **Description:**
 
 ```text
-Agents get attacked through the pages they read and the packages they install. GurtOS stops those attacks at the operating system, whatever the model does: each task is its own Linux user with no keys, its own copy of the files and its own network rule. We publish the score, misses included: 16 OS-level attacks, 14 caught, 2 not covered, on two machines.
+Agents get attacked through the pages they read and the packages they install. GurtOS stops those attacks at the operating system, whatever the model does: each task is its own Linux user with no keys, its own copy of the files and its own network rule. We publish the score, gaps included: 16 OS-level attacks, 15 caught, 1 not covered, on two machines.
 
 Every screen is the real product, recorded on a test computer running GurtOS from main on Oct 24 and 25, 2026. The attacking agents are scripted so they do the same steps every take. The poisoned package is a harmless imitation installed with a real npm install. The payment case is a made-up company with a test bank (Capital One's Nessie) and test money. The phone screenshots are from Apple's iOS simulator.
 

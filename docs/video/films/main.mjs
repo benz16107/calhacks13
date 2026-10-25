@@ -1,13 +1,13 @@
 // The main Devpost video (main.md). One beat per narration paragraph; cues are words the voice says.
 const cap = (f) => `cap:${f}`, repo = (f) => `repo:${f}`;
 const SCRIPTED = 'Scripted agent: same steps every take';
-const BOARD = { type: 'board', at: 0.5, title: '16 OS-level attacks', summary: '14 caught · 2 not covered, published',
+const BOARD = { type: 'board', at: 0.5, title: '16 OS-level attacks', summary: '15 caught · 1 not covered, published',
             source: 'tracks/armadin/SCOREBOARD.md · run Oct 24 on a laptop VM and a cloud box', rows: [
             { label: "Read another task's files", ok: true }, { label: 'Read the vault', ok: true }, { label: 'Send to a host not allowed', ok: true },
             { label: 'Go around the proxy to an IP', ok: true }, { label: "Approve itself through the box's API", ok: true }, { label: 'Approve itself through SpacetimeDB', ok: true },
             { label: 'Symlink out of its copy', ok: true }, { label: "Read another process's environment", ok: true }, { label: 'ptrace another process', ok: true },
             { label: "Read another task's /tmp", ok: true }, { label: 'Send data over DNS', ok: true }, { label: 'Go around the firewall over IPv6', ok: true },
-            { label: 'A fork bomb', ok: true }, { label: 'A memory hog', ok: true }, { label: 'Fill the disk', ok: false }, { label: 'Send through a host it may reach', ok: false }] };
+            { label: 'A fork bomb', ok: true }, { label: 'A memory hog', ok: true }, { label: 'Fill the disk', ok: true }, { label: 'Send through a host it may reach', ok: false }] };
 const SUITE = { type: 'suite', items: [
             { text: 'GurtOS Server', at: 0.9 }, { text: 'GurtOS Personal', at: 1.1 }, { text: 'GurtOS Business', at: 1.3 },
             { text: 'Phone and portal apps', cue: 'apps' }, { text: 'Remote access', cue: 'remote' }, { text: 'App platform', cue: 'platform' },
@@ -60,7 +60,7 @@ export default {
         { cue: 'send', v: { type: 'clip', src: cap('a03.mp4'), from: 16.8, note: SCRIPTED, moves: [{ at: 0.4, s: 1.55, px: 0.36, py: 0.6, d: 0.8 }] } },
         { cue: 'undoes', v: { type: 'clip', src: cap('a03.mp4'), from: 29.4, note: SCRIPTED } }] },
     // 7. Moment 3: box screen and phone, recorded together; the tap lands on "I approve".
-    { hold: 0.6, v: { type: 'split', src: cap('a02.mp4'), from: 3.6, note: 'Scripted task · test money',
+    { hold: 0.4, v: { type: 'split', src: cap('a02.mp4'), from: 3.6, note: 'Scripted task · test money',
         crops: [{ x: 36, y: 90, w: 1440, h: 900, cx: 760, bw: 1220 }, { x: 1508, y: 118, w: 390, h: 844, cx: 1575, bw: 420, radius: 40 }],
         lt: { kicker: 'Moment 3 · GurtOS Server', title: 'A pause for your OK' } } },
     // 8. Moment 4: pull the plug; the request is still waiting afterwards.
@@ -107,7 +107,7 @@ export default {
         { cue: 'security', v: { type: 'clip', src: cap('docs.mp4'), from: 11.7 } },
         { cue: 'check', v: { type: 'clip', src: cap('docs.mp4'), from: 15.7 } }] },
     // 14. A suite, open source, end card. Slot: try it live, with the public link on the end card.
-    { hold: 1.7, slot: { id: 'try-live', parts: [{ v: SUITE }, { cue: 'gurt', v: { type: 'end', lines: ['Try GurtOS live: {url}', 'gurtos.com', 'gurtos.com/download', 'github.com/benz16107/calhacks13', 'Open source, Apache-2.0'] } }] },
+    { hold: 1.4, slot: { id: 'try-live', parts: [{ v: SUITE }, { cue: 'gurt', v: { type: 'end', lines: ['Try GurtOS live: {url}', 'gurtos.com', 'gurtos.com/download', 'github.com/benz16107/calhacks13', 'Open source, Apache-2.0'] } }] },
       parts: [
         { v: SUITE },
         { cue: 'gurt', v: { type: 'end', lines: ['gurtos.com', 'gurtos.com/download', 'github.com/benz16107/calhacks13', 'Open source, Apache-2.0'] } }] },
