@@ -330,7 +330,7 @@ screens (people, rules, routed approvals, the audit trail) in the browser for no
 ## Screenshots for the sites (Oct 24, after the UX fixes)
 
 Taken on the Personal test VM from main, at 1920x1080, with invented demo data (a local demo inbox, never real mail):
-`screenshots/os/everyday.png` and `everyday-dark.png` (mail, a browser and Files with the GurtOS app, the top-bar pill
+`screenshots/os/everyday.png` and `everyday-dark.png` (1680x1050, 16:10 like the sites' display frame; mail, a browser and Files with the GurtOS app, the top-bar pill
 and a request banner), and in `screenshots/site/`: `approval.png` (a request banner and Needs you), `indicator.png` (the
 top-bar popover), `review.png` (a finished task with Keep changes and Undo task) and `files-menu.png` (Files' menu on a
 folder with changes waiting). They replace the site copies made from the older `setup/` and `install/` shots.
