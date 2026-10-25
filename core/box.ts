@@ -1634,7 +1634,7 @@ class Core {
       const allowed = () => !this.setup.done && !fs.existsSync(this.remote.offFile);
       const rv = allowed() ? randomBytes(16).toString('base64url') : '';
       const lan = /^https?:\/\//.test(base) ? new URL(base).host : '';
-      url = `${APP}/pair#${new URLSearchParams({ code, ...(rv ? { rv } : {}), ...(lan ? { lan } : {}), n: this.boxName() })}`;
+      url = `${APP}/pair#${Object.entries({ code, ...(rv ? { rv } : {}), ...(lan ? { lan } : {}), n: this.boxName() }).map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&')}`; // %20, not +, so every parser reads the name
       if (rv) void this.remote.watchPairing(rv, () => (this.pairCodes.get(code)?.expiry ?? 0) > Date.now(), allowed, BOX_ID);
     }
     const own = remote ? remote.url : /^https?:\/\//.test(base) ? base : '';
