@@ -123,6 +123,20 @@ for k in tracks:
     todo += EXTRA_TODO.get(k, [])
     if k not in DECIDED: todo.insert(0, "Review the story with Ben: problem, features with their why, OS vs track")
     out += ["**Still to do:**", ""] + [f"- {x}" for x in todo or ["Nothing open."]] + [""]
+FEATURES = [
+ # name, owner thread, status on main, where it is shown (Devpost, home, tracks), shown yet
+ ("Try GurtOS live (a throwaway computer in the browser, public address once Ben OKs it)", "mcp:6032eb14-4718-4a33-9d29-2a6983bbbce4", "building", "Devpost main text and Try it out first; showcase home; Anthropic, Armadin, Factory", "no"),
+ ("Attack it yourself (paste an injection or pick an attack, watch each defence stop it)", "to be named", "building", "Devpost; showcase home; Armadin, Anthropic", "no"),
+ ("The flight recorder (replay a task step by step, with files and approvals, then Keep or Undo)", "to be named", "building", "Devpost; Hyphenate, Microsoft, CRS, Atlassian; Anthropic, Factory", "no"),
+ ("Agent permissions (the OS enforces each app's manifest; allow, deny, revoke)", "core", "building", "Devpost; Hyphenate, Microsoft, CRS, Atlassian; Visa, Apify", "no"),
+ ("Signed receipts with a QR code and a public verify page (log and Solana anchored)", "Elastic and wallet threads", "building", "Devpost; Elastic, Coinbase, Solana", "no"),
+]
+out += ["## Standout features (Ben, Oct 24): where each is shown", "",
+ "Show each one everywhere it belongs, as it lands on main and is verified. Claim only what works: a feature stays \"building\"",
+ "here, and off every page, until its code is merged and its check passes. Batch the deploys (Vercel's daily cap).", "",
+ "| Feature | Owner | On main | Where it belongs | Shown yet |", "|---|---|---|---|---|"]
+out += [f"| {n} | {o} | {st} | {w} | {sh} |" for n, o, st, w, sh in FEATURES]
+out.append("")
 out += ["## Not entered", "",
  "**MLH GoDaddy Registry domain.** Ben decided on Oct 24 not to enter it. Its showcase page and Devpost section are removed and",
  "`/tracks/godaddy/` redirects to the tracks list. gurtos.com and the per-box `<name>.box.gurtos.com` addresses stay as they are; there is no gurtos.co.", "",

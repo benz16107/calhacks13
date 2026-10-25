@@ -647,6 +647,19 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 
 - Review the story with Ben: problem, features with their why, OS vs track
 
+## Standout features (Ben, Oct 24): where each is shown
+
+Show each one everywhere it belongs, as it lands on main and is verified. Claim only what works: a feature stays "building"
+here, and off every page, until its code is merged and its check passes. Batch the deploys (Vercel's daily cap).
+
+| Feature | Owner | On main | Where it belongs | Shown yet |
+|---|---|---|---|---|
+| Try GurtOS live (a throwaway computer in the browser, public address once Ben OKs it) | mcp:6032eb14-4718-4a33-9d29-2a6983bbbce4 | building | Devpost main text and Try it out first; showcase home; Anthropic, Armadin, Factory | no |
+| Attack it yourself (paste an injection or pick an attack, watch each defence stop it) | to be named | building | Devpost; showcase home; Armadin, Anthropic | no |
+| The flight recorder (replay a task step by step, with files and approvals, then Keep or Undo) | to be named | building | Devpost; Hyphenate, Microsoft, CRS, Atlassian; Anthropic, Factory | no |
+| Agent permissions (the OS enforces each app's manifest; allow, deny, revoke) | core | building | Devpost; Hyphenate, Microsoft, CRS, Atlassian; Visa, Apify | no |
+| Signed receipts with a QR code and a public verify page (log and Solana anchored) | Elastic and wallet threads | building | Devpost; Elastic, Coinbase, Solana | no |
+
 ## Not entered
 
 **MLH GoDaddy Registry domain.** Ben decided on Oct 24 not to enter it. Its showcase page and Devpost section are removed and
