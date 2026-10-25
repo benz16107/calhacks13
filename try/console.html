@@ -42,6 +42,10 @@
     border: 1px solid #ddd; border-radius: .5rem; box-shadow: 0 8px 30px rgba(0,0,0,.15); padding: .9rem 1.1rem; max-width: 24rem; font-weight: 400; }
   #try-caveat ul { margin: .4rem 0 0; padding-left: 1.1rem; } #try-caveat li { margin: .25rem 0; color: #444; }
   .try-spin { color: #555; }
+  #try-gone { position: fixed; inset: 0; z-index: 2147483002; background: rgba(20,20,20,.75); display: flex; align-items: center; justify-content: center; }
+  #try-gone > div { background: #fff; color: #1a1a1a; border-radius: .6rem; padding: 1.25rem 1.5rem; max-width: 22rem; font: 15px/1.5 system-ui; }
+  #try-gone p { margin: .4rem 0 1rem; color: #444; }
+  #try-gone button { font: 600 15px system-ui; background: #0a5c3a; color: #fff; border: 0; border-radius: .5rem; padding: .55rem 1.1rem; cursor: pointer; }
   @media (max-width: 640px) {
     #try-bar { gap: .3rem; padding: 0 .4rem; }
     #try-bar .try-brand, #try-bar .try-tag { display: none; }
@@ -81,6 +85,24 @@
 (function () {
   var $ = function (id) { return document.getElementById(id); };
   var menuData = null;
+
+  // The gateway answers 409 once this visitor's box was wiped (idle, max age, or a host reset). The portal would
+  // show "out of reach" and retry forever, so say what happened and offer a fresh computer instead.
+  var origFetch = window.fetch;
+  window.fetch = function () {
+    return origFetch.apply(this, arguments).then(function (r) {
+      if (r.status === 409 && r.headers.get('x-try-gone')) gone();
+      return r;
+    });
+  };
+  function gone() {
+    if ($('try-gone')) return;
+    var d = document.createElement('div');
+    d.id = 'try-gone';
+    d.innerHTML = '<div><b>This demo computer was reset.</b><p>Demo computers are wiped after 20 idle minutes. Reload for a new one.</p><button>Reload</button></div>';
+    d.querySelector('button').onclick = function () { location.href = '/'; };
+    document.body.appendChild(d);
+  }
 
   // A brief toast, so a visitor who starts a task knows it happened and where to look.
   function toast(text) {

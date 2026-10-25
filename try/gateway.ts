@@ -61,6 +61,8 @@ async function readBody(req: http.IncomingMessage): Promise<string> {
   return data;
 }
 const json = (res: http.ServerResponse, status: number, body: unknown) => res.writeHead(status, { 'content-type': 'application/json' }).end(JSON.stringify(body));
+// This visitor has no box any more (wiped when idle, too old, or a host reset). The header lets the page tell it apart from other 409s.
+const gone = (res: http.ServerResponse) => res.writeHead(409, { 'content-type': 'application/json', 'x-try-gone': '1' }).end(JSON.stringify({ error: 'This demo computer was reset. Reload for a new one.' }));
 
 const PORTAL_DIST = fileURLToPath(new URL('../portal/dist/', import.meta.url));
 const MIME: Record<string, string> = { '.webmanifest': 'application/manifest+json', '.png': 'image/png' };
@@ -247,7 +249,7 @@ const server = http.createServer(async (req, res) => {
         b.interacted = true; // an explicit Start is a real interaction, so the 2-minute sweep won't reclaim it
         return void json(res, 200, { ok: true });
       }
-      if (!b) return void json(res, 409, { error: 'reload the page' });
+      if (!b) return void gone(res);
       if (!sameSite(req)) return void json(res, 403, { error: 'use the demo from the page' });
       b.interacted = true;
       if (method === 'POST' && p === '/try/task') {
@@ -285,7 +287,7 @@ const server = http.createServer(async (req, res) => {
 
     // Everything else is a box route: enforce the whitelist, then forward.
     if (!b) {
-      if (p.startsWith('/api/')) return void json(res, 409, { error: 'reload the page' });
+      if (p.startsWith('/api/')) return void gone(res);
       res.writeHead(302, { location: '/' }).end();
       return;
     }
