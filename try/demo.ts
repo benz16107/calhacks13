@@ -60,8 +60,12 @@ try {
 
   console.log('try: the gateway whitelist blocks task-crafting, the vault, settings and remote access');
   ok(!allowedToBox('POST', '/api/tasks'), 'a browser cannot POST /api/tasks (no visitor-crafted tasks)');
-  for (const p of ['/api/vault', '/api/settings', '/api/devices', '/api/remote', '/api/owner', '/api/quickstart']) {
+  for (const p of ['/api/vault', '/api/devices', '/api/remote', '/api/quickstart']) {
     ok(!allowedToBox('GET', p) && !allowedToBox('POST', p), `the gateway forwards neither GET nor POST ${p}`);
+  }
+  // settings and owner are read-only here (so the desktop renders), but mutating them stays blocked.
+  for (const p of ['/api/settings', '/api/owner']) {
+    ok(allowedToBox('GET', p) && !allowedToBox('POST', p), `GET ${p} is allowed (read-only), POST is not`);
   }
   ok(allowedToBox('GET', '/api/tasks') && allowedToBox('POST', '/api/approvals/abc') && allowedToBox('POST', '/api/tasks/abc/undo'), 'read, approve and undo are allowed');
 

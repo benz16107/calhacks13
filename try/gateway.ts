@@ -62,6 +62,17 @@ async function readBody(req: http.IncomingMessage): Promise<string> {
 }
 const json = (res: http.ServerResponse, status: number, body: unknown) => res.writeHead(status, { 'content-type': 'application/json' }).end(JSON.stringify(body));
 
+const PORTAL_DIST = fileURLToPath(new URL('../portal/dist/', import.meta.url));
+const MIME: Record<string, string> = { '.webmanifest': 'application/manifest+json', '.png': 'image/png' };
+/** Serve a static portal file from disk (manifest, icons) by its exact basename. No path traversal: basename only. */
+function serveStatic(res: http.ServerResponse, p: string) {
+  const file = path.join(PORTAL_DIST, path.basename(p));
+  fs.readFile(file, (err, data) => {
+    if (err) return void res.writeHead(404).end('not found');
+    res.writeHead(200, { 'content-type': MIME[path.extname(file)] ?? 'application/octet-stream', 'cache-control': 'public, max-age=3600' }).end(data);
+  });
+}
+
 // ---------- the whitelist: what a browser may ask a box ----------
 export function allowedToBox(method: string, p: string): boolean {
   if (method === 'GET') {
@@ -206,7 +217,10 @@ const server = http.createServer(async (req, res) => {
 
     // A plain GET never allocates a box (so a crawler, a link preview or a health check cannot claim a slot):
     // with a live box it shows the console, otherwise the landing page. HEAD is answered empty, never allocating.
-    if (method === 'HEAD') return void res.writeHead(b ? 200 : 200).end();
+    if (method === 'HEAD') return void res.writeHead(200).end();
+    // The manifest and icons are fetched by the browser without credentials (no cookie), so they can't go through
+    // the per-box proxy. They are identical for every box and hold nothing private: serve them from disk.
+    if (method === 'GET' && /^\/(manifest\.webmanifest|icon-\d+\.png)$/.test(p)) return void serveStatic(res, p);
     if (method === 'GET' && (p === '/' || p === '/attack')) {
       if (b) return void (await serveConsole(b, req, res, ip));
       return void res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'referrer-policy': 'no-referrer' }).end(landingPage(pool.count()));
