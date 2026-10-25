@@ -19,10 +19,6 @@ export default {
   maxDur: 180, // Devpost's cap for the main video; the track list's target for Armadin
   music: 'bed-hopeful-long.wav',
   beats: [
-    // Cold open, music only: moment 2's real log, the page's two exfiltration tries blocked (the auditor, Oct 25).
-    { dur: 3.6, v: { type: 'shot', frame: 'full', src: cap('a03.mp4'), from: 17, crop: { x: 260, y: 170, w: 1200, h: 675 }, enter: 'cut',
-        note: 'Moment 2: a booby-trapped page · scripted agent',
-        marks: [{ at: 0.5, kind: 'box', x: 0.012, y: 0.585, w: 0.775, h: 0.05, color: 'blocked' }, { at: 1.3, kind: 'box', x: 0.012, y: 0.925, w: 0.775, h: 0.05, color: 'blocked' }] } },
     // The hook: a 2.4 s montage of real product shots under the title.
     { dur: 2.4, v: { type: 'montage', items: [{ src: cap('a03.mp4'), from: 20 }, { src: cap('a02.mp4'), from: 12.4 }, { src: cap('fr.mp4'), from: 18 }, { src: cap('a04.mp4'), from: 18 }] } },
     // 1. The problem, sourced.
