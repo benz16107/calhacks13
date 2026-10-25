@@ -120,7 +120,7 @@ Coinbase asks for four parts: a summary, a working example, the architecture wit
 
 </Details>
 
-<Limits title="Known limits">
+<Limits title="Known limits and implementation boundaries">
 
 - Devnet only, by design. Mainnet needs a different network and asset, real USDC and a review.
 - The CDP Server Wallet lock was not run live: it needs a CDP Wallet Secret. Live runs keep the key in the box's root-only file. A CDP key that can manage policies could also loosen its own policy, so the policy key should be kept off the box.

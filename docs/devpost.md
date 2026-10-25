@@ -45,8 +45,9 @@ visa-trusted-agent-protocol, crs-credit-api, capital-one-nessie, mana, vultr, ve
 Overall, Most Technically Advanced, Most Creative, Best Solo Hack, Hacker's Choice, Anthropic, Atlassian (Track 1 and Track 2),
 Hyphenate, Factory (Droid SDK), Armadin (Best Security Hack), Microsoft (Built for the Real World, and the Customer
 Impact Award), Visa, Coinbase (Payment Agents), Fetch.ai, Spacetime, Elastic, Moss, Apify, CRS (Overall, Financial AI
-Agent, Identity/Fraud, Unexpected), MLH Solana, MLH Vultr, Figma (Best
-Workflow, Stage Log, Best Design, Most Creative), Mana.
+Agent, Identity/Fraud, Unexpected), MLH Solana, MLH Vultr, Figma (select "[Figma] Best Figma Workflow Hack"; the track page covers Workflow, Stage Log, Best Design, Most Creative), Mana.
+
+Opt in to every eligible category at the Devpost step that lists them. Anthropic and Spacetime were not in the Devpost list yet on Sat Oct 24 at 5:45 PM PT ("Devpost will also be updated soon"): check again before submitting and opt in if they appear. Each category's rubric is at hive.hackberkeley.org/prizes. Use the email Ben signed up with. Sponsor notes from Slack: CRS added a 3rd place ($500); Moss has 2 winners (good use of Moss, best engagement); no Microsoft product is required to enter Microsoft.
 
 ---
 
@@ -398,46 +399,12 @@ Figma ran every stage: a FigJam board for the architecture and the four demo mom
 **Files:** [FigJam board](https://www.figma.com/board/KvHiDv5HIJuGYOZDDkp8VG) · [Design file](https://www.figma.com/design/oppzH621OOOMA31rgLbxbM) · [Make](https://www.figma.com/make/udWOO0nK4qggSCOIMqKjCZ), all shared with Anyone. **Landing page (Figma Sites):** https://plum-fabric-10136193.figma.site
 
 **Stage log:**
-
-**Ideation (FigJam and Figma Design, 32 minutes, 4 of 5).** Claude Code built the FigJam board through Figma's MCP
-server: the architecture and the four demo moments with `generate_diagram`, and the 25 sponsor tracks grouped by the
-slot each plugs into. When the first screens looked like a B2B dashboard, it collected 15 OS references from
-official pages into a moodboard on the same board, then drew three OS directions (home-server OS, across-the-room
-console, hardware OS) on the box screen and the phone. Ben picked the home-server OS. Output reached the project as
-`docs/figma/refs/` and `docs/figma/directions/`. When the built screens still read as a SaaS product, a second round
-collected 15 references from GNOME, elementary OS, macOS, Windows 11, Ubuntu, Synology DSM, umbrelOS and iOS, each
-with one rule to take from it, into `docs/figma/refs/os-system/` and a new section of the board. Those rules became
-the GurtOS design system in `docs/figma/system.md`.
-
-**Prototyping (Figma Design and Figma Make, 26 minutes, 4 of 5).** The first round wired two flows between the
-real screens: an approval arriving on the phone, and undoing one task on the box with a confirm step. After the
-redesign, Claude Code wired four flows across the 64 v2 screens with 136 prototype links: all 12 setup steps, approving
-a spend on the phone (the approval arrives on the lock screen after 1.2 s), undoing one task on the box through to an
-undone state with a toast, and the desktop with Notification Center, Control Center and every Settings page. Both
-rounds also went into Figma Make as a small working web page in the design's tokens, tested in a browser before each
-import. Links are in `docs/figma.md`.
-
-**Handoff (Figma Design and Figma's MCP server, 19 minutes, 4 of 5).** Two handoffs. The first (4 minutes) made the design file ready
-for code: every frame named, auto layout throughout, and every color, size and motion value a variable with its CSS
-name as code syntax, so `get_design_context` emits the names the portal uses. `docs/figma.md` lists each screen's node
-ID and the API data behind it. After the redesign, `docs/figma/os-v2/README.md` does the same for every v2 screen,
-matched to the core's setup, settings, apps and vault routes, and the screens reached main in six batches so the
-portal thread could build each one while the next was drawn. The second (15 minutes) took the Personal (GNOME) frames
-to the Personal thread as exported PNGs with notes, not as web code, because Personal is native GTK and libadwaita.
-Each frame's sections became a widget: the indicator menu's "Needs you" and "Running", the notification's actions,
-the Ask an Agent dialog's access group. `docs/figma/system.md` holds the rules, including guidelines for app makers.
-
-**Code generation (Figma's MCP server, 162 minutes, 4 of 5).** Claude Code read the screens with `get_design_context`
-and adapted Figma's React and Tailwind reference into the portal's own Preact components and CSS. The first rounds
-built Shopper's approval page and the direction A screens. When Ben approved the GurtOS design system, the next round
-turned its variables into a kit: each Figma variable is a CSS custom property with the same name in Light and Dark,
-with Atkinson Hyperlegible and GNOME's Adwaita icons self-hosted. On that kit it built a desktop with movable windows,
-the 12-step setup, ten Settings pages, App Center and the phone, with three helper agents building screens in parallel. The last round built GurtOS Personal's GNOME layer from the same frames and tokens as
-libadwaita widgets: the seven-step setup, Ask an Agent, Keep or Undo, the top-bar menu and the notification. Anything
-the box can't back up was cut: no made-up greeting, no Power button without an API, no progress bar without a step
-count. The output is `portal/`, the kit at `/kit/` for track apps, and `personal/`.
-`portal/README.md` puts every Figma frame beside a screenshot of the running app.
-**Landing page (Figma Design to Figma Sites, about 25 minutes, not rated).** The landing page's desktop and mobile frames (`Landing / Desktop 1440` and `Landing / Mobile 390`) were copied into a Sites file with Figma's own copy and paste, along with the design file's 67 variables, and published at https://plum-fabric-10136193.figma.site. The links set as text hyperlinks in the design file came across with the paste (the release, gurtos.com, the showcase, the repo and the Community file), and the live page returns 200 with all five link targets. Known limit: below 1440 px wide the hero's screenshots are clipped on the right edge; the phone layout looks right.
+**Ideation (FigJam and Figma Design, 42 minutes, 4 of 5).** Claude Code built the FigJam board through Figma's MCP server: the architecture and the four demo moments with `generate_diagram`, and the 25 sponsor tracks grouped by the slot each plugs into. When the first screens looked like a B2B dashboard, it collected 15 OS references from official pages into a moodboard on the same board, then drew three OS directions (home-server OS, across-the-room console, hardware OS) on the box screen and the phone. Ben picked the home-server OS. Output reached the project as `docs/figma/refs/` and `docs/figma/directions/`. When the built screens still read as a SaaS product, a second round collected 15 references from GNOME, elementary OS, macOS, Windows 11, Ubuntu, Synology DSM, umbrelOS and iOS, each with one rule to take from it, into `docs/figma/refs/os-system/` and a new section of the board. Those rules became the GurtOS design system in `docs/figma/system.md`. For the last push it researched every Figma product into `docs/figma-products.md` and drew one FigJam map of the whole ecosystem.
+**Prototyping (Figma Design and Figma Make, 61 minutes, 4 of 5).** The first round wired two flows between the real screens: an approval arriving on the phone, and undoing one task on the box with a confirm step. After the redesign, Claude Code wired four flows across the 64 v2 screens with 136 prototype links: all 12 setup steps, approving a spend on the phone (the approval arrives on the lock screen after 1.2 s), undoing one task on the box through to an undone state with a toast, and the desktop with Notification Center, Control Center and every Settings page. Both rounds also went into Figma Make as a small working web page in the design's tokens, tested in a browser before each import. Links are in `docs/figma.md`. The phone app then went into Make as a clickable prototype, and the three editions became one variable collection with a mode each, which the phone flows switch with set-variable-mode and a conditional.
+**Handoff (Figma Design and Figma's MCP server, 67 minutes, 4 of 5).** Two handoffs. The first (4 minutes) made the design file ready for code: every frame named, auto layout throughout, and every color, size and motion value a variable with its CSS name as code syntax, so `get_design_context` emits the names the portal uses. `docs/figma.md` lists each screen's node ID and the API data behind it, and `docs/figma/os-v2/README.md` does the same for every v2 screen, matched to the core's routes; the screens reached main in six batches so the portal thread could build each while the next was drawn. The second (15 minutes) took the Personal (GNOME) frames to the Personal thread as exported PNGs with notes, not as web code, because Personal is native GTK and libadwaita: each frame's sections became a widget. The last push tied design to code: every component's Dev Mode description holds its kit code and source link (publishing Code Connect needs an Organization plan), and a script exports the variables and fails when the kit's tokens drift.
+**Code generation (Figma's MCP server, 229 minutes, 4 of 5).** Claude Code read the screens with `get_design_context` and adapted Figma's React and Tailwind reference into the portal's own Preact components and CSS. The first rounds built Shopper's approval page and the direction A screens. When Ben approved the GurtOS design system, the next round turned its variables into a kit: each Figma variable is a CSS custom property with the same name in Light and Dark. On that kit it built a desktop with movable windows, the 12-step setup, ten Settings pages, App Center and the phone. Another round built GurtOS Personal's GNOME layer from the same frames and tokens as libadwaita widgets: the seven-step setup, Ask an Agent, Keep or Undo, the top-bar menu and the notification. A later round (40 minutes) turned the Personal OS frames into a Shell extension and installed the exported theme. The output is `portal/`, the kit at `/kit/` for track apps, and `personal/`. `portal/README.md` puts every Figma frame beside a screenshot of the running app. A script now regenerates that comparison for 77 frames with a difference score.
+**Code generation, GurtOS Business (the approved frames as exported PNGs, about 120 minutes, 4 of 5).** Claude Code built the Business screens from the frames in `docs/figma/business/` once Ben approved them: People and Add a person, Rules with its tester, Waiting for me and one request on the phone and the desktop, My requests, Audit, the kill switch in Control Center and on the phone, and the paused desktop. Two helper agents built Audit and the Settings pages in parallel while it built the shared state and the shell. Each frame's values come from the box (`/api/me`, `/api/business`, `/api/audit`), so where the box says something else the screen does too: an auditor sees names and limits, "Needs you" counts only what the rules send to that person, and Add a person pairs a phone instead of sending an email the box can't send. `portal/README.md` puts each frame beside the running screen.
+**Landing page (Figma Design to Figma Sites, about 25 minutes, not rated).** The landing page's desktop and mobile frames (`Landing / Desktop 1440` and `Landing / Mobile 390`) were copied into a Sites file with Figma's own copy and paste, along with the design file's 67 variables, and published at https://plum-fabric-10136193.figma.site. The links set as text hyperlinks in the design file came across with the paste (the release, gurtos.com, the showcase, the repo and the Community file), and the live page returns 200 with all five link targets. Known limit: below 1440 px wide the hero's screenshots are clipped on the right edge; the phone layout looks right. 
 
 [Full write-up, video and evidence →](https://calhacks.gurtos.com/tracks/figma/)
 
@@ -476,7 +443,12 @@ Public links (all open signed out): home page, start here https://www.mana.space
 8. **GoDaddy:** not entered (Ben, Oct 24). gurtos.com and the per-box `<name>.box.gurtos.com` addresses stay as they are, and there is no gurtos.co.
 9. **Coinbase.** Their track asks for a verified Coinbase account. Confirm it is verified.
 10. **Devpost link.** Once the project page exists, set `LINKS.devpost` in `showcase/src/data/site.ts`.
-11. **Stage log.** The showcase, this text and `docs/stagelog.md` now agree: 32 sessions, 364 minutes.
+11. **Stage log.** The showcase, this text and `docs/stagelog.md` agree: 56 sessions, 752 minutes, and every stage paragraph is under Figma's 200-word cap (the longest, Code generation, is 185 words).
 12. **Apify.** Switch the Apify account's public profile on in the Console (Settings, Account); the API cannot do it. Then the Actor "Agent-Safe Page Reader" can be made public with the one command in `tracks/apify/README.md`, "Publishing the Actor", and the Best Actor row on the Apify page and this text can link its Store page.
+
+13. **Figma: three deliverables** (TK Dang and Stephanie Zhou, Slack, Oct 24): a demo video of 3 minutes at most, the Stage Log with 200 words at most per stage (done, see 11), and **Figma Slides (required)** holding the stage log (which Figma product and why), the demo video, the embedded Figma files (the Makes and the prototypes) and a link to the working code and repo. On Devpost: put the Figma Slides link in "Try it out" (it is there), select "[Figma] Best Figma Workflow Hack", and set the Slides file to "View all" sharing. The Figma thread owns making the deck hold all of that.
+14. **Apify:** the Actor does not need to be on the Store to qualify (Petros Hong, Slack). Put the Actor's link and ID in the submission: the Store address is `https://apify.com/sacrosanct_zing/agent-safe-page-reader` (404 until the profile is public) and its ID comes from the Apify Console (Actors, Agent-Safe Page Reader). Add both here before submitting.
+15. **Judging and the video** (MLH, Slack): the video is 3 minutes at most. Every team gives a live demo between 10:30 AM and 12:30 PM Sunday and the whole team must be present. Outlets are limited, so charge everything. MLH advice: make the video demo-focused and the live demo pitch-focused.
+16. **Coinbase:** their judges accept a lightweight path for x402 gaps with clearly disclosed implementation boundaries. The Coinbase page lists ours under "Known limits and implementation boundaries" (devnet only, the CDP Server Wallet lock not run live, Onramp sandbox and session step only).
 
 <!-- TODO END -->

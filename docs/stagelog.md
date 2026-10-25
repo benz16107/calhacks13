@@ -84,12 +84,12 @@ import. Links are in `docs/figma.md`. The phone app then went into Make as a cli
 **Handoff (Figma Design and Figma's MCP server, 67 minutes, 4 of 5).** Two handoffs. The first (4 minutes) made the design file ready
 for code: every frame named, auto layout throughout, and every color, size and motion value a variable with its CSS
 name as code syntax, so `get_design_context` emits the names the portal uses. `docs/figma.md` lists each screen's node
-ID and the API data behind it. After the redesign, `docs/figma/os-v2/README.md` does the same for every v2 screen,
-matched to the core's setup, settings, apps and vault routes, and the screens reached main in six batches so the
-portal thread could build each one while the next was drawn. The second (15 minutes) took the Personal (GNOME) frames
-to the Personal thread as exported PNGs with notes, not as web code, because Personal is native GTK and libadwaita.
-Each frame's sections became a widget: the indicator menu's "Needs you" and "Running", the notification's actions,
-the Ask an Agent dialog's access group. `docs/figma/system.md` holds the rules, including guidelines for app makers. The last push tied design to code: every component's Dev Mode description now holds its kit code and source link (publishing Code Connect needs an Organization plan), and a script exports the variables and fails when the kit's tokens drift.
+ID and the API data behind it, and `docs/figma/os-v2/README.md` does the same for every v2 screen, matched to the core's
+routes; the screens reached main in six batches so the portal thread could build each while the next was drawn. The
+second (15 minutes) took the Personal (GNOME) frames to the Personal thread as exported PNGs with notes, not as web
+code, because Personal is native GTK and libadwaita: each frame's sections became a widget. The last push tied design
+to code: every component's Dev Mode description holds its kit code and source link (publishing Code Connect needs an
+Organization plan), and a script exports the variables and fails when the kit's tokens drift.
 
 **Code generation (Figma's MCP server, 229 minutes, 4 of 5).** Claude Code read the screens with `get_design_context`
 and adapted Figma's React and Tailwind reference into the portal's own Preact components and CSS. The first rounds
