@@ -1,5 +1,8 @@
 # GurtOS talking points for the judging table
 
+**Run the table demo from [`table-demo.md`](table-demo.md):** the 3-minute script, the four commands to pre-stage, and
+what to do if the Wi-Fi or the VM fails.
+
 What to say when a judge stops at the table, Sunday 10:30 AM to 12:30 PM PT. The general version comes first, then
 one section per track. Each track takes about 90 seconds to read. Every number comes from `docs/story.md`,
 `docs/features.md`, `docs/devpost.md`, the track's showcase page or its README.
@@ -11,9 +14,9 @@ one section per track. Each track takes about 90 seconds to read. Every number c
 [Most Technically Complex](#most-technically-complex) · [People-First Social Impact](#best-people-first-social-impact) ·
 [Best Solo Hack](#best-solo-hack)
 
-**Marked "(if ready)".** These standout features are not merged and checked by hand yet, so say them only if they
-work on the demo box that morning. Try GurtOS live, Attack it yourself and agent permissions are not on main. The
-flight recorder (Replay) and signed receipts are on main and pass their demo steps, but QA has not tried them by hand.
+**Was "(if ready)".** On Oct 25 at 6:10 to 6:30 AM PT, Try GurtOS live (try.gurtos.com), Attack it yourself,
+Replay and a signed receipt checked on gurtos.com/verify were all tried by hand and worked. Agent permissions are on
+main (Settings, Permissions) but were not tried by hand. Say any of them; still rehearse the table demo once.
 
 **Model credit.** The real-Droid part of the merge gate was switched off on Oct 24 while Factory credit was short.
 Prefer the scripted moments (Quick run, the booby-trapped page, the spend request) unless you have checked credit.
@@ -35,7 +38,7 @@ Prefer the scripted moments (Quick run, the booby-trapped page, the spend reques
 - **Pull the plug.** Cut the power and every task resumes. The kill switch stopped 10 agents in 137 ms.
 
 ## Why it's better
-Normal OSes assume one human at a keyboard: permissions per person, not per task; passwords any program can read; no approval, budget or undo for agents. Proof: 16 attacks, 14 stopped, 2 published as not covered; Server runs on 1 GB of RAM; Personal uses 150 MB less memory than stock Ubuntu; three editions plus phone, watch and Mac apps; open source.
+Normal OSes assume one human at a keyboard: permissions per person, not per task; passwords any program can read; no approval, budget or undo for agents. Proof: 16 attacks, 15 stopped, 1 published as not covered; a Server task ran in 1 GB of RAM; Personal uses 150 MB less memory than stock Ubuntu; three editions plus phone, watch and Mac apps; open source.
 
 ## Questions judges will ask
 - "Why not Docker or a VM?" They isolate apps but know nothing about agents: no approvals, budgets, per-task undo, vault or phone control.
@@ -81,7 +84,7 @@ OS, and the record answers "why" months later.
 
 **Edition:** GurtOS Business. **Live moment:** open Credit desk, press **Quick run** (about 10 seconds, live CRS and
 Nessie sandboxes). APP-1043 turns amber. Answer as the controller on the phone. Then offer **Bring your own** for a
-case the judge picks. Replay the analyst's task step by step in the flight recorder (if ready).
+case the judge picks. Replay the analyst's task step by step in the flight recorder.
 
 **Judges may ask.**
 - "Can I run my own case?" Yes. Bring your own takes an application on one of CRS's 20 test people, or uploaded
@@ -214,19 +217,20 @@ model does, and publishes the score, including the attacks it misses."
 - A seccomp filter, two CPU cores, 2 GB of memory and 512 processes per task.
 
 **Why it's better.** Most agent security asks the model to behave. GurtOS assumes it will be fooled.
-- Proof: 16 OS-level attacks, 14 caught, 2 published as not covered, run on two machines.
+- Proof: 16 OS-level attacks, 15 caught, 1 published as not covered, run on two machines.
 - A poisoned npm package imitating the September 2025 worm, run with a real `npm install`, fails.
 - In every merge-gate run, a scripted agent obeys the hidden instructions step by step: the vault read fails, the
   send to attacker.example is refused, a raw connection to 1.1.1.1 is refused, and approving itself is refused.
 - Mapped to the OWASP Top 10 for LLM Applications 2025 and Agentic Applications 2026, with a not-covered column.
 
 **Edition:** all three. **Live moment:** start a task allowed only `example.com` that reads the booby-trapped page.
-Show the red blocked notice and the log line, then press **Undo task**. Let the judge pick an attack in Attack it
-yourself (if ready).
+Show the red blocked notice and the log line, then press **Undo task** (command A in `table-demo.md`). Then let the
+judge type their own attack in Attack it yourself on try.gurtos.com, from their phone.
 
 **Judges may ask.**
-- "What are the two misses?" There's no per-task disk quota, so a disk fill isn't stopped. And an allowed host gets
-  whatever the task sends it.
+- "What's the miss?" One: an allowed host gets whatever the task sends it, except the box's decoy key, which trips
+  the wire. A disk fill used to be the second; now the box measures each task's own layer every 2 seconds and stops
+  and undoes a task past its disk cap. It is a watcher, not a filesystem quota.
 - "Does it stop prompt injection?" No. The model can still be fooled. GurtOS limits what a fooled agent can do.
 - "What about root or the kernel?" Tasks share one kernel, so a kernel exploit escapes. Root can edit the log, but
   the hash chain and Elastic's add-only copy catch it. No disk encryption or verified boot yet, and no independent
@@ -256,7 +260,7 @@ your machine with the separation built in, usable Monday.
 
 **Edition:** GurtOS Personal and GurtOS Server. **Live moment:** start a task like "Fix the spelling in notes.md and
 change nothing else", show Claude's steps and diff, press **Undo**. Then approve a spend from the phone. Show the
-flight recorder (if ready) or a throwaway box in Try GurtOS live (if ready).
+flight recorder or a throwaway box in Try GurtOS live.
 
 **Judges may ask.**
 - "Where can it go wrong?" A shared kernel. The model provider sees what the agent sees. An allowed host gets what
@@ -291,7 +295,7 @@ undoable, and the limits sit in the OS, not in a prompt.
 
 **Edition:** GurtOS Server and GurtOS Personal. **Live moment:** open the Factory app, start a job with a plan,
 approve the plan on the phone, show the reviewer's verdict and the diff, then **Keep** or **Undo**. This needs
-Factory credit; if it's short, open a finished Droid task and show its steps and diff, or replay it (if ready).
+Factory credit; if it's short, open a finished Droid task and show its steps and diff, or replay it.
 
 **Judges may ask.**
 - "Where does the README say how Droid is used?" `tracks/factory/README.md`.
@@ -320,7 +324,8 @@ never gets the power to act.
 - Proof: asked "Why did the job routine fail?", the agent found the failed task, read its timeline and named the
   cause. The routine could reach only boards.greenhouse.io, its plan needed www.linkedin.com, and the box blocked it.
 - A live run shipped all 156 events of a demo run to Serverless, each exactly once.
-- A signed receipt for a finished task, checked in the browser against Elastic's copy (if ready).
+- A signed receipt for a finished task, checked in the browser. It records what the box found when it compared the
+  task's entries with Elastic's add-only copy.
 
 **Edition:** GurtOS Business and GurtOS Server. **Live moment:** in the signed-in Kibana on the laptop, ask the agent
 "Why did the job routine fail?" Or run `node tracks/elastic/agent.ts ask` with the same question.
@@ -689,7 +694,7 @@ and whole-system updates that roll back."
 Oct 24 it passed 24 sections and 266 checks with 0 failures. Undo of a batch took 48 ms.
 
 **Edition:** GurtOS Server. **Live moment:** pull the plug on a running task and show it resume after boot. Or replay a
-task in the flight recorder (if ready).
+task in the flight recorder.
 
 **Judges may ask.** "What's the hardest part?" Resume after a hard kill without doing a step twice, including a bill
 payment, when the bank takes no idempotency key. "What doesn't it do yet?" Tasks share one kernel. No disk encryption
@@ -709,8 +714,8 @@ be undone, your photos and memory stay on your own computer, and it runs on hard
   gets a plain letter with the main reasons.
 
 **Why it's better.** Today's agents are risky for normal people. Per Censys, OpenClaw had 21,639 instances anyone on the
-internet could reach, and Koi Security found 341 malicious skills out of 2,857 on ClawHub. Proof: 16 attacks, 14
-stopped, 2 published as not covered.
+internet could reach, and Koi Security found 341 malicious skills out of 2,857 on ClawHub. Proof: 16 attacks, 15
+stopped, 1 published as not covered.
 
 **Edition:** GurtOS Personal. **Live moment:** the booby-trapped page fails, then Undo.
 

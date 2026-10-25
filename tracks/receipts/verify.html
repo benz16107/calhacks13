@@ -98,7 +98,7 @@ export async function verifyReceipt(r, { memo = solanaMemo } = {}) {
 
     // 2. The key's short name, which the box also wrote into its own log.
     const fp = (await sha256(canonical({ crv: r.box.key.crv, kty: r.box.key.kty, x: r.box.key.x, y: r.box.key.y }))).slice(0, 16);
-    add('Signing key', fp === r.box.keyFingerprint, fp === r.box.keyFingerprint ? `Key ${fp}. The box wrote this name into its log when it made the key, and Elastic's add-only copy holds it.` : 'The key does not match the name in the receipt.');
+    add('Signing key', fp === r.box.keyFingerprint, fp === r.box.keyFingerprint ? `Key ${fp}. The box wrote this name into its log when it made the key${r.anchors?.elastic ? ", and Elastic's add-only copy holds it" : ''}.` : 'The key does not match the name in the receipt.');
 
     // 3. Every entry points at the hash of the one before it.
     const lines = r.chain.lines;
