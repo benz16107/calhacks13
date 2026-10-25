@@ -64,13 +64,22 @@ verified release, plus the owners' page updates.
    - arm64 Server then Personal natively in the laptop's Lima VM through `BUILD_SHELL='ssh <laptop>
      /opt/homebrew/bin/limactl shell box --'` (5 minutes each). It needs 13 GB free; delete stale `base-*` folders
      under `/var/lib/box-image/*/` if it is full.
+   - From 4a44586, `image/build` copies the disc to `~/box-os/<name>-test.iso` on the laptop whenever `BUILD_SHELL`
+     contains the laptop's name, which would overwrite the discs someone is testing. Use a wrapper script with a
+     neutral name as `BUILD_SHELL` (`exec ssh <laptop> limactl shell box -- "$@"`). The build also installs
+     apt-cacher-ng on the build machine, so a second build downloads less; the first arm64 Personal build is slow
+     (about 19 minutes cold).
    - Check each image: `mount -o loop,ro <iso>.sqfs`, then no `usr/local/bin/droid`, `usr/bin/age` present, the
      right `PRETTY_NAME`, and `etc/box-os/update.pub` equal to the release update key's public half.
 3. **Upload to the mirror's `staging/` folder** with `s3cmd put --acl-public` (x86_64 from the Vultr VM takes about
    a minute per ISO; arm64 from the laptop's home uplink about 12 minutes per ISO, so start it as soon as each
    build finishes). A live folder keeps matching its published checksums until the swap in step 6.
 4. **Test the final bits.** Add the staged x86_64 Server ISO to Vultr by URL and compare its md5 with the build's;
-   deploy a `vc2-2c-4gb` from it, run setup at the console with only a model key, and run one task. Boot-test
+   deploy a `vc2-2c-4gb` from it, run setup at the console with only a model key, and run one task. A release disc
+   has no sshd, so test a Server **update and rollback** with a debug build of the same commit: build Server x86_64
+   with `BOX_SSH_KEY=<public key file>` on the build VM (about 6 minutes), then
+   `SSH_PORT=<free port> BUILD_HOST=root@<build vm> image/test --debug` on a machine with KVM (it installs, updates
+   to slot B, and checks that a broken update rolls back by itself). Boot-test
    Personal x86_64 with `SSH_PORT=<free port> ISO=<file> image/test --personal` where memory allows.
 5. **Sign.** On the machine that holds the release key: download the four staged ISOs (about 17 minutes from a
    Mac-class home link; do it while step 3 runs), `sha256sum` them against the build hosts' hashes, write
