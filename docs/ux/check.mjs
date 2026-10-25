@@ -142,7 +142,7 @@ for (const sc of scenes) {
   const ctx = await browser.newContext({ bypassCSP: true, viewport: sc.vp, deviceScaleFactor: 1, colorScheme: sc.dark ? 'dark' : 'light', hasTouch: !!sc.mobile, isMobile: !!sc.mobile, extraHTTPHeaders: sc.headers ?? {} });
   const pg = await ctx.newPage();
   const errors = [];
-  // SpacetimeDB's port is not forwarded from the test VM (on linuxbox 3000 is another service): ignore that socket.
+  // SpacetimeDB's port is not forwarded from the test VM (on the x86 test host 3000 is another service): ignore that socket.
   pg.on('console', (m) => m.type() === 'error' && !/WebSocket connection to 'ws:\/\/127\.0\.0\.1:3000/.test(m.text()) && errors.push(m.text().slice(0, 120)));
   pg.on('pageerror', (e) => errors.push(`pageerror: ${e.message.slice(0, 120)}`));
   pg.on('requestfailed', (r) => errors.push(`failed: ${r.url().replace(sc.base, '')}`));

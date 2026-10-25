@@ -1,11 +1,14 @@
-# gitleaks: the default rules, minus two kinds of known false positive (checked by hand in release/audit.md).
+# gitleaks: the default rules, minus known false positives: public values (an RFC example key, the release key's public fingerprint), a variable name, and example keys in docs; (checked by hand in release/audit.md).
 [extend]
 useDefault = true
 
 [allowlist]
 description = "Idempotency keys in the docs' log examples, and the Figma file key"
-regexTarget = "match"
+regexTarget = "line"
 regexes = [
+  '''auth: 'BTBZMqHH6r4Tts7J_aSIgg'''',
+  '''SHA256:FWKFb1eAvEBmMhVJwMwTnLnhrmZ5yQZ5947pDvFKcpY''',
+  '''public var privateKey: P256\.KeyAgreement\.PrivateKey''',
   '''key":"mcp\.[a-z-]+\.[a-z]+\.[0-9a-f]{12}\.\d+"''',
   '''key for MCP calls: `[A-Za-z0-9]{22}`''',
 ]

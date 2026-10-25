@@ -35,7 +35,7 @@ new build (`after/live-remote-address.png`, `after/live-remote-laptop.png`). app
 (portal 0c254e5): "Computer's address", 44 px targets (`after/live-app-gurtos.png`). Roll back with
 `vercel promote gurtos-jp6up1pve-benz16107-1762s-projects.vercel.app` from the laptop's Vercel login.
 
-Next: the final Server and Personal walk-throughs, and E-14, run on the rebuilt arm64 ISOs on benmac (Lima/QEMU, one
+Next: the final Server and Personal walk-throughs, and E-14, run on the rebuilt arm64 ISOs on the laptop (Lima/QEMU, one
 VM at a time, in `~/ux-audit/`; its `box` VM and `~/box-os` stay untouched).
 
 ## Top 10
@@ -606,9 +606,9 @@ plain-zero alternate, so the only fix is a second typeface for numbers. Recommen
 
 ![](after/personal-sidebar-apps.png)
 
-## Personal test disc on benmac (arm64, main 167f46e, before the release rebuild)
+## Personal test disc on the laptop (arm64, main 167f46e, before the release rebuild)
 
-A fresh install of image's arm64 test disc in QEMU with HVF on benmac, 39 screenshots in `after/iso/`. It predates
+A fresh install of image's arm64 test disc in QEMU with HVF on the laptop, 39 screenshots in `after/iso/`. It predates
 P-4 and E-6 (4a44586), so those are checked on the release discs.
 
 **Confirmed on an installed system:** P-17 (blue login ring, "GurtOS Personal" on the boot splash, `03`, `37`),

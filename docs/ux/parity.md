@@ -25,7 +25,7 @@ Ubuntu is P0, a place where macOS or Windows is clearly smoother is P1.
 * Idle: 2 minutes at the desktop with nothing open, then `free -m`, `top -bn3 -d5`, `ps` by RSS, PSS total. Screen blank and lock were turned off (`idle-delay 0`) after boot 1 in both.
 * Two clean reboots each, so two boot, login, idle and cold-launch readings per OS. A third, crashed boot of A is listed separately.
 * All timings are from QEMU/KVM, not real hardware. Both ran the same way, so compare them to each other, not to a laptop.
-* **Memory pressure:** linuxbox was under memory pressure earlier in this audit (swap full with other agents' VMs; one of my VMs was stopped, so the first
+* **Memory pressure:** the x86 test host was under memory pressure earlier in this audit (swap full with other agents' VMs; one of my VMs was stopped, so the first
   GurtOS session and its timings were thrown away). Every reading below was taken after that, with no other `-name ux-` qemu process running
   (checked before each run, `others: 0`). Host swap stayed at about 8 GB used from before my start, so the "swap used under 2 GB"
   condition could not be met; I relaxed it to "no swap I/O" (vmstat `si`/`so` of 0 to 4), which held.
@@ -182,12 +182,12 @@ Fix: show the network page in `gnome-initial-setup` (upstream has one; this imag
 Evidence: warm first-change time on GurtOS 0.55 to 0.72 s against stock 0.39 to 0.45 s for Files, Settings, Terminal and Text Editor (table above), the same ssh launch path on both. The extra time is in the Shell, not the apps. One cold Settings launch took 6.0 s (the earlier, discarded boot-2 run took 1.1 s), likely host noise, but check it on the demo machine.
 Fix: profile the GurtOS session mode (`gnome-shell --mode=gurtos`): look at the extension's window-open hook, the blurred dock (`transparency-mode FIXED`, `background-opacity 0.86`) and the custom window animation; compare with `GNOME_SHELL_SESSION_MODE=ubuntu`.
 
-**Re-measured 2026-10-24 evening, inconclusive.** On one install of the released ISO, while linuxbox was swapping:
+**Re-measured 2026-10-24 evening, inconclusive.** On one install of the released ISO, while the x86 test host was swapping:
 GurtOS as shipped, warm first change 0.56 to 0.92 s; the same install with `GNOME_SHELL_SESSION_MODE=ubuntu`, Files
 0.67 to 0.69 s (other apps cut short when the VM was stopped for memory); GurtOS with the dock's `transparency-mode
 DEFAULT` and intellihide off, 0.57 to 0.99 s. The dock settings don't close the gap, and the session mode doesn't
 clearly either. The Personal thread measured 10 to 40 ms between the two session modes up to the window mapping.
-Measure once more on the rebuilt ISO on a quiet host; the scripts are in `~/.cache/ux-audit/parity/bin/` on linuxbox.
+Measure once more on the rebuilt ISO on a quiet host; the scripts are in `~/.cache/ux-audit/parity/bin/` on the x86 test host.
 
 ### E-15 P1, image: no language, keyboard, or disk choice before install
 Stock asks language, accessibility, keyboard, network, update, install type, apps, drivers and codecs, disk, account, time zone. GurtOS asks nothing until after install, then GNOME setup asks language, typing, time zone and account. That is faster (1 min against 7) but the person cannot pick a disk or keep Windows. Not a P0 because README states it; list it on the download page.

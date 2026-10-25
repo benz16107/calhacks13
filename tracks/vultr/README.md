@@ -67,7 +67,7 @@ It downloads the newest backup, stops the box, moves the old state into `BOX_HOM
 backups), decrypts in a pipe into `BOX_HOME`, gives each task user its old id, and starts the box. The box then does what it
 does after a power cut: replays the log and resumes every task that was running or waiting.
 
-**Measured** on the linuxbox test VM against the real Object Storage (`restore-proof.sh`): a 379 KB backup uploaded in
+**Measured** on the the x86 test host test VM against the real Object Storage (`restore-proof.sh`): a 379 KB backup uploaded in
 1.2 s; a fresh `BOX_HOME` restored and its box was up 3 s after the download started; the task that was waiting for an
 OK came back waiting, got its OK on the restored box and finished, and its user had its old id. Restore onto a fresh
 *Vultr* instance has not been run (see "Status").

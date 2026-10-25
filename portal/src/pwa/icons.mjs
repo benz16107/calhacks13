@@ -1,6 +1,7 @@
 // Renders icon.svg to the PNGs the manifest and iOS need, with headless Chromium. Run once after changing the SVG:
 //   node portal/src/pwa/icons.mjs
-import { chromium } from '/home/ben/.cache/calhacks-accounts/node_modules/playwright-core/index.mjs';
+// PLAYWRIGHT_CORE: the path to playwright-core's index.mjs if it is not installed where node can find it.
+const { chromium } = await import(process.env.PLAYWRIGHT_CORE ?? 'playwright-core');
 import fs from 'node:fs';
 const dir = new URL('.', import.meta.url).pathname;
 const svg = fs.readFileSync(dir + 'icon.svg', 'utf8');

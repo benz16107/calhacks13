@@ -110,6 +110,15 @@ closed before the repository goes public.
 - After the flip: the repo page, README and LICENSE return 200 logged out, and all 42 GitHub links on gurtos.com
   and calhacks.gurtos.com resolve. Private vulnerability reporting, secret scanning and push protection are on.
 
+## Re-check after the flip (Oct 24, 10 PM PT)
+
+`release/check.ts` on main found 66 private details in 17 files, and gitleaks found 1 tree hit and 2 in history. No
+secret. About 35 were harmless patterns (systemd unit names, public GNOME extension ids, a fake test site, SVG numbers,
+version strings), which the checker now knows. The rest were machine names in docs and one dev script, replaced
+with role names; one path in a dev script became an environment variable. The gitleaks hits were a variable name, the RFC 8291
+example key in a test, and this release's public key fingerprint, all allowlisted in `.gitleaks.toml`.
+The one file left is `image/build` (the laptop's name in its test-disc copy), owned by the image thread.
+
 ## Before the flip (done)
 
 1. Merge the top-level public files (README, CONTRIBUTING, LICENSE, NOTICE, the public CLAUDE.md). The internal
