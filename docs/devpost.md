@@ -19,14 +19,14 @@ https://youtu.be/GRx8n4Ic_EY ("GurtOS: operating systems built for AI agents", 3
 
 ## Image gallery (upload in this order)
 
-Six images, all in `showcase/public/devpost/`. The first one is the thumbnail.
+Six images, all in `showcase/public/devpost/`. The first one is the thumbnail. Captions to type under each:
 
-1. `edition-server.png`: GurtOS Server on gurtos.com (box screen and iPhone), 2x, dark.
-2. `edition-personal.png`: GurtOS Personal (desktop, iPhone and Watch).
-3. `edition-business.png`: GurtOS Business (portal and iPhone).
-4. `docs-home.png`: gurtos.com/docs home with its sidebar, 2x, dark.
-5. `5-try-live.png`: https://try.gurtos.com, an attack pasted and each defence shown with its log line.
-6. `2-blocked.png`: the booby-trapped page, blocked and logged, with Undo.
+1. `edition-server.png`. Caption: "GurtOS Server: the box's own screen and the phone app".
+2. `edition-personal.png`. Caption: "GurtOS Personal: agents beside you on your own desktop, approvals on phone and Watch".
+3. `edition-business.png`. Caption: "GurtOS Business: an approval routed to the controller, with the agent's checks".
+4. `docs-home.png` (Ben asked for the docs home here). Caption: "The docs at gurtos.com/docs".
+5. `5-try-live.png`. Caption: "try.gurtos.com: paste an attack and see each defence".
+6. `2-blocked.png`. Caption: "The booby-trapped page: blocked, logged, undone in one tap".
 
 ## Try it out (links)
 
