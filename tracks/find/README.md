@@ -164,6 +164,61 @@ call. `POST /t/find/warm` opens the session early, for example as the person sta
 0.7 to 1.2 s; a warm query 3 to 9 ms. Reply: `{query, index, ms, wallMs, cloud, results: [{id, kind, workspace,
 path, task, model, score, text}]}`.
 
+## Answers: local by default, Moss Inference when the owner turns it on
+
+*Criterion: "real-time agents" and "talk to your computer": one question, one short answer, fast.*
+
+`GET /t/find/answer?q=<question>` finds the notes that match (the search above, on this computer) and writes one or
+two plain sentences from them. The agent version is the tool `find.answer`. Two engines write the answer from the
+same notes:
+
+| Engine | What writes the answer | What leaves the computer |
+|---|---|---|
+| `local` (the default) | A model on your own machine if `FIND_OLLAMA_URL` is set, otherwise the best match as it is | Nothing, except to your own Ollama |
+| `moss` | Moss Inference (`inference.moss.dev`, model `moss`) | The question and the 4 best matching notes, at most 400 characters each. No photo, no other file, no memory that did not match |
+
+**What is Moss and what is GurtOS.** The search is the Moss session in the computer's own memory, as before, and
+so are the permissions: a task only gets notes its permissions allow, and a guest's task gets none. Moss Inference
+only writes the answer. It does not search here (`X-Moss-Retrieve: off`), so nothing needs a cloud copy of the index.
+
+**Off until the owner turns it on, in two steps.** Add a Moss Inference key (`MOSS_INFERENCE_API_KEY`) in
+Settings, then switch on "Faster answers with Moss" on the Find page (owner only). Asking for `engine=moss` before that
+is refused, and the Find page's privacy line changes to say what is sent ("each question you ask, with the few notes
+that match it, is sent to Moss to write the answer. Nothing else leaves"). The key lives in the vault and is read
+only by the box; an agent never sees it. `engine=auto` uses Moss when it is on and the local path otherwise. The Find
+page's **Ask** button uses `auto` and shows who wrote the answer, how long it took and what left the computer.
+
+**Priced in the task budget.** The tool `find.answerFast` is Moss Inference for an agent. It is priced at 0.15 cents a
+call (list price is about 0.04 cents of tokens), so the task's budget pays for it and a task without one is asked
+first. A computer answers at most 300 Moss questions a day, so a loop cannot spend the credit. A paused project
+(Moss usage limit) fails the call and the local path keeps working.
+
+**Speed (measured Oct 24).** Method: five questions about the four test photos and one preference, each asked three
+times through `GET /t/find/answer` with Moss's reply cache off (`DEMO_LIVE=moss ./demo vultr`), 15 calls per row.
+"Question to answer" is the time from the box receiving the question to the finished answer. All machines are
+4 to 6 vCPU x86 cloud VMs with no GPU, in the same region as Moss's servers (San Jose), so a home connection adds
+its own round trip to Moss, which is not measured here.
+
+| Path | Question to answer (median, range) | Answers right | Notes |
+|---|---|---|---|
+| Local, no model (the best match as it is) | 0.6 ms | 5 of 5 | The answer is the note's text, not a sentence |
+| Local, small model on the CPU (`qwen3-vl:2b-instruct`) | 3.1 s (1.6 to 9.3 s) | 5 of 5 | 4 vCPU VM, 4.3 GB of memory in use; the first call after a quiet spell adds 21 s to load the model |
+| Moss Inference, notes found on this computer | 329 ms (search 0.4 ms, answer 328 ms) | 5 of 5 | The default Moss path here |
+| Moss Inference, Moss searches its cloud index | 857 ms (438 to 1357 ms) | not scored | Needs a cloud copy of the index, so more leaves the computer; its index here was stale, so only the time counts |
+
+**Speech to answer.** Add the time to turn speech into text. The Personal thread measured faster-whisper `base.en`
+(int8, beam size 1) on the CPU of a 4 vCPU VM, at a median of 1.6 s (1,547 to 1,621 ms) for questions of 3.9 to
+4.6 seconds, counted from the end of the question, with speech made by a computer voice and not a person at a
+microphone. So from the end of a spoken question to the answer: about **4.7 s** with a small local model
+(1.6 + 3.1), about **1.9 s** with Moss Inference (1.6 + 0.33), and 1.6 s with the best match only. The local model
+on a computer with a GPU or an Apple chip is faster than the CPU row (gemma4 on an M2 Max describes a photo in 1 to
+3 s); we did not time answers there.
+
+**What it shows.** Without a GPU, writing the answer is the slow step, and Moss's model writes it about nine times
+faster than a 2 billion parameter model on the same kind of CPU, while the search stays local and takes under a
+millisecond. The cost is that the question and four notes go to Moss, which is why it is off until the owner turns
+it on.
+
 ## What gets indexed
 
 - **Photos** (`.jpg`, `.jpeg`, `.png`, `.webp`, `.gif`) in every workspace: the description.
@@ -205,6 +260,8 @@ index answered. It uses the GurtOS kit, so off the box's own screen its calls ca
 | `GET /file?workspace=photos&path=IMG_2041.jpg` | The file a result points at, to show it. Only inside a workspace; symlinks are refused |
 | `GET /memory`, `POST /memory {text}` | Owner only: list what GurtOS remembers, add a preference |
 | `POST /trust {id}`, `POST /forget {id}`, `POST /warm` | Owner only for the first two. See Memory and the fast search |
+| `GET /answer?q=&engine=local\|moss\|auto&fast=1` | An answer written from the matching notes (see Answers). `moss` and `auto` with Moss on are owner only |
+| `POST /inference {on}` | Owner only: the switch for Moss Inference. Needs the key first |
 | `GET /status` | How many photos, files and tasks are indexed, how many photos wait for a description (`undescribed`), each model and whether its key is set, and the cloud copy's state (`cloud`) |
 | `POST /describe` | Ask Claude to describe the photos no other model could (needs `FACTORY_API_KEY`) |
 
@@ -234,7 +291,8 @@ no network and costs nothing. It shows:
 4. A task writes a packing list. The file is found by a search moments later, and the task by its title.
 5. A symlink to the vault, planted in a workspace, is neither indexed nor served.
 6. Undo the task: its file leaves the index, the photos stay.
-7. Memory: one preference handed to two apps' tasks, a planted instruction blocked and logged, a lesson that
+7. Answers: the default is local and says nothing left the computer; an agent asks `find.answer` through the broker; without a key Moss is refused. With `DEMO_LIVE=moss` (and `MOSS_INFERENCE_API_KEY` in the vault): off until the owner switches it on, five questions through both engines three times each with the cache off, the numbers below, a priced task, and off again.
+8. Memory: one preference handed to two apps' tasks, a planted instruction blocked and logged, a lesson that
    reaches only tasks with the same permissions, an untrusted note kept from agents, and Forget of a memory and a
    photo, logged by id.
 

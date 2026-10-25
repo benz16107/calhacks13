@@ -117,6 +117,7 @@ export default async function (d: DemoKit) {
   d.check(after.docs.photo === 4, 'undo took the task\'s note back out of /find; the photos stayed');
 
   await memory(d, search);
+  await answers(d);
 
   if (!live) {
     console.log('  skip  live descriptions and Moss: DEMO_LIVE=find ./demo runs them');
@@ -200,4 +201,75 @@ async function memory(d: DemoKit, search: (q: string, kind?: string, k?: number)
     `forgotten: the preference and IMG_2044.jpg are out of the index (${gone.message.split('.')[1].trim()}); a rescan did not bring the photo back`,
   );
   d.check(log.includes(prefId) && log.includes('file:photos/IMG_2044.jpg') && !log.includes('aisle') && gone2.message.includes('untouched'), 'each forget is in the log by id, never with its content; the photo file itself is untouched');
+}
+
+// ---------- answers: local by default; Moss Inference only with the owner's key and switch ----------
+
+type Answer = { answer: string; engine: string; via: string; sources: string[]; ms: { search: number; answer: number; total: number }; leaves: string; usage?: unknown };
+const QUESTIONS: [string, RegExp[]][] = [
+  ['What does the sprint plan on the whiteboard say?', [/portal|box core|vault|sprint/i]],
+  ['How much was the Corner Market receipt?', [/37\.15/]],
+  ['Which brand are the batteries in the photo?', [/powercell/i]],
+  ['What date is on the Corner Market receipt?', [/10\/22\/2026|october 22/i]],
+  ['What do I prefer when shopping?', [/corner market/i]],
+];
+
+async function answers(d: DemoKit) {
+  const vault = fs.readFileSync(path.join(d.home, 'vault.env'), 'utf8');
+  const hasKey = /^MOSS_INFERENCE_API_KEY=.+$/m.test(vault);
+  const live = (process.env.DEMO_LIVE ?? '').split(/[\s,]+/).includes('moss');
+  const ask = (q: string, engine: string) => d.api<Answer>('GET', `/t/find/answer?q=${encodeURIComponent(q)}&engine=${engine}`);
+  const median = (xs: number[]) => [...xs].sort((x, y) => x - y)[xs.length >> 1];
+
+  // The default needs nothing: it answers from the best match, on this computer.
+  const local = await ask('what is on the whiteboard photo', 'local');
+  d.check(local.engine === 'local' && local.sources.includes('file:photos/IMG_2041.jpg') && /^Nothing left this computer/.test(local.leaves), `answers are local by default, and say nothing left the computer: "${local.answer.slice(0, 60)}..."`);
+  const task = await d.api<Task>('POST', '/tasks', { title: 'Ask the notes', workspace: 'home', worker: 'fake', source: 'demo', tools: ['find.answer'], prompt: 'call find.answer {"query":"what is on the whiteboard photo"}' });
+  await d.settled([task.id]);
+  const out = ((await d.api<{ events: any[] }>('GET', `/tasks/${task.id}`)).events.find((e) => e.type === 'tool.result')?.output ?? {}) as Answer;
+  d.check(out.engine === 'local' && out.sources?.includes('file:photos/IMG_2041.jpg'), 'an agent asked find.answer through the broker and got the same answer, on this computer');
+
+  if (!hasKey) {
+    const refused = await d.api('GET', '/t/find/answer?q=hello&engine=moss').then(() => '', (e: Error) => e.message);
+    d.check(/No Moss Inference key/.test(refused), 'without a Moss Inference key, asking for Moss is refused and nothing is sent');
+  }
+  if (!live) return console.log('  skip  Moss Inference answers, which spend Moss credit: DEMO_LIVE=moss ./demo runs them (needs MOSS_INFERENCE_API_KEY)');
+  d.check(hasKey, 'DEMO_LIVE=moss: MOSS_INFERENCE_API_KEY is in /etc/box/vault.env on this test machine');
+
+  // Off until the owner turns it on, whatever keys are in the vault.
+  const off = await d.api('GET', '/t/find/answer?q=hello&engine=moss').then(() => '', (e: Error) => e.message);
+  d.check(/Moss Inference is off/.test(off), 'with the key set but the switch off, Moss is refused: the owner turns it on');
+  const on = await d.api<{ privacy: string }>('POST', '/t/find/inference', { on: true });
+  d.check(/sent to Moss/.test(on.privacy), `turned on, the privacy line says what leaves: "${on.privacy.split('. ').pop()}"`);
+  await d.api('POST', '/t/find/memory', { text: 'I prefer not to buy from Corner Market when shopping.' });
+
+  // The same questions through both paths, three times each, with the reply cache off.
+  const rows: Record<string, { total: number[]; search: number[]; answer: number[]; right: number }> = {
+    local: { total: [], search: [], answer: [], right: 0 },
+    moss: { total: [], search: [], answer: [], right: 0 },
+  };
+  for (const [q, want] of QUESTIONS) {
+    for (let i = 0; i < 3; i++) {
+      for (const engine of ['local', 'moss']) {
+        const a = await ask(q, engine);
+        const row = rows[engine];
+        row.total.push(a.ms.total), row.search.push(a.ms.search), row.answer.push(a.ms.answer);
+        if (i === 0 && want.every((w) => w.test(a.answer))) row.right++;
+        if (i === 0 && engine === 'moss') console.log(`  info  Moss: "${q}" -> ${a.answer.slice(0, 120)}`);
+      }
+    }
+  }
+  for (const [engine, r] of Object.entries(rows))
+    console.log(`  info  ${engine === 'moss' ? 'Moss Inference' : 'local path'}: median ${median(r.total)} ms question to answer (${median(r.search)} ms search, ${median(r.answer)} ms answer), ${r.right} of ${QUESTIONS.length} answers right, ${r.total.length} calls`);
+  d.check(rows.moss.right >= QUESTIONS.length - 1, `Moss Inference answered ${rows.moss.right} of ${QUESTIONS.length} questions right, from notes found on this computer`);
+
+  // In a task it is priced: the budget pays for it, and a task with no budget is asked first.
+  const priced = await d.api<Task>('POST', '/tasks', { title: 'Ask fast', workspace: 'home', worker: 'fake', source: 'demo', tools: ['find.answerFast'], budgetCents: 5, prompt: 'call find.answerFast {"query":"which brand are the batteries in the photo"}' });
+  await d.settled([priced.id]);
+  const after = await d.api<{ task: Task }>('GET', `/tasks/${priced.id}`);
+  d.check(after.task.costCents === 0.15, `find.answerFast in a task cost ${after.task.costCents} cents, counted in its budget`);
+
+  await d.api('POST', '/t/find/inference', { on: false });
+  const again = await d.api('GET', '/t/find/answer?q=hello&engine=moss').then(() => '', (e: Error) => e.message);
+  d.check(/is off/.test(again), 'switched off again, Moss is refused');
 }

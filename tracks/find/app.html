@@ -33,9 +33,11 @@
       <g-icon name="system-search"></g-icon>
       <label class="g-sr" for="q">Search this computer</label>
       <input id="q" class="g-field" type="search" placeholder="Find the whiteboard photo" autocomplete="off" autofocus>
+      <button class="g-btn" type="button" id="ask">Ask</button>
     </form>
   </div>
   <div id="describe" class="g-banner" hidden><g-icon name="dialog-information"></g-icon><div><span id="describe-text"></span> <button class="g-btn" id="describe-btn" type="button">Describe with Claude</button></div></div>
+  <div id="answer" aria-live="polite"></div>
   <div id="results" aria-live="polite"></div>
   <section id="memory" hidden>
     <form id="add" class="add">
@@ -46,6 +48,10 @@
     <p class="t-caption t-secondary">Preferences go to every agent in every app before its task starts. Notes from earlier tasks go only to tasks with the same permissions. A note from a task that could reach the web is not shared with agents until you trust it.</p>
     <div id="items"></div>
   </section>
+  <label class="g-row" id="inference-row" hidden>
+    <div class="g-row-text"><div class="g-row-title">Faster answers with Moss</div><div class="g-row-sub">When on, a question you ask and the few notes that match it are sent to Moss to write the answer. Off: answers are written on this computer.</div></div>
+    <input type="checkbox" role="switch" class="g-switch" id="inference" aria-label="Faster answers with Moss">
+  </label>
   <footer class="t-caption t-secondary"><div id="privacy"></div><div id="foot">Searches tasks, files, memories and photo descriptions on this computer.</div></footer>
 </main>
 <script>
@@ -193,6 +199,7 @@
   // Photos no model on this computer could describe. Claude describes them only when you ask: it uses your model key.
   fetch('/t/find/status').then((r) => r.json()).then((s) => {
     $('privacy').textContent = s.privacy;
+    if (s.inference?.key) ($('inference-row').hidden = false), ($('inference').checked = s.inference.on);
     if (!s.undescribed) return;
     $('describe-text').textContent = `${s.undescribed} photo${s.undescribed > 1 ? 's are' : ' is'} not described yet, so search cannot find ${s.undescribed > 1 ? 'them' : 'it'} by what is in ${s.undescribed > 1 ? 'them' : 'it'}.`;
     $('describe').hidden = false;
@@ -202,6 +209,23 @@
     const d = await r.json().catch(() => ({}));
     $('describe-text').textContent = r.ok ? 'Claude is describing them in a task. Watch it in Tasks; search finds them when it is done.' : d.error || `HTTP ${r.status}`;
     $('describe-btn').hidden = true;
+  });
+  async function ask() {
+    const q = $('q').value.trim();
+    if (!q) return;
+    const r = await fetch(`/t/find/answer?q=${encodeURIComponent(q)}&engine=auto`);
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) return $('answer').replaceChildren(Object.assign(el('div', 'g-banner g-banner-destructive'), { textContent: d.error || `HTTP ${r.status}` }));
+    const card = el('div', 'g-card');
+    card.append(el('div', 't-body-strong', d.answer), el('div', 't-caption t-secondary', `Written by ${d.via} in ${d.ms.total < 1000 ? Math.round(d.ms.total) + ' ms' : (d.ms.total / 1000).toFixed(1) + ' s'}. ${d.leaves}`));
+    $('answer').replaceChildren(card);
+  }
+  $('ask').addEventListener('click', ask);
+  $('inference').addEventListener('change', async (e) => {
+    const r = await post('inference', { on: e.target.checked });
+    const d = await r.json().catch(() => ({}));
+    if (r.ok) $('privacy').textContent = d.privacy;
+    else (e.target.checked = !e.target.checked), gurtos.toast(d.error || `HTTP ${r.status}`);
   });
   const start = new URLSearchParams(location.search).get('q');
   if (start) ($('q').value = start), search();

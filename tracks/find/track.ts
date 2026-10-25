@@ -4,7 +4,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import type { Box, Track } from '../../core/contract.ts';
 import { HOME, MODELS, OFFLINE, PROMPT, cloudStatus, describeAny, docs, drop, forget, isUsageLimit, mossIndex, photoType, put, root, scan, use, wordIndex, type Index } from './find.ts';
-import { addPreference, clean, isGuest, preferences, recall, remember, scope } from './memory.ts';
+import { addPreference, allowed, clean, isGuest, preferences, recall, remember, scope } from './memory.ts';
+import { answerLocal, answerMoss, countMossAnswer, inferenceOn, setInference, type Engine } from './answer.ts';
 
 const MOSS = ['MOSS_PROJECT_ID', 'MOSS_PROJECT_KEY'];
 const KINDS = ['photo', 'file', 'task', 'memory'];
@@ -136,8 +137,55 @@ function privacy(secret: Secret) {
     url ? (here ? 'Photos are described by a model on this computer.' : `Photos are described by a model on ${host}.`) : 'No local photo model is set, so photos are found by file name until you set one.',
     ...(maybe(secret, 'VULTR_INFERENCE_KEY') ? ["If that model does not answer, a photo is sent to Vultr's hosted model."] : []),
     'Claude sees a photo only when you press Describe with Claude.',
+    ...(mossToken(secret) ? [inferenceOn() ? 'Faster answers are on: each question you ask, with the few notes that match it, is sent to Moss to write the answer. Nothing else leaves.' : 'Faster answers with Moss are available but off.'] : []),
   ];
   return parts.join(' ');
+}
+
+/** The Moss Inference key, if the owner added one. A whole `id:key` token, or a key for this project. */
+const mossToken = (secret: Secret) => {
+  const key = maybe(secret, 'MOSS_INFERENCE_API_KEY');
+  return key && (key.includes(':') ? key : `${maybe(secret, 'MOSS_PROJECT_ID')}:${key}`);
+};
+const mossAnswering = (secret: Secret) => !!mossToken(secret) && inferenceOn();
+
+/**
+ * Find the notes that match, then write an answer from them. `engine` local is the default and sends nothing anywhere.
+ * `moss` needs the owner's key and switch (otherwise it refuses); `auto` is moss when that is on, else local.
+ * `spec` limits memory and task notes to what a task's permissions allow; the owner (no spec) sees everything.
+ */
+async function answer(secret: Secret, input: { query?: unknown; engine?: unknown; fast?: unknown }, spec?: { workspace?: string; tools?: string[]; hosts?: string[] }) {
+  const q = String(input.query ?? '').trim();
+  if (!q) throw new Error('query is required');
+  const asked = String(input.engine ?? 'local');
+  const engine: Engine = asked === 'auto' ? (mossAnswering(secret) ? 'moss' : 'local') : asked === 'moss' ? 'moss' : 'local';
+  if (engine === 'moss' && !mossAnswering(secret)) throw new Error(mossToken(secret) ? 'Moss Inference is off. Turn it on in Find first.' : 'No Moss Inference key is set.');
+  const t0 = performance.now();
+  const found = await query(secret, q, 8, undefined, input.fast === true || input.fast === 'true' || input.fast === '1');
+  const notes = found.hits
+    .filter((h) => !spec || !['memory', 'task'].includes(h.metadata.kind) || allowed(h.metadata, { title: '', prompt: q, ...spec }))
+    .slice(0, 4)
+    .map((h) => ({ id: h.id, text: h.text }));
+  const t1 = performance.now();
+  const url = maybe(secret, 'FIND_OLLAMA_URL');
+  let r: Awaited<ReturnType<typeof answerLocal>> & { usage?: { prompt_tokens?: number; completion_tokens?: number } };
+  if (engine === 'moss') {
+    countMossAnswer();
+    r = await answerMoss(q, notes, mossToken(secret)!, maybe(secret, 'MOSS_INFERENCE_URL'));
+  } else {
+    r = await answerLocal(q, notes, url ? { base: url.replace(/\/+$/, ''), model: maybe(secret, 'FIND_OLLAMA_MODEL') || MODELS[0].model } : undefined);
+  }
+  const t2 = performance.now();
+  return {
+    question: q,
+    answer: r.answer,
+    engine,
+    via: r.via,
+    sources: notes.map((n) => n.id),
+    ms: { search: round(t1 - t0), answer: round(t2 - t1), total: round(t2 - t0) },
+    leaves: engine === 'moss' ? `The question and ${notes.length} matching note${notes.length === 1 ? '' : 's'} went to Moss to write the answer.` : url && notes.length ? 'Nothing left this computer except to your own Ollama.' : 'Nothing left this computer.',
+    ...(r.usage ? { usage: r.usage } : {}),
+  };
 }
 
 let undescribed: { workspace: string; path: string }[] = []; // from the last scan: photos no model could describe
@@ -179,7 +227,7 @@ export default {
   title: 'Find',
   description: 'Search your photos, files and past tasks by what is in them, like "the whiteboard photo".',
   // FACTORY_API_KEY: only checked for presence before starting a Claude describe task; its value is never read here.
-  secrets: [...MOSS, 'FIND_OLLAMA_URL', 'FIND_OLLAMA_MODEL', 'VULTR_INFERENCE_KEY', 'FACTORY_API_KEY'],
+  secrets: [...MOSS, 'FIND_OLLAMA_URL', 'FIND_OLLAMA_MODEL', 'VULTR_INFERENCE_KEY', 'FACTORY_API_KEY', 'MOSS_INFERENCE_API_KEY', 'MOSS_INFERENCE_URL'],
 
   // Before every task starts, the core asks for what we remember: the owner's preferences, and the few notes from
   // earlier tasks that match its prompt and that this task's permissions allow.
@@ -240,6 +288,28 @@ export default {
 
   tools: [
     remember,
+    {
+      name: 'find.answer',
+      description: 'Ask a question and get a one or two sentence answer from the notes GurtOS has: files, photo descriptions and notes you may know about. Nothing leaves this computer.',
+      input: { type: 'object', properties: { query: { type: 'string' } }, required: ['query'] },
+      secrets: [...MOSS, 'FIND_OLLAMA_URL', 'FIND_OLLAMA_MODEL'],
+      async run(input: { query?: string }, ctx) {
+        if (ctx.task && isGuest(ctx.task)) throw new Error('a guest task cannot ask the owner\'s notes');
+        return answer(ctx.secret, { query: input.query, engine: 'local' }, ctx.task);
+      },
+    },
+    {
+      name: 'find.answerFast',
+      description: 'Like find.answer, but Moss Inference writes the answer, which is faster. Only works when the owner has turned Moss Inference on. The question and the few matching notes go to Moss. It costs a fraction of a cent.',
+      input: { type: 'object', properties: { query: { type: 'string' } }, required: ['query'] },
+      secrets: [...MOSS, 'MOSS_INFERENCE_API_KEY', 'MOSS_INFERENCE_URL'],
+      // List price: about 0.04 cents of tokens plus 0.05 cents for the search it does not do here; 0.15 covers the larger answers.
+      cost: () => 0.15,
+      async run(input: { query?: string }, ctx) {
+        if (ctx.task && isGuest(ctx.task)) throw new Error('a guest task cannot ask the owner\'s notes');
+        return answer(ctx.secret, { query: input.query, engine: 'moss' }, ctx.task);
+      },
+    },
     {
       name: 'find.recall',
       description: 'Look up what GurtOS remembers: the owner\'s preferences and notes from earlier tasks you may know about. Returns the best matches.',
@@ -348,6 +418,26 @@ export default {
       box.note({ forgot: id, kind: r.kind, cloud: r.cloud });
       return Response.json({ id, ...r, message: `Forgotten. ${r.cloud[0].toUpperCase()}${r.cloud.slice(1)}.${id.startsWith('file:') ? ' The file itself is untouched; it will not be described again.' : ''}` });
     },
+    // GET /t/find/answer?q=<question>&engine=local|moss|auto&fast=1 : the notes that match, and an answer written from them.
+    'GET /answer': async (req, box) => {
+      const u = new URL(req.url);
+      const engine = u.searchParams.get('engine') ?? 'local';
+      if ((engine === 'moss' || (engine === 'auto' && mossAnswering(box.secret))) && !owner(req)) return denied(); // Moss answers cost credit: only the owner's screen or device
+      try {
+        return Response.json(await answer(box.secret, { query: u.searchParams.get('q'), engine, fast: u.searchParams.get('fast') }));
+      } catch (e) {
+        return Response.json({ error: (e as Error).message }, { status: 400 });
+      }
+    },
+    // The owner's switch for Moss Inference. It only does anything once a Moss Inference key is in the vault.
+    'POST /inference': async (req, box) => {
+      if (!owner(req)) return denied();
+      const on = (await req.json().catch(() => ({}))).on === true;
+      if (on && !mossToken(box.secret)) return Response.json({ error: 'Add a Moss Inference key in Settings first.' }, { status: 400 });
+      setInference(on);
+      box.note({ inference: on ? 'on' : 'off' });
+      return Response.json({ on, privacy: privacy(box.secret) });
+    },
     'GET /status': (_req, box) => {
       const count: Record<string, number> = {};
       for (const d of docs.values()) count[d.metadata.kind] = (count[d.metadata.kind] ?? 0) + 1;
@@ -357,6 +447,7 @@ export default {
         docs: count,
         undescribed: undescribed.length,
         privacy: privacy(box.secret),
+        inference: { key: !!mossToken(box.secret), on: mossAnswering(box.secret) },
         preferences: preferences().length,
         models: MODELS.map((m) => `${m.model}: ${maybe(box.secret, m.needs) ? 'on' : `off until ${m.needs} is set`}`).concat(
           `Claude via a Droid task: ${maybe(box.secret, 'FACTORY_API_KEY') ? 'on request' : 'needs FACTORY_API_KEY'}`,
