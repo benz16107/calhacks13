@@ -1,0 +1,12 @@
+# GNOME's first-run setup runs as the gnome-initial-setup user with its own dconf profile (DCONF_PROFILE), which
+# skips the GurtOS defaults every other account gets. This layer gives it GurtOS's blue (instead of Yaru's orange)
+# and the GurtOS backdrop (instead of Ubuntu's aubergine one, from the GNOME-Greeter override in 10_ubuntu-settings).
+[org/gnome/desktop/interface]
+gtk-theme='Yaru-blue'
+icon-theme='Yaru'
+
+[org/gnome/desktop/background]
+picture-uri='file:///usr/share/backgrounds/gurtos/hills-dark.svg'
+picture-uri-dark='file:///usr/share/backgrounds/gurtos/hills-dark.svg'
+picture-options='zoom'
+primary-color='#27313F'

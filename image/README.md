@@ -220,7 +220,8 @@ kiosk:
   `/etc/plymouth/plymouthd.conf` names the theme; Server boots without one). The login screen offers only the GurtOS
   session: Ubuntu's own sessions are removed. The image installs
   their packages up front, so the layer's install needs no network. The login screen and shell use GurtOS's
-  blue (`#2F64A6`, a GDM theme built from Yaru at build time) and Plymouth shows "GurtOS Personal" under the logo.
+  blue (`#2F64A6`, a GDM theme built from Yaru at build time) and Plymouth shows "GurtOS Personal" under the logo. GNOME's first-run setup has its own dconf profile (`/etc/dconf/profile/gnome-initial-setup`, a layer
+  in `rootfs-personal/etc/dconf/db/gurtos-setup.d`), which gives it blue buttons and the GurtOS backdrop.
 - **An app store that survives updates.** GNOME Software with Flatpak and Flathub (a per-user remote that every new
   account gets from `/etc/skel`). It has no snap or deb plugin, because snaps cannot be built into the image and
   software installed with `apt` is gone after the next system update (see the trade-off below). Flatpak apps live
@@ -233,11 +234,13 @@ kiosk:
   these.
 - **Ubuntu's updater and release upgrade are hidden** (`NoDisplay`, `Prompt=never`). GurtOS's own update is the
   way to update. `unattended-upgrades` is installed, so security updates still reach the running slot until the next GurtOS update.
-- **The firewall has a switch.** `box-firewall status|locked|open` (Personal only). `locked` is the default and
-  is the policy above. `open` loads `/usr/share/gurtos/firewall-open.nft`, which accepts incoming connections on the
-  home network (the usual desktop behaviour, so file sharing or a local web server works), except port 3000, and
-  port 7700 from outside the private networks. The
-  choice is kept in `/etc/box/firewall-mode` on the data partition.
+- **Sharing opens its own ports.** Personal's firewall stays default-drop. While a Settings, Sharing service
+  is on, its port is open: remote desktop (3389), file sharing (3490), media sharing (rygel), a shared printer
+  (631), mDNS (5353 for discovery), and ssh (22) if openssh-server is installed and running. Turning it off
+  closes the port within 3 seconds. `box-sharing-fw` does this (`box-sharing-fw.service` reads the listening
+  sockets and fills two sets that `/etc/nftables.conf` accepts from). Listeners owned by task users (`box-*`) never
+  count, and a task user's outbound limits (the box service's `inet box` table) are not touched, so an agent
+  cannot open a port. `box-sharing-fw status` prints what is open. Server has no such rule.
 - **Talk to your computer** needs a local speech model (faster-whisper `base.en`, about 600 MB with its Python
   environment). It is not in the image, which would then be larger than 2 GiB: `box-voice.service` runs
   `personal/voice-setup.sh` once the network is up, retrying every minute, into `/opt/box/voice-venv` and
@@ -302,7 +305,8 @@ With `image/test` in QEMU on an x86_64 Linux machine:
   hostname, and boot menus that say GurtOS.
 - Personal parity (x86_64 debug build): printing's folders are on the data partition, a new account has the Flathub
   remote, GNOME Software has no snap or deb plugin, the updater is hidden, zram and oomd run, online accounts and
-  remote desktop are installed, H.264 and AAC decoders are present, and `box-firewall` switches both ways.
+  remote desktop are installed, H.264 and AAC decoders are present, a Sharing program's port opens and closes with it, and a
+  task user's listener stays shut.
 - Personal: installs on a blank 40 GB disk and shows GNOME's first-boot welcome. An account made the way GNOME's
   setup makes one (AccountsService, administrator) lands in `sudo`; no task user does. The box learns its owner,
   and after an update the account, its sudo and its files are still there.

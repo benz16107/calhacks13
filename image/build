@@ -44,7 +44,17 @@ if [[ ${1:-} != --here ]]; then
       printf "BOX_TIMEZONE=%q BOX_VERSION=%q BOX_UPDATE_KEY=%q %q --here %q %q\n" \
         "${BOX_TIMEZONE:-}" "${BOX_VERSION:-}" "${ukey:+$k}" "$dest/image/build" "$arch" "$edition"
     done
-  } | ${BUILD_SHELL:-} sudo bash -s
+  } | ${BUILD_SHELL:-} sudo bash -s || exit
+  # Built in benmac's VM: put the disc in ~/box-os on the laptop as <name>-test.iso, and check it arrived whole.
+  if [[ ${BUILD_SHELL:-} == *benmac* && ${1:-x86_64} != all ]]; then
+    iso=gurtos-${edition:-server}-${1:-x86_64}${key:+-debug}
+    want=$(${BUILD_SHELL} sudo sha256sum /var/lib/box-image/out/$iso.iso | cut -d' ' -f1)
+    ssh benmac "${BUILD_SHELL##*benmac }" sudo cat /var/lib/box-image/out/$iso.iso '>' '~/box-os/'$iso-test.iso.part \
+      '&&' mv '~/box-os/'$iso-test.iso.part '~/box-os/'$iso-test.iso
+    got=$(ssh benmac "shasum -a 256 ~/box-os/$iso-test.iso" | cut -d' ' -f1)
+    [[ $want == "$got" ]] || { echo "build: ~/box-os/$iso-test.iso on benmac does not match the build ($got, not $want)" >&2; exit 1; }
+    echo "build: benmac:~/box-os/$iso-test.iso, sha256 ${got:0:12}"
+  fi
   exit
 fi
 
@@ -117,12 +127,18 @@ else
 fi
 [[ -f $src/image/.ssh-key ]] && packages+=" openssh-server" # debug builds only
 
-host_tools="mmdebstrap squashfs-tools xorriso mtools grub-common"
+host_tools="mmdebstrap squashfs-tools xorriso mtools grub-common apt-cacher-ng" # apt-cacher-ng: packages download once per build machine
 [[ $edition == personal ]] && host_tools+=" gettext libglib2.0-bin libglib2.0-dev-bin" # the first-boot text and GDM theme
 [[ $arch == x86_64 ]] && host_tools+=" grub-pc-bin grub-efi-amd64-bin" # so x86 builds need an x86 build VM
 [[ $arch == arm64 && $(uname -m) != aarch64 ]] && host_tools+=" qemu-user-static"
 missing=$(for p in $host_tools; do dpkg -s "$p" >/dev/null 2>&1 || echo "$p"; done)
 [[ -z $missing ]] || { apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq $missing >/dev/null; }
+# Packages come through apt-cacher-ng on this machine (port 3142, cache in /var/cache/apt-cacher-ng), so a second
+# build, or the other edition, downloads only what it has not fetched before. Without it they come straight from the mirror.
+proxy=
+curl -s --max-time 3 -o /dev/null http://127.0.0.1:3142/ && proxy=http://127.0.0.1:3142
+aptproxy=(--aptopt='Acquire::Retries "5"') # a flaky connection retries instead of failing the build
+[[ -z $proxy ]] || aptproxy+=(--aptopt="Acquire::http::Proxy \"$proxy\";")
 
 mounts_under() { awk -v d="$1" '$5 == d || index($5, d "/") == 1 { print $5 }' /proc/self/mountinfo; }
 # Unmount everything at or under $1, or stop the build. A chroot's /dev is the host's own /dev, bind-mounted: an
@@ -160,17 +176,18 @@ if [[ ! -d $base ]]; then
   say "base $stamp: Ubuntu 24.04 from $mirror"
   unmount_under "$work/base.tmp"
   rm -rf "$work/base.tmp"
-  mmdebstrap --arch=$deb --variant=minbase --include="$(echo $packages | tr ' ' ,)" \
+  mmdebstrap "${aptproxy[@]}" --arch=$deb --variant=minbase --include="$(echo $packages | tr ' ' ,)" \
     --dpkgopt='path-exclude=/usr/share/doc/*' --dpkgopt='path-include=/usr/share/doc/*/copyright' \
     --dpkgopt='path-exclude=/usr/share/man/*' \
     noble "$work/base.tmp" \
     "deb $mirror noble $components" "deb $mirror noble-updates $components" "deb $mirror noble-security $components"
   root=$work/base.tmp
   mount_root "$root"
+  [[ -z $proxy ]] || echo "Acquire::http::Proxy \"$proxy\"; Acquire::Retries \"5\";" > "$root/etc/apt/apt.conf.d/99box-proxy"
   mkdir -p "$root/tmp/core" && cp core/setup.sh "$root/tmp/core/"
   in_root env BOX_NO_DROID=1 bash /tmp/core/setup.sh # Droid's license forbids shipping it: box-droid fetches it
   umount_all
-  rm -rf "$root/tmp/core"
+  rm -rf "$root/tmp/core" "$root/etc/apt/apt.conf.d/99box-proxy"
   mv "$work/base.tmp" "$base"
 fi
 
@@ -182,6 +199,7 @@ unmount_under "$base"
 unmount_under "$root"
 rsync -aHAX --delete "$base/" "$root/"
 mount_root "$root"
+[[ -z $proxy ]] || echo "Acquire::http::Proxy \"$proxy\"; Acquire::Retries \"5\";" > "$root/etc/apt/apt.conf.d/99box-proxy"
 rsync -a --exclude node_modules --exclude .git "$src/" "$root/tmp/src/"
 # core/install.sh ends by asking systemd if the box is running. In an image build nothing runs yet.
 printf '#!/bin/sh\n[ "$1" = is-active ] && { echo "active at boot"; exit 0; }\nexec /usr/bin/systemctl "$@"\n' \
@@ -349,7 +367,9 @@ if [[ $edition == personal ]]; then in_root bash -euo pipefail -c '
   # below puts it in place. `splash` is on the kernel line in grub.cfg.
   grep -q " splash " /usr/local/lib/box-os/grub.cfg
   systemctl enable box-voice
-  systemctl enable nftables box-firstboot box-droid box-confirm box-install box-owner.service box-owner.path >/dev/null 2>&1
+  dconf update
+  test -f /etc/dconf/db/gurtos-setup
+  systemctl enable nftables box-firstboot box-droid box-confirm box-install box-owner.service box-owner.path box-sharing-fw >/dev/null 2>&1
   # The distributor logo GNOME shows (its first-boot setup, Settings > About) is GurtOS, not Ubuntu.
   logo=/usr/share/icons/hicolor/symbolic/apps/dev.box.Box-symbolic.svg
   if [ -f $logo ]; then
@@ -367,6 +387,12 @@ if [[ $edition == personal ]]; then in_root bash -euo pipefail -c '
   ln -sf "$(ls initrd.img-* | sort -V | tail -1)" initrd.img
 '
 fi
+if [[ $edition == personal ]]; then
+  # Personal only: the ports of the Settings, Sharing services that are on (box-sharing-fw fills the two sets).
+  sed -i -e 's|^\t# personal: sharing sets|\tset sharing_tcp { type inet_service; }\n\tset sharing_udp { type inet_service; }|' \
+         -e 's|^\t\t# personal: sharing rules|\t\ttcp dport @sharing_tcp accept\n\t\tudp dport @sharing_udp accept|' "$root/etc/nftables.conf"
+  grep -q 'tcp dport @sharing_tcp accept' "$root/etc/nftables.conf" && grep -q 'set sharing_udp' "$root/etc/nftables.conf"
+fi
 if [[ -f $src/image/.ssh-key ]]; then
   say "debug build: sshd with a root key"
   install -d -m 700 "$root/root/.ssh"
@@ -379,6 +405,7 @@ fi
 : > "$root/etc/machine-id"
 rm -f "$root/var/lib/dbus/machine-id" "$root"/etc/ssh/ssh_host_*
 umount_all
+rm -f "$root/etc/apt/apt.conf.d/99box-proxy"
 rm -rf "$root/tmp/"* "$root/var/lib/apt/lists/"* "$root/var/cache/"*/* "$root/root/.npm" "$root/root/.cache"
 ln -sf ../run/systemd/resolve/stub-resolv.conf "$root/etc/resolv.conf"
 

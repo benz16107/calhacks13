@@ -49,7 +49,7 @@ common=(-name box-test -m 2560 -smp 4 -display none
   -drive "if=none,id=cd,media=cdrom,readonly=on,file=$iso" -drive "if=none,id=hd,file=$run/disk.qcow2"
   -device virtio-blk-pci,drive=hd,bootindex=1
   -serial "file:$run/serial.log" -monitor "unix:$run/mon.sock,server,nowait"
-  -nic "user,model=virtio-net-pci,hostfwd=tcp:127.0.0.1:$port-:22,hostfwd=tcp:127.0.0.1:$((port + 1000))-:3000,hostfwd=tcp:127.0.0.1:$((port + 2000))-:7700"
+  -nic "user,model=virtio-net-pci,hostfwd=tcp:127.0.0.1:$port-:22,hostfwd=tcp:127.0.0.1:$((port + 1000))-:3000,hostfwd=tcp:127.0.0.1:$((port + 2000))-:7700,hostfwd=tcp:127.0.0.1:$((port + 3000))-:3389,hostfwd=tcp:127.0.0.1:$((port + 4000))-:3490"
   -daemonize -pidfile "$run/qemu.pid")
 if [[ $arch == arm64 ]]; then
   cp "$share/edk2-arm-vars.fd" "$run/vars.fd"
@@ -78,7 +78,7 @@ wait_for() { # <pattern> <how many times in the log> <seconds>
   exit 1
 }
 box_id() { grep 'box: up and healthy' "$run/serial.log" | sed -n "${1}p" | sed -n 's/.* \(gurt-[0-9a-f]*\):.*/\1/p'; }
-vm() { ssh -q -p "$port" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5 root@127.0.0.1 "$@"; }
+vm() { ssh -q -p "$port" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=40 root@127.0.0.1 "$@"; }
 
 wait_for 'box-install: Installing GurtOS' 1 300
 echo "test: $(grep -o 'Installing GurtOS.*' "$run/serial.log")"
@@ -135,7 +135,23 @@ if [[ $edition == personal- ]]; then
   check "no zram swap or oomd" 'swapon --show | grep -q zram && systemctl is-active systemd-oomd'
   check "no online accounts or sharing" 'test -x /usr/libexec/goa-daemon && test -x /usr/libexec/gnome-remote-desktop-daemon'
   check "no H.264 or AAC decoder" 'gst-inspect-1.0 avdec_h264 >/dev/null && gst-inspect-1.0 avdec_aac >/dev/null'
-  check "the firewall switch does not work" 'box-firewall open && nft list chain inet gurtos input | grep -q "policy accept" && box-firewall locked && nft list chain inet gurtos input | grep -q "policy drop"'
+  # Settings, Sharing (E-6): a Sharing program's port opens while it listens and closes when it stops; a task
+  # user's listener never opens, and a task user still cannot reach out beyond its rules (the box table).
+  # The programs are stood in for by python3 under the Sharing programs' names, as a file name sets the process name.
+  fake() { echo "cd /tmp && ln -sf /usr/bin/python3 /tmp/$1 && (setsid ${3:-} /tmp/$1 -m http.server $2 --bind 0.0.0.0 >/dev/null 2>&1 &)"; }
+  answers() { curl -s -o /dev/null --max-time 4 "http://127.0.0.1:$1/"; }
+  answers $((port + 3000)) && { echo "test: FAILED, port 3389 answers before Sharing is on"; exit 1; }
+  vm "$(fake gnome-remote-d 3389)"
+  for _ in $(seq 10); do answers $((port + 3000)) && break; sleep 1; done
+  answers $((port + 3000)) || { echo "test: FAILED, turning on a Sharing program does not open its port"; exit 1; }
+  vm 'pkill -f "[/]tmp/gnome-remote-d" || true'
+  for _ in $(seq 10); do answers $((port + 3000)) || break; sleep 1; done
+  answers $((port + 3000)) && { echo "test: FAILED, turning off a Sharing program leaves its port open"; exit 1; }
+  vm "$(fake gnome-remote-d 3490 'setpriv --reuid=30001 --regid=30001 --clear-groups')" ; sleep 8
+  answers $((port + 4000)) && { echo "test: FAILED, a task user's listener was opened to the network"; exit 1; }
+  vm 'pkill -f "[/]tmp/gnome-remote-d" || true'
+  check "a task user can reach out" '! setpriv --reuid=30001 --regid=30001 --clear-groups python3 -c "import socket; socket.create_connection((\"10.0.2.2\", 22), 4)"'
+  echo "test: a Sharing port opens and closes with its program; a task user's port stays shut and it cannot reach out"
   echo "test: kernel $(vm uname -r)"
   check "no BOX_URL" 'grep -q "^BOX_URL=http" /run/box-os/box.env'
   check "no pretty hostname" 'grep -q "^PRETTY_HOSTNAME=gurt-" /etc/machine-info'

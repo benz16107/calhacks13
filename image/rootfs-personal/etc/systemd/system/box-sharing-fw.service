@@ -1,0 +1,11 @@
+[Unit]
+Description=GurtOS: open the ports of the Sharing services that are on
+After=nftables.service
+Wants=nftables.service
+
+[Service]
+ExecStart=/usr/local/sbin/box-sharing-fw run
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
