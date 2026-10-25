@@ -272,6 +272,7 @@ export interface Relay {
   apns?: Apns;
   /** How APNs is called; tests swap in a fake. */
   apnsSend?: ApnsSend;
+  rv?: Rendezvous;
 }
 
 export function load(dir = STATE): Relay {
@@ -282,7 +283,48 @@ export function load(dir = STATE): Relay {
   return { names: new Names(dir), vapid: loadVapid(dir), selfSecret: fs.readFileSync(selfFile, 'utf8').trim(), tunnelCa: fs.existsSync(caFile) ? fs.readFileSync(caFile, 'utf8') : '', apns: loadApns(dir) };
 }
 
-const limits = { enroll: new Limit(5, 3600_000), enrollAll: new Limit(200, 3600_000), check: new Limit(60, 60_000), push: new Limit(600, 3600_000), bad: new Limit(20, 600_000), logins: new Limit(30, 60_000) };
+// ---------- rendezvous ----------
+// A short-lived drop box two devices use to find each other across networks before either can reach the other:
+// a phone pairing with a box that has no address yet, or a new computer being set up from one you own. The id is a
+// random capability shown only on the box's screen (in its QR code). Each slot is written once and lives 10 minutes.
+// The relay never sees a pairing code: codes stay in the URL fragment, and anything secret is encrypted by the
+// devices themselves. The `host` slot can only be written by the enrolled box whose address it names.
+
+interface Drop { at: number; slots: Map<string, unknown>; waiting: Map<string, ((v: unknown) => void)[]> }
+const RV_TTL = 10 * 60_000;
+
+export class Rendezvous {
+  drops = new Map<string, Drop>();
+  get(id: string, now = Date.now()) {
+    for (const [k, d] of this.drops) if (now - d.at > RV_TTL) this.drops.delete(k); // shortcut: a sweep per call, fine at hackathon volume
+    let d = this.drops.get(id);
+    if (!d && this.drops.size < 10_000) this.drops.set(id, (d = { at: now, slots: new Map(), waiting: new Map() }));
+    return d;
+  }
+  /** Write once. False if the slot already holds something. */
+  put(id: string, slot: string, value: unknown) {
+    const d = this.get(id);
+    if (!d || d.slots.has(slot)) return false;
+    d.slots.set(slot, value);
+    for (const w of d.waiting.get(slot) ?? []) w(value);
+    d.waiting.delete(slot);
+    return true;
+  }
+  /** The slot's value, waiting up to `ms` for it to be written. */
+  read(id: string, slot: string, ms: number): Promise<unknown> {
+    const d = this.get(id);
+    if (!d || d.slots.has(slot) || ms <= 0) return Promise.resolve(d?.slots.get(slot));
+    return new Promise((resolve) => {
+      const list = d.waiting.get(slot) ?? [];
+      const done = (v: unknown) => (clearTimeout(t), resolve(v));
+      const t = setTimeout(() => (list.splice(list.indexOf(done), 1), resolve(undefined)), ms);
+      list.push(done);
+      d.waiting.set(slot, list);
+    });
+  }
+}
+
+const limits = { rvPut: new Limit(30, 60_000), rvGet: new Limit(240, 60_000), enroll: new Limit(5, 3600_000), enrollAll: new Limit(200, 3600_000), check: new Limit(60, 60_000), push: new Limit(600, 3600_000), bad: new Limit(20, 600_000), logins: new Limit(30, 60_000) };
 
 type Answer = { status: number; body: unknown };
 
@@ -292,6 +334,7 @@ export async function api(r: Relay, method: string, url: URL, body: any, auth: s
   const err = (status: number, error: string): Answer => ({ status, body: { error } });
   const p = url.pathname;
   const named = p.match(/^\/v1\/names\/([^/]+)$/)?.[1];
+  const drop = p.match(/^\/v1\/rv\/([A-Za-z0-9_-]{22,64})\/([a-z0-9-]{1,32})$/);
 
   if (method === 'GET' && p === '/v1/tunnel') return ok({ host: DOMAIN, port: TUNNEL_PORT, serverName: DOMAIN, ca: r.tunnelCa });
   if (method === 'GET' && p === '/v1/push/key') return ok({ publicKey: r.vapid.publicKey });
@@ -344,6 +387,26 @@ export async function api(r: Relay, method: string, url: URL, body: any, auth: s
     });
     // 404 and 410 mean the phone dropped the subscription: the box should forget it.
     return ok({ status: res.status, gone: res.status === 404 || res.status === 410, ...(res.ok ? {} : { error: (await res.text()).slice(0, 300) }) });
+  }
+
+  if (drop) {
+    const rv = (r.rv ??= new Rendezvous());
+    const [, id, slot] = drop;
+    if (method === 'GET') {
+      if (!limits.rvGet.ok(ip)) return err(429, 'too many reads; wait a minute');
+      const v = await rv.read(id, slot, Math.min(Number(url.searchParams.get('wait') ?? 0) || 0, 25) * 1000);
+      return v === undefined ? err(404, 'nothing there yet') : ok(v);
+    }
+    if (method === 'PUT') {
+      if (!limits.rvPut.ok(ip)) return err(429, 'too many writes; wait a minute');
+      if (JSON.stringify(body ?? null).length > 8192) return err(413, 'at most 8 KB');
+      if (slot === 'host') {
+        // Only the box that holds the name may say where it is, so nobody else can point a phone at another box.
+        const [who, secret] = (auth ?? '').replace(/^Bearer /i, '').split('.', 2);
+        if (!r.names.check(who, secret) || body?.host !== `${who}.${DOMAIN}`) return err(403, 'only the box that holds this address can write it');
+      }
+      return rv.put(id, slot, body) ? ok({ ok: true }) : err(409, 'already written');
+    }
   }
 
   if (method === 'GET' && p === '/') return { status: 200, body: PAGE };
@@ -418,6 +481,8 @@ export function serve(r: Relay, pluginPort = Number(process.env.RELAY_PLUGIN_POR
   });
   // Caddy on the relay serves this at https://DOMAIN, with the caller's address in X-Forwarded-For.
   const apiServer = http.createServer(async (req, res) => {
+    // The GurtOS app reads and writes rendezvous slots from the browser.
+    if (req.method === 'OPTIONS') return void res.writeHead(204, { 'access-control-allow-origin': '*', 'access-control-allow-methods': 'GET, PUT', 'access-control-allow-headers': 'content-type, authorization', 'access-control-max-age': '600' }).end();
     const ip = String(req.headers['x-forwarded-for'] ?? req.socket.remoteAddress ?? '').split(',').pop()!.trim();
     let a: Answer;
     try {

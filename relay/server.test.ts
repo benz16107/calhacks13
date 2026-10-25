@@ -150,3 +150,20 @@ test('APNs for the native apps: only GurtOS apps, ciphertext only, Apple token s
   r.apnsSend = (async () => ({ status: 400, body: '{"reason":"BadDeviceToken"}' })) as ApnsSend;
   assert.deepEqual((await api(r, 'POST', u('/v1/push'), body, auth, '203.0.113.1')).body, { status: 400, gone: true, error: 'BadDeviceToken' });
 });
+
+test('rendezvous: slots are write-once, a reader can wait for one, and only the named box can write its host', async () => {
+  const r = fresh();
+  const id = 'r'.repeat(22);
+  const at = (slot: string) => u(`/v1/rv/${id}/${slot}`);
+  assert.equal((await api(r, 'GET', at('ask'), {}, undefined, '203.0.113.20')).status, 404);
+  const waiting = api(r, 'GET', u(`/v1/rv/${id}/ask?wait=5`), {}, undefined, '203.0.113.20');
+  assert.equal((await api(r, 'PUT', at('ask'), { want: 'remote' }, undefined, '203.0.113.21')).status, 200);
+  assert.deepEqual((await waiting).body, { want: 'remote' }, 'a waiting reader wakes when the slot is written');
+  assert.equal((await api(r, 'PUT', at('ask'), { want: 'other' }, undefined, '203.0.113.21')).status, 409, 'write once');
+  const secret = r.names.enroll('rosa');
+  assert.equal((await api(r, 'PUT', at('host'), { host: `rosa.${DOMAIN}` }, undefined, '203.0.113.21')).status, 403, 'no secret, no host');
+  assert.equal((await api(r, 'PUT', at('host'), { host: `ben.${DOMAIN}` }, `Bearer rosa.${secret}`, '203.0.113.21')).status, 403, "can't point at another box");
+  assert.equal((await api(r, 'PUT', at('host'), { host: `rosa.${DOMAIN}` }, `Bearer rosa.${secret}`, '203.0.113.21')).status, 200);
+  assert.deepEqual((await api(r, 'GET', at('host'), {}, undefined, '203.0.113.20')).body, { host: `rosa.${DOMAIN}` });
+  assert.equal((await api(r, 'GET', u('/v1/rv/short/ask'), {}, undefined, '203.0.113.20')).status, 404, 'ids are long random capabilities');
+});

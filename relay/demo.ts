@@ -3,6 +3,7 @@
 // API for remote access and notifications. DEMO_LIVE=remote adds the real thing: this demo box enrolls a name with
 // the real relay, gets its own certificate, answers at https://<name>.box.gurtos.com, sends a real push through
 // the gateway and Mozilla's push service to a stand-in phone, then releases the name.
+import { execFileSync } from 'node:child_process';
 import { createECDH, createHmac, randomBytes } from 'node:crypto';
 import fs from 'node:fs';
 import http from 'node:http';
@@ -108,24 +109,43 @@ export default async function (d: DemoKit) {
   const forgot = await raw('DELETE', '/api/pair/self', undefined, phoneH);
   d.check(forgot.body.revoked === true && (await raw('GET', '/api/push', undefined, phoneH)).status === 401, 'a phone that forgets the box revokes its own pairing');
 
-  if (!LIVE) return console.log('    (DEMO_LIVE=remote runs the real relay, a real certificate and a real push)');
+  // ---------- the setup QR: what a phone gets when it scans it ----------
+  // The QR must open somewhere every phone can reach, whatever network it is on and before remote access is on:
+  // the GurtOS app, with the code in the fragment and a rendezvous id, never the box's own private address.
+  const start = await d.api('POST', '/pair/start', { owner: true });
+  const qrText = qrRoundTrip(start.url);
+  const link = new URL(qrText ?? start.url);
+  d.check(qrText === undefined || qrText === start.url, qrText === undefined ? '(qrencode and zbarimg are not on this machine: the QR image itself was not decoded)' : 'the pairing QR, drawn and read back, holds exactly the link the box gave');
+  d.check(link.origin === 'https://app.gurtos.com' && link.pathname === '/pair' && (link.searchParams.get('rv') ?? '').length >= 22 && link.hash === `#${start.code}`, 'with remote access off, the QR opens the GurtOS app with a rendezvous id and the code, not an address only the box\'s own network can reach');
+  const viaQr = await raw('POST', '/api/pair', { code: link.hash.slice(1), name: 'Phone from the QR' });
+  const qrPhone = { authorization: `Bearer ${viaQr.body.token}`, 'x-forwarded-for': '203.0.113.8' };
+  d.check(viaQr.status === 200 && (await raw('GET', '/api/tasks', undefined, qrPhone)).status === 200, 'the code read from the QR pairs a phone with the box');
+  await raw('DELETE', '/api/pair/self', undefined, qrPhone);
+
+  if (!LIVE) return console.log('    (DEMO_LIVE=remote runs the real relay: a phone that scanned the QR turns remote access on, then a real certificate and a real push)');
 
   // ---------- live: the real relay ----------
-  const name = `demo-${randomBytes(3).toString('hex')}`;
-  const on = await raw('POST', '/api/remote', { name });
-  d.check(on.body.state === 'starting', `live: the box enrolled ${name}.box.gurtos.com with the relay`);
+  // A phone that can't reach the box asks it, through the relay, to turn remote access on, then pairs over https.
+  const scan = await d.api('POST', '/pair/start', { owner: true });
+  const rv = new URL(scan.url).searchParams.get('rv');
+  await fetch(`https://box.gurtos.com/v1/rv/${rv}/ask`, { method: 'PUT', headers: { 'content-type': 'application/json' }, body: '{}' });
+  let name = '';
   try {
-    const up = await d.waitFor('the box to answer at its https address', async () => {
-      const s = (await raw('GET', '/api/remote')).body;
-      if (s.state === 'error') throw new Error(s.error);
-      return s.state === 'connected' ? s : undefined;
-    }, 150_000);
-    const base = up.url;
+    const host: string = await d.waitFor('the box to turn on remote access and post its address', async () => {
+      const e = await fetch(`https://box.gurtos.com/v1/rv/${rv}/error`);
+      if (e.ok) throw new Error(((await e.json()) as any).error);
+      const r = await fetch(`https://box.gurtos.com/v1/rv/${rv}/host?wait=20`);
+      return r.ok ? ((await r.json()) as any).host : undefined;
+    }, 180_000);
+    name = host.split('.')[0];
+    const base = `https://${host}`;
+    d.check(/^[a-z0-9-]+\.box\.gurtos\.com$/.test(host) && (await raw('GET', '/api/remote')).body.state === 'connected', `live: the phone asked through the relay, and the box turned on ${host} by itself`);
     const health = await fetch(`${base}/api/health`);
     d.check(health.ok && (await fetch(`${base}/api/tasks`)).status === 401, `live: ${base} answers with a trusted certificate, and refuses a request without a token`);
-    const start = await d.api('POST', '/pair/start', { owner: true });
-    d.check(start.url.startsWith(`https://app.gurtos.com/pair?box=${name}.box.gurtos.com#`), 'live: the pairing QR opens the GurtOS app with this box');
-    const owner = (await (await fetch(`${base}/api/pair`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ code: start.code, name: 'Owner phone' }) })).json()) as any;
+    const owner = (await (await fetch(`${base}/api/pair`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ code: scan.code, name: 'Owner phone' }) })).json()) as any;
+    d.check(typeof owner.token === 'string', 'live: the phone paired over https with the code from the QR it scanned before the box had an address');
+    const next = await d.api('POST', '/pair/start', { owner: true });
+    d.check(next.url.startsWith(`https://app.gurtos.com/pair?box=${host}#`), 'live: with remote access on, the pairing QR opens the GurtOS app with this box');
     const key = (await (await fetch('https://box.gurtos.com/v1/push/key')).json()).publicKey;
     const tp = await testPhone(key);
     try {
@@ -156,7 +176,17 @@ export default async function (d: DemoKit) {
     }
   } finally {
     const offAgain = await raw('DELETE', '/api/remote');
-    const free = (await (await fetch(`https://box.gurtos.com/v1/names/${name}`)).json()) as any;
-    d.check(offAgain.body.enabled === false && offAgain.body.released && free.available, 'live: turning it off released the name');
+    const free = name ? ((await (await fetch(`https://box.gurtos.com/v1/names/${name}`)).json()) as any) : { available: true };
+    d.check(offAgain.body.enabled === false && (!name || offAgain.body.released) && free.available, 'live: turning it off released the name');
   }
+}
+
+/** Draw the text as a QR code and read it back with qrencode and zbarimg, installing them if missing. Undefined if they can't be had. */
+function qrRoundTrip(text: string): string | undefined {
+  const have = () => ['qrencode', 'zbarimg'].every((t) => { try { execFileSync('sh', ['-c', `command -v ${t}`], { stdio: 'ignore' }); return true; } catch { return false; } });
+  if (!have()) try { execFileSync('sh', ['-c', 'DEBIAN_FRONTEND=noninteractive apt-get install -y -qq qrencode zbar-tools >/dev/null 2>&1'], { timeout: 180_000 }); } catch {}
+  if (!have()) return undefined;
+  const file = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'qr-')), 'qr.png');
+  execFileSync('qrencode', ['-o', file, '-s', '6', text]);
+  return execFileSync('zbarimg', ['-q', '--raw', file]).toString().trim();
 }

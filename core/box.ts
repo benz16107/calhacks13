@@ -1620,12 +1620,23 @@ class Core {
     const code = randomBytes(4).toString('hex');
     const expiry = Date.now() + 5 * 60 * 1000;
     this.pairCodes.set(code, { expiry, owner, ...(person ? { person } : {}) });
-    // With BOX_URL set (the image sets it from the box's address) the url is absolute, so the box screen's QR
-    // opens on a phone. Without it the url is a path the page prefixes with its own origin. With remote access on,
-    // the QR opens the GurtOS app, which adds this box to its machines (`boxUrl` is the box's own copy).
+    // The QR always opens the GurtOS app (app.gurtos.com), which any phone can reach, with the code in the fragment.
+    // With remote access on it carries the box's https address. Without it, the box's address on its own network
+    // (`lan`, which a phone on another network, or a VM's private address, can't reach) plus a rendezvous id: the
+    // app can then ask this box, through the relay, to turn remote access on, and pair over https (watchPairing).
+    // `boxUrl` is the box's own copy of the pairing page.
     const remote = this.remote.saved;
-    const url = remote ? `${APP}/pair?box=${remote.host}#${code}` : `${this.boxUrl()}/pair#${code}`;
-    return { code, url, ...(remote ? { boxUrl: `${remote.url}/pair#${code}` } : {}), expiresAt: new Date(expiry).toISOString(), box: { id: BOX_ID, name: this.boxName() } };
+    const base = this.boxUrl();
+    let url: string;
+    if (remote) url = `${APP}/pair?box=${remote.host}#${code}`;
+    else {
+      const rv = randomBytes(16).toString('base64url');
+      const lan = /^https?:\/\//.test(base) ? new URL(base).host : '';
+      url = `${APP}/pair?rv=${rv}${lan ? `&lan=${encodeURIComponent(lan)}` : ''}&n=${encodeURIComponent(this.boxName())}#${code}`;
+      void this.remote.watchPairing(rv, () => (this.pairCodes.get(code)?.expiry ?? 0) > Date.now(), BOX_ID);
+    }
+    const own = remote ? remote.url : /^https?:\/\//.test(base) ? base : '';
+    return { code, url, ...(own ? { boxUrl: `${own}/pair#${code}` } : {}), expiresAt: new Date(expiry).toISOString(), box: { id: BOX_ID, name: this.boxName() } };
   }
 
   /** A phone redeems the code for a durable device token. */

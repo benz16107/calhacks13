@@ -87,6 +87,54 @@ export class Remote {
     if (this.saved) void this.start();
   }
 
+  /**
+   * A phone that scanned the pairing QR while remote access is off can ask, through a rendezvous slot on the relay,
+   * for this box to turn it on (it holds the QR, so it is the person at this screen). The box then enrolls a name,
+   * waits until its address answers, and posts that address back for the phone to pair with. Runs while the code is
+   * valid; `alive` turns false once the code is used or expires.
+   */
+  async watchPairing(rv: string, alive: () => boolean, boxId: string) {
+    let failures = 0;
+    while (alive() && failures < 3) {
+      try {
+        const r = await fetch(`${RELAY}/v1/rv/${rv}/ask?wait=25`, { signal: AbortSignal.timeout(35_000) });
+        if (r.status === 404) continue; // nobody asked yet
+        if (!r.ok) throw new Error(`relay answered ${r.status}`);
+        if (!this.saved) await this.enableAuto(boxId);
+        const until = Date.now() + 150_000;
+        while (this.state !== 'connected' && Date.now() < until) {
+          if (this.state === 'error') throw new Error(this.error ?? 'remote access failed');
+          await new Promise((res) => setTimeout(res, 1000));
+        }
+        if (this.state !== 'connected') throw new Error('the address did not come up in time');
+        const s = this.saved!;
+        await fetch(`${RELAY}/v1/rv/${rv}/host`, { method: 'PUT', headers: { authorization: `Bearer ${s.name}.${this.deps.secret()}`, 'content-type': 'application/json' }, body: JSON.stringify({ host: s.host }), signal: AbortSignal.timeout(10_000) });
+        return;
+      } catch (e) {
+        failures++;
+        if (failures >= 3 || !alive()) {
+          await fetch(`${RELAY}/v1/rv/${rv}/error`, { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ error: (e as Error).message }), signal: AbortSignal.timeout(10_000) }).catch(() => {});
+          return;
+        }
+        await new Promise((res) => setTimeout(res, 3000));
+      }
+    }
+  }
+
+  /** Turn remote access on with a name made from the box id (gurt-2a48f6), adding -2, -3 if it is taken. */
+  async enableAuto(boxId: string) {
+    const base = boxId.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, '').replace(/--+/g, '-').slice(0, 26).replace(/-+$/, '');
+    const root = base.length >= 3 && !nameProblem(base) ? base : `gurt-${base || 'box'}`.slice(0, 26);
+    for (const name of [root, `${root}-2`, `${root}-3`, `${root}-${Math.random().toString(36).slice(2, 6)}`]) {
+      try {
+        return await this.enable(name);
+      } catch (e) {
+        if ((e as { status?: number }).status !== 409) throw e; // taken or reserved: try the next
+      }
+    }
+    throw new Error('no free name for this box; choose one in Settings, Remote access');
+  }
+
   /** Ask the relay whether a name is free. */
   async available(name: string) {
     const problem = nameProblem(name);
