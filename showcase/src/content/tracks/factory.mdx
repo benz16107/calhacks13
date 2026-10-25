@@ -95,7 +95,24 @@ This run was real Droid with Claude Sonnet 5.5, started on Oct 24 from the Facto
 
 **2. Plan, then approve.** Droid starts in Factory's spec mode, which can read but not change anything. Its plan becomes an approval on every screen. Nothing runs until Approve.
 
-<Shot src="track/factory/plan-phone.png" size="phone" alt="A phone approval: Droid's plan for Fix add() so its test passes. It names the cause, a one-operator fix, and a process of a coder droid then a reviewer droid, with Deny and Approve buttons." caption="Droid's plan on a phone. It names the cause (<code>a - b</code>), the fix, and the order: coder, then reviewer. Its text shows the plan's markdown unrendered, which is a known rough edge." />
+The same plan waits on every paired device, and the box decides who may answer. A plan moves no money, so the plain Approve and Deny work from the iPhone notification, and the Watch may approve it too. The Watch is capped at $25 and never approves a Business request or a Shopper purchase.
+
+<Compare labels={["iPhone notification", "Apple Watch"]}>
+<div slot="a">
+
+<Shot src="track/factory/iphone-plan-actions.png" alt="An iPhone notification from Home box, Time Sensitive: Fix add() so its test passes. Approve Droid's plan for Fix add() so its test passes? It names the cause, add.js returns a - b instead of a + b, and starts the plan. Below it, Approve and Deny." caption="Droid's real plan, answered without opening the app. Its markdown marks show as typed, a known rough edge." />
+
+</div>
+<div slot="b">
+
+<Shot src="track/factory/watch-plan.png" alt="An Apple Watch showing Home box, Fix add() so its test passes, with deny and approve buttons." caption="On the wrist: double tap approves the plan." />
+
+</div>
+</Compare>
+
+<Shot src="track/factory/mac-menu-plan.png" size="phone" alt="The GurtOS Mac menu bar menu for Home box, with four requests under Needs you, the last Fix add() so its test passes, then Ask Home box, Computers, Pause all agents, Settings and Quit." caption="On the Mac where you code, the plan sits under Needs you, beside test-money requests from other tasks." />
+
+The notification and the Watch are from the iOS and watchOS simulators, and the plan is a real Droid plan from the box. The simulator cannot receive Apple pushes, so the notification was built by the box's own push code and shown by the app's normal decrypt path. The iPhone app is in internal TestFlight testing and the Mac app is a notarized download; neither is on an app store.
 
 **3. Work, review, diff.** After Approve, a coder droid with edit tools made the change and ran the test. A reviewer droid with read-only tools checked it and answered `VERDICT: APPROVE`. Every tool call is a step in the log.
 
@@ -178,7 +195,7 @@ moment 1 with Droid: a real agent (Claude) in its own copy
 <Limits title="What is not covered">
 
 - **The hooks are a convenience.** The hooks file is in the task user's home, so a hijacked Droid could edit or delete it. The OS limits are the boundary.
-- **The plan's wording is Claude's.** The portal shows it as plain text, with markdown marks visible.
+- **The plan's wording is Claude's.** The portal and the iPhone notification show it as plain text, with markdown marks visible.
 - **The Factory app mislabels a denied plan** as "The plan you approved".
 - **The model provider sees what Droid sees.** Prompts, files and tool results go to Claude through Factory.
 - **Droid's cost is a display.** The worker reports its own token counts, so a hijacked task could under-report them.
