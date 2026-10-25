@@ -15,6 +15,7 @@ import { registerWorker } from './pwa/pwa.tsx';
 import { MachinesSheet } from './apps/machines.tsx';
 import { NotifyFirst, askNotifyFirst, syncPush } from './apps/remote.tsx';
 import { QuickStartPhone } from './apps/quickstart.tsx';
+import { PermissionPrompt } from './apps/permissions.tsx';
 
 /** The route in the address: #tasks, #task/<id>, #settings/devices, #app/<track>/<name>, and /pair#<code>. */
 const routeOf = () => (location.pathname === '/pair' ? `pair/${location.hash.slice(1)}` : decodeURIComponent(location.hash.slice(1)));
@@ -47,7 +48,13 @@ function App() {
   if (b.down && surface === 'box screen') return <BootScreen />;
   // First run: the wizard on the box's screen (or the owner's phone) until setup is done. Nothing else shows.
   const setupOpen = b.setup && !b.setup.done;
-  if (setupOpen && (surface === 'box screen' || b.owner)) return <SetupWizard />;
+  if (setupOpen && (surface === 'box screen' || b.owner))
+    return (
+      <>
+        <SetupWizard />
+        <PermissionPrompt />
+      </>
+    );
   if (setupOpen)
     return (
       <div class="gos-setup-layer">
@@ -70,6 +77,7 @@ function App() {
       {mobile && <MachinesSheet />}
       {shell.open === 'apps' && <Launcher />}
       <Banners />
+      <PermissionPrompt />
       {shell.locked && <LockScreen />}
     </>
   );

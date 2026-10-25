@@ -270,6 +270,8 @@ textarea.g-field { height: auto; min-height: 96px; padding: 8px var(--space-sm);
   background: var(--color-card-bg); color: var(--color-text-primary); text-align: left; width: 100%; border: 0; font: inherit;
 }
 .g-row + .g-row { border-top: 1px solid var(--color-border-default); }
+/* A list in a scrolling column (a sheet) keeps each row whole and scrolls, instead of squeezing rows. */
+.g-list, .g-list > * { flex-shrink: 0; }
 .g-row-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .g-row-title { font: 400 var(--fs-body) / var(--lh-body) var(--font); overflow-wrap: anywhere; }
 .g-row-sub { font: 400 var(--fs-caption) / var(--lh-caption) var(--font); color: var(--color-text-secondary); overflow-wrap: anywhere; }

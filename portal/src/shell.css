@@ -402,3 +402,10 @@ html.is-dragging iframe { pointer-events: none; }
 }
 /* The pairing page's longer link buttons wrap on a phone instead of widening the page. */
 .gos-pair a.g-btn { height: auto; min-height: 44px; padding-block: 10px; white-space: normal; text-align: center; }
+
+/* The question after an app is turned on (apps/permissions.tsx), over the whole screen. */
+.gos-perm-layer { position: fixed; inset: 0; z-index: 950; }
+.gos-perm-limit .g-field { max-width: 200px; }
+/* A permission's Allow and Don't Allow go under its sentence when the sheet is narrow (a phone). */
+.g-sheet .g-row:has(.g-toggle-group) { flex-wrap: wrap; height: auto; }
+.g-sheet .g-row:has(.g-toggle-group) .g-row-text { flex: 1 1 260px; }

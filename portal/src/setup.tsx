@@ -13,6 +13,7 @@ import { dollars, hhmm, keyLabel, plural, selfBox, sentence, useNow } from './ut
 import './setup.css';
 import { RemoteAccess } from './apps/remote.tsx';
 import { QuickStartHere, hasQuickStart } from './apps/quickstart.tsx';
+import { askPermissions } from './apps/permissions.tsx';
 
 interface Step {
   id: string;
@@ -896,7 +897,7 @@ function AppRow({ a, w }: { a: AppInfo; w: Wiz }) {
   const toggle = (v: boolean) => {
     setBusy(true);
     api('POST', `/apps/${a.id}/${v ? 'enable' : 'disable'}`)
-      .then(loadApps, w.fail)
+      .then(() => (void loadApps(), v && void askPermissions(a.id)), w.fail)
       .finally(() => setBusy(false));
   };
   return (
@@ -1019,7 +1020,7 @@ function PrivacyStep({ w }: { w: Wiz }) {
         sub={a ? sub : `${sub}. Not installed on this computer.`}
         checked={a?.status === 'enabled'}
         disabled={!a}
-        onChange={(v) => void api('POST', `/apps/${id}/${v ? 'enable' : 'disable'}`).then(loadApps, w.fail)}
+        onChange={(v) => void api('POST', `/apps/${id}/${v ? 'enable' : 'disable'}`).then(() => (void loadApps(), v && void askPermissions(id)), w.fail)}
       />
     );
   };

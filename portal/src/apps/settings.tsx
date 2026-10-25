@@ -2,6 +2,7 @@
 // PATCH /api/settings, the vault, apps on and off, and pairing. Only the owner may change anything: the box's own
 // screen or the owner's paired phone. Everyone else reads.
 import './settings.css';
+import { AppPermissions, askPermissions } from './permissions.tsx';
 import { Notifications, RemoteAccess } from './remote.tsx';
 import type { ComponentChildren, JSX } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
@@ -151,6 +152,7 @@ export function useToggleApp() {
       await api('POST', `/apps/${a.id}/${on ? 'enable' : 'disable'}`);
       await loadApps();
       win?.toast(`${appTitle(a)} is ${on ? 'on' : 'off'}`);
+      if (on) void askPermissions(a.id); // a phone asks what a new app may do: so does GurtOS, once
     } catch (e) {
       win?.toast(`Could not turn ${appTitle(a)} ${on ? 'on' : 'off'}: ${(e as Error).message}`);
       await loadApps();
@@ -432,6 +434,7 @@ function Permissions() {
           disabled={ro || !s.quietHours.enabled}
         />
       </Group>
+      <AppPermissions />
       {sheet === 'hosts' && <HostsSheet onClose={() => setSheet(undefined)} />}
       {sheet === 'folder' && <FolderSheet onClose={() => setSheet(undefined)} />}
     </>
