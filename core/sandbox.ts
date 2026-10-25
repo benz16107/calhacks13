@@ -425,6 +425,16 @@ export function workerError(task: Task): string | undefined {
 /** Put the task's file changes on disk, so a step the log calls done survives a power cut. */
 export const flush = (task: Task) => tryRun('sync', '-f', dirs.upper(task.id));
 
+/** How much the task's own layer holds, in bytes (du -sb: apparent size, so a sparse file counts in full). */
+export async function layerBytes(task: Task): Promise<number> {
+  try {
+    const { stdout } = await exec('du', ['-sb', '--one-file-system', dirs.upper(task.id)]);
+    return Number(stdout.split(/\s/)[0]) || 0;
+  } catch {
+    return 0;
+  }
+}
+
 /** Stop everything the task's user runs. */
 export const kill = (task: Task) => tryRun('pkill', '-KILL', '-u', task.user);
 

@@ -456,6 +456,21 @@ await moment("permissions: an app does only what the owner allowed, like a phone
   }
 });
 
+await moment('the disk cap: a task that fills its disk space is stopped and undone', async () => {
+  workspace('disk', {});
+  await api('PUT', '/api/permissions/example', { diskBytes: 20 * 1024 ** 2 }); // 20 MB for this app's tasks (5 GB by default)
+  try {
+    const t0 = Date.now();
+    const T = await api<Task>('POST', '/tasks', { title: 'Fill the disk', workspace: 'disk', worker: 'fake', source: 'example', prompt: 'sh fill.txt dd if=/dev/zero of=big bs=1M count=200 2>&1 | tail -1\nsleep 20\nwrite after.txt done' });
+    const t = await waitFor('the disk cap', async () => { const x = await task(T.id); return ['undone', 'done', 'failed'].includes(x.state) ? x : undefined; }, 60_000);
+    const secs = Math.round((Date.now() - t0) / 1000);
+    const note = (await api<LogEvent[]>('GET', '/log')).find((e) => e.type === 'note' && e.task === T.id && (e as { data?: { diskCap?: number } }).data?.diskCap) as { text?: string } | undefined;
+    check(t.state === 'undone' && /wrote more than its 20 MB/.test(note?.text ?? ''), `a task past its 20 MB cap was stopped and undone in about ${secs} s, and the log says why ("${note?.text?.slice(0, 70)}")`);
+  } finally {
+    await api('PUT', '/api/permissions/example', { diskBytes: null });
+  }
+});
+
 await moment('the GurtOS MCP server: Claude Code drives the box', async () => {
   workspace('claude', {});
   const { code } = await api<{ code: string }>('POST', '/api/pair/start');

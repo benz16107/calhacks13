@@ -197,7 +197,7 @@ class Core {
     this.write({ type: 'note', track: 'security', task: t.id, data: { tripwire: true, where } });
     void this.undo(t.id).catch((e) => console.error(`tripwire: could not undo ${t.id}: ${(e as Error).message}`));
     const fields = { type: 'tripwire', id: `tripwire.${t.id}`, task: t.id, source: t.source, costCents: 0, title: 'An agent tried to leak a key', body: `"${t.title}" tried to send its decoy key out (${where}). The box stopped it and undid its changes.`.slice(0, 200) };
-    if (this.remote.saved) for (const d of this.devices.filter((x) => x.owner && x.push && !x.revoked)) void this.pushTo(d, fields, fields.id).catch(() => {});
+    this.alertOwner(fields);
   }
   business: Business = { on: process.env.BOX_EDITION === 'business', company: '', policy: DEFAULT_POLICY, people: [], seats: [], shadow: [], policyMeta: {}, ...readJson<Partial<Business>>(this.businessPath, {}) };
   // The kill switch is Settings' `paused`: every agent stops until someone resumes them. Who pulled it is kept beside it.
@@ -237,6 +237,40 @@ class Core {
   // ---------- permissions: what each app may do (core/permissions.ts) ----------
   grants = perms.load(HOME);
 
+  /** An alert to the owner's phones (not a question): the tripwire, a disk cap. Needs remote access for the push. */
+  alertOwner(fields: Record<string, string | number>) {
+    if (!this.remote.saved) return;
+    for (const d of this.devices.filter((x) => x.owner && x.push && !x.revoked)) void this.pushTo(d, fields, String(fields.id)).catch(() => {});
+  }
+
+  /**
+   * The disk cap: every two seconds, each running task's own layer is measured, and a task past its cap (5 GB, or its
+   * app's permission, or BOX_TASK_DISK_CAP) is stopped and undone, logged and told to the owner's phone. A fast writer
+   * can pass the cap by about two seconds of writing before it is stopped.
+   */
+  watchDisk() {
+    let busy = false;
+    setInterval(async () => {
+      if (busy) return;
+      busy = true;
+      try {
+        for (const id of [...this.workers.keys()]) {
+          const t = this.state.tasks.get(id);
+          if (!t || (t.state !== 'running' && t.state !== 'waiting')) continue;
+          const cap = Number(process.env.BOX_TASK_DISK_CAP) || this.grants[t.source]?.diskBytes || 5 * 1024 ** 3;
+          const used = await sandbox.layerBytes(t);
+          if (used <= cap || !this.workers.has(id)) continue;
+          const title = t.title.slice(0, 80);
+          this.write({ type: 'note', track: 'security', task: id, data: { diskCap: cap, used }, text: `"${title}" wrote more than its ${Math.round(cap / 1024 ** 2)} MB of disk. GurtOS stopped it and undid its changes.` });
+          void this.undo(id).catch((e) => console.error(`disk cap: could not undo ${id}: ${(e as Error).message}`));
+          this.alertOwner({ type: 'tripwire', id: `disk.${id}`, task: id, source: t.source, costCents: 0, title: 'A task filled its disk space', body: `"${title}" wrote more than its ${Math.round(cap / 1024 ** 2)} MB. GurtOS stopped it and undid its changes.`.slice(0, 200) });
+        }
+      } finally {
+        busy = false;
+      }
+    }, 2000).unref();
+  }
+
   /** A task an app starts: refused where the owner said no; otherwise what it asks for is remembered for Settings. */
   permitTask(app: string, spec: TaskSpec): TaskSpec {
     const hosts = spec.hosts ?? [];
@@ -267,7 +301,7 @@ class Core {
       const g = perms.grant(this.grants, name);
       const spends = [...this.tools.values()].some((e) => e.track === name && !!e.tool.cost);
       const items = perms.manifest({ title: t.title ?? name, keys: this.appEntry(name).access.secrets.map((k: { name: string }) => k.name), spends, strangers: !!t.openRoutes?.length }, g);
-      return { app: name, title: t.title ?? name, answered: !!g.answered, perDayCents: g.perDayCents ?? null, items: items.map((i) => ({ ...i, allowed: !g.deny.includes(i.id) })) };
+      return { app: name, title: t.title ?? name, answered: !!g.answered, perDayCents: g.perDayCents ?? null, diskBytes: g.diskBytes ?? 5 * 1024 ** 3, items: items.map((i) => ({ ...i, allowed: !g.deny.includes(i.id) })) };
     });
   }
 
@@ -2404,6 +2438,11 @@ class Core {
               if (!Array.isArray(body.deny) || body.deny.some((x: unknown) => typeof x !== 'string')) throw new Error('deny: a list of permission ids');
               g.deny = [...new Set(body.deny as string[])];
             }
+            if (body?.diskBytes !== undefined) {
+              if (body.diskBytes !== null && !(Number.isInteger(body.diskBytes) && body.diskBytes >= 1024 ** 2)) throw new Error('diskBytes: whole bytes, at least 1 MB, or null for the default (5 GB)');
+              if (body.diskBytes === null) delete g.diskBytes;
+              else g.diskBytes = body.diskBytes;
+            }
             if (body?.perDayCents !== undefined) {
               if (body.perDayCents !== null && !(Number.isInteger(body.perDayCents) && body.perDayCents >= 0)) throw new Error('perDayCents: whole cents, 0 or more, or null for no daily limit');
               if (body.perDayCents === null) delete g.perDayCents;
@@ -2601,6 +2640,7 @@ data: ${JSON.stringify(e)}
       }
     }
     this.sweepUndone();
+    this.watchDisk();
     for (const pump of this.readers) pump();
     await listenSocket(this.api(), path.join(HOME, 'api.sock'));
     // BOX_PORT=auto (the demo) takes any free port and writes it to BOX_HOME/api.port.

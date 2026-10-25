@@ -7,7 +7,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 export type Item = { id: string; kind: 'key' | 'money' | 'strangers' | 'shell' | 'host' | 'folders'; text: string; seen?: boolean };
-export type Grant = { deny: string[]; perDayCents?: number; answered?: boolean; seen: { hosts: string[]; shell?: boolean; folders?: boolean } };
+export type Grant = { deny: string[]; perDayCents?: number; diskBytes?: number; answered?: boolean; seen: { hosts: string[]; shell?: boolean; folders?: boolean } };
 export type Grants = Record<string, Grant>;
 
 export function load(home: string): Grants {
