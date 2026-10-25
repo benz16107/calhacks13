@@ -455,7 +455,7 @@ export async function build(id, { noMusic = false } = {}) {
   const on = (sid) => sid in SLOTS;
   const fill = (o) => JSON.parse(JSON.stringify(o).replace(/\{url\}/g, (s) => SLOTS['try-live']?.url ?? s).replace(/"slot:([a-z-]+)"/g, (_, k) => JSON.stringify(SLOTS[k]?.media ?? `slot:${k}`)));
   let t = 0, para = 0;
-  const hosts = [], audio = [], allWords = [], voWindows = [], used = [];
+  const hosts = [], audio = [], allWords = [], voWindows = [], deadWindows = [], used = [];
   // The title card: 2.6 s, or 3 s when the track name is long enough that 2.6 s is too short to read it.
   const cardDur = spec.card && spec.card.track.split(/\s+/).length > 5 ? 3.0 : 2.6;
   const beats = [...(spec.card ? [{ dur: cardDur, v: { type: 'trackcard', ...spec.card } }] : []), ...spec.beats].filter((x) => !x.insert || on(x.insert));
@@ -474,12 +474,21 @@ export async function build(id, { noMusic = false } = {}) {
       if (!fs.existsSync(base + '.json')) throw new Error(`${id}: no narration ${base}.json (run narration/say.py${voName ? ' --slots' : ''})`);
       const { alignment } = JSON.parse(fs.readFileSync(base + '.json', 'utf8'));
       const len = probe(base + '.wav'), pre = b.pre ?? (bi === 0 ? 0.6 : 0.3);
-      vo = { start: t + pre, len, wav: base + '.wav' };
+      vo = { start: t + pre, len, wav: base + '.wav', gap: 0 };
       words = wordsOf(alignment, vo.start);
+      // gap: { after: word, dur }: hold silence inside the line after that word (main's power cut); later words move.
+      if (b.gap) {
+        const i = words.findIndex((w) => w.text.toLowerCase().replace(/[^a-z0-9]/g, '') === b.gap.after);
+        if (i < 0 || i + 1 >= words.length) throw new Error(`${id} beat ${bi + 1}: no spoken word "${b.gap.after}" to hold after`);
+        vo.split = r3((words[i].end + words[i + 1].start) / 2 - vo.start);
+        vo.gap = b.gap.dur;
+        for (const w of words.slice(i + 1)) { w.start += vo.gap; w.end += vo.gap; }
+        deadWindows.push([vo.start + vo.split, vo.start + vo.split + vo.gap]);
+      }
       allWords.push(...words);
-      voWindows.push([vo.start, vo.start + len]);
+      voWindows.push([vo.start, vo.start + len + vo.gap]);
     }
-    const dur = r3(b.dur ?? (vo.start - t) + vo.len + (b.post ?? 0.45) + (b.hold ?? 0));
+    const dur = r3(b.dur ?? (vo.start - t) + vo.len + vo.gap + (b.post ?? 0.45) + (b.hold ?? 0));
     // Resolve a visual's time: `at` (seconds into the part) or `cue` (the first spoken word starting with it, after `after`).
     const cueAbs = (o) => {
       if (o.cue == null) return null;
@@ -497,7 +506,11 @@ export async function build(id, { noMusic = false } = {}) {
       fs.writeFileSync(path.join(comp, `${sid}.html`), fn(sid, p.v, e - s, ctx));
       hosts.push(`<div id="${sid}" data-composition-id="${sid}" data-composition-src="compositions/${sid}.html" data-start="${r3(s)}" data-duration="${r3(e - s)}" data-track-index="1" data-track-kind="graphics" data-width="${W}" data-height="${H}"></div>`);
     });
-    if (vo) audio.push(`<audio id="vo-${bi + 1}" class="clip" src="${media_('cap:' + path.relative(path.join(STUDIO, 'assets/capture'), vo.wav))}" data-start="${r3(vo.start)}" data-duration="${r3(vo.len)}" data-track-index="3" data-volume="1"></audio>`);
+    if (vo) {
+      const src = media_('cap:' + path.relative(path.join(STUDIO, 'assets/capture'), vo.wav)), cut = vo.gap ? vo.split : vo.len;
+      audio.push(`<audio id="vo-${bi + 1}" class="clip" src="${src}" data-start="${r3(vo.start)}" data-duration="${r3(cut)}" data-track-index="3" data-volume="1"></audio>`);
+      if (vo.gap) audio.push(`<audio id="vo-${bi + 1}b" class="clip" src="${src}" data-start="${r3(vo.start + cut + vo.gap)}" data-duration="${r3(vo.len - cut)}" data-media-start="${cut}" data-track-index="3" data-volume="1"></audio>`);
+    }
     t = r3(t + dur);
   }
   const total = r3(t);
@@ -511,12 +524,16 @@ export async function build(id, { noMusic = false } = {}) {
   let music = '';
   if (spec.music && !fs.existsSync(path.join(STUDIO, 'assets/music', spec.music))) console.warn(`${id}: WARNING no music file ${spec.music}; building without a bed`);
   else if (spec.music) {
-    const under = spec.musicUnder ?? 0.2, open = spec.musicOpen ?? 0.42, pts = [{ t: 0, v: open }];
+    const under = spec.musicUnder ?? 0.14, open = spec.musicOpen ?? 0.3, // 3 dB under the first mix (Ben, Oct 25)
+    pts = [{ t: 0, v: open }];
     for (const [a, b] of voWindows) {
       if (a - 0.4 > (pts.at(-1)?.t ?? 0) + 0.4) pts.push({ t: r3(a - 0.45), v: open });
       pts.push({ t: r3(Math.max(0.01, a - 0.15)), v: under }, { t: r3(b + 0.2), v: under });
     }
     pts.push({ t: r3(Math.min(total, voWindows.at(-1)[1] + 0.9)), v: open });
+    // A held silence is a dead moment: the bed nearly drops out, then comes back with the voice.
+    for (const [a, b] of deadWindows) pts.push({ t: r3(a + 0.05), v: under }, { t: r3(a + 0.35), v: 0.04 }, { t: r3(b - 0.5), v: 0.04 }, { t: r3(b - 0.05), v: under });
+    pts.sort((x, y) => x.t - y.t);
     const auto = JSON.stringify({ version: 1, lanes: [{ target: 'volume', points: pts.filter((p, i) => i === 0 || p.t > pts[i - 1].t) }] });
     music = `<audio id="music" class="clip" src="${media_('brand:../music/' + spec.music)}" data-start="0" data-duration="${total}" data-media-start="${spec.musicFrom ?? 0}" data-track-index="4" data-volume="1" data-fade-in="1.5" data-fade-out="3" data-automation='${auto}'></audio>`;
   }

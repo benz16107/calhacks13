@@ -55,20 +55,20 @@ export default {
         { v: { type: 'clip', src: cap('a04.mp4'), from: 7.5, rate: 1.2, moves: [{ at: 0.2, s: 1.3, px: 0.5, py: 0.38, d: 0.8 }], lt: { kicker: 'Moment 1 · GurtOS Server', title: 'Undo one task' } } },
         { cue: 'undo', v: { type: 'clip', src: cap('a04.mp4'), from: 16.0, moves: [{ at: 0, s: 1.3, px: 0.5, py: 0.38, d: 0.01 }] } }] },
     // 6. Moment 2: the booby-trapped page.
-    { hold: 1.0, parts: [
+    { hold: 0.7, parts: [
         { v: { type: 'clip', src: cap('a03.mp4'), from: 7.5, rate: 1.3, note: SCRIPTED, lt: { kicker: 'Moment 2 · GurtOS Server', title: 'The booby-trapped page' } } },
         { cue: 'send', v: { type: 'clip', src: cap('a03.mp4'), from: 16.8, note: SCRIPTED, moves: [{ at: 0.4, s: 1.55, px: 0.36, py: 0.6, d: 0.8 }] } },
         { cue: 'undoes', v: { type: 'clip', src: cap('a03.mp4'), from: 29.4, note: SCRIPTED } }] },
     // 7. Moment 3: box screen and phone, recorded together; the tap lands on "I approve".
-    { hold: 0.8, v: { type: 'split', src: cap('a02.mp4'), from: 3.6, note: 'Scripted task · test money',
+    { hold: 0.6, v: { type: 'split', src: cap('a02.mp4'), from: 3.6, note: 'Scripted task · test money',
         crops: [{ x: 36, y: 90, w: 1440, h: 900, cx: 760, bw: 1220 }, { x: 1508, y: 118, w: 390, h: 844, cx: 1575, bw: 420, radius: 40 }],
         lt: { kicker: 'Moment 3 · GurtOS Server', title: 'A pause for your OK' } } },
     // 8. Moment 4: pull the plug; the request is still waiting afterwards.
-    { hold: 1.0, pre: 1.3, parts: [
+    // The power cut holds: 2.4 s with no voice and the bed nearly gone, about 2 s of it black, then the box boots.
+    { hold: 1.0, pre: 0.9, gap: { after: 'plug', dur: 2.4 }, parts: [
         { v: { type: 'clip', src: cap('a05.mp4'), from: 8.0, lt: { kicker: 'Moment 4 · GurtOS Server', title: 'Pull the plug' } } },
-        // The power cut: a 0.25 s blink, then the boot screen while the voice says the box boots.
         { cue: 'plug', off: 0.35, v: { type: 'black' } },
-        { cue: 'plug', off: 0.6, v: { type: 'clip', src: cap('a05.mp4'), from: 13.2, drift: false } },
+        { cue: 'plug', off: 2.4, v: { type: 'clip', src: cap('a05.mp4'), from: 13.2, drift: false } },
         { cue: 'picks', v: { type: 'clip', src: cap('a05.mp4'), from: 21.2, moves: [{ cue: 'approval', s: 1.7, px: 0.2, py: 0.22, d: 0.8 }] } }] },
     // 9. Security: the published attack test, the placeholder key. Slot: attack it yourself, in place of the key line.
     { slot: { id: 'attack-yourself', parts: [{ v: BOARD }, { cue: 'attack', after: 'can', v: { type: 'clip', src: 'slot:attack-yourself',
@@ -84,7 +84,7 @@ export default {
         { n: '903 MB', label: 'Personal at idle, about 150 MB less than stock Ubuntu', cue: 'personal' }],
       source: 'Measured Oct 24 on a 1 GB Vultr machine, and against stock Ubuntu 24.04', sourceAt: { at: 1.0 } } },
     // 11. Phone and portal: live control from anywhere.
-    { hold: 0.4, v: { type: 'stills', h: 700, note: "iPhone, Watch and Mac: screenshots from Apple's simulators", items: [
+    { hold: 0.2, v: { type: 'stills', h: 700, note: "iPhone, Watch and Mac: screenshots from Apple's simulators", items: [
         { src: repo('showcase/src/assets/repo/portal/phone-home.png'), device: 'phone', label: 'app.gurtos.com', cue: 'portal' },
         { src: repo('native/screenshots/iphone-approval-dark.png'), device: 'phone', label: 'iPhone', cue: 'iphone' },
         { src: repo('native/screenshots/watch-big.png'), device: 'watch', hf: 0.5, label: 'Apple Watch', cue: 'watch' },
@@ -107,7 +107,7 @@ export default {
         { cue: 'security', v: { type: 'clip', src: cap('docs.mp4'), from: 11.7 } },
         { cue: 'check', v: { type: 'clip', src: cap('docs.mp4'), from: 15.7 } }] },
     // 14. A suite, open source, end card. Slot: try it live, with the public link on the end card.
-    { hold: 2.0, slot: { id: 'try-live', parts: [{ v: SUITE }, { cue: 'gurt', v: { type: 'end', lines: ['Try GurtOS live: {url}', 'gurtos.com', 'gurtos.com/download', 'github.com/benz16107/calhacks13', 'Open source, Apache-2.0'] } }] },
+    { hold: 1.7, slot: { id: 'try-live', parts: [{ v: SUITE }, { cue: 'gurt', v: { type: 'end', lines: ['Try GurtOS live: {url}', 'gurtos.com', 'gurtos.com/download', 'github.com/benz16107/calhacks13', 'Open source, Apache-2.0'] } }] },
       parts: [
         { v: SUITE },
         { cue: 'gurt', v: { type: 'end', lines: ['gurtos.com', 'gurtos.com/download', 'github.com/benz16107/calhacks13', 'Open source, Apache-2.0'] } }] },
