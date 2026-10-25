@@ -29,7 +29,7 @@ def run(*a):
 def findings_in(text, names):
     out = []
     # A dash in a sentence sits between words; OCR also reads lone dashes from window controls and the wallpaper.
-    out += [f"em or en dash: {m}" for m in re.findall(r"\w+ ?[\u2014\u2013] ?\w+", text)]
+    out += [f"em or en dash: {m}" for m in re.findall(r"[A-Za-z0-9]+ ?[\u2014\u2013] ?[A-Za-z0-9]+", text)]
     low = text.lower()
     out += [f"private name ({n[:3]}...)" for n in names if n.lower() in low]
     out += [f"email {m}" for m in re.findall(r"[\w.+-]+@[\w-]+\.[\w.]+", text)]

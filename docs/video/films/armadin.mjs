@@ -7,6 +7,7 @@ export default {
   edition: 'server',
   maxDur: 90, // Devpost's cap for the main video; the track list's target for Armadin
   music: 'bed-tense-long.wav',
+  card: { sponsor: 'Armadin', track: 'Best Security Hack', editions: ['server', 'personal', 'business'] },
   beats: [
     // 1. The problem, then the OS answer.
     { parts: [

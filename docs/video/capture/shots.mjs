@@ -39,14 +39,14 @@ const CURSOR = () => {
 
 async function open(url = '/screen') {
   const ctx = await chromium.launchPersistentContext(`/tmp/gurtos-shots-${process.pid}`, {
-    headless: false, viewport: null,
+    headless: false, viewport: null, colorScheme: 'dark',
     args: ['--kiosk', '--window-position=0,0', '--window-size=1920,1080', '--disable-gpu', '--ozone-platform=x11',
       '--no-first-run', '--hide-scrollbars', '--force-dark-mode'],
   });
   await ctx.addInitScript(CURSOR);
   const page = ctx.pages()[0] ?? (await ctx.newPage());
   page.pos = { x: 1190, y: 760 };
-  await page.goto(BOX + url);
+  await page.goto(url.startsWith('http') ? url : BOX + url);
   await page.waitForTimeout(2500);
   await page.evaluate(({ x, y }) => window.__cur?.(x, y), page.pos);
   return page;
@@ -311,6 +311,27 @@ const shots = {
     await page.waitForTimeout(2500);
     await glide(page, page.getByText(/not approved/i).first(), 0.98, 2.2);
     await page.waitForTimeout(4000);
+    await done(page);
+  },
+
+  // The live site in dark mode: the download page, then four docs pages, each held with a slow scroll.
+  async DL() {
+    const page = await open('https://gurtos.com/download/');
+    await page.evaluate(() => document.getElementById('__cursor')?.remove());
+    await page.waitForTimeout(1500);
+    for (let i = 0; i < 40; i++) { await page.mouse.wheel(0, 14); await page.waitForTimeout(60); }
+    await page.waitForTimeout(3000);
+    await done(page);
+  },
+  async DOCS() {
+    const page = await open('https://gurtos.com/docs/');
+    await page.evaluate(() => document.getElementById('__cursor')?.remove());
+    for (const u of ['https://gurtos.com/docs/', 'https://gurtos.com/docs/concepts/architecture/', 'https://gurtos.com/docs/security/model/', 'https://gurtos.com/docs/reference/http-api/']) {
+      await page.goto(u);
+      await page.waitForTimeout(1200);
+      for (let i = 0; i < 26; i++) { await page.mouse.wheel(0, 12); await page.waitForTimeout(60); }
+      await page.waitForTimeout(1000);
+    }
     await done(page);
   },
 

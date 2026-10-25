@@ -10,36 +10,39 @@ bed, in case a platform or judge prefers it.
 
 ## Main video: Devpost
 
-**File:** `out/main.mp4` (2:57). **Thumbnail:** `out/main-thumb.jpg`.
+**File:** `out/main.mp4` (2:58.8). **Thumbnail:** `out/main-thumb.jpg`. **Captions:** `out/main.srt`.
 
-**Title:** GurtOS: operating systems built for AI agents (Cal Hacks 13)
+**Title:** GurtOS: operating systems built for AI agents
 
 **Description:**
 
 ```text
 GurtOS: operating systems built for AI agents. Each task runs as its own Linux user, in its own copy-on-write copy of your files, with no keys. Undo any task, approve spending from your phone. Built solo by Ben Zhou for Cal Hacks 13.
 
-Every screen is the real product, recorded on a test computer running GurtOS from main on Oct 24 and 25, 2026. The agents in moments 1 to 4 are scripted so they do the same steps every take; real Droid runs with Claude are in the merge gate. All payments are test money.
+Every screen is the real product: a test computer running GurtOS from main on Oct 24 and 25, 2026, the live gurtos.com site, and the signed v0.1.0-preview Server disc booting and installing in a VM (sped up). The agents in moments 1 to 4 are scripted so they do the same steps every take; real Droid runs with Claude are in the merge gate. All payments are test money.
 
 Narration: Ben's own voice, cloned with ElevenLabs. Music: generated with MusicGen.
 
-Sources for the numbers on screen: GitHub API (Oct 23, 2026), Censys (Jan 2026), Koi Security (341 of 2,857 ClawHub skills), CVE-2026-25253, and the attack scoreboard in the repo (tracks/armadin/SCOREBOARD.md).
+Sources for the numbers on screen: GitHub API (Oct 23, 2026), Censys (Jan 2026), Koi Security (341 of 2,857 ClawHub skills), CVE-2026-25253, the attack scoreboard in the repo (tracks/armadin/SCOREBOARD.md), and measurements from Oct 24 (a 1 GB Vultr machine; Personal against stock Ubuntu 24.04).
 
-Every track, with its evidence: https://calhacks.gurtos.com
-Docs and downloads: https://gurtos.com
+Download the signed discs: https://gurtos.com/download/
+Docs, from the architecture to the security model and the APIs: https://gurtos.com/docs/
 Code (Apache-2.0): https://github.com/benz16107/calhacks13
+Every Cal Hacks track, with its evidence: https://calhacks.gurtos.com
+Home: https://gurtos.com
 
 0:00 The problem
-0:18 Why an operating system
-0:35 GurtOS: each task its own user and copy of your files
-0:56 Three editions: Server, Personal, Business
-1:14 Moment 3: a pause for your OK
-1:28 Moment 2: the booby-trapped page
-1:40 Moment 1: undo one task
-1:50 Moment 4: pull the plug
-2:03 Security, with the score published
-2:18 Light enough for old hardware
-2:30 Live from any device, a suite, open source
+0:14 Why an operating system
+0:31 GurtOS: each task its own user and copy of your files
+0:46 Three editions: Server, Personal, Business
+0:57 Moment 3: a pause for your OK
+1:11 Moment 2: the booby-trapped page
+1:23 Moment 1: undo one task
+1:33 Moment 4: pull the plug
+1:45 Security, with the score published
+2:00 Try it: signed discs, light enough for old hardware
+2:23 Every part documented, and live from any device
+2:41 A suite, open source
 ```
 
 ## Armadin: Best Security Hack

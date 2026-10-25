@@ -153,6 +153,31 @@ function note(id, text, left, top) { // bottom-left inside the frame: the box sc
 }
 
 const V = {
+  // The title card every track video opens with; its frame at 1.9 s is the thumbnail.
+  trackcard(id, v, dur) {
+    const eds = ['server', 'personal', 'business'], name = { server: 'Server', personal: 'Personal', business: 'Business' };
+    return scene(id, dur, { hills: true,
+      css: `#${id}-b { position: absolute; left: 0; right: 0; top: 150px; display: flex; flex-direction: column; align-items: center; gap: 22px; text-align: center; }
+        #${id}-k { font-size: 30px; color: ${C.ink2}; letter-spacing: 0.02em; }
+        #${id}-lock { display: flex; align-items: center; gap: 30px; } #${id}-logo { width: 120px; height: 120px; }
+        #${id}-t { font-size: ${v.size ?? 118}px; font-weight: 700; line-height: 1.02; }
+        #${id}-s { font-size: 46px; color: ${C.ink}; font-weight: 600; max-width: 1500px; line-height: 1.2; }
+        #${id}-e { display: flex; align-items: center; gap: 16px; margin-top: 18px; font-size: 30px; color: ${C.ink2}; }
+        #root .chip { display: flex; align-items: center; gap: 12px; padding: 10px 22px; border-radius: 999px; background: rgba(23,30,37,0.78); border: 2px solid rgba(242,239,232,0.16); font-size: 30px; font-weight: 700; color: ${C.ink}; }
+        #root .chip.off { opacity: 0.38; } #root .chip i { width: 16px; height: 16px; border-radius: 50%; display: block; }`,
+      body: `<div id="${id}-b"><div id="${id}-k" class="mono">${esc(v.kicker ?? 'Cal Hacks 13')}</div>
+        <div id="${id}-lock"><img id="${id}-logo" src="assets/brand/logo.svg" alt="GurtOS" /><div id="${id}-t">GurtOS for ${esc(v.sponsor)}</div></div>
+        <div id="${id}-s">${esc(v.track)}</div>
+        <div id="${id}-e"><span>Best shown in</span>${eds.map((e) => `<div class="chip${v.editions.includes(e) ? '' : ' off'}" id="${id}-${e}"><i style="background:${C.edition[e]}"></i>${name[e]}</div>`).join('')}</div></div>`,
+      js: `tl.fromTo("#${id}-k", { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 0.35, ease: "power3.out" }, 0.05);
+        tl.fromTo("#${id}-logo", { opacity: 0, scale: 0.85 }, { opacity: 1, scale: 1, duration: 0.45, ease: "back.out(1.6)" }, 0.1);
+        tl.fromTo("#${id}-t", { clipPath: "inset(0 100% 0 0)" }, { clipPath: "inset(0 0% 0 0)", duration: 0.55, ease: "power3.inOut" }, 0.2);
+        tl.fromTo("#${id}-s", { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.4, ease: "power3.out" }, 0.55);
+        tl.fromTo("#${id}-e", { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.4, ease: "power3.out" }, 0.75);
+        tl.to("#${id}-b", { opacity: 0, duration: 0.3, ease: "power2.in" }, ${r3(dur - 0.32)});`,
+    });
+  },
+
   // A cut to black: the power cut.
   black(id, v, dur) { return scene(id, dur, { ground: false, css: `#root { background: #000; }` }); },
 
@@ -412,7 +437,7 @@ export async function build(id, { noMusic = false } = {}) {
   const fill = (o) => JSON.parse(JSON.stringify(o).replace(/\{url\}/g, (s) => SLOTS['try-live']?.url ?? s).replace(/"slot:([a-z-]+)"/g, (_, k) => JSON.stringify(SLOTS[k]?.media ?? `slot:${k}`)));
   let t = 0, para = 0;
   const hosts = [], audio = [], allWords = [], voWindows = [], used = [];
-  const beats = spec.beats.filter((x) => !x.insert || on(x.insert));
+  const beats = [...(spec.card ? [{ dur: 2.6, v: { type: 'trackcard', ...spec.card } }] : []), ...spec.beats].filter((x) => !x.insert || on(x.insert));
   for (const [bi, beat0] of beats.entries()) {
     let beat = beat0, voName = null;
     if (beat.insert) { voName = `slot-${beat.insert}`; used.push(beat.insert); }
@@ -532,6 +557,7 @@ else if (id) {
     execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', raw, '-c:v', 'copy', '-af', `volume=${gain.toFixed(2)}dB`, '-c:a', 'aac', '-b:a', '192k', '-ar', '48000', fin]);
     fs.rmSync(raw);
     console.log(`${name}: loudness ${input_i} LUFS, peak ${input_tp} dBTP, gain ${gain.toFixed(2)} dB`);
+    if (spec.card && !noMusic) execFileSync('ffmpeg', ['-v', 'error', '-y', '-ss', '1.9', '-i', fin, '-frames:v', '1', '-vf', 'scale=1280:-1', '-q:v', '2', path.join(dst, `${id}-thumb.jpg`)]);
     fs.copyFileSync(path.join(out, `${id}.srt`), path.join(dst, `${id}.srt`));
     console.log(`${id}: rendered ${path.join(dst, `${name}.mp4`)} (${spec.title})`);
   }

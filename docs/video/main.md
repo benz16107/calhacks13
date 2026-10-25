@@ -50,18 +50,17 @@ clause.
 ## Narration (exact text for ElevenLabs)
 
 The spelling "Gurt O.S." is on purpose: it makes the clone say "Gurt O S" instead of "Girdos" (`narration.md`).
+**Oct 25 cut:** "The agent runs as you" is out; the editions and filesystem lines are shorter; "You can try it today" (real discs, measured weight, where it installs) replaces "And it's light"; a docs line follows it. The shot list above is the first cut; `films/main.mjs` is the current one.
 404 words, about 2,350 characters.
 
 ```text
 Almost four hundred thousand people starred OpenClaw, an AI agent that runs on your own computer. Then twenty-one thousand copies were found open to the internet, three hundred forty-one of its skills were malware, and one click could steal its token.
 
-The agent runs as you: your keys, your files, your network.
-
 The problem isn't the agent. Our operating systems were built for one person at a keyboard. Permissions are per user, not per task. Any process can read your secrets. The network is all or nothing. And there's no approval, no budget, no record and no undo.
 
-So I built Gurt O.S.: operating systems built for AI agents. Every task runs as its own Linux user, in its own copy-on-write copy of your files, and reaches only the sites it needs. Agents work side by side without colliding, and nothing is copied twice. Factory's Droid, running Claude, does the work.
+So I built Gurt O.S.: operating systems built for AI agents. Every task runs as its own Linux user, in its own copy-on-write copy of your files, and reaches only the sites it needs. Factory's Droid, running Claude, does the work.
 
-It comes in three editions. Server is an always-on box with no human login. Personal is your own laptop, with agents built into the desktop. Business shares one box across a team, with roles, routed approvals and an audit trail.
+It comes in three editions: Server, an always-on box; Personal, your own laptop with agents built into the desktop; and Business, one box for a team, with roles and an audit trail.
 
 A task wants to spend eight dollars on a five-dollar budget. It stops and asks, on the box and on my phone at once, while other tasks keep running. I approve, and it carries on.
 
@@ -73,7 +72,9 @@ Now pull the plug. The box boots, rebuilds every task from its log, and picks up
 
 Security comes from the OS, whatever the model does. We publish our attack test: sixteen attacks, fourteen stopped, and two we don't cover yet. A real agent held only a placeholder key in two hundred forty out of two hundred forty checks.
 
-And it's light. The Server disc is under one and a half gigabytes, with no desktop and no GPU. It runs on the old computer you already own, and it installed on a one-gigabyte cloud machine.
+You can try it today: signed install discs for Server and Personal are at gurtos dot com slash download. It's light enough for almost any computer, even an old one: Server runs in one gigabyte of memory, and Personal uses less than stock Ubuntu. It installs on regular PCs, Apple-silicon Macs in a virtual machine, and cloud servers.
+
+Every part is documented at gurtos dot com slash docs, from the architecture to the security model, so anyone can check it or build on it.
 
 You watch and answer from anywhere: the portal at app dot gurtos dot com, and apps for iPhone, Apple Watch, Mac and Android.
 
