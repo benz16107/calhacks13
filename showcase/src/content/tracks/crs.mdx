@@ -186,8 +186,23 @@ It runs on a computer the lender owns: one Node service, 4 GB of memory and 17 G
   { what: "CRS's MCP server behind the broker, scoped per seat", why: "An MCP server given to the agent would hand it the login and a lookup of any request id", os: "The core starts it with the login from the vault", track: "CRS's MCP server", status: "Built" },
   { what: "Nightly re-checks of existing customers at 02:00, off until switched on because a night run costs model credit", why: "A customer's limit can go 29 months without a look", os: "The Server routine, the same pull rules", track: "Fresh CRS reports", status: "Built" },
   { what: "A fraud case for the controller: identity codes, what drove the Fraud Finder score, inquiry dates, phone owner and request ids on one page", why: "A controller needs the evidence, not the agent's summary", os: "The Business request screen and the log", track: "The CRS answers", status: "Built" },
-  { what: "A fraudster who argues: an application says to ignore the identity codes, and the desk is tested against it", why: "An agent that reads that text may do as it says", os: "Only a person can answer the controller's question", track: "credit_decision refuses an approval or cash-in-advance terms while the fraud stops apply", status: "Built" }
+  { what: "A fraudster who argues: an application says to ignore the identity codes, and the desk is tested against it", why: "An agent that reads that text may do as it says", os: "Only a person can answer the controller's question", track: "credit_decision refuses an approval or cash-in-advance terms while the fraud stops apply", status: "Built" },
+  { what: "Agent permissions: the CRS login is in the credit desk's permissions list only, and the owner can turn it off", why: "One switch takes CRS away from the desk; the refusal is logged", os: "The manifest, enforced at the vault and in the desk's tools", track: "The CRS keys the desk declares", status: "Built" }
 ]} />
+
+<Shot src="track/crs/perm-audit.png" alt="Audit, read-only for the auditor, searched for allowed: the credit analyst's task failed because Credit desk isn't allowed to use the key CRS_PASSWORD." caption="With the CRS password turned off for the credit desk, the analyst's CRS call was refused before any answer came back, and the task stopped. A dev box seeded as Fogline Supply, the key turned back on afterwards." />
+
+<Evidence title="Turning the CRS key off" run="A dev box on main seeded as Fogline Supply, Oct 25: PUT /api/permissions/credit-desk with the CRS password denied, then a scripted desk run." numbers={[{ value: "1", label: "key turned off" }, { value: "0", label: "CRS answers returned to the analyst" }]} sources={[{ label: "core/permissions.ts", href: "https://github.com/benz16107/calhacks13/blob/main/core/permissions.ts" }]}>
+
+```
+note       Permissions for Credit desk: 1 turned off
+note       Credit desk wasn't allowed to use the key CRS_PASSWORD
+tool.result  credit-desk.crs  ok: false  "Credit desk isn't allowed to use the key CRS_PASSWORD.
+             The owner can allow it in Settings, Permissions."
+task.state   Credit analyst: failed
+```
+
+</Evidence>
 
 ## Proof in depth
 
@@ -292,6 +307,7 @@ track credit-desk
 
 <Limits title="What this does not cover">
 
+- Agent permissions: Not enforced yet: limiting hosts before an app first uses them, an allow-once question for a new host, and a first-run prompt that blocks the app until the owner answers (until then, apps keep working as today). The capture shows the analyst's CRS call refused with the password off. We did not test every CRS route one by one.
 - **Not built:** a payment gate for guests (wallet and Shopper payments do not yet ask for a verified guest), the controller's clear-the-flag path (nothing in the box clears a fraud stop, so a real false positive has no way out yet), and an ASI:One chat intent for credit.
 - Checked in the merge gate: no guest task can pay. The guest gates have no tools and a $0 budget, guest web runs have only web tools and at most 25 cents, and the credit analyst holds no wallet, Shopper or x402 tool.
 - A guest's credit request waits in memory between the identity check and the owner's OK, so a restart loses it and the guest asks again. After the OK the application is a file in the box's own folder, because CRS needs it, and the seats get the redacted copy. Failed identity checks are counted in memory: 3 an hour per guest and 6 overall.

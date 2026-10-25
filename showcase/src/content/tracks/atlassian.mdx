@@ -139,8 +139,19 @@ It runs on a computer you own: one Node service, 4 GB of memory and 17 GB of dis
   { what: "Jira Service Management approvals for risky actions", why: "A production push waits for the people who already approve changes in IT", os: "The approval pause", track: "The JSM request and its approvers", status: "Built" },
   { what: "Confluence reports: a daily page of what the agents did and an incident page whenever something is blocked", why: "The record outlives the computer", os: "The log", track: "The Confluence writer", status: "Built" },
   { what: "A dashboard gadget with tasks, blocked attempts and cost per project", why: "The team sees its agents on the dashboard it already uses", os: "None", track: "The gadget", status: "Built" },
-  { what: "A Jira user acts as their GurtOS Business person: only someone with both the Jira permission and the GurtOS role, within their limit, can approve", why: "Jira's permissions and the company's roles together decide who may (Track 2: who may act for whom)", os: "GurtOS Business roles and limits", track: "The Forge resolver", status: "Built" }
+  { what: "A Jira user acts as their GurtOS Business person: only someone with both the Jira permission and the GurtOS role, within their limit, can approve", why: "Jira's permissions and the company's roles together decide who may (Track 2: who may act for whom)", os: "GurtOS Business roles and limits", track: "The Forge resolver", status: "Built" },
+  { what: "Agent permissions: the Jira app's list is its four Atlassian and Jira keys plus taking requests from people and agents not paired with this computer, and the owner can turn any of them off", why: "A team sees and limits what the Jira app may use", os: "The manifest, enforced at the vault, in tools and at the app's public routes", track: "The keys the Jira app declares and its public routes for the Forge panel", status: "Built" }
 ]} />
+
+<Evidence title="What the Jira app may use" run="GET /api/permissions on a dev box on main, Oct 25. The owner can turn any item off. Strangers is enforced at the app's public routes." numbers={[{ value: "4", label: "keys, used through GurtOS; the app never sees them" }, { value: "1", label: "public route permission: requests from outside" }]} sources={[{ label: "core/permissions.ts", href: "https://github.com/benz16107/calhacks13/blob/main/core/permissions.ts" }]}>
+
+- Use the key ATLASSIAN_API_TOKEN (through GurtOS; the app never sees it)
+- Use the key ATLASSIAN_EMAIL
+- Use the key ATLASSIAN_SITE
+- Use the key JIRA_BOX_SECRET
+- Take requests from people and agents who aren't paired with this computer
+
+</Evidence>
 
 ## What Atlassian asked for, and where each answer is
 
@@ -273,6 +284,7 @@ The full steps are in the [track README](https://github.com/benz16107/calhacks13
 
 <Limits title="What this does not cover">
 
+- Agent permissions: Not enforced yet: limiting hosts before an app first uses them, an allow-once question for a new host, and a first-run prompt that blocks the app until the owner answers (until then, apps keep working as today). We did not capture a Jira refusal; the Jira list above is from the API.
 - Roll back undoes the task's **file changes**. It cannot recall something a task already sent out through a tool, such as a payment. Those show in the issue so a person can follow up.
 - One shared secret guards the box's three Jira routes. Forge Remote's signed invocation tokens would let the box check each call came from this app and this user. That is the next step.
 - The box writes to Jira with one person's API token, so its comments show that person as the author.

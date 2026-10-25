@@ -136,6 +136,7 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 | Confluence reports: a daily page of what the agents did and an incident page whenever something is blocked | The record outlives the computer | The log | The Confluence writer | Built |
 | A dashboard gadget with tasks, blocked attempts and cost per project | The team sees its agents on the dashboard it already uses | None | The gadget | Built |
 | A Jira user acts as their GurtOS Business person: only someone with both the Jira permission and the GurtOS role, within their limit, can approve | Jira's permissions and the company's roles together decide who may (Track 2: who may act for whom) | GurtOS Business roles and limits | The Forge resolver | Built |
+| Agent permissions: the Jira app's list is its four Atlassian and Jira keys plus taking requests from people and agents not paired with this computer, and the owner can turn any of them off | A team sees and limits what the Jira app may use | The manifest, enforced at the vault, in tools and at the app's public routes | The keys the Jira app declares and its public routes for the Forge panel | Built |
 
 **Demo moment and proof:** BOX-29, a scripted agent that misread a rule, changed three configs instead of one and tried to send a file to a paste site. The upload was blocked, the push was approved from Jira, then the task was rolled back from Jira and its three configs came back. On every merge the gate checks the same roll back leaves another task's fix in place.
 
@@ -175,6 +176,7 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 | Two analysts that split the work from one shared queue | Several agents can share one case without colliding | The SpacetimeDB queue and its atomic claim | The opt-in Coordinate option | Built |
 | Bring your own: an application on one of CRS's 20 test people, or uploaded case files, checked first | A judge can try a case of their own | None | The Bring your own tab and check-case | Built |
 | A public benchmark slice: the 10 public DABstep dev questions through GurtOS tasks, 7 right, no network, about $3.22 of model use | Proof beyond our own planted case | Tasks with no network | bench/ | Built |
+| Agent permissions: the owner sees what the desk may use (the CRS and Nessie keys and money) and can turn any of it off, or set money per day | The owner controls the desk's keys, money and hosts; the seats and Business routing separate the duties | The manifest, enforced at the vault, in tools and in the broker, with every refusal logged | The keys and spending tools the desk declares | Built |
 
 **Demo moment and proof:** The full live run with real Droid on all three seats, scored from the action log against the answer key: 16 of 17 planted errors caught, 1 false alarm (precision 97%), all 6 credit decisions right (outcome, band, limit and terms), in 12 minutes for about $5.24. It held APP-1043, a synthetic identity that a simple rule approves for $20,000. The January review caught 2 of 2.
 
@@ -270,6 +272,7 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 | Each control mapped to the six Responsible AI principles, a protected-attribute test and a plain letter for every adverse decision | A judge can check each claim | The vault, the log and the approvals | RESPONSIBLE.md, fairness.test.ts, letters.ts | Built |
 | Published, cited facts about the customer, with their scope | The case rests on real failures | None | CUSTOMER.md | Built |
 | A measured incident drill: kill switch, undo, resume, each timed | The answer to what if it goes wrong is a number | The kill switch, undo and resume | None | Built |
+| Agent permissions: each app's list of what it may use, and the owner turns any item off or sets money per day | Least privilege for every app, with every refusal on the record | The manifest: keys at the vault and in tools, money in the broker (over the daily limit becomes a request), shell, hosts and folders when a task starts, strangers at public routes | The keys and tools the desk declares | Built |
 
 **Demo moment and proof:** Measured on a live credit desk run with 10 agents working (3 Droid seats on Claude, 7 scripted): the kill switch froze every agent within 271 ms, none took a step while paused, and a bad batch was undone in 48 ms with every other task keeping its work. Scored against the answer key, the full live run caught 16 of 17 planted errors and held a $20,000 fake applicant a simple rule approves.
 
@@ -522,6 +525,7 @@ The build freezes Sat Oct 24, 9 PM PT; after that, fixes only.
 | Nightly re-checks of existing customers at 02:00, off until switched on because a night run costs model credit | A customer's limit can go 29 months without a look | The Server routine, the same pull rules | Fresh CRS reports | Built |
 | A fraud case for the controller: identity codes, what drove the Fraud Finder score, inquiry dates, phone owner and request ids on one page | A controller needs the evidence, not the agent's summary | The Business request screen and the log | The CRS answers | Built |
 | A fraudster who argues: an application says to ignore the identity codes, and the desk is tested against it | An agent that reads that text may do as it says | Only a person can answer the controller's question | credit_decision refuses an approval or cash-in-advance terms while the fraud stops apply | Built |
+| Agent permissions: the CRS login is in the credit desk's permissions list only, and the owner can turn it off | One switch takes CRS away from the desk; the refusal is logged | The manifest, enforced at the vault and in the desk's tools | The CRS keys the desk declares | Built |
 
 **Demo moment and proof:** APP-1043 has clean-looking numbers and a 640 score, and the simple rule approves it for $20,000. CRS, live: identity fails with codes 2201, 2202 and 2101, Fraud Finder scores it 88, nobody owns its phone, and 9 credit inquiries landed between Aug 19 and Sep 12. The analyst put it on fraud hold and the controller confirmed it. Every merge-gate run repeats this live.
 
