@@ -19,7 +19,7 @@ a private notes file outside the repo. **Delete them and their custom ISOs after
 
 ## Summary
 
-Status at 02:35 PT Saturday. The feature ledger and merge collisions are tracked in `docs/features.md`. **8 P0 found, all 8 fixed and verified.** 20 P1 and 22 P2 found in the product, plus 7 in
+Status at 02:35 PT Saturday. The feature ledger and merge collisions are tracked in `docs/features.md`. **8 P0 found, all 8 fixed and verified.** 20 P1 and 23 P2 found in the product, plus 7 in
 the docs site and 9 in the showcase. The four moments, Shopper, the wallet, the credit desk and a phone paired over the
 network all work on main as of 717bc3f.
 
@@ -403,6 +403,25 @@ steps were right. So: either wait out "out of reach" in the page, or keep the bo
 errors on every load from the blocked routes (403 on `/api/settings`, `/api/owner`, `/api/vault`), a manifest syntax error and a
 service worker script 403; and "Start a task" gives no toast, so a visitor doesn't know to open Tasks.
 
+**P2-33 fixed and verified.** On the final v0.1.0-preview Server disc, About reads "0.1.0, build 20261025-0355-58576a7".
+
+**P2-37. The pairing code wraps in the setup's Owner step.** Owner: portal. On the final Server disc (Oct 25), step 4 shows the code
+"FC13-D2F8" split over two lines ("FC13-" and "D2F8") in the narrow QR column. It reads as two codes. On camera, widen the column or
+stop the break at the dash.
+
+**P3-1. The Personal disc menu cuts off its last line.** Owner: image. The third entry reads "Try GurtOS Personal from this disc (nothing
+is save" with an arrow, because the GRUB box is 80 columns wide at that size. The Server entry fits.
+
+**P3-2. Setup's last page tells a Factory-key user to add an Anthropic key.** Owner: portal, personal. GurtOS Setup on Personal ends with
+"Add an Anthropic API key in GurtOS Settings before your first task". The model-key step accepts a Factory key too, and the
+Server wizard says "Anthropic or Factory". Not wrong for most people, but it will confuse the Factory path.
+
+**Final discs, install pass Oct 25 (02:00 to 03:00 PT).** Server x86_64 and Personal x86_64 on Vultr, Server arm64 on benmac. All three
+installed from the public mirror and reached setup. The setup QR from each parses with the app's own parser (`PairingLink` and
+`Rendezvous` from `Pairing.swift`, through `/tmp/qa-scripts/qrcheck.sh`): the id, the home-network address and the box name come out.
+The console of a Vultr instance stops redrawing during the install (noVNC shows a stale frame until a key is pressed): that is the
+console, not the disc.
+
 ## Docs site (gurtos.com)
 
 **D-1 to D-4 and D-7 fixed in 199dce5 and live, spot-checked 00:00 PT:** real ISO names, `gurt-<id>`, the Personal ISO
@@ -537,3 +556,7 @@ on the pages or in OCR of all 61 images; no em dashes; every page fits 390 x 844
 | 00:53 | Main d64cb80: QR pairing on fresh phones, the live moment 2 banner, task source | 78, 79 |
 | 09:23 | Public mirror's Server x86_64 ISO (e36a6cc): SHA256SUMS signature good, mirror sha256 matches; reinstalled the QA box over its old disk: the installer asks for `erase` first, then installs in about 10 min and boots straight into setup | |
 | 09:47 | Setup, all 13 steps; model key skipped; the home screen; a task with no key fails at once with "No model key. Add one in Settings, Agents & Models" and $0.00 | |
+| 02:05 | Final Server x86_64 disc on the Vultr QA instance: disc menu, Install, `erase`, installed in about 4 min, boots into setup | |
+| 02:15 | Setup, About (P2-33 fixed), QR parsed with the app's parser | |
+| 02:20 | Final Personal x86_64 disc on the same instance: GNOME first run, GurtOS Setup, the native app opens | |
+| 02:35 | Final Server arm64 disc on benmac: installed and booted to setup in about a minute; serial log "box: up and healthy on slot a" | |
