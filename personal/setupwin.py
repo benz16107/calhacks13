@@ -268,6 +268,13 @@ class SetupWindow(Adw.ApplicationWindow):
         ):
             lst.append(row(title, sub, icon))
         box.append(lst)
+        other = boxed()  # an agent on another computer can do the rest of setup over HTTPS, with a one-time code
+        r = row('Set up from another computer', 'Let an agent you already use, like Claude Code, finish this setup for you.', 'computer-symbolic')
+        b = Gtk.Button(label='Get a code…', valign=Gtk.Align.CENTER)
+        b.connect('clicked', lambda _b: RemoteSetup(self))
+        r.add_suffix(b)
+        other.append(r)
+        box.append(other)
         if not Gio.NetworkMonitor.get_default().get_network_available():  # offline: Claude and apps need the internet
             net = boxed()
             r = row("This computer isn't online", 'Connect to Wi-Fi first. Agents use Claude over the internet.', 'network-wireless-offline-symbolic')
@@ -550,6 +557,15 @@ class SetupWindow(Adw.ApplicationWindow):
             card.append(inner)
             cards.append(card)
         box.append(cards)
+        if getattr(self, 'remote_done', None):  # set up from another computer: say what the agent set
+            done = section_list(box, 'Set up from your other computer')
+            on = [app_title(a) for a in self.apps if a.get('enabled') and a['id'] in PERSONAL_APPS]
+            for title, value, icon in (('Model key', 'Saved' if self.model_ready() else 'Not set yet', 'dialog-password-symbolic'),
+                                       ('Apps on', ', '.join(on) or 'None', 'view-app-grid-symbolic'),
+                                       ('Phone', 'Paired' if self.remote_done['devices'] else 'Not paired', 'phone-symbolic')):
+                r = row(title, None, icon)
+                r.add_suffix(Gtk.Label(label=value, css_classes=['gurt-secondary'], ellipsize=3, max_width_chars=40))
+                done.append(r)
         self.summary.set_label('' if self.model_ready() else 'Add an Anthropic API key in GurtOS Settings before your first task.')
         return scroller
 
@@ -567,6 +583,126 @@ def app_blurb(a):
     if not d or d.startswith(('!', 'Track:', '[')):
         return ''
     return d if len(d) <= 180 else d[:179].rsplit(' ', 1)[0] + '…'
+
+
+def section_list(box, title):
+    box.append(Gtk.Label(label=title, xalign=0, css_classes=['heading'], margin_top=12))
+    lst = boxed()
+    box.append(lst)
+    return lst
+
+
+class RemoteSetup(Adw.Window):
+    """Set up from another computer: a one-time code, the addresses, the sentence to give the agent, who is connected,
+    and Stop. POST /api/setup/code opens it; GET /api/setup's channel follows it; POST /api/setup/stop ends it."""
+
+    def __init__(self, parent):
+        super().__init__(transient_for=parent, modal=True, title='Set up from another computer', default_width=620, default_height=560)
+        self.parent_win = parent
+        self.timer = 0
+        self.body = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=14, margin_top=18, margin_bottom=18, margin_start=24, margin_end=24)
+        view = Adw.ToolbarView(content=Gtk.ScrolledWindow(child=self.body, hscrollbar_policy=Gtk.PolicyType.NEVER))
+        header = Adw.HeaderBar()
+        self.stop = Gtk.Button(label='Stop', css_classes=['destructive-action'], sensitive=False)
+        self.stop.connect('clicked', lambda _b: self.end())
+        header.pack_end(self.stop)
+        view.add_top_bar(header)
+        self.toasts = Adw.ToastOverlay(child=view)
+        self.set_content(self.toasts)
+        self.connect('close-request', lambda _w: (self.timer and GLib.source_remove(self.timer), False)[1])
+        self.body.append(Gtk.Label(label='Getting a code…', xalign=0, css_classes=['gurt-secondary']))
+        self.present()
+        background(lambda: api('POST', '/api/setup/code', {}), self.opened)
+
+    def clear(self):
+        while (c := self.body.get_first_child()) is not None:
+            self.body.remove(c)
+
+    def opened(self, out, err):
+        self.clear()
+        if err:
+            self.body.append(Gtk.Label(label=f"GurtOS couldn't open setup to another computer: {err}", xalign=0, wrap=True))
+            return
+        self.stop.set_sensitive(True)
+        urls = out.get('urls') or []
+        code = out.get('code', '')
+        sentence = f"Set up the new GurtOS computer at {urls[0] if urls else 'this computer'} with code {code}, by following AGENT-SETUP.md"
+        self.body.append(Gtk.Label(label='Give this to the agent on your other computer', xalign=0, css_classes=['heading']))
+        say = Gtk.Label(label=sentence, xalign=0, wrap=True, selectable=True, css_classes=['card'], margin_bottom=2)
+        say.set_margin_start(0)
+        self.body.append(say)
+        copy = Gtk.Button(label='Copy', halign=Gtk.Align.START)
+        copy.connect('clicked', lambda _b: (self.get_clipboard().set(sentence), self.toasts.add_toast(Adw.Toast(title='Copied.'))))
+        self.body.append(copy)
+        lst = boxed()
+        r = row('Code', f"Works once. Ends {when_text(out.get('expiresAt'))}." if out.get('expiresAt') else 'Works once.', 'dialog-password-symbolic')
+        r.add_suffix(Gtk.Label(label=code, selectable=True, css_classes=['gurt-mono', 'gurt-title-3']))
+        lst.append(r)
+        for u in urls:
+            a = row('Address', None, 'network-server-symbolic')
+            a.add_suffix(Gtk.Label(label=u, selectable=True, css_classes=['gurt-mono'], ellipsize=3, max_width_chars=40))
+            lst.append(a)
+        self.body.append(lst)
+        self.body.append(Gtk.Label(label='Connected', xalign=0, css_classes=['heading'], margin_top=6))
+        self.who = boxed()
+        self.body.append(self.who)
+        self.show_who(out.get('devices') or [])
+        self.body.append(Gtk.Label(label='The agent can only do setup: keys, folders, permissions, apps. Stop ends it at once, and it ends by itself when '
+                                         'setup is done.', xalign=0, wrap=True, css_classes=['gurt-caption', 'gurt-secondary']))
+        self.timer = GLib.timeout_add_seconds(3, self.follow)
+
+    def show_who(self, devices):
+        while (c := self.who.get_first_child()) is not None:
+            self.who.remove(c)
+        for d in devices:
+            self.who.append(row(d.get('name') or 'An agent', f"Connected {when_text(d.get('since'))}" if d.get('since') else '', 'computer-symbolic'))
+        if not devices:
+            self.who.append(row('Nothing yet', 'It appears here when the agent connects.', 'computer-symbolic'))
+
+    def follow(self):
+        def done(setup, err):
+            if err:
+                return
+            ch = setup.get('channel') or {}
+            if not ch.get('open'):
+                self.timer = 0
+                self.stop.set_sensitive(False)
+                win = self.parent_win
+
+                def reloaded(state, err):  # show what the agent set, on Done, and let the owner press Start using GurtOS
+                    if err:
+                        return
+                    win.loaded(state[:5], None)
+                    win.remote_done = {'devices': state[5]}
+                    win.go(len(STEPS) - 1)
+                    win.toast('Your other computer finished setup.')
+                    self.close()  # its code is used up; Done shows what was set
+                background(lambda: (api('GET', '/api/setup'), api('GET', '/api/settings'), api('GET', '/api/vault'), api('GET', '/api/apps?all=1'),
+                                    api('GET', '/api/boxes'), api('GET', '/api/devices')), reloaded)
+                return
+            self.show_who(ch.get('devices') or [])
+            self.timer = GLib.timeout_add_seconds(3, self.follow)
+        self.timer = 0
+        background(lambda: api('GET', '/api/setup'), done)
+        return False
+
+    def end(self):
+        def done(_out, err):
+            if err:
+                return self.toasts.add_toast(Adw.Toast(title=f'Not stopped: {err}'))
+            if self.timer:
+                GLib.source_remove(self.timer)
+                self.timer = 0
+            self.close()
+        background(lambda: api('POST', '/api/setup/stop', {}), done)
+
+
+def when_text(iso):
+    from datetime import datetime
+    try:
+        return 'at ' + datetime.fromisoformat(iso.replace('Z', '+00:00')).astimezone().strftime('%-I:%M %p')
+    except (ValueError, AttributeError):
+        return 'soon'
 
 
 def qr_image(text):
