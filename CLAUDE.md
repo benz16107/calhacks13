@@ -2,7 +2,7 @@
 
 Instructions for coding agents (and people) working in this repo. Contributor guide: `CONTRIBUTING.md`.
 
-GurtOS is an operating system for a machine where AI agents do work safely, watched and controlled from a web
+GurtOS is a set of operating systems built for AI agents, watched and controlled from a web
 portal and a phone. It started as a Cal Hacks 13.0 project. It is a preview: see `README.md`.
 
 **Naming rule:** anything a person reads (the portal, the box screen, the docs, the README) says **GurtOS**,
