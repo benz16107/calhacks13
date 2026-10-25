@@ -231,6 +231,51 @@ class Core {
     return typeof n === 'string' && n.trim() && n.trim().length <= 40 ? n.trim() : BOX_NAME;
   }
 
+  // ---------- setup: one path for the wizard, command setup and Quick Start ----------
+  // Every way of setting up a computer calls these (and setOwner, enableApp, disableApp, remote.enable), so the
+  // checks and the log are the same whichever screen, command or phone did it. Callers check who may.
+
+  /** Record a setup step, finish setup or open it again. */
+  setupStep(kind: 'step' | 'finish' | 'reopen', step?: string, data?: unknown) {
+    if (kind === 'step') {
+      recordStep(this.setup, step as string, data);
+      this.write({ type: 'note', track: 'setup', data: { step } }); // the step id only: data may be personal
+    } else {
+      this.setup.done = kind === 'finish';
+      if (kind === 'finish') this.setup.finishedAt = new Date().toISOString();
+      else delete this.setup.finishedAt;
+      this.write({ type: 'note', track: 'setup', data: kind === 'finish' ? { finished: true } : { reopened: true } });
+    }
+    saveSetup(HOME, this.setup);
+    return this.setupView();
+  }
+
+  /** Change settings with their validation. Pausing needs the request, for who pulled the switch. */
+  changeSettings(patch: Record<string, unknown>, who?: Who, req?: http.IncomingMessage) {
+    if ('paused' in patch && !req) throw new Error('Pause all agents from the screen, the phone or the API.');
+    const next = applyPatch(this.settings, patch);
+    const changed = Object.fromEntries(Object.keys(patch).map((k) => [k, { from: (this.settings as any)[k], to: (next as any)[k] }]));
+    this.settings = next;
+    saveSettings(HOME, next);
+    this.write({ type: 'note', track: 'settings', data: { changed }, ...(who ? { who } : {}) });
+    if (req && 'paused' in patch && changed.paused.from !== next.paused) this.pauseChanged(next.paused, req); // the kill switch
+    return this.settings;
+  }
+
+  /** Write a key into the vault: a model key is tried first, the value is never returned or logged. */
+  async putKey(name: string, value: unknown, who?: Who) {
+    if (!VAULT_NAME.test(name)) throw new Error('Key names are capital letters, digits and _ (like STRIPE_KEY), 2 to 64 characters.');
+    if (typeof value !== 'string' || !value.trim()) throw new Error('Paste a key first.');
+    const check = await checkModelKey(name, value.trim());
+    if (check.status === 'rejected') throw Object.assign(new Error(check.message), { status: 400 });
+    writeVaultKey(name, value); // validates; throws without echoing the value
+    this.vault.set(name, value.trim());
+    this.vaultMeta[name] = new Date().toISOString();
+    fs.writeFileSync(this.vaultMetaPath, JSON.stringify(this.vaultMeta, null, 2), { mode: 0o600 });
+    this.write({ type: 'note', track: 'vault', data: { set: name }, ...(who ? { who } : {}) }); // the name only, never the value
+    return { name, setAt: this.vaultMeta[name], ...(check.status !== 'none' ? { check: check.status, checked: check.status === 'ok', message: check.message } : {}) };
+  }
+
   /** A plain sentence for a note the core writes, so Activity and Audit never show raw data. */
   noteText(track: string, d: Record<string, any> = {}): string | undefined {
     const app = (n: string) => this.installed.get(n)?.track?.title ?? n;
@@ -2107,35 +2152,14 @@ class Core {
             return this.setupView();
           case 'POST /setup/:id': {
             this.requireOwner(req);
-            if (id === 'step') {
-              recordStep(this.setup, body.id ?? body.step, body.data);
-              saveSetup(HOME, this.setup);
-              this.write({ type: 'note', track: 'setup', data: { step: body.id ?? body.step } }); // the step id only: data may be personal
-            } else if (id === 'finish') {
-              this.setup.done = true;
-              this.setup.finishedAt = new Date().toISOString();
-              saveSetup(HOME, this.setup);
-              this.write({ type: 'note', track: 'setup', data: { finished: true } });
-            } else if (id === 'reopen') {
-              this.setup.done = false;
-              delete this.setup.finishedAt;
-              saveSetup(HOME, this.setup);
-              this.write({ type: 'note', track: 'setup', data: { reopened: true } });
-            } else return undefined;
-            return this.setupView();
+            if (id !== 'step' && id !== 'finish' && id !== 'reopen') return undefined;
+            return this.setupStep(id, body?.id ?? body?.step, body?.data);
           }
           case 'GET /settings':
             return this.settings;
           case 'PATCH /settings': {
             this.requireOwner(req);
-            const next = applyPatch(this.settings, body);
-            const changed = Object.fromEntries(Object.keys(body).map((k) => [k, { from: (this.settings as any)[k], to: (next as any)[k] }]));
-            this.settings = next;
-            saveSettings(HOME, next);
-            const who = this.actor(req).who; // Business: the person who changed them
-            this.write({ type: 'note', track: 'settings', data: { changed }, ...(who ? { who } : {}) });
-            if ('paused' in body && changed.paused.from !== next.paused) this.pauseChanged(next.paused, req); // the kill switch
-            return this.settings;
+            return this.changeSettings(body, this.actor(req).who, req); // Business: who records the person
           }
           case 'GET /update':
             // System update (Personal's Settings row): read from what box-update leaves; 'unknown' off an image.
@@ -2146,17 +2170,7 @@ class Core {
             return [...new Set([...this.vault.keys(), ...Object.keys(this.vaultMeta)])].sort().map((name) => ({ name, setAt: this.vaultMeta[name] ?? null }));
           case 'PUT /vault/:id': {
             this.requireOwner(req);
-            if (!VAULT_NAME.test(id)) throw new Error('Key names are capital letters, digits and _ (like STRIPE_KEY), 2 to 64 characters.');
-            if (typeof body?.value !== 'string' || !body.value.trim()) throw new Error('Paste a key first.');
-            const check = await checkModelKey(id, body.value.trim()); // a model key is tried before it is saved
-            if (check.status === 'rejected') throw Object.assign(new Error(check.message), { status: 400 });
-            writeVaultKey(id, body?.value); // validates; throws without echoing the value
-            this.vault.set(id, String(body.value).trim());
-            this.vaultMeta[id] = new Date().toISOString();
-            fs.writeFileSync(this.vaultMetaPath, JSON.stringify(this.vaultMeta, null, 2), { mode: 0o600 });
-            const who = this.actor(req).who;
-            this.write({ type: 'note', track: 'vault', data: { set: id }, ...(who ? { who } : {}) }); // the name only, never the value
-            return { name: id, setAt: this.vaultMeta[id], ...(check.status !== 'none' ? { check: check.status, checked: check.status === 'ok', message: check.message } : {}) };
+            return this.putKey(id, body?.value, this.actor(req).who);
           }
           case 'GET /health': {
             // Open for the outage check and remote access's self-check; the rest only for this machine or a paired device.

@@ -111,6 +111,12 @@ key Anthropic refuses is a 400 ("Anthropic didn't accept this key...") and is no
 `check: 'ok' | 'unchecked'` and a `message` to show ("Saved. GurtOS couldn't check it yet." when offline). A
 Factory key is saved unchecked. An empty key is a 400 ("Paste a key first.").
 
+**One setup path.** The wizard, command setup and Quick Start all set a computer up through the same functions
+in the core, so the checks and the log are the same whichever did it: `setOwner`, `putKey` (a model key is tried
+first; the value is never returned or logged), `changeSettings` (applyPatch's validation; pausing needs a request),
+`enableApp` and `disableApp`, `remote.enable`, and `setupStep('step' | 'finish' | 'reopen')`. The routes call them
+after checking who may; a new way of setting up calls them too, never a copy of a route.
+
 **System update.** `GET /api/update` is `{version, build, state, slot?, last?, lastAt?}`, read from what
 `box-update` leaves behind: `state` is `current`, `ready` (an update is written to the other slot and starts at the
 next restart), `trial` (running an update not yet confirmed), `rolledBack` (the last line says it rolled back or did
