@@ -42,6 +42,24 @@ final class DeviceShots: XCTestCase {
     shot(env["NAME"] ?? "scrolled")
   }
 
+  /** A rendezvous link (TEST_RUNNER_OPEN): Pair over the internet, the wait, then the paired computer's Home. */
+  func testRendezvous() throws {
+    let app = launch(["GURTOS_OPEN": env["OPEN"] ?? ""])
+    let over = app.buttons["Pair over the internet"]
+    XCTAssert(over.waitForExistence(timeout: 20), "no Pair over the internet button")
+    Thread.sleep(forTimeInterval: 1)
+    shot("\(env["NAME"] ?? "rv")-ask")
+    over.tap()
+    Thread.sleep(forTimeInterval: 2)
+    shot("\(env["NAME"] ?? "rv")-asking")
+    // The sheet closes once the computer has an address and the phone is paired.
+    let end = Date().addingTimeInterval(150)
+    while Date() < end, app.buttons["Same Wi-Fi? Pair on this network"].exists || app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH 'Asking'")).firstMatch.exists { Thread.sleep(forTimeInterval: 1) }
+    Thread.sleep(forTimeInterval: 4)
+    shot("\(env["NAME"] ?? "rv")-paired")
+    XCTAssertFalse(app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH 'Asking'")).firstMatch.exists, "still asking")
+  }
+
   /** Tap Approve and capture what opens (a Shopper purchase opens the box's own passkey page). */
   func testTapApprove() throws {
     let app = launch(["GURTOS_OPEN": env["OPEN"] ?? ""])

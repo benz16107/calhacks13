@@ -70,7 +70,7 @@ struct PairSheet: View {
       Group {
         if let link { confirm(link) } else if let rendezvous { over(rendezvous) } else if typing { typed } else { scanner }
       }
-      .navigationTitle(link == nil ? "Add a computer" : "Pair")
+      .navigationTitle(link == nil && rendezvous == nil ? "Add a computer" : "Pair")
       .navigationBarTitleDisplayMode(.inline)
       .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } } }
     }
