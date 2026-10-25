@@ -32,11 +32,11 @@ Checked against main `7fe6651`, Sat Oct 24 08:09 PT. `./demo` from a clean workt
 |---|---|
 | verified (ISO) | 3 |
 | verified | 60 |
-| merged | 180 |
+| merged | 184 |
 | building | 1 |
-| planned | 1 |
+| planned | 2 |
 | not pursued | 6 |
-| **Total** | **251** |
+| **Total** | **256** |
 
 **Collisions** (detail below): none open at 03:27. The three found at 02:25 are resolved and Business is on main. Still
 watched: portal/dist rebuilt from merged sources (C-4).
@@ -104,6 +104,11 @@ watched: portal/dist rebuilt from merged sources (C-4).
 | App permissions: a manifest plus the owner's answers (`GET` and `PUT /api/permissions`). The portal and Personal screens for it are the UI owners' work | core | merged (main 4b473ea; gate 39 passed, 0 failed; not deployed) | 4b473ea | permissions: an app does only what the owner allowed | all |
 | Permission enforcement: keys, money, shell, hosts, folders and strangers. Money and a key are refused and logged; a daily limit becomes a question. Not built: limiting hosts before first use, allow-once for a new host, a blocking first-run prompt | core | merged (main 4b473ea; gate 39 passed, 0 failed; not deployed) | 4b473ea | same step | all |
 | Setup codes forgive capitals and dashes, and a wrong kind of code keeps the code | core | merged (main 4b473ea; gate 39 passed, 0 failed; not deployed) | 4b473ea | command setup step | all |
+| Receipts anyone can check: a signed receipt per finished task (steps, approvals and who gave them, cost, Keep or Undo, the log chain around it). A task's receipt is listed only for the owner, or the person who asked for it on a Business box. Known gap: the QR is in the Receipts app, not yet a button on each task's page (the portal thread's decision) | receipts (elastic thread) | merged (deployed to linuxbox, vultr and the laptop box; `./demo` 39 passed, 0 failed offline) | 7ca2941 | tracks/receipts/demo.ts: makes a receipt, verifies it, flipping one byte fails it, editing the real log fails the chain | Elastic, Coinbase, Solana, Microsoft |
+| Public verify page: the check runs in the browser and nothing is uploaded (each box serves it at `/t/receipts/verify`; gurtos.com/verify is being placed by docs). The app's own page is not in the gate | receipts | merged | 7ca2941 | tracks/receipts/receipts.test.ts runs the page's own checker | Elastic, Coinbase, Solana, Microsoft |
+| Redacted receipt: no step text, questions, tool inputs, file names or amounts | receipts | merged | 7ca2941 | tracks/receipts/demo.ts | Business, Elastic |
+| Receipt anchored by the Elastic add-only copy (the box compares the task's entries and signs the result) | receipts | merged (tried by hand on the cloud box, 5 of 5 matched; needs live Elastic, so not in the gate) | 7ca2941 | none | Elastic |
+| Receipt anchored by the daily Solana fingerprint | receipts, wallet | planned (waiting on wallet: the audit memo needs `head=`, asked and not on main; the Solana line says "not anchored yet" until it lands) |  | tracks/receipts/receipts.test.ts covers the check with a stand-in | Solana, Coinbase |
 | Docs site gurtos.com | docs | verified Oct 24 01:00 (82+ pages, links, privacy scan) | 212c817 | site `npm run check` | all |
 | Showcase calhacks.gurtos.com | submission | verified Oct 24 01:30 | 52fb7f7, 213622e | showcase link checker | all |
 
