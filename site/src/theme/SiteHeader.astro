@@ -12,8 +12,11 @@ interface Props {
   origin?: string;
   calhacks?: string;
   nav?: boolean;
+  // false inside a page that already has its own <header> (the docs), so there is one banner landmark
+  landmark?: boolean;
 }
-const { current = '', origin = '', calhacks = 'https://calhacks.gurtos.com/', nav = true } = Astro.props;
+const { current = '', origin = '', calhacks = 'https://calhacks.gurtos.com/', nav = true, landmark = true } = Astro.props;
+const Tag = landmark ? 'header' : 'div';
 const links = [
   { id: 'editions', label: 'Editions', href: `${origin}/#editions` },
   { id: 'download', label: 'Download', href: `${origin}/download/` },
@@ -22,7 +25,7 @@ const links = [
   { id: 'github', label: 'GitHub', href: REPO },
 ];
 ---
-<header class="gw-header">
+<Tag class="gw-header">
   <div class="gw-bar">
     <a class="gw-brand" href={`${origin}/`} aria-label="GurtOS home"><span class="g">Gurt</span><span class="o">OS</span></a>
     <slot name="middle" />
@@ -31,7 +34,7 @@ const links = [
     </nav>
     <ThemeToggle />
   </div>
-</header>
+</Tag>
 
 <style is:global>
   .gw-header { background: var(--gw-glass); color: var(--gw-on-glass); border-bottom: 1px solid var(--gw-glass-rule); }

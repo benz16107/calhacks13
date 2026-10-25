@@ -12,13 +12,16 @@ interface Props {
   sizes?: string;
   // which part to keep when the screenshot is wider than 16:10, as CSS object-position
   focus?: string;
+  // load at once: for the first screenshot on a page, which is often the largest thing on screen
+  priority?: boolean;
 }
-const { src, dark, alt, sizes = '(max-width: 900px) 100vw, 640px', focus = '50% 50%' } = Astro.props;
+const { src, dark, alt, sizes = '(max-width: 900px) 100vw, 640px', focus = '50% 50%', priority = false } = Astro.props;
+const load = priority ? { loading: 'eager' as const, fetchpriority: 'high' as const } : {};
 ---
 <div class="gw-display">
   <div class="gw-display-body">
     <div class="gw-display-screen" style={`--focus:${focus}`}>
-      <Image class="gw-light" src={src} alt={alt} widths={[720, 1440]} sizes={sizes} />
+      <Image class="gw-light" src={src} alt={alt} widths={[720, 1440]} sizes={sizes} {...load} />
       {dark && <Image class="gw-dark" src={dark} alt="" aria-hidden="true" widths={[720, 1440]} sizes={sizes} />}
     </div>
   </div>
