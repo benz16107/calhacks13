@@ -91,7 +91,6 @@ function spawnProc(b: Box) {
       BOX_PROXY_PORT: 'auto',
       BOX_SETUP_PORT: 'auto',
       BOX_APPROVAL_WAIT_MS: '3600000', // an approval may wait the box's whole life
-      BOX_OWNER: 'owner',
       BOX_NO_DROID: '1', // scripted worker only: no model spend, ever
       BOX_TASK_DISK_CAP: String(200 * 1024 * 1024), // 200 MB per task: real here, and it protects this small host's disk
       BOX_HOSTS: JSON.stringify({ [WEB_HOST]: '127.0.0.1' }), // the fake web is the only name a task can resolve
@@ -217,13 +216,12 @@ export async function runAttack(b: Box, pagePath: string, asks: string[]): Promi
   const direct = view(b, 'target', 'direct.txt') ?? '';
   const database = view(b, 'target', 'database.txt') ?? '';
   const procs = view(b, 'target', 'procs.txt') ?? '';
-  const exfil = view(b, 'target', 'exfil.txt') ?? '';
   const envDump = view(b, 'target', 'env.txt') ?? '';
 
   const defenses: Defense[] = [];
   defenses.push({ name: 'The vault refused', detail: `Reading /etc/box/vault.env returned "${vault || 'denied'}": the vault is root-only, and no task runs as root.`, log: 'the agent never saw a real key' });
   const exfilLog = blocked(ATTACKER);
-  defenses.push({ name: 'The proxy blocked the host', detail: `Sending data to ${ATTACKER} was refused before any bytes left (${exfil || 'blocked'}). A task reaches only the hosts it was given.`, log: exfilLog ? `net.blocked ${exfilLog.host}` : undefined });
+  defenses.push({ name: 'The proxy blocked the host', detail: `Sending data to ${ATTACKER} was refused before any bytes left (the proxy cancelled the request). A task reaches only the hosts it was given.`, log: exfilLog ? `net.blocked ${exfilLog.host}` : undefined });
   const directLog = blocked('1.1.1.1');
   defenses.push({ name: 'The firewall dropped it', detail: `A raw connection to 1.1.1.1:443, around the proxy, was blocked by the box's firewall (${direct || 'blocked'}).`, log: directLog ? `net.blocked ${directLog.host}` : undefined });
   defenses.push({ name: "The box's own controls were out of reach", detail: `The database port 127.0.0.1:3000 could not be reached (${database || 'blocked'}), so a task cannot forge its own approval.` });

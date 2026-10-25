@@ -155,7 +155,7 @@ function landingPage(count: number): string {
  #msg{min-height:1.4em;color:#e6a;margin-top:.5rem}
 </style></head><body><div class=wrap>
  <h1>GurtOS live demo</h1>
- <p class=tag>Get your own throwaway GurtOS computer in the browser. It is wiped after you leave.</p>
+ <p class=tag>Get your own throwaway GurtOS computer in the browser. Wiped after 20 idle minutes.</p>
  <div class=row>
    <button class=go id=start ${full ? 'disabled' : ''}>Start the demo</button>
    <button class=atk id=attack ${full ? 'disabled' : ''}>Attack it yourself</button>

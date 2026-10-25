@@ -1,5 +1,7 @@
 <style>
-  body { padding-top: 3.25rem !important; }
+  /* The portal's screens are position:fixed, so body padding can't move them. A transform makes #app the box they
+     are fixed to, so it starts below our bar and its header, windows and dock all sit under it. */
+  #app { position: fixed; inset: 3.25rem 0 0 0; transform: translateZ(0); }
   #try-bar, #try-bar * { box-sizing: border-box; }
   #try-bar {
     position: fixed; top: 0; left: 0; right: 0; height: 3.25rem; z-index: 2147483000;
@@ -40,6 +42,12 @@
     border: 1px solid #ddd; border-radius: .5rem; box-shadow: 0 8px 30px rgba(0,0,0,.15); padding: .9rem 1.1rem; max-width: 24rem; font-weight: 400; }
   #try-caveat ul { margin: .4rem 0 0; padding-left: 1.1rem; } #try-caveat li { margin: .25rem 0; color: #444; }
   .try-spin { color: #555; }
+  @media (max-width: 640px) {
+    #try-bar { gap: .3rem; padding: 0 .4rem; }
+    #try-bar .try-brand, #try-bar .try-tag { display: none; }
+    #try-bar button { white-space: nowrap; padding: .3rem .45rem; font-size: 13px; }
+    #try-bar #try-tasks { margin-left: auto; }
+  }
   .try-toast { position: fixed; left: 50%; bottom: 6.5rem; transform: translateX(-50%); z-index: 2147483001;
     background: #141414; color: #f2f2f2; border: 1px solid #333; border-radius: .5rem; padding: .7rem 1rem;
     max-width: 90vw; box-shadow: 0 8px 30px rgba(0,0,0,.35); font: 500 14px system-ui; transition: opacity .6s; }
@@ -55,7 +63,7 @@
 <div id="try-caveat" hidden>
   <b>What this is</b>
   <ul>
-    <li>A real GurtOS box, just for you, wiped after 20 minutes.</li>
+    <li>A real GurtOS box, just for you. Wiped after 20 idle minutes.</li>
     <li>The worker is scripted. No AI model runs, and there are no real keys anywhere on this host.</li>
     <li>Tasks reach only a fake web page the demo serves itself. Nothing can leave.</li>
     <li>The defences you see are the real operating system. The agent is acted out, so this does not test the model itself.</li>
