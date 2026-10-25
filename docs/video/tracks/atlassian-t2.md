@@ -5,6 +5,12 @@ Business. The box in the footage ran as GurtOS Server (always on), and the Jira 
 so the script says so where it matters. **Shares footage with:** Atlassian Track 1 (#8), the same shoot.
 **Status:** draft for Ben's approval.
 
+## Creative brief
+
+An incident review told at night. BOX-29 is the case file, and an evidence board pins the Jira issue, the Confluence page, the Service Management request and the log, joined by string that is the audit trail. After the card, full-bleed `t2-issue-ask.png` shows BOX-29 as the box wrote it, with hand-drawn underlines on the three config writes and the paste-site fetch as the voice says them (paragraph 1). Paragraph 2 strikes through "runs as you" in kinetic type, then `a06.mp4` from 4. Paragraph 3 stamps BLOCKED on `t2-issue-allowed.png`. Paragraph 4 builds the board, the string drawn as each page is named, and ends on the role check in `a31.mp4`. Paragraph 5 is the rollback. It shows `rollback-confirm.png`, a timeline of the night with only the 20:47:22 UTC refusal dated, the layer diagram, then a match cut from `t2-diff-rolled.png` to `t2-undone.png` and a ROLLED BACK stamp. Paragraphs 6 and 7 use `t2-rovo-confirm.png`, `bulk-report.png` and `gadget.png`. Slow reveals, one flash on the refusal. One zoom, on the refusal line in `t2-issue-ask.png`. Music bed: noir.
+
+Footage: t2-issue-ask.png, a06.mp4, t2-issue-allowed.png, t2-wait-top.png, t2-incident-top.png, tracks/jira/screenshots/jsm-approval.png, t2-audit-approved.png, a31.mp4, tracks/jira/screenshots/rollback-confirm.png, t2-diff-rolled.png, t2-undone.png, t2-rovo-confirm.png, tracks/jira/screenshots/bulk-report.png, tracks/jira/screenshots/gadget.png
+
 **Goal.** A judge sees one concrete failure, BOX-29: an agent that changed three configs instead of one and tried to
 reach a paste site. The video shows the refusal, the audit record in Jira and Confluence, a risky push waiting in Jira
 Service Management, and then Roll back from Jira taking out only that task's changes.

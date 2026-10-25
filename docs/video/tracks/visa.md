@@ -3,6 +3,12 @@
 **Track:** Visa, Reimagining Shopping. **Edition:** GurtOS Personal, plus GurtOS Server for watches that keep running
 when the laptop is closed. **Status:** draft for Ben's approval.
 
+## Creative brief
+
+A shopping journey. A progress rail runs along the bottom of the frame and fills one station at a time, in the narration's order: shelf, approval, checkout, refund. After the card, full-bleed `vi.mp4` from 0 shows the real Shopper window with its TEST PAYMENTS ONLY bar while the voice names the problem (paragraph 1). Paragraph 2 holds `app-shopper.png` as the vault line types in. Paragraph 3 is the shelf: `vi.mp4` from 5.6, then a counter rolling to $15.36 CAD. Paragraph 4 sets `face-id-purchase.png` on a tilted 3D card with the real watch screenshot as a picture-in-picture inset, under a TEST PAYMENT stamp. Paragraph 5 is the checkout: `store-refusals.png` with hand-drawn circles on the unsigned and changed-order rows. Paragraph 6 splits the merchant dashboard from its bot count. Paragraph 7 stamps REFUNDED on the stolen-session row. Paragraph 8 rolls 209,000 against 0. Directional wipes move left to right with the rail; holds are steady. One zoom, on the TEST PAYMENT label. Music bed: shopping.
+
+Footage: vi.mp4, showcase/src/assets/shots/app-shopper.png, showcase/src/assets/repo/shopper/face-id-purchase.png, showcase/src/assets/track/visa/watch-shopper.png, showcase/src/assets/repo/shopper/store-refusals.png, showcase/src/assets/repo/shopper/store-dashboard.png, visa-stolen-row.png
+
 **Goal.** A standing instruction becomes a signed, approved, refundable purchase, while the agent never sees the card.
 Every payment on screen is test money, labelled and said once.
 

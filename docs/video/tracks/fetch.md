@@ -4,6 +4,12 @@
 mailbox; GurtOS Personal works the same). **Shares footage with:** the main video (A02, A05), Mana (the guest path).
 **Status:** draft for Ben's approval. Ben records the ASI:One chat shots himself.
 
+## Creative brief
+
+A chat-first film. The real ASI:One chat is the stage, and the box answers beside it, one chapter per paragraph, each opened by a typewriter header. After the card, full-bleed `asi1/fe-fix-safe.mp4` from 13 shows the paired chat while the header asks "Where does the agent run?" (paragraph 1), then `a01.mp4` on "someone else's cloud". Paragraph 2 rolls counters (4 GB, 17 GB, No GPU) and pins the Agentverse profile to a board. Paragraph 4 is a split screen, the diff card (`fe-fix-safe.mp4` from 30) beside `task-done.png`, with circles on the real cost and layer chips and a `task-undo.png` inset on Undo. Paragraphs 3 and 5 use chat bubbles in GurtOS colours that quote only the script's words, footnoted as not recorded. Paragraph 6 plays `fe-weather.mp4`, circles the Blocked card's chips and stamps BLOCKED. Paragraph 7 slams TEST MONEY, then builds a ledger (0.5 quote, approval, receipt, 0.05 buyer) over `fe-oracle.mp4` and `fe-buyer.mp4`. Paragraphs 8 to 10 keep the labelled stand-ins. Whip pans link chat to box; holds are long. One zoom, on the Approve card. Music bed: chat.
+
+Footage: asi1/fe-fix-safe.mp4, asi1/fe-weather.mp4, asi1/fe-oracle.mp4, asi1/fe-buyer.mp4, a01.mp4, a05.mp4, showcase/src/assets/track/fetch/agentverse-profile-oct24.png, showcase/src/assets/track/factory/task-done.png, showcase/src/assets/repo/portal/task-undo.png, native/screenshots/iphone-guest.png, native/screenshots/watch-guest.png
+
 **Goal.** Fetch.ai requires a 3 to 5 minute video with the main flow inside an ASI:One chat. This one opens with the
 two problems of a chat agent (where it runs, and strangers' agents), shows GurtOS as the safe body, then walks the flow
 in the chat: pairing, a real multi-step task with a diff and Undo, the agent team, a stranger's reply with a hidden

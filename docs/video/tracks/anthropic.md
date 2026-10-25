@@ -5,6 +5,12 @@
 presses Keep). **Shares footage with:** Factory (T-FA-01), Armadin (A03), the main video (A02, A06). **Status:** draft for
 Ben's approval.
 
+## Creative brief
+
+A human story about one developer at home. It is first person, with long holds and no wipes. After the card, full-bleed `a01.mp4` from 1.0 shows the real box at rest at night. Kinetic type arrives word by word on its empty Hills, "I leave agents running", then the three jobs (paragraph 1), with the Censys line as a footnote. Paragraph 2 holds `task-done.png` and rolls a 240 of 240 counter. Paragraph 3 shows the plan on my phone as two tilted 3D cards, then a ledger of the three model costs builds row by row. Paragraph 4 circles Keep in `14-review.png`. Paragraphs 5 and 6 are kinetic type, the limits in amber and left on screen. Paragraph 7 sets the iPhone, Watch and Mac shots in a row as tilted 3D cards. Paragraph 8 types the install line. Match cuts join the quiet box shots, and the music stays low. One zoom, on the Claude line in `task-done.png`. Music bed: home.
+
+Footage: a01.mp4, showcase/src/assets/track/factory/task-done.png, showcase/src/assets/track/factory/plan-phone.png, showcase/src/assets/track/factory/iphone-plan-actions.png, showcase/src/assets/repo/personal/14-review.png, showcase/src/assets/track/anthropic/iphone-request-dark.png, showcase/src/assets/track/anthropic/watch-8-and-42.png, showcase/src/assets/track/anthropic/mac-menu-dark.png
+
 **Goal.** Name the community and the lived problem in the first seconds: solo developers who leave AI agents running
 unattended on a machine at home, which is Ben's own situation. Then show Claude doing real work inside a space that
 holds no keys, its cost, the one check that is not consistent, the published attack test with its limits, and control

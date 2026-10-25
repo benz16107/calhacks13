@@ -4,6 +4,12 @@
 and Business; the clips come from a Server clip box, with the hijacked-payment case on the Business credit desk).
 **Shares footage with:** the main video (A03, G05), Anthropic (A03). **Status:** draft for Ben's approval.
 
+## Creative brief
+
+A red-team thriller. Live attacks, a terminal and alarm flashes count each block, and the film ends on the published score. After the card, full-bleed `ar03.mp4` from 7.6 shows the road-bike task starting and the Blocked toast dropping, then full-bleed `a06.mp4` from 4 shows the task's own Linux user, under a typewriter header naming each attack (paragraph 1). Paragraph 2 pins the CISA alert to an evidence board, with string to full-bleed `ar01.mp4` and a flash when the red notice opens. Paragraph 3 plays `ar03.mp4` from 13 with a hand-drawn circle on each red row as the voice says vault, proxy, firewall and approving, then a BLOCKED stamp. Paragraph 4 sets the two phone shots as tilted 3D cards. Paragraph 5 splits `ar04.mp4` into the AP-4 refusal and the over-limit bill, under a TEST MONEY stamp. Paragraph 6 types the sandbox lines in a terminal, then two amber NOT BUILT stamps. Paragraph 7 rolls scoreboard counters to 14 of 16. Hard cuts on action, one long hold on the score. One zoom, on the host list in `ar01.mp4`. Music bed: redteam.
+
+Footage: ar03.mp4, ar01.mp4, ar04.mp4, a06.mp4, showcase/src/assets/track/armadin/iphone-tripwire-task.png, native/screenshots/iphone-tripwire-notification.png
+
 **Goal.** A security judge sees a real attack stopped at the operating system, step by step, and then sees the score
 with its misses. The video says exactly what is built (a system-call filter and a CPU cap) and what is not (Landlock, a
 per-task disk quota), because an honest scoreboard is the argument.

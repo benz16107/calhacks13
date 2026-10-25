@@ -4,6 +4,12 @@
 (the wallet, the payments, the Solana checks), plus GurtOS Business for the last beat. **Status:** draft for Ben's
 approval.
 
+## Creative brief
+
+A ledger that builds on screen, one row for each payment the narration names, with an amount and a state (paid, waiting for Face ID, charged). After the card, full-bleed `cb-shopper-rows.png` shows the box's real x402 rows while the first ledger row, the FBI's Bybit figure, types in salmon (paragraph 1). Paragraph 2 holds `a06.mp4` from 4 for the task with no key. Paragraph 3 adds the one-cent joke, then match cuts from the three-cent report row to the same $0.03 on `watch-wallet.png`, beside `iphone-wallet-faceid.png`, both tilted 3D cards under a TEST MONEY stamp. Paragraph 4 adds the earned rows. Paragraph 5 types the one-line install in a terminal and rolls the 28 counter. In paragraph 6, `explorer-urd99.png` becomes a tilted 3D card, counters roll to 109 with 0 failed, and a callout circles the fee payer. Paragraph 7 is `a30.mp4`, labelled a credit request. Upward wipes as rows land; an even, metronome pace. One zoom, on the memo line. Music bed: ledger.
+
+Footage: cb-shopper-rows.png, a06.mp4, a30.mp4, native/screenshots/iphone-wallet-faceid.png, showcase/src/assets/track/coinbase/watch-wallet.png, showcase/src/assets/track/solana/explorer-urd99.png
+
 **Goal.** Giving an agent money usually means handing it the key. This video shows a real agent buying with x402
 without ever seeing the key, waiting for a Face ID tap when a price is over its budget, earning from the x402 Bazaar,
 and installing the same wallet in one command for Claude Code. Then Solana gets its own beat: anyone can check the

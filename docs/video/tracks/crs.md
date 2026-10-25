@@ -4,6 +4,12 @@
 (scored runs on GurtOS Server; the Business screens from the box seeded as the made-up Fogline Supply).
 **Shares footage with:** Hyphenate (#1), Microsoft (#4). **Status:** draft for Ben's approval.
 
+## Creative brief
+
+A fraud case file. One fake applicant, APP-1043, sits at the centre of an evidence board. Each check that catches it is pinned and joined by drawn string, and a tally scoreboard closes the film. After the card, full-bleed `hy.mp4` from 5.75 at slow speed shows the live CRS checks land, with a hand-drawn circle on the failed identity and another on the fraud score 88 as the voice says them (paragraph 1). Paragraph 2 pins the TechCrunch card to the board. Paragraph 3 is the AP clerk seat in `ar04.mp4` from 7, then a typed comparison of where the login lives. Paragraph 4 is `replay-pull-dark.png`, circling the reason line. Paragraph 5 puts a HELD stamp on `crs-case-top.png`, then `a30-fraud.mp4` and the controller's phone as a tilted 3D card. Paragraph 6 tallies counters from 1 to 9, one REFUSED mark for each "the CEO already approved". Paragraph 7 is the end card. Hard cuts, a flash on the score, slow reveals for evidence and fast ones for the tally. One zoom, on the 88 in `hy.mp4`. Music bed: fraud.
+
+Footage: hy.mp4, ar04.mp4, showcase/src/assets/track/crs/replay-pull-dark.png, crs-case-top.png, a30-fraud.mp4, showcase/src/assets/track/crs/iphone-biz-fraud-dark.png
+
 **Goal.** The same APP-1043 catch as the Hyphenate video, told as identity and fraud done right. A judge sees CRS used
 live for the catch, then learns what the OS adds: the agent never holds the CRS login, every pull needs a stated
 reason and stays under a limit, a person approves what the rules send them, and a fraudster who argues is refused in

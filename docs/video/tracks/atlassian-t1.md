@@ -4,6 +4,12 @@
 box in the footage ran as GurtOS Server (always on). **Shares footage with:** Atlassian Track 2 (#7), the same shoot.
 **Status:** draft for Ben's approval.
 
+## Creative brief
+
+The agent as a teammate, inside Jira. The film stays on Jira's own pages, and each beat hands the issue to the next part of the team with a directional wipe. After the card, full-bleed `tracks/jira/screenshots/started-from-issue.png` (PLAT-33510) fills the frame under a typewriter header. One hand-drawn underline lands on the issue text as the voice says "anyone" (paragraph 1). Paragraph 2 names the three ways to start in kinetic type, then underlines the label. Paragraph 3 splits the issue from `task-done.png`, the box's task, with a counter rolling to 25 cents. Paragraph 4 returns to the Jira result comment and circles "Done. Spent $0.03 of a $0.25 budget" and the one changed file, then a RUNS ONCE stamp. Paragraph 5 cuts to `rollback-confirm.png`, then the two approvals. Paragraph 6 pins the Rovo answer and the Confluence page as documents. Brisk, about four seconds a shot, hard cuts on each click. One zoom, on the result comment. Music bed: team.
+
+Footage: tracks/jira/screenshots/started-from-issue.png, showcase/src/assets/track/factory/task-done.png, tracks/jira/screenshots/rollback-confirm.png, t1-approval-top.png, tracks/jira/screenshots/jsm-approval.png, t2-rovo-activity.png, t1-confluence.png
+
 **Goal.** A teammate's ordinary Jira issue becomes work an agent does, inside limits the OS enforces. The video shows
 three ways to start it, the result with its diff on the issue, a request for an OK in Jira or Jira Service Management,
 and the team's questions answered by Rovo and Confluence.

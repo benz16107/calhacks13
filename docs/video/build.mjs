@@ -8,6 +8,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
+import { kit } from './kit.mjs';
 
 const HERE = import.meta.dirname, REPO = path.resolve(HERE, '../..'), STUDIO = path.join(HERE, 'studio');
 const HF = 'hyperframes@0.8.193';
@@ -399,6 +400,9 @@ const V = {
   },
 };
 
+// The track formats (kit.mjs): shot, pair, caseboard, dossier, exhibit, timeline, scoreboard, terminal, chat, ledger.
+Object.assign(V, kit({ C, W, H, FRAME, esc, r3, scene, fit, dims, lowerThird, note, moves }));
+
 function captionsScene(groups, dur) {
   const body = groups.map((g, i) => `<div id="cap-${i}" class="cap clip" data-start="${g.start}" data-duration="${r3(g.end - g.start)}" data-track-index="0"><span class="pill">${g.words.map((w) => `<b>${esc(w.text)}</b>`).join(' ')}</span></div>`).join('\n    ');
   const times = JSON.stringify(groups.map((g) => g.words.map((w) => r3(w.start))));
@@ -500,7 +504,7 @@ export async function build(id, { noMusic = false } = {}) {
     const starts = b.parts.map((p, pi) => (pi === 0 ? t : (cueAbs(p) ?? t + p.at)));
     b.parts.forEach((p, pi) => {
       const s = starts[pi], e = pi + 1 < b.parts.length ? starts[pi + 1] : t + dur, sid = `b${String(bi + 1).padStart(2, '0')}${String.fromCharCode(97 + pi)}`;
-      const ctx = { edition: spec.edition, file, media: media_, t: (o, def) => { const a = cueAbs(o ?? {}); return Math.max(0, a != null ? a - s : (o?.at ?? def)); } };
+      const ctx = { edition: spec.edition, style: spec.style, file, media: media_, t: (o, def) => { const a = cueAbs(o ?? {}); return Math.max(0, a != null ? a - s : (o?.at ?? def)); } };
       const fn = V[p.v.type];
       if (!fn) throw new Error(`${id}: no visual type ${p.v.type}`);
       fs.writeFileSync(path.join(comp, `${sid}.html`), fn(sid, p.v, e - s, ctx));

@@ -3,6 +3,12 @@
 **Track:** Mana, Building with Mana. **Edition:** GurtOS Personal (a guest's request answered by the owner on a
 phone) and GurtOS Business (rules drafted in Mana become policy). **Status:** draft for Ben's approval.
 
+## Creative brief
+
+Two rooms and a doorbell. Mana is the planning room, GurtOS is where work runs, and a guest rings the bell from a Mana app so the owner's phone lights up. After the card, `project-page.png` (a real Mana page) whips right to `a03.mp4` from 8 at 1.3x, the real box blocking a bad page (paragraph 1). Paragraph 2 pins `chat-review.png` and `chat-gen3.png` to a board as notes at slight angles. Paragraph 3 circles the two $10,000 records in `mana-gap2.png`, rolls a counter to $20,000, then types REL-1 and SOD-5 in a header. Paragraph 4 is `2-rules.png` with kinetic type, "the owner approves the exact text". Paragraph 5 splits `mana-ask-top.png` from the owner's phone, a tilted 3D card with the watch shot as an inset, and counters read 25 cents and no network. Paragraph 6 shows both rooms side by side under the end card. Quick, bouncy cuts and whip pans between rooms. One zoom, on the "$20k" sentence. Music bed: social.
+
+Footage: showcase/src/assets/track/mana/project-page.png, a03.mp4, showcase/src/assets/track/mana/chat-review.png, showcase/src/assets/track/mana/chat-gen3.png, mana-gap2.png, showcase/src/assets/repo/business/2-rules.png, mana-ask-top.png, showcase/src/assets/track/mana/iphone-guest.png, showcase/src/assets/track/mana/watch-guest.png
+
 **Goal.** Mana is where we thought; GurtOS is where the work runs safely. A judge sees a public Mana chat, one moment
 where Mana changed what we built (two $10,000 limits for one business, now rules REL-1 and SOD-5), the rules reaching
 GurtOS Business only after an owner approves the exact text, and the project living inside Mana: a visitor's request

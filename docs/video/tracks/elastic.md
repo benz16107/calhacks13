@@ -5,6 +5,12 @@
 **Shares footage with:** Armadin (#14) for the hash chain, Hyphenate and Microsoft (#1, #4) for the Audit shot.
 **Status:** draft for Ben's approval.
 
+## Creative brief
+
+A question-and-answer film, like a data dashboard. Each beat types a plain question as a header, then the real answer fills in. After the card, full-bleed `a08.mp4` from 4.6 scrolls the real action log under the header "What did the agents do this week?" (paragraph 1). Paragraph 2 types three chained hash lines in a terminal, then breaks the third with a flash. Paragraph 3 shows `el-dash.png` with the three 403 lines typed beside it, each stamped in salmon. Paragraph 4 is a split screen, the clean chain on the left and `el-tamper.png` on the right, where hand-drawn underlines land on 466 and 474 as the voice says them and a counter rolls between. A picture-in-picture inset enlarges the entry numbers. Paragraph 5 asks "Why did the job routine fail?", then reveals `el-routine-a.png` and underlines the blocked site. Paragraph 6 is `a30.mp4` from 12.2. A short pause after every question, then a downward wipe as the answer drops. No zoom. Music bed: data.
+
+Footage: a08.mp4, el-dash.png, el-tamper.png, el-routine-q.png, el-routine-a.png, a30.mp4
+
 **Goal.** Remove the limit every log has, "anyone with root can edit it". The video shows the OS writing one
 hash-chained log, Elastic keeping a copy the box cannot rewrite, a planted edit named by entry number even after every
 hash was rewritten, an Agent Builder agent finding a root cause, and an alert that reaches the owner as one approval.

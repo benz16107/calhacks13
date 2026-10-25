@@ -64,3 +64,35 @@ export default {
   and every `line_unread` / `text_below_floor` / `content_overlap`; then `snapshot --at <times>` across every beat and
   look at the frames. Fix and repeat until clean. `node build.mjs <id> --render` and `python3 qc.py out/<id>.mp4 --max N`
   make and check the file.
+
+## Track formats (Oct 25, after Ben's notes)
+
+Ben: "Too many of the same animation, the zoom-in effect" and "different sponsor tracks should get very different
+taste, style and format." Each track's brief is the `## Creative brief` section of `tracks/<id>.md`; `tracks/BRIEFS.md`
+lists them. `films/hyphenate.mjs` is the worked example (a case file). The types live in `kit.mjs`:
+
+| type | what it is | key fields |
+|---|---|---|
+| `shot` | one recording or screenshot | `src`, `from`, `rate`, `crop`, `frame: full / window / paper / tilt / bare`, `box`, `enter`, `marks`, `stamp(s)`, `pip`, `lt`, `note`, `rot` |
+| `pair` | two sources side by side | `items: [shot fields + label, color]`; the second wipes in on its `cue` |
+| `caseboard` | pin board | `items: [{ kind: card / photo / note, x, y (top centre, px), w, rot, cue }]`, `strings: [{ from, to, cue }]`, `stamps` |
+| `dossier` | case file card | `tab`, `title`, `sub`, `fields: [{ k, v, cue, flag: bad / ok }]`, `photo` |
+| `exhibit` | paper document | `label`, `lines: [{ text, cue, mark, dim }]`, `source` |
+| `timeline` | dots on a dated axis | `from`, `to`, `dots: [0..1]`, `count`, `label`, `source` |
+| `scoreboard` | tiles with rolling digits | `items: [{ n, of, label, cue, color }]`, `source` |
+| `terminal` | typed commands and output | `title`, `lines: [{ text, cmd, kind: out / ok / bad / warn, cue }]`, `alarms: [{ cue }]` |
+| `chat` | message bubbles | `messages: [{ from: 'me' / other, who, text, kind: quote / bad / ok, cue }]` |
+| `ledger` | payment rows building | `rows: [{ when, what, amount, status, cue }]`, `total`, `source` |
+
+- `enter`: cut, fade, whip-l, whip-r, wipe, wipe-down, iris, drop, slide-up, flip. Vary them; a hard cut is fine.
+- `marks`: `{ cue, kind: circle / box / underline / arrow / spot, x, y, w, h (fractions of the crop), color, label, side, labelW }`.
+  Measure positions on a full-size frame (`ffmpeg -ss T -i f.mp4 -frames:v 1 -vf crop=...`), never guess.
+- `stamp`: `{ text, cue, color: blocked / done / amber, x, y (fractions of the shot), rot, size, box: 'frame' }`. Use one or
+  two per video at most, on the words that earn them.
+- No camera moves unless the brief names that one zoom: `moves` is opt-in on `shot` (`drift` is off).
+- A `cue` matches the first spoken word in the paragraph that starts with it. Repeated words need `after`.
+- Pinned photos on a board should be stills (a frame grabbed into `studio/assets/capture/<name>.png`): a late-starting
+  video inside a board showed black frames. Check every video shot's first and last second in snapshots.
+- Keep each text on screen long enough to read (the check's `line_unread` warnings), labels at 28 px or more.
+- Lengths stay as before (`maxDur`); the narration files do not change. `style: { bg }` sets the default ground:
+  plain, hills, board, grid, desk, night. `music` names a bed in `studio/assets/music/` (`bed-<name>-long.wav`).
