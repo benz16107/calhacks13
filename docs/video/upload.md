@@ -19,6 +19,8 @@ bed, in case a platform or judge prefers it.
 ```text
 GurtOS: operating systems built for AI agents. Each task runs as its own Linux user, in its own copy-on-write copy of your files, with no keys. Undo any task, approve spending from your phone. Built solo by Ben Zhou for Cal Hacks 13.
 
+Try it live in your browser: https://try.gurtos.com (your own throwaway GurtOS computer; paste an attack and watch it stopped).
+
 Every screen is the real product: a test computer running GurtOS from main on Oct 24 and 25, 2026, the live gurtos.com site, and the signed v0.1.0-preview Server disc booting and installing in a VM (sped up). The agents in moments 1 to 4 are scripted so they do the same steps every take; real Droid runs with Claude are in the merge gate. All payments are test money.
 
 Narration: Ben's own voice, cloned with ElevenLabs. Music: generated with MusicGen.
@@ -32,17 +34,17 @@ Every Cal Hacks track, with its evidence: https://calhacks.gurtos.com
 Home: https://gurtos.com
 
 0:00 GurtOS, and the problem
-0:16 Why an operating system
-0:33 GurtOS: each task its own user and copy of your files
-0:48 Three editions: Server, Personal, Business
-0:59 Moment 1: undo one task
-1:09 Moment 2: the booby-trapped page
-1:20 Moment 3: a pause for your OK
-1:33 Moment 4: pull the plug
-1:47 Security, with the score published
-2:03 Light, and live from any device
-2:22 Try it: signed discs at gurtos.com/download
-2:34 Every part documented, a suite, open source
+0:20 Why an operating system
+0:37 GurtOS: each task its own user and copy of your files
+0:52 Three editions: Server, Personal, Business
+1:03 Moment 1: undo one task
+1:12 Moment 2: the booby-trapped page
+1:24 Moment 3: a pause for your OK
+1:37 Moment 4: pull the plug
+1:50 Security, with the score published
+2:06 Light, and live from any device
+2:25 Try it: signed discs at gurtos.com/download, and every part documented
+2:42 A suite, open source
 ```
 
 ## Armadin: Best Security Hack
@@ -70,7 +72,7 @@ Code (Apache-2.0): https://github.com/benz16107/calhacks13
 0:26 The booby-trapped page, and tripwire keys
 0:45 A hijacked payment
 0:55 The sandbox, and what is not built
-1:05 The published score
+1:06 The published score
 ```
 
 ## When a standout feature lands

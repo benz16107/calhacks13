@@ -19,6 +19,10 @@ export default {
   maxDur: 180, // Devpost's cap for the main video; the track list's target for Armadin
   music: 'bed-hopeful-long.wav',
   beats: [
+    // Cold open, music only: moment 2's real log, the page's two exfiltration tries blocked (the auditor, Oct 25).
+    { dur: 3.6, v: { type: 'shot', frame: 'full', src: cap('a03.mp4'), from: 17, crop: { x: 260, y: 170, w: 1200, h: 675 }, enter: 'cut',
+        note: 'Moment 2: a booby-trapped page · scripted agent',
+        marks: [{ at: 0.5, kind: 'box', x: 0.012, y: 0.585, w: 0.775, h: 0.05, color: 'blocked' }, { at: 1.3, kind: 'box', x: 0.012, y: 0.925, w: 0.775, h: 0.05, color: 'blocked' }] } },
     // The hook: a 2.4 s montage of real product shots under the title.
     { dur: 2.4, v: { type: 'montage', items: [{ src: cap('a03.mp4'), from: 20 }, { src: cap('a02.mp4'), from: 12.4 }, { src: cap('fr.mp4'), from: 18 }, { src: cap('a04.mp4'), from: 18 }] } },
     // 1. The problem, sourced.
@@ -90,16 +94,12 @@ export default {
         { src: repo('native/screenshots/watch-big.png'), device: 'watch', hf: 0.5, label: 'Apple Watch', cue: 'watch' },
         { src: repo('native/screenshots/mac-menu-dark.png'), device: 'bare', hf: 0.5, label: 'Mac', cue: 'mac' },
         { src: repo('native/screenshots/android-notifications.png'), device: 'phone', label: 'Android', cue: 'android' }] } },
-    // 12. You can try it, it's real: the Download page, the real disc installing, where it installs.
-    { hold: 0, parts: [
-        { v: { type: 'clip', src: cap('dl.mp4'), from: 1.4, moves: [{ cue: 'gurtos', s: 1.35, px: 0.42, py: 0.42, d: 0.9 }],
-            lt: { kicker: 'gurtos.com/download', title: 'Signed install discs: Server and Personal' } } },
-        { cue: 'download', off: 0.45, v: { type: 'clip', src: cap('disc-install.mp4'), from: 0, rate: 3, drift: false, moves: [{ at: 0.6, s: 2.0, px: 0.25, py: 0.06, d: 0.45 }],
+    // 12. You can try it, it's real: the real disc installing on "signed install discs", then the Download page.
+    { hold: 1.0, parts: [
+        { v: { type: 'clip', src: cap('disc-install.mp4'), from: 0, rate: 3, drift: false, moves: [{ at: 0.8, s: 2.0, px: 0.25, py: 0.06, d: 0.45 }],
             note: 'Release disc in a VM, sped up' } },
-        { cue: 'virtual', v: { type: 'lines', kicker: 'It installs on', lines: [
-            { text: 'Regular PCs, Intel and AMD (x86_64)', at: 0.1 },
-            { text: 'Apple-silicon Macs, in a virtual machine (arm64)', at: 0.25 },
-            { text: 'Cloud servers (tested on Vultr)', cue: 'cloud' }] } }] },
+        { cue: 'gurtos', v: { type: 'clip', src: cap('dl.mp4'), from: 1.4, moves: [{ at: 0.3, s: 1.35, px: 0.42, py: 0.42, d: 0.9 }],
+            lt: { kicker: 'gurtos.com/download', title: 'Signed install discs: Server and Personal' } } }] },
     // 13. It's all documented: four real pages of gurtos.com/docs.
     { hold: 0, parts: [
         { v: { type: 'clip', src: cap('docs.mp4'), from: 1.6, lt: { kicker: 'gurtos.com/docs', title: 'How it works, the security model, the APIs' } } },

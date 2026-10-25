@@ -59,10 +59,10 @@ export default {
               marks: [{ cue: 'three', kind: 'circle', x: 0.13, y: 0.182, w: 0.118, h: 0.034, color: 'amber', label: '$0.03', side: 'right', labelW: 160 },
                 { cue: 'press', kind: 'box', x: 0.506, y: 0.755, w: 0.36, h: 0.035, color: 'blocked' }] },
             { src: repo('showcase/src/assets/repo/portal/task-undo.png'), label: 'Undo: only this task', cue: 'undo', color: 'blocked' }] } }] },
-    // 5. The team: a question and the Shopper's words as a quote with its name (from the recorded buyer run).
-    { hold: 2.5, v: { type: 'chat', lt: { kicker: 'The question and the Shopper quote are from the recorded chat', title: 'Its team replies as quotes, named', t: 0.2, dur: 5 }, messages: [
-        { from: 'me', who: 'Me, in ASI:One', text: 'Is the Hario V60 filter back in stock?', cue: 'ask' },
-        { from: 'them', who: 'GurtOS', kind: 'quote', text: 'GurtOS Shopper answered: Paid price check: hario v60 filters at bestbuy.ca', cue: 'gurt', after: 'protocol' }] } },
+    // 5. The team, re-created from the recorded chat (Oct 24 23:46 PT, docs/features.md): the question and the Shopper's reply.
+    { hold: 2.5, v: { type: 'chat', lt: { kicker: 'Re-created from the recorded chat, Oct 24', title: 'Its team replies as quotes, named', t: 0.2, dur: 5 }, messages: [
+        { from: 'me', who: 'Me, in ASI:One', text: 'check if the Hario V60 filters are back in stock', cue: 'ask' },
+        { from: 'them', who: 'GurtOS Shopper replied:', kind: 'quote', text: 'Gold Roast: 40-pack, $9.50, in stock', cue: 'gurt', after: 'protocol' }] } },
     // 6. A stranger's agent in the real chat: the question and reply, what the hidden comment asked, the Blocked card.
     { hold: 4.0, parts: [
         { v: { type: 'shot', frame: 'full', src: cap('asi1/fe-weather.mp4'), from: 24, crop: { ...CHAT, y: 20 }, enter: 'whip-l', note: ASI,

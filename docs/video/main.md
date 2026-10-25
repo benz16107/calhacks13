@@ -76,7 +76,7 @@ And it's light enough for almost any computer, even an old one: Server runs in o
 
 You watch and answer from anywhere: the portal at app dot gurtos dot com, and apps for iPhone, Apple Watch, Mac and Android.
 
-You can try it today: signed install discs for Server and Personal are at gurtos dot com slash download. It installs on regular PCs, Apple-silicon Macs in a virtual machine, and cloud servers.
+You can try it today: signed install discs for Server and Personal are at gurtos dot com slash download.
 
 Every part is documented at gurtos dot com slash docs, from the architecture to the security model, so anyone can check it or build on it.
 
