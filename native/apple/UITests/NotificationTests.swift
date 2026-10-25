@@ -40,6 +40,7 @@ final class NotificationTests: XCTestCase {
     XCTAssert(banner.waitForExistence(timeout: 30), "no notification arrived")
     Thread.sleep(forTimeInterval: 1)
     shot("notification")
+    if !(ProcessInfo.processInfo.environment["NOACTIONS"] ?? "").isEmpty { return } // a notice with no buttons (a tripwire)
     banner.press(forDuration: 1.2)
     XCTAssert(spring.buttons["Approve"].waitForExistence(timeout: 10) || spring.buttons["Approve with Face ID"].waitForExistence(timeout: 2))
     Thread.sleep(forTimeInterval: 0.8)

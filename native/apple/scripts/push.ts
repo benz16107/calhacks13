@@ -6,6 +6,9 @@ import { approvalText, encrypt, message } from '../../../core/push.ts';
 const [device, approval, box, machine, url, source = ''] = process.argv.slice(2);
 const d = JSON.parse(device);
 const a = JSON.parse(approval);
-const fields = { v: 1, type: 'approval', machine, box, url, id: a.id, task: a.task, source, costCents: a.costCents, ...approvalText(a, process.argv[8] ?? '') };
+// An approval (its fields made as core's pushTo makes them), or other fields as the box sends them (a tripwire).
+const fields = a.type
+  ? { v: 1, machine, box, url, ...a }
+  : { v: 1, type: 'approval', machine, box, url, id: a.id, task: a.task, source, costCents: a.costCents, ...approvalText(a, process.argv[8] ?? '') };
 const e = encrypt(d.push.p256dh, d.push.auth, Buffer.from(message(fields, d.push.key))).toString('base64url');
 console.log(JSON.stringify({ 'Simulator Target Bundle': 'com.benzhou.gurtos', aps: { alert: { title: 'GurtOS', body: 'A request needs you' }, 'mutable-content': 1, category: 'APPROVAL', sound: 'default' }, e }));

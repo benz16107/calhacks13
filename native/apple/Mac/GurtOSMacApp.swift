@@ -45,8 +45,11 @@ final class MacDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
     #if DEBUG
     // Screenshots: --pair <link> pairs first; --render-shots <dir> draws the windows and the menu, then quits.
     let args = CommandLine.arguments
-    if let i = args.firstIndex(of: "--pair"), i + 1 < args.count, let l = PairingLink.parse(args[i + 1]), model.machines.isEmpty {
-      Task { try? await model.pair(l, name: "Mac") ; RenderShots.runIfAsked(model) }
+    if let i = args.firstIndex(of: "--pair"), i + 1 < args.count, let l = PairingLink.parse(args[i + 1]) {
+      let old = model.machines.first { URL(string: $0.url)?.host == l.box.host }
+      if old == nil || args.contains("--repair") {
+        Task { if let old { await model.forget(old) }; try? await model.pair(l, name: "Mac"); RenderShots.runIfAsked(model) }
+      } else { model.select(old!); RenderShots.runIfAsked(model) }
     } else { RenderShots.runIfAsked(model) }
     #endif
     model.start()
