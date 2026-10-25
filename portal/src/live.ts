@@ -94,7 +94,9 @@ export interface Settings {
   autoUpdate: boolean;
   appearance: { theme: 'light' | 'dark' | 'system'; accent: string };
 }
-export interface SetupState { done: boolean; finishedAt?: string; migrated?: boolean; steps: Record<string, { at: string; data?: any }>; suggested: string[] }
+/** Command setup: an agent on another computer sets this one up with a one-time code (core's /api/setup/code). */
+export interface SetupChannel { code: string; expiresAt: string; open: boolean; port: number; urls: string[]; remote?: string; devices: { id?: string; name?: string }[] }
+export interface SetupState { done: boolean; finishedAt?: string; migrated?: boolean; steps: Record<string, { at: string; data?: any }>; suggested: string[]; channel?: SetupChannel | null }
 export interface System {
   product: string;
   edition: string;

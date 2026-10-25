@@ -4,7 +4,7 @@
 import type { ComponentChildren } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import qrcode from 'qrcode-generator';
-import { api, box, loadApps, loadSetup, patchSettings, surface, useBox, type AppInfo } from './live.ts';
+import { api, box, loadApps, loadSetup, patchSettings, surface, useBox, type AppInfo, type SetupChannel } from './live.ts';
 import { AppIcon, Badge, Button, Chip, ComboRow, Group, Icon, IconButton, LinkRow, Popover, Row, Sheet, SwitchRow, ToggleGroup } from './kit/ui.tsx';
 import { access } from './shell.tsx';
 import { phone } from './wm.tsx';
@@ -519,20 +519,87 @@ const Paired = ({ name }: { name: string }) => (
 
 const NoQr = () => <p class="t-caption t-secondary gos-setup-noqr">This screen does not know the address phones use to reach this computer. Set BOX_URL on it, or open {PRODUCT} from a laptop to show the code.</p>;
 
+/** Another computer's agent sets this one up: a one-time code, the addresses, what to tell the agent, who is connected. */
+function AgentSetup({ onStop }: { onStop: () => void }) {
+  const b = useBox();
+  const now = useNow(1000);
+  const [made, setMade] = useState<SetupChannel>();
+  const [error, setError] = useState('');
+  const fresh = () => (setError(''), api<SetupChannel>('POST', '/setup/code').then(setMade, (e) => setError((e as Error).message)));
+  useEffect(() => void fresh(), []);
+  // Who is connected comes with GET /api/setup; ask every few seconds while this panel is open.
+  useEffect(() => {
+    const t = setInterval(() => void loadSetup(), 3000);
+    return () => clearInterval(t);
+  }, []);
+  const ch = b.setup?.channel?.code === made?.code ? (b.setup?.channel ?? made) : made;
+  const stop = () => api('POST', '/setup/stop').then(() => (void loadSetup(), onStop()), (e) => setError((e as Error).message));
+  const url = ch?.remote ?? ch?.urls[0];
+  const expired = !!ch && Date.parse(ch.expiresAt) < now;
+  return (
+    <>
+      <p class="t-caption t-secondary">An AI agent on another computer, like Claude Code, can do every step for you. This screen follows along.</p>
+      {ch && (
+        <>
+          <p class="gos-setup-code">{formatCode(ch.code)}</p>
+          <p class="t-caption t-secondary">{expired ? 'This code ran out.' : `Works once, until ${hhmm(ch.expiresAt)}.`}</p>
+          {url && !expired && (
+            <>
+              <p class="t-caption-strong">Tell your agent:</p>
+              <p class="gos-agent-say">
+                Set up the new {PRODUCT} computer at {url} with code {ch.code}, by following AGENT-SETUP.md
+              </p>
+              {ch.urls.length + (ch.remote ? 1 : 0) > 1 && (
+                <p class="t-caption t-secondary">Also at {[...(ch.remote ? ch.urls : ch.urls.slice(1))].join(', ')}</p>
+              )}
+            </>
+          )}
+          <p class="t-caption" role="status">
+            {ch.devices.length ? `Connected: ${ch.devices.map((d) => d.name ?? d.id).join(', ')}` : 'No agent connected yet.'}
+          </p>
+        </>
+      )}
+      {error && (
+        <p class="gos-error" role="alert">
+          {sentence(error)}
+        </p>
+      )}
+      <span class="gos-actions">
+        {expired && <Button onClick={() => void fresh()}>New code</Button>}
+        <Button kind={ch?.devices.length ? 'destructive' : 'default'} onClick={() => void stop()}>
+          Stop
+        </Button>
+      </span>
+    </>
+  );
+}
+
 function PhoneHandoff() {
+  const b = useBox();
   const p = usePairing();
-  // Quick Start starts on the new computer's own screen only, and only with a core that has it.
+  // Quick Start and command setup start on the new computer's own screen only, and only with a core that has them.
   const [quick, setQuick] = useState<boolean>();
-  const [quickOn, setQuickOn] = useState(false);
+  const [mode, setMode] = useState<'' | 'quick' | 'agent'>('');
   useEffect(() => void (loopback && hasQuickStart().then(setQuick)), []);
-  if (quickOn)
+  const agent = loopback && !!b.setup && 'channel' in b.setup;
+  if (mode === 'quick')
     return (
       <aside class="g-card gos-setup-handoff" aria-label="Quick Start from your phone">
         <h3 class="t-heading gos-setup-handoff-head">
           <Icon name="phone" />
           Quick Start from your phone
         </h3>
-        <QuickStartHere onBack={() => setQuickOn(false)} onDone={() => void api('POST', '/setup/finish').then(loadSetup, loadSetup)} />
+        <QuickStartHere onBack={() => setMode('')} onDone={() => void api('POST', '/setup/finish').then(loadSetup, loadSetup)} />
+      </aside>
+    );
+  if (mode === 'agent')
+    return (
+      <aside class="g-card gos-setup-handoff" aria-label="Set up from another computer">
+        <h3 class="t-heading gos-setup-handoff-head">
+          <Icon name="computer" />
+          Set up from another computer
+        </h3>
+        <AgentSetup onStop={() => setMode('')} />
       </aside>
     );
   return (
@@ -555,7 +622,13 @@ function PhoneHandoff() {
       {quick && (
         <div class="gos-qs-choice">
           <p class="t-caption t-secondary">Already have GurtOS on another computer? Copy its keys, apps and rules from your phone.</p>
-          <Button onClick={() => setQuickOn(true)}>Quick Start from your phone</Button>
+          <Button onClick={() => setMode('quick')}>Quick Start from your phone</Button>
+        </div>
+      )}
+      {agent && (
+        <div class="gos-qs-choice">
+          <p class="t-caption t-secondary">Have an AI agent on your laptop? It can set this computer up with a one-time code.</p>
+          <Button onClick={() => setMode('agent')}>Set up from another computer</Button>
         </div>
       )}
     </aside>
