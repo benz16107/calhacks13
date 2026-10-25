@@ -115,7 +115,7 @@ AI agents now do real work on our computers: booking, buying, coding, filing. To
 - **Light:** GurtOS Server is 40 named Ubuntu packages on a 1.37 GB disc, and the box ran one task at a time in 1 GB of RAM (installed from source, QEMU VM). Personal idles about 150 MB below stock Ubuntu Desktop.
 - **Control:** the kill switch froze 10 agents within 271 ms (the call returned in 137 ms); a bad batch was undone in 48 ms.
 - **Real work:** a credit desk of agents caught 16 of 17 planted errors and got 6 of 6 decisions right in 12 minutes for $5.24.
-- **Download:** signed discs on the [release page](https://github.com/benz16107/calhacks13/releases/tag/v0.1.0-preview): Server 1.37 GB (x86_64 and arm64), Personal 2.01 GB (x86_64) and 1.99 GB (arm64), with SBOMs and a licence report.
+- **Download:** signed discs on the [release page](https://github.com/benz16107/calhacks13/releases/tag/v0.1.0-preview): Server 1.37 GB (x86_64 and arm64), Personal 2.01 GB (x86_64) and 1.99 GB (arm64), with SBOMs and a licence report. Our QA installed the final discs on Vultr and in QEMU; Replay, receipts, command setup, permissions and files-at-each-step are on main but not in these discs, and reach installed computers through the next signed update.
 - **Verifiable:** every finished task can get a signed receipt; https://gurtos.com/verify/ checks it in your browser.
 - **Everywhere:** three editions (Server, Personal, Business), phone, Watch and Mac apps, remote access, open source.
 

@@ -375,7 +375,8 @@ const prizes = [
       <h2 id="limits">Known limits</h2>
       <ul class="measure">
         <li>Undo takes back a task's file changes. It cannot recall what a task already sent out through a tool, such as a payment; those are in the log for a person to follow up, and the shopper's undo refunds the order.</li>
-        <li>The bootable image is tested in QEMU (x86 with BIOS and UEFI, ARM64 emulated). It has not run on real Apple hardware, a real PC or Vultr's own ISO boot yet.</li>
+        <li>The final v0.1.0-preview discs were installed by our QA on Vultr instances and in QEMU (Server x86_64 and arm64, Personal x86_64, and Personal arm64 as far as the first-run page). None has run on real Apple hardware or a real PC.</li>
+        <li>The Replay, signed receipts, command setup, agent permissions and files-at-each-step features are on main, but they are not in the v0.1.0-preview discs. They reach installed computers through the next signed update.</li>
         <li>System slots are writable ext4 without dm-verity, and updates are signed with one key with no rotation.</li>
         <li>Agents are Droid with Claude. Other agents would need a worker adapter in the core.</li>
         <li>GurtOS Business's work-account sign-in has been tested with a standards test provider and not a real Entra tenant, and its screens here are from a seeded box with scripted seats and sandbox data.</li>
