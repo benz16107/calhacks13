@@ -1,5 +1,6 @@
 {
   "name": "portal",
+  "license": "Apache-2.0",
   "private": true,
   "type": "module",
   "description": "The box's screen, the portal and the phone view. One web app, built into dist/ and served by the box.",
