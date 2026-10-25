@@ -13,6 +13,8 @@ Status of each step, checked Sun Oct 25 between 6:10 and 6:30 AM PT:
 | Replay | try.gurtos.com | Steps through every event with the files |
 | Receipt check | A real receipt on gurtos.com/verify, then the same receipt with one letter changed | Passed; the changed copy failed the signature check |
 | Attack it yourself | try.gurtos.com, with injection text typed by hand | 8 defences shown, plus the "Not covered, honestly" section |
+| iPhone app approval | TestFlight build 5's code in the iPhone simulator, against a box on current main | Paired as owner and approved an $8 request with Face ID. A real phone has not yet received a push from a box |
+| Mac app, Android app | Not paired with a box yet | Do not show them unless you try them first |
 
 The four commands below have **not** been run on the laptop box itself, because that would change the demo box.
 Rehearse each once before 10:00 AM (they add four small tasks to its list, which is fine).
@@ -21,7 +23,9 @@ Rehearse each once before 10:00 AM (they add four small tasks to its list, which
 
 1. Laptop on its charger. `limactl list` shows the `box` VM running.
 2. Browser, full screen, on `http://127.0.0.1:7700`. That is the box's own screen, so it acts as the owner.
-3. Phone: the GurtOS app paired with the laptop box, notifications on, sound on.
+3. Phone: the GurtOS app paired with the laptop box as the owner, notifications on, sound on. Then run command B
+   once and approve it from the phone. This is the first time a real phone takes a push from a box, so do it early.
+   If the push does not arrive, the phone can still answer: open the app and approve under Needs you.
 4. A terminal with the commands below pasted in, one per line, ready to run with the up arrow. Never press
    **New task** on the screen: it starts a real Claude agent and spends model credit.
 5. A second browser tab on `https://try.gurtos.com`, and its QR code on your phone's screen or on paper, for judges.
