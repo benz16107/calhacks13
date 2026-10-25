@@ -1,7 +1,21 @@
 {
   "applinks": {
     "details": [
-      { "appIDs": ["744282DWSN.com.benzhou.gurtos"], "components": [{ "/": "/pair", "comment": "A machine's pairing QR code opens the GurtOS iPhone app when it is installed" }] }
+      {
+        "appIDs": [
+          "744282DWSN.com.benzhou.gurtos"
+        ],
+        "components": [
+          {
+            "/": "/pair",
+            "comment": "A machine's pairing QR code opens the GurtOS iPhone app when it is installed"
+          },
+          {
+            "/": "/quickstart",
+            "comment": "A new computer's Quick Start QR code opens the GurtOS iPhone app when it is installed"
+          }
+        ]
+      }
     ]
   }
 }
