@@ -107,7 +107,8 @@ export default async function (d: DemoKit) {
     await expect(stranger, 'to a stranger clicking Approve');
     d.check((await d.api<Approval[]>('GET', '/approvals?state=pending')).some((a) => a.id === pending?.id), 'a stranger sending the same click approves nothing');
 
-    say(owner, click(ask.card, 'approve_cta'));
+    // ASI:One's direct chat sends a click as "@<agent address> {selection}".
+    say(owner, `@${addresses.box} ${click(ask.card, 'approve_cta')}`);
     const done = await expect(owner, 'with the result', (m) => m.text.startsWith('Done'));
     const { approvals } = await d.api<{ approvals: Approval[] }>('GET', `/tasks/${t.id}`);
     d.check(approvals[0]?.state === 'approved' && approvals[0].by === 'asi1', 'clicking Approve in the chat answered it on the box, logged as asi1');

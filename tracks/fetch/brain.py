@@ -140,13 +140,20 @@ SORT = ("You sort messages sent to an agent that runs tasks on its owner's compu
         "'status' if the message checks on work already asked for: how it is going, whether it is done, or its result. "
         "'new' if it asks for new work. Tasks already asked for:\n{titles}")
 # The fallback when ASI:One cannot answer. ASI:One's planner checks on a task like this: "Status check: how is it going?"
-STATUS = re.compile(r"\bstatus (check|update)\b|\bhow(?:'s| is| are)\b.*\bgoing\b|\b(is it|has it) (done|finished|completed)\b")
+STATUS = re.compile(r"\bstatus\b|\bprogress\b|\bfollow[ -]?up\b|\bany (news|updates?)\b|\bhow(?:'s| is| are)\b.*\bgoing\b"
+                    r"|\b(is|has|have) (it|they|that|the [\w ]{1,40}?) (been )?(done|finished|completed)\b|\bdone yet\b")
+
+
+AT_ME = re.compile(r'^\s*@(agent1[0-9a-z]{38,}|[a-z0-9_-]{2,40})(?=\s|$)\s*', re.I)  # "@<agent address> " or "@handle "
 
 
 def asks_status(text, titles):
-    """Does this check on earlier work, or ask for new work? ASI:One's own model decides."""
+    """Does this check on earlier work, or ask for new work? The words of a check decide. (asi1-mini once took
+    "Is the Hario V60 filter back in stock?" for a check, so it now only confirms what the words already say.)"""
+    if not STATUS.search(text.lower()):
+        return False
     said = ask_model(SORT.format(titles='\n'.join(f'- {t}' for t in titles)), text)
-    return 'status' in said if said is not None else bool(STATUS.search(text.lower()))
+    return 'status' in said if said is not None else True
 
 
 def selection(text):
@@ -270,7 +277,8 @@ class Brain:
     # ---------- messages from the chat ----------
 
     def on_message(self, sender, session, text, card=None):
-        text = (text or '').strip()
+        # ASI:One's direct chat puts "@<agent address>" in front of every message, card clicks included.
+        text = AT_ME.sub('', text or '').strip()
         if not text:
             return
         try:
