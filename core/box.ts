@@ -23,6 +23,7 @@ import { VAULT_NAME, loadVault, removeVaultKey, writeVaultKey } from './vault.ts
 import { challenge, checkSso, noGroup, personId, provider, random, roleFor, verifyIdToken, whoIs, type Claims, type Sso } from './sso.ts';
 import * as push from './push.ts';
 import { APP, RELAY, Remote, SECRET_KEY } from './remote.ts';
+import * as quick from './quickstart.ts';
 
 type Handler = (method: string, url: URL, body: any, headers: http.IncomingHttpHeaders, req: http.IncomingMessage) => unknown;
 
@@ -296,6 +297,7 @@ class Core {
         return d.tripwire ? `An agent tried to send a decoy key out (${d.where}). GurtOS stopped and undid the task.` : undefined;
       case 'files':
         return d.fast === true ? `Fast folders: workspace ready in ${d.ms} ms` : d.fast === false ? `Fast folders not used: ${d.why}` : undefined;
+      case 'quickstart':
       case 'remote':
         return typeof d.text === 'string' ? d.text : undefined;
       case 'share':
@@ -1844,6 +1846,63 @@ class Core {
     }
   }
 
+  // ---------- Quick Start: set up a new computer from one you own, the phone as the bridge (core/quickstart.ts) ----------
+
+  /** This computer as the new one: made on first use. */
+  quickTarget?: quick.Target;
+  quickTargetFor() {
+    return (this.quickTarget ??= new quick.Target({
+      relay: RELAY,
+      app: APP,
+      apply: { putKey: (n, v, w) => this.putKey(n, v, w), changeSettings: (p, w) => this.changeSettings(p, w), enableApp: (id) => this.enableApp(id), disableApp: (id) => this.disableApp(id), setupStep: (k, st, d) => this.setupStep(k, st, d) },
+      apps: () => [...this.installed.keys()].filter((id) => id !== 'example').map((id) => ({ id, on: !this.disabled.has(id) })),
+      remoteOn: async () => {
+        if (!this.remote.saved) await this.remote.enableAuto(BOX_ID);
+        for (const until = Date.now() + 150_000; this.remote.state !== 'connected' && Date.now() < until; ) {
+          if (this.remote.state === 'error') throw new Error(this.remote.error ?? 'remote access failed');
+          await new Promise((r) => setTimeout(r, 1000));
+        }
+        if (this.remote.state !== 'connected') throw new Error('the address did not come up in time');
+        return this.remote.saved!.host;
+      },
+      ownerCode: () => this.pairStart(true).code,
+      note: (text, data) => this.write({ type: 'note', track: 'quickstart', data: { text, ...(data as object) } }),
+    }));
+  }
+
+  /** This computer as the source: sends waiting for the owner's named OK, ten minutes each. */
+  quickSends = new Map<string, quick.Pending>();
+
+  /** Vault keys a send may include: everything but the box's own (BOX_*). The model keys are ticked by default. */
+  sendableKeys() {
+    return [...this.vault.keys()].filter((k) => !k.startsWith('BOX_')).sort();
+  }
+
+  quickSend(req: http.IncomingMessage, id: string | undefined, body: any) {
+    const d = this.deviceOf(req);
+    if (!d?.owner) throw Object.assign(new Error('only a phone paired as the owner can send this computer\'s setup'), { status: 403 });
+    for (const [k, p] of this.quickSends) if (Date.now() - p.at > 10 * 60_000) this.quickSends.delete(k);
+    const apps = () => [...this.installed.keys()].filter((a) => !this.disabled.has(a) && a !== 'example');
+    if (!id) {
+      const p = quick.parseSend(body);
+      const keys = this.sendableKeys().filter((k) => quick.MODEL_KEYS.includes(k));
+      const sid = randomBytes(9).toString('base64url');
+      this.quickSends.set(sid, { ...p, keys, at: Date.now(), by: d.name });
+      return { id: sid, phrase: quick.phrase(p.pk), question: quick.question({ keys, apps: apps().length, n: p.n, pk: p.pk }), keys: this.sendableKeys().map((k) => ({ name: k, chosen: keys.includes(k) })) };
+    }
+    const p = this.quickSends.get(id);
+    if (!p) throw Object.assign(new Error('that Quick Start request expired; scan the new computer\'s code again'), { status: 404 });
+    this.quickSends.delete(id); // one answer
+    if (body?.approve !== true) return { sent: false };
+    const keys = Array.isArray(body.keys) ? this.sendableKeys().filter((k) => body.keys.includes(k)) : p.keys;
+    const b = quick.bundle({ from: this.boxName(), keys: Object.fromEntries(keys.map((k) => [k, this.vault.get(k)!])), settings: this.settings as never, apps: apps(), phonePk: p.phonePk });
+    return quick.deliver(RELAY, p, b).then(() => {
+      // Names only, never values; and the new computer's key, so the owner can match it later.
+      this.write({ type: 'note', track: 'quickstart', data: { text: `Quick Start: ${d.name} sent ${keys.length ? keys.join(', ') : 'no keys'}, ${b.apps.length} apps and spending rules to "${p.n}" (key ${quick.fingerprint(p.pk)})`, to: p.n, keys, pk: quick.fingerprint(p.pk) } });
+      return { sent: true, phrase: quick.phrase(p.pk) };
+    });
+  }
+
   /** One test push per device every 10 s, so a phone can't use up the box's push allowance at the relay. */
   lastTest = new Map<string, number>();
   testThrottle(d: Device) {
@@ -1868,6 +1927,16 @@ class Core {
     else if (p === '/push' && m === 'DELETE') act = () => (delete phone().push, this.saveDevices(), { subscribed: false });
     else if (p === '/push/test' && m === 'POST')
       act = async () => (this.testThrottle(phone()), await this.pushTo(phone(), { type: 'test', id: `test-${Date.now()}`, task: '', title: 'Notifications work', body: `${this.boxName()} will tell this phone when a task needs your OK.` }, 'test'), { sent: 1 });
+    const qsend = p.match(/^\/quickstart\/send(?:\/([A-Za-z0-9_-]{8,20}))?$/);
+    if (p === '/quickstart/start' && m === 'POST')
+      act = () => {
+        if (!(this.isLocal(req) && !this.serviceCaller(req))) throw Object.assign(new Error("Quick Start starts on the new computer's own screen"), { status: 403 });
+        if (this.setup.done) throw Object.assign(new Error('Quick Start is for a new computer, during setup'), { status: 409 });
+        return this.quickTargetFor().start(this.boxName());
+      };
+    else if (p === '/quickstart' && m === 'GET') act = () => (this.requireOwner(req), this.quickTarget?.view() ?? { state: 'off', steps: [] });
+    else if (p === '/quickstart/stop' && m === 'POST') act = () => (this.requireOwner(req), this.quickTarget?.stop() ?? { state: 'off', steps: [] });
+    else if (qsend && m === 'POST') act = (b) => this.quickSend(req, qsend[1], b);
     if (!act) return false;
     void (async () => {
       const json = (status: number, obj: unknown) => res.writeHead(status, { 'content-type': 'application/json' }).end(JSON.stringify(obj));

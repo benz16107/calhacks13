@@ -11,6 +11,7 @@ import os from 'node:os';
 import path from 'node:path';
 import type { DemoKit } from '../core/contract.ts';
 import { send } from '../core/push.ts';
+import { keyPair, open as openSealed, phrase } from '../core/quickstart.ts';
 import { nameProblem as boxRule } from '../core/remote.ts';
 import { RESERVED, load, nameProblem as relayRule, serve } from './server.ts';
 import { decrypt, testPhone } from './testphone.ts';
@@ -134,6 +135,26 @@ export default async function (d: DemoKit) {
   await raw('DELETE', '/api/pair/self', undefined, qrPhone);
   if (!setupDone) await d.api('POST', '/setup/reopen', {}); // leave setup as this step found it
 
+  // ---------- Quick Start: its guards, offline ----------
+  const qs = (u: URL) => new URLSearchParams(u.hash.slice(1));
+  const ownerCode = (await d.api('POST', '/pair/start', { owner: true })).code;
+  const ownerPhone = { authorization: `Bearer ${(await raw('POST', '/api/pair', { code: ownerCode, name: 'Owner phone' })).body.token}`, 'x-forwarded-for': '203.0.113.9' };
+  d.check((await raw('POST', '/api/quickstart/start', {})).status === 409, 'Quick Start only starts on a computer that is still in setup');
+  await d.api('POST', '/setup/reopen', {});
+  try {
+    const st = await d.api('POST', '/quickstart/start', {});
+    const qu = new URL(st.url);
+    d.check(qu.origin === 'https://app.gurtos.com' && qu.pathname === '/quickstart' && !qu.search && qs(qu).get('pk')?.length === 43 && (qs(qu).get('s') ?? '').length >= 22 && st.phrase === phrase(qs(qu).get('pk')!), "Quick Start's QR carries the new computer's one-time key, the secret and the rendezvous id after #, and its check phrase");
+    const send = { rv: qs(qu).get('rv'), pk: qs(qu).get('pk'), s: qs(qu).get('s'), n: 'Demo box', phonePk: keyPair().pk };
+    const plainCode = (await d.api('POST', '/pair/start', {})).code;
+    const plainPhone = { authorization: `Bearer ${(await raw('POST', '/api/pair', { code: plainCode, name: 'Family phone' })).body.token}`, 'x-forwarded-for': '203.0.113.10' };
+    d.check((await raw('POST', '/api/quickstart/send', send, plainPhone)).status === 403 && (await raw('POST', '/api/quickstart/send', { ...send, pk: 'x' }, ownerPhone)).status === 400, 'only a phone paired as the owner can send a setup, and a bad request is refused by field');
+    await raw('DELETE', '/api/pair/self', undefined, plainPhone);
+    d.check((await d.api('POST', '/quickstart/stop', {})).state === 'stopped', 'Stop on the new computer ends the session');
+  } finally {
+    await d.api('POST', '/setup/finish', {});
+  }
+
   if (!LIVE) return console.log('    (DEMO_LIVE=remote runs the real relay: a phone that scanned the QR turns remote access on, then a real certificate and a real push)');
 
   // ---------- live: the real relay ----------
@@ -187,6 +208,31 @@ export default async function (d: DemoKit) {
     } finally {
       tp.close();
     }
+    // ---------- live: Quick Start through the real relay (this box plays both computers) ----------
+    await d.api('DELETE', '/remote'); // the new computer starts without an address
+    await d.api('POST', '/setup/reopen', {});
+    const st = await d.api('POST', '/quickstart/start', {});
+    const f = qs(new URL(st.url));
+    const phone = keyPair();
+    const asked = await raw('POST', '/api/quickstart/send', { rv: f.get('rv'), pk: f.get('pk'), s: f.get('s'), n: f.get('n'), phonePk: phone.pk }, ownerPhone);
+    d.check(asked.status === 200 && asked.body.question.includes(`check phrase: ${st.phrase}`) && /^Send your .* and your spending rules to "/.test(asked.body.question), `live: the source asks its owner, naming what leaves: "${asked.body.question}"`);
+    const sent = await raw('POST', `/api/quickstart/send/${asked.body.id}`, { approve: true }, ownerPhone);
+    const done = await d.waitFor('Quick Start to finish on the new computer', async () => {
+      const v = await d.api('GET', '/quickstart');
+      if (v.state === 'error') throw new Error(v.error);
+      return v.state === 'done' ? v : undefined;
+    }, 200_000);
+    d.check(sent.body.sent === true && done.steps.some((x: any) => /app/.test(x.text)) && done.steps.some((x: any) => /^Reach from anywhere/.test(x.text)), `live: after the owner's OK, the new computer applied each step: ${done.steps.map((x: any) => x.text).join('; ')}`);
+    const sealedOwner = await (await fetch(`https://box.gurtos.com/v1/rv/${f.get('rv')}/owner`)).json();
+    const { host: qhost, code: qcode } = openSealed(phone.privateKey, f.get('s')!, sealedOwner as any);
+    const qp = (await (await fetch(`https://${qhost}/api/pair`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ code: qcode, name: 'Phone from Quick Start' }) })).json()) as any;
+    d.check(typeof qp.token === 'string' && (await fetch(`https://${qhost}/api/tasks`, { headers: { authorization: `Bearer ${qp.token}` } })).ok, 'live: only the phone could open its pairing code, and it paired with the new computer over https as the owner');
+    name = qhost.split('.')[0];
+    const again = await d.api('POST', '/quickstart/start', {});
+    const g = qs(new URL(again.url));
+    await d.api('POST', '/quickstart/stop', {});
+    const late = await raw('POST', '/api/quickstart/send', { rv: g.get('rv'), pk: g.get('pk'), s: g.get('s'), n: 'Demo box', phonePk: keyPair().pk }, ownerPhone);
+    d.check((await raw('POST', `/api/quickstart/send/${late.body.id}`, { approve: true }, ownerPhone)).status === 409, 'live: once the new computer pressed Stop, a late bundle is refused');
   } finally {
     await d.api('POST', '/setup/finish', {});
     const offAgain = await raw('DELETE', '/api/remote');
