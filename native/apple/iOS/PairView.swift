@@ -80,7 +80,8 @@ struct PairSheet: View {
     VStack(spacing: 0) {
       if DataScannerViewController.isSupported && DataScannerViewController.isAvailable {
         QRScanner { text in
-          if let l = PairingLink.parse(text) { link = l } else if let r = Rendezvous.parse(text) { rendezvous = r } else { error = "That QR code isn't a GurtOS pairing code." }
+          if let l = PairingLink.parse(text) { link = l } else if let r = Rendezvous.parse(text) { rendezvous = r }
+          else if let q = QuickStart.parse(text) { dismiss(); app.quickStart = q } else { error = "That QR code isn't a GurtOS pairing code." }
         }
         .ignoresSafeArea(edges: .horizontal)
       } else {

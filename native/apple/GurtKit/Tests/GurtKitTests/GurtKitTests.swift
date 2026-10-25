@@ -141,3 +141,24 @@ final class StubRelay: URLProtocol {
   StubRelay.answer = { req in req.url!.path.hasSuffix("/host") ? (200, #"{"host":"evil.example"}"#) : req.url!.path.hasSuffix("/ask") ? (200, "{}") : (204, "") }
   await #expect(throws: BoxError.self, "an address outside box.gurtos.com is refused") { try await r.resolve(session: StubRelay.session) }
 }
+
+@Test func quickStartOpensWhatCoreSeals() throws {
+  // Made by core/quickstart.ts seal() (commit 5319611) for this phone key and secret.
+  let key = try Curve25519.KeyAgreement.PrivateKey(rawRepresentation: Base64URL.decode("kPE7JbXst_Hz9T7dTYl_ZryIF5GpTFZ4_-EoxN9timY")!) // gitleaks:allow (test key)
+  #expect(Base64URL.encode(key.publicKey.rawRepresentation) == "7b0FcSLnTHu5y5mBujXm7KGFc_qg_gMh_G35BYrzIXo")
+  let q = QuickStart(rv: String(repeating: "r", count: 22), pk: String(repeating: "p", count: 43), s: "BQUFBQUFBQUFBQUFBQUFBQ", name: "New box")
+  let sealed = QuickStart.Sealed(v: 1, eph: "kN0aH8KYgNipakz4IrEyQD0eD0OJZ5iq1Hzh7-PYYjM", iv: "jIWwELKIqGy2rshD", ct: "RP2yuZrImZjrmrnnV6czrDcxa34acgMy_B-UAdea7ma1VBa8xivfLpBkLKnUrefoYcKHwRazzwwnroQ79Yor7xsDqQ")
+  #expect(try q.open(sealed, with: key) == PairingLink(box: URL(string: "https://new-box.box.gurtos.com")!, code: "ab12cd34"))
+  var other = q
+  other.s = "BgYGBgYGBgYGBgYGBgYGBg"
+  #expect(throws: (any Error).self, "a different QR secret can't open it") { try other.open(sealed, with: key) }
+}
+
+@Test func readsAQuickStartLink() {
+  let rv = String(repeating: "a", count: 22), pk = String(repeating: "B", count: 43)
+  let q = QuickStart.parse("https://app.gurtos.com/quickstart#rv=\(rv)&pk=\(pk)&s=\(String(repeating: "c", count: 22))&n=Home%20box")
+  #expect(q?.name == "Home box" && q?.pk == pk)
+  #expect(QuickStart.parse("https://app.gurtos.com/quickstart#rv=\(rv)&pk=short&s=\(String(repeating: "c", count: 22))") == nil)
+  #expect(QuickStart.parse("https://evil.example/quickstart#rv=\(rv)&pk=\(pk)&s=\(String(repeating: "c", count: 22))") == nil)
+  #expect(QuickStart.parse("https://app.gurtos.com/pair#rv=\(rv)&pk=\(pk)&s=\(String(repeating: "c", count: 22))") == nil)
+}

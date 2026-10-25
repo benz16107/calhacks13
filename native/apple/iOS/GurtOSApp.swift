@@ -75,6 +75,7 @@ final class AppState {
   func open(url: URL) {
     if let link = PairingLink.parse(url.absoluteString) { pending = link; pendingRendezvous = nil; showPair = true; return }
     if let r = Rendezvous.parse(url.absoluteString) { pending = nil; pendingRendezvous = r; showPair = true; return }
+    if let q = QuickStart.parse(url.absoluteString) { quickStart = q; return }
     // An app.gurtos.com link this app can't read: the web app, in Safari, rather than nothing.
     if url.host == "app.gurtos.com" { safari = url; return }
     guard url.scheme == "gurtos", let parts = URLComponents(url: url, resolvingAgainstBaseURL: false) else { return }
@@ -93,6 +94,8 @@ final class AppState {
   /** A link scanned with the Camera app, waiting for the person to confirm. */
   var pending: PairingLink?
   var pendingRendezvous: Rendezvous?
+  /** A new computer's Quick Start code, waiting for the owner. */
+  var quickStart: QuickStart?
   /** A link opened in Safari inside the app. */
   var safari: URL?
 
@@ -226,6 +229,7 @@ struct RootView: View {
     .sheet(isPresented: $app.showMachines) { MachinesSheet() }
     .sheet(isPresented: $app.showPair) { PairSheet(link: app.pending, rendezvous: app.pendingRendezvous) }
     .sheet(item: $app.safari) { SafariView(url: $0).ignoresSafeArea() }
+    .sheet(item: $app.quickStart) { QuickStartSheet(q: $0) }
     .task { app.model.start() }
   }
 }

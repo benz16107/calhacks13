@@ -26,6 +26,10 @@ pairing token of their own. The web app stays the option that needs no install.
   the computer to open an address for this phone. With `lan` it offers "Same Wi-Fi? Pair on this network", which
   pairs with the computer's home address directly. Without `rv` it says how to turn on Reach from anywhere. Once
   app.gurtos.com serves its app-site association, the iPhone Camera opens the app straight from the QR code.
+- **Quick Start**: scanning a new computer's Quick Start code (`app.gurtos.com/quickstart#rv=…&pk=…&s=…&n=…`) picks
+  a computer this phone owns, shows what it would send (the question, a four-word check phrase to compare, and the
+  keys as toggles), and sends only after Face ID. The new computer seals an owner pairing code to a one-time key this
+  phone made (X25519, HKDF-SHA256, AES-256-GCM, as core/quickstart.ts), and the phone pairs with it.
 - **Computers**: the title menu and the tile at the top right switch between paired computers (Computers, Add a computer), like switching
   accounts. Every computer keeps its own token, edition and, on Business, the person you are.
 - **Homes per edition**: Needs you, Running and the kill switch on Server; Ready for you with Keep changes and Undo
