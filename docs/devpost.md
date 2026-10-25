@@ -444,7 +444,7 @@ Public links (all open signed out): home page, start here https://www.mana.space
 8. **GoDaddy:** not entered (Ben, Oct 24). gurtos.com and the per-box `<name>.box.gurtos.com` addresses stay as they are, and there is no gurtos.co.
 9. **Coinbase.** Their track asks for a verified Coinbase account. Confirm it is verified.
 10. **Devpost link.** Once the project page exists, set `LINKS.devpost` in `showcase/src/data/site.ts`.
-11. **Stage log.** The showcase, this text and `docs/stagelog.md` agree: 56 sessions, 752 minutes, and every stage paragraph is under Figma's 200-word cap (the longest, Code generation, is 185 words).
+11. **Stage log.** The showcase, this text and `docs/stagelog.md` agree: 57 sessions, 755 minutes, and every stage paragraph is under Figma's 200-word cap (the longest, Code generation, is 185 words).
 12. **Apify.** Switch the Apify account's public profile on in the Console (Settings, Account); the API cannot do it. Then the Actor "Agent-Safe Page Reader" can be made public with the one command in `tracks/apify/README.md`, "Publishing the Actor", and the Best Actor row on the Apify page and this text can link its Store page.
 
 13. **Figma: three deliverables** (TK Dang and Stephanie Zhou, Slack, Oct 24): a demo video of 3 minutes at most, the Stage Log with 200 words at most per stage (done, see 11), and **Figma Slides (required)** holding the stage log (which Figma product and why), the demo video, the embedded Figma files (the Makes and the prototypes) and a link to the working code and repo. On Devpost: put the Figma Slides link in "Try it out" (it is there), select "[Figma] Best Figma Workflow Hack", and set the Slides file to "View all" sharing. The Figma thread owns making the deck hold all of that.
