@@ -4,7 +4,7 @@ export const VIDEOS: Record<string, string> = {
   main: '0ZlE6Z8VvKM',
   fetch: 'YkLOewsE2yw',
   atlassian: '',
-  figma: '',
+  figma: 'JI8PBEVwaCw',
   hyphenate: '90iEnbJtJoU',
   visa: '',
 };
