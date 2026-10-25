@@ -117,13 +117,22 @@ NFT
 fi
 # The egress guard is always ours (UFW's per-IP egress is awkward): a task is already confined to the fake web
 # by the box proxy; this makes sure even a host-level escape cannot reach the real boxes or any private network.
+#
+# The specific hosts to block (the real boxes and the relay) are NOT in this public repo. Pass them at setup time
+# in TRY_BLOCKED_IPS (space- or comma-separated IPv4/CIDR) or in the git-ignored file /etc/try/blocked-ips (one per
+# line). Without them the private ranges below still apply; add the public ones for full defence in depth.
+blocked=${TRY_BLOCKED_IPS:-}
+[ -z "$blocked" ] && [ -f /etc/try/blocked-ips ] && blocked=$(grep -vE '^[[:space:]]*(#|$)' /etc/try/blocked-ips | tr '\n' ' ')
+blocked_set=$(printf '%s' "$blocked" | tr ', ' '\n\n' | grep -E '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+(/[0-9]+)?$' | paste -sd, -)
+hosts_rule=""
+[ -n "$blocked_set" ] && hosts_rule="ip daddr { $blocked_set } drop"
 cat > /etc/nftables-try.conf <<NFT
 table inet try_guard {
   chain output {
     type filter hook output priority -10; policy accept;
     oif "lo" accept
-    # never reach the real boxes, the relay, or any private range
-    ip daddr { 104.207.151.249, 45.32.140.213, 140.82.51.9, 149.28.206.167, 104.238.181.14 } drop
+    # never reach the specific hosts in TRY_BLOCKED_IPS / /etc/try/blocked-ips, or any private range
+    ${hosts_rule}
     ip daddr { 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 100.64.0.0/10, 169.254.0.0/16 } drop
     ip6 daddr { fc00::/7, fe80::/10 } drop
   }
