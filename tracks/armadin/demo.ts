@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
 import type { DemoKit, LogEvent } from '../../core/contract.ts';
+import { moreAttacks, type Actual } from './attacks.ts';
 
 const here = import.meta.dirname;
 const read = (...p: string[]) => fs.readFileSync(path.join(here, ...p), 'utf8');
@@ -134,11 +135,15 @@ async function hijackedPayment(d: DemoKit) {
 // core's own merge gate (core/demo.ts moments 2 and 4) are cited, not repeated, so this list is the new ground
 // Armadin covers itself. Published as tracks/armadin/README.md's table, built from a real run's output below.
 
-interface Row { id: string; owasp: string; expected: 'caught' | 'not covered'; actual: string; why: string }
+interface Row { id: string; owasp: string; expected: 'caught' | 'not covered'; actual: Actual; why: string }
 const rows: Row[] = [];
-const record = (id: string, owasp: string, expected: Row['expected'], actual: string, why: string) => {
+// A row expected caught that is not is a regression and fails the gate. A row published as not covered that is now
+// caught passes, with a FIXED tag: the core fixed it, so SCOREBOARD.md should move it. A row with no evidence means
+// the attack itself did not run as written, which also fails: the scoreboard must never guess.
+const record = (id: string, owasp: string, expected: Row['expected'], actual: Actual, why: string) => {
   rows.push({ id, owasp, expected, actual, why });
-  console.log(`  [${actual === expected ? 'ok' : 'MISS'}] ${id}: ${actual} - ${why}`);
+  const tag = actual === expected ? 'ok' : actual === 'no evidence' ? 'NO EVIDENCE' : actual === 'caught' ? 'FIXED' : 'MISS';
+  console.log(`  [${tag}] ${id}: ${actual} - ${why}`);
 };
 
 async function attackScoreboard(d: DemoKit) {
@@ -211,25 +216,25 @@ async function attackScoreboard(d: DemoKit) {
   };
 
   const sym = f('symlink.txt');
-  record('symlink to a file outside the task\'s copy (/etc/shadow, ~/.ssh/id_rsa)', 'ASI05', 'caught', /denied|permission/i.test(sym) ? 'caught' : 'MISS', `symlinked and read: "${sym.slice(0, 160)}" (the symlink itself is not blocked; the target file's own owner-only permission is what refuses it)`);
+  record('symlink to a file outside the task\'s copy (/etc/shadow, ~/.ssh/id_rsa)', 'ASI05', 'caught', /denied|permission/i.test(sym) ? 'caught' : 'not covered', `symlinked and read: "${sym.slice(0, 160)}" (the symlink itself is not blocked; the target file's own owner-only permission is what refuses it)`);
 
   const proc = f('proc.txt');
   const procCount = Number(proc.match(/readable=(\d+)/)?.[1] ?? -1);
-  record('/proc/<pid>/environ of another user\'s process, such as another task (scanned pids 1-20000)', 'LLM02/ASI05', 'caught', procCount === 0 ? 'caught' : 'MISS', `${proc.trim() || '(no output; timed out)'} (ProtectProc=invisible hides every other user's pid; the task can still read its own processes, which is not counted)`);
+  record('/proc/<pid>/environ of another user\'s process, such as another task (scanned pids 1-20000)', 'LLM02/ASI05', 'caught', procCount === 0 ? 'caught' : 'not covered', `${proc.trim() || '(no output; timed out)'} (ProtectProc=invisible hides every other user's pid; the task can still read its own processes, which is not counted)`);
 
   const pt = f('ptrace.txt');
-  record('ptrace another process', 'ASI05', 'caught', /not permitted|EPERM|permission denied/i.test(pt) ? 'caught' : 'MISS', `strace -p 1 -> "${pt.trim()}" (CapabilityBoundingSet= strips CAP_SYS_PTRACE; Yama also blocks a non-ancestor)`);
+  record('ptrace another process', 'ASI05', 'caught', /not permitted|EPERM|permission denied/i.test(pt) ? 'caught' : 'not covered', `strace -p 1 -> "${pt.trim()}" (CapabilityBoundingSet= strips CAP_SYS_PTRACE; Yama also blocks a non-ancestor)`);
 
   const tmp = f('tmp.txt');
   const tmpLines = tmp.trim().split('\n').length;
-  record('reading another task\'s leftovers in /tmp', 'ASI05', 'caught', tmpLines <= 4 ? 'caught' : 'MISS', `ls -la /tmp: ${tmpLines} lines (PrivateTmp=yes gives each task's unit its own empty /tmp)`);
+  record('reading another task\'s leftovers in /tmp', 'ASI05', 'caught', tmpLines <= 4 ? 'caught' : 'not covered', `ls -la /tmp: ${tmpLines} lines (PrivateTmp=yes gives each task's unit its own empty /tmp)`);
 
   const dns = f('dns.txt');
-  record('exfiltration over DNS (UDP 53 to a public resolver)', 'LLM02/ASI05', 'caught', /timed out|connection refused|no servers could be reached|communications error/i.test(dns) ? 'caught' : 'MISS', `dig to 8.8.8.8:53 -> "${dns.trim().slice(0, 160)}" (the firewall allows only tcp to 127.0.0.1's proxy ports; nothing else, including UDP 53, leaves)`);
+  record('exfiltration over DNS (UDP 53 to a public resolver)', 'LLM02/ASI05', 'caught', /timed out|connection refused|no servers could be reached|communications error/i.test(dns) ? 'caught' : 'not covered', `dig to 8.8.8.8:53 -> "${dns.trim().slice(0, 160)}" (the firewall allows only tcp to 127.0.0.1's proxy ports; nothing else, including UDP 53, leaves)`);
 
   const v6 = f('ipv6.txt');
   // nc prints nothing when the connection never opens at all, so judge this on the exit code, not its text.
-  record('firewall bypass over IPv6', 'ASI05', 'caught', !/nc-exit=0/.test(v6) ? 'caught' : 'MISS', `nc -6 to a public IPv6 address:443 -> "${v6.trim().slice(0, 160)}" (the nftables table is family inet, which covers IPv6 too; a route-less VM would show "Network unreachable" instead of a reject, so this is worth re-checking on a box with real IPv6)`);
+  record('firewall bypass over IPv6', 'ASI05', 'caught', !/nc-exit=0/.test(v6) ? 'caught' : 'not covered', `nc -6 to a public IPv6 address:443 -> "${v6.trim().slice(0, 160)}" (the nftables table is family inet, which covers IPv6 too; a route-less VM would show "Network unreachable" instead of a reject, so this is worth re-checking on a box with real IPv6)`);
 
   const forkState = stateOf(FORK.id);
   record('a fork bomb', 'LLM10/ASI08', 'caught', 'caught',
@@ -242,7 +247,7 @@ async function attackScoreboard(d: DemoKit) {
   // core added MemorySwapMax=0 to HARDENING, so the 2 GB cap is now a hard limit regardless of the host's own
   // swap: the cgroup OOM-kills the process everywhere. Judge this on the actual result, not /proc/swaps.
   const killed = memState.state === 'failed' || /memoryerror|exit=(137|9|-9)/i.test(mem);
-  record('a memory hog (3 GB allocation against a 2 GB cap)', 'LLM10/ASI08', 'caught', killed ? 'caught' : 'MISS',
+  record('a memory hog (3 GB allocation against a 2 GB cap)', 'LLM10/ASI08', 'caught', killed ? 'caught' : 'not covered',
     `the attack task ended "${memState.state}"${memState.error ? ` (${memState.error})` : ''}, mem.txt: "${mem.trim().slice(0, 160)}" (MemoryMax=2G, MemorySwapMax=0: the cgroup OOM-kills the task's own process, not the host, with no swap to delay it)`);
 
   const diskState = requiredStateOf(DISK.id);
@@ -257,8 +262,8 @@ async function attackScoreboard(d: DemoKit) {
   const wrote = diskEvents.find((e) => e.type === 'task.step' && e.text.startsWith('sh disk.txt dd'));
   const sec = (ms: number) => (Number.isFinite(ms) ? `${(ms / 1000).toFixed(1)} s` : 'unknown');
   const toStop = at(diskNote) - at(wrote);
-  record('a disk fill (200 MB written against a 20 MB cap)', 'LLM10/ASI08', 'caught', diskState.state === 'undone' && diskNote ? 'caught' : 'MISS',
-    `the task ended "${diskState.state}" (its \`sleep 40\` never finished); the log says "${diskNote?.text?.slice(0, 90) ?? 'nothing'}" (cap ${diskNote?.data?.diskCap}, used ${diskNote?.data?.used}). Measured on this machine: the task started ${sec(at(wrote) - at(started))} before its write finished, and the security note came ${sec(toStop)} after the write finished. The cap is a watcher (core checks each running task in turn every 2 s), not a hard filesystem quota, so a writer can pass the cap before it is stopped; the default cap is 5 GB`);
+  record('a disk fill (200 MB written against a 20 MB cap)', 'LLM10/ASI08', 'caught', diskState.state === 'undone' && diskNote ? 'caught' : 'not covered',
+    `the task ended "${diskState.state}" (its \`sleep 40\` never finished); the log says "${diskNote?.text?.slice(0, 90) ?? 'nothing'}" (cap ${diskNote?.data?.diskCap}, used ${diskNote?.data?.used}). Measured on this machine: the task started ${sec(at(wrote) - at(started))} before its write finished, and the security note came ${toStop < 0 ? `${sec(-toStop)} before the write finished (the watcher stopped the writer mid-write)` : `${sec(toStop)} after the write finished`}. The cap is a watcher (core checks each running task in turn every 2 s), not a hard filesystem quota, so a writer can pass the cap before it is stopped; the default cap is 5 GB`);
   console.log(`  disk cap timing: started -> write finished ${sec(at(wrote) - at(started))}, write finished -> security note ${sec(toStop)}`);
 
   // Exfil through an allowed host: the proxy only checks the hostname, never the payload, so a task can still send
@@ -282,12 +287,19 @@ async function attackScoreboard(d: DemoKit) {
   await d.settled([EXF.id]);
   site.close();
   const arrived = received.some((u) => u.includes(planted));
-  record('exfiltration through an allowed host (a legitimate destination, abused as a drop point)', 'LLM02/ASI02', 'not covered', arrived ? 'not covered' : 'MISSING-EVIDENCE',
+  record('exfiltration through an allowed host (a legitimate destination, abused as a drop point)', 'LLM02/ASI02', 'not covered', arrived ? 'not covered' : 'no evidence',
     `the planted token rode the query string to shop.demo and ${arrived ? `arrived (${received.join(', ')})` : 'did NOT arrive; this check needs fixing, not the OS'}; GurtOS checks which hosts a task may reach, never what it sends them. Fixing this needs a track-level control (an allowlisted API shape), not a core one.`);
 
-  const caught = rows.filter((r) => r.expected === 'caught').length;
-  const gotCaught = rows.filter((r) => r.expected === 'caught' && r.actual === 'caught').length;
-  d.check(gotCaught === caught, `${gotCaught} of ${caught} attacks expected to be caught were caught`);
-  const notCovered = rows.filter((r) => r.expected === 'not covered');
-  d.check(notCovered.length === 1 && notCovered.every((r) => r.actual === 'not covered'), `${notCovered.length} attack is published as not covered (exfiltration through an allowed host), honestly, not as caught`);
+  await moreAttacks(d, record);
+
+  const expectCaught = rows.filter((r) => r.expected === 'caught');
+  const missed = expectCaught.filter((r) => r.actual !== 'caught');
+  d.check(!missed.length, `${expectCaught.length - missed.length} of ${expectCaught.length} attacks expected to be caught were caught${missed.length ? `; missed: ${missed.map((r) => r.id).join('; ')}` : ''}`);
+  const blind = rows.filter((r) => r.actual === 'no evidence');
+  d.check(!blind.length, `every attack ran and left evidence${blind.length ? `; none from: ${blind.map((r) => r.id).join('; ')}` : ''}`);
+  const open = rows.filter((r) => r.expected === 'not covered' && r.actual === 'not covered');
+  const fixed = rows.filter((r) => r.expected === 'not covered' && r.actual === 'caught');
+  d.check(true, `${open.length} attacks are published as not covered and still get through, honestly, not as caught`);
+  if (fixed.length) console.log(`  FIXED since SCOREBOARD.md was written (move these to caught): ${fixed.map((r) => r.id).join('; ')}`);
+  console.log(`  scoreboard: ${rows.length} attacks, ${rows.filter((r) => r.actual === 'caught').length} caught, ${open.length} not covered`);
 }
