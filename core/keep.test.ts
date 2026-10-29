@@ -198,3 +198,17 @@ test("a file root writes into a task's home never goes through a link the task l
   assert.equal(fs.readFileSync(path.join(home9, '.factory', 'settings.json'), 'utf8'), '{"customModels":[1]}');
   assert.equal(fs.readFileSync(path.join(home9, '.factory', 'sessions', 's1'), 'utf8'), 'session', "Droid's sessions stay, so a resumed task can carry on");
 });
+
+test("a task with thousands of changed files cannot hold the box while its diff is shown: empty files start no process, and 200 files are compared", () => {
+  fs.mkdirSync(sb.dirs.workspace('many'), { recursive: true });
+  const task = { id: 'tmany', workspace: 'many', layers: [] } as unknown as Task;
+  const dir = path.join(sb.dirs.upper('tmany'), 'many');
+  fs.mkdirSync(dir, { recursive: true });
+  for (let i = 0; i < 3000; i++) fs.writeFileSync(path.join(dir, String(i).padStart(4, '0')), i < 100 ? '' : `line ${i}\n`);
+  const t0 = performance.now();
+  const d = sb.diff(task);
+  const ms = performance.now() - t0;
+  assert.equal(d.changes.length, 3000, 'every change is still listed');
+  assert.equal((d.diff.match(/^\+\+\+ /gm) ?? []).length, 100, 'of the first 200, the 100 empty files show nothing; the other 100 are compared, and no more');
+  assert.ok(ms < 3000, `took ${Math.round(ms)} ms`);
+});

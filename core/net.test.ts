@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { Tries, destination, factoryPath, fetchesOnItsOwn, fromScreen, sourceOf, withKey } from './net.ts';
+import http from 'node:http';
+import net from 'node:net';
+import { MAX_MODEL_BODY, Tries, allowed, uidOf, anthropicPath, destination, factoryPath, fetchesOnItsOwn, fromScreen, sourceOf, startProxy, withKey } from './net.ts';
+import type { Task } from './contract.ts';
 
 test('a task reaches a name on the box only on the exact host:port it was given, never a box port', async () => {
   assert.match((await destination(['localhost:5555'], 'localhost', '5555')) ?? '', /^(127\.0\.0\.1|::1)$/); // either loopback: the OS decides which one "localhost" is
@@ -88,4 +91,66 @@ test('only the Factory calls Droid makes are relayed with the owner\'s Factory k
     assert.ok(factoryPath(ok), ok);
   for (const no of ['/api/connectors/tools/call', '/api/sessions', '/api/feature-flags/x', '/api/billing/limits/../keys', '/v1/messages', '/'])
     assert.ok(!factoryPath(no), no);
+});
+
+test('only the Anthropic calls Droid makes are relayed with the owner\'s Anthropic key', () => {
+  for (const ok of ['/v1/messages', '/v1/messages/count_tokens', '/v1/models', '/v1/models/claude-haiku-4-5']) assert.ok(anthropicPath(ok), ok);
+  for (const no of ['/v1/files', '/v1/messages/batches', '/v1/skills', '/v1/organizations/users', '/v1/complete', '/v1/models/../files', '/'])
+    assert.ok(!anthropicPath(no), no);
+});
+
+test('a wildcard host with a port matches its subdomains on that port only', () => {
+  assert.ok(allowed(['*.example.com:443'], 'api.example.com', '443'));
+  assert.ok(!allowed(['*.example.com:443'], 'api.example.com', '80'));
+  assert.ok(!allowed(['*.example.com:443'], 'example.com', '443'), 'the subdomains, not the name itself');
+  assert.ok(allowed(['*.example.com'], 'a.b.example.com', '8080'));
+  assert.ok(allowed(['example.com:8080'], 'example.com', '8080') && !allowed(['example.com:8080'], 'example.com', '80'));
+  assert.ok(!allowed(['*.example.com'], 'badexample.com', '443'));
+});
+
+test('the proxy reads every model call: no compressed or non-JSON body, at most 32 MB each and 64 MB a task at once', async () => {
+  process.env.BOX_PROXY_PORT = 'auto';
+  const blocked: string[] = [];
+  const task = { id: 'tproxytest', worker: 'droid', hosts: [] } as unknown as Task;
+  const port = await startProxy(
+    { taskOf: () => task, blocked: (_t, host) => blocked.push(host), leaked: () => false, factoryKey: () => 'fk-real', anthropicKey: () => undefined },
+    { key: Buffer.from(''), cert: Buffer.from('') },
+  );
+  // A plain path is Droid's Factory API (FACTORY_API_BASE_URL); its model calls are read before they go on.
+  const send = (headers: Record<string, string>, body?: Buffer, end = true) =>
+    new Promise<{ status: number; req: http.ClientRequest }>((resolve) => {
+      const req = http.request({ host: '127.0.0.1', port, path: '/api/llm/a/v1/messages', method: 'POST', headers });
+      req.on('response', (r) => (r.resume(), resolve({ status: r.statusCode ?? 0, req })));
+      req.on('error', () => {});
+      if (body) req.write(body);
+      if (end) req.end();
+    });
+  try {
+    assert.equal((await send({ 'content-encoding': 'gzip', 'content-type': 'application/json' }, Buffer.from('x'))).status, 415, 'a compressed body is refused');
+    assert.equal((await send({ 'content-type': 'application/json' }, Buffer.from('not json'))).status, 415, 'a body the box cannot read is refused');
+    assert.ok(blocked.some((b) => /gzip/.test(b)) && blocked.some((b) => /not JSON/.test(b)), 'both are logged as blocked');
+    assert.equal((await send({ 'content-length': String(MAX_MODEL_BODY + 1) }, Buffer.alloc(MAX_MODEL_BODY + 1, 32))).status, 413, 'over 32 MB in one call');
+    // Two calls of 30 MB held open, then a third: together past 64 MB.
+    const big = Buffer.alloc(30 * 1024 ** 2, 32);
+    const open = [0, 1].map(() => http.request({ host: '127.0.0.1', port, path: '/api/llm/a/v1/messages', method: 'POST', headers: { 'content-length': String(big.length + 1) } }).on('error', () => {}));
+    for (const r of open) r.write(big);
+    await new Promise((r) => setTimeout(r, 300));
+    assert.equal((await send({ 'content-length': String(big.length + 1) }, big, false)).status, 413, 'a third call past 64 MB at once');
+    for (const r of open) r.destroy();
+  } finally {
+    delete process.env.BOX_PROXY_PORT;
+  }
+});
+
+test('the owner of each loopback connection is found from /proc/net/tcp', async () => {
+  const seen: (number | undefined)[] = [];
+  const server = net.createServer((sock) => void seen.push(uidOf(sock)));
+  await new Promise<void>((r) => server.listen(0, '127.0.0.1', r));
+  const port = (server.address() as net.AddressInfo).port;
+  const clients = await Promise.all(Array.from({ length: 200 }, () => new Promise<net.Socket>((r) => { const c = net.connect(port, '127.0.0.1', () => r(c)); })));
+  for (let i = 0; i < 200 && seen.length < 200; i++) await new Promise((r) => setTimeout(r, 20));
+  for (const c of clients) c.destroy();
+  server.close();
+  assert.equal(seen.length, 200);
+  assert.ok(seen.every((u) => u === process.getuid!()), 'every connection is ours');
 });

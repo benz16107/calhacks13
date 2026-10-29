@@ -208,8 +208,9 @@ export function writeHomeFile(task: Task, ids: { uid: number; gid: number }, rel
 
 const WORKERS = new URL('./workers/', import.meta.url).pathname;
 
-// What a task's worker may not do, on top of being its own user: see other processes, share /tmp, write
-// outside its copy and home, use devices, gain privileges, reach D-Bus, or use more than its share.
+// What a task's worker may not do, on top of being its own user: see other processes, share /tmp, /dev/shm or
+// System V IPC, write outside its copy and home, use devices, gain privileges, make namespaces, reach D-Bus or any
+// address but the box itself, or use more than its share.
 const HARDENING = [
   'NoNewPrivileges=yes',
   'ProtectProc=invisible',
@@ -217,6 +218,14 @@ const HARDENING = [
   'ProtectSystem=strict',
   'ProtectHome=yes',
   'PrivateDevices=yes',
+  // PrivateDevices still binds the machine's /dev/shm: a task gets its own, in memory (counted in its 2 GB), gone when
+  // it stops. 256 MB, not 64: a headless Chrome needs more.
+  'TemporaryFileSystem=/dev/shm:size=256M,mode=1777',
+  'PrivateIPC=yes',
+  'RestrictNamespaces=yes', // no user namespace (root inside it), whatever the host's own limit
+  // The firewall (net.ts) refuses and logs; this drops anything but loopback even when the firewall did not load.
+  'IPAddressDeny=any',
+  'IPAddressAllow=localhost',
   'CapabilityBoundingSet=',
   'RestrictSUIDSGID=yes',
   'InaccessiblePaths=-/run/dbus',
@@ -349,14 +358,18 @@ export function changes(task: Task): Change[] {
 }
 
 /** What a task changed, from its own layer only, and a unified diff of it. */
+/** Files a diff compares at most, each with its own `diff` process on the box's only thread: a task that made 3,000 held it 6 s. */
+const DIFF_FILES = 200;
+
 export function diff(task: Task, maxBytes = 200_000): { changes: Change[]; diff: string } {
   const upper = dirs.upper(task.id);
   const lowers = lowersOf(task);
   const below = (rel: string) => holder(lowers, rel);
   const changes = changesOf(task);
   let text = '';
+  let compared = 0;
   for (const c of changes) {
-    if (text.length > maxBytes) break;
+    if (text.length > maxBytes || compared++ >= DIFF_FILES) break; // the list of changes stays whole
     const before = c.change === 'added' ? undefined : below(c.path);
     if (c.change === 'deleted' && before && fs.lstatSync(path.join(before, c.path)).isDirectory()) continue; // a removed folder: its files are listed one by one
     text += diffFiles(c.path, before ? { root: before, rel: c.path } : undefined, c.change === 'deleted' ? undefined : { root: upper, rel: c.path });
@@ -407,6 +420,8 @@ function diffFiles(p: string, a?: { root: string; rel: string }, b?: { root: str
       const db = b && (fb === undefined ? describe(path.join(b.root, b.rel)) : '(a file)');
       return `--- a/${p}\n+++ b/${p}\n@@ -${da ? 1 : '0,0'} +${db ? 1 : '0,0'} @@\n${da ? `-${da}\n` : ''}${db ? `+${db}\n` : ''}`;
     }
+    // Nothing on either side (an empty file made or removed): no lines to show, and no process to start.
+    if ((fa === undefined || !fs.fstatSync(fa).size) && (fb === undefined || !fs.fstatSync(fb).size)) return '';
     // The child reads the open files as /dev/fd/3 and /dev/fd/4, so no path is looked up again.
     const r = spawnSync('diff', ['-u', '--label', `a/${p}`, '--label', `b/${p}`, fa === undefined ? '/dev/null' : '/dev/fd/3', fb === undefined ? '/dev/null' : '/dev/fd/4'], {
       encoding: 'utf8',
@@ -424,6 +439,8 @@ type ReplayChange = Change & { big?: true };
 type Replay = { points: { seq: number; changes: ReplayChange[] }[]; capped?: true; state: Record<string, string>; bytes: number };
 const BIG = 1024 ** 2; // files over 1 MB are noted, not kept
 const CAP = 50 * 1024 ** 2; // per task
+const BLOCK = 4096; // a kept file counts as at least one disk block, so many empty files reach the cap too
+const MAX_WALK = 20_000; // entries looked at in one step: a layer with more stops the recording (it runs on the box's only thread)
 const replayFile = (id: string) => path.join(dirs.task(id), 'replay.json');
 const readReplay = (id: string): Replay => {
   try {
@@ -441,8 +458,10 @@ export function recordReplay(task: Task, seq: number) {
   const r = readReplay(task.id);
   if (r.capped) return;
   const now: Record<string, string> = {};
+  let seen = 0;
   const walk = (rel: string) => {
     for (const name of fs.readdirSync(path.join(upper, rel))) {
+      if (++seen > MAX_WALK) return;
       const p = path.join(rel, name);
       const st = fs.lstatSync(path.join(upper, p));
       if (st.isCharacterDevice() && st.rdev === 0) now[p] = 'deleted'; // overlayfs whiteout
@@ -451,6 +470,10 @@ export function recordReplay(task: Task, seq: number) {
     }
   };
   walk('');
+  if (seen > MAX_WALK) {
+    r.capped = true;
+    return void fs.writeFileSync(replayFile(task.id), JSON.stringify(r), { mode: 0o600 });
+  }
   const lowers = lowersOf(task);
   const below = (rel: string) => lowers.some((l) => fs.existsSync(path.join(l, rel)));
   const out: ReplayChange[] = [];
@@ -466,7 +489,7 @@ export function recordReplay(task: Task, seq: number) {
       out.push({ path: p, change, big: true });
       continue;
     }
-    if (r.bytes + size > CAP) {
+    if (r.bytes + Math.max(size, BLOCK) > CAP) {
       r.capped = true;
       break;
     }
@@ -479,7 +502,7 @@ export function recordReplay(task: Task, seq: number) {
     } finally {
       fs.closeSync(fd);
     }
-    r.bytes += size;
+    r.bytes += Math.max(size, BLOCK);
     out.push({ path: p, change });
   }
   for (const p of Object.keys(r.state)) if (!(p in now)) out.push({ path: p, change: 'deleted' }); // a file it made, then removed
@@ -506,11 +529,12 @@ export function diffAt(task: Task, seq: number, maxBytes = 200_000): { changes: 
   const below = (rel: string) => holder(lowers, rel);
   const changes: ReplayChange[] = [];
   let text = '';
+  let compared = 0;
   for (const [p, v] of [...view.entries()].sort(([a], [b]) => a.localeCompare(b))) {
     const before = below(p);
     if (v.change === 'deleted' && !before) continue; // made and removed within the task: nothing to show
     changes.push({ path: p, change: v.change === 'deleted' ? 'deleted' : before ? 'modified' : 'added', ...(v.big ? { big: true } : {}) });
-    if (v.big || text.length > maxBytes) continue;
+    if (v.big || text.length > maxBytes || compared++ >= DIFF_FILES) continue;
     text += diffFiles(p, before ? { root: before, rel: p } : undefined, v.file ? { root: v.file.slice(0, -p.length - 1), rel: p } : undefined);
   }
   return { changes, diff: text.slice(0, maxBytes) };
@@ -751,13 +775,28 @@ export function workerError(task: Task): string | undefined {
 /** Put the task's file changes on disk, so a step the log calls done survives a power cut. */
 export const flush = (task: Task) => tryRun('sync', '-f', dirs.upper(task.id));
 
-/** How much the task's own layer holds, in bytes (du -sb: apparent size, so a sparse file counts in full). */
-export async function layerBytes(task: Task): Promise<number> {
+/** The task's private /tmp and /var/tmp (systemd's PrivateTmp): on the machine's disk, removed when its unit stops. */
+const privateTmps = (task: Task) =>
+  ['/tmp', '/var/tmp'].flatMap((d) => {
+    try {
+      return fs.readdirSync(d).filter((n) => n.startsWith('systemd-private-') && n.includes(`-box-task-${task.id}.service-`)).map((n) => path.join(d, n));
+    } catch {
+      return [];
+    }
+  });
+
+/**
+ * How much disk the task uses, in bytes: its layer, its home and its private /tmp (du -sb: apparent size, so a sparse
+ * file counts in full, and a file linked in two of them counts once). Its /dev/shm is memory, in its 2 GB.
+ */
+export async function diskBytes(task: Task): Promise<number> {
+  const parts = [dirs.upper(task.id), path.join(dirs.task(task.id), 'home'), ...privateTmps(task)].filter((d) => fs.existsSync(d));
+  if (!parts.length) return 0;
+  const total = (out = '') => Number(/(\d+)\s+total\s*$/.exec(out)?.[1]) || 0;
   try {
-    const { stdout } = await exec('du', ['-sb', '--one-file-system', dirs.upper(task.id)]);
-    return Number(stdout.split(/\s/)[0]) || 0;
-  } catch {
-    return 0;
+    return total((await exec('du', ['-sbc', '--one-file-system', ...parts])).stdout);
+  } catch (e) {
+    return total((e as { stdout?: string }).stdout); // a file removed while du counted: it still prints the total
   }
 }
 
@@ -801,11 +840,11 @@ export function seal(task: Task) {
   }
 }
 
-/** Delete an undone task's files: its layer, scratch space and copy. The caller makes sure nothing still reads them. */
+/** Delete an undone task's files: its layer, scratch space, copy and home. The caller makes sure nothing still reads them. */
 export function purge(task: Task) {
   fs.rmSync(path.join(dirs.task(task.id), 'replay'), { recursive: true, force: true }); // the recording goes with the layer
   fs.rmSync(replayFile(task.id), { force: true });
-  for (const d of ['upper', 'work', 'base', 'root']) {
+  for (const d of ['upper', 'work', 'base', 'root', 'home']) {
     const dir = path.join(dirs.task(task.id), d);
     if (!fs.existsSync(dir)) continue;
     if (fs.readFileSync('/proc/self/mountinfo', 'utf8').includes(` ${dir} `)) continue; // still mounted: leave it

@@ -28,8 +28,9 @@ for s in /org/kernel/linux/storage/multipathd ISCSIADM_ABSTRACT_NAMESPACE; do
   say abstract "$s $(python3 -c "import socket,sys;s=socket.socket(socket.AF_UNIX);s.settimeout(2);s.connect('\0'+sys.argv[1]);print('connected')" "$s" 2>&1 | tail -1)"
 done
 
-# The lock the box takes before it publishes its SpacetimeDB module. Taken and let go at once, so no other run waits.
-say lock "$(timeout 3 flock -n -x -o /run/lock/box-spacetime-cli.lock -c 'echo took it' 2>&1; echo "exit=$?")"
+# The lock the box takes before it publishes its SpacetimeDB module (in /run/box, root's alone, since 2026-10-29).
+# Taken and let go at once, so no other run waits.
+say lock "$(timeout 3 flock -n -x -o /run/box/spacetime-cli.lock -c 'echo took it' 2>&1; echo "exit=$?")"
 
 # A listener on 127.0.0.1 in the proxy's port range that is not a proxy: straight there, around the proxy.
 printf "direct-$3" | timeout 3 nc -w1 127.0.0.1 "$2" >/dev/null 2>&1; say direct "nc exit=$?"

@@ -48,7 +48,7 @@ let box: ReturnType<typeof spawn> | undefined;
 let PORT = 0; // the box's API port, which the box picks and writes to BOX_HOME/api.port
 // The owner's test folders live here, not in the box's own directory (agents are never given that).
 const OWNER_ROOT = `/tmp/gurt-demo-owner-${run}`;
-const DEFAULT_THRESHOLD = 10_000; // the approval threshold setting's default
+const DEFAULT_THRESHOLD = 10_000; // the approval threshold the rest of this demo runs at (a new box's is 500, $5)
 const WINDOW = 600; // the approval wait window; short here so a long wait is quick to act out (a fake clock)
 
 // Real Droid tasks spend Factory credit, so they are off unless asked for: DEMO_LIVE=droid ./demo (or --live-droid).
@@ -1218,6 +1218,17 @@ await moment('security: a task cannot lower its spend, read through a link, hang
   await api('POST', `/api/approvals/${encodeURIComponent(otherAsk.id)}`, { approved: false });
   check(win.status === 200 && page.status === 200 && /sandbox allow-scripts/.test(page.csp) && !/allow-same-origin/.test(page.csp) && ownRoute.status === 200 && readsOk.status === 200 && preflight.status === 204 && preflight.acao === 'null', `an app's page is served sandboxed ("${page.csp.slice(0, 32)}..."), and its window token reaches the app's own routes and the task list`);
   check(refused.every((r) => r.status === 403) && crossAnswer.status === 403, `but not the vault, settings, pairing, another app or another window (${refused.map((r) => r.status).join(' ')}), and it answers only its own app's requests (${crossAnswer.status})`);
+  // Shopper's Face ID page is the one page listed in an app's ownOrigin (WebAuthn needs a real origin); every other page,
+  // Shopper's own app page included, stays sandboxed. The token script goes after a doctype, so no page is in quirks mode.
+  const get = (p: string) => new Promise<{ status: number; csp: string; body: string }>((resolve, reject) => {
+    http.get({ host: '127.0.0.1', port: PORT, path: p, headers: { accept: 'text/html' } }, (r) => {
+      let body = '';
+      r.on('data', (c) => (body += c)).on('end', () => resolve({ status: r.statusCode ?? 0, csp: String(r.headers['content-security-policy'] ?? ''), body }));
+    }).on('error', reject);
+  });
+  const [approvePage, shopperPage] = await Promise.all([get('/t/shopper/approve'), get('/t/shopper/')]);
+  check(approvePage.status === 200 && !/sandbox/.test(approvePage.csp) && /sandbox allow-scripts/.test(shopperPage.csp) && /^<!doctype html><script>/i.test(approvePage.body) && /^<!doctype html><script>/i.test(shopperPage.body),
+    `Shopper's Face ID page keeps the box's own origin (CSP "${approvePage.csp}"), its app page is sandboxed, and each page starts with its doctype, then the token script`);
   await api('DELETE', `/api/devices/${(await api<{ id: string; name: string }[]>('GET', '/api/devices')).find((d) => d.name === 'plain phone')!.id}`);
   check((await viaTcp('GET', '/t/example/secret-check', undefined, w)).status === 401, 'removing the phone that opened the window ends the window too');
 
@@ -1464,7 +1475,8 @@ await moment('business: sign in with a work account (OpenID Connect, roles from 
 
 // Last, because it restarts the box with its phones unpaired.
 await moment('security: a box whose state files were torn by a failing disk still starts, and waits for its owner', async () => {
-  for (const f of ['devices.json', 'permissions.json', 'owner.json']) fs.writeFileSync(path.join(HOME, f), '{"half": ');
+  // settings.json (the kill switch, limits), setup.json and business.json too: none may fall back silently to a default.
+  for (const f of ['devices.json', 'permissions.json', 'owner.json', 'settings.json', 'setup.json', 'business.json']) fs.writeFileSync(path.join(HOME, f), '{"half": ');
   process.kill(-box!.pid!, 'SIGKILL');
   await sleep(300);
   for (const m of mountsUnder(HOME)) execFileSync('umount', ['-l', m]);
@@ -1472,7 +1484,9 @@ await moment('security: a box whose state files were torn by a failing disk stil
   const set = fs.readdirSync(HOME).filter((f) => /\.torn-\d+$/.test(f));
   const pause = await api<{ paused: boolean; via: string | null }>('GET', '/api/pause');
   const note = (await api<LogEvent[]>('GET', '/api/log')).findLast((e) => e.type === 'note' && (e as { track?: string }).track === 'security');
-  check(set.length === 3 && pause.paused && (await api<unknown[]>('GET', '/api/devices')).length === 0 && /could not read/.test((note as { text?: string })?.text ?? ''), `it starts with the torn files set aside (${set.length}), no paired phones, and its agents paused until the owner checks the permissions ("${pause.via}")`);
+  const setup = await api<{ done?: boolean }>('GET', '/api/setup');
+  check(set.length === 6 && pause.paused && /settings\.json/.test(pause.via ?? '') && setup.done === true && (await api<unknown[]>('GET', '/api/devices')).length === 0 && /could not read/.test((note as { text?: string })?.text ?? ''),
+    `it starts with the torn files set aside (${set.length}), no paired phones, setup still done, and its agents paused until the owner checks ("${pause.via}"; "${(note as { text?: string })?.text?.slice(-90)}")`);
   await api('PATCH', '/api/settings', { paused: false });
 });
 

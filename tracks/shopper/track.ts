@@ -688,6 +688,8 @@ export default {
     },
   ],
 
+  // Face ID (WebAuthn) cannot run in a sandboxed page with no origin, so the approve page keeps the box's own.
+  ownOrigin: ['GET /approve'],
   routes: {
     'GET /': file('app.html', 'text/html'),
     'GET /passkey.js': file('passkey.js', 'text/javascript'),

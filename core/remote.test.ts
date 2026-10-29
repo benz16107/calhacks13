@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
-import { RELAY, Remote, checkRelay, relayProblem } from './remote.ts';
+import { DEFAULT_APP, RELAY, Remote, checkRelay, relayProblem, remotePairUrl } from './remote.ts';
 
 test("an owner's own relay must be a public https host name", async () => {
   assert.equal(relayProblem('https://relay.example.com'), undefined);
@@ -32,4 +32,11 @@ test('the relay choice is saved, waits until remote access is off, and null goes
   assert.ok(!fs.existsSync(path.join(home, 'relay.json')));
   await assert.rejects(r.setRelay('http://relay.example.com'), /must be https/);
   assert.equal(notes.length, 1);
+});
+
+test("with the owner's own relay, a phone pairs on the computer's own address there, since the hosted app accepts only its own relay", () => {
+  const saved = { host: 'den.relay.example.com', url: 'https://den.relay.example.com' };
+  assert.equal(remotePairUrl('c0de', saved, true, DEFAULT_APP), 'https://den.relay.example.com/pair#c0de');
+  assert.equal(remotePairUrl('c0de', { host: 'den.box.gurtos.com', url: 'https://den.box.gurtos.com' }, false, DEFAULT_APP), `${DEFAULT_APP}/pair?box=den.box.gurtos.com#c0de`, 'the default relay: the hosted app');
+  assert.equal(remotePairUrl('c0de', saved, true, 'https://app.example.com'), 'https://app.example.com/pair?box=den.relay.example.com#c0de', 'their own app too: it accepts their relay');
 });

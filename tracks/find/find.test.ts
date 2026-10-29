@@ -96,6 +96,28 @@ test('scan describes new photos once, reads text files, skips binaries and drops
   assert.ok(JSON.parse(fs.readFileSync(path.join(home, 'find', 'docs.json'), 'utf8')).length === 1, 'docs.json is saved');
 });
 
+test('a scan lets the box answer while it reads, skips empty files and reads a few thousand at a time', async () => {
+  const ws = path.join(home, 'workspaces', 'many');
+  fs.mkdirSync(path.join(ws, 'many'), { recursive: true });
+  for (let i = 0; i < 3000; i++) fs.writeFileSync(path.join(ws, 'many', String(i)), '');
+  for (let i = 0; i < 30; i++) fs.writeFileSync(path.join(ws, `note${i}.txt`), `note number ${i}`);
+  let ticks = 0;
+  const timer = setInterval(() => ticks++, 0);
+  try {
+    await scan(async () => ({ text: '', model: 'stub', ms: 0 }), undefined, { reads: 20, files: 100_000, every: 100 });
+  } finally {
+    clearInterval(timer);
+  }
+  const mine = () => [...docs.keys()].filter((id) => id.startsWith('file:many/'));
+  assert.ok(ticks > 5, `timers ran while 3,030 files were looked at (${ticks})`);
+  assert.equal(mine().length, 20, 'at most 20 new files read in this scan, and no empty one');
+  await scan(async () => ({ text: '', model: 'stub', ms: 0 }), undefined, { reads: 20, files: 100_000, every: 100 });
+  assert.equal(mine().length, 30, 'the next scan carries on, and keeps what the first one read');
+  fs.rmSync(ws, { recursive: true });
+  await scan(async () => ({ text: '', model: 'stub', ms: 0 }));
+  assert.equal(mine().length, 0);
+});
+
 test('the cloud copy: only when the index changed, at most every 10 minutes, and an hour off after a usage limit', async (t) => {
   t.mock.timers.enable({ apis: ['Date'], now: Date.now() });
   const min = 60_000;

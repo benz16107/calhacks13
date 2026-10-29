@@ -19,8 +19,13 @@ const cliConfig = path.join(process.env.BOX_HOME ?? '/var/lib/box', 'spacetime',
 const sharedConfig = path.join(os.homedir(), '.config', 'spacetime', 'cli.toml');
 const exec = promisify(execFile);
 // One spacetime CLI at a time per machine, and async so publishing never blocks the box's boot or its event loop
-// while the lock is held.
-const run = (...args: string[]) => exec('flock', ['/run/lock/box-spacetime-cli.lock', 'spacetime', '--config-path', cliConfig, ...args], { encoding: 'utf8' }).then((r) => r.stdout);
+// while the lock is held. The lock is in a folder only root can open: a task could hold one in /run/lock.
+const LOCKS = '/run/box';
+const run = (...args: string[]) => {
+  fs.mkdirSync(LOCKS, { recursive: true, mode: 0o700 });
+  fs.chmodSync(LOCKS, 0o700);
+  return exec('flock', [path.join(LOCKS, 'spacetime-cli.lock'), 'spacetime', '--config-path', cliConfig, ...args], { encoding: 'utf8' }).then((r) => r.stdout);
+};
 
 /** Publish the module as the box. Whoever publishes owns the database, so only the box can write to it. */
 async function publish(): Promise<string> {

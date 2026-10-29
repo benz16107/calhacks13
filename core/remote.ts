@@ -46,7 +46,16 @@ export async function checkRelay(url: unknown, lookup = (h: string) => dns.looku
   return u.origin;
 }
 /** The GurtOS app: one web app for every machine a person pairs. Each box lets it call the API (CORS). */
-export const APP = (process.env.BOX_APP ?? 'https://app.gurtos.com').replace(/\/+$/, '');
+export const DEFAULT_APP = 'https://app.gurtos.com';
+export const APP = (process.env.BOX_APP ?? DEFAULT_APP).replace(/\/+$/, '');
+
+/**
+ * Where a phone pairs with a computer whose remote access is on: the GurtOS app, told the computer's address. The
+ * hosted app accepts only addresses on its own relay, so with the owner's own relay and the hosted app, the phone pairs
+ * on the computer's own address on that relay instead (it serves the same pairing page).
+ */
+export const remotePairUrl = (code: string, saved: { host: string; url: string }, customRelay: boolean, app = APP) =>
+  customRelay && app === DEFAULT_APP ? `${saved.url}/pair#${code}` : `${app}/pair?box=${saved.host}#${code}`;
 const FRPC = process.env.BOX_FRPC ?? '/usr/local/bin/frpc';
 const CADDY = process.env.BOX_CADDY ?? '/usr/local/bin/caddy';
 /** Let's Encrypt's staging CA for tests (its certificates are not trusted, so the self-check skips verifying). */

@@ -51,3 +51,20 @@ test('with the relay offline, Quick Start says so in words on both computers, no
   const p = { rv: 'r'.repeat(22), pk: keyPair().pk, s, phonePk: keyPair().pk, n: 'New computer', keys: [], at: 0, by: 'phone' };
   await assert.rejects(deliver(relay, p, bundle({ from: 'Old', keys: {}, settings: {}, apps: [], phonePk: p.phonePk })), (e: Error & { status?: number }) => e.status === 502 && /^Quick Start needs the GurtOS relay/.test(e.message));
 });
+
+test('Quick Start reads the relay each time, so a relay the owner changed since is the one it uses (core/box.ts passes a getter)', async () => {
+  const closedPort = async () => {
+    const s = http.createServer();
+    await new Promise<void>((r) => s.listen(0, '127.0.0.1', r));
+    const port = (s.address() as { port: number }).port;
+    await new Promise((r) => s.close(r));
+    return port;
+  };
+  const [first, second] = [await closedPort(), await closedPort()];
+  let relay = `http://127.0.0.1:${first}`;
+  const t = new Target({ get relay() { return relay; }, app: 'https://app.example', apply: {} as never, apps: () => [], remoteOn: async () => '', ownerCode: () => '', note: () => {} });
+  relay = `http://127.0.0.1:${second}`; // PUT /api/remote/relay after the first Quick Start
+  t.start('New computer');
+  for (let i = 0; i < 100 && t.state === 'waiting'; i++) await new Promise((r) => setTimeout(r, 20));
+  assert.match(t.error ?? '', new RegExp(`127\\.0\\.0\\.1:${second}\\b`));
+});

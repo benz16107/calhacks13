@@ -12,6 +12,26 @@ export function readJson<T>(file: string, fallback: T): T {
   }
 }
 
+/**
+ * A state file the box wrote, read back. Missing: the fallback. Unreadable (a torn write, a full disk): set aside as
+ * <name>.torn-<time>, a warning, the fallback, and the name in `torn`, so the box starts and says so. Writes are atomic
+ * (writeJson), so this is for a disk that failed under it.
+ */
+export function readState<T>(file: string, fallback: T, torn: string[]): T {
+  if (!fs.existsSync(file)) return fallback;
+  try {
+    return JSON.parse(fs.readFileSync(file, 'utf8')) as T;
+  } catch (e) {
+    const aside = `${file}.torn-${Date.now()}`;
+    try {
+      fs.renameSync(file, aside);
+    } catch {}
+    console.error(`WARNING: ${file} could not be read (${(e as Error).message}); it is kept as ${aside}`);
+    torn.push(path.basename(file));
+    return fallback;
+  }
+}
+
 export function writeJson(file: string, value: unknown) {
   fs.mkdirSync(path.dirname(file), { recursive: true });
   const tmp = `${file}.${process.pid}.tmp`;
@@ -183,7 +203,8 @@ export function applyPatch(current: Settings, patch: unknown): Settings {
   return next;
 }
 
-export const loadSettings = (home: string): Settings => applyPatch(structuredClone(DEFAULT_SETTINGS), readJson(path.join(home, 'settings.json'), {}));
+/** Unreadable: the defaults, with the name in `torn` (the box then pauses its agents until the owner checks Settings). */
+export const loadSettings = (home: string, torn: string[] = []): Settings => applyPatch(structuredClone(DEFAULT_SETTINGS), readState(path.join(home, 'settings.json'), {}, torn));
 export const saveSettings = (home: string, s: Settings) => writeJson(path.join(home, 'settings.json'), s);
 
 /**
@@ -239,9 +260,10 @@ export function hadHumanUse(events: { type: string; source?: string; spec?: { so
   );
 }
 
-export const loadSetup = (home: string, hasHistory: boolean): SetupState => {
+export const loadSetup = (home: string, hasHistory: boolean, torn: string[] = []): SetupState => {
   const file = path.join(home, 'setup.json');
-  if (fs.existsSync(file)) return readJson<SetupState>(file, { done: false, steps: {} });
+  // Unreadable: this box was set up once, so setup stays done (reopening it would let anyone at the screen set it up).
+  if (fs.existsSync(file)) return readState<SetupState>(file, { done: true, steps: {} }, torn);
   // A box that already ran tasks before the wizard existed is already set up.
   const fresh: SetupState = hasHistory ? { done: true, migrated: true, finishedAt: new Date().toISOString(), steps: {} } : { done: false, steps: {} };
   writeJson(file, fresh);

@@ -145,7 +145,7 @@ export function failureText(why: string | undefined, code: unknown, via?: string
   // Only the real agent's failures are about Claude; a scripted task's error is its own tool's (a payment URL down).
   if (worker !== 'droid') return w ? w.slice(0, 300) : `The task stopped with an error (code ${code}).`;
   // Same words as the Personal desktop's banner.
-  if (/\b401\b|authentication_error|invalid x-api-key|invalid api key/i.test(w)) return `Your ${via === 'factory' ? 'Factory' : 'Anthropic'} key was not accepted. Change it in Settings, Keys.`;
+  if (/\b401\b|authentication_error|invalid x-api-key|invalid api key/i.test(w)) return `Your ${via === 'factory' ? 'Factory' : 'Anthropic'} key was not accepted. Change it in Settings, Accounts & Keys.`;
   if (/\b429\b|rate.?limit|overloaded/i.test(w)) return "Claude is busy or the key's limit was reached. Try again in a minute.";
   if (/ENOTFOUND|ECONNREFUSED|ETIMEDOUT|EAI_AGAIN|fetch failed/i.test(w)) return "Couldn't reach Claude. Check this computer's internet connection.";
   if (/still downloading/i.test(w)) return w;

@@ -31,3 +31,10 @@ export function manifest(o: { title: string; keys: string[]; spends: boolean; st
 }
 
 export const denied = (g: Grants, app: string, id: string) => !!g[app]?.deny.includes(id);
+
+/** Whether a task an app asks for runs an agent that can run commands: Droid, which a task that names no worker gets. */
+export const runsCommands = (spec: { worker?: string }) => (spec.worker ?? 'droid') === 'droid';
+
+/** Why an app may not undo this task, or undefined. A kept task's changes are in the owner's own folder: only the owner takes them out. */
+export const appUndoRefusal = (t: { review?: string } | undefined) =>
+  t?.review === 'kept' ? "Its changes were kept in the owner's folder, so only the owner can undo it, in GurtOS." : undefined;

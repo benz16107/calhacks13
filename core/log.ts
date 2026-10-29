@@ -97,6 +97,7 @@ export function apply(s: State, e: LogEvent): void {
         layers: [],
         costCents: 0,
         ...(e.requestedBy ? { requestedBy: e.requestedBy } : {}),
+        ...(e.app ? { app: e.app } : {}),
         createdAt: e.at,
         updatedAt: e.at,
       });
@@ -146,4 +147,29 @@ export function doneLayers(events: LogEvent[], s: State, workspace: string): str
   const order: string[] = [];
   for (const e of events) if (e.type === 'task.state' && e.state === 'done') order.push(e.task);
   return order.filter((id) => s.tasks.get(id)?.state === 'done' && s.tasks.get(id)?.workspace === workspace).reverse();
+}
+
+/** The approval keys the core itself uses. A task's own key goes under `task.` (core/box.ts, the broker's /ask). */
+export const CORE_KEYS = /^(budget|shadow|tool|task)\./;
+
+/**
+ * The id for an approval. Before 2026-10-29 (v0.1.0-preview) a task's question was `<task>.<key>` and a tool's
+ * `<task>.<call>.ask.<hash>`: a box upgraded with one of those in its log answers from it instead of asking again (and
+ * leaving the task waiting on it). `legacy` is that old key; one in the core's own spaces never matches, so a task still
+ * cannot name the core's budget question, and a tool's must have asked the same words.
+ */
+export function approvalId(approvals: ReadonlyMap<string, Approval>, task: string, key: string, legacy?: { key: string; question?: string }): string {
+  const old = legacy && !CORE_KEYS.test(legacy.key) ? approvals.get(`${task}.${legacy.key}`) : undefined;
+  return old && (legacy?.question === undefined || old.question === legacy.question) ? old.id : `${task}.${key}`;
+}
+
+/**
+ * Text an agent wrote, made safe to show a person: no control characters but tab and newline, no bidirectional or
+ * invisible formatting (a right-to-left override makes "DEVORPPA" read as APPROVED), at most `max` characters: a
+ * longer one keeps its start and its last tenth.
+ */
+export function plainText(s: string, max: number): string {
+  const clean = s.replace(/[\u0000-\u0008\u000b-\u001f\u007f-\u009f\u00ad\u061c\u115f\u1160\u180e\u200b-\u200f\u2028-\u202e\u2060-\u206f\u3164\ufeff\ufff9-\ufffb]/g, '');
+  const tail = Math.floor(max / 10); // the end too: it often holds the ask itself, or an app's mark ([policy <hash>])
+  return clean.length > max ? `${clean.slice(0, max - tail - 1)}…${clean.slice(-tail)}` : clean;
 }

@@ -11,18 +11,18 @@ import path from 'node:path';
 import type { App, Approval, ApprovalRoute, Box, FullSpec, Ctx, LogEvent, LogReader, ModelJob, NewEvent, Route, Task, TaskSpec, TaskState, Tool, Track, Who } from './contract.ts';
 import { DEFAULT_POLICY, amountOf, approversFor, auditRows, checkPerson, checkSeats, checkShadow, goLiveRules, holds, notifyPeople, parsePolicy, pilot, refusal, route, toCsv, whoOf, type Business, type Person } from './business.ts';
 import { DB, Live } from './live.ts';
-import { Log, apply, canMove, doneLayers, fold, type State } from './log.ts';
-import { ANTHROPIC_PLACEHOLDER, PLACEHOLDER_KEY, Tries, firewall, fromScreen, logBlocked, sourceOf, stopLoggingBlocked, uidOf, relayCert, reservePort, startProxy } from './net.ts';
+import { Log, apply, approvalId, canMove, doneLayers, fold, plainText, type State } from './log.ts';
+import { ANTHROPIC_PLACEHOLDER, PLACEHOLDER_KEY, Tries, closeProxy, firewall, fromScreen, logBlocked, sourceOf, stopLoggingBlocked, uidOf, relayCert, reservePort, startProxy } from './net.ts';
 import * as sandbox from './sandbox.ts';
 import { HOME, dirs } from './sandbox.ts';
 import { MODELS, modelProblem, resolveModel } from './models.ts';
 import { usageCents } from './pricing.ts';
-import { DEFAULT_SETTINGS, SETUP_STEPS, applyPatch, folderRefusal, hadHumanUse, hostProblem, insideAny, neverFolder, loadDisabled, loadSetup, loadSettings, readJson, recordStep, saveDisabled, saveSettings, saveSetup, writeJson, type Settings, type SetupState } from './config.ts';
+import { DEFAULT_SETTINGS, SETUP_STEPS, applyPatch, folderRefusal, hadHumanUse, hostProblem, insideAny, neverFolder, loadDisabled, loadSetup, loadSettings, readJson, readState, recordStep, saveDisabled, saveSettings, saveSetup, writeJson, type Settings, type SetupState } from './config.ts';
 import * as system from './system.ts';
 import { VAULT_NAME, loadVault, redact, removeVaultKey, secretValues, writeVaultKey } from './vault.ts';
 import { challenge, checkSso, noGroup, personId, provider, random, roleFor, verifyIdToken, whoIs, type Claims, type Sso } from './sso.ts';
 import * as push from './push.ts';
-import { APP, Remote, SECRET_KEY } from './remote.ts';
+import { APP, Remote, SECRET_KEY, remotePairUrl } from './remote.ts';
 import * as quick from './quickstart.ts';
 import * as perms from './permissions.ts';
 
@@ -34,28 +34,29 @@ const MAX_BODY = 10 * 1024 ** 2;
 const MAX_OPEN_BODY = 1024 ** 2;
 
 /** Read a request's body, at most `limit` bytes: past that it is a 413, and the connection closes after the answer. */
-async function readBody(req: http.IncomingMessage, res: http.ServerResponse, limit = MAX_BODY) {
+async function readBody(req: http.IncomingMessage, res: http.ServerResponse, limit = MAX_BODY, count?: (bytes: number) => void) {
   const chunks: Buffer[] = [];
   let size = 0;
   for await (const c of req) {
     size += (c as Buffer).length;
+    count?.((c as Buffer).length);
     if (size > limit) {
       if (!res.headersSent) res.setHeader('connection', 'close'); // the rest is never read
-      throw Object.assign(new Error(`the request body is over ${Math.round(limit / 1024 ** 2)} MB`), { status: 413 });
+      throw Object.assign(new Error(`the request body is over ${limit < 1024 ** 2 ? `${Math.round(limit / 1024)} KB` : `${Math.round(limit / 1024 ** 2)} MB`}`), { status: 413 });
     }
     chunks.push(c as Buffer);
   }
   return Buffer.concat(chunks);
 }
 
-/** A JSON-over-HTTP server. Thrown errors become 400s. */
-function jsonServer(handler: Handler, raw?: (req: http.IncomingMessage, res: http.ServerResponse) => boolean) {
+/** A JSON-over-HTTP server. Thrown errors become 400s. `reading` sets how much a request may send, and counts what it sent. */
+function jsonServer(handler: Handler, raw?: (req: http.IncomingMessage, res: http.ServerResponse) => boolean, reading?: { limit: (req: http.IncomingMessage) => number; count: (bytes: number) => void }) {
   const server = http.createServer(async (req, res) => {
     if (raw?.(req, res)) return;
     let status = 200;
     let out: unknown;
     try {
-      const text = (await readBody(req, res)).toString();
+      const text = (await readBody(req, res, reading?.limit(req), reading?.count)).toString();
       let body: unknown = {};
       try {
         body = text ? JSON.parse(text) : {};
@@ -117,26 +118,6 @@ interface Device {
   lastSeen?: string;
 }
 
-/**
- * A state file the box wrote, read back. Missing: the fallback. Unreadable (a torn write, a full disk): set aside as
- * <name>.torn-<time>, a warning, the fallback, and the name in `torn`, so the box starts and says so. Writes are atomic
- * (writeJson), so this is for a disk that failed under it.
- */
-function readState<T>(file: string, fallback: T, torn: string[]): T {
-  if (!fs.existsSync(file)) return fallback;
-  try {
-    return JSON.parse(fs.readFileSync(file, 'utf8')) as T;
-  } catch (e) {
-    const aside = `${file}.torn-${Date.now()}`;
-    try {
-      fs.renameSync(file, aside);
-    } catch {}
-    console.error(`WARNING: ${file} could not be read (${(e as Error).message}); it is kept as ${aside}`);
-    torn.push(path.basename(file));
-    return fallback;
-  }
-}
-
 /** What an app's sandboxed page may still do: its scripts and forms, popups, dialogs, downloads, and top-level links a person clicks. */
 const SANDBOX = 'allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-modals allow-downloads allow-top-navigation-by-user-activation';
 
@@ -169,7 +150,7 @@ class Core {
   vault = loadVault();
   tools = new Map<string, { tool: Tool; track: string }>();
   jobs = new Map<string, { job: ModelJob; track: string }>();
-  routes = new Map<string, { route: Route; track: string; open: boolean }>();
+  routes = new Map<string, { route: Route; track: string; open: boolean; ownOrigin: boolean }>();
   apps: (App & { track: string })[] = [];
   readers: (() => void)[] = [];
   listeners = new Set<(e: LogEvent) => void>();
@@ -190,8 +171,8 @@ class Core {
   // The human with sudo on a Personal box: set at runtime (the image does it after the desktop's own setup
   // makes the account), else BOX_OWNER, else none (a Server box).
   owner: string | null = readState<{ user?: string } | null>(this.ownerPath, null, this.torn)?.user ?? process.env.BOX_OWNER ?? null;
-  settings: Settings = loadSettings(HOME);
-  setup: SetupState = loadSetup(HOME, hadHumanUse(this.log.events as never, fs.existsSync(new URL('../tracks/', import.meta.url)) ? fs.readdirSync(new URL('../tracks/', import.meta.url)) : [], this.devices.length));
+  settings: Settings = loadSettings(HOME, this.torn); // unreadable: the defaults, and the agents wait (boot)
+  setup: SetupState = loadSetup(HOME, hadHumanUse(this.log.events as never, fs.existsSync(new URL('../tracks/', import.meta.url)) ? fs.readdirSync(new URL('../tracks/', import.meta.url)) : [], this.devices.length), this.torn);
   vaultMetaPath = path.join(HOME, 'vault-meta.json');
   vaultMeta: Record<string, string> = readState(this.vaultMetaPath, {}, this.torn);
   startedAt = new Date().toISOString();
@@ -242,7 +223,8 @@ class Core {
     const fields = { type: 'tripwire', id: `tripwire.${t.id}`, task: t.id, source: t.source, costCents: 0, title: 'An agent tried to leak a key', body: `"${t.title}" tried to send its decoy key out (${where}). GurtOS stopped it and undid its changes.`.slice(0, 200) };
     this.alertOwner(fields);
   }
-  business: Business = { on: process.env.BOX_EDITION === 'business', company: '', policy: DEFAULT_POLICY, people: [], seats: [], shadow: [], policyMeta: {}, ...readJson<Partial<Business>>(this.businessPath, {}) };
+  // Unreadable: Business as the edition says, and the agents wait until the owner checks it (boot).
+  business: Business = { on: process.env.BOX_EDITION === 'business', company: '', policy: DEFAULT_POLICY, people: [], seats: [], shadow: [], policyMeta: {}, ...readState<Partial<Business>>(this.businessPath, {}, this.torn) };
   // The kill switch is Settings' `paused`: every agent stops until someone resumes them. Who pulled it is kept beside it.
   pausedPath = path.join(HOME, 'paused.json');
   pausedMeta: { by: string; at: string; via?: string } | null = readJson(this.pausedPath, null);
@@ -287,7 +269,7 @@ class Core {
   }
 
   /**
-   * The disk cap: every two seconds, each running task's own layer is measured, and a task past its cap (5 GB, or its
+   * The disk cap: every two seconds, each running task's disk is measured (its layer, home and /tmp), and a task past its cap (5 GB, or its
    * app's permission, or BOX_TASK_DISK_CAP) is stopped and undone, logged and told to the owner's phone. Not a hard quota:
    * a writer can pass the cap until the next check. Armadin measured 0 to 3.1 s from the write to the stop (six runs).
    */
@@ -301,7 +283,7 @@ class Core {
           const t = this.state.tasks.get(id);
           if (!t || (t.state !== 'running' && t.state !== 'waiting')) continue;
           const cap = Number(process.env.BOX_TASK_DISK_CAP) || this.grants[t.source]?.diskBytes || 5 * 1024 ** 3;
-          const used = await sandbox.layerBytes(t);
+          const used = await sandbox.diskBytes(t);
           if (used <= cap || !this.workers.has(id)) continue;
           const title = t.title.slice(0, 80);
           this.write({ type: 'note', track: 'security', task: id, data: { diskCap: cap, used }, text: `"${title}" wrote more than its ${Math.round(cap / 1024 ** 2)} MB of disk. GurtOS stopped it and undid its changes.` });
@@ -317,14 +299,15 @@ class Core {
   /** A task an app starts: refused where the owner said no; otherwise what it asks for is remembered for Settings. */
   permitTask(app: string, spec: TaskSpec): TaskSpec {
     const hosts = spec.hosts ?? [];
-    if (spec.worker === 'droid' && perms.denied(this.grants, app, 'shell')) this.permRefuse(app, 'shell', 'run an agent that can run commands');
+    const droid = perms.runsCommands(spec);
+    if (droid && perms.denied(this.grants, app, 'shell')) this.permRefuse(app, 'shell', 'run an agent that can run commands');
     if ((spec.folder || spec.folders) && perms.denied(this.grants, app, 'folders')) this.permRefuse(app, 'folders', 'give an agent a copy of your folders');
     for (const h of hosts) if (perms.denied(this.grants, app, `host:${h}`)) this.permRefuse(app, `host:${h}`, `let its agents reach ${h}`);
     const g = perms.grant(this.grants, app);
     const newHosts = hosts.filter((h) => !g.seen.hosts.includes(h));
-    const changed = newHosts.length || (spec.worker === 'droid' && !g.seen.shell) || ((spec.folder || spec.folders) && !g.seen.folders);
+    const changed = newHosts.length || (droid && !g.seen.shell) || ((spec.folder || spec.folders) && !g.seen.folders);
     g.seen.hosts.push(...newHosts);
-    if (spec.worker === 'droid') g.seen.shell = true;
+    if (droid) g.seen.shell = true;
     if (spec.folder || spec.folders) g.seen.folders = true;
     if (changed) perms.save(HOME, this.grants);
     return spec;
@@ -596,7 +579,8 @@ class Core {
     return ws;
   }
 
-  async createTask(spec: TaskSpec, requestedBy?: string): Promise<Task> {
+  /** `app` is the app (track) whose box made the task, whatever `source` it gave: it answers that task's requests. */
+  async createTask(spec: TaskSpec, requestedBy?: string, app?: string): Promise<Task> {
     const known = ['title', 'prompt', 'workspace', 'worker', 'tools', 'hosts', 'budgetCents', 'source', 'folder', 'folders', 'seat', 'droid', 'model', 'files'];
     const unknown = Object.keys(spec ?? {}).filter((k) => !known.includes(k));
     if (unknown.length) throw new Error(`unknown task field${unknown.length > 1 ? 's' : ''}: ${unknown.join(', ')} (known: ${known.join(', ')})`);
@@ -660,7 +644,7 @@ class Core {
       }
     }
     const id = 't' + Date.now().toString(36).slice(-6) + randomBytes(2).toString('hex');
-    this.write({ type: 'task.created', task: id, spec: s.worker === 'droid' && handed.length ? { ...s, prompt: `${s.prompt}\n\n${handed.join('\n\n')}` } : s, user: `box-${id}`, ...(requestedBy ? { requestedBy } : {}) });
+    this.write({ type: 'task.created', task: id, spec: s.worker === 'droid' && handed.length ? { ...s, prompt: `${s.prompt}\n\n${handed.join('\n\n')}` } : s, user: `box-${id}`, ...(requestedBy ? { requestedBy } : {}), ...(app ? { app } : {}) });
     if (handed.length) this.write({ type: 'task.step', task: id, text: `Handed over ${handed.length} memory block${handed.length > 1 ? 's' : ''}`, data: { memory: handed.join('\n\n') } });
     const t = this.must(id);
     if (!this.settings.paused) await this.start(t); // paused: it stays queued until the owner resumes
@@ -673,7 +657,7 @@ class Core {
     try {
       if (t.worker === 'droid') {
         if (!this.modelVia()) this.vault = loadVault(); // a key added to the file by hand since boot
-        if (!this.modelVia()) throw new Error('No model key yet. Add an Anthropic or Factory API key in Settings, Keys, then start the task again.');
+        if (!this.modelVia()) throw new Error('No model key yet. Add an Anthropic or Factory API key in Settings, Accounts & Keys, then start the task again.');
         // An image downloads Droid after its first start (its license forbids shipping it in the image): a task waits for it.
         const droid = system.droidState();
         if (droid.state === 'missing') throw new Error(droid.message);
@@ -727,7 +711,7 @@ class Core {
       sandbox.snapshotBase(t);
       this.uidTask.set(ids.uid, t.id);
       stopLoggingBlocked(t.id); // a task resumed after the core restarted (not the machine) still has its old rule
-      logBlocked(ids.uid, t.id);
+      logBlocked(ids.uid, t.id, this.proxyPort);
       await this.openBroker(t, ids);
       if (t.state !== 'running' && t.state !== 'waiting') return this.finish(t); // undone while it was being set up: never start its worker
       if (this.paused) {
@@ -913,10 +897,12 @@ class Core {
    * no answer came within the window, so the worker can report "waiting, call again" and poll past a client
    * tool-call timeout (Droid gives up after ~3 minutes). Any copy's answer resolves the one request.
    */
-  async askFor(t: Task, key: string, opts: { question: string; costCents?: number; payee?: string; purpose?: string; shadow?: string }): Promise<'approved' | 'denied' | 'pending'> {
-    const id = `${t.id}.${key}`;
+  async askFor(t: Task, key: string, opts: { question: string; costCents?: number; payee?: string; purpose?: string; shadow?: string }, legacy?: { key: string; question?: string }): Promise<'approved' | 'denied' | 'pending'> {
+    const id = approvalId(this.state.approvals, t.id, key, legacy);
     if (!this.state.approvals.has(id)) {
-      const approval: Approval = { id, task: t.id, question: opts.question, costCents: opts.costCents ?? 0, payee: opts.payee, purpose: opts.purpose, state: 'pending', ...(opts.shadow ? { shadow: opts.shadow } : {}) };
+      // What a person reads: an agent's words, but no direction overrides or invisible characters, and not a book.
+      const text = (s: unknown, max: number) => (typeof s === 'string' ? plainText(s, max) || undefined : undefined);
+      const approval: Approval = { id, task: t.id, question: text(opts.question, 2000) ?? '(no question)', costCents: opts.costCents ?? 0, payee: text(opts.payee, 200), purpose: text(opts.purpose, 500), state: 'pending', ...(opts.shadow ? { shadow: opts.shadow } : {}) };
       if (this.business.on) Object.assign(approval, { ...(t.requestedBy ? { askedBy: t.requestedBy } : {}), route: this.routeOf(approval, t) });
       this.write({ type: 'approval.asked', task: t.id, approval });
     }
@@ -963,9 +949,9 @@ class Core {
     return route(parsePolicy(this.business.policy), ask, this.business.people, t.requestedBy);
   }
 
-  /** The app (track) a task came from, from its source ('credit-desk:abc'), or '' for the API or a phone. */
+  /** The app (track) a task came from: the one whose box made it, else (a task from before that was kept) its source ('credit-desk:abc'); '' for the API or a phone. */
   appOf(t: Task): string {
-    const name = t.source.split(':')[0];
+    const name = t.app ?? t.source.split(':')[0];
     return this.installed.has(name) ? name : '';
   }
 
@@ -1302,9 +1288,10 @@ class Core {
         if (!task) return false;
         // The same question in the same tool call is the same approval; a different one gets its own. A slow owner is not a "no":
         // askFor gives up waiting after a while but leaves the approval open, so ask again until it is answered.
-        const askKey = `tool.${key}.ask.${createHash('sha256').update(question).digest('hex').slice(0, 8)}`; // never a task's (task.)
+        const hash = createHash('sha256').update(question).digest('hex').slice(0, 8);
         for (;;) {
-          const r = await this.askFor(task, askKey, { question, purpose: opts?.purpose });
+          // never a task's (task.); a box upgraded from v0.1.0-preview finds its old one (approvalId)
+          const r = await this.askFor(task, `tool.${key}.ask.${hash}`, { question, purpose: opts?.purpose }, { key: `${key}.ask.${hash}`, question });
           if (r !== 'pending') return r === 'approved';
         }
       },
@@ -1407,14 +1394,7 @@ class Core {
     const server = jsonServer(async (method, url, body) => {
       const route = `${method} ${url.pathname}`;
       if ((route === 'POST /call' || route === 'POST /ask') && !body.key) throw new Error('a key is required');
-      if (method === 'POST') {
-        // What a task writes stays in the box's memory (the log), so a task gets 64 KB a line and 20 MB in all.
-        const size = JSON.stringify(body ?? null).length;
-        if (size > 64 * 1024 && route !== 'POST /call') throw Object.assign(new Error('a step, question or cost is at most 64 KB'), { status: 413 });
-        const total = (this.logged.get(t.id) ?? 0) + size;
-        if (total > 20 * 1024 ** 2) throw Object.assign(new Error('this task has written 20 MB to the action log; it may write no more'), { status: 429 });
-        this.logged.set(t.id, total);
-      }
+      if (method === 'POST' && (this.logged.get(t.id) ?? 0) > 20 * 1024 ** 2) throw Object.assign(new Error('this task has written 20 MB to the action log; it may write no more'), { status: 429 });
       if (route === 'GET /task') {
         const steps = this.log.events.flatMap((e) => (e.type === 'task.step' && e.task === t.id ? [{ text: e.text, data: e.data }] : []));
         return { task: t, steps };
@@ -1447,10 +1427,16 @@ class Core {
         if (!Number.isFinite(costCents) || costCents < 0) throw new Error('costCents: an amount of 0 or more');
         // The task's own questions live under `task.`: a key it chooses can never name the core's budget or shadow
         // question (`budget.<action>`), or a tool's (`tool.<call>.ask.<hash>`), and so pre-approve it.
-        const outcome = await this.askFor(t, `task.${String(body.key)}`, { question: String(body.question), costCents, payee: body.payee, purpose: body.purpose });
+        const outcome = await this.askFor(t, `task.${String(body.key)}`, { question: String(body.question), costCents, payee: body.payee, purpose: body.purpose }, { key: String(body.key) });
         return outcome === 'pending' ? { pending: true } : { approved: outcome === 'approved' };
       }
+    }, undefined, {
+      // What a task writes stays in the box's memory (the log): 64 KB a step, question or cost, a tool call's input up to
+      // MAX_BODY, and 20 MB in all, refused requests counted too.
+      limit: (req) => (req.method === 'POST' && req.url === '/call' ? MAX_BODY : 64 * 1024),
+      count: (bytes) => void this.logged.set(t.id, (this.logged.get(t.id) ?? 0) + bytes),
     });
+    server.maxConnections = 64; // the worker, Droid and its hooks use a few at once
     this.brokers.set(t.id, server);
     await listenSocket(server, dirs.socket(t.id), owner);
   }
@@ -1556,12 +1542,15 @@ class Core {
    */
   boxFor(track: string, person?: Person): Box {
     return {
-      createTask: (spec) => this.createTask({ source: track, ...this.permitTask(track, spec) }, person?.id),
+      createTask: (spec) => this.createTask({ source: track, ...this.permitTask(track, spec) }, person?.id, track),
       workspace: (name, fromDir) => sandbox.workspace(name, fromDir),
       linkWorkspace: (name, realPath) => this.linkWorkspace(name, realPath),
       task: (id) => this.state.tasks.get(id),
       tasks: () => [...this.state.tasks.values()],
-      undo: (id) => this.undo(id),
+      undo: (id) => {
+        const no = perms.appUndoRefusal(this.state.tasks.get(id)); // the owner undoes a Keep with POST /tasks/:id/undo
+        return no ? Promise.reject(Object.assign(new Error(no), { status: 403 })) : this.undo(id);
+      },
       approvals: () => [...this.state.approvals.values()],
       answer: (id, approved, by) => this.answerAs(id, approved, person, by),
       on: (l) => (this.listeners.add(l), () => this.listeners.delete(l)),
@@ -1648,7 +1637,7 @@ class Core {
     for (const job of track.modelJobs ?? []) this.jobs.set(job.name, { job, track: name });
     for (const [key, route] of Object.entries(track.routes ?? {})) {
       const [method, p] = key.split(' ');
-      this.routes.set(`${method} /t/${name}${p}`, { route, track: name, open: (track.openRoutes ?? []).includes(key) });
+      this.routes.set(`${method} /t/${name}${p}`, { route, track: name, open: (track.openRoutes ?? []).includes(key), ownOrigin: (track.ownOrigin ?? []).includes(key) });
     }
     for (const app of track.apps ?? []) this.apps.push({ ...app, track: name });
     this.trackPumps.set(name, (track.logReaders ?? []).map((r) => this.addReader(name, r)));
@@ -1932,7 +1921,7 @@ class Core {
     const remote = this.remote.saved;
     const base = this.boxUrl();
     let url: string;
-    if (remote) url = `${APP}/pair?box=${remote.host}#${code}`;
+    if (remote) url = remotePairUrl(code, remote, !!this.remote.custom);
     else {
       const allowed = () => !this.setup.done && !fs.existsSync(this.remote.offFile);
       const rv = allowed() ? randomBytes(16).toString('base64url') : '';
@@ -2160,8 +2149,11 @@ class Core {
   /** This computer as the new one: made on first use. */
   quickTarget?: quick.Target;
   quickTargetFor() {
+    const remote = this.remote;
     return (this.quickTarget ??= new quick.Target({
-      relay: this.remote.relay,
+      get relay() {
+        return remote.relay; // read each time: the owner can change the relay (PUT /api/remote/relay) without a restart
+      },
       app: APP,
       apply: { putKey: (n, v, w) => this.putKey(n, v, w), changeSettings: (p, w) => this.changeSettings(p, w), enableApp: (id) => this.enableApp(id), disableApp: (id) => this.disableApp(id), setupStep: (k, st, d) => this.setupStep(k, st, d) },
       apps: () => [...this.installed.keys()].filter((id) => id !== 'example').map((id) => ({ id, on: !this.disabled.has(id) })),
@@ -2710,12 +2702,14 @@ data: ${JSON.stringify(e)}
         const r = await entry.route(request, this.boxFor(entry.track, person));
         const out = Object.fromEntries(r.headers);
         // An app's page runs sandboxed, with no origin of its own: a bug in one app's page can't use the box's screen,
-        // the portal around it or the opener's token. It reaches the box with its window's token (windowGate).
+        // the portal around it or the opener's token. It reaches the box with its window's token (windowGate). A page
+        // the app lists in `ownOrigin` (a passkey needs a real origin) runs with the box's, and is reviewed like core code.
         let page = Buffer.from(await r.arrayBuffer());
         if (/html|xml/i.test(out['content-type'] ?? '')) {
-          out['content-security-policy'] = [out['content-security-policy'], `sandbox ${SANDBOX}`].filter(Boolean).join(', ');
-          // Its first calls can run before /kit/gurtos.js (a module) does: this carries the window's token on them.
-          if (/html/i.test(out['content-type'] ?? '')) page = Buffer.from(CARRY_TOKEN + page.toString());
+          if (!entry.ownOrigin) out['content-security-policy'] = [out['content-security-policy'], `sandbox ${SANDBOX}`].filter(Boolean).join(', ');
+          // Its first calls can run before /kit/gurtos.js (a module) does: this carries the window's token on them. After
+          // a leading doctype, so the page is not drawn in quirks mode.
+          if (/html/i.test(out['content-type'] ?? '')) page = Buffer.from(page.toString().replace(/^(\ufeff?\s*<!doctype[^>]*>)?/i, (m) => m + CARRY_TOKEN));
           delete out['content-length'];
         }
         res.writeHead(r.status, out).end(page);
@@ -2777,9 +2771,10 @@ data: ${JSON.stringify(e)}
     const url = new URL(req.url ?? '/', 'http://box');
     const token = (req.headers.authorization ?? '').replace(/^Bearer /i, '') || url.searchParams.get('access_token') || '';
     const w = token.startsWith('w') ? this.windows.get(token) : undefined;
-    if (!w) return false;
     const no = (status: number, error: string) => (res.writeHead(status, { 'content-type': 'application/json' }).end(JSON.stringify({ error })), true);
-    if (w.expiry < Date.now() || (w.device && !this.devices.some((d) => d.id === w.device && !d.revoked))) return no(401, 'this window has expired: close it and open the app again');
+    const expired = 'this window has expired: close it and open the app again';
+    if (!w) return /^w[0-9a-f]{48}$/.test(token) ? no(401, expired) : false; // window tokens live in memory: a restart ends them all
+    if (w.expiry < Date.now() || (w.device && !this.devices.some((d) => d.id === w.device && !d.revoked))) return no(401, expired);
     const m = req.method ?? 'GET';
     const p = url.pathname.replace(/^\/api(?=\/)/, '');
     const own = p === `/t/${w.track}` || p.startsWith(`/t/${w.track}/`);
@@ -2818,21 +2813,18 @@ data: ${JSON.stringify(e)}
 
   async boot() {
     if (this.torn.length) {
-      // The owner's "off" switches live in permissions.json: without them, no agent starts until the owner looks.
-      if (this.torn.includes('permissions.json') && !this.settings.paused) {
+      // The owner's "off" switches (permissions.json), limits and kill switch (settings.json) and the Business policy
+      // (business.json): without one of them, no agent starts until the owner looks.
+      const guards = ['permissions.json', 'settings.json', 'business.json'].filter((f) => this.torn.includes(f));
+      if (guards.length && !this.settings.paused) {
         this.settings = applyPatch(this.settings, { paused: true });
         saveSettings(HOME, this.settings);
-        writeJson(this.pausedPath, (this.pausedMeta = { by: 'GurtOS', at: new Date().toISOString(), via: 'an unreadable permissions file' }));
+        writeJson(this.pausedPath, (this.pausedMeta = { by: 'GurtOS', at: new Date().toISOString(), via: `an unreadable ${guards.join(' and ')}` }));
       }
-      this.write({ type: 'note', track: 'security', data: { torn: this.torn }, text: `GurtOS could not read ${this.torn.join(', ')} when it started and set ${this.torn.length > 1 ? 'them' : 'it'} aside.${this.torn.includes('permissions.json') ? ' Agents are paused: check Settings, Permissions, then resume them.' : ''}${this.torn.includes('devices.json') ? ' Pair your phones again.' : ''}` });
+      const check = { 'permissions.json': 'Permissions', 'settings.json': 'your limits and network', 'business.json': 'Business' } as Record<string, string>;
+      this.write({ type: 'note', track: 'security', data: { torn: this.torn }, text: `GurtOS could not read ${this.torn.join(', ')} when it started and set ${this.torn.length > 1 ? 'them' : 'it'} aside.${guards.length ? ` Agents are paused: check ${guards.map((g) => check[g]).join(' and ')} in Settings, then resume them.` : ''}${this.torn.includes('devices.json') ? ' Pair your phones again.' : ''}` });
     }
     sandbox.workspace('home');
-    try {
-      firewall();
-      this.watchBlocked();
-    } catch (e) {
-      console.error(`WARNING: the firewall rule did not load, so tasks are not network-limited: ${(e as Error).message}`);
-    }
     this.proxyPort = await startProxy({
       taskOf: (uid) => {
         const t = this.state.tasks.get(this.uidTask.get(uid) ?? '');
@@ -2847,6 +2839,12 @@ data: ${JSON.stringify(e)}
       factoryKey: () => this.vault.get('FACTORY_API_KEY'),
       anthropicKey: () => this.vault.get('ANTHROPIC_API_KEY'),
     }, this.relay);
+    try {
+      firewall(this.proxyPort); // once the proxy listens: its port is the one tasks may reach
+      this.watchBlocked();
+    } catch (e) {
+      console.error(`WARNING: the firewall rule did not load, so tasks reach only the box itself (each task's unit), unlogged: ${(e as Error).message}`);
+    }
     const tracks = await this.loadTracks();
     for (const [name, real] of Object.entries(this.links)) typeof real === 'string' ? sandbox.linkBase(name, real) : sandbox.linkMulti(name, real);
     for (const ws of fs.readdirSync(path.join(HOME, 'workspaces'))) this.refreshView(ws);
@@ -2886,12 +2884,15 @@ data: ${JSON.stringify(e)}
 // One bad connection or task must not take the box down. The log keeps the truth either way.
 process.on('uncaughtException', (e) => console.error('uncaught:', e));
 // A clean stop (systemctl restart, a deploy) leaves a marker, so the next boot is not announced as a power cut.
+let core: Core | undefined;
 process.on('SIGTERM', () => {
   try {
     fs.writeFileSync(path.join(HOME, 'clean-stop'), new Date().toISOString());
   } catch {} // the marker is a courtesy for the screen
+  if (core?.proxyPort) closeProxy(core.proxyPort);
   process.exit(0);
 });
 process.on('unhandledRejection', (e) => console.error('unhandled:', e));
 sandbox.init();
-await new Core().boot();
+core = new Core();
+await core.boot();

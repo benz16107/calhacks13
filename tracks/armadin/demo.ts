@@ -201,6 +201,20 @@ async function attackScoreboard(d: DemoKit) {
     return t.state === 'running' || t.state === 'queued' || t.state === 'waiting' ? undefined : t;
   }, 20000).catch(() => undefined);
   if (forkSettled) final.set(FORK.id, forkSettled);
+  // How much the bomb slows everything else while it runs: a one-line task's time from start to done, beside it.
+  const probe = async () => {
+    const t0 = Date.now();
+    const P = await sh('Attack scoreboard: a small task beside the fork bomb', 'say hello');
+    await d.waitFor('the small task to finish', async () => (['done', 'failed'].includes((await taskState(P.id)).state) ? true : undefined), 120000);
+    return Date.now() - t0;
+  };
+  const besideBomb = forkSettled ? undefined : await probe();
+  // Then end it, so it does not slow the attacks after it (each measures the box's own answers).
+  if (!forkSettled) {
+    await d.api('POST', `/tasks/${FORK.id}/undo`);
+    await d.waitFor('the fork bomb to be undone', async () => ((await taskState(FORK.id)).state === 'undone' ? true : undefined), 60000);
+  }
+  const afterBomb = besideBomb === undefined ? undefined : await probe();
   // ATK, MEM and DISK are always in `final` (the Promise.all above only resolves once each is set); FORK alone
   // may be missing if it never settled within its own short probe, so it keeps the optional lookup.
   const requiredStateOf = (id: string) => final.get(id)!;
@@ -240,7 +254,7 @@ async function attackScoreboard(d: DemoKit) {
   record('a fork bomb', 'LLM10/ASI08', 'caught', 'caught',
     forkState
       ? `the attack task ended "${forkState.state}" within 20s (the sibling memory-hog and disk-fill tasks finished normally throughout); TasksMax=512 caps the unit's own process count`
-      : `the attack task was still "running" after 20s (the sibling memory-hog and disk-fill tasks finished normally the whole time): TasksMax=512 keeps a fork bomb's own recursion from ever reaching 0, so the *task* can stay wedged forever. That is still caught, not missed: the host and every other task stayed unaffected throughout, which the owner can confirm and which the kill switch ends if an agent gets itself stuck like this`);
+      : `the attack task was still "running" after 20s: TasksMax=512 keeps a fork bomb's own recursion from ever reaching 0, so the task can stay wedged until it is undone (here, by the demo; the kill switch does it too). The host and other tasks stayed up, but slower: a one-line task took ${((besideBomb ?? 0) / 1000).toFixed(1)} s from start to done beside the bomb and ${((afterBomb ?? 0) / 1000).toFixed(1)} s once it was undone, since its processes fork and fail without end and the kernel work for that is the machine's`);
 
   const memState = requiredStateOf(MEM.id);
   const mem = f('mem.txt', MEM);

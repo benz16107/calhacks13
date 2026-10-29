@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import type { FullSpec } from './contract.ts';
-import { Log, canMove, chainBreaks, doneLayers, fold, hashLine } from './log.ts';
+import { Log, approvalId, canMove, chainBreaks, doneLayers, fold, hashLine, plainText } from './log.ts';
 
 const spec: FullSpec = { title: 't', prompt: 'p', workspace: 'w', worker: 'fake', tools: [], hosts: [], budgetCents: 0, source: 'test' };
 
@@ -134,4 +134,40 @@ test('a write cut short by a full disk never leaves half a line in front of the 
   const again = new Log(file);
   assert.deepEqual(again.events.map((e) => e.seq), [1, 2]);
   assert.deepEqual(chainBreaks(fs.readFileSync(file, 'utf8').split('\n').filter(Boolean)), []);
+});
+
+test('a box upgraded from v0.1.0-preview answers from its old approvals, and a task still cannot name the core\'s', () => {
+  // A v0.1.0-style log: a task's own question was <task>.<key>, a tool's <task>.<call>.ask.<hash>, a budget one <task>.budget.<action>.
+  const ask = (id: string, question: string) => ({ type: 'approval.asked' as const, task: 'a', approval: { id, task: 'a', question, costCents: 0, state: 'pending' as const } });
+  const s = fold(
+    [
+      { type: 'task.created', task: 'a', spec, user: 'box-a' },
+      ask('a.deploy', 'Deploy to production?'),
+      { type: 'approval.answered', task: 'a', id: 'a.deploy', approved: true, by: 'owner' },
+      ask('a.line2.ask.0123abcd', 'Send the invoice?'),
+      ask('a.budget.example.spend:00ff', 'Spend $900?'),
+    ].map((e, i) => ({ ...e, seq: i + 1, at: '2026-10-24T20:00:00Z' })) as never,
+  );
+  assert.equal(approvalId(s.approvals, 'a', 'task.deploy', { key: 'deploy' }), 'a.deploy', "the task's answered question is reused, not asked again");
+  assert.equal(approvalId(s.approvals, 'a', 'task.other', { key: 'other' }), 'a.task.other', 'a new question gets the new id');
+  assert.equal(approvalId(s.approvals, 'a', 'task.budget.example.spend:00ff', { key: 'budget.example.spend:00ff' }), 'a.task.budget.example.spend:00ff', "a task's key in the core's space never reaches the core's approval");
+  assert.equal(approvalId(s.approvals, 'a', 'tool.line2.ask.0123abcd', { key: 'line2.ask.0123abcd', question: 'Send the invoice?' }), 'a.line2.ask.0123abcd', "a tool's pending question is the same one");
+  assert.equal(approvalId(s.approvals, 'a', 'tool.line2.ask.0123abcd', { key: 'line2.ask.0123abcd', question: 'Something else?' }), 'a.tool.line2.ask.0123abcd', 'other words: a new question');
+  assert.equal(approvalId(s.approvals, 'a', 'budget.example.spend:00ff'), 'a.budget.example.spend:00ff', "the core's own keys did not change");
+});
+
+test('an agent\'s question is shown as plain text: no direction overrides or invisible characters, at most the cap', () => {
+  assert.equal(plainText('\u202eDEVORPPA\u202c ok', 2000), 'DEVORPPA ok');
+  assert.equal(plainText('a\u200bb\u2066c\u2069\u0007d\ufeff', 100), 'abcd');
+  assert.equal(plainText('line one\nline two\ttab', 100), 'line one\nline two\ttab', 'newlines and tabs stay');
+  assert.equal(plainText('Café — 写真 ✓', 100), 'Café — 写真 ✓', 'letters and symbols of any language stay');
+  const long = plainText(`${'A'.repeat(100_000)} [policy 0123456789ab]`, 2000);
+  assert.equal(long.length, 2000);
+  assert.ok(long.startsWith('AAA') && long.includes('…') && long.endsWith('[policy 0123456789ab]'), 'the start and the end stay');
+});
+
+test('a task records the app that created it, whatever source it gave', () => {
+  const s = fold([{ type: 'task.created', task: 'a', spec: { ...spec, source: 'github:owner/repo#7' }, user: 'box-a', app: 'factory' }, { type: 'task.created', task: 'b', spec: { ...spec, source: 'jira:BOX-1' }, user: 'box-b' }].map((e, i) => ({ ...e, seq: i + 1, at: '2026-10-29T20:00:00Z' })) as never);
+  assert.equal(s.tasks.get('a')?.app, 'factory');
+  assert.equal(s.tasks.get('b')?.app, undefined, 'a task from before: the box falls back to its source (box.ts appOf)');
 });

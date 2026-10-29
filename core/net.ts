@@ -18,8 +18,9 @@ import path from 'node:path';
 import tls from 'node:tls';
 import type { Task } from './contract.ts';
 
-// The installed box uses 8888. BOX_PROXY_PORT=auto (the demo) takes a free one in 8800-8887.
-const PROXY_PORTS = '8800-8899';
+// The installed box uses 8888. BOX_PROXY_PORT=auto (the demo) takes a free one in 8800-8887. Task users may reach only
+// the ports in use by a box's proxy (the nftables set `proxies`), never anything else that listens in this range.
+const PROXY_RANGE = [8800, 8899];
 export const TASK_UIDS = '30000-39999'; // the range sandbox.ts gives task users
 export const PLACEHOLDER_KEY = 'fk-placeholder-the-box-adds-the-key';
 const FACTORY = /^([a-z0-9-]+\.)*factory\.ai$/;
@@ -32,6 +33,12 @@ const ANTHROPIC = 'api.anthropic.com';
  */
 const FACTORY_PATHS = /^\/api\/(llm\/|cli\/|feature-flags$|organization\/managed-settings$|billing\/limits$|connectors\/tools\/list$|apps\/cloud-sync\/sessions\/batch$|ingest$)/;
 export const factoryPath = (p: string) => FACTORY_PATHS.test(p);
+/** The Anthropic paths Droid calls with the owner's own key: messages (and counting their tokens) and the model list. */
+const ANTHROPIC_PATHS = /^\/v1\/(messages(\/count_tokens)?|models(\/[\w.@:-]+)?)$/;
+export const anthropicPath = (p: string) => ANTHROPIC_PATHS.test(p);
+/** A model call's body is read before it goes on (fetchesOnItsOwn): at most 32 MB each (Anthropic's own limit), 64 MB a task at once. */
+export const MAX_MODEL_BODY = 32 * 1024 ** 2;
+export const MAX_MODEL_HELD = 64 * 1024 ** 2;
 /** Open connections a task may hold to the proxy at once (a browser keeps about 6 a host; npm a few dozen). */
 export const MAX_OPEN = 256;
 /** Hosts the proxy answers TLS for itself, to put the vault's model key on the way out. Only for Droid tasks. */
@@ -39,36 +46,94 @@ const relayed = (host: string) => FACTORY.test(host) || host === ANTHROPIC;
 const SAN = 'subjectAltName=DNS:factory.ai,DNS:*.factory.ai,DNS:api.anthropic.com\n';
 
 /**
- * Load the firewall: a task user may reach the box's proxy and nothing else. Boxes on one machine share the
- * rule, so a table that is already right is left alone (rewriting it would drop the per-task rules below).
+ * Load the firewall: a task user may reach a box's proxy port and nothing else. Boxes on one machine share the table,
+ * so a table that is already right is left alone (rewriting it would drop the per-task rules below), and each box
+ * adds its own proxy port to the set (`own`).
  */
-export function firewall() {
+export function firewall(own: number) {
   const has = (() => {
     try {
       const t = execFileSync('nft', ['list', 'table', 'inet', 'box'], { encoding: 'utf8', stdio: 'pipe' });
-      return t.includes('jump blocked') && t.includes(`dport ${PROXY_PORTS}`);
+      return t.includes('jump blocked') && t.includes('dport @proxies');
     } catch {
       return false; // no such table yet
     }
   })();
-  if (has) return;
-  const rules = `add table inet box
+  if (!has)
+    nft(`add table inet box
 delete table inet box
 table inet box {
+  set proxies {
+    type inet_service
+  }
   chain blocked {
     meta skuid ${TASK_UIDS} counter log prefix "box-block " reject
   }
   chain out {
     type filter hook output priority filter; policy accept;
-    meta skuid ${TASK_UIDS} ip daddr 127.0.0.1 tcp dport ${PROXY_PORTS} accept
+    meta skuid ${TASK_UIDS} ip daddr 127.0.0.1 tcp dport @proxies accept
     meta skuid ${TASK_UIDS} jump blocked
   }
 }
-`;
-  const file = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'box-nft-')), 'rules.nft'); // nft -f wants a real file
-  fs.writeFileSync(file, rules);
-  execFileSync('nft', ['-f', file]);
-  fs.rmSync(path.dirname(file), { recursive: true });
+`);
+  // Every box's proxy that listens now (a table made afresh holds none), and none of the ports nobody listens on any
+  // more (a box that stopped without a word): whatever opens on such a port later is not a proxy.
+  const { proxies, listening } = loopbackListeners();
+  const inSet = (() => {
+    try {
+      return [...execFileSync('nft', ['list', 'set', 'inet', 'box', 'proxies'], { encoding: 'utf8', stdio: 'pipe' }).matchAll(/\b(88\d\d)\b/g)].map((m) => Number(m[1]));
+    } catch {
+      return [];
+    }
+  })();
+  const add = [...new Set([own, ...proxies])];
+  const stale = inSet.filter((p) => !listening.has(p) && !add.includes(p));
+  nft(`add element inet box proxies { ${add.join(', ')} }\n${stale.length ? `delete element inet box proxies { ${stale.join(', ')} }\n` : ''}`);
+}
+
+/** This box's proxy port leaves the set when the box stops: something else may listen there next. */
+export function closeProxy(port: number) {
+  try {
+    execFileSync('nft', ['delete', 'element', 'inet', 'box', 'proxies', `{ ${port} }`], { stdio: 'pipe' });
+  } catch {} // not there, or no firewall
+}
+
+/** Run an nftables script as one transaction. */
+function nft(rules: string) {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'box-nft-'));
+  try {
+    fs.writeFileSync(path.join(dir, 'rules.nft'), rules); // nft -f wants a real file
+    execFileSync('nft', ['-f', path.join(dir, 'rules.nft')], { stdio: 'pipe' });
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+/**
+ * Who listens on 127.0.0.1 in the proxy range: every port, and the ones where a GurtOS box's proxy listens (a root
+ * process running core/box.ts). A port a box's proxy left, now held by something else, is not a proxy.
+ */
+export function loopbackListeners(): { proxies: number[]; listening: Set<number> } {
+  const proxies: number[] = [];
+  const listening = new Set<number>();
+  let out = '';
+  try {
+    out = execFileSync('ss', ['-Hltnp', 'src', '127.0.0.1'], { encoding: 'utf8', stdio: 'pipe' });
+  } catch {
+    return { proxies, listening }; // no ss: only this box's own port goes in
+  }
+  for (const line of out.split('\n')) {
+    const port = Number(/127\.0\.0\.1:(\d+)\s/.exec(line)?.[1]);
+    if (!(port >= PROXY_RANGE[0] && port <= PROXY_RANGE[1])) continue;
+    listening.add(port);
+    for (const [, pid] of line.matchAll(/pid=(\d+)/g)) {
+      try {
+        if (fs.statSync(`/proc/${pid}`).uid !== 0) continue;
+        if (fs.readFileSync(`/proc/${pid}/cmdline`, 'utf8').split('\0').some((a) => a.endsWith('/core/box.ts'))) proxies.push(port);
+      } catch {} // gone meanwhile
+    }
+  }
+  return { proxies, listening };
 }
 
 /**
@@ -76,14 +141,14 @@ table inet box {
  * connection, so each task gets its own log rule ahead of the general one; the box reads the log and turns each
  * line into a net.blocked event.
  */
-export function logBlocked(uid: number, taskId: string) {
+export function logBlocked(uid: number, taskId: string, proxyPort: number) {
   const insert = () =>
     execFileSync('nft', ['insert', 'rule', 'inet', 'box', 'blocked', 'meta', 'skuid', String(uid), 'counter', 'log', 'prefix', `"box-block:${uid} "`, 'reject', 'comment', `"task-${taskId}"`], { stdio: 'pipe' });
   try {
     insert();
   } catch {
     try {
-      firewall(); // another box on this machine (older code) may have put back the old table; make ours again
+      firewall(proxyPort); // another box on this machine (older code) may have put back the old table; make ours again
       insert();
     } catch {} // no firewall on this machine: nothing is refused, so nothing to log
   }
@@ -127,11 +192,11 @@ export function relayCert(home: string) {
 /** The uid that owns the other end of a loopback connection, from /proc/net/tcp. */
 export function uidOf(sock: net.Socket): number | undefined {
   const hex = (port: number) => `0100007F:${port.toString(16).toUpperCase().padStart(4, '0')}`;
-  const [client, server] = [hex(sock.remotePort ?? 0), hex(sock.localPort ?? 0)];
-  for (const line of fs.readFileSync('/proc/net/tcp', 'utf8').split('\n').slice(1)) {
-    const f = line.trim().split(/\s+/);
-    if (f[1] === client && f[2] === server) return Number(f[7]);
-  }
+  const pair = ` ${hex(sock.remotePort ?? 0)} ${hex(sock.localPort ?? 0)} `; // the client's line: its local address, then the box's
+  // Searched, not split into lines: a task holding many connections makes the table long, and this runs for each one.
+  const table = fs.readFileSync('/proc/net/tcp', 'utf8');
+  const at = table.indexOf(pair);
+  if (at >= 0) return Number(table.slice(at + 1, table.indexOf('\n', at)).split(/\s+/)[6]); // local rem st queues timer retransmits uid
 }
 
 /**
@@ -197,15 +262,19 @@ export class Tries {
   }
 }
 
-/** 'example.com' allows that host on any port, 'example.com:8080' only that port, '*.example.com' its subdomains. */
+/** 'example.com' allows that host on any port, 'example.com:8080' only that port, '*.example.com' its subdomains (on any port, or one: '*.example.com:443'). */
 export function allowed(hosts: string[], host: string, port: string) {
-  return hosts.some((h) => h === host || h === `${host}:${port}` || (h.startsWith('*.') && host.endsWith(h.slice(1))));
+  return hosts.some((h) => {
+    const [, name, only] = /^(.+?)(?::(\d+))?$/.exec(h) ?? [];
+    if (only !== undefined && only !== port) return false;
+    return name === host || (name?.startsWith('*.') && host.endsWith(name.slice(1)));
+  });
 }
 
 /** Box ports a task must never reach, even through a name it may use: the API, SpacetimeDB, the proxies. */
 const reserved = new Set([3000]);
 export const reservePort = (port: number) => reserved.add(port);
-const boxPort = (port: number) => reserved.has(port) || (port >= 8800 && port <= 8899);
+const boxPort = (port: number) => reserved.has(port) || (port >= PROXY_RANGE[0] && port <= PROXY_RANGE[1]);
 
 /** Link-local: the cloud's metadata service (169.254.169.254, with the machine's own credentials) and the like. */
 const subnets = (...cidrs: string[]) => {
@@ -303,8 +372,10 @@ export interface ProxyHooks {
 
 /** Start the proxy. Resolves to its port. */
 export async function startProxy(hooks: ProxyHooks, cert: { key: Buffer; cert: Buffer }): Promise<number> {
+  const uids = new WeakMap<net.Socket, number | undefined>(); // a connection's owner never changes: looked up once
   const who = (sock: net.Socket) => {
-    const uid = uidOf(sock);
+    if (!uids.has(sock)) uids.set(sock, uidOf(sock));
+    const uid = uids.get(sock);
     return uid === undefined ? undefined : hooks.taskOf(uid);
   };
   const fail = (res: http.ServerResponse, status: number, text: string) =>
@@ -328,6 +399,8 @@ export async function startProxy(hooks: ProxyHooks, cert: { key: Buffer; cert: B
     req.pipe(up);
   };
 
+  /** Bytes of model calls the proxy holds for each task right now (MAX_MODEL_HELD). */
+  const held = new Map<string, number>();
   /** A call to Factory or Anthropic from a Droid task: the placeholder key becomes the real one, and only here. */
   const toFactory = (req: http.IncomingMessage, res: http.ServerResponse, host: string, t?: Task) => {
     const anthropic = host === ANTHROPIC;
@@ -336,23 +409,52 @@ export async function startProxy(hooks: ProxyHooks, cert: { key: Buffer; cert: B
     const u = new URL(req.url ?? '/', 'http://x');
     const p = u.pathname;
     const to = p + u.search; // checked and sent as one normalized path, so the service can't read it another way
-    if (!anthropic && !FACTORY_PATHS.test(p)) {
+    if (anthropic ? !ANTHROPIC_PATHS.test(p) : !FACTORY_PATHS.test(p)) {
       if (t) hooks.blocked(t, `${host}${p}`.slice(0, 200));
-      return fail(res, 403, 'blocked by the box: GurtOS relays only the Factory calls Droid makes');
+      return fail(res, 403, `blocked by the box: GurtOS relays only the ${anthropic ? 'Anthropic' : 'Factory'} calls Droid makes`);
     }
     const headers = withKey(req.headers, host, anthropic ? ANTHROPIC_PLACEHOLDER : PLACEHOLDER_KEY, key);
     // A model call is read first, so the model service never fetches anything for the task (fetchesOnItsOwn).
     if (!anthropic && !p.startsWith('/api/llm/')) return forward(req, res, https.request({ host, path: to, method: req.method, headers }));
+    // Only a body the box can read goes on: a compressed one would carry a fetch past the check.
+    const encoding = String(req.headers['content-encoding'] ?? 'identity').trim().toLowerCase();
+    if (encoding !== 'identity') {
+      if (t) hooks.blocked(t, `${host}${p} (a ${encoding} body)`.slice(0, 200));
+      return fail(res, 415, 'blocked by the box: a model call goes as plain JSON, not compressed');
+    }
     const chunks: Buffer[] = [];
     let size = 0;
-    req.on('data', (c: Buffer) => ((size += c.length) > 64 * 1024 ** 2 ? req.destroy() : chunks.push(c)));
-    req.on('error', () => res.destroy());
+    let done = false; // read to the end, refused or cut off: what it held is let go once
+    const release = () => {
+      const left = (t && held.get(t.id)) || 0;
+      if (!done && t) left - size > 0 ? held.set(t.id, left - size) : held.delete(t.id);
+      done = true;
+    };
+    req.on('data', (c: Buffer) => {
+      if (done) return;
+      size += c.length;
+      if (t) held.set(t.id, (held.get(t.id) ?? 0) + c.length);
+      if (size <= MAX_MODEL_BODY && (!t || (held.get(t.id) ?? 0) <= MAX_MODEL_HELD)) return void chunks.push(c);
+      // The box holds what it reads, and a task may hold 256 connections: so a limit per call and per task.
+      release();
+      chunks.length = 0;
+      if (!res.headersSent) res.setHeader('connection', 'close');
+      fail(res, 413, "blocked by the box: a model call is at most 32 MB, and a task's calls at once 64 MB");
+    });
+    req.on('error', () => (release(), res.destroy()));
+    req.on('close', release);
     req.on('end', () => {
+      if (done) return;
+      release();
       const body = Buffer.concat(chunks);
       let why: string | undefined;
       try {
         why = body.length ? fetchesOnItsOwn(JSON.parse(body.toString())) : undefined;
-      } catch {} // not JSON: nothing for the service to fetch
+      } catch {
+        // Not JSON: the box cannot tell what it asks the service to fetch, so it does not go.
+        if (t) hooks.blocked(t, `${host}${p} (a body that is not JSON)`.slice(0, 200));
+        return fail(res, 415, 'blocked by the box: a model call goes as plain JSON');
+      }
       if (why) {
         if (t) hooks.blocked(t, `${host}${p} (${why})`.slice(0, 200));
         return fail(res, 403, `blocked by the box: a model call may not ask the model service to fetch ${why} for the task`);

@@ -298,7 +298,8 @@ export function TaskApp({ id }: { id: string }) {
 /** Personal edition: a done task on one of the owner's real folders waits for Keep before the folder changes. */
 function KeepButton({ task, events, after }: { task: Task; events: LogEvent[]; after: () => void }) {
   const [result, setResult] = useState('');
-  const kept = task.review === 'kept' || events.some((e) => (e.type === 'keep' && e.result === 'kept') || (e.type === 'task.step' && (e.data as { keep?: string })?.keep === 'applied'));
+  // Only the core's own keep events: a task can log a step with any data, including one that looks like a Keep.
+  const kept = task.review === 'kept' || events.some((e) => e.type === 'keep' && e.result === 'kept');
   if (kept) return <p class="t-body t-success">Kept: the changes are in your folder.</p>;
   const go = () =>
     api<{ kept?: unknown[]; conflicts?: string[] }>('POST', `/tasks/${task.id}/keep`)

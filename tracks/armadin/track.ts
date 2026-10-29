@@ -5,6 +5,6 @@ import type { Track } from '../../core/contract.ts';
 const track: Track = {
   name: 'armadin',
   title: 'Attack tests',
-  description: 'Runs known attacks on AI agents against this computer, like a poisoned package or a hijacked payment, and shows which ones GurtOS stopped.',
+  description: "Known attacks on AI agents, like a poisoned package or a hijacked payment, that GurtOS is tested against. They run only in GurtOS's own test suite, never on this computer; the results are in its published attack scoreboard.",
 };
 export default track;

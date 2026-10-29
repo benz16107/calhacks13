@@ -11,8 +11,8 @@ its network may reach, and a budget. States: `queued`, `running`, `waiting` (for
 
 Each task runs as its own Linux user (`box-<id>`, uid 30000 to 39999, no sudo, no shell) in its own
 overlayfs copy of the workspace, as a hardened systemd unit (`box-task-<id>`): it sees only its own
-processes, has a private `/tmp`, can write only its copy and its home, cannot reach D-Bus, and gets at most
-2 GB of memory. Its changes stay in its own layer. When it finishes, that layer goes on top
+processes, has a private `/tmp`, `/dev/shm` and System V IPC, can write only its copy and its home, cannot make
+namespaces or reach D-Bus, and gets at most 2 GB of memory. Its changes stay in its own layer. When it finishes, that layer goes on top
 of the workspace's view. **Undo** takes one layer out of the stack. Other tasks keep theirs, and the base
 files are never written.
 
@@ -31,7 +31,11 @@ and resumes what was running. SpacetimeDB only mirrors live status and approvals
 ## The network
 
 Task users reach nothing but the box's proxy (an nftables rule on their uids), and the proxy lets a task
-reach only the hosts in its spec. `example.com` allows any port, `example.com:8080` one port, `*.example.com`
+reach only the hosts in its spec. The rule allows only the ports in its set `proxies`: each box adds its own proxy port
+when it starts and removes it when it stops, and a box that starts drops the ports no one listens on any more, so
+anything else listening on loopback in 8800-8899 (an owner's dev server, a root service) is out of reach. Each task's
+unit also drops every packet that is not for loopback (`IPAddressDeny=any`), so a task stays on the box even if the
+firewall did not load. `example.com` allows any port, `example.com:8080` one port, `*.example.com`
 subdomains. A name that lands on the box itself (like `shop.localhost`) or on a private network (10/8, 172.16/12,
 192.168/16, 100.64/10 for a tailnet, fc00::/7) needs the exact `host:port`, so a public name that its owner points
 at the home network cannot take a task there. The box's own ports and link-local addresses (169.254.169.254, the
@@ -44,15 +48,18 @@ model call that asks the model service to fetch something for the task (a `web_f
 image or document by URL) is refused with a 403 and a `net.blocked` event: the service would reach that host for the
 task, around its allow-list. With a Factory key, only the paths Droid calls are relayed (models under `/api/llm/`, its
 own settings and limits, its session copy and telemetry; `FACTORY_PATHS` in `net.ts`, captured from a real session).
-Any other path, such as running a Factory-hosted connector's tool, is a 403 and a `net.blocked` event. A task may hold
-at most 256 connections to the proxy at once.
+With an Anthropic key, only `/v1/messages`, `/v1/messages/count_tokens` and `/v1/models` (`ANTHROPIC_PATHS`). Any other
+path, such as the account's files or batches, or running a Factory-hosted connector's tool, is a 403 and a
+`net.blocked` event. The proxy reads every model call before it goes on: a compressed body (`content-encoding`) or one
+that is not JSON is a 415 and a `net.blocked` event, a call is at most 32 MB and a task's calls being read at once 64
+MB in all (413). A task may hold at most 256 connections to the proxy at once.
 
 **One model key is enough: Factory's or your own Anthropic key.** With `FACTORY_API_KEY` in the vault, Droid uses
 Factory. With only `ANTHROPIC_API_KEY`, the box writes a bring-your-own-key model into the task user's
 `~/.factory/settings.json` (the task's model, and Haiku for the second look, with a placeholder key) and runs Droid on
 `custom:<model>`; the proxy relays `api.anthropic.com` and puts the real key in the `x-api-key` header. Droid's own
 calls to Factory get a 503 then, and the task carries on. With neither, a Droid task fails at once with "No model key
-yet. Add an Anthropic or Factory API key in Settings, Keys, then start the task again." `GET /api/setup` and
+yet. Add an Anthropic or Factory API key in Settings, Accounts & Keys, then start the task again." `GET /api/setup` and
 `GET /api/system` report `model: {ready, via: 'factory' | 'anthropic' | null}`.
 
 **Droid arrives after the first start.** Its license keeps it out of the image, so a new GurtOS computer downloads it
@@ -90,9 +97,9 @@ Worker side of the socket (`BOX_SOCKET` in the worker's environment), JSON over 
 | Request | Does |
 |---|---|
 | `GET /task` | The task, plus the steps it already logged (to resume) |
-| `POST /step {text, data?}` | Log progress: a plan, a step, a diff. A step, question or cost is at most 64 KB, and a task writes at most 20 MB to the log in all (`413`, `429`): the log is kept in the box's memory. |
+| `POST /step {text, data?}` | Log progress: a plan, a step, a diff. A step, question or cost is at most 64 KB (the box stops reading past that), and a task sends at most 20 MB to its broker in all, refused requests counted (`413`, `429`): the log is kept in the box's memory. A broker takes 64 connections at once. `data` is the task's own: the box never takes a fact from it (a Keep, a review). |
 | `POST /call {tool, input, key}` | Run a tool. Above the remaining budget it asks for an OK first. A key already answered returns the logged result. A call cut off mid-way runs again with the same `ctx.key`, so tools pass it on as an idempotency key and a resumed task never pays twice. |
-| `POST /ask {question, key}` | Pause for an OK, returns `{approved}`. The same key returns the same approval. |
+| `POST /ask {question, key}` | Pause for an OK, returns `{approved}`. The same key returns the same approval. A task's keys live under `task.`, apart from the box's own (`budget.`, `shadow.`, `tool.`), so it cannot pre-approve one of them. The question is shown as plain text: at most 2,000 characters (its start and its end), with no direction overrides or invisible characters. |
 | `POST /cost {cents, what}` | Count model spending. `cents` is 0 or more; anything else is refused, so a task can't lower its own spend. Token counts (`POST /usage`) and a question's `costCents` are checked the same way. |
 
 ## Approvals
@@ -113,7 +120,7 @@ So a task can wait hours for an OK.
 
 **Why a task failed.** The `task.state: failed` event's `error` is a sentence a person can read: the worker's own
 last error message, or for the common causes a plain one ("Your Anthropic key was not accepted. Change it in
-Settings, Keys.", "This computer's disk is full. Free some space, then run the task again."). It never starts with
+Settings, Accounts & Keys.", "This computer's disk is full. Free some space, then run the task again."). It never starts with
 `worker exited with`, and never holds a command line: a task that could not be set up names the step that failed
 ("GurtOS could not set this task up (mount failed)..."), and the whole message goes to the journal.
 
@@ -158,8 +165,9 @@ money in the broker (over the daily limit becomes an approval), shell, hosts and
 strangers at its open routes. Each refusal is a `permissions` note. Nothing changes for an app until the owner turns
 something off. Not covered yet: limiting hosts before an app first uses them, and an "allow once" question for a new one.
 
-**The disk cap.** Every 2 seconds the box measures each running task's own layer (`du -sb`, so a sparse file counts
-in full). A task past its cap is stopped and undone, with a `security` note in words and an alert to the owner's
+**The disk cap.** Every 2 seconds the box measures each running task's disk: its layer, its home and its private
+`/tmp` and `/var/tmp` (`du -sb`, so a sparse file counts in full). Its `/dev/shm` is memory, inside its 2 GB. Undo
+deletes the home too. A task past its cap is stopped and undone, with a `security` note in words and an alert to the owner's
 phones. The cap is 5 GB, or an app's `diskBytes` permission (`PUT /api/permissions/<app>`), or `BOX_TASK_DISK_CAP`
 for a whole box. It is a watcher, not a filesystem quota: a writer can pass the cap until the next check. Measured
 from the write to the stop: 0 to 3.1 s in six runs on x86 and arm64, each the only gate run on its machine; not yet
@@ -167,7 +175,8 @@ measured with many tasks at once.
 
 **The flight recorder.** At each step and tool result of a running task, the box keeps what changed in the task's
 own layer since the last record, beside the layer (`tasks/<id>/replay/<seq>/`, `replay.json`), never in the log.
-Files over 1 MB are noted as `big`, not kept; recording stops at 50 MB a task (`capped`). `GET /api/tasks/:id/replay`
+Files over 1 MB are noted as `big`, not kept; recording stops at 50 MB a task (`capped`), each kept file counting as
+at least 4 KB, or once the layer holds more than 20,000 entries (it runs on the box's only thread). `GET /api/tasks/:id/replay`
 is `{points: [{seq, changes: [{path, change, big?}]}], capped?}`; `GET /api/tasks/:id/diff?at=<seq>` is the usual
 `{changes, diff}` for the layer as it was right after that event. Purging the layer removes the recording too.
 
@@ -270,11 +279,28 @@ Not covered: the model relay (an agent reading its own environment may show its 
 leak) and the body of an HTTPS request to a host the task is allowed to reach.
 
 **Sandbox.** Each task is a systemd unit run as its own user, with no capabilities, no new privileges, a private
-`/tmp`, other users' processes hidden, the system read-only and writes only to its copy and home. It also has a
-seccomp filter: mounts, kernel modules, ptrace and perf, raw I/O, reboot, swap, the clock, keyrings and bpf fail with
-EPERM, and only the machine's own architecture runs. Kernel tunables, modules, logs, control groups, the clock and
-the host name are protected. Limits: 2 GB of memory with no swap, 512 processes, two CPU cores. Not covered: a
-per-task disk quota, and Landlock (the read-only system and write paths above do that job).
+`/tmp`, its own `/dev/shm` (256 MB, in memory) and System V IPC, other users' processes hidden, the system read-only
+and writes only to its copy and home. It cannot make namespaces (`RestrictNamespaces=yes`) or send a packet anywhere
+but loopback (`IPAddressDeny=any`). It also has a seccomp filter: mounts, kernel modules, ptrace and perf, raw I/O,
+reboot, swap, the clock, keyrings and bpf fail with EPERM, and only the machine's own architecture runs. Kernel
+tunables, modules, logs, control groups, the clock and the host name are protected. Limits: 2 GB of memory with no
+swap, 512 processes, two CPU cores. The box's own locks are in `/run/box` (root's alone), where no task can hold one.
+Not covered: a hard per-task disk quota (the disk cap above is a watcher), Landlock (the read-only system and write
+paths above do that job), and the network namespace: every task shares the machine's, so two tasks can talk over an
+abstract Unix socket and a task can read `/proc/net` (other tasks' ports and socket names). The fix is a network
+namespace per task with the proxy reached through a socket, or Landlock's abstract-socket scope on Linux 6.12 and
+later. The second look at risky steps runs in the worker, inside the task, so a hijacked agent can skip it by calling
+its broker itself; budgets and the owner's threshold still apply, since they are in the core.
+
+**State files that cannot be read.** A torn `devices.json`, `owner.json`, `vault-meta.json`, `permissions.json`,
+`settings.json`, `setup.json` or `business.json` (a disk that failed under a write) is set aside as
+`<name>.torn-<time>` with a warning and a `security` note, and the box still starts. Setup stays done. With
+`permissions.json`, `settings.json` or `business.json` torn, the agents are paused until the owner checks Settings and
+resumes them.
+
+**Upgrading from v0.1.0-preview.** A task's own question used to be `<task>.<key>` and a tool's
+`<task>.<call>.ask.<hash>`. A box upgraded with one of those in its log answers from it instead of asking again; a key
+in the box's own spaces never matches one (`log.ts` `approvalId`).
 
 ## Writing a track
 
@@ -293,6 +319,7 @@ Make `tracks/<name>/track.ts` and default-export a `Track` with any of these slo
 | `offByDefault` | Not read by the core any more: a new box turns on only the model app, so every other app is off until the owner turns it on. Kept so a track that sets it still loads. |
 | `x-box-caller` | Not a slot: a header on the Request every route gets, set by the box (a copy the caller sends is replaced): `screen` (the box's own screen), `owner` (a phone paired as the owner), `device:<id>` (another paired phone), `service` (a helper on the box) or `none` (an open route reached through a proxy with no token). On a Business box, `x-box-person` carries the calling person's id (absent otherwise); the `box` the route gets already acts as that person. |
 | `openRoutes` | Route keys (like `'GET /status'`) that need no paired-phone token, even for a request that arrives through a public proxy. For a route that is public on purpose, or checks its own secret (the Jira panel's routes). Every other route needs a phone. An open route must return nothing private unless its own check passes. |
+| `ownOrigin` | Route keys whose HTML page is served with the box's own origin instead of the sandbox (*An app's window*): only for a page that cannot work without one, such as a passkey ceremony. It runs with the box's origin, so review it like core code. The window token and every other rule still apply. |
 
 Rules:
 - Import only types from `core/contract.ts`. Never import other core files or another track.
@@ -435,8 +462,13 @@ and answering the app's own tasks' requests. Anything else is a `403`; another a
 until the device that opened it is removed. The box puts a short script first in the page that adds the token to
 the page's own `fetch` calls, and `/kit/gurtos.js` carries it on links, forms and `EventSource`. A request the
 browser makes by itself (a `<script type="module" src>`, an `<img>`) carries no header: add `location.search` to its
-address, as `tracks/spacetime/app/index.html` does. Passkeys need a real origin, so Shopper's are unavailable in its
-window.
+address, as `tracks/spacetime/app/index.html` does. A page that cannot work without a real origin (a passkey
+ceremony) is listed in the track's `ownOrigin` and served without the sandbox, with the box's own origin: only
+Shopper's Face ID page (`GET /approve`), which the phone opens top level. Such a page is reviewed like core code: it
+shows an agent's text only escaped and loads nothing from another site. An app answers only the requests of tasks
+its own box made (`task.app`, whatever `source` it gave), and its box may not undo a task whose changes the owner
+kept in their folder (403); the owner undoes that. Window tokens live in memory: after a restart, an old one gets a
+`401` "this window has expired".
 
 **Undo removes the task's files**: its layer is deleted from disk (once no running task still reads it), and
 `GET /api/tasks/<id>/diff` for an undone task is empty. A task undone while it is still being set up never starts its
@@ -742,7 +774,7 @@ answers without `/api`, which is what the demo and tracks use.
 | `POST /api/tasks {title, prompt, workspace?, tools?, hosts?, budgetCents?}` | The new task. Workspace defaults to `home`, worker to Droid. A field the box doesn't know (a typo like `folders`) is refused with a 400 naming it. `folder` (Personal) is a real field: the owner's folder the task works a copy of, kept on the task. |
 | `POST /api/tasks {..., files: [{name, data}]}` | Files shared to a new task (the Mac app's Share menu): 1 to 8, base64, 5 MB in all, plain names. They go to a new workspace whose name the box picks (`shared-<random>`), so the task's copy holds only them; a task with files can't name a workspace, folder or folders. The log keeps names and sizes, never the contents. |
 | `GET /api/tasks/<id>` | `{task, approvals, events}`: the task, its approvals, and its whole action log |
-| `GET /api/tasks/<id>/diff` | `{changes: [{path, change}], diff}`: what it added, modified or deleted, and a unified diff |
+| `GET /api/tasks/<id>/diff` | `{changes: [{path, change}], diff}`: what it added, modified or deleted, and a unified diff of the first 200 changed files (at most 200 KB; `changes` lists them all) |
 | `POST /api/tasks/<id>/undo` | The task, now `undone`. For a real-folder task, discards its changes. |
 | `POST /api/tasks/<id>/keep` | Personal: apply a done task's changes to its real folder. `{kept}` or `{conflicts}`. |
 | `GET /api/owner` | Personal: `{user, name, uid, home}` (`name` is the account's full name, empty when unset), or null on a Server box |
@@ -863,7 +895,9 @@ device's token like any other off-box request. Code: `core/remote.ts`. State: `B
 | `PUT /api/remote/relay {url}` | Owner, while remote access is off (`409` otherwise). Use your own relay (`relay/README.md`): an `https://` host name with no path, query or login, that resolves only to public addresses; anything else is a `400` naming why. `{url: null}` goes back to the default. Saved in `BOX_HOME/relay.json`. Pushes and Quick Start use the same relay. |
 
 While it is on, `POST /api/pair/start` returns `url: https://app.gurtos.com/pair?box=<name>.box.gurtos.com#<code>` (the
-GurtOS app adds the box to its machines) and `boxUrl`, the box's own `https://.../pair#<code>`; `GET /api/boxes`
+GurtOS app adds the box to its machines) and `boxUrl`, the box's own `https://.../pair#<code>`. With your own relay and
+the hosted app (which accepts only its own relay's addresses), `url` is the computer's own address on your relay,
+`https://<name>.<relay host>/pair#<code>`; `GET /api/boxes`
 reports the https address. The API allows CORS from `https://app.gurtos.com` (always) and `BOX_ORIGINS`.
 
 **Push notifications** reach the GurtOS app on a phone. The app subscribes once with the relay gateway's VAPID key

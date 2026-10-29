@@ -30,9 +30,9 @@ export interface TaskSpec {
   model?: string;
   /** Tool names the task may call through the broker. Default none. */
   tools?: string[];
-  /** Host names the task's network may reach. Default none. */
+  /** Host names the task's network may reach. Default: the owner's network setting (none on a new box). */
   hosts?: string[];
-  /** Spending above this, in US cents, pauses the task for an OK. Default 0. */
+  /** Spending above this, in US cents, pauses the task for an OK. Default: the owner's setting (`defaultBudgetCents`, 100 on a new box). */
   budgetCents?: number;
   /** Who started it, for the log and the portal: 'jira:BOX-12', 'asi1', 'schedule', 'portal'. */
   source?: string;
@@ -82,6 +82,8 @@ export interface Task extends FullSpec {
   review?: 'pending' | 'kept' | 'conflict' | 'undone';
   /** Business: the id of the person who asked for this task. Set by the core, never by the caller. */
   requestedBy?: string;
+  /** The app (track) that created the task through its box, whatever `source` it gave. Set by the core. */
+  app?: string;
   createdAt: string;
   updatedAt: string;
   error?: string;
@@ -159,7 +161,7 @@ interface Base {
 type Ev<T extends string, D> = Base & { type: T } & D;
 
 export type LogEvent =
-  | Ev<'task.created', { task: string; spec: FullSpec; user: string; requestedBy?: string }>
+  | Ev<'task.created', { task: string; spec: FullSpec; user: string; requestedBy?: string; app?: string }>
   | Ev<'task.state', { task: string; state: TaskState; layers?: string[]; error?: string; summary?: string }>
   /** Progress the worker reports: plans, steps, diffs. `data` is what the worker needs to resume. */
   | Ev<'task.step', { task: string; text: string; data?: unknown }>
@@ -279,6 +281,13 @@ export interface Track {
    * phone. The core cannot help an open route: it must never return anything private unless its own check passes.
    */
   openRoutes?: string[];
+  /**
+   * Route keys (as in `routes`) whose HTML page is served with the box's own origin instead of the sandbox every other
+   * app page gets: only for a page that cannot work without one, such as a passkey (WebAuthn) ceremony. Such a page runs
+   * with the box's origin, so review it like core code: it shows an agent's text only escaped, and loads nothing from
+   * another site. The window token and every other rule still apply.
+   */
+  ownOrigin?: string[];
 }
 
 /**

@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
-import { DEFAULT_SETTINGS, applyPatch, insideAny, loadSetup, recordStep } from './config.ts';
+import { DEFAULT_SETTINGS, applyPatch, insideAny, loadSettings, loadSetup, recordStep } from './config.ts';
 
 const dir = () => fs.mkdtempSync(path.join(os.tmpdir(), 'cfg-'));
 
@@ -91,4 +91,15 @@ import { hostProblem } from './config.ts';
 test('hosts a task may reach: names, *.domain and :port; never "*", ranges, a whole TLD or the box itself', () => {
   for (const ok of ['example.com', 'api.apify.com', '*.cdn.example.com', 'example.com:8443', 'api.localhost:4021']) assert.equal(hostProblem(ok), undefined, ok);
   for (const bad of ['*', '*.*', '*.com', '0.0.0.0/0', '127.0.0.1', '127.0.0.1:7700', 'localhost', '169.254.169.254', 'http://x.com', '', 42]) assert.ok(hostProblem(bad), String(bad));
+});
+
+test('a torn settings.json or setup.json is set aside and named, never a silent reset', () => {
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'cfg-'));
+  fs.writeFileSync(path.join(home, 'settings.json'), '{"paused": tr');
+  fs.writeFileSync(path.join(home, 'setup.json'), '{"done": tr');
+  const torn: string[] = [];
+  assert.deepEqual(loadSettings(home, torn), DEFAULT_SETTINGS, 'the defaults, for the box to pause its agents on');
+  assert.equal(loadSetup(home, false, torn).done, true, 'a box that was set up is not set up again from its screen');
+  assert.deepEqual(torn, ['settings.json', 'setup.json']);
+  assert.ok(fs.readdirSync(home).some((f) => f.startsWith('settings.json.torn-')), 'kept aside for a look');
 });

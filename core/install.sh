@@ -3,8 +3,9 @@
 # power cut. Safe to run again. Needs root.   sudo core/install.sh
 set -euo pipefail
 cd "$(dirname "$0")/.."
-# One install at a time per machine: two deploys at once collide in npm ci on /opt/box/node_modules.
-mkdir -p /run/lock; exec 8>/run/lock/box-install.lock
+# One install at a time per machine: two deploys at once collide in npm ci on /opt/box/node_modules. The lock is in a
+# folder only root can open (a task could hold one in /run/lock).
+install -d -m 700 /run/box; exec 8>/run/box/install.lock
 flock -n 8 || { echo "install: waiting for another install on this machine to finish"; flock 8; }
 core/setup.sh >/dev/null
 

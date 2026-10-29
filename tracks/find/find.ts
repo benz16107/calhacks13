@@ -387,23 +387,39 @@ function readText(file: string, size: number) {
 type Described = { text: string; model: string; ms: number };
 
 /**
+ * A scan runs on the box's only thread, beside the API, the kill switch and the proxy: it lets them answer every 100
+ * files, reads at most `reads` new or changed files (the next scan carries on) and looks at most at `files` in all.
+ */
+export const SCAN_LIMITS = { reads: 2000, files: 100_000, every: 100 };
+
+/**
  * Index every workspace's photos and text files that are new or changed, and drop the ones that are gone.
  * Returns the photos no model could describe.
  */
-export async function scan(describePhoto: (file: string, ws: string, rel: string) => Promise<Described>, onDescribed?: (d: Doc) => void) {
+export async function scan(describePhoto: (file: string, ws: string, rel: string) => Promise<Described>, onDescribed?: (d: Doc) => void, limits = SCAN_LIMITS) {
   const seen = new Set<string>();
   const failed: { workspace: string; path: string; error: string }[] = [];
   let changed = false;
+  let looked = 0;
+  let read = 0;
+  const keep = (ws: string) => {
+    for (const id of docs.keys()) if (id.startsWith(`file:${ws}/`)) seen.add(id);
+  };
 
+  /** False when the scan stopped short of the end of this workspace. */
   async function workspace(ws: string) {
     const dir = root(ws);
     for (const rel of walk(dir)) {
+      if (++looked % limits.every === 0) await new Promise((r) => setImmediate(r));
+      if (looked > limits.files || read >= limits.reads) return false;
       const id = `file:${ws}/${rel}`;
       const file = path.join(dir, rel);
       const st = fs.statSync(file);
+      if (!st.size) continue; // nothing in it to find (and an entry it had goes)
       const sig = `${st.size}:${st.mtimeMs}`;
       seen.add(id);
       if (forgotten.has(id) || docs.get(id)?.sig === sig) continue;
+      read++;
       const metadata: Record<string, string> = { kind: photoType(rel) ? 'photo' : 'file', workspace: ws, path: rel };
       let text: string | undefined;
       if (photoType(rel)) {
@@ -423,15 +439,16 @@ export async function scan(describePhoto: (file: string, ws: string, rel: string
       changed = true;
       if (metadata.kind === 'photo') onDescribed?.(doc);
     }
+    return true;
   }
 
   for (const ws of fs.readdirSync(path.join(HOME, 'workspaces'))) {
     try {
-      await workspace(ws);
+      if (!(await workspace(ws))) keep(ws); // stopped short: the files it did not reach keep their entries
     } catch (e) {
       // It changed under the scan, for example an undo remounting its view: keep what it had, read it next time.
       console.error(`find: could not read workspace ${ws}: ${(e as Error).message}`);
-      for (const id of docs.keys()) if (id.startsWith(`file:${ws}/`)) seen.add(id);
+      keep(ws);
     }
   }
   if (changed) save();
