@@ -39,10 +39,13 @@ cloud's metadata service) are never reached. Every refusal is a `net.blocked` ev
 
 Droid tasks hold placeholder keys. The proxy swaps in the vault's key on the way out, for plain calls and,
 through the box's own TLS certificate, for model calls. So the real key never enters a task. The key goes only into
-the `authorization` and `x-api-key` headers, never into another header a service might quote back in an error. On
-your own Anthropic key, a model call that asks Anthropic to fetch something for the task (a `web_fetch` tool, an
-MCP server, an image or document by URL) is refused with a 403: Anthropic would reach that host for the task,
-around its allow-list. Factory's calls are passed through unread: a limit, listed in the threat model (gurtos.com/docs/security/threat-model/).
+the `authorization` and `x-api-key` headers, never into another header a service might quote back in an error. A
+model call that asks the model service to fetch something for the task (a `web_fetch` or `mcp` tool, an MCP server, an
+image or document by URL) is refused with a 403 and a `net.blocked` event: the service would reach that host for the
+task, around its allow-list. With a Factory key, only the paths Droid calls are relayed (models under `/api/llm/`, its
+own settings and limits, its session copy and telemetry; `FACTORY_PATHS` in `net.ts`, captured from a real session).
+Any other path, such as running a Factory-hosted connector's tool, is a 403 and a `net.blocked` event. A task may hold
+at most 256 connections to the proxy at once.
 
 **One model key is enough: Factory's or your own Anthropic key.** With `FACTORY_API_KEY` in the vault, Droid uses
 Factory. With only `ANTHROPIC_API_KEY`, the box writes a bring-your-own-key model into the task user's
@@ -87,7 +90,7 @@ Worker side of the socket (`BOX_SOCKET` in the worker's environment), JSON over 
 | Request | Does |
 |---|---|
 | `GET /task` | The task, plus the steps it already logged (to resume) |
-| `POST /step {text, data?}` | Log progress: a plan, a step, a diff |
+| `POST /step {text, data?}` | Log progress: a plan, a step, a diff. A step, question or cost is at most 64 KB, and a task writes at most 20 MB to the log in all (`413`, `429`): the log is kept in the box's memory. |
 | `POST /call {tool, input, key}` | Run a tool. Above the remaining budget it asks for an OK first. A key already answered returns the logged result. A call cut off mid-way runs again with the same `ctx.key`, so tools pass it on as an idempotency key and a resumed task never pays twice. |
 | `POST /ask {question, key}` | Pause for an OK, returns `{approved}`. The same key returns the same approval. |
 | `POST /cost {cents, what}` | Count model spending. `cents` is 0 or more; anything else is refused, so a task can't lower its own spend. Token counts (`POST /usage`) and a question's `costCents` are checked the same way. |
@@ -138,7 +141,8 @@ after checking who may; a new way of setting up calls them too, never a copy of 
 **Setup from another computer.** `POST /api/setup/code` (only from the computer's own screen, during setup) returns
 `{code, expiresAt, open, until, port, urls, remote?, devices}`: an 8-character code, one use, 30 minutes, and the setup
 channel, a listener on port 7701 (`BOX_SETUP_PORT`) that forwards to this API and marks every request as coming
-from the network. `POST /api/pair {code, kind: 'setup'}` trades the code for a setup token (an owner device of kind
+from the network. It is plain HTTP, so the image's firewall opens it to private networks only (a home network, a
+tailnet), never the public internet: set a cloud box up on its provider's console, or over a tailnet. `POST /api/pair {code, kind: 'setup'}` trades the code for a setup token (an owner device of kind
 `setup`; only a setup code pairs as `setup`). The token and the channel end at `POST /api/setup/finish`, at
 `POST /api/setup/stop` (the screen's Stop), or two hours after they were made. `GET /api/setup` has `channel`
 (`devices` is `[{name, since}]`). `GET /api/setup/doctor` is `{ok, missing: [{id, text}]}`. Clients:
@@ -242,7 +246,9 @@ may rewrite the log.
 ## Claude Code and Claude Desktop (the GurtOS MCP server)
 
 `core/claude-mcp.ts` lets Claude on your own computer work a box: start a task, list tasks, read a task's log and
-diff, see and answer pending approvals, and undo or keep a task. It calls the box's API with a paired device's token,
+diff, see pending approvals, and undo or keep a task. **It does not answer approvals unless you add
+`--env BOX_MCP_ANSWER=on`**: a task writes its own log, questions and files, maybe following a page it read, and Claude
+reads them, so they could talk it into approving. With it on, the answer is logged under the paired device's name. It calls the box's API with a paired device's token,
 so it goes through the same approvals, budgets and log as a phone, and it never sees a vault key. Pair a device named
 "Claude" from the box's screen, then:
 
@@ -280,7 +286,7 @@ Make `tracks/<name>/track.ts` and default-export a `Track` with any of these slo
 | `tools` | Tasks that list the tool's name can call it through the broker. It runs in the core with its `secrets`. |
 | `logReaders` | Feeds `read(event)` every log event in order, from the start, and resumes after restarts. Throw to retry. |
 | `modelJobs` | Anyone with the box can run it with `box.job(name, input)`. |
-| `apps` | The portal lists them. Their pages are your routes. |
+| `apps` | The portal lists them. Their pages are your routes, served sandboxed (below, *An app's window*). |
 | `routes` | `'POST /hook': (req, box) => Response`, served at `/t/<name>/hook` on the box's API. Webhooks go here. |
 | `secrets` | Vault keys this track's routes and triggers may read with `box.secret(name)`. Tools and jobs declare their own. |
 | `optionalSecrets` | Keys among the app's declared secrets it can run without (it falls back to test mode). The App Center marks them `optional: true`, and setup asks only for the others. |
@@ -417,6 +423,20 @@ followed to where they really go. A Server box (no owner, no `agentFolders`) han
 
 **Request bodies** are at most 10 MB, and 1 MB on the routes open without a token (pairing, the work-account
 sign-in, a track's open routes). A bigger one is a `413`, and the box stops reading it.
+
+**An app's window.** Every HTML (or XML, SVG) answer from a track route is served with `Content-Security-Policy:
+sandbox` (scripts, forms, popups, dialogs, downloads and links a person clicks, never `allow-same-origin`). The page
+has no origin of its own: it can't act as the box's screen, reach into the portal around it, or read the device's
+token or storage (use memory for state). The portal asks `POST /api/apps/<app>/window` for `{token, expiresAt}` and
+opens the page with `?access_token=<token>`. That token reaches the app's own routes (`/t/<app>/...`, as whoever
+opened the window, so `x-box-caller` is what it was), `GET /api/tasks`, `GET /api/tasks/<id>`, `GET /api/approvals`,
+and answering the app's own tasks' requests. Anything else is a `403`; another app's request comes back with
+`needs: 'shell'` and the task's id, and GurtOS opens that task's window for a person to answer. It lasts 12 hours, or
+until the device that opened it is removed. The box puts a short script first in the page that adds the token to
+the page's own `fetch` calls, and `/kit/gurtos.js` carries it on links, forms and `EventSource`. A request the
+browser makes by itself (a `<script type="module" src>`, an `<img>`) carries no header: add `location.search` to its
+address, as `tracks/spacetime/app/index.html` does. Passkeys need a real origin, so Shopper's are unavailable in its
+window.
 
 **Undo removes the task's files**: its layer is deleted from disk (once no running task still reads it), and
 `GET /api/tasks/<id>/diff` for an undone task is empty. A task undone while it is still being set up never starts its
@@ -581,7 +601,7 @@ an admin pairing each phone with a code. Pairing still works beside it. The code
 1. The pairing page asks `GET /api/sso` (open: it returns only `{on, name}`) and shows "Sign in with your work account".
 2. `GET /api/sso/start` sends the browser to the provider's sign-in page (from its discovery document) with `state`, a
    `nonce` and a PKCE challenge (S256). A cookie ties the sign-in to that browser. At most 200 sign-ins wait at once,
-   each for 10 minutes.
+   and 10 from one address, each for 10 minutes.
 3. The provider sends the browser to `GET /api/sso/callback` on the address the person used. The box checks the state
    and the cookie, trades the code for an ID token (with the client secret from the vault and the PKCE verifier), and
    checks the token: RS256 only, signed by one of the provider's keys (`jwks_uri`, fetched again once for a key it has
@@ -826,7 +846,7 @@ Column names are camelCase in the TypeScript client and snake_case in SQL (`cost
 
 ## Remote access and push notifications
 
-**Reach this box from anywhere** (opt in, owner only) gives the box its own address, `https://<name>.box.gurtos.com`,
+**Reach this computer from anywhere** (opt in, owner only) gives the box its own address, `https://<name>.box.gurtos.com`,
 through the GurtOS relay (`relay/README.md`). The box opens an outbound tunnel (frpc), so nothing is forwarded at
 home, and gets its own Let's Encrypt certificate (Caddy on 127.0.0.1). TLS ends on the box: the relay passes the
 encrypted bytes by name and cannot read them. Requests through it carry `X-Forwarded-For`, so they need a paired

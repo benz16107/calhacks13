@@ -1,10 +1,10 @@
 // A track's own app (GET /api/apps) in a GurtOS window. The page lives under /t/<track>/ and is owned by its track;
 // it can link /kit/gurtos.css and /kit/gurtos.js to look like the rest of the OS. The window keeps it in the
 // desktop's light or dark style.
-import { useRef } from 'preact/hooks';
-import { applyTheme, base, box, signedIn, tokenQuery, useBox } from '../live.ts';
+import { useEffect, useRef, useState } from 'preact/hooks';
+import { api, applyTheme, base, box, signedIn, tokenQuery, useBox } from '../live.ts';
 import { Button, IconButton, StatusPage } from '../kit/ui.tsx';
-import { HeaderBar } from '../wm.tsx';
+import { HeaderBar, open } from '../wm.tsx';
 import { useToggleApp } from './settings.tsx';
 
 export const trackEntry = (arg: string) => box.apps.find((x) => `${x.track}/${x.name}` === arg);
@@ -23,9 +23,26 @@ export function TrackApp({ arg }: { arg: string }) {
   const off = !a && installed(arg);
   const frame = useRef<HTMLIFrameElement>(null);
   const src = a ? `${base()}/t/${a.track}${a.href}` : '';
-  // Off the box's own screen a track page needs the pairing token: the URL carries it, /kit/gurtos.js carries it on.
-  // On the box's own screen a Business person may be signed in: the window gets ?person= and sends it as x-box-person.
-  const load = src && src + tokenQuery(src.includes('?') ? '&' : '?') + (signedIn() ? `${src.includes('?') || tokenQuery() ? '&' : '?'}person=${encodeURIComponent(signedIn()!)}` : '');
+  // The page runs sandboxed, with no origin of its own, so it never holds this device's token or acts as the box's
+  // screen: the box gives each window a token of its own, for that app's routes only (core/box.ts, windowGate). The
+  // URL carries it and /kit/gurtos.js carries it on. A box too old to give one gets the old way: the pairing token.
+  const [win, setWin] = useState<string | undefined>();
+  useEffect(() => {
+    setWin(undefined);
+    if (a) api<{ token: string }>('POST', `/apps/${encodeURIComponent(a.track)}/window`).then((r) => setWin(r.token), () => setWin(''));
+  }, [a?.track]);
+  const sep = src.includes('?') ? '&' : '?';
+  const old = () => src + tokenQuery(sep) + (signedIn() ? `${src.includes('?') || tokenQuery() ? '&' : '?'}person=${encodeURIComponent(signedIn()!)}` : '');
+  const load = src && win !== undefined ? (win ? `${src}${sep}access_token=${encodeURIComponent(win)}` : old()) : '';
+  // A request the page may not answer (another app's), it asks GurtOS to open here, where the person answers it.
+  useEffect(() => {
+    const hear = (e: MessageEvent) => {
+      const m = e.data as { gurtos?: string; route?: string };
+      if (e.source === frame.current?.contentWindow && m?.gurtos === 'open' && /^task\/[\w.-]{1,80}$/.test(m.route ?? '')) open(m.route!);
+    };
+    addEventListener('message', hear);
+    return () => removeEventListener('message', hear);
+  }, []);
   return (
     <>
       <HeaderBar
@@ -42,7 +59,7 @@ export function TrackApp({ arg }: { arg: string }) {
         }
       />
       <div class="g-window-content gos-track">
-        {a ? (
+        {a && !load ? null : a ? (
           <iframe ref={frame} class="gos-track-frame" title={a.title} src={load} onLoad={applyTheme} allow="publickey-credentials-get; publickey-credentials-create" />
         ) : (
           <StatusPage

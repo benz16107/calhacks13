@@ -618,11 +618,9 @@ export function applyTheme() {
   const dark = t === 'dark' || (t === 'system' && matchMedia('(prefers-color-scheme: dark)').matches);
   document.documentElement.dataset.theme = dark ? 'dark' : 'light';
   applyAccent();
-  for (const f of document.querySelectorAll('iframe')) {
-    try {
-      f.contentDocument!.documentElement.dataset.theme = document.documentElement.dataset.theme;
-    } catch {} // a frame from another origin keeps its own
-  }
+  // An app's window is sandboxed (another origin), so it hears the style by message (/kit/gurtos.js, followTheme).
+  const d = document.documentElement.dataset;
+  for (const f of document.querySelectorAll('iframe')) f.contentWindow?.postMessage({ gurtos: 'theme', theme: d.theme, contrast: d.contrast, largerText: d.largerText, reduceMotion: d.reduceMotion }, '*');
 }
 /** The accent color from Settings, Appearance, mixed for light or dark. Empty means the system's blue. */
 function applyAccent() {

@@ -106,8 +106,9 @@ the box's screen before detaching the ISO or restarting. Detach the ISO afterwar
 either way, but with the ISO attached every start waits 30 seconds at the disc's menu. To reinstall, restart with
 the ISO attached and pick Install within those 30 seconds (Vultr's reinstall refuses ISO instances).
 
-On any cloud VM with only a public address, the firewall lets nothing reach the box's API, so first-run setup
-happens on the provider's web console, which shows the box's screen. To reach the portal afterwards from your own
+On any cloud VM with only a public address, the firewall lets nothing reach the box's API or its setup port, so
+first-run setup happens on the provider's web console, which shows the box's screen. To let an agent set it up
+from another computer (AGENT-SETUP.md), join the box to a private network such as Tailscale first. To reach the portal afterwards from your own
 computer or phone, join the box to a private network such as Tailscale (its addresses are allowed), or, on a
 debug build, forward the port over ssh: `ssh -L 7700:127.0.0.1:7700 root@<box>`, then open `http://127.0.0.1:7700`.
 
@@ -207,7 +208,9 @@ Updates do not touch it: setup's state lives with the box on the data partition.
 
 `/etc/nftables.conf` drops everything coming in except replies to the box's own connections, ping and DHCP. On
 both editions the box's API and portal (port 7700) are also open to private networks (10/8, 172.16/12,
-192.168/16, Tailscale's 100.64/10, link-local, IPv6 ULA), so a phone on the same network can pair; the box
+192.168/16, Tailscale's 100.64/10, link-local, IPv6 ULA), so a phone on the same network can pair. So is the setup
+port (7701) while setup from another computer is open, and from the same networks only, because it is plain HTTP
+and the model key an agent sets travels over it. The box
 listens on every address and sets `BOX_URL` to its own address at each start (`box-env`), so the pairing QR code
 opens on the phone. Never from the public internet: every request that does not come from the box itself
 already needs a paired phone's token (core's "Who may reach the API"), and the firewall keeps it that way one

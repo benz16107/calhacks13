@@ -2,7 +2,7 @@
 
 The relay gives a GurtOS box an address like `https://rosa.box.gurtos.com` with no port forwarding at home, and
 forwards push notifications to the GurtOS app on a phone. It runs on its own small machine with a public address,
-not on a box. A box opts in from Settings ("Reach this box from anywhere"); nothing changes until the owner does.
+not on a box. A box opts in from Settings ("Reach this computer from anywhere"); nothing changes until the owner does.
 
 The hosted relay at `box.gurtos.com` is not running as of October 29, 2026. To use remote access today, run your own
 ([`docs/self-host.md`](../docs/self-host.md)) and point boxes at it with `BOX_RELAY`.

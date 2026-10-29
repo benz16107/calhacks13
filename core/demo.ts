@@ -1,7 +1,7 @@
 // The four demo moments, headless. ./demo runs this on a test box as root. Exit 0 = pass.
 // Each run has its own BOX_HOME and its own box process, so threads can run it at the same time.
 import { execFileSync, spawn, spawnSync } from 'node:child_process';
-import { randomBytes } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
 import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
@@ -305,6 +305,8 @@ await moment(
         const steps = events.filter((e) => e.type === 'task.step').length;
         check(view('repo', 'notes.md')?.includes('Droid was here.'), 'Droid, running Claude as its own Linux user, edited the file in its own copy');
         check(steps >= 2, `its steps are in the action log (${steps} steps)`);
+        const refusedFactory = events.flatMap((e) => (e.type === 'net.blocked' && /factory\.ai/.test(e.host) ? [e.host] : []));
+        check(!refusedFactory.length, `every Factory call Droid made is one the box relays (${refusedFactory.join(', ') || 'none refused'})`);
         const paid = events.find((e) => e.type === 'tool.result' && e.ok);
         check(paid, 'it used a box tool through the broker; the tool ran in the core with the vault, not in the task');
         const keys = new Set(envs.flatMap((e) => e.split('\0').filter((v) => v.startsWith('FACTORY_API_KEY='))));
@@ -489,10 +491,18 @@ await moment('the GurtOS MCP server: Claude Code drives the box', async () => {
   workspace('claude', {});
   const { code } = await api<{ code: string }>('POST', '/api/pair/start');
   const { token } = await api<{ token: string }>('POST', '/api/pair', { code, name: 'Claude Code' });
-  const mcp = spawn(process.execPath, ['--experimental-strip-types', '--disable-warning=ExperimentalWarning', new URL('./claude-mcp.ts', import.meta.url).pathname], {
-    env: { ...process.env, BOX_URL: `http://127.0.0.1:${PORT}`, BOX_TOKEN: token },
+  const start = (answer: boolean) => spawn(process.execPath, ['--experimental-strip-types', '--disable-warning=ExperimentalWarning', new URL('./claude-mcp.ts', import.meta.url).pathname], {
+    env: { ...process.env, BOX_URL: `http://127.0.0.1:${PORT}`, BOX_TOKEN: token, BOX_MCP_ANSWER: answer ? 'on' : '' },
     stdio: ['pipe', 'pipe', 'inherit'],
   });
+  // By default Claude can't answer requests: a task's log is written by the task, and could talk it into approving.
+  const plain = start(false);
+  const firstLine = new Promise<string>((r) => plain.stdout!.once('data', (c) => r(String(c))));
+  plain.stdin!.write(JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/list', params: {} }) + '\n');
+  const plainNames = (JSON.parse((await firstLine).split('\n')[0]).result.tools as { name: string }[]).map((t) => t.name);
+  plain.kill();
+  check(!plainNames.includes('box_answer_approval') && plainNames.includes('box_pending_approvals'), 'out of the box, Claude can see requests but not answer them (BOX_MCP_ANSWER=on lets it)');
+  const mcp = start(true);
   const waiting = new Map<number, (v: any) => void>();
   let buf = '', n = 0;
   mcp.stdout!.on('data', (c) => {
@@ -1115,6 +1125,33 @@ await moment('security: a task cannot lower its spend, read through a link, hang
   const spent = (await task(S.id)).costCents;
   check(Number.isFinite(spent) && spent >= 0 && [1, 2, 3, 4].every((i) => /0 or more/.test(view('spender', `c${i}.txt`) ?? '')), `a negative or made-up cost, token count or amount from a task is refused, and its spend stays ${spent}`);
 
+  // A task can't pre-approve the core's own budget question: it asks a harmless $0.01 under the id the box would use
+  // for a $900 spend, the owner approves that, and the spend still asks with its real amount.
+  workspace('forger', {});
+  const input = { cents: 90000, on: 'coffee' };
+  const action = `example.spend:${createHash('sha256').update(JSON.stringify(input)).digest('hex').slice(0, 16)}`;
+  const G = await api<Task>('POST', '/tasks', { title: 'Forges a budget OK', workspace: 'forger', worker: 'fake', source: 'demo', tools: ['example.spend'], budgetCents: 100, prompt: [
+    `sh f.txt ${post('/ask', JSON.stringify({ key: `budget.${action}`, question: 'Spend $0.01 to Test Vendor on example.spend (test spend on coffee)? Spends above $5.00 always ask.', costCents: 1 }))}`,
+    'sleep 2',
+    `call example.spend ${JSON.stringify(input)}`,
+  ].join('\n') });
+  const forged = await waitFor('the forged question', async () => (await api<Approval[]>('GET', '/api/approvals?state=pending')).find((a) => a.task === G.id));
+  await api('POST', `/api/approvals/${encodeURIComponent(forged.id)}`, { approved: true });
+  const real = await waitFor('the real question', async () => (await api<Approval[]>('GET', '/api/approvals?state=pending')).find((a) => a.task === G.id && a.id !== forged.id));
+  await api('POST', `/api/approvals/${encodeURIComponent(real.id)}`, { approved: false });
+  await waitFor('the forger to end', async () => (['done', 'failed'].includes((await task(G.id)).state) ? true : undefined));
+  check(forged.id === `${G.id}.task.budget.${action}` && real.id === `${G.id}.budget.${action}` && real.costCents === 90000 && (await task(G.id)).costCents === 0, `a task's own question can't stand in for the box's: the $900.00 spend asked again with its real amount (${real.question.slice(0, 40)}...), and nothing was spent`);
+
+  // What a task writes stays in the box's memory, and each connection it opens is a socket in the box's own process.
+  workspace('flood', {});
+  const F = await api<Task>('POST', '/tasks', { title: 'Floods the box', workspace: 'flood', worker: 'fake', source: 'demo', prompt: [
+    `sh s.txt node -e "const r=require('http').request({socketPath:process.env.BOX_SOCKET,method:'POST',path:'/step',headers:{'content-type':'application/json'}},(res)=>{let b='';res.on('data',(c)=>b+=c);res.on('end',()=>console.log(res.statusCode,b))});r.end(JSON.stringify({text:'x'.repeat(70*1024)}))"`,
+    `sh c.txt node -e "const u=new URL(process.env.HTTP_PROXY);let o=0,c=0;for(let i=0;i<300;i++){const k=require('net').connect(u.port,u.hostname);k.on('connect',()=>o++);k.on('close',()=>c++)}setTimeout(()=>{console.log('closed',c);process.exit()},2500)"`,
+  ].join('\n') });
+  await settled([F.id]);
+  const closed = Number(/closed (\d+)/.exec(view('flood', 'c.txt') ?? '')?.[1] ?? -1);
+  check(/64 KB/.test(view('flood', 's.txt') ?? '') && closed >= 300 - 256, `a 70 KB step is refused, and of 300 connections at once to the proxy the box closes ${closed} past its 256`);
+
   // A link a task leaves in its copy is shown as a link: the box, reading as root, never follows it.
   workspace('linky', {});
   const L = await api<Task>('POST', '/tasks', { title: 'Leaves a link and a pipe', workspace: 'linky', worker: 'fake', source: 'demo', prompt: [
@@ -1160,6 +1197,29 @@ await moment('security: a task cannot lower its spend, read through a link, hang
   const relayBad = await api('PUT', '/api/remote/relay', { url: 'http://203.0.113.5' }).then(() => 'ALLOWED', (e: Error) => e.message);
   const relayNow = await api<{ url: string; custom: boolean }>('GET', '/api/remote/relay');
   check(meScreen.owner === true && mePhone.body?.owner === false && relayByPhone.status === 403 && /https/.test(relayBad) && !relayNow.custom, `GET /api/me says owner for the screen and not for a plain phone; a phone can't change the relay (${relayByPhone.status}), and the owner's choice is checked ("${relayBad}")`);
+
+  // An app's page runs sandboxed with its window's own token: its own routes and reads, never the owner's controls.
+  const win = await viaTcp('POST', '/api/apps/example/window', {}, asPhone);
+  const w = { origin: 'null', authorization: `Bearer ${win.body?.token}` };
+  const page = await new Promise<{ status: number; csp: string }>((resolve, reject) => {
+    http.get({ host: '127.0.0.1', port: PORT, path: `/t/example/?access_token=${win.body?.token}`, headers: { accept: 'text/html' } }, (r) => (r.resume(), resolve({ status: r.statusCode ?? 0, csp: String(r.headers['content-security-policy'] ?? '') }))).on('error', reject);
+  });
+  const ownRoute = await viaTcp('GET', '/t/example/secret-check', undefined, w);
+  const readsOk = await viaTcp('GET', '/api/tasks', undefined, w);
+  const refused = await Promise.all([viaTcp('GET', '/api/vault', undefined, w), viaTcp('PUT', '/api/vault/STOLEN', { value: 'x' }, w), viaTcp('POST', '/api/pair/start', {}, w), viaTcp('PATCH', '/api/settings', { paused: true }, w), viaTcp('GET', '/t/mana/status', undefined, w), viaTcp('POST', '/api/apps/example/window', {}, w)]);
+  workspace('otherapp', {});
+  const other = await api<Task>('POST', '/tasks', { title: 'Not the app\'s', workspace: 'otherapp', worker: 'fake', source: 'demo', prompt: 'ask May I?' });
+  const otherAsk = await waitFor('the request', async () => (await api<{ id: string; task: string }[]>('GET', '/api/approvals?state=pending')).find((a) => a.task === other.id));
+  const crossAnswer = await viaTcp('POST', `/api/approvals/${encodeURIComponent(otherAsk.id)}`, { approved: true }, w);
+  const preflight = await new Promise<{ status: number; acao: string }>((resolve, reject) => {
+    const r = http.request({ host: '127.0.0.1', port: PORT, method: 'OPTIONS', path: '/t/example/secret-check', headers: { origin: 'null', 'access-control-request-method': 'GET', 'access-control-request-headers': 'authorization' } }, (res) => (res.resume(), resolve({ status: res.statusCode ?? 0, acao: String(res.headers['access-control-allow-origin'] ?? '') })));
+    r.on('error', reject).end();
+  });
+  await api('POST', `/api/approvals/${encodeURIComponent(otherAsk.id)}`, { approved: false });
+  check(win.status === 200 && page.status === 200 && /sandbox allow-scripts/.test(page.csp) && !/allow-same-origin/.test(page.csp) && ownRoute.status === 200 && readsOk.status === 200 && preflight.status === 204 && preflight.acao === 'null', `an app's page is served sandboxed ("${page.csp.slice(0, 32)}..."), and its window token reaches the app's own routes and the task list`);
+  check(refused.every((r) => r.status === 403) && crossAnswer.status === 403, `but not the vault, settings, pairing, another app or another window (${refused.map((r) => r.status).join(' ')}), and it answers only its own app's requests (${crossAnswer.status})`);
+  await api('DELETE', `/api/devices/${(await api<{ id: string; name: string }[]>('GET', '/api/devices')).find((d) => d.name === 'plain phone')!.id}`);
+  check((await viaTcp('GET', '/t/example/secret-check', undefined, w)).status === 401, 'removing the phone that opened the window ends the window too');
 
   // Nobody can make the box read an endless body before it checks who is asking.
   // (The box answers 413 and hangs up mid-upload, so the sender may see the reset before the answer.)
@@ -1401,6 +1461,20 @@ if (fs.existsSync(nativeDemo)) await moment('native apps: every call the apps ma
 
 await moment('business edition', async () => (await import('./business-demo.ts')).default(kit));
 await moment('business: sign in with a work account (OpenID Connect, roles from groups)', async () => (await import('./sso-demo.ts')).default(kit));
+
+// Last, because it restarts the box with its phones unpaired.
+await moment('security: a box whose state files were torn by a failing disk still starts, and waits for its owner', async () => {
+  for (const f of ['devices.json', 'permissions.json', 'owner.json']) fs.writeFileSync(path.join(HOME, f), '{"half": ');
+  process.kill(-box!.pid!, 'SIGKILL');
+  await sleep(300);
+  for (const m of mountsUnder(HOME)) execFileSync('umount', ['-l', m]);
+  await startBox();
+  const set = fs.readdirSync(HOME).filter((f) => /\.torn-\d+$/.test(f));
+  const pause = await api<{ paused: boolean; via: string | null }>('GET', '/api/pause');
+  const note = (await api<LogEvent[]>('GET', '/api/log')).findLast((e) => e.type === 'note' && (e as { track?: string }).track === 'security');
+  check(set.length === 3 && pause.paused && (await api<unknown[]>('GET', '/api/devices')).length === 0 && /could not read/.test((note as { text?: string })?.text ?? ''), `it starts with the torn files set aside (${set.length}), no paired phones, and its agents paused until the owner checks the permissions ("${pause.via}")`);
+  await api('PATCH', '/api/settings', { paused: false });
+});
 
 // ---------- cleanup ----------
 

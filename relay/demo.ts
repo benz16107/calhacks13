@@ -100,7 +100,7 @@ export default async function (d: DemoKit) {
   const bad = await raw('PUT', '/api/push', { subscription, key: 'short' }, phoneH);
   d.check(put.body.subscribed === true && (await raw('GET', '/api/push', undefined, phoneH)).body.subscribed === true && bad.status === 400 && /key/.test(bad.body.error), 'a paired phone turns notifications on; a bad subscription is refused by field');
   const test = await raw('POST', '/api/push/test', {}, phoneH);
-  d.check(test.status === 409 && /Reach this box from anywhere/.test(test.body.error), 'with remote access off, a test push says to turn it on first (pushes go through the relay)');
+  d.check(test.status === 409 && /Reach this computer from anywhere/.test(test.body.error), 'with remote access off, a test push says to turn it on first (pushes go through the relay)');
   const notOwner = await raw('POST', '/api/remote', { name: 'judge-box' }, phoneH);
   const noToken = await raw('GET', '/api/push', undefined, { 'x-forwarded-for': '203.0.113.7' });
   d.check(notOwner.status === 403 && noToken.status === 401, "only the owner turns remote access on, and nothing answers without a paired phone's token");
@@ -204,7 +204,7 @@ export default async function (d: DemoKit) {
         const task = await d.api('POST', '/tasks', { title: 'Ask over the relay', worker: 'fake', prompt: 'ask May I order the cable?' });
         const a = JSON.parse(await tp.next(60_000));
         d.check(a.type === 'approval' && a.task === task.id && a.url === base && a.machine && macOk(JSON.stringify(a), pushKey), 'live: an approval reached the owner phone as a push that names its machine');
-        for (const id of [a.id, `${hushed.id}.line1`]) await fetch(`${base}/api/approvals/${encodeURIComponent(id)}`, { method: 'POST', headers: H, body: JSON.stringify({ approved: true }) });
+        for (const id of [a.id, `${hushed.id}.task.line1`]) await fetch(`${base}/api/approvals/${encodeURIComponent(id)}`, { method: 'POST', headers: H, body: JSON.stringify({ approved: true }) });
         await d.settled([task.id, hushed.id]);
       } finally {
         await d.api('PATCH', '/settings', { quietHours: before });

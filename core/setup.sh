@@ -79,9 +79,25 @@ fi
 
 
 # SpacetimeDB: live task status and approvals for the portal and phone. The box publishes its module at boot.
+# Pinned release files, checked against the sha256 GitHub publishes for each, laid out the way its own installer does
+# (spacetime is the version manager; bin/<version> holds the CLI and the server). No script from the internet runs.
+STDB=2.13.0
+case $(uname -m) in
+  aarch64) t=aarch64-unknown-linux-gnu stdb_sha=47e4ad61f3d5830cf75a0b5b2432f5d9c115ab4e37505f757d7555f3ad1fe8f0 upd_sha=5056baeaa55963585a092afe7590b8b394db369821e5a675660640cdad91fcbb;;
+  *) t=x86_64-unknown-linux-gnu stdb_sha=034fe43ebb42e8d291c6ba18b6b3a6ac9a3bb4aa548d37743340362cb021165e upd_sha=dc30ca52824cfe0ece2427da8a4ccafc0ad605140f635e2fcde97bf2f5bb2232;;
+esac
 if ! command -v spacetime >/dev/null; then
-  curl -sSf https://install.spacetimedb.com | HOME=/root sh -s -- --yes >/dev/null
-  ln -sf /root/.local/bin/spacetime /usr/local/bin/spacetime
+  tmp=$(mktemp -d) local=${STDB_ROOT:-/root/.local} # STDB_ROOT: only to try this block somewhere else
+  rel=https://github.com/clockworklabs/SpacetimeDB/releases/download/v$STDB
+  curl -fsSL "$rel/spacetime-$t.tar.gz" -o "$tmp/stdb.tgz"
+  curl -fsSL "$rel/spacetimedb-update-$t" -o "$tmp/spacetime"
+  printf '%s  %s\n' "$stdb_sha" "$tmp/stdb.tgz" "$upd_sha" "$tmp/spacetime" | sha256sum -c --quiet -
+  mkdir -p "$local/share/spacetime/bin/$STDB" "$local/share/spacetime/data" "$local/bin"
+  tar -xzf "$tmp/stdb.tgz" -C "$local/share/spacetime/bin/$STDB"
+  ln -sfn "$STDB" "$local/share/spacetime/bin/current"
+  install -m 0744 "$tmp/spacetime" "$local/bin/spacetime"
+  rm -rf "$tmp"
+  [ -n "${STDB_ROOT:-}" ] || ln -sf /root/.local/bin/spacetime /usr/local/bin/spacetime
 fi
 unit=/etc/systemd/system/spacetimedb.service
 want=$(cat <<'UNIT'

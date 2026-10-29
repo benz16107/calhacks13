@@ -25,6 +25,15 @@ export const PLACEHOLDER_KEY = 'fk-placeholder-the-box-adds-the-key';
 const FACTORY = /^([a-z0-9-]+\.)*factory\.ai$/;
 export const ANTHROPIC_PLACEHOLDER = 'sk-ant-placeholder-the-box-adds-the-key';
 const ANTHROPIC = 'api.anthropic.com';
+/**
+ * The Factory paths Droid calls (captured from droid 0.248 in a real session): models, its own settings and limits,
+ * the session copy in the owner's Factory account, and telemetry. Any other path, such as running a Factory-hosted
+ * connector's tool, would reach a service outside the task's allow-list with the owner's key.
+ */
+const FACTORY_PATHS = /^\/api\/(llm\/|cli\/|feature-flags$|organization\/managed-settings$|billing\/limits$|connectors\/tools\/list$|apps\/cloud-sync\/sessions\/batch$|ingest$)/;
+export const factoryPath = (p: string) => FACTORY_PATHS.test(p);
+/** Open connections a task may hold to the proxy at once (a browser keeps about 6 a host; npm a few dozen). */
+export const MAX_OPEN = 256;
 /** Hosts the proxy answers TLS for itself, to put the vault's model key on the way out. Only for Droid tasks. */
 const relayed = (host: string) => FACTORY.test(host) || host === ANTHROPIC;
 const SAN = 'subjectAltName=DNS:factory.ai,DNS:*.factory.ai,DNS:api.anthropic.com\n';
@@ -320,14 +329,20 @@ export async function startProxy(hooks: ProxyHooks, cert: { key: Buffer; cert: B
   };
 
   /** A call to Factory or Anthropic from a Droid task: the placeholder key becomes the real one, and only here. */
-  const toFactory = (req: http.IncomingMessage, res: http.ServerResponse, host: string) => {
+  const toFactory = (req: http.IncomingMessage, res: http.ServerResponse, host: string, t?: Task) => {
     const anthropic = host === ANTHROPIC;
     const key = anthropic ? hooks.anthropicKey() : hooks.factoryKey();
     if (!key) return fail(res, 503, `the vault has no ${anthropic ? 'ANTHROPIC_API_KEY' : 'FACTORY_API_KEY'}`);
+    const u = new URL(req.url ?? '/', 'http://x');
+    const p = u.pathname;
+    const to = p + u.search; // checked and sent as one normalized path, so the service can't read it another way
+    if (!anthropic && !FACTORY_PATHS.test(p)) {
+      if (t) hooks.blocked(t, `${host}${p}`.slice(0, 200));
+      return fail(res, 403, 'blocked by the box: GurtOS relays only the Factory calls Droid makes');
+    }
     const headers = withKey(req.headers, host, anthropic ? ANTHROPIC_PLACEHOLDER : PLACEHOLDER_KEY, key);
-    if (!anthropic) return forward(req, res, https.request({ host, path: req.url, method: req.method, headers }));
-    // Your own Anthropic key: read the call first, so the model service never fetches for the task (fetchesOnItsOwn).
-    // shortcut: Factory's calls are passed through unread; its formats are its own (core/README.md, The network).
+    // A model call is read first, so the model service never fetches anything for the task (fetchesOnItsOwn).
+    if (!anthropic && !p.startsWith('/api/llm/')) return forward(req, res, https.request({ host, path: to, method: req.method, headers }));
     const chunks: Buffer[] = [];
     let size = 0;
     req.on('data', (c: Buffer) => ((size += c.length) > 64 * 1024 ** 2 ? req.destroy() : chunks.push(c)));
@@ -338,9 +353,12 @@ export async function startProxy(hooks: ProxyHooks, cert: { key: Buffer; cert: B
       try {
         why = body.length ? fetchesOnItsOwn(JSON.parse(body.toString())) : undefined;
       } catch {} // not JSON: nothing for the service to fetch
-      if (why) return fail(res, 403, `blocked by the box: a model call may not ask Anthropic to fetch ${why} for the task`);
+      if (why) {
+        if (t) hooks.blocked(t, `${host}${p} (${why})`.slice(0, 200));
+        return fail(res, 403, `blocked by the box: a model call may not ask the model service to fetch ${why} for the task`);
+      }
       const { 'transfer-encoding': _chunked, ...sized } = headers;
-      const up = https.request({ host, path: req.url, method: req.method, headers: { ...sized, 'content-length': String(body.length) } });
+      const up = https.request({ host, path: to, method: req.method, headers: { ...sized, 'content-length': String(body.length) } });
       up.on('response', (r) => (r.on('error', () => res.destroy()), res.writeHead(r.statusCode ?? 502, r.headers), r.pipe(res)));
       up.on('error', () => fail(res, 502, 'upstream failed'));
       up.end(body);
@@ -348,10 +366,11 @@ export async function startProxy(hooks: ProxyHooks, cert: { key: Buffer; cert: B
   };
 
   // HTTPS to Factory, after the proxy has answered TLS itself. The task was checked at CONNECT.
+  const tunnels = new WeakMap<net.Socket, Task>(); // each relayed TLS connection's task, for the log
   const relay = http.createServer((req, res) => {
     const host = (req.headers.host ?? '').split(':')[0];
     if (!relayed(host)) return fail(res, 403, 'not a model host');
-    toFactory(req, res, host);
+    toFactory(req, res, host, tunnels.get(req.socket));
   });
 
   const server = http.createServer((req, res) => {
@@ -360,7 +379,7 @@ export async function startProxy(hooks: ProxyHooks, cert: { key: Buffer; cert: B
     // FACTORY_API_BASE_URL points here, so Droid's API calls arrive as plain paths.
     if (req.url?.startsWith('/')) {
       if (t.worker !== 'droid') return fail(res, 403, 'no Factory access for this task');
-      return toFactory(req, res, 'api.factory.ai');
+      return toFactory(req, res, 'api.factory.ai', t);
     }
     // Plain HTTP through the proxy.
     let url: URL;
@@ -391,6 +410,7 @@ export async function startProxy(hooks: ProxyHooks, cert: { key: Buffer; cert: B
       client.write('HTTP/1.1 200 Connection Established\r\n\r\n');
       if (head.length) client.unshift(head);
       const secure = new tls.TLSSocket(client, { isServer: true, ...cert });
+      tunnels.set(secure, t);
       secure.on('error', () => client.destroy());
       return void relay.emit('connection', secure);
     }
@@ -415,6 +435,16 @@ export async function startProxy(hooks: ProxyHooks, cert: { key: Buffer; cert: B
       });
       up.on('error', () => client.destroy());
     });
+  });
+  // A task's open connections to the proxy, each a socket in the box's own process: at most 256 at once.
+  const open = new Map<string, number>();
+  server.on('connection', (sock: net.Socket) => {
+    const t = who(sock);
+    if (!t) return;
+    const n = open.get(t.id) ?? 0;
+    if (n >= MAX_OPEN) return void sock.destroy();
+    open.set(t.id, n + 1);
+    sock.once('close', () => (open.get(t.id) === 1 ? open.delete(t.id) : open.set(t.id, (open.get(t.id) ?? 1) - 1)));
   });
   server.on('clientError', (_e, sock) => sock.destroy());
 

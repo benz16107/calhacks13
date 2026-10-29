@@ -117,6 +117,33 @@ interface Device {
   lastSeen?: string;
 }
 
+/**
+ * A state file the box wrote, read back. Missing: the fallback. Unreadable (a torn write, a full disk): set aside as
+ * <name>.torn-<time>, a warning, the fallback, and the name in `torn`, so the box starts and says so. Writes are atomic
+ * (writeJson), so this is for a disk that failed under it.
+ */
+function readState<T>(file: string, fallback: T, torn: string[]): T {
+  if (!fs.existsSync(file)) return fallback;
+  try {
+    return JSON.parse(fs.readFileSync(file, 'utf8')) as T;
+  } catch (e) {
+    const aside = `${file}.torn-${Date.now()}`;
+    try {
+      fs.renameSync(file, aside);
+    } catch {}
+    console.error(`WARNING: ${file} could not be read (${(e as Error).message}); it is kept as ${aside}`);
+    torn.push(path.basename(file));
+    return fallback;
+  }
+}
+
+/** What an app's sandboxed page may still do: its scripts and forms, popups, dialogs, downloads, and top-level links a person clicks. */
+const SANDBOX = 'allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-modals allow-downloads allow-top-navigation-by-user-activation';
+
+/** The first thing in an app's page: its same-box calls carry the window's token from ?access_token= (windowGate). */
+// A request it may not answer (another app's) comes back with needs: 'shell', and the window asks GurtOS to open it.
+const CARRY_TOKEN = `<script>(()=>{const t=new URLSearchParams(location.search).get('access_token');if(!t)return;const here=new URL(location.href).origin,f=window.fetch.bind(window);window.fetch=async(i,o={})=>{const u=new URL(i instanceof Request?i.url:String(i),location.href);if(u.origin!==here)return f(i,o);const h=new Headers(o.headers||(i instanceof Request?i.headers:undefined));if(!h.has('authorization'))h.set('authorization','Bearer '+t);const r=await f(i,{...o,headers:h});if(r.status===403&&parent!==window)r.clone().json().then((b)=>b.needs==='shell'&&parent.postMessage({gurtos:'open',route:'task/'+b.task},'*'),()=>{});return r}})()</script>`;
+
 const forbid = (message: string): never => {
   throw Object.assign(new Error(message), { status: 403 });
 };
@@ -154,24 +181,19 @@ class Core {
   inflight = new Map<string, Promise<{ ok: boolean; output?: unknown; error?: string; pending?: boolean }>>(); // one run per task+action
   webhooks = new Map<string, (payload: unknown, headers: Record<string, string>) => unknown>();
   trackSecrets = new Map<string, Set<string>>(); // vault keys each track's routes and triggers may read
+  torn: string[] = []; // state files that could not be read at start (readState)
   devicesPath = path.join(HOME, 'devices.json');
-  devices: Device[] = fs.existsSync(this.devicesPath) ? JSON.parse(fs.readFileSync(this.devicesPath, 'utf8')) : [];
+  devices: Device[] = readState(this.devicesPath, [], this.torn); // none paired: safe, the owner pairs again
   screens = new Map<string, string>(); // SpacetimeDB identity -> name, for the box's own screen(s); lost on restart, re-sent on the next page load
   pairCodes = new Map<string, { expiry: number; owner: boolean; person?: string; setup?: boolean }>(); // one-time code -> expiry (ms), whether it pairs an owner device, and for whom (Business)
   ownerPath = path.join(HOME, 'owner.json');
   // The human with sudo on a Personal box: set at runtime (the image does it after the desktop's own setup
   // makes the account), else BOX_OWNER, else none (a Server box).
-  owner: string | null = (() => {
-    try {
-      return JSON.parse(fs.readFileSync(this.ownerPath, 'utf8')).user ?? null;
-    } catch {
-      return process.env.BOX_OWNER ?? null;
-    }
-  })();
+  owner: string | null = readState<{ user?: string } | null>(this.ownerPath, null, this.torn)?.user ?? process.env.BOX_OWNER ?? null;
   settings: Settings = loadSettings(HOME);
   setup: SetupState = loadSetup(HOME, hadHumanUse(this.log.events as never, fs.existsSync(new URL('../tracks/', import.meta.url)) ? fs.readdirSync(new URL('../tracks/', import.meta.url)) : [], this.devices.length));
   vaultMetaPath = path.join(HOME, 'vault-meta.json');
-  vaultMeta: Record<string, string> = fs.existsSync(this.vaultMetaPath) ? JSON.parse(fs.readFileSync(this.vaultMetaPath, 'utf8')) : {};
+  vaultMeta: Record<string, string> = readState(this.vaultMetaPath, {}, this.torn);
   startedAt = new Date().toISOString();
   apiPort = 0;
   /** This box's own https address through the GurtOS relay, when the owner turned it on. */
@@ -217,7 +239,7 @@ class Core {
     this.tripped.add(t.id);
     this.write({ type: 'note', track: 'security', task: t.id, data: { tripwire: true, where } });
     void this.undo(t.id).catch((e) => console.error(`tripwire: could not undo ${t.id}: ${(e as Error).message}`));
-    const fields = { type: 'tripwire', id: `tripwire.${t.id}`, task: t.id, source: t.source, costCents: 0, title: 'An agent tried to leak a key', body: `"${t.title}" tried to send its decoy key out (${where}). The box stopped it and undid its changes.`.slice(0, 200) };
+    const fields = { type: 'tripwire', id: `tripwire.${t.id}`, task: t.id, source: t.source, costCents: 0, title: 'An agent tried to leak a key', body: `"${t.title}" tried to send its decoy key out (${where}). GurtOS stopped it and undid its changes.`.slice(0, 200) };
     this.alertOwner(fields);
   }
   business: Business = { on: process.env.BOX_EDITION === 'business', company: '', policy: DEFAULT_POLICY, people: [], seats: [], shadow: [], policyMeta: {}, ...readJson<Partial<Business>>(this.businessPath, {}) };
@@ -256,7 +278,7 @@ class Core {
   }
 
   // ---------- permissions: what each app may do (core/permissions.ts) ----------
-  grants = perms.load(HOME);
+  grants: perms.Grants = readState(path.join(HOME, 'permissions.json'), {}, this.torn); // unreadable: the agents wait (boot)
 
   /** An alert to the owner's phones (not a question): the tripwire, a disk cap. Needs remote access for the push. */
   alertOwner(fields: Record<string, string | number>) {
@@ -442,7 +464,7 @@ class Core {
     writeVaultKey(name, value); // validates; throws without echoing the value
     this.vault.set(name, value.trim());
     this.vaultMeta[name] = new Date().toISOString();
-    fs.writeFileSync(this.vaultMetaPath, JSON.stringify(this.vaultMeta, null, 2), { mode: 0o600 });
+    writeJson(this.vaultMetaPath, this.vaultMeta);
     this.write({ type: 'note', track: 'vault', data: { set: name }, ...(who ? { who } : {}) }); // the name only, never the value
     return { name, setAt: this.vaultMeta[name], ...(check.status !== 'none' ? { check: check.status, checked: check.status === 'ok', message: check.message } : {}) };
   }
@@ -1022,6 +1044,8 @@ class Core {
    */
   personOf(req: http.IncomingMessage): Person | undefined {
     if (!this.business.on) return undefined;
+    const w = this.windowAs.get(req);
+    if (w) return this.person(w.person ?? (w.device ? this.devices.find((d) => d.id === w.device)?.person : undefined));
     const device = this.deviceOf(req);
     if (device) return this.person(device.person);
     const said = req.headers['x-box-person'];
@@ -1226,6 +1250,7 @@ class Core {
   /** An auditor reads and never changes anything, on any route. */
   readOnly(req: http.IncomingMessage, res: http.ServerResponse) {
     if (req.method === 'GET' || req.method === 'OPTIONS' || this.personOf(req)?.role !== 'auditor') return false;
+    if (/^(\/api)?\/apps\/[^/]+\/window$/.test(new URL(req.url ?? '/', 'http://box').pathname)) return false; // opening an app's window changes nothing
     res.writeHead(403, { 'content-type': 'application/json' }).end(JSON.stringify({ error: 'an auditor can read everything and change nothing' }));
     return true;
   }
@@ -1277,7 +1302,7 @@ class Core {
         if (!task) return false;
         // The same question in the same tool call is the same approval; a different one gets its own. A slow owner is not a "no":
         // askFor gives up waiting after a while but leaves the approval open, so ask again until it is answered.
-        const askKey = `${key}.ask.${createHash('sha256').update(question).digest('hex').slice(0, 8)}`;
+        const askKey = `tool.${key}.ask.${createHash('sha256').update(question).digest('hex').slice(0, 8)}`; // never a task's (task.)
         for (;;) {
           const r = await this.askFor(task, askKey, { question, purpose: opts?.purpose });
           if (r !== 'pending') return r === 'approved';
@@ -1375,10 +1400,21 @@ class Core {
 
   // ---------- the broker: one socket per task, owned by its user ----------
 
+  /** Bytes each task has written to the log through its broker, this run: the log is kept in memory. */
+  logged = new Map<string, number>();
+
   async openBroker(t: Task, owner: { uid: number; gid: number }) {
     const server = jsonServer(async (method, url, body) => {
       const route = `${method} ${url.pathname}`;
       if ((route === 'POST /call' || route === 'POST /ask') && !body.key) throw new Error('a key is required');
+      if (method === 'POST') {
+        // What a task writes stays in the box's memory (the log), so a task gets 64 KB a line and 20 MB in all.
+        const size = JSON.stringify(body ?? null).length;
+        if (size > 64 * 1024 && route !== 'POST /call') throw Object.assign(new Error('a step, question or cost is at most 64 KB'), { status: 413 });
+        const total = (this.logged.get(t.id) ?? 0) + size;
+        if (total > 20 * 1024 ** 2) throw Object.assign(new Error('this task has written 20 MB to the action log; it may write no more'), { status: 429 });
+        this.logged.set(t.id, total);
+      }
       if (route === 'GET /task') {
         const steps = this.log.events.flatMap((e) => (e.type === 'task.step' && e.task === t.id ? [{ text: e.text, data: e.data }] : []));
         return { task: t, steps };
@@ -1409,7 +1445,9 @@ class Core {
       if (route === 'POST /ask') {
         const costCents = Number(body.costCents ?? 0);
         if (!Number.isFinite(costCents) || costCents < 0) throw new Error('costCents: an amount of 0 or more');
-        const outcome = await this.askFor(t, String(body.key), { question: String(body.question), costCents, payee: body.payee, purpose: body.purpose });
+        // The task's own questions live under `task.`: a key it chooses can never name the core's budget or shadow
+        // question (`budget.<action>`), or a tool's (`tool.<call>.ask.<hash>`), and so pre-approve it.
+        const outcome = await this.askFor(t, `task.${String(body.key)}`, { question: String(body.question), costCents, payee: body.payee, purpose: body.purpose });
         return outcome === 'pending' ? { pending: true } : { approved: outcome === 'approved' };
       }
     });
@@ -1814,7 +1852,7 @@ class Core {
       if (!f) throw new Error(`user: no account named "${String(user).slice(0, 40)}" on this machine (create it first)`);
       const uid = Number(f[2]);
       if (!((uid >= 1000 && uid < 30000) || (uid >= 40000 && uid < 65534))) throw new Error(`user: "${user}" is a system account (uid ${uid}); the owner is a person's account`);
-      fs.writeFileSync(this.ownerPath, JSON.stringify({ user, setAt: new Date().toISOString() }), { mode: 0o600 });
+      writeJson(this.ownerPath, { user, setAt: new Date().toISOString() });
       this.owner = user;
     }
     this.write({ type: 'note', track: 'owner', data: { owner: this.owner } });
@@ -1824,7 +1862,8 @@ class Core {
   /** Changing an owner that already exists takes the box's socket (root) or an owner-paired phone, not any local process. */
   requireOwnerChange(req: http.IncomingMessage) {
     this.requireOwner(req);
-    if (this.owner && req.socket.remoteAddress !== undefined && !this.deviceOf(req)?.owner) {
+    // An owner.json that could not be read still means an owner was set: only root or the owner's phone changes it.
+    if ((this.owner || this.torn.includes('owner.json')) && req.socket.remoteAddress !== undefined && !this.deviceOf(req)?.owner) {
       throw Object.assign(new Error('the owner is already set; change it on this computer or from the owner\'s phone'), { status: 403 });
     }
   }
@@ -1938,7 +1977,7 @@ class Core {
   // ---------- Business: sign in with a work account (OpenID Connect) ----------
 
   /** Sign-ins gone to the provider, by `state`, and finished ones waiting for the page, by one-time code. Both expire and are capped. */
-  ssoPending = new Map<string, { nonce: string; verifier: string; browser: string; redirect: string; device: string; expiry: number }>();
+  ssoPending = new Map<string, { nonce: string; verifier: string; browser: string; redirect: string; device: string; expiry: number; from: string }>();
   ssoDone = new Map<string, { expiry: number; person?: string; device?: string; error?: string }>();
 
   /** GET /api/sso, /api/sso/start and /api/sso/callback, POST /api/sso/redeem. Open routes: they say nothing private. */
@@ -1972,7 +2011,7 @@ class Core {
       this.ssoDone.delete(code); // one-time
       const p = this.person(done?.person);
       if (!done || done.expiry < Date.now()) return json(400, { error: 'This sign-in has expired. Sign in again.' });
-      if (done.error || !p) return json(403, { error: done.error ?? 'You were removed from this box.' });
+      if (done.error || !p) return json(403, { error: done.error ?? 'You were removed from this computer.' });
       // A device token bound to the person, exactly as pairing a phone for them makes one.
       const device: Device = { id: 'd' + randomBytes(5).toString('hex'), name: (done.device || `${p.name}'s work sign-in`).slice(0, 40), token: randomBytes(24).toString('hex'), pairedAt: new Date().toISOString(), person: p.id };
       this.devices.push(device);
@@ -2003,13 +2042,16 @@ class Core {
     if (!cfg) throw new Error('Sign-in with work accounts is not set up on this computer.');
     const { authorization_endpoint } = await provider(cfg.issuer);
     this.sweep(this.ssoPending, 'Too many sign-ins are in progress. Try again in a few minutes.');
+    // One address can't fill the 200 places and keep everyone else from signing in.
+    const from = sourceOf(req.socket.remoteAddress, req.headers);
+    if ([...this.ssoPending.values()].filter((x) => x.from === from).length >= 10) throw new Error('Too many sign-ins started from here. Try again in a few minutes.');
     const h = req.headers;
     const host = String(h['x-forwarded-host'] ?? h.host ?? '').split(',')[0].trim();
     const proto = String(h['x-forwarded-proto'] ?? 'http').split(',')[0].trim();
     if (!/^[\w.:[\]-]{1,200}$/.test(host) || !/^https?$/.test(proto)) throw new Error('This request has no usable address to come back to.');
     const [state, nonce, verifier, browser] = [random(), random(), random(32), random()];
     const redirect = `${proto}://${host}/api/sso/callback`; // the provider accepts only the redirect addresses registered for the app
-    this.ssoPending.set(state, { nonce, verifier, browser, redirect, device: (url.searchParams.get('device') ?? '').trim().slice(0, 40), expiry: Date.now() + 10 * 60_000 });
+    this.ssoPending.set(state, { nonce, verifier, browser, redirect, device: (url.searchParams.get('device') ?? '').trim().slice(0, 40), expiry: Date.now() + 10 * 60_000, from });
     // The sign-in must come back to the browser that started it, so nobody can hand someone else a link that signs them in as the sender.
     res.setHeader('set-cookie', `gurtos_sso=${browser}; Path=/api/sso; Max-Age=600; HttpOnly; SameSite=Lax${proto === 'https' ? '; Secure' : ''}`);
     const q = new URLSearchParams({ response_type: 'code', client_id: cfg.clientId, redirect_uri: redirect, scope: 'openid profile email', state, nonce, code_challenge: challenge(verifier), code_challenge_method: 'S256' });
@@ -2100,7 +2142,7 @@ class Core {
     const s = this.remote.saved;
     const secret = this.vault.get(SECRET_KEY);
     if (!d.push) throw Object.assign(new Error('turn on notifications on this phone first'), { status: 409 });
-    if (!s || !secret) throw Object.assign(new Error('notifications go through the relay: turn on "Reach this box from anywhere" first'), { status: 409 });
+    if (!s || !secret) throw Object.assign(new Error('notifications go through the relay: turn on "Reach this computer from anywhere" first'), { status: 409 });
     try {
       const r = await push.send(this.remote.relay, s.name, secret, d.push, { v: 1, machine: BOX_ID, box: this.boxName(), url: s.url, ...fields }, topic);
       if (r.gone) delete d.push, this.saveDevices(); // the phone dropped the subscription
@@ -2244,6 +2286,8 @@ class Core {
    * carries forwarding headers, so it does not count.
    */
   isLocal(req: http.IncomingMessage): boolean {
+    const w = this.windowAs.get(req);
+    if (w) return !w.device; // an app's window opened on the box's own screen, within its own app (windowGate)
     // A web page in a browser on this machine also arrives from loopback. Only the box's own pages count (net.ts).
     return fromScreen(req.socket.remoteAddress, req.headers, this.apiPort, (process.env.BOX_ORIGINS ?? '').split(',').map((o) => o.trim()).filter((o) => o && o !== '*'));
   }
@@ -2285,6 +2329,8 @@ class Core {
 
   /** The paired, un-revoked device this request is from: by `Authorization: Bearer` or `?access_token=`. */
   deviceOf(req: http.IncomingMessage): Device | undefined {
+    const w = this.windowAs.get(req);
+    if (w) return w.device ? this.devices.find((d) => d.id === w.device && !d.revoked) : undefined; // the window's opener
     const q = new URL(req.url ?? '/', 'http://box').searchParams.get('access_token') ?? undefined;
     return this.deviceByToken(req.headers.authorization) ?? this.deviceByToken(q);
   }
@@ -2335,7 +2381,7 @@ class Core {
   }
 
   saveDevices() {
-    fs.writeFileSync(this.devicesPath, JSON.stringify(this.devices, null, 2), { mode: 0o600 });
+    writeJson(this.devicesPath, this.devices);
   }
 
   /** Pairing and box-listing routes, served as JSON. Kept raw so they can read request headers. */
@@ -2495,6 +2541,10 @@ class Core {
             if (q('all')) return [...this.installed.keys()].map((n) => this.appEntry(n));
             return this.apps.map((a) => ({ ...a, ...this.appEntry(a.track), name: a.name, title: a.title, href: a.href }));
           }
+          case 'POST /apps/:id/window':
+            // A token for one app's window (portal/src/apps/track.tsx): the page uses it instead of the opener's own.
+            if (!this.isLocal(req) && !this.deviceOf(req)) throw Object.assign(new Error('pair this phone with this computer first'), { status: 401 });
+            return this.openWindow(id, req);
           case 'POST /apps/:id/enable':
             this.requireOwner(req);
             return this.enableApp(id);
@@ -2576,16 +2626,17 @@ class Core {
           }
         }
       },
-      (req, res) => this.cors(req, res) || this.gate(req, res) || this.ssoRoutes(req, res) || this.readOnly(req, res) || this.pairing(req, res) || this.remoteRoutes(req, res) || this.logStream(req, res) || this.auditCsv(req, res) || this.webhook(req, res) || this.trackRoute(req, res) || this.portal(req, res),
+      (req, res) => this.cors(req, res) || this.windowGate(req, res) || this.gate(req, res) || this.ssoRoutes(req, res) || this.readOnly(req, res) || this.pairing(req, res) || this.remoteRoutes(req, res) || this.logStream(req, res) || this.auditCsv(req, res) || this.webhook(req, res) || this.trackRoute(req, res) || this.portal(req, res),
     );
 
   /** The GurtOS app (app.gurtos.com) may call the box from the browser; other origins (a portal dev server) need BOX_ORIGINS, comma separated, or '*'. Tokens are required either way. */
   cors(req: http.IncomingMessage, res: http.ServerResponse) {
     const origin = req.headers.origin;
-    const allowed = [APP, ...(process.env.BOX_ORIGINS ?? '').split(',').map((o) => o.trim())];
+    // "null": an app's page, sandboxed (trackRoute) so it has no origin of its own. It still needs a token: its window's.
+    const allowed = [APP, 'null', ...(process.env.BOX_ORIGINS ?? '').split(',').map((o) => o.trim())];
     if (!origin || !(allowed.includes(origin) || allowed.includes('*'))) return false;
     res.setHeader('access-control-allow-origin', origin);
-    res.setHeader('access-control-allow-headers', 'content-type, authorization');
+    res.setHeader('access-control-allow-headers', 'content-type, authorization, x-box-person');
     res.setHeader('access-control-allow-methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
     if (req.method !== 'OPTIONS') return false;
     res.writeHead(204).end();
@@ -2655,7 +2706,17 @@ data: ${JSON.stringify(e)}
         if (person) headers['x-box-person'] = person.id;
         const request = new Request(url, { method: req.method, headers, body: hasBody ? raw : undefined });
         const r = await entry.route(request, this.boxFor(entry.track, person));
-        res.writeHead(r.status, Object.fromEntries(r.headers)).end(Buffer.from(await r.arrayBuffer()));
+        const out = Object.fromEntries(r.headers);
+        // An app's page runs sandboxed, with no origin of its own: a bug in one app's page can't use the box's screen,
+        // the portal around it or the opener's token. It reaches the box with its window's token (windowGate).
+        let page = Buffer.from(await r.arrayBuffer());
+        if (/html|xml/i.test(out['content-type'] ?? '')) {
+          out['content-security-policy'] = [out['content-security-policy'], `sandbox ${SANDBOX}`].filter(Boolean).join(', ');
+          // Its first calls can run before /kit/gurtos.js (a module) does: this carries the window's token on them.
+          if (/html/i.test(out['content-type'] ?? '')) page = Buffer.from(CARRY_TOKEN + page.toString());
+          delete out['content-length'];
+        }
+        res.writeHead(r.status, out).end(page);
       } catch (e) {
         if (res.headersSent) return void res.destroy();
         res.writeHead((e as { status?: number }).status === 413 ? 413 : 500, { 'content-type': 'application/json' }).end(JSON.stringify({ error: (e as Error).message }));
@@ -2680,8 +2741,57 @@ data: ${JSON.stringify(e)}
     const target = this.portalTarget(req);
     if (!target) return false;
     const types: Record<string, string> = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png', '.json': 'application/json', '.woff2': 'font/woff2', '.ico': 'image/x-icon', '.webmanifest': 'application/manifest+json' };
-    res.writeHead(200, { 'content-type': types[path.extname(target)] ?? 'application/octet-stream' }).end(fs.readFileSync(target));
+    // The files are public; a sandboxed app page loads /kit/gurtos.js as a module, which is fetched with CORS.
+    const shared = path.basename(target) !== 'index.html' ? { 'access-control-allow-origin': '*' } : {};
+    res.writeHead(200, { 'content-type': types[path.extname(target)] ?? 'application/octet-stream', ...shared }).end(fs.readFileSync(target));
     return true;
+  }
+
+  // ---------- an app's window: a token for one app's page, never the opener's own ----------
+
+  /** Open windows by token: the app, who opened it (a device, else the box's own screen) and the person (Business). */
+  windows = new Map<string, { track: string; device?: string; person?: string; expiry: number }>();
+  windowAs = new WeakMap<http.IncomingMessage, { track: string; device?: string; person?: string; expiry: number }>();
+
+  /** POST /api/apps/<id>/window: a token that reaches only this app's routes and the reads its page needs. 12 hours. */
+  openWindow(track: string, req: http.IncomingMessage) {
+    if (!this.active.has(track)) throw Object.assign(new Error(`${track} is not on`), { status: 404 });
+    for (const [k, w] of this.windows) if (w.expiry < Date.now()) this.windows.delete(k);
+    if (this.windows.size >= 1000) this.windows.delete(this.windows.keys().next().value!); // the oldest goes
+    const token = 'w' + randomBytes(24).toString('hex');
+    const expiry = Date.now() + 12 * 3600_000;
+    const device = this.deviceOf(req)?.id;
+    const person = this.personOf(req)?.id;
+    this.windows.set(token, { track, ...(device ? { device } : {}), ...(person ? { person } : {}), expiry });
+    return { token, expiresAt: new Date(expiry).toISOString() };
+  }
+
+  /**
+   * A request with a window token: it may use its own app's routes (/t/<app>/...), read tasks and approvals, and
+   * answer its own app's requests, as whoever opened the window. Anything else is a 403: owner's controls, other apps,
+   * pairing. A token that is not a window token goes on to the usual rules.
+   */
+  windowGate(req: http.IncomingMessage, res: http.ServerResponse): boolean {
+    const url = new URL(req.url ?? '/', 'http://box');
+    const token = (req.headers.authorization ?? '').replace(/^Bearer /i, '') || url.searchParams.get('access_token') || '';
+    const w = token.startsWith('w') ? this.windows.get(token) : undefined;
+    if (!w) return false;
+    const no = (status: number, error: string) => (res.writeHead(status, { 'content-type': 'application/json' }).end(JSON.stringify({ error })), true);
+    if (w.expiry < Date.now() || (w.device && !this.devices.some((d) => d.id === w.device && !d.revoked))) return no(401, 'this window has expired: close it and open the app again');
+    const m = req.method ?? 'GET';
+    const p = url.pathname.replace(/^\/api(?=\/)/, '');
+    const own = p === `/t/${w.track}` || p.startsWith(`/t/${w.track}/`);
+    const reads = (m === 'GET' || m === 'HEAD') && (/^\/tasks(\/[^/]+)?$/.test(p) || p === '/approvals');
+    const answer = m === 'POST' && /^\/approvals\/[^/]+$/.test(p);
+    if (!own && !reads && !answer) return no(403, `an app's window may use only its own routes; open GurtOS itself for this`);
+    if (answer) {
+      const a = this.state.approvals.get(decodeURIComponent(p.split('/')[2]));
+      const t = a && this.state.tasks.get(a.task);
+      // Another app's request: the page's window asks GurtOS itself to show it (CARRY_TOKEN), where a person answers.
+      if (t && this.appOf(t) !== w.track) return (res.writeHead(403, { 'content-type': 'application/json' }).end(JSON.stringify({ error: 'GurtOS opened this request for you to answer there: an app answers only its own requests', needs: 'shell', task: t.id })), true);
+    }
+    this.windowAs.set(req, w);
+    return false;
   }
 
   /**
@@ -2705,6 +2815,15 @@ data: ${JSON.stringify(e)}
   }
 
   async boot() {
+    if (this.torn.length) {
+      // The owner's "off" switches live in permissions.json: without them, no agent starts until the owner looks.
+      if (this.torn.includes('permissions.json') && !this.settings.paused) {
+        this.settings = applyPatch(this.settings, { paused: true });
+        saveSettings(HOME, this.settings);
+        writeJson(this.pausedPath, (this.pausedMeta = { by: 'GurtOS', at: new Date().toISOString(), via: 'an unreadable permissions file' }));
+      }
+      this.write({ type: 'note', track: 'security', data: { torn: this.torn }, text: `GurtOS could not read ${this.torn.join(', ')} when it started and set ${this.torn.length > 1 ? 'them' : 'it'} aside.${this.torn.includes('permissions.json') ? ' Agents are paused: check Settings, Permissions, then resume them.' : ''}${this.torn.includes('devices.json') ? ' Pair your phones again.' : ''}` });
+    }
     sandbox.workspace('home');
     try {
       firewall();

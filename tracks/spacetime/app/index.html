@@ -39,6 +39,6 @@
 </head>
 <body class="g-page">
 <div id="app"></div>
-<script type="module" src="live.js"></script>
+<script type="module">import("./live.js" + location.search); // carries the window's token, as a module request can't carry a header</script>
 </body>
 </html>

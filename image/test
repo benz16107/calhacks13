@@ -105,7 +105,8 @@ echo "test: SpacetimeDB (3000) does not answer from outside"
 curl -sf --max-time 8 "http://127.0.0.1:$((port + 2000))/api/health" | grep -q '"ok":true' ||
   { echo "test: FAILED, the box's API (7700) does not answer from a private network"; exit 1; }
 echo "test: the box's API (7700) answers from a private network"
-vm 'nft list chain inet gurtos input | grep -q "tcp dport 7701 accept"' || { echo "test: FAILED, the firewall does not allow the setup port (7701)"; exit 1; }
+vm 'nft list chain inet gurtos input | grep -q "tcp dport 7701 ip saddr @private4 accept"' || { echo "test: FAILED, the firewall does not allow the setup port (7701) from private networks"; exit 1; }
+vm 'nft list chain inet gurtos input | grep -q "tcp dport 7701 accept"' && { echo "test: FAILED, the setup port (7701) is open to the public internet"; exit 1; }
 if vm 'test -f /opt/box/core/gurtos.ts'; then
   vm 'test -x /usr/local/bin/gurtos && test -f /usr/share/doc/gurtos/AGENT-SETUP.md' ||
     { echo "test: FAILED, command setup has no gurtos command or AGENT-SETUP.md on the disc"; exit 1; }

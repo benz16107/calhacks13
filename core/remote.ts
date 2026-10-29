@@ -84,6 +84,8 @@ export interface RemoteDeps {
 }
 
 type State = 'off' | 'starting' | 'connected' | 'error';
+/** Write beside the final name, then rename: never a half-written file. */
+const atomic = (file: string, text: string) => (fs.writeFileSync(`${file}.tmp`, text, { mode: 0o600 }), fs.renameSync(`${file}.tmp`, file));
 const err = (status: number, message: string) => Object.assign(new Error(message), { status });
 
 /** A call to the relay. When it can't be reached (it is down, or this box is offline), say so in words. */
@@ -130,7 +132,13 @@ export class Remote {
     this.deps = deps;
     const suffix = path.resolve(home) === '/var/lib/box' ? '' : '-' + createHash('sha256').update(path.resolve(home)).digest('hex').slice(0, 8);
     this.units = { tunnel: `box-tunnel${suffix}`, tls: `box-tls${suffix}` };
-    if (fs.existsSync(this.file)) this.saved = JSON.parse(fs.readFileSync(this.file, 'utf8'));
+    try {
+      if (fs.existsSync(this.file)) this.saved = JSON.parse(fs.readFileSync(this.file, 'utf8'));
+    } catch (e) {
+      // A torn remote.json must not stop the box: remote access starts off, and turning it on again works.
+      console.error(`WARNING: ${this.file} could not be read (${(e as Error).message}); remote access is off. It is kept as ${this.file}.torn`);
+      fs.renameSync(this.file, `${this.file}.torn`);
+    }
   }
 
   view() {
@@ -151,7 +159,7 @@ export class Remote {
       this.custom = undefined;
     } else {
       const origin = await checkRelay(url);
-      fs.writeFileSync(this.relayFile, JSON.stringify({ url: origin, at: new Date().toISOString() }), { mode: 0o600 });
+      atomic(this.relayFile, JSON.stringify({ url: origin, at: new Date().toISOString() }));
       this.custom = origin === RELAY ? undefined : origin;
       if (!this.custom) fs.rmSync(this.relayFile, { force: true });
     }
@@ -213,7 +221,8 @@ export class Remote {
       try {
         return await this.enable(name);
       } catch (e) {
-        if ((e as { status?: number }).status !== 409) throw e; // taken or reserved: try the next
+        const status = (e as { status?: number }).status;
+        if (status !== 409 && status !== 400) throw e; // taken, or a name the relay keeps for itself (a host named "server"): try the next
       }
     }
     throw new Error('no free name for this box; choose one in Settings, Remote access');
@@ -246,7 +255,7 @@ export class Remote {
     this.deps.setSecret(out.secret);
     fs.rmSync(this.offFile, { force: true });
     this.saved = { name: out.name, host: out.host, url: `https://${out.host}`, tunnel: { host: out.tunnel.host, port: out.tunnel.port, serverName: out.tunnel.serverName }, ports: await freePorts(), at: new Date().toISOString() };
-    fs.writeFileSync(this.file, JSON.stringify(this.saved, null, 2), { mode: 0o600 });
+    atomic(this.file, JSON.stringify(this.saved, null, 2));
     this.deps.note({ remote: 'on', name: out.name, url: this.saved.url });
     this.state = 'starting';
     void this.start();
@@ -295,8 +304,9 @@ export class Remote {
       fs.writeFileSync(path.join(this.dir, 'frpc.toml'), frpcConfig(s, secret, caFile), { mode: 0o600 });
       fs.writeFileSync(path.join(this.dir, 'Caddyfile'), caddyConfig(s, this.deps.apiPort()), { mode: 0o600 });
       this.stopUnits();
-      this.run(this.units.tls, [CADDY, 'run', '--adapter', 'caddyfile', '--config', path.join(this.dir, 'Caddyfile')], [`XDG_DATA_HOME=${this.dir}/caddy`, `XDG_CONFIG_HOME=${this.dir}/caddy`]);
+      // The tunnel first, so Let's Encrypt's first challenge already finds the way in (a failed one costs a retry delay).
       this.run(this.units.tunnel, [FRPC, '-c', path.join(this.dir, 'frpc.toml')], []);
+      this.run(this.units.tls, [CADDY, 'run', '--adapter', 'caddyfile', '--config', path.join(this.dir, 'Caddyfile')], [`XDG_DATA_HOME=${this.dir}/caddy`, `XDG_CONFIG_HOME=${this.dir}/caddy`]);
       const until = Date.now() + 150_000; // a new certificate usually takes 5 to 30 s
       let last = '';
       while (Date.now() < until && this.saved === s) {
@@ -304,7 +314,7 @@ export class Remote {
         if (!last) return void ((this.state = 'connected'), (this.checkedAt = Date.now()));
         await new Promise((r) => setTimeout(r, 2000));
       }
-      if (this.saved === s) throw new Error(last);
+      if (this.saved === s) throw new Error(this.refused() ?? last);
     } catch (e) {
       if (this.saved !== s) return;
       this.state = 'error';
@@ -319,7 +329,7 @@ export class Remote {
     this.checkedAt = Date.now();
     const problem = await this.selfCheck();
     this.state = problem ? 'error' : 'connected';
-    this.error = problem || undefined;
+    this.error = problem ? (this.refused() ?? problem) : undefined;
     return this.view();
   }
 
@@ -342,6 +352,12 @@ export class Remote {
       req.on('timeout', () => req.destroy(new Error('no answer in 10 s')));
       req.on('error', (e) => resolve(`not reachable yet: ${e.message}`));
     });
+  }
+
+  /** Why the relay turned the tunnel away, from its log, in words: its secret no longer holds the name. */
+  refused(): string | undefined {
+    const log = spawnSync('journalctl', ['-u', this.units.tunnel, '-n', '40', '--no-pager', '-o', 'cat'], { encoding: 'utf8' }).stdout ?? '';
+    if (/unknown box or wrong secret/.test(log)) return "The relay refused this computer's login: its name was freed after 30 days offline, or given to another computer. Turn remote access off and on again to get a name.";
   }
 
   run(unit: string, cmd: string[], env: string[]) {

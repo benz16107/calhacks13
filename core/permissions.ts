@@ -10,16 +10,11 @@ export type Item = { id: string; kind: 'key' | 'money' | 'strangers' | 'shell' |
 export type Grant = { deny: string[]; perDayCents?: number; diskBytes?: number; answered?: boolean; seen: { hosts: string[]; shell?: boolean; folders?: boolean } };
 export type Grants = Record<string, Grant>;
 
-export function load(home: string): Grants {
-  try {
-    return JSON.parse(fs.readFileSync(path.join(home, 'permissions.json'), 'utf8'));
-  } catch {
-    return {};
-  }
-}
-
+/** Saved beside the final name, then renamed: a write cut off half way never leaves a torn file. */
 export function save(home: string, g: Grants) {
-  fs.writeFileSync(path.join(home, 'permissions.json'), JSON.stringify(g, null, 1), { mode: 0o600 });
+  const file = path.join(home, 'permissions.json');
+  fs.writeFileSync(`${file}.${process.pid}.tmp`, JSON.stringify(g, null, 1), { mode: 0o600 });
+  fs.renameSync(`${file}.${process.pid}.tmp`, file);
 }
 
 export const grant = (g: Grants, app: string): Grant => (g[app] ??= { deny: [], seen: { hosts: [] } });

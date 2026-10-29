@@ -28,7 +28,16 @@ const api = async <T = any>(method: string, p: string, body?: unknown): Promise<
 
 let local: DbConnection | undefined;
 let fleet: Fleet | undefined;
-let view: 'agents' | 'requests' | 'machines' = (localStorage.getItem('gurtos.live.view') as any) || 'agents';
+// Inside a GurtOS window the page is sandboxed and has no storage: it keeps these for the visit only.
+const store = (() => {
+  try {
+    return localStorage;
+  } catch {
+    const m = new Map<string, string>();
+    return { getItem: (k: string) => m.get(k) ?? null, setItem: (k: string, v: string) => void m.set(k, v) };
+  }
+})();
+let view: 'agents' | 'requests' | 'machines' = (store.getItem('gurtos.live.view') as any) || 'agents';
 let queue = '';
 let looking = '';
 let fleetStatus: FleetStatus | undefined;
@@ -183,7 +192,7 @@ document.addEventListener('click', async (e) => {
   if (!el) return;
   if (el.dataset.view) {
     view = el.dataset.view as typeof view;
-    localStorage.setItem('gurtos.live.view', view);
+    store.setItem('gurtos.live.view', view);
     if (view === 'machines') void loadFleet();
     draw();
   } else if (el.classList.contains('req-open')) {
@@ -195,7 +204,8 @@ document.addEventListener('click', async (e) => {
     const approved = el.dataset.answer === 'approve';
     try {
       // The box's own screen answers in SpacetimeDB; any other screen through the box's API, like the phone app.
-      if (local?.reducers.answer) await local.reducers.answer({ id: el.dataset.id!, approved, by: 'box screen' });
+      // Inside a GurtOS window the page is sandboxed: it answers through its window's token, never as the box's screen.
+      if (local?.reducers.answer && self.origin !== 'null') await local.reducers.answer({ id: el.dataset.id!, approved, by: 'box screen' });
       else await api('POST', `/api/approvals/${encodeURIComponent(el.dataset.id!)}`, { approved, by: 'live window' });
     } catch (err) {
       // "already approved by Rosa's phone": the database's own sentence, which names only who answered first.
@@ -233,9 +243,9 @@ async function connectLocal() {
   DbConnection.builder()
     .withUri(`ws://${location.hostname}:3000`)
     .withDatabaseName(where.database)
-    .withToken(localStorage.getItem('gurtos.live.token') ?? undefined)
+    .withToken(store.getItem('gurtos.live.token') ?? undefined)
     .onConnect((c, identity, tok) => {
-      localStorage.setItem('gurtos.live.token', tok);
+      store.setItem('gurtos.live.token', tok);
       local = c;
       for (const t of [c.db.job, c.db.agent, c.db.meter, c.db.activity, c.db.approval, c.db.myRequests, c.db.viewers] as any[]) {
         t.onInsert?.(draw);
@@ -309,9 +319,9 @@ async function loadFleet() {
   Fleet.builder()
     .withUri(where.fleet.host)
     .withDatabaseName(where.fleet.database)
-    .withToken(localStorage.getItem('gurtos.fleet.token') ?? undefined)
+    .withToken(store.getItem('gurtos.fleet.token') ?? undefined)
     .onConnect((c, identity, tok) => {
-      localStorage.setItem('gurtos.fleet.token', tok);
+      store.setItem('gurtos.fleet.token', tok);
       fleet = c;
       c.db.myMachines.onInsert(draw);
       c.db.myMachines.onDelete(draw);

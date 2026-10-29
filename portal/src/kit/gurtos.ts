@@ -111,7 +111,17 @@ function followTheme() {
     };
     copy();
     new MutationObserver(copy).observe(top, { attributes: true, attributeFilter: ['data-theme', 'data-contrast', 'data-larger-text', 'data-reduce-motion'] });
-  } catch {} // another origin: the page follows the system's style through the CSS
+  } catch {
+    // A sandboxed app page (another origin): the window sends the style by message; until then the CSS follows the system.
+    addEventListener('message', (e) => {
+      const m = e.data as { gurtos?: string } & Record<string, string | undefined>;
+      if (e.source !== parent || m?.gurtos !== 'theme') return;
+      for (const k of ['theme', 'contrast', 'largerText', 'reduceMotion'] as const) {
+        if (m[k] !== undefined) document.documentElement.dataset[k] = m[k];
+        else delete document.documentElement.dataset[k];
+      }
+    });
+  }
 }
 followTheme();
 
@@ -126,12 +136,15 @@ function carryPerson() {
   const real = window.fetch.bind(window);
   window.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
     const url = input instanceof Request ? input.url : String(input);
-    if (new URL(url, location.href).origin !== location.origin) return real(input, init);
+    if (new URL(url, location.href).origin !== here) return real(input, init);
     const headers = new Headers(init?.headers ?? (input instanceof Request ? input.headers : undefined));
     if (!headers.has('x-box-person')) headers.set('x-box-person', person!);
     return real(input, { ...init, headers });
   };
 }
+
+/** This page's own box. Not location.origin: a sandboxed app page has none of its own ("null"). */
+const here = new URL(location.href).origin;
 
 // Off the box's own screen every call needs the device's pairing token. The window passes it as ?access_token=;
 // carry it on this page's own fetches, log streams and links, so a track page works on a phone unchanged.
@@ -141,7 +154,7 @@ function carryToken() {
     token ??= JSON.parse(parent.localStorage.getItem('pairing') ?? 'null')?.token ?? null;
   } catch {} // another origin
   if (!token) return carryPerson();
-  const mine = (u: string | URL) => new URL(u, location.href).origin === location.origin;
+  const mine = (u: string | URL) => new URL(u, location.href).origin === here;
   const withQuery = (u: string | URL) => {
     const url = new URL(u, location.href);
     if (!url.searchParams.has('access_token')) url.searchParams.set('access_token', token!);

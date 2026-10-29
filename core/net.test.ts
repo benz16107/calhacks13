@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { Tries, destination, fetchesOnItsOwn, fromScreen, sourceOf, withKey } from './net.ts';
+import { Tries, destination, factoryPath, fetchesOnItsOwn, fromScreen, sourceOf, withKey } from './net.ts';
 
 test('a task reaches a name on the box only on the exact host:port it was given, never a box port', async () => {
   assert.match((await destination(['localhost:5555'], 'localhost', '5555')) ?? '', /^(127\.0\.0\.1|::1)$/); // either loopback: the OS decides which one "localhost" is
@@ -81,4 +81,11 @@ test('wrong pairing codes are limited per address and overall, so one address ca
   assert.equal(t.refusal('a', now + 60_001), undefined, 'a minute later it may try again');
   for (let i = 0; i < 60; i++) t.wrong(`n${i}`, now);
   assert.match(t.refusal('fresh', now) ?? '', /too many wrong/, 'many addresses together are capped too');
+});
+
+test('only the Factory calls Droid makes are relayed with the owner\'s Factory key', () => {
+  for (const ok of ['/api/llm/o/v1/responses', '/api/llm/a/v1/messages', '/api/cli/whoami', '/api/feature-flags', '/api/organization/managed-settings', '/api/billing/limits', '/api/connectors/tools/list', '/api/apps/cloud-sync/sessions/batch', '/api/ingest'])
+    assert.ok(factoryPath(ok), ok);
+  for (const no of ['/api/connectors/tools/call', '/api/sessions', '/api/feature-flags/x', '/api/billing/limits/../keys', '/v1/messages', '/'])
+    assert.ok(!factoryPath(no), no);
 });

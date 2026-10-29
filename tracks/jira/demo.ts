@@ -75,7 +75,7 @@ export default async function (d: DemoKit) {
         headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json', 'x-forwarded-for': '203.0.113.7' },
         body: body === undefined ? undefined : JSON.stringify(body),
       });
-    const approval = `${B.id}.line3`;
+    const approval = `${B.id}.task.line3`;
     // The Forge app sends the Atlassian account id; the box asks Atlassian for the name. A name in the body is ignored.
     const me = stub ? { accountId: 'acct-user', displayName: 'Jira user' } : await jira('GET', '/rest/api/3/myself');
     const acting = { account: me.accountId, by: 'Someone else entirely' };
@@ -122,7 +122,7 @@ export default async function (d: DemoKit) {
     d.check(bReq, `B's production push opened Jira Service Management request ${bReq} for its approvers`);
     // C asks for a production deploy and nobody answers in GurtOS: the JSM approver decides.
     const C = await start('Ship the hotfix', 'write hotfix.txt deployed\nask Deploy the hotfix to production?');
-    const cReq = await d.waitFor('C\'s JSM request', async () => opened()[`${C.id}.line2`]?.key, 40000);
+    const cReq = await d.waitFor('C\'s JSM request', async () => opened()[`${C.id}.task.line2`]?.key, 40000);
     made.push(cReq);
     if (stub) stub.approve(cReq);
     else {
@@ -238,7 +238,7 @@ async function business(d: DemoKit, stub: Stub, call: (m: string, p: string, b?:
     stub.issue('OPS-9');
     const own = await call('POST', '/start', { issue: { key: 'OPS-9', summary: 'Ship the hotfix', description: 'ask Push the hotfix to production?' }, account: 'acct-dana' });
     const ownTask = (await d.api('GET', `/tasks/${own.task.id}`)).task;
-    const req = await d.waitFor('the JSM request for Dana\'s task', async () => opened()[`${own.task.id}.line1`]?.key, 40000);
+    const req = await d.waitFor('the JSM request for Dana\'s task', async () => opened()[`${own.task.id}.task.line1`]?.key, 40000);
     stub.approve(req, 'acct-dana');
     const refused = await d.waitFor('the box to refuse Dana\'s JSM approval', async () =>
       (await d.api('GET', `/tasks/${own.task.id}`)).events.find((e: any) => e.type === 'note' && e.data?.action === 'jsm.refused'), 40000);
