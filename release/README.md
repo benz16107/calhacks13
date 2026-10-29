@@ -86,7 +86,9 @@ release. Each build machine is a fresh Ubuntu 24.04 VM of the right architecture
    the previous release to the new `.sqfs` with `sudo box-update apply <url>`.
 5. **Sign.** On the machine that holds the release key: download the staged ISOs and `sha256sum` them against the
    build hosts' hashes. `RELEASE_KEY=<key> S3CFG=<s3cmd config> release/publish.sh <version> <folder>` writes
-   `SHA256SUMS` for the ISOs, signs it and uploads it. It covers ISOs only: to include the Android app
+   `SHA256SUMS` for the ISOs and update images, signs it and uploads every ISO, update image (`.sqfs` with its
+   `.sha256` and `.sig`) and bill of materials to the mirror and GitHub. `DRAFT=1` uploads a draft GitHub release
+   only, which nobody else sees; run it again without `DRAFT` to fill the mirror and publish. To include the Android app
    (`gurtos-android-<version>.apk`), write `SHA256SUMS` by hand with its line too and sign it with
    `ssh-keygen -Y sign -f <release key> -n gurtos-release SHA256SUMS`. Verify with `release/allowed_signers`.
 6. **Publish.** Move each staged ISO into `<version>/` on the mirror with `s3cmd mv --acl-public`, and put
