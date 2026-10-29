@@ -45,7 +45,7 @@ const jumps = [
           <p class="kicker">Track {number} · Sponsor track</p>
           <h1>{d.title}</h1>
           <p class="sponsor">{d.sponsor} · {d.prize}</p>
-          <p class="kbest">Best shown in <strong>{d.editions}</strong> <span aria-hidden="true">·</span> <a href={LINKS.site}>The product: gurtos.com</a> <span aria-hidden="true">·</span> <a href={LINKS.try}>Try it live: try.gurtos.com</a></p>
+          <p class="kbest">Best shown in <strong>{d.editions}</strong> <span aria-hidden="true">·</span> <a href={LINKS.site}>The product: gurtos.com</a></p>
         </header>
         {/* the track's own narrated video, when one is set for its slug in src/data/videos.ts */}
         <VideoSlot video={entry.id} label={`${d.sponsor} video`} />
@@ -60,7 +60,7 @@ const jumps = [
       </article>
     ) : (
   <article class="wrap track" data-track-body>
-    <nav class="crumbs" aria-label="Breadcrumb"><a href="/">All tracks</a> / {number} / {d.sponsor} <span class="to-product">· The product: <a href={LINKS.site}>gurtos.com</a> · <a href={LINKS.try}>Try it live</a></span></nav>
+    <nav class="crumbs" aria-label="Breadcrumb"><a href="/">All tracks</a> / {number} / {d.sponsor} <span class="to-product">· The product: <a href={LINKS.site}>gurtos.com</a></span></nav>
     <header class="head">
       <div class="head-main">
         <p class="kicker">Track {number} · Sponsor track</p>

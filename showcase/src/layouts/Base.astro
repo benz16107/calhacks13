@@ -36,6 +36,13 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
     <a class="skip" href="#main">Skip to content</a>
     <SiteHeader current="calhacks" origin={LINKS.site} calhacks="/" />
     <main id="main">
+      <div class="wrap archived" role="note">
+        <p>
+          This is the record of GurtOS at Cal Hacks 13.0, kept as it was judged. The live demos it links to
+          (try.gurtos.com and the Vultr computer at gurt-cloud.box.gurtos.com) were turned off after the hackathon. GurtOS
+          today is at <a href={LINKS.site}>gurtos.com</a>.
+        </p>
+      </div>
       <slot />
       <div class="wrap note">
         <p>
@@ -51,6 +58,12 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
 </html>
 
 <style>
+  .archived p {
+    max-width: var(--measure);
+    margin: var(--space-4) 0 0;
+    font-size: 0.9rem;
+    color: var(--color-text-secondary);
+  }
   .note {
     margin-top: var(--space-8);
   }

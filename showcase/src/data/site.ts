@@ -3,7 +3,6 @@ export const LINKS = {
   repo: 'https://github.com/benz16107/calhacks13',
   site: 'https://gurtos.com', // the product landing page, editions and downloads
   docs: 'https://gurtos.com/docs',
-  try: 'https://try.gurtos.com', // the live public demo: a throwaway GurtOS computer in the browser
   devpost: '', // set once the Devpost page exists
   deck: 'https://www.figma.com/slides/SBrJtJiY20k88X3IGzKwZW',
   figmaDesign: 'https://www.figma.com/design/oppzH621OOOMA31rgLbxbM',
