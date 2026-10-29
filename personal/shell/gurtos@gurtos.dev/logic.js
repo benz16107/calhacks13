@@ -28,7 +28,7 @@ export function quietAt(settings, hhmm) {
 export const dollars = (cents) => `$${((cents ?? 0) / 100).toFixed(2)}`;
 
 /** A task failed only because the vault has no model key yet: the fix is GurtOS Setup. */
-export const noModelKey = (error) => /vault has no/i.test(error ?? '') && /(factory_api_key|anthropic_api_key|model key)/i.test(error ?? '');
+export const noModelKey = (error) => /no model key/i.test(error ?? '') || (/vault has no/i.test(error ?? '') && /(factory_api_key|anthropic_api_key|model key)/i.test(error ?? ''));
 
 /** Why a task failed, in one sentence. `key` is true when the fix is a model key in Settings. */
 export function failure(error) {
