@@ -10,7 +10,7 @@ const checks: [string, RegExp, ((m: string) => boolean)?][] = [
   ['tailnet', /tailb51682|\b[\w-]+\.ts\.net\b/gi],
   ['public tunnel host', /[\w-]+\.sslip\.io/gi],
   ['jira site', /\b[a-z0-9-]+\.atlassian\.net\b/gi, (m) => /^(your-site|your-org|example|api|x)\.atlassian\.net$/i.test(m)],
-  ['email', /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/g, (m) => /@(example\.(com|org|net)|[\w.-]+\.(example|exam|test|invalid)|users\.noreply\.github\.com|anthropic\.com|gurtos\.dev|ubuntu\.com|evil\.com)$/i.test(m) || /@[\w.-]+\.(service|target|socket|slice|mount)$/.test(m) || /^(git|noreply)@/.test(m) || /\.(png|svg|jpg|webp|js|ts)$/.test(m)],
+  ['email', /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/g, (m) => /@(([\w-]+\.)*example\.(com|org|net)|[\w.-]+\.(example|exam|test|invalid)|users\.noreply\.github\.com|anthropic\.com|gurtos\.dev|ubuntu\.com|evil\.com)$/i.test(m) || /@[\w.-]+\.(service|target|socket|slice|mount)$/.test(m) || /^(git|noreply)@/.test(m) || /\.(png|svg|jpg|webp|js|ts)$/.test(m)],
   ['home folder', /\/home\/ben\b|\/Users\/ben\w*/g],
   ['ipv4', /(?<![\d.])\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}(?![\d./])/g, (m) => m.split('.').some((o) => +o > 255) || DOC_IPS.test(m) || /^(24\.04|1\.5\.75)\./.test(m)],
   ['cgnat or tailnet ip', /(?<![\d.])100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\.\d{1,3}\.\d{1,3}(?![\d./])/g],
