@@ -397,7 +397,7 @@ function Permissions() {
         <LinkRow title="Sites any task may reach" sub={s.defaultHosts.length ? s.defaultHosts.join(', ') : undefined} value={s.defaultHosts.length ? plural(s.defaultHosts.length, 'site') : 'None'} onClick={() => !ro && setSheet('hosts')} />
       </Group>
       {(b.system?.owner || s.agentFolders.length > 0) && (
-      <Group title="Folders agents may use" caption={s.agentFolders.length ? 'Agents work on a copy. You keep or undo their changes in Time Machine.' : 'None chosen yet, so a task may work on a copy of any folder you give it.'}>
+      <Group title="Folders agents may use" caption={s.agentFolders.length ? 'Agents work on a copy. You keep or undo their changes in Time Machine.' : 'None chosen yet, so a task may work on a copy of any folder in your home folder.'}>
         {s.agentFolders.map((f) => (
           <Row icon="folder" title={f.split('/').filter(Boolean).at(-1) ?? f} sub={f} key={f}>
             <Value>May change</Value>

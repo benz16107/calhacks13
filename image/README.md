@@ -199,7 +199,7 @@ in `core/`). The image only gets a person to it:
   (`box-env`), so the QR opens on a phone on the same network.
 - **Personal:** GNOME's own setup makes the account first. At that person's first login the Personal layer's own
   "GurtOS Setup" (`personal/setupwin.py`, started from `/etc/xdg/autostart/box-setup.desktop`) opens for the owner
-  until the box says setup is done. It is native, with seven steps. The portal's longer wizard shows only on a
+  until the box says setup is done. It is native, with six steps. The portal's wizard (eight steps) shows only on a
   Server box's screen, and in the Box window until setup is done.
 
 Updates do not touch it: setup's state lives with the box on the data partition.
@@ -372,7 +372,8 @@ Stock Ubuntu Server 24.04 has a login prompt, a user with sudo, snapd, cloud-ini
   whole download may take 4 hours. Then box-droid waits 30 seconds, 1, 2 and 4 minutes, then every 5, and starts
   again at once when the network comes back after being away. With no network it waits for one. Neither the boot
   nor the screen waits for it. Where it stands is in `/run/box-os/droid` (`state=` ready, downloading, offline or
-  retrying, and a `message=` for a person). Until then a Droid task fails with a message saying so.
+  retrying, and a `message=` for a person). Until then a Droid task waits in the queue with that message as its step,
+  and starts once Droid is there.
 - **Its screen is the box.** `box-kiosk.service` runs cage, a Wayland compositor that shows one window, with a
   full-screen WebKit view (`rootfs/usr/local/lib/box-os/kiosk.py`) as the `kiosk` user (no password, no shell).
   seatd, a small root daemon, hands that user the display and keyboard. Ubuntu's own browsers are snaps, which
