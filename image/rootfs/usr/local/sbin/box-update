@@ -86,6 +86,23 @@ main() {
     [ "$(cut -d' ' -f1 $state/new.sqfs.sha256)" = "$(sha256sum < "$file" | cut -d' ' -f1)" ] ||
       die "the update does not match its .sha256"
 
+    # Read the update's own release files from the image first: a refused update must leave the spare slot as it was,
+    # since it holds the last system (the one rollback starts).
+    local peekdir
+    peekdir=$(mktemp -d $work/check.XXXXXX)
+    unsquashfs -f -q -no-progress -d $peekdir "$file" etc/os-release etc/box-os/release usr/lib/os-release >/dev/null 2>&1 || true
+    unsquashfs -l "$file" boot/vmlinuz opt/box/core/box.ts 2>/dev/null | grep -q '/opt/box/core/box.ts$' &&
+      unsquashfs -l "$file" boot/vmlinuz 2>/dev/null | grep -q '/boot/vmlinuz$' ||
+      { rm -rf $peekdir; die "the update is not a GurtOS system"; }
+    refused() { rm -rf $peekdir; die "$*"; }
+    [ "$(edition $peekdir)" = "$(edition /)" ] || refused "the update is a different edition: $(edition $peekdir), not $(edition /)"
+    [ "$(arch $peekdir)" = "$(arch /)" ] || refused "the update is for $(arch $peekdir), not $(arch /)"
+    # Build ids start with the build's UTC date and time (20261024-1439-<commit>), so they sort by age.
+    if [ -z "$older" ] && [[ $(build $peekdir) < $(build /) ]]; then
+      refused "the update (build $(build $peekdir)) is older than this system (build $(build /)); --allow-older installs it anyway"
+    fi
+    rm -rf $peekdir
+
     echo "box-update: writing slot $new"
     local dev
     dev=$(slotdev $new)
@@ -97,14 +114,7 @@ main() {
     mkdir -p $work/$new && mount $dev $work/$new
     root=$work/$new
     unsquashfs -f -q -no-progress -d $root "$file"
-    refuse() { umount $root; die "$*"; }
-    [ -e $root/boot/vmlinuz ] && [ -e $root/opt/box/core/box.ts ] || refuse "the update is not a GurtOS system"
-    [ "$(edition $root)" = "$(edition /)" ] || refuse "the update is a different edition: $(edition $root), not $(edition /)"
-    [ "$(arch $root)" = "$(arch /)" ] || refuse "the update is for $(arch $root), not $(arch /)"
-    # Build ids start with the build's UTC date and time (20261024-1439-<commit>), so they sort by age.
-    if [ -z "$older" ] && [[ $(build $root) < $(build /) ]]; then
-      refuse "the update (build $(build $root)) is older than this system (build $(build /)); --allow-older installs it anyway"
-    fi
+    [ -e $root/boot/vmlinuz ] && [ -e $root/opt/box/core/box.ts ] || { umount $root; die "the update did not unpack whole"; }
     # The new system keeps this machine's identity and the box's task users (core makes them, uids 30000-39999).
     cp -a /etc/machine-id /etc/localtime /etc/timezone $root/etc/ # the time zone someone chose stays
     cp -a /etc/ssh/ssh_host_* $root/etc/ssh/ 2>/dev/null || true

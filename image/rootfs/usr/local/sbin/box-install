@@ -93,7 +93,7 @@ choose() {
       printf '\n'
       read -r -p '  Type its number and press Enter: ' answer
       [[ $answer =~ ^[0-9]+$ ]] && [ "$answer" -ge 1 ] && [ "$answer" -le ${#list[@]} ] || continue
-      i=$((answer - 1))
+      i=$((10#$answer - 1)) # 10#: a leading zero is not octal
     fi
     disk=${list[$i]%% *}
     # An empty internal disk has nothing to lose. A USB or removable one may be someone's backup drive: ask.

@@ -296,10 +296,10 @@ if [[ ${1:-} == --vm-inside ]]; then
   check "and just_installed is cleared" eq "$(grubvar just_installed)" ""
   got=$(bu a apply "$t/good.sqfs" --no-reboot)
   check "a slot that is not the default may not take an update" has "$got" "is not the default one; restart into slot b first"
+  before=$(bu b status)
   got=$(bu b apply "$t/old.sqfs" --no-reboot)
   check "an older build is refused" has "$got" "is older than this system"
-  check "status says slot A's write did not finish" has "$(bu b status)" "other:    slot a, an update that did not finish"
-  check "and rollback will not start it" has "$(bu b rollback)" "slot a holds no system that can start"
+  check "and the refusal changes nothing: slot A is as it was (rollback still has what it had)" eq "$(bu b status)" "$before"
   check "--allow-older installs it" has "$(bu b apply "$t/old.sqfs" --no-reboot --allow-older)" "slot a holds the update"
   rm -f "$t/data/update/trial"; grub-editenv "$t/esp/grubenv" unset next_entry
   check "rollback to a whole slot restarts into it" has "$(bu b rollback)" "systemctl reboot"
