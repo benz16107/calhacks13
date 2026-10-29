@@ -195,7 +195,8 @@ function check(ok: unknown, what: string) {
 let passed = 0;
 let failed = 0;
 let pending = 0;
-// DEMO_ONLY=anthropic ./demo runs just that track's step (a developer's loop; the merge gate runs everything).
+// DEMO_ONLY=anthropic ./demo runs just that track's step, DEMO_ONLY=personal the core moments named "personal: ..."
+// (a developer's loop; the merge gate runs everything).
 const ONLY = process.env.DEMO_ONLY;
 async function moment(title: string, fn?: () => Promise<void>, why = 'not built yet') {
   if (ONLY && title !== `track ${ONLY}` && !title.startsWith(`${ONLY}:`)) return; // DEMO_ONLY=security: the core moments named "security: ..."
@@ -855,6 +856,35 @@ await moment("personal: an agent works on the owner's folder, then Keep or Undo"
 });
 
 
+await moment('personal: Keep after the agent removes folders, and Undo of a kept task', async () => {
+  const folder = path.join(OWNER_ROOT, 'site');
+  const put = (f: string, text: string) => (fs.mkdirSync(path.dirname(path.join(folder, f)), { recursive: true }), fs.writeFileSync(path.join(folder, f), text));
+  for (const f of ['build/old.js', 'build/sub/deep.js', 'dist/a.js', 'dist/b.js', 'stale/x.txt', 'readme.md']) put(f, `${f}\n`);
+  const tree = () => execFileSync('find', [folder, '-mindepth', '1'], { encoding: 'utf8' }).trim().split('\n').map((p) => p.slice(folder.length + 1)).sort().join(' ');
+  const before = tree();
+  // rm -rf a folder (a whiteout over it in the layer), rm -rf then mkdir another (an opaque folder), and a plain edit.
+  const T = await api<Task>('POST', '/tasks', { title: 'Rebuild the site', worker: 'fake', source: 'demo', folder, prompt: 'sh out.txt rm -rf build stale && rm -rf dist && mkdir dist && echo new > dist/new.js\nappend readme.md rebuilt' });
+  await settled([T.id]);
+  const d = await api<{ changes: { path: string; change: string }[] }>('GET', `/api/tasks/${T.id}/diff`);
+  const deleted = d.changes.filter((c) => c.change === 'deleted').map((c) => c.path);
+  check(['build/old.js', 'build/sub/deep.js', 'dist/a.js', 'dist/b.js', 'stale/x.txt'].every((p) => deleted.includes(p)), `the diff lists every file in the folders it removed (${deleted.join(', ')})`);
+  put('stale/mine.txt', 'the owner added this while the agent worked\n');
+  const kept = await api<{ kept?: unknown[] }>('POST', `/api/tasks/${T.id}/keep`).catch((e: Error) => ({ error: e.message }));
+  check('kept' in kept, `Keep applies a task that removed folders (${JSON.stringify(kept).slice(0, 120)})`);
+  check(tree() === 'dist dist/new.js out.txt readme.md stale stale/mine.txt', `the real folder now matches the task, and a file the owner added meanwhile stays (${tree()})`);
+  await api('POST', `/api/tasks/${T.id}/undo`);
+  const t = await task(T.id);
+  check(t.state === 'undone' && t.review === 'undone', `Undo of a kept task takes its changes out of the real folder too (state ${t.state}, review ${t.review})`);
+  check(tree() === [...before.split(' '), 'stale/mine.txt'].sort().join(' ') && fs.readFileSync(path.join(folder, 'readme.md'), 'utf8') === 'readme.md\n', `every removed file and folder is back (${tree()})`);
+  // Undo of a kept file the owner edited since changes nothing, and says why.
+  const E = await api<Task>('POST', '/tasks', { title: 'Edit the readme', worker: 'fake', source: 'demo', folder, prompt: 'append readme.md agent line' });
+  await settled([E.id]);
+  await api('POST', `/api/tasks/${E.id}/keep`);
+  fs.appendFileSync(path.join(folder, 'readme.md'), 'owner line\n');
+  const no = await api('POST', `/api/tasks/${E.id}/undo`).then(() => '', (e: Error) => e.message);
+  check(/You changed readme\.md/.test(no) && (await task(E.id)).state === 'done' && fs.readFileSync(path.join(folder, 'readme.md'), 'utf8').includes('owner line'), `Undo refuses when the owner edited a kept file since ("${no}")`);
+});
+
 // ---------- Personal: several folders in one task, and setting the owner at runtime ----------
 
 await moment('personal: one task on several folders, and a runtime owner', async () => {
@@ -1358,6 +1388,8 @@ await moment("native apps: device kinds and the Apple Watch's limits, enforced b
   const bad = await Promise.all([[{ name: '../x', data: b64('a') }], [{ name: 'big.bin', data: Buffer.alloc(5 * 1024 * 1024 + 1).toString('base64') }], Array.from({ length: 9 }, (_, i) => ({ name: `f${i}`, data: b64('a') }))]
     .map((files) => phone('POST', '/api/tasks', { title: 'x', worker: 'fake', prompt: 'say hi', files })));
   check(bad.every((r) => r.status === 400), 'a path in a name, more than 5 MB, or more than 8 files is refused');
+  const named = await phone('POST', '/api/tasks', { title: 'Read my résumé', worker: 'fake', source: 'demo', prompt: 'expect Résumé.txt cv\nexpect 写真.txt photo', files: [{ name: 'Résumé.txt', data: b64('cv\n') }, { name: '写真.txt', data: b64('photo\n') }] });
+  check(named.status === 200 && (await settled([named.body.id]))[0].state === 'done', `a file name in any language is shared as it is (${named.status} ${named.body.error ?? ''})`);
   await api('DELETE', `/api/devices/${phoneDev.device.id}`);
   check((await phone('GET', '/api/tasks')).status === 401 && (await as(wt.body.token)('GET', '/api/tasks')).status === 401, "revoking the iPhone revokes its Watch");
   await as(webDev.token)('DELETE', '/api/pair/self');

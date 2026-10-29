@@ -102,6 +102,20 @@ export interface TargetDeps {
 
 type Step = { text: string; ok: boolean; at: string };
 
+/** The relay could not be reached or did not answer well: say so, and what to do instead. */
+const offline = (relay: string) => Object.assign(new Error(`Quick Start needs the GurtOS relay at ${new URL(relay).host}, and this computer couldn't reach it. Set it up on its own screen instead.`), { status: 502 });
+async function atRelay(relay: string, url: string, init: RequestInit): Promise<Response> {
+  let r: Response;
+  try {
+    r = await fetch(url, init);
+  } catch (e) {
+    if ((init.signal as AbortSignal | undefined)?.aborted && (e as Error).name === 'AbortError') throw e; // stopped here, not the relay
+    throw offline(relay);
+  }
+  if (r.status >= 500) throw offline(relay);
+  return r;
+}
+
 /** The new computer's side: one session at a time, ten minutes, Stop at any point. */
 export class Target {
   deps: TargetDeps;
@@ -145,9 +159,9 @@ export class Target {
   async watch(signal: AbortSignal) {
     while (!signal.aborted && Date.now() < this.until) {
       try {
-        const r = await fetch(`${this.deps.relay}/v1/rv/${this.rv}/bundle?wait=25`, { signal: AbortSignal.any([signal, AbortSignal.timeout(35_000)]) });
+        const r = await atRelay(this.deps.relay, `${this.deps.relay}/v1/rv/${this.rv}/bundle?wait=25`, { signal: AbortSignal.any([signal, AbortSignal.timeout(35_000)]) });
         if (r.status === 404) continue;
-        if (!r.ok) throw new Error(`relay answered ${r.status}`);
+        if (!r.ok) throw offline(this.deps.relay);
         const b = await r.json();
         if ((b as { stopped?: boolean }).stopped) return;
         await this.apply(open(this.privateKey!, this.s, b as Sealed));
@@ -189,8 +203,8 @@ export class Target {
     const host = await this.deps.remoteOn();
     step(`Reach from anywhere: ${host}`);
     const sealed = seal(b.phonePk, this.s, { host, code: this.deps.ownerCode() });
-    const r = await fetch(`${this.deps.relay}/v1/rv/${this.rv}/owner`, { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify(sealed), signal: AbortSignal.timeout(10_000) });
-    if (!r.ok) throw new Error(`relay answered ${r.status} for the phone's pairing code`);
+    const r = await atRelay(this.deps.relay, `${this.deps.relay}/v1/rv/${this.rv}/owner`, { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify(sealed), signal: AbortSignal.timeout(10_000) });
+    if (!r.ok) throw offline(this.deps.relay);
     step('Your phone can pair now');
     this.deps.apply.setupStep('step', 'quickstart', { from: b.from });
     this.state = 'done';
@@ -206,7 +220,7 @@ export function bundle(o: { from: string; keys: Record<string, string>; settings
 
 /** Seal a bundle to the target and drop it at the relay. 409: the new computer stopped, or something already arrived. */
 export async function deliver(relay: string, p: Pending, b: ReturnType<typeof bundle>) {
-  const r = await fetch(`${relay}/v1/rv/${p.rv}/bundle`, { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify(seal(p.pk, p.s, b)), signal: AbortSignal.timeout(15_000) });
+  const r = await atRelay(relay, `${relay}/v1/rv/${p.rv}/bundle`, { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify(seal(p.pk, p.s, b)), signal: AbortSignal.timeout(15_000) });
   if (r.status === 409) throw Object.assign(new Error(`${p.n} stopped Quick Start, or already got a bundle`), { status: 409 });
-  if (!r.ok) throw Object.assign(new Error(`the relay answered ${r.status}`), { status: 502 });
+  if (!r.ok) throw offline(relay);
 }

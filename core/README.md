@@ -48,8 +48,16 @@ around its allow-list. Factory's calls are passed through unread: a limit, liste
 Factory. With only `ANTHROPIC_API_KEY`, the box writes a bring-your-own-key model into the task user's
 `~/.factory/settings.json` (the task's model, and Haiku for the second look, with a placeholder key) and runs Droid on
 `custom:<model>`; the proxy relays `api.anthropic.com` and puts the real key in the `x-api-key` header. Droid's own
-calls to Factory get a 503 then, and the task carries on. With neither, a Droid task fails with "the vault has no
-model key". `GET /api/setup` and `GET /api/system` report `model: {ready, via: 'factory' | 'anthropic' | null}`.
+calls to Factory get a 503 then, and the task carries on. With neither, a Droid task fails at once with "No model key
+yet. Add an Anthropic or Factory API key in Settings, Keys, then start the task again." `GET /api/setup` and
+`GET /api/system` report `model: {ready, via: 'factory' | 'anthropic' | null}`.
+
+**Droid arrives after the first start.** Its license keeps it out of the image, so a new GurtOS computer downloads it
+(about 300 MB) and writes how that goes to `/run/box-os/droid` (`state=`, `message=`, `at=`). A Droid task made before
+it is there waits, `queued`, with that message as its `step`, and starts once Droid is in `/usr/local/bin`. On a
+checkout installed with `core/install.sh` there is no such file, so a missing Droid fails the task at once with what to
+run. `GET /api/system` and `GET /api/setup` report `droid: {state: ready | downloading | offline | retrying | missing,
+message, at?}`, and `GET /api/setup/doctor` lists Droid when it is missing.
 The cost numbers are list prices either way; with your own key the spend is on your Anthropic account.
 
 **The model is chosen per task.** `POST /api/tasks {model}` takes `haiku` (cheap checks, photo descriptions), `sonnet`
@@ -101,8 +109,10 @@ with "call again to check"; the worker (and Droid, which calls the tool again) p
 So a task can wait hours for an OK.
 
 **Why a task failed.** The `task.state: failed` event's `error` is a sentence a person can read: the worker's own
-last error message, or for the common causes a plain one ("Claude didn't accept the model key. Change it in
-Settings, Keys."). It never starts with `worker exited with`.
+last error message, or for the common causes a plain one ("Your Anthropic key was not accepted. Change it in
+Settings, Keys.", "This computer's disk is full. Free some space, then run the task again."). It never starts with
+`worker exited with`, and never holds a command line: a task that could not be set up names the step that failed
+("GurtOS could not set this task up (mount failed)..."), and the whole message goes to the journal.
 
 **Notes have text.** A `note` the core writes carries `text`, a sentence for Activity and Audit ("Setup: network
 step done", "Key saved: ANTHROPIC_API_KEY", "App turned on: Mana"). Show `text` when it is there.
@@ -157,10 +167,16 @@ Files over 1 MB are noted as `big`, not kept; recording stops at 50 MB a task (`
 is `{points: [{seq, changes: [{path, change, big?}]}], capped?}`; `GET /api/tasks/:id/diff?at=<seq>` is the usual
 `{changes, diff}` for the layer as it was right after that event. Purging the layer removes the recording too.
 
-**System update.** `GET /api/update` is `{version, build, state, slot?, last?, lastAt?}`, read from what
-`box-update` leaves behind: `state` is `current`, `ready` (an update is written to the other slot and starts at the
-next restart), `trial` (running an update not yet confirmed), `rolledBack` (the last line says it rolled back or did
-not start) or `unknown` (not running from a GurtOS image). There is no update feed yet, so there is no check.
+**System update.** `GET /api/update` is `{version, build, state, slot?, last?, lastAt?, install, slots, automatic,
+default?, other?, trial?}`, read from what `box-update` leaves behind, with no mount. `state` is `current`, `ready`
+(an update is written to the other slot and starts at the next restart), `trial` (running an update not yet
+confirmed), `rolledBack` (the last line says it rolled back or did not start) or `unknown` (not running from an
+installed image). `install` is `image` (installed from a GurtOS ISO: two systems, slots `a` and `b`), `disc` (the
+install disc running live) or `checkout` (`core/install.sh` on stock Ubuntu, updated with git and `./deploy`).
+Only `image` has `slots: true`, `default` (the slot the next start uses), `other: {slot, unfinished?}` (`unfinished`:
+a write that was cut off, so that slot cannot start) and `trial` (the slot on trial). The other slot's build is not
+reported, because reading it needs a mount (`box-update status` shows it). There is no update feed yet, so nothing
+looks for updates by itself: `automatic` is false, and Settings' `autoUpdate` and `updateChannel` are stored only.
 
 **Closed at the end.** When a task reaches done, failed or undone, any approval still pending for it is
 closed, so none lingers.
@@ -267,8 +283,8 @@ Make `tracks/<name>/track.ts` and default-export a `Track` with any of these slo
 | `apps` | The portal lists them. Their pages are your routes. |
 | `routes` | `'POST /hook': (req, box) => Response`, served at `/t/<name>/hook` on the box's API. Webhooks go here. |
 | `secrets` | Vault keys this track's routes and triggers may read with `box.secret(name)`. Tools and jobs declare their own. |
-| `optionalSecrets` | Keys among the app's declared secrets it can run without (it falls back to test mode). A new box turns the app on when only these are missing; the App Center marks them `optional: true`. |
-| `offByDefault` | A new box leaves the app off even when nothing is missing, for an app that makes something public (Mana's status page). The owner turns it on. |
+| `optionalSecrets` | Keys among the app's declared secrets it can run without (it falls back to test mode). The App Center marks them `optional: true`, and setup asks only for the others. |
+| `offByDefault` | Not read by the core any more: a new box turns on only the model app, so every other app is off until the owner turns it on. Kept so a track that sets it still loads. |
 | `x-box-caller` | Not a slot: a header on the Request every route gets, set by the box (a copy the caller sends is replaced): `screen` (the box's own screen), `owner` (a phone paired as the owner), `device:<id>` (another paired phone), `service` (a helper on the box) or `none` (an open route reached through a proxy with no token). On a Business box, `x-box-person` carries the calling person's id (absent otherwise); the `box` the route gets already acts as that person. |
 | `openRoutes` | Route keys (like `'GET /status'`) that need no paired-phone token, even for a request that arrives through a public proxy. For a route that is public on purpose, or checks its own secret (the Jira panel's routes). Every other route needs a phone. An open route must return nothing private unless its own check passes. |
 
@@ -298,7 +314,10 @@ triggers: [
 ]
 ```
 
-- `schedule` takes `everyMs` or `dailyAt: 'HH:MM'` (the box's local time). It re-arms after a restart.
+- `schedule` takes `everyMs` (1 ms to about 24 days) or `dailyAt: 'HH:MM'` (the box's local time, 24-hour). Anything
+  else throws when the track loads. It re-arms after a restart, but a run missed while the box was off is skipped,
+  not made up: a daily one runs next at its usual time, and an interval counts again from when the box started.
+  A daily run happens once per day even if the clock moves.
 - `webhook` serves `POST /hook/<track>/<name>` on the box's API; the JSON body is the payload.
 - `onFileChange` watches a folder (debounced) and fires per added or changed file.
 
@@ -330,8 +349,8 @@ The `owner` flag is ignored from anyone who is not already the owner.
 
 | Request | Does |
 |---|---|
-| `GET /api/system` | `{product, edition, editionName, version, build, hostname, timezone, network: {online, interfaces}, boxId, boxName, owner, startedAt, uptimeSec}`. `build` is the commit `./deploy` installed. |
-| `GET /api/setup` | `{modelKey, done, finishedAt, migrated, steps: {id: {at, data?}}, suggested: [...]}`. **Until `done`, the box's screen shows the wizard.** `modelKey` is false until the vault holds `FACTORY_API_KEY`; without it no Droid task can start, so the wizard should ask for it (`PUT /api/vault/FACTORY_API_KEY`, which takes effect at once). A box that already ran tasks when this arrived is `migrated` and counts as done. |
+| `GET /api/system` | `{product, edition, editionName, version, build, hostname, timezone, network: {online, interfaces}, boxId, boxName, owner, model, droid, paused, startedAt, uptimeSec}`. `build` is the commit `./deploy` installed. |
+| `GET /api/setup` | `{model, droid, modelKey, done, finishedAt, migrated, steps: {id: {at, data?}}, suggested: [...], channel}`. **Until `done`, the box's screen shows the wizard.** `modelKey` is false until the vault holds `ANTHROPIC_API_KEY` or `FACTORY_API_KEY`; without one no Droid task can start, so the wizard should ask for it (`PUT /api/vault/<NAME>`, which takes effect at once). `droid` is where Droid's download stands (above). A box that already ran tasks when this arrived is `migrated` and counts as done. |
 | `POST /api/setup/step {id, data?}` | Records a step as taken (any id like `network`; `suggested` lists the usual ones). `data` is at most 4 KB and is for answers, not keys: keys go to the vault. |
 | `POST /api/setup/finish`, `POST /api/setup/reopen` | Mark setup done, or show the wizard again. |
 | `GET /api/settings`, `PATCH /api/settings {...}` | The settings below. A patch changes only the keys it names (`quietHours` and `appearance` merge one level). Unknown keys and bad values are a `400` that names the field. Each change is a `note` in the action log with the old and new value. |
@@ -343,8 +362,8 @@ The `owner` flag is ignored from anyone who is not already the owner.
 
 **Settings** (defaults in parentheses; the first four are enforced by the core):
 
-- `approvalThresholdCents` (10000): a single spend above this always asks for an OK, even inside the task's budget.
-- `defaultBudgetCents` (0): the budget of a task that names none. 0 means every spend asks.
+- `approvalThresholdCents` (500): a single spend above this always asks for an OK, even inside the task's budget.
+- `defaultBudgetCents` (100): the budget of a task that names none. 0 means every spend asks.
 - `watchLimitCents` (2500): the most an Apple Watch token may approve (below, "The native apps"). 0: a Watch may only deny.
 - `networkDefault` (`none`) and `defaultHosts` (`[]`): with `allowlist`, a task that names no hosts gets `defaultHosts`; a task that names its own keeps them.
 - `agentFolders` (`[]`): Personal. Folders agents may use besides the owner's home. Can't include the system or the box's own state. Empty means only the owner's home.
@@ -361,7 +380,7 @@ Turning an app **off** takes its tools, jobs, routes, webhooks, log readers and 
 its triggers; a task that asks for one of its tools is refused. A trigger that returns a stop function from
 `start` stops cleanly (the generic `schedule`, `webhook` and `onFileChange` all do). A trigger that returns
 nothing keeps running until the box restarts, and the app reports `restartNeeded: true`. Turning it **on** loads
-it again with no reinstall. The choice is saved in `apps.json`, so it survives a restart. **A new box** (no `apps.json` and an empty log) starts with only the apps whose keys are all in the vault turned on, and never the example app, so a fresh install runs nothing it has no keys for. Turning one on later shows which keys it needs.
+it again with no reinstall. The choice is saved in `apps.json`, so it survives a restart. **A new box** (no `apps.json` and an empty log) starts with only the model app (`anthropic`) on, and only when its keys that are not optional are in the vault. Every other app is off, whatever keys the vault holds, until the owner turns it on in setup or the App Center, which shows the keys it needs. The example app is never on, and a release image does not load it at all. Demo boxes (`BOX_DEMO`) keep every app on.
 
 ## Who may reach the API
 
@@ -400,7 +419,10 @@ followed to where they really go. A Server box (no owner, no `agentFolders`) han
 sign-in, a track's open routes). A bigger one is a `413`, and the box stops reading it.
 
 **Undo removes the task's files**: its layer is deleted from disk (once no running task still reads it), and
-`GET /api/tasks/<id>/diff` for an undone task is empty.
+`GET /api/tasks/<id>/diff` for an undone task is empty. A task undone while it is still being set up never starts its
+worker. One workspace stacks up to 499 finished tasks (the kernel's limit of 500 overlay layers, mounted through short
+names so the 4 KB of mount options is no limit); past that a new task there is refused in words. Folding old layers
+into one is not built.
 
 ## Personal edition: the owner and their real folders
 
@@ -425,7 +447,9 @@ A task can work on one of the owner's real folders:
   changed any of the same files since the task started, it applies nothing and returns `{conflicts: [paths]}`.
   Otherwise it returns `{kept: changes}` and saves before-images under `BOX_HOME/timemachine/<id>` so the
   desktop's Time Machine can undo the Keep later.
-- `POST /api/tasks/<id>/undo` discards the task's changes; the real folder never received them.
+- `POST /api/tasks/<id>/undo` discards the task's changes; the real folder never received them. For a task that was
+  kept, Undo first reverts the Keep (the owner only), or changes nothing and answers `409` if the owner edited a kept
+  file since.
 - `POST /api/tasks/<id>/unkeep` undoes a Keep from the Time Machine before-images: kept files go back with
   their old content, owner and mode, and files Keep added are removed. If the owner edited a kept file since,
   it changes nothing and returns `{conflicts}`.
@@ -433,6 +457,11 @@ A task can work on one of the owner's real folders:
 **Links and odd files in a task's copy.** The box reads a task's layer as root, so it never follows a link the task
 made: the diff shows a link as `link to <target>`, and Keep copies it as a link. A pipe, socket or device the task made
 is not a change at all. Keep never writes through a link in the real folder: a change under one is a conflict.
+
+**Keep is all or nothing.** A conflict applies nothing. A file that cannot be written (a full disk, no permission)
+puts back the files Keep already wrote and says which file and why. A folder the task removed (`rm -rf`, or `rm -rf`
+then `mkdir`) is listed file by file in the diff; Keep removes those files and then the folder once it is empty, so a
+file the owner added there meanwhile stays, and Undo Keep makes the folder again.
 
 **Keep never changes ownership or widens permissions.** A kept file keeps the real file's owner, group and mode.
 A new file or folder takes the owner of the folder it lands in; files are 0644 (0755 if executable), and new

@@ -257,10 +257,13 @@ export interface Track {
   taskContext?(spec: TaskSpec, box: Box): string | undefined | Promise<string | undefined>;
   /**
    * Keys among this app's declared secrets (track, tool or job) that it can run without, like a payment key it
-   * falls back to test mode without. A new box turns the app on when only these are missing.
+   * falls back to test mode without. The App Center marks them `optional: true`, and setup asks only for the others.
    */
   optionalSecrets?: string[];
-  /** Off on a new box even when nothing is missing: an app that makes something public (Mana's status page). */
+  /**
+   * @deprecated Not read by the core: a new box turns on only the model app (`anthropic`), so every other app is off
+   * until the owner turns it on. Kept so a track that sets it still loads.
+   */
   offByDefault?: boolean;
   triggers?: Trigger[];
   tools?: Tool[];

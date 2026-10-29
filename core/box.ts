@@ -394,6 +394,8 @@ class Core {
   doctor() {
     const missing: { id: string; text: string }[] = [];
     if (!this.modelVia()) missing.push({ id: 'key', text: 'No model key yet: set ANTHROPIC_API_KEY or FACTORY_API_KEY.' });
+    const droid = system.droidState(); // still downloading on a new image is fine: tasks wait for it
+    if (droid.state === 'missing') missing.push({ id: 'droid', text: droid.message });
     if (system.edition(this.owner, this.business.on) === 'personal' && !this.owner) missing.push({ id: 'owner', text: 'No owner yet.' });
     if (!this.devices.some((d) => !d.revoked && d.kind !== 'setup' && d.kind !== 'watch')) missing.push({ id: 'phone', text: 'No phone paired yet: run pair and scan the code.' });
     return { ok: !missing.length, missing };
@@ -552,7 +554,8 @@ class Core {
     let total = 0;
     const list = files.map((f: { name?: unknown; data?: unknown }) => {
       const name = String(f?.name ?? '');
-      if (!/^[\w .()\[\]-]{1,100}$/.test(name) || name.startsWith('.')) throw new Error(`"${name.slice(0, 40)}" isn't a plain file name.`);
+      // Letters of any language (Résumé.pdf, 写真.jpg), never a path: no / or \, no leading dot, no control characters.
+      if (!/^[\p{L}\p{M}\p{N}\w .,()\[\]{}'&+=#@!~%$-]{1,100}$/u.test(name) || name.startsWith('.')) throw new Error(`"${name.slice(0, 40)}" isn't a plain file name.`);
       const data = typeof f?.data === 'string' && /^[A-Za-z0-9+/=]*$/.test(f.data) ? Buffer.from(f.data, 'base64') : undefined;
       if (!data) throw new Error(`${name} needs its contents as base64.`);
       total += data.length;
@@ -646,10 +649,23 @@ class Core {
   async start(t: Task) {
     if (this.paused) return; // the kill switch is on: it starts when someone resumes the agents
     try {
+      if (t.worker === 'droid') {
+        if (!this.modelVia()) this.vault = loadVault(); // a key added to the file by hand since boot
+        if (!this.modelVia()) throw new Error('No model key yet. Add an Anthropic or Factory API key in Settings, Keys, then start the task again.');
+        // An image downloads Droid after its first start (its license forbids shipping it in the image): a task waits for it.
+        const droid = system.droidState();
+        if (droid.state === 'missing') throw new Error(droid.message);
+        if (droid.state !== 'ready') return this.waitForDroid(t, droid.message);
+      }
       sandbox.kill(t); // a worker left over from a core that died without the box rebooting
       // A linked (real-folder) workspace is not layer-stacked: each task starts from the real folder, and
       // the owner Keeps or Undoes it. An owned workspace stacks done tasks as layers (Server undo model).
       const layers = sandbox.isLinked(t.workspace) ? [] : doneLayers(this.log.events, this.state, t.workspace);
+      // This task and each one running on the workspace become layers too when done: count them now, so the finished
+      // layers never pass MAX_LOWERS - 1 and the workspace's view (those layers and its base) can always be mounted.
+      const coming = layers.length ? [...this.state.tasks.values()].filter((x) => x.id !== t.id && x.workspace === t.workspace && (x.state === 'running' || x.state === 'waiting')).length : 0;
+      if (t.state === 'queued' && layers.length + coming + 1 > sandbox.MAX_LOWERS - 1)
+        throw new Error(`The workspace "${t.workspace}" holds ${layers.length} finished tasks${coming ? ` and ${coming} running` : ''}, and GurtOS can stack at most ${sandbox.MAX_LOWERS - 1} on one workspace. Undo finished tasks there that you no longer need, or give this task another workspace.`);
       if (t.state === 'queued') this.move(t, 'running', { layers });
       // Everything goes through the box's proxy. Its own address stays direct, for Droid's Factory calls.
       const proxy = `http://127.0.0.1:${this.proxyPort}`;
@@ -665,11 +681,7 @@ class Core {
       };
       let byok: string | undefined; // the model id, when the task runs on the owner's own Anthropic key
       if (t.worker === 'droid') {
-        if (!this.modelVia()) this.vault = loadVault(); // a key added to the file by hand since boot
-        // An image downloads Droid at first boot (its license forbids shipping it in the image).
-        if (!fs.existsSync('/usr/local/bin/droid')) throw new Error('Droid is still downloading; it arrives a minute after the first start with a network connection');
         const via = this.modelVia();
-        if (!via) throw new Error('the vault has no model key: add ANTHROPIC_API_KEY or FACTORY_API_KEY in Setup');
         // The task holds placeholders. The proxy swaps in the real key on the way to Factory or Anthropic.
         if (via === 'anthropic') byok = resolveModel(t.model);
         Object.assign(env, {
@@ -685,17 +697,17 @@ class Core {
       const ids = await sandbox.prepare(t);
       if (byok) {
         // Droid reads its own-key models from the task user's ~/.factory/settings.json; the key there is a placeholder.
-        const dir = path.join(dirs.task(t.id), 'home', '.factory');
-        fs.mkdirSync(dir, { recursive: true });
         // The task's model, plus Haiku for the second-pair-of-eyes check (core/workers/review.ts).
         const customModels = [...new Set([byok, MODELS.haiku])].map((model) => ({ model, displayName: 'Claude (your Anthropic key)', baseUrl: 'https://api.anthropic.com', apiKey: ANTHROPIC_PLACEHOLDER, provider: 'anthropic', maxOutputTokens: 8192 }));
-        fs.writeFileSync(path.join(dir, 'settings.json'), JSON.stringify({ customModels }));
-        execFileSync('chown', ['-R', `${ids.uid}:${ids.gid}`, dir]);
+        // The task's processes were stopped above, and its home is its own: never write through a link it left there.
+        sandbox.writeHomeFile(t, ids, '.factory/settings.json', JSON.stringify({ customModels }));
       }
       sandbox.snapshotBase(t);
       this.uidTask.set(ids.uid, t.id);
+      stopLoggingBlocked(t.id); // a task resumed after the core restarted (not the machine) still has its old rule
       logBlocked(ids.uid, t.id);
       await this.openBroker(t, ids);
+      if (t.state !== 'running' && t.state !== 'waiting') return this.finish(t); // undone while it was being set up: never start its worker
       if (this.paused) {
         // Paused while this task was getting ready. Resume starts it again from the top.
         this.brokers.get(t.id)?.close();
@@ -707,22 +719,53 @@ class Core {
       child.on('exit', (code, signal) => {
         this.workers.delete(t.id);
         this.endedAt.set(t.id, Date.now()); // for refusals that reach the kernel log a moment late
-        if (t.state === 'running' || t.state === 'waiting') {
-          const why = code === 0 ? undefined : sandbox.workerError(t);
-          this.move(t, code === 0 ? 'done' : 'failed', code === 0 ? {} : { error: system.failureText(why, signal ?? code, this.modelVia() ?? undefined, t.worker) });
-          // A task on the owner's real folder waits for their Keep or Undo.
-          if (code === 0 && sandbox.isLinked(t.workspace)) this.write({ type: 'keep', task: t.id, result: 'pending' });
+        try {
+          if (t.state === 'running' || t.state === 'waiting') {
+            const why = code === 0 ? undefined : sandbox.workerError(t);
+            this.move(t, code === 0 ? 'done' : 'failed', code === 0 ? {} : { error: system.failureText(why, signal ?? code, this.modelVia() ?? undefined, t.worker) });
+            // A task on the owner's real folder waits for their Keep or Undo.
+            if (code === 0 && sandbox.isLinked(t.workspace)) this.write({ type: 'keep', task: t.id, result: 'pending' });
+          }
+        } catch (e) {
+          // A full disk: the end is not in the log, so the next start resumes the task. Its sandbox still goes now.
+          console.error(`task ${t.id}: could not log how it ended:`, (e as Error).message);
         }
         this.finish(t);
       });
     } catch (e) {
-      if (canMove(t.state, 'failed')) this.move(t, 'failed', { error: (e as Error).message });
+      console.error(`task ${t.id} could not start:`, (e as Error).message); // the whole message, for whoever reads the journal
+      if (canMove(t.state, 'failed')) this.move(t, 'failed', { error: system.startFailureText((e as Error).message) });
       this.finish(t);
     }
   }
 
+  /** Droid tasks waiting for the image to finish downloading Droid, and the timer that starts them once it is here. */
+  droidWaiting = new Set<string>();
+  droidTimer?: NodeJS.Timeout;
+  waitForDroid(t: Task, message: string) {
+    if (!this.droidWaiting.has(t.id)) {
+      this.droidWaiting.add(t.id);
+      this.write({ type: 'task.step', task: t.id, text: message }); // what the task list shows while it waits
+    }
+    this.droidTimer ??= setInterval(() => {
+      if (system.droidState().state !== 'ready') return;
+      clearInterval(this.droidTimer);
+      this.droidTimer = undefined;
+      const ids = [...this.droidWaiting];
+      this.droidWaiting.clear();
+      for (const id of ids) {
+        const w = this.state.tasks.get(id);
+        if (w && (w.state === 'queued' || w.state === 'running' || w.state === 'waiting')) void this.start(w);
+      }
+    }, 5000).unref();
+  }
+
   finish(t: Task) {
-    this.closePending(t, 'task ended'); // nothing waits on a task that has stopped
+    try {
+      this.closePending(t, 'task ended'); // nothing waits on a task that has stopped
+    } catch (e) {
+      console.error(`task ${t.id}: could not close its approvals:`, (e as Error).message); // the sandbox still goes
+    }
     stopLoggingBlocked(t.id);
     this.brokers.get(t.id)?.close();
     this.brokers.delete(t.id);
@@ -778,12 +821,21 @@ class Core {
   }
 
   refreshView(workspace: string) {
-    sandbox.refreshView(workspace, doneLayers(this.log.events, this.state, workspace));
+    try {
+      sandbox.refreshView(workspace, doneLayers(this.log.events, this.state, workspace));
+    } catch (e) {
+      console.error(`workspace ${workspace}: its view could not be mounted:`, (e as Error).message); // one workspace must never stop the box
+    }
   }
 
   async undo(id: string): Promise<Task> {
     const t = this.must(id);
     if (t.state === 'undone') return t;
+    // A kept task's changes are in the owner's real folder by now: Undo takes them out of it too, or changes nothing.
+    if (t.review === 'kept') {
+      const out = this.unkeep(id);
+      if (out.conflicts) throw Object.assign(new Error(`You changed ${out.conflicts.join(', ')} since you kept "${t.title}", so GurtOS left your folder as it is.`), { status: 409 });
+    }
     this.move(t, 'undone');
     for (const a of this.state.approvals.values()) if (a.task === id && a.state === 'pending') this.answer(a.id, false, 'undo');
     if (this.workers.has(id)) {
@@ -1381,7 +1433,7 @@ class Core {
     if (this.links[name] && this.links[name] !== real) throw new Error(`workspace ${name} already points at ${this.links[name]}`); // never repoint: Keep would write into the wrong folder
     this.links[name] = real;
     sandbox.linkBase(name, real);
-    fs.writeFileSync(this.linksPath, JSON.stringify(this.links, null, 2), { mode: 0o600 });
+    writeJson(this.linksPath, this.links); // atomic: a torn links.json would stop the box at its next start
   }
 
   /** Link several of the owner's folders as one workspace. Each shows up as a top-level folder named by its label. */
@@ -1393,7 +1445,7 @@ class Core {
     fs.mkdirSync(dirs.workspace(name), { recursive: true }); // a marker, so the workspace exists; the folders are the real ones
     this.links[name] = folders;
     sandbox.linkMulti(name, folders);
-    fs.writeFileSync(this.linksPath, JSON.stringify(this.links, null, 2), { mode: 0o600 });
+    writeJson(this.linksPath, this.links);
   }
 
   folderRefusal(real: string): string | undefined {
@@ -1435,8 +1487,9 @@ class Core {
   /** Apply a done task's changes to its linked real folder (owner's Keep), or report a conflict. */
   keep(id: string) {
     const t = this.must(id);
-    if (t.state !== 'done') throw new Error(`task ${id} is ${t.state}; only a done task can be kept`);
-    if (t.review === 'kept') throw new Error(`task ${id} was already kept`);
+    const why = ({ undone: 'was undone, so there is nothing to keep', failed: 'did not finish, so there is nothing to keep' } as Record<string, string>)[t.state] ?? 'is still working; Keep is for when it is done';
+    if (t.state !== 'done') throw new Error(`"${t.title}" ${why}.`);
+    if (t.review === 'kept') throw new Error(`"${t.title}" is already kept.`);
     const out = sandbox.keep(t);
     if (out.conflicts) {
       this.write({ type: 'keep', task: id, result: 'conflict', conflicts: out.conflicts });
@@ -1452,7 +1505,7 @@ class Core {
   /** Undo a Keep from Time Machine's before-images, unless the owner has edited the kept files since. */
   unkeep(id: string) {
     const t = this.must(id);
-    if (t.review !== 'kept') throw new Error(`task ${id} has no Keep to undo`);
+    if (t.review !== 'kept') throw new Error(`"${t.title}" has no Keep to undo.`);
     const out = sandbox.unkeep(t);
     if (out.reverted) this.write({ type: 'keep', task: id, result: 'reverted', changes: out.reverted });
     return out;
@@ -1509,7 +1562,7 @@ class Core {
           setTimeout(pump, 5000);
           break;
         }
-        fs.writeFileSync(cursor, String(++pos));
+        writeJson(cursor, ++pos); // atomic: a torn cursor would read as 0 (replay everything) or NaN (never read again)
       }
       busy = false;
     };
@@ -1793,6 +1846,7 @@ class Core {
       boxName: this.boxName(),
       owner: this.owner,
       model: { ready: !!this.modelVia(), via: this.modelVia() },
+      droid: system.droidState(),
       ...(this.business.on ? { company: this.business.company } : {}),
       paused: this.pauseView(),
       startedAt: this.startedAt,
@@ -1807,7 +1861,7 @@ class Core {
 
   /** The setup state with the suggested step order. Until `done`, the box's screen shows the wizard. */
   setupView() {
-    return { model: { ready: !!this.modelVia(), via: this.modelVia() }, modelKey: !!this.modelVia(), done: this.setup.done, finishedAt: this.setup.finishedAt ?? null, migrated: this.setup.migrated ?? false, steps: this.setup.steps, suggested: SETUP_STEPS, channel: this.channelView() };
+    return { model: { ready: !!this.modelVia(), via: this.modelVia() }, droid: system.droidState(), modelKey: !!this.modelVia(), done: this.setup.done, finishedAt: this.setup.finishedAt ?? null, migrated: this.setup.migrated ?? false, steps: this.setup.steps, suggested: SETUP_STEPS, channel: this.channelView() };
   }
 
   // ---------- pairing a phone, and listing every box ----------
@@ -2367,6 +2421,7 @@ class Core {
             this.requireOwner(req);
             return this.unkeep(id);
           case 'POST /tasks/:id/undo':
+            if (this.state.tasks.get(id)?.review === 'kept') this.requireOwner(req); // it changes the owner's real files back
             return this.undo(id);
           case 'GET /approvals': {
             if (q('for') === 'me') {

@@ -12,12 +12,24 @@ install_droid() {
   DROID_VERSION=0.248.0
   if ! /usr/local/bin/droid --version 2>/dev/null | grep -q "$DROID_VERSION"; then
     arch=$(uname -m); case $arch in aarch64) arch=arm64;; x86_64) arch=x64; grep -qi avx2 /proc/cpuinfo || arch=x64-baseline;; esac
+    # Pinned here, not fetched beside the file: a checksum from the same server proves nothing if that server is wrong.
+    # Checked against Factory's published droid.sha256 for 0.248.0 on Oct 29 2026. A new DROID_VERSION needs all three.
+    case $arch in
+      x64) sum=721cbf9bb2b136a8ef6926038da61aa4bd8cca2dfc0cf2f99c4b6ad251fa5416 ;;
+      x64-baseline) sum=e5bf27c3e10d17b07c07c7719aaeaf57b650bc15f0014a34e09cc9487fa48866 ;;
+      arm64) sum=b6503be37b6247b86096e899f9e685f41926070d844f2fd2ba6068e85187a579 ;;
+      *) echo "Droid is not built for this processor ($(uname -m))" >&2; exit 1 ;;
+    esac
     url=https://downloads.factory.ai/factory-cli/releases/$DROID_VERSION/linux/$arch/droid
     tmp=$(mktemp)
-    curl -fsSL "$url" -o "$tmp"
-    [ "$(sha256sum "$tmp" | cut -d' ' -f1)" = "$(curl -fsSL "$url.sha256")" ] || { rm -f "$tmp"; echo "droid checksum mismatch" >&2; exit 1; }
+    trap 'rm -f "$tmp"' EXIT # a failed or cut-off download leaves nothing behind
+    # About 300 MB. A line slower than 20 KB/s for a minute is cut and tried again (the image's box-droid has the same).
+    curl -fsSL --connect-timeout 20 --speed-limit 20000 --speed-time 60 --retry 3 --retry-delay 5 "$url" -o "$tmp" ||
+      { echo "Droid's download from Factory did not finish" >&2; exit 1; }
+    [ "$(sha256sum "$tmp" | cut -d' ' -f1)" = "$sum" ] || { echo "droid checksum mismatch: the download is not Droid $DROID_VERSION" >&2; exit 1; }
     install -m 0755 "$tmp" /usr/local/bin/droid.new && mv /usr/local/bin/droid.new /usr/local/bin/droid # never a half-written droid
     rm -f "$tmp"
+    trap - EXIT
   fi
   droid --version
 }

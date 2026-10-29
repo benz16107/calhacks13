@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import { randomBytes } from 'node:crypto';
 import test from 'node:test';
-import { bundle, keyPair, label, open, parseSend, phrase, question, seal } from './quickstart.ts';
+import http from 'node:http';
+import { Target, bundle, deliver, keyPair, label, open, parseSend, phrase, question, seal } from './quickstart.ts';
 
 const s = randomBytes(16).toString('base64url');
 
@@ -35,4 +36,18 @@ test('a send is checked at the boundary, and the bundle copies only the settings
   assert.match(question({ keys: ['ANTHROPIC_API_KEY'], apps: 6, n: 'GurtOS Laptop', pk: good.pk }), /^Send your Anthropic key, 6 apps and your spending rules to "GurtOS Laptop" \(check phrase: \w+ \w+ \w+ \w+\)\?$/);
   assert.match(question({ keys: [], apps: 1, n: 'X', pk: good.pk }), /^Send 1 app and your spending rules \(no keys\) to "X"/);
   assert.deepEqual(['APIFY_TOKEN', 'STRIPE_API_KEY', 'ANTHROPIC_API_KEY', 'ASI_ONE_API_KEY'].map(label), ['Apify token', 'Stripe API key', 'Anthropic key', 'ASI:One API key'], 'people read the question: keys in plain words');
+});
+
+test('with the relay offline, Quick Start says so in words on both computers, not "fetch failed"', async () => {
+  const closed = http.createServer();
+  await new Promise<void>((r) => closed.listen(0, '127.0.0.1', r));
+  const relay = `http://127.0.0.1:${(closed.address() as { port: number }).port}`;
+  await new Promise((r) => closed.close(r));
+  const t = new Target({ relay, app: 'https://app.example', apply: {} as never, apps: () => [], remoteOn: async () => '', ownerCode: () => '', note: () => {} });
+  t.start('New computer');
+  for (let i = 0; i < 100 && t.state === 'waiting'; i++) await new Promise((r) => setTimeout(r, 20));
+  assert.equal(t.state, 'error');
+  assert.match(t.error ?? '', /^Quick Start needs the GurtOS relay at 127\.0\.0\.1:\d+, and this computer couldn't reach it\. Set it up on its own screen instead\.$/);
+  const p = { rv: 'r'.repeat(22), pk: keyPair().pk, s, phonePk: keyPair().pk, n: 'New computer', keys: [], at: 0, by: 'phone' };
+  await assert.rejects(deliver(relay, p, bundle({ from: 'Old', keys: {}, settings: {}, apps: [], phonePk: p.phonePk })), (e: Error & { status?: number }) => e.status === 502 && /^Quick Start needs the GurtOS relay/.test(e.message));
 });

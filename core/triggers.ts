@@ -4,8 +4,29 @@
 import fs from 'node:fs';
 import type { Box, TaskSpec, Trigger } from './contract.ts';
 
-/** Run on a fixed interval, or once a day at 'HH:MM' (the box's local time). */
+/** The first `h:m` (local time) strictly after `after`. */
+export function nextDaily(after: number, h: number, m: number): Date {
+  const next = new Date(after);
+  next.setHours(h, m, 0, 0);
+  if (next.getTime() <= after) {
+    next.setDate(next.getDate() + 1);
+    next.setHours(h, m, 0, 0); // again: a day across a clock change is not 24 hours
+  }
+  return next;
+}
+
+const MAX_TIMER = 2 ** 31 - 1; // about 24.8 days: Node runs a longer timer after 1 ms instead
+
+/**
+ * Run on a fixed interval, or once a day at 'HH:MM' (the box's local time). A run missed while the box was off is
+ * skipped, not made up: a daily one runs next at its usual time, an interval one counts from when the box started.
+ */
 export function schedule(opts: { name: string; everyMs?: number; dailyAt?: string; task: () => TaskSpec | undefined | Promise<TaskSpec | undefined> }): Trigger {
+  // A bad value would make Node's timer fire after 1 ms, over and over: refuse it when the track loads instead.
+  const daily = opts.dailyAt === undefined ? undefined : /^([01]\d|2[0-3]):([0-5]\d)$/.exec(opts.dailyAt);
+  if (opts.dailyAt !== undefined && !daily) throw new Error(`schedule ${opts.name}: dailyAt must be a time like 02:00, not "${opts.dailyAt}"`);
+  if (opts.everyMs !== undefined && !(Number.isFinite(opts.everyMs) && opts.everyMs >= 1 && opts.everyMs <= MAX_TIMER)) throw new Error(`schedule ${opts.name}: everyMs must be from 1 to ${MAX_TIMER} (about 24 days); use dailyAt for longer`);
+  if (!daily && opts.everyMs === undefined) throw new Error(`schedule ${opts.name}: give everyMs or dailyAt`);
   return {
     name: opts.name,
     start(box) {
@@ -21,21 +42,21 @@ export function schedule(opts: { name: string; everyMs?: number; dailyAt?: strin
       let stopped = false;
       const every = opts.everyMs ? setInterval(fire, opts.everyMs) : undefined;
       every?.unref();
-      if (opts.dailyAt) {
-        const [h, m] = opts.dailyAt.split(':').map(Number);
-        const arm = () => {
-          const now = new Date();
-          const next = new Date(now);
-          next.setHours(h, m, 0, 0);
-          if (next <= now) next.setDate(next.getDate() + 1);
+      if (daily) {
+        const [h, m] = [Number(daily[1]), Number(daily[2])];
+        const arm = (after: number) => {
+          const next = nextDaily(after, h, m);
+          // A wait past Node's timer limit (not for a day, but a clock set far back) re-arms instead of firing.
+          const wait = Math.min(next.getTime() - Date.now(), MAX_TIMER);
           timer = setTimeout(() => {
             if (stopped) return;
+            if (Date.now() < next.getTime() - 60_000) return arm(Date.now()); // the clock moved back: wait for the time
             void fire();
-            arm();
-          }, next.getTime() - now.getTime());
+            arm(Math.max(Date.now(), next.getTime())); // a timer that fires a moment early must not run this time again
+          }, Math.max(wait, 0));
           timer.unref();
         };
-        arm();
+        arm(Date.now());
       }
       return () => {
         stopped = true;

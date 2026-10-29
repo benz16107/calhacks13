@@ -36,6 +36,13 @@ export function teardown(home: string, boxPid?: number) {
   for (const u of users) spawnSync('pkill', ['-KILL', '-u', u]);
   for (const m of mountsUnder(home).sort((a, b) => b.length - a.length)) spawnSync('umount', ['-l', m]);
   for (const u of users) for (let i = 0; i < 10 && spawnSync('id', [u]).stdout; i++) if (spawnSync('userdel', [u]).status === 0) break;
+  // Each task's firewall log rule (core/net.ts logBlocked): the box removes it when a task ends, a killed box cannot.
+  const ids = new Set(users.map((u) => u.replace(/^box-/, '')));
+  const chain = spawnSync('nft', ['-a', 'list', 'chain', 'inet', 'box', 'blocked'], { encoding: 'utf8' }).stdout ?? '';
+  for (const line of chain.split('\n')) {
+    const m = /comment "task-([\w]+)".*# handle (\d+)/.exec(line);
+    if (m && ids.has(m[1])) spawnSync('nft', ['delete', 'rule', 'inet', 'box', 'blocked', 'handle', m[2]]);
+  }
 }
 
 /**

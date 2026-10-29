@@ -5,8 +5,18 @@
 export type Api = (method: string, path: string, body?: unknown) => Promise<any>;
 
 /** Trade the code shown on the computer's screen for a setup token (it lasts until setup finishes, two hours at most). */
+/** fetch, with a sentence when the computer cannot be reached instead of "fetch failed". */
+async function reach(url: string, init: RequestInit): Promise<Response> {
+  try {
+    return await fetch(url, { ...init, signal: AbortSignal.timeout(30_000) });
+  } catch (e) {
+    const why = (e as { cause?: { code?: string } }).cause?.code ?? (e as Error).name;
+    throw new Error(`Couldn't reach ${new URL(url).origin} (${why}). Check the address on the computer's screen, and that both computers are on the same network.`);
+  }
+}
+
 export async function connect(url: string, code: string, name = 'Setup agent'): Promise<{ token: string; box: { id: string; name: string } }> {
-  const r = await fetch(`${url.replace(/\/$/, '')}/api/pair`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ code: code.trim(), name, kind: 'setup' }) });
+  const r = await reach(`${url.replace(/\/$/, '')}/api/pair`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ code: code.trim(), name, kind: 'setup' }) });
   const data = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error(data.error ?? `HTTP ${r.status}`);
   return data;
@@ -14,9 +24,9 @@ export async function connect(url: string, code: string, name = 'Setup agent'): 
 
 export function client(url: string, token: string): Api {
   return async (method, path, body) => {
-    const r = await fetch(`${url.replace(/\/$/, '')}/api${path}`, { method, headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` }, body: body === undefined ? undefined : JSON.stringify(body) });
+    const r = await reach(`${url.replace(/\/$/, '')}/api${path}`, { method, headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` }, body: body === undefined ? undefined : JSON.stringify(body) });
     const data = await r.json().catch(() => undefined);
-    if (!r.ok) throw new Error(data?.error ?? `HTTP ${r.status}`);
+    if (!r.ok) throw Object.assign(new Error(data?.error ?? `HTTP ${r.status}`), { status: r.status });
     return data;
   };
 }

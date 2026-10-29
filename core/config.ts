@@ -90,7 +90,7 @@ export function hostProblem(s: unknown): string | undefined {
   if (typeof s !== 'string') return 'hosts are text, like example.com';
   if (!/^(\*\.)?[a-z0-9]([a-z0-9.-]{0,251}[a-z0-9])?(:\d{1,5})?$/i.test(s)) return `"${s.slice(0, 80)}" is not a host name (use example.com, *.example.com or example.com:8080)`;
   const name = s.replace(/:\d+$/, '');
-  if (/^(127\.|0\.|169\.254\.)/.test(name) || name === 'localhost') return `"${s}" is the box itself; tasks never get it`;
+  if (/^(127\.|0\.|169\.254\.)/.test(name) || name === 'localhost') return `"${s}" is this computer itself; tasks never get it`;
   if (/^\*\.[^.]+$/.test(name)) return `"${s}" is a whole top-level domain; name the site`;
   return undefined;
 }
@@ -109,7 +109,7 @@ const under = (p: string, root: string) => p === root || p.startsWith(root + '/'
 export function neverFolder(p: string): string | undefined {
   const home = process.env.BOX_HOME ?? '/var/lib/box';
   const hit = [...NEVER, home].find((r) => under(p, r));
-  return hit ? `${p} is inside ${hit}, which holds the system or the box's own keys and state` : undefined;
+  return hit ? `${p} is inside ${hit}, which holds the system or GurtOS's own keys and state` : undefined;
 }
 
 const folder = (s: string) => {
@@ -194,7 +194,7 @@ export const saveSettings = (home: string, s: Settings) => writeJson(path.join(h
 export function folderRefusal(real: string, ctx: { hasOwner: boolean; ownerHome?: string; chosen: string[]; folderUid: number; allowRootOwned?: boolean }): string | undefined {
   const never = neverFolder(real);
   if (never) return never;
-  if (!ctx.hasOwner && !ctx.chosen.length) return 'folders are for GurtOS Personal: this box has no owner yet, and no folders were chosen in Settings (agentFolders)';
+  if (!ctx.hasOwner && !ctx.chosen.length) return 'Folders are for GurtOS Personal: this computer has no owner yet, and no folders were chosen in Settings, Permissions.';
   // The owner's list, once they have one, is the list: a folder in their home that isn't on it is refused too.
   const allowed = ctx.chosen.length ? insideAny(real, ctx.chosen) : !!ctx.ownerHome && insideAny(real, [ctx.ownerHome]);
   if (!allowed) {

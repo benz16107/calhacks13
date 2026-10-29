@@ -148,3 +148,53 @@ test('a layer file is opened only where it really is: never through a link on th
   assert.equal(sb.openPlain(root, 'missing'), undefined);
 });
 
+test('Keep is all or nothing: a file it cannot write puts back the ones it already wrote', () => {
+  const real = path.join(home, 'report');
+  fs.mkdirSync(path.join(real, 'locked'), { recursive: true });
+  fs.writeFileSync(path.join(real, 'a.md'), 'old\n');
+  fs.writeFileSync(path.join(real, 'locked', 'c.md'), 'c\n');
+  sb.linkBase('ws3', real);
+  const task = { id: 't3', title: 'Report', workspace: 'ws3', layers: [] } as unknown as Task;
+  fs.mkdirSync(sb.dirs.task('t3'), { recursive: true });
+  fs.writeFileSync(path.join(sb.dirs.task('t3'), 'manifest.json'), JSON.stringify({ 'a.md': sha(path.join(real, 'a.md')), 'locked/c.md': sha(path.join(real, 'locked', 'c.md')) }));
+  fs.mkdirSync(path.join(sb.dirs.upper('t3'), 'locked'), { recursive: true });
+  fs.writeFileSync(path.join(sb.dirs.upper('t3'), 'a.md'), 'new\n');
+  fs.writeFileSync(path.join(sb.dirs.upper('t3'), 'locked', 'c.md'), 'c changed\n');
+  fs.chmodSync(path.join(real, 'locked'), 0o555); // this test runs unprivileged: Keep cannot write in there
+  try {
+    assert.throws(() => sb.keep(task), (e: Error) => /^locked\/c\.md could not be written \(permission denied\), so nothing was kept\. Your folder is as it was\.$/.test(e.message));
+  } finally {
+    fs.chmodSync(path.join(real, 'locked'), 0o755);
+  }
+  assert.equal(fs.readFileSync(path.join(real, 'a.md'), 'utf8'), 'old\n', 'a.md is put back');
+  assert.deepEqual(fs.readdirSync(real).sort(), ['a.md', 'locked'], 'no temporary files left behind');
+  assert.throws(() => sb.unkeep(task), /no Keep to undo/, 'nothing was kept, so there is nothing to undo');
+});
+
+// Root writes Droid's own-key settings into the task's home at every start. The task owns that home, so it could have
+// left a link there pointing at the box's own state.
+test("a file root writes into a task's home never goes through a link the task left there", () => {
+  const ids = { uid: process.getuid!(), gid: process.getgid!() };
+  const task = { id: 't9', workspace: 'ws9', layers: [] } as unknown as Task;
+  const home9 = path.join(sb.dirs.task('t9'), 'home');
+  fs.mkdirSync(home9, { recursive: true });
+  const boxState = path.join(home, 'box-state');
+  fs.mkdirSync(boxState);
+  fs.writeFileSync(path.join(boxState, 'settings.json'), '{"paused":false}');
+  // ~/.factory is a link to the box's own folder.
+  fs.symlinkSync(boxState, path.join(home9, '.factory'));
+  sb.writeHomeFile(task, ids, '.factory/settings.json', '{"customModels":[]}');
+  assert.equal(fs.readFileSync(path.join(boxState, 'settings.json'), 'utf8'), '{"paused":false}', "the box's file is untouched");
+  assert.ok(fs.lstatSync(path.join(home9, '.factory')).isDirectory(), '~/.factory is a real folder now');
+  assert.equal(fs.readFileSync(path.join(home9, '.factory', 'settings.json'), 'utf8'), '{"customModels":[]}');
+  // A real ~/.factory keeps what the task put there (Droid's sessions); settings.json itself as a link is replaced.
+  fs.mkdirSync(path.join(home9, '.factory', 'sessions'));
+  fs.writeFileSync(path.join(home9, '.factory', 'sessions', 's1'), 'session');
+  fs.rmSync(path.join(home9, '.factory', 'settings.json'));
+  fs.symlinkSync(path.join(boxState, 'settings.json'), path.join(home9, '.factory', 'settings.json'));
+  sb.writeHomeFile(task, ids, '.factory/settings.json', '{"customModels":[1]}');
+  assert.equal(fs.readFileSync(path.join(boxState, 'settings.json'), 'utf8'), '{"paused":false}', 'still untouched');
+  assert.ok(!fs.lstatSync(path.join(home9, '.factory', 'settings.json')).isSymbolicLink());
+  assert.equal(fs.readFileSync(path.join(home9, '.factory', 'settings.json'), 'utf8'), '{"customModels":[1]}');
+  assert.equal(fs.readFileSync(path.join(home9, '.factory', 'sessions', 's1'), 'utf8'), 'session', "Droid's sessions stay, so a resumed task can carry on");
+});

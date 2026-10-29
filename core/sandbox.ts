@@ -66,7 +66,8 @@ export const dirs = {
   socket: (id: string) => path.join(HOME, 'tasks', id, 'broker.sock'),
 };
 
-const run = (cmd: string, ...args: string[]) => execFileSync(cmd, args, { encoding: 'utf8' }).trim();
+// stderr is kept with the error, not printed: an expected miss ('no such user' as a task ends) is no news in the journal.
+const run = (cmd: string, ...args: string[]) => execFileSync(cmd, args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
 const tryRun = (cmd: string, ...args: string[]) => {
   try {
     return run(cmd, ...args);
@@ -107,12 +108,24 @@ export function workspace(name: string, fromDir?: string) {
 
 const mounted = (dir: string) => fs.readFileSync('/proc/self/mountinfo', 'utf8').includes(` ${dir} `);
 
+/** The kernel's limit on an overlay's lower layers: a workspace's base plus 499 finished tasks. */
+export const MAX_LOWERS = 500;
+
 function mountOverlay(target: string, lowers: string[], upper?: string) {
   if (mounted(target)) return;
-  // shortcut: mount options cap out near 4 KB of lower paths (~60 layers); squash old layers into the base past that.
-  const opts = [`lowerdir=${lowers.join(':')}`];
-  if (upper) opts.push(`upperdir=${upper}`, `workdir=${path.join(path.dirname(upper), 'work')}`);
-  run('mount', '-t', 'overlay', 'overlay', '-o', opts.join(','), target);
+  // Mount options stop at one page (4 KB): about 110 full layer paths. So each layer gets a short name (a symlink in a
+  // folder of its own), the mount runs from that folder, and the folder goes once the mount holds the layers. A short
+  // name also keeps a ',' or ':' in a real folder's path out of the options.
+  // shortcut: past MAX_LOWERS a workspace takes no new task; settling its oldest layers into one would lift that.
+  const names = fs.mkdtempSync(path.join(HOME, '.lowers-'));
+  try {
+    lowers.forEach((l, i) => fs.symlinkSync(l, path.join(names, i.toString(36))));
+    const opts = [`lowerdir=${lowers.map((_, i) => i.toString(36)).join(':')}`];
+    if (upper) opts.push(`upperdir=${upper}`, `workdir=${path.join(path.dirname(upper), 'work')}`);
+    execFileSync('mount', ['-t', 'overlay', 'overlay', '-o', opts.join(','), target], { cwd: names, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+  } finally {
+    fs.rmSync(names, { recursive: true, force: true });
+  }
 }
 
 const unmount = (dir: string) => mounted(dir) && tryRun('umount', '-l', dir);
@@ -163,6 +176,34 @@ export async function prepare(task: Task): Promise<{ uid: number; gid: number }>
   }
   mountOverlay(dirs.root(task.id), [...task.layers.map(dirs.upper), base], dirs.upper(task.id));
   return { uid, gid };
+}
+
+/**
+ * Write a file the box makes for a task into the task's home (`rel`, like `.factory/settings.json`), as root, never
+ * through a link the task left there: a task owns its home, and could point ~/.factory at the box's own state. A
+ * folder on the way that is not a real folder is replaced; a real one keeps what the task put in it (Droid's
+ * sessions). Call it only while none of the task's processes run, so nothing can swap a link in meanwhile.
+ */
+export function writeHomeFile(task: Task, ids: { uid: number; gid: number }, rel: string, text: string) {
+  const parts = rel.split('/');
+  let dir = path.join(dirs.task(task.id), 'home');
+  for (const part of parts.slice(0, -1)) {
+    dir = path.join(dir, part);
+    const st = fs.lstatSync(dir, { throwIfNoEntry: false });
+    if (st?.isDirectory()) continue;
+    if (st) fs.rmSync(dir, { force: true }); // a link or a file where the folder goes: the task's own, so it goes (never its target)
+    fs.mkdirSync(dir, { mode: 0o700 });
+    fs.lchownSync(dir, ids.uid, ids.gid);
+  }
+  const file = path.join(dir, parts.at(-1)!);
+  fs.rmSync(file, { recursive: true, force: true }); // whatever is there: a link itself goes, never what it points at
+  const fd = fs.openSync(file, fs.constants.O_WRONLY | fs.constants.O_CREAT | fs.constants.O_EXCL | fs.constants.O_NOFOLLOW, 0o600);
+  try {
+    fs.writeSync(fd, text);
+    fs.fchownSync(fd, ids.uid, ids.gid);
+  } finally {
+    fs.closeSync(fd);
+  }
 }
 
 const WORKERS = new URL('./workers/', import.meta.url).pathname;
@@ -231,24 +272,80 @@ export function spawnWorker(task: Task, ids: { uid: number; gid: number }, extra
 
 export type Change = { path: string; change: 'added' | 'modified' | 'deleted' };
 
-/** The files a task changed, from its own layer only. Cost: the number of changes, not the workspace size. */
+const isWhiteout = (st: fs.Stats) => st.isCharacterDevice() && st.rdev === 0;
+
+/** What a folder held below the task's layer when it started: its files and subfolders, as the task saw them. */
+function lowerTree(lowers: string[], rel: string): { files: string[]; dirs: string[] } {
+  const seen = new Map<string, 'file' | 'dir' | 'hidden'>();
+  for (const l of lowers) {
+    const walk = (r: string) => {
+      let names: string[];
+      try {
+        names = fs.readdirSync(path.join(l, r));
+      } catch {
+        return; // not in this layer
+      }
+      for (const n of names) {
+        const p = path.join(r, n);
+        if (seen.get(p) === 'hidden' || seen.get(p) === 'file') continue; // a higher layer removed or replaced it
+        const st = fs.lstatSync(path.join(l, p));
+        if (isWhiteout(st)) seen.set(p, seen.get(p) ?? 'hidden');
+        else if (st.isDirectory()) (seen.set(p, 'dir'), walk(p));
+        else if (!seen.has(p)) seen.set(p, 'file');
+      }
+    };
+    walk(rel);
+  }
+  const of = (k: string) => [...seen].filter(([, v]) => v === k).map(([p]) => p);
+  return { files: of('file'), dirs: of('dir') };
+}
+
+/** Which of these folders in a layer are opaque (removed and made again: nothing below shows through). */
+function opaqueDirs(upper: string, rels: string[]): string[] {
+  if (!rels.length) return [];
+  // Node has no xattr call; python3 is on every GurtOS image and on Ubuntu.
+  const py = 'import os,sys\nup=sys.argv[1]\nfor p in sys.stdin.read().split("\\0"):\n  try:\n    if p and os.getxattr(os.path.join(up,p),"trusted.overlay.opaque",follow_symlinks=False)==b"y": print(p)\n  except OSError: pass';
+  const r = spawnSync('python3', ['-c', py, upper], { input: rels.join('\0'), encoding: 'utf8' });
+  return r.status === 0 ? r.stdout.split('\n').filter(Boolean) : [];
+}
+
+/**
+ * The files a task changed, from its own layer only. Cost: the number of changes, not the workspace size, except
+ * for a folder the task removed: each file that was in it is listed as deleted too, after the folder itself.
+ */
 export function changes(task: Task): Change[] {
   const upper = dirs.upper(task.id);
   const lowers = [...task.layers.map(dirs.upper), isLinked(task.workspace) && fs.existsSync(taskBase(task.id)) ? taskBase(task.id) : dirs.workspace(task.workspace)];
   const below = (rel: string) => lowers.map((l) => path.join(l, rel)).find((f) => fs.existsSync(f));
   const out: Change[] = [];
+  const both: string[] = []; // folders in the layer that were also there before: one of them may be opaque
   const walk = (rel: string) => {
     for (const name of fs.readdirSync(path.join(upper, rel)).sort()) {
       const r = path.join(rel, name);
       const st = fs.lstatSync(path.join(upper, r));
-      if (st.isCharacterDevice() && st.rdev === 0) out.push({ path: r, change: 'deleted' }); // overlayfs whiteout
-      else if (st.isDirectory()) walk(r);
+      if (isWhiteout(st)) {
+        out.push({ path: r, change: 'deleted' });
+        const was = below(r);
+        if (was && fs.lstatSync(was).isDirectory()) {
+          const t = lowerTree(lowers, r); // rm -rf of a folder: its files are gone too
+          out.push(...[...t.dirs, ...t.files].map((p) => ({ path: p, change: 'deleted' as const })));
+        }
+      } else if (st.isDirectory()) {
+        if (below(r)) both.push(r);
+        walk(r);
+      }
       // Files and links only: a pipe, socket or device a task made would hang or mislead the box that reads it.
       else if (st.isFile() || st.isSymbolicLink()) out.push({ path: r, change: below(r) ? 'modified' : 'added' });
     }
   };
   if (fs.existsSync(upper)) walk('');
-  return out;
+  const listed = new Set(out.map((c) => c.path));
+  for (const d of opaqueDirs(upper, both)) {
+    // rm -rf then mkdir: what was in the folder before is gone, apart from what the task wrote there again.
+    const t = lowerTree(lowers, d);
+    for (const p of [...t.dirs, ...t.files]) if (!listed.has(p) && !fs.existsSync(path.join(upper, p))) (listed.add(p), out.push({ path: p, change: 'deleted' }));
+  }
+  return out.sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0)); // a folder before what is in it
 }
 
 /** What a task changed, from its own layer only, and a unified diff of it. */
@@ -261,6 +358,7 @@ export function diff(task: Task, maxBytes = 200_000): { changes: Change[]; diff:
   for (const c of changes) {
     if (text.length > maxBytes) break;
     const before = c.change === 'added' ? undefined : below(c.path);
+    if (c.change === 'deleted' && before && fs.lstatSync(path.join(before, c.path)).isDirectory()) continue; // a removed folder: its files are listed one by one
     text += diffFiles(c.path, before ? { root: before, rel: c.path } : undefined, c.change === 'deleted' ? undefined : { root: upper, rel: c.path });
   }
   return { changes, diff: text.slice(0, maxBytes) };
@@ -475,20 +573,50 @@ export interface KeepMeta {
   change: Change['change'];
   /** The real file before Keep: its owner and mode, to put back on undo. Absent for a new file. */
   before?: { mode: number; uid: number; gid: number };
+  /** A folder the task removed: Keep removes it once its files are gone, and undo makes it again. */
+  dir?: true;
   /** Hash of the kept content, so undo can tell if the owner has edited it since. */
   after?: string;
 }
 
+/** A file error in words, for a Keep that could not finish. */
+const fileTrouble = (e: NodeJS.ErrnoException) =>
+  ({ EACCES: 'permission denied', EPERM: 'permission denied', ENOSPC: 'the disk is full', EDQUOT: 'the disk is full', EROFS: 'the folder is read-only', ENOTDIR: 'a file is where a folder should be', EISDIR: 'a folder is where a file should be', ENOENT: 'it is no longer there' } as Record<string, string>)[e.code ?? ''] ?? e.message;
+
+/** Put the owner's files back as they were before Keep, from the before-images in saveDir. */
+function revert(ws: string, saveDir: string, changes: KeepMeta[]) {
+  for (const m of changes) {
+    const real = realOf(ws, m.path);
+    if (m.dir) {
+      if (!fs.existsSync(real)) {
+        mkdirOwned(path.dirname(real));
+        fs.mkdirSync(real);
+        if (m.before) (fs.chownSync(real, m.before.uid, m.before.gid), fs.chmodSync(real, m.before.mode));
+      }
+    } else if (m.before) {
+      mkdirOwned(path.dirname(real));
+      const tmp = `${real}.box-${process.pid}`;
+      place(path.join(saveDir, m.path), tmp);
+      if (fs.lstatSync(tmp).isSymbolicLink()) fs.lchownSync(tmp, m.before.uid, m.before.gid); // the link itself, never what it points at
+      else (fs.chownSync(tmp, m.before.uid, m.before.gid), fs.chmodSync(tmp, m.before.mode));
+      fs.renameSync(tmp, real);
+    } else {
+      fs.rmSync(real, { force: true }); // Keep added it
+    }
+  }
+}
+
 /**
- * Apply a done task's changes to its linked real folder, atomically per file and all-or-nothing on conflict.
- * If the owner changed any of the same files since the task started, nothing is applied and the clash is
- * reported. A kept file keeps the real file's owner, group and mode; a new file takes the owner of the folder
- * it lands in with mode 0644 (0755 if it was executable). The task's uid and its a+rwX layer permissions
- * never reach the owner's files. Before-images and metadata go under BOX_HOME/timemachine/<task> so Keep
- * can be undone later.
+ * Apply a done task's changes to its linked real folder, atomically per file and all or nothing. If the owner
+ * changed any of the same files since the task started, nothing is applied and the clash is reported; if a file
+ * cannot be written, the ones already written are put back and it throws. A kept file keeps the real file's owner,
+ * group and mode; a new file takes the owner of the folder it lands in with mode 0644 (0755 if it was
+ * executable). The task's uid and its a+rwX layer permissions never reach the owner's files. A folder the task
+ * removed goes once its files are gone, never with something the owner put in it since. Before-images and
+ * metadata go under BOX_HOME/timemachine/<task> so Keep can be undone later.
  */
 export function keep(task: Task): { kept?: Change[]; conflicts?: string[] } {
-  if (!isLinked(task.workspace)) throw new Error(`workspace ${task.workspace} is not a real folder; nothing to keep`);
+  if (!isLinked(task.workspace)) throw new Error('This task worked in a space of its own, not on one of your folders, so there is nothing to keep.');
   const upper = dirs.upper(task.id);
   const manifestPath = path.join(dirs.task(task.id), 'manifest.json');
   const manifest: Record<string, string> = fs.existsSync(manifestPath) ? JSON.parse(fs.readFileSync(manifestPath, 'utf8')) : {};
@@ -510,42 +638,76 @@ export function keep(task: Task): { kept?: Change[]; conflicts?: string[] } {
 
   const saveDir = path.join(HOME, 'timemachine', task.id);
   fs.mkdirSync(path.join(HOME, 'timemachine'), { recursive: true, mode: 0o700 }); // copies of the owner's old files: root only
+  fs.rmSync(saveDir, { recursive: true, force: true }); // left by a Keep that could not finish
   fs.mkdirSync(saveDir, { recursive: true, mode: 0o700 });
   const meta: KeepMeta[] = [];
-  for (const c of cs) {
-    const real = realOf(task.workspace, c.path);
-    const m: KeepMeta = { path: c.path, change: c.change };
-    if (fs.existsSync(real)) {
-      const st = fs.statSync(real);
-      m.before = { mode: st.mode & 0o7777, uid: st.uid, gid: st.gid };
-      // a before-image so Time Machine can undo this Keep
-      fs.mkdirSync(path.dirname(path.join(saveDir, c.path)), { recursive: true });
-      place(real, path.join(saveDir, c.path)); // the real path is replaced by a rename below, so this keeps the old content
-    }
-    if (c.change === 'deleted') {
-      fs.rmSync(real, { force: true });
-    } else {
-      mkdirOwned(path.dirname(real));
-      const src = path.join(upper, c.path);
-      const srcStat = fs.lstatSync(src);
-      const dirStat = fs.statSync(path.dirname(real));
-      const mode = m.before?.mode ?? (srcStat.mode & 0o111 ? 0o755 : 0o644);
-      const owner = m.before ?? { uid: dirStat.uid, gid: dirStat.gid };
-      const tmp = `${real}.box-${process.pid}`;
-      if (srcStat.isSymbolicLink()) {
-        // A link the task made stays a link: copying what it points at would hand the owner's folder (and the next
-        // task) a file the task could not read, read by root.
-        fs.symlinkSync(fs.readlinkSync(src), tmp);
-        fs.lchownSync(tmp, owner.uid, owner.gid);
-      } else {
-        fs.copyFileSync(src, tmp, fs.constants.COPYFILE_FICLONE);
-        fs.chownSync(tmp, owner.uid, owner.gid);
-        fs.chmodSync(tmp, mode);
+  let at = '';
+  try {
+    for (const c of cs) {
+      at = c.path;
+      const real = realOf(task.workspace, c.path);
+      const m: KeepMeta = { path: c.path, change: c.change };
+      const lst = fs.lstatSync(real, { throwIfNoEntry: false }); // a link is never taken for the folder it points at
+      if (lst?.isDirectory() && c.change === 'deleted') {
+        meta.push({ ...m, dir: true, before: { mode: lst.mode & 0o7777, uid: lst.uid, gid: lst.gid } }); // removed below, once empty
+        continue;
       }
-      fs.renameSync(tmp, real); // atomic per file
-      m.after = stamp(real);
+      const st = fs.existsSync(real) ? fs.statSync(real) : undefined;
+      if (st) {
+        m.before = { mode: st.mode & 0o7777, uid: st.uid, gid: st.gid };
+        // a before-image so Time Machine can undo this Keep
+        fs.mkdirSync(path.dirname(path.join(saveDir, c.path)), { recursive: true });
+        place(real, path.join(saveDir, c.path)); // the real path is replaced by a rename below, so this keeps the old content
+      }
+      if (c.change === 'deleted') {
+        fs.rmSync(real, { force: true });
+      } else {
+        mkdirOwned(path.dirname(real));
+        const src = path.join(upper, c.path);
+        const srcStat = fs.lstatSync(src);
+        const dirStat = fs.statSync(path.dirname(real));
+        const mode = m.before?.mode ?? (srcStat.mode & 0o111 ? 0o755 : 0o644);
+        const owner = m.before ?? { uid: dirStat.uid, gid: dirStat.gid };
+        const tmp = `${real}.box-${process.pid}`;
+        try {
+          if (srcStat.isSymbolicLink()) {
+            // A link the task made stays a link: copying what it points at would hand the owner's folder (and the next
+            // task) a file the task could not read, read by root.
+            fs.symlinkSync(fs.readlinkSync(src), tmp);
+            fs.lchownSync(tmp, owner.uid, owner.gid);
+          } else {
+            fs.copyFileSync(src, tmp, fs.constants.COPYFILE_FICLONE);
+            fs.chownSync(tmp, owner.uid, owner.gid);
+            fs.chmodSync(tmp, mode);
+          }
+          fs.renameSync(tmp, real); // atomic per file
+        } catch (e) {
+          try {
+            fs.rmSync(tmp, { force: true });
+          } catch {} // never made
+          throw e;
+        }
+        m.after = stamp(real);
+      }
+      meta.push(m);
     }
-    meta.push(m);
+    // The folders the task removed, deepest first, once empty: a file the owner added to one since stays.
+    for (const m of [...meta].reverse()) {
+      if (!m.dir) continue;
+      try {
+        fs.rmdirSync(realOf(task.workspace, m.path));
+      } catch (e) {
+        if (!['ENOTEMPTY', 'EEXIST', 'ENOENT'].includes((e as NodeJS.ErrnoException).code ?? '')) throw e;
+      }
+    }
+  } catch (e) {
+    try {
+      revert(task.workspace, saveDir, meta);
+      fs.rmSync(saveDir, { recursive: true, force: true });
+    } catch (again) {
+      throw new Error(`${at} could not be written (${fileTrouble(e as NodeJS.ErrnoException)}), and putting your folder back failed too (${fileTrouble(again as NodeJS.ErrnoException)}). Check it before you run Keep again.`);
+    }
+    throw new Error(`${at} could not be written (${fileTrouble(e as NodeJS.ErrnoException)}), so nothing was kept. Your folder is as it was.`);
   }
   fs.writeFileSync(path.join(saveDir, 'kept.json'), JSON.stringify({ at: new Date().toISOString(), changes: meta }));
   return { kept: cs };
@@ -558,7 +720,7 @@ export function keep(task: Task): { kept?: Change[]; conflicts?: string[] } {
 export function unkeep(task: Task): { reverted?: Change[]; conflicts?: string[] } {
   const saveDir = path.join(HOME, 'timemachine', task.id);
   const file = path.join(saveDir, 'kept.json');
-  if (!fs.existsSync(file) || fs.existsSync(path.join(saveDir, 'reverted.json'))) throw new Error(`task ${task.id} has no Keep to undo`);
+  if (!fs.existsSync(file) || fs.existsSync(path.join(saveDir, 'reverted.json'))) throw new Error(`"${task.title}" has no Keep to undo.`);
   const { changes } = JSON.parse(fs.readFileSync(file, 'utf8')) as { changes: KeepMeta[] };
   const conflicts = changes
     .filter((m) => m.after !== undefined || linkOnTheWay(task.workspace, m.path))
@@ -568,19 +730,7 @@ export function unkeep(task: Task): { reverted?: Change[]; conflicts?: string[] 
     })
     .map((m) => m.path);
   if (conflicts.length) return { conflicts };
-  for (const m of changes) {
-    const real = realOf(task.workspace, m.path);
-    if (m.before) {
-      mkdirOwned(path.dirname(real));
-      const tmp = `${real}.box-${process.pid}`;
-      place(path.join(saveDir, m.path), tmp);
-      fs.chownSync(tmp, m.before.uid, m.before.gid);
-      fs.chmodSync(tmp, m.before.mode);
-      fs.renameSync(tmp, real);
-    } else {
-      fs.rmSync(real, { force: true }); // Keep added it
-    }
-  }
+  revert(task.workspace, saveDir, changes);
   fs.writeFileSync(path.join(saveDir, 'reverted.json'), JSON.stringify({ at: new Date().toISOString() }));
   return { reverted: changes.map(({ path: p, change }) => ({ path: p, change })) };
 }
@@ -667,9 +817,12 @@ export function purge(task: Task) {
 export function refreshView(workspace: string, layers: string[]) {
   const v = dirs.view(workspace);
   fs.mkdirSync(v, { recursive: true });
-  unmount(v);
   // A lower-only overlay needs two layers; the empty dir keeps that true with no tasks done.
-  mountOverlay(v, [...layers.map(dirs.upper), path.join(HOME, 'empty'), dirs.workspace(workspace)]);
+  const lowers = [...layers.map(dirs.upper), ...(layers.length ? [] : [path.join(HOME, 'empty')]), dirs.workspace(workspace)];
+  // Tasks started side by side can finish past the limit: keep the view it has rather than none.
+  if (lowers.length > MAX_LOWERS) throw new Error(`${layers.length} finished tasks are more than one view can stack (${MAX_LOWERS - 1}); it stays as it was`);
+  unmount(v);
+  mountOverlay(v, lowers);
 }
 
 /** Unmount everything under BOX_HOME. The demo uses it to act out a power cut. */

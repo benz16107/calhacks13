@@ -18,9 +18,11 @@ export async function askHaiku(prompt: string, modelId: string, cwd: string, onU
       }
     }
   })();
+  let timer: NodeJS.Timeout | undefined;
   try {
-    await Promise.race([work, new Promise((_, no) => setTimeout(() => no(new Error('timed out after 60 s')), 60_000))]);
+    await Promise.race([work, new Promise((_, no) => (timer = setTimeout(() => no(new Error('timed out after 60 s')), 60_000)))]);
   } finally {
+    clearTimeout(timer); // a check that answered in time must not keep the worker alive for the rest of the minute
     await s.close();
   }
   return parseVerdict(text);

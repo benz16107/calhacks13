@@ -39,14 +39,28 @@ export class Log {
     const text = buf.subarray(0, endByte).toString('utf8');
     for (const line of text.split('\n')) if (line) (this.events.push(JSON.parse(line)), (this.last = hashLine(line)));
     this.fd = fs.openSync(path, 'a', 0o600);
+    this.size = endByte;
   }
+
+  private size: number; // bytes of whole lines on disk
 
   append(e: NewEvent): LogEvent {
     // prev comes last so an event cannot bring its own: the chain is the log's, not the caller's.
     const full = { seq: this.events.length + 1, at: new Date().toISOString(), ...e, prev: this.last } as LogEvent;
     const line = JSON.stringify(full);
-    fs.writeSync(this.fd, line + '\n');
-    fs.fsyncSync(this.fd);
+    const bytes = Buffer.from(line + '\n');
+    try {
+      // A full disk can take part of a line and refuse the rest; keep writing until all of it is down.
+      for (let done = 0; done < bytes.length; ) done += fs.writeSync(this.fd, bytes, done);
+      fs.fsyncSync(this.fd);
+    } catch (err) {
+      // Cut the half line off again, so the next event (once there is room) starts on a line of its own.
+      try {
+        fs.ftruncateSync(this.fd, this.size);
+      } catch {} // the boot after this trims a torn tail too
+      throw err;
+    }
+    this.size += bytes.length;
     this.last = hashLine(line);
     this.events.push(full);
     return full;

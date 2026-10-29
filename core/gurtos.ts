@@ -22,16 +22,24 @@ const fail = (message: string): never => {
   process.exit(1);
 };
 const dollars = (v: string | undefined, what: string) => {
-  const n = Number(String(v ?? '').replace(/^\$/, ''));
-  return Number.isFinite(n) && n >= 0 ? Math.round(n * 100) : fail(`${what}: a dollar amount, like 5`);
+  const text = String(v ?? '').trim().replace(/^\$/, '');
+  const n = Number(text);
+  return text && Number.isFinite(n) && n >= 0 ? Math.round(n * 100) : fail(`${what}: a dollar amount, like 5 (usage: gurtos budget <ask-over-dollars> <task-budget-dollars>)`);
 };
 async function stdin() {
+  if (process.stdin.isTTY) console.error('Paste the key, then press Enter and Ctrl-D. It is not shown or saved here.');
   let s = '';
   for await (const c of process.stdin) s += c;
   return s.trim();
 }
+// The usage is the comment at the top of this file.
+const usage = () => fs.readFileSync(new URL(import.meta.url), 'utf8').split('\n').filter((l) => l.startsWith('//   ')).map((l) => l.slice(5)).join('\n');
 
 const [cmd, ...args] = process.argv.slice(2);
+if (!cmd || ['help', '--help', '-h'].includes(cmd)) {
+  console.log(`Set up a GurtOS computer from this one (AGENT-SETUP.md). Each command prints JSON.\n\n${usage()}`);
+  process.exit(cmd ? 0 : 1);
+}
 try {
   if (cmd === 'connect') {
     const [url, code, name] = args;
@@ -59,7 +67,15 @@ try {
       folders: () => (args.length ? steps.folders(api, args) : fail('usage: gurtos folders <path> [path...]')),
       app: () => (a === 'on' || a === 'off') && b ? steps.app(api, b, a === 'on') : fail('usage: gurtos app on|off <id>'),
       budget: () => steps.settings(api, { approvalThresholdCents: dollars(a, 'ask over'), defaultBudgetCents: dollars(b, 'task budget') }),
-      settings: () => steps.settings(api, JSON.parse(a ?? fail("usage: gurtos settings '<json>'"))),
+      settings: () => {
+        let patch: Record<string, unknown>;
+        try {
+          patch = JSON.parse(a ?? fail("usage: gurtos settings '<json>'"));
+        } catch {
+          return fail(`settings: give the changes as JSON, like '{"defaultBudgetCents": 100}'`);
+        }
+        return steps.settings(api, patch);
+      },
       remote: () => (a === 'on' ? steps.remote(api, b) : fail('usage: gurtos remote on [name]')),
       pair: () => steps.pair(api),
     };
@@ -67,5 +83,7 @@ try {
     out({ ok: true, result: await f() });
   }
 } catch (e) {
+  // A setup token ends when setup finishes, or two hours after it was made.
+  if ((e as { status?: number }).status === 401) fail('This setup token no longer works: setup finished, or two hours passed. Ask for a new code on the computer\'s screen and run gurtos connect again.');
   fail((e as Error).message);
 }

@@ -114,3 +114,24 @@ test('an event cannot bring its own prev, and stripping prev from the lines afte
   const stripped = edited.map((l, i) => (i === 0 ? l : JSON.stringify({ ...JSON.parse(l), prev: undefined })));
   assert.deepEqual(chainBreaks(stripped), [2, 3], 'lines without prev after the chain began are breaks');
 });
+
+test('a write cut short by a full disk never leaves half a line in front of the next one', (t) => {
+  const file = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'log-')), 'log.jsonl');
+  const log = new Log(file);
+  log.append({ type: 'task.created', task: 'a', spec, user: 'box-a' });
+  // The disk fills up: the kernel takes part of the line, then refuses the rest.
+  const real = fs.writeSync;
+  let calls = 0;
+  t.mock.method(fs, 'writeSync', (fd: number, data: string | Buffer, ...rest: unknown[]) => {
+    if (++calls === 1) return (real as (...a: unknown[]) => number)(fd, Buffer.from(data).subarray(0, 20), ...rest);
+    throw Object.assign(new Error('ENOSPC: no space left on device, write'), { code: 'ENOSPC' });
+  });
+  assert.throws(() => log.append({ type: 'task.state', task: 'a', state: 'running', layers: [] }), /ENOSPC/);
+  t.mock.restoreAll();
+  assert.equal(log.events.length, 1, 'an event that did not reach the disk is not in memory either');
+  // Space comes back and the box carries on: the next line must not land after the torn fragment.
+  log.append({ type: 'task.state', task: 'a', state: 'running', layers: [] });
+  const again = new Log(file);
+  assert.deepEqual(again.events.map((e) => e.seq), [1, 2]);
+  assert.deepEqual(chainBreaks(fs.readFileSync(file, 'utf8').split('\n').filter(Boolean)), []);
+});
