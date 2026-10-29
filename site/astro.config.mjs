@@ -109,12 +109,6 @@ export default defineConfig({
             'docs/guides/schedule-a-routine',
             'docs/guides/add-a-secret',
             'docs/guides/update-and-roll-back',
-            'docs/guides/connect-jira',
-            'docs/guides/send-the-log-to-elastic',
-            'docs/guides/verify-a-receipt',
-            'docs/guides/agent-payments',
-            'docs/guides/shopping-agent',
-            'docs/guides/asi-one',
             'docs/guides/find',
             'docs/guides/reach-your-box-from-anywhere',
             'docs/guides/self-host',
@@ -142,6 +136,19 @@ export default defineConfig({
         {
           label: 'Security',
           items: ['docs/security/model', 'docs/security/threat-model', 'docs/security/trust-boundaries', 'docs/security/reporting'],
+        },
+        {
+          // Apps that need another company's account. Off on a new box; none is needed to use GurtOS.
+          label: 'Optional apps',
+          collapsed: true,
+          items: [
+            'docs/guides/connect-jira',
+            'docs/guides/send-the-log-to-elastic',
+            'docs/guides/asi-one',
+            'docs/guides/verify-a-receipt',
+            'docs/guides/agent-payments',
+            'docs/guides/shopping-agent',
+          ],
         },
         {
           label: 'Project',

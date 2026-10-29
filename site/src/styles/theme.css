@@ -217,3 +217,7 @@ h1#_top {
 
 /* The phone frame in docs pages sits at phone size, not column width. */
 .docs-phone { width: 13rem; margin: 1.25rem 0; }
+
+/* The mobile "On this page" bar sits below the dark header but uses the page's colours, so the current section's
+   name stays readable in light mode (it was dark text on the header's dark glass). */
+mobile-starlight-toc nav { background-color: var(--sl-color-bg); }

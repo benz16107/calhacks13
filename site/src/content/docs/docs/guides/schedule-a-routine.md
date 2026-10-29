@@ -7,7 +7,7 @@ A routine is a task the box starts on its own, on a timer. In this guide you wri
 
 ## Before you start
 
-- A box installed on Ubuntu from a source checkout. See [Install on Ubuntu](/docs/get-started/install-on-ubuntu/). On a box installed from the ISO, apps ship inside the system image, so a new app reaches it as a [system update](/docs/guides/update-and-roll-back/).
+- A box installed on Ubuntu from a source checkout. See [Install on Ubuntu](/docs/get-started/install-on-ubuntu/). A box installed from an ISO has only the apps in its image, and a Server box has no shell to install one from, so use an Ubuntu install for your own app.
 - A model key in the vault (`ANTHROPIC_API_KEY` or `FACTORY_API_KEY`), because scheduled tasks run Droid with Claude by default. See [Add a secret](/docs/guides/add-a-secret/).
 - Basic TypeScript.
 
@@ -44,10 +44,11 @@ A routine is a task the box starts on its own, on a timer. In this guide you wri
    } satisfies Track;
    ```
 
-   - `dailyAt: 'HH:MM'` fires once a day at that time. Use `everyMs` instead for a fixed interval, for example `everyMs: 15 * 60_000` for every 15 minutes.
+   - `dailyAt: 'HH:MM'` fires once a day at that time, on a 24-hour clock. Use `everyMs` instead for a fixed interval, for example `everyMs: 15 * 60_000` for every 15 minutes. `everyMs` runs from 1 ms to about 24 days. A bad value stops the app from loading.
+   - `workspace: 'home'` is the workspace every box has. Put the files the routine reads there, or name another workspace.
    - `task()` returns a task spec. Return nothing to skip a run, for example when there is no new work.
-   - `hosts: []` means the task has no network beyond Claude. Add only the hosts the routine needs. See [Network policy](/docs/concepts/network-policy/).
-   - `budgetCents` caps tool spending before the task asks for your OK.
+   - `hosts: []` means the task reaches no website. Model calls go through the box. Add only the hosts the routine needs. See [Network policy](/docs/concepts/network-policy/).
+   - `budgetCents`: a paid tool call that would take the task past this amount asks for your OK first. Model use counts toward the total but never pauses the task by itself.
 
 3. **Install the checkout** on the box. The install script copies it to `/opt/box` and restarts the service, which loads every app at boot.
 
@@ -64,10 +65,10 @@ A routine is a task the box starts on its own, on a timer. In this guide you wri
    ```
 
    ```text
-   box up: 12 tasks in the log, tracks: example, nightly, wallet
+   box up: 12 tasks in the log, tracks: anthropic, nightly
    ```
 
-   If the app failed to load, the journal has `track nightly not loaded:` and the reason. A broken app never stops the box.
+   The line lists only apps that are on. If `nightly` is missing, turn it on in App Center. If the app failed to load, the journal has `track nightly not loaded:` and the reason. A broken app never stops the box.
 
 2. To see a task without waiting until 02:00, set `everyMs: 60_000` for a test run, install again, and wait a minute. Then list tasks:
 

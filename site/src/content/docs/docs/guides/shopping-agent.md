@@ -3,6 +3,10 @@ title: Set up the shopping agent
 description: Set up the Shopper app so an agent compares stores, watches prices, and pays only after you approve a signed mandate and each purchase, with Face ID and test payments.
 ---
 
+:::note[Optional app]
+Shopper is an optional app. It is off on a new box. Stripe, Cybersource and Apify accounts are optional; without them, payments are simulated and prices come from the GurtOS Test Store on the box.
+:::
+
 The Shopper app turns shopping into standing instructions. "Get me the coffee filters when they're under $7." You first approve a **shopping mandate**: the items, the stores, the most you will pay and when it expires. The box signs it, then checks the stores on a schedule. When an item is in stock at or under your price, it asks for your OK on that one purchase, and pays only after you approve. It can also read household receipts, propose a reorder, and find savings after you buy. In this guide you set up the app and run one watch from start to purchase.
 
 :::caution[Test payments only]

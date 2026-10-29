@@ -16,8 +16,8 @@ Listing and switching boxes is built. Switching opens the other box's own portal
 ## Before you start
 
 - Two machines running GurtOS. See [Install on Ubuntu](/docs/get-started/install-on-ubuntu/) or [Install GurtOS Server](/docs/get-started/install-server/).
-- A root shell on each.
-- A network route from your browser to both boxes. GurtOS Server from the ISO opens its API to private networks and sets its own `BOX_URL`. On the Ubuntu install, see step 2 of [Approve from your phone](/docs/guides/approve-from-your-phone/) for `BOX_LISTEN`.
+- A root shell on each: `sudo` on Ubuntu or GurtOS Personal, or SSH on a GurtOS Server **debug build**. A release build of GurtOS Server has no shell, so you cannot set these variables on it.
+- A network route from your browser to both boxes: the same local network, a private network such as Tailscale or WireGuard, or a relay you run yourself (see [Self-host](/docs/guides/self-host/)). A hosted relay is not running during the preview, and the web app at app.gurtos.com reaches a box only at an https address that a relay gives it, so use each box's own address here. A GurtOS ISO install opens its API to private networks and sets its own `BOX_URL`. On the Ubuntu install, see step 2 of [Approve from your phone](/docs/guides/approve-from-your-phone/) for `BOX_LISTEN`.
 - Your browser paired with each box. Off the box itself, every request needs a paired device's token, and each box pairs its own devices.
 
 ## Steps
@@ -38,6 +38,10 @@ Listing and switching boxes is built. Switching opens the other box's own portal
 
    Use a different id, name and address on the second machine, for example `cloud`, `Cloud box` and
    `http://192.0.2.20:7700`.
+
+   On a GurtOS ISO install, leave `BOX_URL` out. The box works out its own address at every start, and that value
+   wins over one in a drop-in. A drop-in in `/etc/systemd/system` also belongs to the system slot, so the next
+   [system update](/docs/guides/update-and-roll-back/) removes it. The name chosen in GurtOS Setup wins over `BOX_NAME`.
 
 2. **List the other box as a peer.** On the first box, add `BOX_PEERS`, a JSON array with one entry per other box.
    `url` is where its portal answers. `stdb` is the name of its SpacetimeDB database, which is `box` unless you
@@ -61,10 +65,10 @@ Listing and switching boxes is built. Switching opens the other box's own portal
 
    If `BOX_PEERS` is not valid JSON, the box still starts, lists only itself, and logs `BOX_PEERS is not valid JSON`.
 
-4. **Switch boxes.** Open the first box's portal. The box switcher in the menu bar, the boxes at the end of the dock,
-   and **Settings** under **Boxes** all list both boxes. Choose the other box, and the browser opens that box's own
-   portal. Pair your browser with that box the first time, the same way as a phone. A peer without a `url` shows
-   as "no address yet".
+4. **Switch boxes.** Open the first box's portal. The computer name in the top bar (**Switch computer**) opens a
+   **Boxes** menu that lists both boxes, with "(this computer)" beside the one you are on. Choose the other box, and
+   the browser opens that box's own portal. Pair your browser with that box the first time, the same way as a phone.
+   A peer without a `url` is greyed out.
 
 ## Check it worked
 

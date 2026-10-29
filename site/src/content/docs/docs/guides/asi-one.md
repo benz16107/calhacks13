@@ -3,6 +3,10 @@ title: Reach GurtOS from ASI:One
 description: Make the box an agent on Agentverse so you can give it work from an ASI:One chat, approve spending with cards, and keep or undo the result.
 ---
 
+:::note[Optional app]
+ASI:One is an optional app. It is off on a new box, and it needs an Agentverse account and an ASI:One account from Fetch.ai. The box's own screen and phone app do the same jobs without it.
+:::
+
 The ASI:One app makes the box a chat agent on Agentverse. You find it in ASI:One, pair once, then ask for work in plain words. The box starts a task, and the chat gets the progress, an **Approve** or **Deny** card when the task wants to spend past its budget, and the result with **Keep** and **Undo**. In this guide you turn the agent on and pair your chat with the box.
 
 ## Before you start

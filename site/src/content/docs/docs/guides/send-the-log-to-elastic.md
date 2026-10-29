@@ -3,6 +3,10 @@ title: Send the log to Elastic
 description: Stream the box's action log into Elasticsearch Serverless and ask an Agent Builder agent what your agents changed, spent and were blocked from.
 ---
 
+:::note[Optional app]
+Elastic is an optional app. It is off on a new box, and it needs an Elastic Cloud account with an Elasticsearch Serverless project. The action log works the same without it.
+:::
+
 The Elastic app streams every event in the box's action log into an Elasticsearch Serverless index, `box-actions`. It also installs an Elastic Agent Builder agent, **GurtOS log** (id `gurtos-log`), that answers questions about that index in plain words. In this guide you connect a box to Elastic, install the agent and ask it a question.
 
 ## Before you start
@@ -98,7 +102,7 @@ The first six are ES|QL tools. Those that take `days` default to 7, and those th
 
 ## Limits
 
-- A failed task's error is "worker exited with N" plus the worker's last error message. When that message is generic, the agent reads the task's timeline to find the cause, which usually works but is not exact.
+- A failed task's error is one plain sentence. When that sentence is generic, the agent reads the task's timeline to find the cause, which usually works but is not exact.
 - `tool.result` events carry no tool name, so the reader takes it from the `tool.call` before it. A restart between the two loses the name on that one result. The cost and the task are still right.
 
 ## Related

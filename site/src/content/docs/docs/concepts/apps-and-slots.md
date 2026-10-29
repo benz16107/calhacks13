@@ -3,7 +3,7 @@ title: "Apps and slots"
 description: "An app extends GurtOS by filling slots in the core: triggers, tools, log readers, model jobs and portal entries, plus HTTP routes and the vault keys it may read."
 ---
 
-GurtOS's core does tasks, approvals, undo and the log. Everything else is an app: the Jira connection, the wallet, the shopping agent, /find. An app is a folder of TypeScript that the core loads at boot. It plugs into the core through named slots, and it never changes the core. The owner can turn each app off and on again without a reinstall.
+GurtOS's core does tasks, approvals, undo and the log. Everything else is an app: /find, the model app, and optional apps for outside services such as Jira, the shopping agent and the wallet. An app is a folder of TypeScript that the core loads at boot. It plugs into the core through named slots, and it never changes the core. The owner can turn each app off and on again without a reinstall.
 
 ## What an app is
 
@@ -66,7 +66,7 @@ A model job is model work the box does for itself, outside any task, such as /fi
 
 ### Portal entries
 
-The `apps` slot lists the app's pages for the portal: a `name`, a `title`, and an `href` under the app's routes. `GET /api/apps` returns the entries of apps that are on, and the portal opens `/t/<app><href>`.
+The `apps` slot lists the app's pages for the portal: a `name`, a `title`, and an `href` under the app's routes. `GET /api/apps` returns the entries of apps that are on, and the portal opens `/t/<app><href>` in a sandbox, described next.
 
 ## Routes and secrets
 
@@ -83,6 +83,19 @@ routes: {
 
 **`secrets`** lists the vault keys the app's routes and triggers may read with `box.secret(name)`. Tools and model jobs declare their own. A route may use a secret to call an outside service, but must never return it in a response or hand it to a task.
 
+## An app's pages are sandboxed
+
+Every HTML, XML or SVG answer from an app's route is served with `Content-Security-Policy: sandbox`. The sandbox allows scripts, forms, popups, dialogs, downloads and links a person clicks, and never gives the page the box's origin. So an app's page cannot act as the box's screen, reach into the portal around it, or read the device's token or storage. It keeps its state in memory.
+
+The portal opens a page with a window token. It asks `POST /api/apps/<app>/window` for `{token, expiresAt}` and opens the page with `?access_token=<token>`. The token:
+
+- reaches the app's own routes (`/t/<app>/...`), as whoever opened the window, so `x-box-caller` is what it would have been;
+- reads `GET /api/tasks`, `GET /api/tasks/<id>` and `GET /api/approvals`;
+- answers requests of the tasks that app started, and no one else's;
+- lasts 12 hours, or until the device that opened it is removed.
+
+Anything else is a `403`. A request of another app's task comes back with `needs: 'shell'` and the task's id, and GurtOS opens that task's window so a person answers it there. The box puts a short script first in the page that adds the token to the page's own `fetch` calls, and `/kit/gurtos.js` carries it on links, forms and `EventSource`. A request the browser makes by itself, such as a `<script type="module" src>` or an `<img>`, carries no header, so add `location.search` to its address. Passkeys need a real origin, so the shopping agent's are unavailable in its window.
+
 ## The rules
 
 - An app imports only types from the core's contract. It never imports another core file or another app. The core never imports an app.
@@ -92,7 +105,7 @@ routes: {
 
 ## Turning apps on and off
 
-The owner can turn an app off and on without a reinstall, in the portal's **App Center** or through the API, from the box's own screen or a phone paired as the owner. App Center shows each app's description, the tools, hosts and keys it uses, and one action: **Open**, **Set key**, **Details** or **Turn on**.
+The owner can turn an app off and on without a reinstall, in the portal's **App Center** or through the API, from the box's own screen or a phone paired as the owner. App Center shows each app's description, the tools, hosts and keys it uses, and one action: **Open**, **Set key**, **Details** or **Turn on**. An app's details page has **Turn off**. An app that only moves test money has a **Test only** badge.
 
 | Request | Does |
 |---|---|
@@ -100,15 +113,15 @@ The owner can turn an app off and on without a reinstall, in the portal's **App 
 | `POST /api/apps/<id>/disable` | Takes out the app's tools, jobs, routes, webhooks, log readers and windows at once, and stops its triggers. A task that asks for one of its tools is refused. |
 | `POST /api/apps/<id>/enable` | Loads it again |
 
-The choice is saved in `apps.json` in the box's state folder, so it survives a restart. A new box starts with only the apps whose keys are all in the vault turned on, and never the example app, so a fresh install runs nothing it has no keys for. A trigger that returned a stop function from `start` stops cleanly. One that returned nothing keeps running until the box restarts, and the app reports `restartNeeded: true`.
+The choice is saved in `apps.json` in the box's state folder, so it survives a restart. A new box starts with only the Claude model app on. Every other app is off until the owner turns it on, so a fresh install runs nothing it was not asked to. A release image leaves out the example app. A trigger that returned a stop function from `start` stops cleanly. One that returned nothing keeps running until the box restarts, and the app reports `restartNeeded: true`.
 
 ## What an app cannot do
 
-Apps run inside the core, as root, with the core's privileges. The slots define what the core offers them, but the core does not sandbox their code. An app is trusted code, like a kernel module. Install only apps you trust. Tasks, the untrusted part, are what GurtOS isolates. See [the security model](/docs/security/model/).
+Apps run inside the core, as root, with the core's privileges. The slots define what the core offers them, but the core does not sandbox their code: tools, routes, triggers, log readers and model jobs. Only an app's pages are sandboxed, as above. An app is trusted code, like a kernel module. Install only apps you trust. Tasks, the untrusted part, are what GurtOS isolates. The owner can still turn off what one app may use in Settings, Permissions: a vault key, spending money, running commands in agents, a host its agents reach, copies of the owner's folders and open routes. The core enforces each switch where it already draws the line: the vault, the broker, task creation and routes. It still does not sandbox the app's own code. See [the security model](/docs/security/model/).
 
 ## Apps that ship with GurtOS
 
-GurtOS includes apps for Jira, Elastic, ASI:One, x402 payments, a shopping agent, web work through Apify, /find, a read-only status summary, and a sample credit desk. Each is listed with its tools and routes in [included apps](/docs/reference/apps/).
+GurtOS includes /find and the Claude model app, plus optional apps for Jira, Elastic, ASI:One, x402 payments, a shopping agent, web work through Apify, a read-only status summary and a sample credit desk. An optional app needs that service's account, and the apps that move money use test money only. Each is listed with its tools and routes in [included apps](/docs/reference/apps/).
 
 ## Related
 

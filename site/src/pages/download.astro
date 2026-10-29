@@ -26,7 +26,7 @@ const url = (e: string, a: string) => `${RELEASE}/${file(e, a)}`;
   <div class="wrap dl-page">
     <section class="top" aria-labelledby="dl-h">
       <h1 id="dl-h">Download {NAME} v0.1.0-preview</h1>
-      <p class="lead">Signed install images. Use a spare machine or a virtual machine, because the installer takes the whole disk.</p>
+      <p class="lead">Signed install images, built on Ubuntu 24.04. This is a preview that has not had a security audit. Use a spare computer or a virtual machine, because the installer erases the disk it installs to.</p>
 
       <div class="big">
         {editions.map((e) => (
@@ -68,39 +68,36 @@ const url = (e: string, a: string) => `${RELEASE}/${file(e, a)}`;
     </section>
 
     <section aria-labelledby="apps-h">
-      <h2 id="apps-h">Get the GurtOS app</h2>
-      <p class="apps-lead">Approve, deny and undo tasks from your phone or computer. Every app talks to the same box.</p>
+      <h2 id="apps-h">Approve from your phone or another computer</h2>
+      <p class="apps-lead">Each phone or computer pairs with your box using a code from the box's screen. On your home network it reaches the box at the box's own address. Away from home, use a private network such as Tailscale, or a relay you run. <a href="/docs/guides/reach-your-box-from-anywhere/">How to reach your box from anywhere</a>.</p>
       <dl class="apps">
         <div>
-          <dt>Android</dt>
+          <dt>Any phone or computer</dt>
           <dd>
-            <a class="btn" href={`${RELEASE}/gurtos-android-0.1.0.apk`}>Download the APK <span class="size">918 KB</span></a>
-            <p>Open the file on your phone. If Android asks, allow installs from your browser, then tap Install. It is the GurtOS web app in an installed app, with notifications, installed from outside the Play Store. We tried it in an Android 15 emulator, not yet on a phone. <a href={`${RELEASE}/gurtos-android-0.1.0.apk.sha256`}>SHA-256</a>: <code>cef69ba2f14d5d0833ee6cf7349d412b730b80a284da5c9034159258d0228b3a</code></p>
+            <p>No install. Scan the pairing QR code on the box's screen with the phone's camera, or open the box's address in a browser on the same network. The box serves the GurtOS app itself. <a href="/docs/guides/approve-from-your-phone/">Approve from your phone</a> walks through it.</p>
           </dd>
         </div>
         <div>
           <dt>iPhone and Apple Watch</dt>
           <dd>
-            <p><strong>iPhone app: TestFlight (beta).</strong> The native app, with Face ID when an approval spends money, notifications you can answer with Approve or Deny, a widget, and the Apple Watch app, which installs with it. The beta is private for now. <a href={`${REPO}/issues/new?title=TestFlight`}>Open an issue on GitHub</a> titled "TestFlight" to hear when it opens.</p>
-            <p>No install: open <a href="https://app.gurtos.com">app.gurtos.com</a> in Safari and add it to your Home Screen.</p>
+            <p><strong>iPhone app: TestFlight, internal testing only.</strong> The native app, with Face ID when an approval spends money, a widget, and the Apple Watch app, which installs with it. It is not open to the public yet. <a href={`${REPO}/issues/new?title=TestFlight`}>Open an issue on GitHub</a> titled "TestFlight" to hear when it opens.</p>
           </dd>
         </div>
         <div>
           <dt>Mac</dt>
           <dd>
             <a class="btn" href={`${RELEASE}/gurtos-mac-0.1.0.dmg`}>Download the DMG <span class="size">1.3 MB</span></a>
-            <p>A menu bar app for macOS 26 or later, with Approve by Touch ID, ⌥⌘G to ask your computer for a task, and Send to GurtOS in the Share menu. Open the DMG, drag GurtOS to Applications and open it. Choose Add a computer and pair it. It is signed and notarized by Apple, and it has no auto-update yet, so download a new DMG for a new version. <a href={`${RELEASE}/gurtos-mac-0.1.0.dmg.sha256`}>SHA-256</a>: <code>ef8a7e72441b10dc3d6bacd1308d670cb551ffd8644403429b57e1d733ae994b</code></p>
+            <p>A menu bar app for macOS 26 or later, with Approve by Touch ID, ⌥⌘G to ask your computer for a task, and Send to GurtOS in the Share menu. Open the DMG, drag GurtOS to Applications and open it. Choose Add a computer, then paste the box's pairing link or type its address and code. It is signed and notarized by Apple, and it has no auto-update yet. <a href={`${RELEASE}/gurtos-mac-0.1.0.dmg.sha256`}>SHA-256</a>: <code>ef8a7e72441b10dc3d6bacd1308d670cb551ffd8644403429b57e1d733ae994b</code></p>
           </dd>
         </div>
         <div>
-          <dt>Windows</dt>
+          <dt>Android and Windows</dt>
           <dd>
-            <p>Open <a href="https://app.gurtos.com">app.gurtos.com</a> in Microsoft Edge. Select "App available. Install GurtOS" in the address bar, or the <b>...</b> menu, then Apps, then Install GurtOS. It opens in its own window and can show notifications. Pair it with your computer's QR code or code, as on a phone.</p>
-            <p class="caveat">We checked this in Edge 156 on Linux, where Edge reported the app installable. We have not tried it on a Windows PC.</p>
+            <p>Use the browser, as above. The Android app in the v0.1.0-preview release, and installing app.gurtos.com, reach a box only through a relay, and the hosted one is not running during the preview. The Android app cannot pair over plain HTTP on a home network.</p>
           </dd>
         </div>
       </dl>
-      <p><a href="/docs/guides/reach-your-box-from-anywhere/">Set up remote access</a> to reach your box from any of them.</p>
+      <p class="caveat">Push notifications need a relay. Without one, a request shows when the app is open.</p>
     </section>
 
     <section aria-label="Details" class="details">
@@ -130,7 +127,8 @@ shasum -a 256 -c SHA256SUMS --ignore-missing      # macOS`}</pre>
           <li>2 cores (4 recommended) and 4 GB of memory. At least 17 GB of disk for Server, 29 GB for Personal; the installer refuses a smaller disk.</li>
           <li>The box itself has run one task in 1 GB of memory. <a href="/docs/get-started/install-server/#why-it-is-light">Why Server is light</a>.</li>
           <li>x86_64 with BIOS or UEFI, or arm64 with UEFI. Secure Boot off, because the boot loader is not signed.</li>
-          <li>Internet on first start. The box downloads Factory's Droid CLI, about 300 MB. Personal also downloads its voice model, about 490 MB.</li>
+          <li>Internet on first start. The box downloads Factory's Droid CLI, about 300 MB. Personal also downloads its voice model, about 600 MB with its Python environment.</li>
+          <li>Server needs a wired network: it has no Wi-Fi. Personal uses wired or Wi-Fi.</li>
         </ul>
       </details>
 
@@ -138,8 +136,8 @@ shasum -a 256 -c SHA256SUMS --ignore-missing      # macOS`}</pre>
         <summary>Install steps</summary>
         <ol>
           <li>Write the ISO to a USB stick (balenaEtcher, or <code>sudo dd if=&lt;file&gt;.iso of=/dev/sdX bs=4M status=progress</code>), or attach it to a VM as its disc. On a cloud VM such as Vultr, add the ISO by its URL as a custom ISO.</li>
-          <li>Start from it. On a blank disk it installs in a few minutes. A disk with data is erased only after you type <code>erase</code>.</li>
-          <li>Setup asks for one model key, an Anthropic or a Factory API key. Agents never see it.</li>
+          <li>Start from it. On a computer with one empty disk it installs in a few minutes. With several disks it lists them and asks which one. A disk with data on it, or a USB disk, is erased only after you type <code>erase</code>.</li>
+          <li>Setup asks for one model key, an Anthropic or a Factory API key. Agents never see it. Every other app is optional and off until you turn it on.</li>
           <li>Open Tasks, then New task.</li>
         </ol>
         <p>Full guides: <a href="/docs/get-started/install-server/">Install GurtOS Server</a>, <a href="/docs/get-started/install-personal/">Install GurtOS Personal</a> and <a href="/docs/get-started/first-task/">Your first task</a>.</p>
@@ -148,19 +146,21 @@ shasum -a 256 -c SHA256SUMS --ignore-missing      # macOS`}</pre>
       <details>
         <summary>Known limits</summary>
         <ul>
+          <li>GurtOS Server has no shell, and updates need one today, so moving a Server box to the next release means reinstalling, which erases its disk. GurtOS Personal updates with <code>sudo box-update</code>.</li>
           <li>On Server, the first-boot setup clock reads UTC until the wizard's time zone step.</li>
           <li>On Personal, GNOME's first "Welcome!" page still shows Ubuntu's wallpaper behind it.</li>
           <li>Both editions include <code>age</code> for encrypted backups. The owner holds the key.</li>
+          <li>These images were built on Oct 24, 2026. Main has changed since, for example a shorter setup with no apps step. The <a href="/docs/project/changelog/">changelog</a> lists what the next release adds, and the docs describe main.</li>
         </ul>
       </details>
 
       <details>
         <summary>Build it from source</summary>
-        <p>On an Ubuntu 24.04 machine or VM with root and about 10 GB free per image:</p>
+        <p>On an Ubuntu 24.04 machine or VM with root, 4 GB of memory and about 40 GB free for both editions:</p>
         <pre>{`git clone ${REPO}.git gurtos && cd gurtos
 image/build                 # GurtOS Server for this machine's architecture
 image/build personal        # GurtOS Personal`}</pre>
-        <p>About 6 minutes on a 4-core, 8 GB VM. See <a href={`${REPO}/blob/main/release/README.md`}>release/README.md</a>.</p>
+        <p>About 6 minutes for Server and 7 for Personal on a 4-core, 8 GB VM. See <a href={`${REPO}/blob/main/release/README.md`}>release/README.md</a>.</p>
       </details>
     </section>
   </div>

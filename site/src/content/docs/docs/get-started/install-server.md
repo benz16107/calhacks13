@@ -14,11 +14,17 @@ box screen. For GurtOS on your own desktop computer, see [Install GurtOS Persona
 This page covers getting the ISO and installing it four ways: a real machine, UTM on a Mac, QEMU on Linux, and a
 cloud instance. If you would rather keep an existing Ubuntu system, see [Install on Ubuntu](/docs/get-started/install-on-ubuntu/).
 
+:::note[Which release this page describes]
+This page describes the current source. The v0.1.0-preview ISO is older. Its installer takes the first disk that is
+big enough instead of listing your disks, and its setup wizard has more steps (it adds Remote access, Apps, Keys for
+apps, Privacy and logs, and Appearance). The next release is cut from the current source.
+:::
+
 :::note[What you need]
 One model key, so agents can think: an **Anthropic API key** from
 [console.anthropic.com](https://console.anthropic.com), or a **Factory API key** from
-[app.factory.ai](https://app.factory.ai). Either is enough. Every app (Jira, Elastic, Apify, the wallet and the rest)
-is optional and stays off until you add its keys.
+[app.factory.ai](https://app.factory.ai). Either is enough. Apps are optional. On a new box only the model app is
+on, and every other app stays off until you turn it on in App Center and add the keys it lists.
 :::
 
 ## Requirements
@@ -29,14 +35,17 @@ is optional and stays off until you add its keys.
 | Memory | 4 GB, as releases are tested | 8 GB or more. Each task may use up to 2 GB. The box has run one task in 1 GB: see [Why it is light](#why-it-is-light). |
 | Disk | 17 GB | 32 GB. The two system slots take 12 GB. |
 | Firmware | BIOS or UEFI, with **Secure Boot off** | |
-| Network | A wired connection with DHCP, and internet on first start: the box downloads Factory's Droid CLI then | |
+| Network | A wired connection with DHCP, and internet on first start: the box downloads Factory's Droid CLI (about 300 MB) then | |
 
 Secure Boot must be off because the box's boot loader is not signed. The box configures every wired network card
-with DHCP. Wi-Fi is not set up.
+with DHCP. GurtOS Server has no Wi-Fi, so use a wired connection or a virtual machine's network card. The installer
+does not offer a disk smaller than 17 GB, and stops if no disk is big enough.
 
 :::danger
-Installing erases the target disk. A blank disk is used straight away. A disk with anything on it is erased only
-after you type `erase` on the screen, but check which machine you are booting before you do.
+Installing erases the whole target disk. The installer never offers the disc or USB stick it started from. If the
+machine has one internal disk and it is empty, the installer uses it at once. If it has several disks, the installer
+lists them with their size, model and contents and asks for a number. A disk that holds data, and any USB or
+removable disk, is erased only after you type `erase` on the screen. Check which machine you are booting before you do.
 :::
 
 ### Why it is light
@@ -56,21 +65,24 @@ image itself has not been measured at 1 GB.
 ## Get the ISO
 
 Download the ISO from the [Download](/download/) page. Use `gurtos-server-x86_64.iso` for a PC or an x86_64 cloud
-instance, and `gurtos-server-arm64.iso` for a Mac with Apple silicon in UTM or an arm64 machine. Check its checksum
-before you use it; the Download page shows how.
+instance, and `gurtos-server-arm64.iso` for a Mac with Apple silicon in UTM or an arm64 machine. Each is 1.37 GB in the
+v0.1.0-preview release. Check its checksum before you use it; the Download page shows how.
 
 ### Build it yourself
 
 You can also build the ISO from the [source](https://github.com/benz16107/calhacks13) on any Ubuntu 24.04 machine or
-VM where you have root. The build runs there, not on your own computer:
+VM where you have root. The build installs tools, mounts loop devices and runs chroots as root, so use a machine set
+aside for it. To build on another machine, give `BUILD_SHELL` a shell there:
 
 ```sh
 git clone https://github.com/benz16107/calhacks13.git gurtos && cd gurtos
-BUILD_SHELL='ssh my-build-vm' image/build          # GurtOS Server, x86_64: about 12 minutes the first time, 3 after
-BUILD_SHELL='ssh my-build-vm' image/build arm64    # GurtOS Server, arm64, for Apple silicon and arm64 servers
+image/build                                        # GurtOS Server, x86_64, on this machine
+image/build arm64                                  # GurtOS Server, arm64, for Apple silicon and arm64 servers
+BUILD_SHELL='ssh my-build-vm' image/build         # the same build, run on my-build-vm
 ```
 
-An x86_64 ISO needs an x86_64 build machine. An arm64 ISO builds natively on arm64 in about 20 minutes, or under
+The first x86_64 build took about 6 minutes on a 4-vCPU, 8 GB cloud machine, and a second build about half that. Build
+each architecture on a machine of that architecture. An arm64 ISO builds natively on arm64 in about 5 minutes, or under
 emulation on x86_64 in about an hour. The results stay on the build machine in `/var/lib/box-image/out/`:
 
 | File | What it is |
@@ -95,10 +107,14 @@ Only images signed by the same build key can update a box later. See [System upd
 
 2. Turn Secure Boot off in the machine's firmware settings.
 3. Start the machine from the USB stick.
-4. The disc's menu waits 5 seconds, then installs. On a blank disk it starts at once. On a disk with data, type
-   `erase` when asked. If GurtOS is already on the disk, the menu waits 30 seconds and then starts it; pick
-   **Install** in that time to install again.
+4. The disc's menu waits 5 seconds, then installs. Press Esc to stop the countdown and open the menu. Answer the
+   installer's questions if it asks any: a number to pick a disk when there are several, and `erase` for a disk with
+   data or a USB disk. If GurtOS is already on the disk, the menu waits 30 seconds and then starts it; press Esc and
+   pick **Install** to install again.
 5. Installing takes about a minute. The machine restarts into the box. Remove the USB stick.
+
+If a second disk that also holds GurtOS is plugged in (an old install on a USB drive), a start may use that disk's
+system or data. Unplug it or erase it first.
 
 ## Install in UTM on a Mac
 
@@ -144,7 +160,8 @@ Any provider that boots a custom ISO works. On Vultr:
 3. Deploy a **Cloud Compute** instance with that ISO as its image and at least 25 GB of disk.
 4. Open the instance's console. A new Vultr instance first shows iPXE ("Please mount an ISO") for about a minute
    while the ISO attaches, then restarts into the disc by itself. The installer's screen stays dark for a minute or
-   two, then shows a progress bar. From the disc's menu to the box's screen takes about 3 minutes.
+   two, then shows a progress bar. From the disc's menu to the box's screen takes about 3 minutes on a 4-vCPU
+   instance and 5 to 8 on a 1-vCPU one. Wait for the box's screen before you detach the ISO or restart.
 5. Detach the ISO afterwards. The box starts from its disk either way, but with the ISO attached every start waits
    30 seconds at the disc's menu.
 
@@ -157,22 +174,27 @@ console, or put the box on a private network such as Tailscale. See
 
 ## Set it up
 
-The first time the box starts, its screen runs the setup wizard: network, the box's name and time zone, who owns the
-box (pair your phone, or keep the owner on this screen), the model key, what agents may do, which apps to turn on and
-their keys, updates, privacy and appearance. You can change all of it later in **Settings**.
+The first time the box starts, its screen runs the setup wizard. It has eight steps: **Welcome**, **Network**,
+**Name and time zone**, **Owner** (pair your phone, or keep the owner on this screen), **Model key**,
+**Permissions** (what agents may reach and spend), **Updates** and **Done**. There is no step for apps or their keys.
+Apps are optional, and you turn them on later in App Center. Appearance, Privacy and Remote access are in **Settings**
+only. You can change everything else later in **Settings** too.
 
-Paste your Anthropic or Factory key at the **AI models** step. It goes straight into the vault, and no screen shows it
-again. If you skip it, tasks cannot run until you add a key in **Settings**, **Accounts & Keys**.
+Paste your Anthropic or Factory key at the **Model key** step. It goes straight into the vault, and no screen shows it
+again. If you choose **Skip for now**, tasks cannot run until you add a key in **Settings**, **Accounts & Keys**.
+[First boot and pairing](/docs/get-started/first-boot/#setup-and-your-keys) walks through each step.
 
-**On a cloud instance, run setup in the provider's web console.** The box's firewall lets its API in only from
-private networks, so a cloud instance with only a public address cannot be reached from your browser or phone.
+**On a cloud instance, run setup in the provider's web console.** The box's firewall lets its API and its setup port
+in only from private networks, so a cloud instance with only a public address cannot be reached from your browser,
+your phone or another computer.
 The console shows the box's own screen. Use the keyboard and mouse there to finish setup. To reach the box from a
 phone afterwards, put both on a private network such as Tailscale.
 
 ## Check the install
 
-After setup, the screen shows the GurtOS desktop: widgets for what needs you and what is running, and a dock. Its clock uses Pacific time. The box names itself `gurt-<id>`, from the first 6 hex digits of a hash of its own key, for example
-`gurt-bf07fe`.
+After setup, the screen shows the GurtOS desktop: widgets for what needs you and what is running, and a dock. Its clock
+uses the time zone you chose in setup, and UTC until then. The computer's hostname is `gurt-<id>`, from the first 6 hex
+digits of a hash of its own key, for example `gurt-bf07fe`. That is also its name until you give it one in setup.
 
 On a debug build you can also log in over SSH and ask the box directly:
 
@@ -181,7 +203,7 @@ ssh root@192.0.2.10 'curl -s 127.0.0.1:7700/api/health'
 ```
 
 ```json
-{"ok":true,"startedAt":"2026-10-24T07:00:00.000Z","resumed":[],"tasks":0,"tools":["..."],"spacetime":{"port":3000,"database":"box"}}
+{"ok":true,"startedAt":"2026-10-24T07:00:00.000Z","paused":false,"cleanStart":false,"resumed":[],"tasks":0,"tools":[],"spacetime":{"port":3000,"database":"box"}}
 ```
 
 ## What has been tested

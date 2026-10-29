@@ -1,12 +1,74 @@
 ---
 title: Changelog
-description: What changed in GurtOS, newest first. GurtOS has no numbered releases yet; changes are listed by date under one preview.
+description: What changed in GurtOS, newest first. Changes on main that are not in a release yet are under Unreleased.
 ---
 
-GurtOS has no numbered releases yet. Everything below is part of one early preview and may change. Dates are in
-Eastern Time.
+Everything here is a preview and may change. Dates are in Eastern Time.
 
-## Preview
+## Unreleased
+
+On main since v0.1.0-preview. The next release will include these; the v0.1.0-preview images do not.
+
+**Setup**
+- Set up a new computer from one you already own: the new computer shows a code on its screen, and an agent or the
+  `gurtos` command on your other computer finishes setup over the network, while the code lasts.
+- GurtOS Server setup is 8 steps: welcome, network, name, owner and phone, model key, what agents may do, updates and
+  done. GurtOS Personal setup is 6. Neither asks about optional apps: only the model app is on at first (and Find on
+  Personal), and the rest wait in the App Center. Optional apps that use test money say so.
+- Pairing codes forgive the way people type them: `5FFF-BAEB` and `5fffbaeb` both work.
+- Pairing QR codes open the computer's own pairing page on the home network, so a phone pairs with no hosted
+  service. Remote access says when the relay is not answering, and the owner can choose their own relay in Settings,
+  Remote access, Relay (or `PUT /api/remote/relay`).
+
+**Apps and permissions**
+- Apps ask for permissions like a phone app: turning one on shows what it may do, and Settings, Permissions changes it.
+- Replay plays back a finished task step by step, with its files at each step.
+- Receipts: a signed receipt for a finished task that anyone can check in a browser at [gurtos.com/verify](/verify/).
+  An optional app.
+
+**Safety**
+- A per-task disk cap: a task that fills its space is stopped and undone.
+- A task can no longer lower its own spending with a negative or invalid cost.
+- Diff, Replay and Keep never follow links in a task's files, so a link to the vault shows as a link.
+- Only a page from the box's own address counts as the box's screen. Request bodies are capped at 10 MB, or 1 MB
+  without a token, and wrong pairing codes are limited to 5 a minute per address.
+- The proxy never reaches link-local addresses such as cloud metadata, and private-network hosts need an exact
+  `host:port`. A key that a tool quotes in its output is cut out of the log.
+- Factory's pull request tool no longer runs a task's git hooks or config as root.
+- A task can no longer approve its own budget question with a cheap one and then spend past its budget.
+- App pages under `/t/<app>/` run sandboxed, with a token that reaches only that app's routes, so a bug in an app's
+  page cannot use the owner's controls.
+- Through Factory, the proxy relays only the paths Droid calls. Answering approvals through the MCP server is off
+  unless `BOX_MCP_ANSWER=on`.
+- Limits per task: 64 KB per step, question or cost, 20 MB of log and 256 open proxy connections. The setup port
+  7701 answers private networks only.
+- SpacetimeDB installs from pinned, checksummed release files instead of a script from the internet.
+
+**Reliability**
+- A workspace takes up to 499 finished tasks, then refuses new ones in words. Before, about 110 stopped new tasks.
+- A full disk no longer leaves a torn log line that stops the next boot. First boot survives a power cut. The box's
+  own state files are written atomically, and a torn one is set aside so the box still starts.
+- Undo on a kept task takes the change back out of your folder, or refuses if you edited a kept file since. Keep is
+  all or nothing.
+- The first start downloads Droid in the background and retries; boot and the screen no longer wait for it. A task
+  started before Droid is ready waits in the queue.
+- Errors people see are sentences, such as the one for a missing model key.
+
+**Install and updates**
+- The installer never offers the disc or USB stick it started from. With several disks it lists them; a disk with
+  data, or a USB disk, needs `erase` typed first.
+- `box-update` refuses another architecture, an older build (unless `--allow-older`), and an update while a new
+  system is still on trial. A slot whose write did not finish is never started.
+
+**Project**
+- A security policy, code of conduct, roadmap, issue templates, a licence report and SBOMs for every image.
+- Continuous integration runs the tests, the type check, the public-repo check and a secret scan on every pull
+  request.
+
+## v0.1.0-preview
+
+Released 2026-10-24, from commit `58576a7`. The first public images: GurtOS Server and GurtOS Personal for x86_64
+and arm64, on the [Download](/download/) page.
 
 ### 2026-10-24: access, setup and GurtOS Personal
 
@@ -38,7 +100,7 @@ Eastern Time.
 **Core**
 - The box's API for first-run setup, settings, the App Center and the vault: `/api/setup`, `/api/settings`,
   `/api/apps?all=1` with enable and disable, `GET /api/vault` (names only) and `PUT /api/vault/<NAME>`.
-- Settings the core enforces: a spend above `approvalThresholdCents` (default $100) always asks; a default budget;
+- Settings the core enforces: a spend above `approvalThresholdCents` (default $5) always asks; a default budget;
   a default network rule and hosts; folders agents may use.
 - `GET /api/system` reports the edition, version, build, hostname and network.
 - A failed task's error ends with the worker's own last error message.

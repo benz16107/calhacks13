@@ -48,7 +48,7 @@ Once no running task still reads the undone layer, the core deletes it from disk
 
 ### What undo does not do
 
-Undo removes file changes. It cannot recall what a task already sent out of the box: a payment, an email, a message to an API. Those calls are in the log so you can follow up. Some apps reverse their own effects when a task is undone. For example, undoing a purchase from the shopping agent refunds its order. See [undo a task](/docs/guides/undo-a-task/).
+Undo removes file changes. It cannot recall what a task already sent out of the box: a payment, an email, a message to an API. Those calls are in the log so you can follow up. Some apps reverse their own effects when a task is undone. For example, undoing a purchase from the shopping agent refunds its order, which is a test order in the preview. See [undo a task](/docs/guides/undo-a-task/).
 
 ### Layers built on other layers
 
@@ -62,14 +62,14 @@ overlayfs is in the kernel, costs nothing until a task writes, and records each 
 
 ## Limits
 
-- Mount options cap the number of layers at about 60 per workspace. Squashing old layers into the base is not built yet.
+- A workspace stacks up to 499 finished tasks, and the tasks running on it count too, because each becomes a layer. Past that, a new task there is refused with a message that says to undo finished tasks you no longer need, or to use another workspace. Squashing old layers into the base is not built yet.
 - The diff API shows at most 200,000 bytes of unified diff. The list of changed paths is always complete.
 - A failed task's changes stay in its own layer and never join the workspace. You can read them, but no later task sees them.
 
 ## On the Personal edition
 
 :::note[Preview]
-On Personal, a task can work on your own folders: `folder` or `folders` on `POST /api/tasks`. Such a workspace does not stack layers. Each task gets a fresh copy of the real folder when it starts and runs on a layer over that copy, so your folder is untouched while the task runs. When the task is done, **Keep** (`POST /api/tasks/<id>/keep`) writes its changes into the real folder, one file at a time, keeping each file's owner and mode, and refuses if you changed the same files since the task started. **Undo** discards them. **Undo Keep** (`POST /api/tasks/<id>/unkeep`) puts back what a Keep changed. In GNOME, **Ask an Agent** in Files and a review window do the same. See [give an agent a folder](/docs/guides/keep-or-undo/).
+On Personal, a task can work on your own folders: `folder` or `folders` on `POST /api/tasks`. Such a workspace does not stack layers. Each task gets a fresh copy of the real folder when it starts and runs on a layer over that copy, so your folder is untouched while the task runs. When the task is done, **Keep** (`POST /api/tasks/<id>/keep`) writes its changes into the real folder. Each file is replaced in one step and keeps its owner and mode. Keep is all or nothing: it refuses if you changed the same files since the task started, and if one file cannot be written it puts back the ones it already wrote. **Undo** discards the changes. Undo of a task you already kept also takes its changes out of your folder, or changes nothing if you edited a kept file since. **Undo Keep** (`POST /api/tasks/<id>/unkeep`) puts back what a Keep changed. Keep, Undo Keep and the undo of a kept task are for the owner. Each task's copy of your folder stays on disk until the task is undone, even after Keep. In GNOME, **Ask an Agent** in Files and a review window do the same. See [give an agent a folder](/docs/guides/keep-or-undo/).
 :::
 
 ## Related

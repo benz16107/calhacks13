@@ -18,14 +18,15 @@ This page names the parts and how they talk to each other. The pages after it ex
 
 The core is one Node.js process, `box.service`, running as root. It is the only part of the system that can read secrets, create users and mount file systems. It does six jobs:
 
-- **The API.** An HTTP server on port 7700 for the portal, the phone and other programs. It listens on `127.0.0.1` unless you change `BOX_LISTEN`. GurtOS Server from the ISO listens on every address and lets only private networks through its firewall. A request from the box's own machine is trusted; any other request needs a paired device's token. See [the HTTP API](/docs/reference/http-api/).
+- **The API.** An HTTP server on port 7700 for the portal, the phone and other programs. It listens on `127.0.0.1` unless you set `BOX_LISTEN`. A machine installed from a GurtOS ISO, Server or Personal, listens on every address, and its firewall lets only private networks reach port 7700. A request from the box's own screen (the machine itself, with no proxy in between) is trusted. Any other request needs a paired device's token. See [the HTTP API](/docs/reference/http-api/).
+  While setup is open, the core also listens on port 7701 (`BOX_SETUP_PORT`), so you can set the computer up from another one. It forwards to the same API, and every request needs the setup token. It closes when setup finishes, when you stop it, or after two hours. It is plain HTTP, so the firewall opens it to private networks only, like 7700. Set a cloud computer up from its provider's console or over a private network such as Tailscale.
 - **Tasks.** It creates a Linux user for each task, mounts the task's own copy of its workspace, and starts the worker as a hardened systemd unit.
 - **One broker per task.** A Unix socket that only that task's user can open. It is the task's only way to reach the core: to log a step, call a tool, ask for an OK, or report cost.
 - **The vault.** A root-only file of secrets. Tools run inside the core and read the secrets they declare. Tasks never do.
 - **The proxy.** The only network path a task has. It lets each task reach only the hosts in its spec, and logs every refusal.
 - **The action log.** An append-only file of every event. At boot the core rebuilds every task and approval from it.
 
-The core also loads apps. An app is a folder that plugs tools, triggers, log readers, model jobs, pages and routes into the core. See [apps and slots](/docs/concepts/apps-and-slots/).
+The core also loads apps. An app is a folder that plugs tools, triggers, log readers, model jobs, pages and routes into the core. An app's pages open in a sandbox with a token of their own. See [apps and slots](/docs/concepts/apps-and-slots/).
 
 ## Tasks and workers
 
@@ -35,28 +36,28 @@ A task is one piece of agent work. The worker inside it is Factory's Droid with 
 - in its own overlayfs copy of a workspace, so its changes stay in its own layer until it finishes;
 - inside a systemd unit that hides other processes, gives it a private `/tmp`, blocks D-Bus and caps it at 2 GB of memory.
 
-A worker holds no secrets. Droid needs a Factory API key to reach its model, so the task gets a placeholder. The proxy swaps in the real key on the way out. See [agents as their own users](/docs/concepts/agent-users/) and [the vault and the broker](/docs/concepts/vault-and-broker/).
+A worker holds no secrets. Droid needs a model key, either a Factory API key or your own Anthropic key, so the task gets a placeholder. The proxy swaps in the real key on the way out. See [agents as their own users](/docs/concepts/agent-users/) and [the vault and the broker](/docs/concepts/vault-and-broker/).
 
 ## Live state
 
-SpacetimeDB runs on the box on port 3000 and holds two public tables, `task` and `approval`. The core mirrors every change into them, so the box's own screen sees updates the moment they happen. SpacetimeDB has no login, so it listens on `127.0.0.1` only. A phone or a laptop follows the box's log stream over the authenticated API instead.
+SpacetimeDB runs on the box on port 3000. Two public tables, `task` and `approval`, mirror the core's tasks and approvals, so the box's own screen sees updates the moment they happen. Smaller tables keep counters and per-minute activity. SpacetimeDB has no login, so it listens on `127.0.0.1` by default. A phone or a laptop follows the box's log stream over the authenticated API instead.
 
 The mirror is a convenience, not the record. If SpacetimeDB is down, tasks keep running and the portal falls back to the log stream. When it comes back, the core refills it. See [live updates](/docs/reference/live-updates/).
 
 ## Your devices
 
 - **The portal** is a web app the core serves from the same address as the API.
-- **The box's own screen** is a full-screen browser that shows the portal's box screen, which the core serves at `/screen`. It has no desktop and no login prompt.
+- **The box's own screen** on GurtOS Server is a full-screen browser that shows the portal's box screen, which the core serves at `/screen`. It has no desktop and no login prompt.
 - **A phone or a laptop** opens the portal at the box's address. Pairing gives it a device token, which every request from it carries, and the log records which device said yes. See [approve from your phone](/docs/guides/approve-from-your-phone/).
 
-Other programs can drive the box too. Apps on the box connect it to Jira, Elastic and ASI:One. They use the same API and the same approvals as the portal.
+Other programs can drive the box too, through the same API and the same approvals as the portal. Optional apps connect it to outside services such as Jira, Elastic and ASI:One. Each needs that service's account.
 
 ## The operating system around it
 
 On a machine installed from a GurtOS ISO, the core is part of a fixed system:
 
 - On GurtOS Server there is no human account. Root's password is locked and there is no `sudo` binary. On GurtOS Personal the person who owns the computer has an account with `sudo`; task users never do.
-- `box-firstboot` makes the box's identity key and an empty vault on first start. The box's id is the first 6 hex digits of the SHA-256 of its public key, and the machine is named `gurt-<id>`, for example `gurt-bf07fe`. The core uses that name as the box's id.
+- `box-firstboot` makes the box's identity key and an empty vault on first start. The box's id is the first 6 hex digits of the SHA-256 of its public key, and the machine is named `gurt-<id>`, for example `gurt-bf07fe`, unless a name was already chosen (on Personal, the owner's). The core uses the machine's name as the box's id.
 - The disk has two system slots, A and B. An update writes the other slot, starts it once, and keeps it only if the box reports healthy. See [system updates](/docs/concepts/system-updates/).
 
 You can also install the core on an existing Ubuntu 24.04 machine. That gives you the same tasks, vault, log and API, without the A/B updates or the locked-down system. See [install on Ubuntu](/docs/get-started/install-on-ubuntu/).

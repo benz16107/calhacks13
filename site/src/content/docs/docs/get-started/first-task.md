@@ -7,9 +7,11 @@ In this tutorial you give an agent a small job on a file, follow what it does, a
 watch GurtOS stop a connection the task was not allowed to make, and approve a test payment. It takes about
 15 minutes.
 
-You need a running box with a model key in its vault: `ANTHROPIC_API_KEY` or `FACTORY_API_KEY`. If you do not have one yet, follow
-[Install on Ubuntu](/docs/get-started/install-on-ubuntu/). Run the commands on the box itself, or through an SSH
-session with the box's port forwarded.
+You need a running box with a model key in its vault: `ANTHROPIC_API_KEY` or `FACTORY_API_KEY`, and a shell on the
+box. If you do not have one yet, follow [Install on Ubuntu](/docs/get-started/install-on-ubuntu/). Run the commands on
+the box itself, or through an SSH session with the box's port forwarded. A release build of GurtOS Server has no shell
+and no SSH, so on one of those, use the portal on its screen instead of these commands. A debug build allows SSH as
+root.
 
 ## 1. Put a file in a workspace
 
@@ -18,7 +20,7 @@ Add a short note with a few spelling mistakes:
 
 ```sh
 sudo tee /var/lib/box/workspaces/home/notes.md >/dev/null <<'EOF'
-# Weekend plan
+# Saturday plan
 
 - Pick up the groceries on Saturday morining.
 - Call the plumer about the kitchen tap.
@@ -78,7 +80,7 @@ curl -s 127.0.0.1:7700/api/tasks/$id/diff
 
 ```json
 {"changes":[{"path":"notes.md","change":"modified"}],
- "diff":"--- a/notes.md\n+++ b/notes.md\n@@ -1,5 +1,5 @@\n # Weekend plan\n \n-- Pick up the groceries on Saturday morining.\n+- Pick up the groceries on Saturday morning.\n..."}
+ "diff":"--- a/notes.md\n+++ b/notes.md\n@@ -1,5 +1,5 @@\n # Saturday plan\n \n-- Pick up the groceries on Saturday morining.\n+- Pick up the groceries on Saturday morning.\n..."}
 ```
 
 The task's change is now part of the workspace's view, the read-only folder that shows the base files plus every
@@ -127,7 +129,16 @@ Run it again with `"hosts": ["example.com"]` and it succeeds. See [Network polic
 ## 7. Approve a payment
 
 Tools can cost money, and a task that would go over its budget waits for you. The `example` app that ships with
-GurtOS has a tool, `example.spend`, that spends **test money**: it records a payment and moves nothing.
+GurtOS has a tool, `example.spend`, that spends **test money**: it records a payment and moves nothing. A new box
+has the example app off, and the tool needs a stand-in key, so turn the app on and give it one first:
+
+```sh
+curl -s -X POST 127.0.0.1:7700/api/apps/example/enable
+printf '{"value":"sk_test_demo"}' | curl -s -X PUT http://127.0.0.1:7700/api/vault/DEMO_SECRET \
+  -H 'content-type: application/json' -d @-
+```
+
+Now start the task:
 
 ```sh
 curl -s 127.0.0.1:7700/api/tasks -H 'content-type: application/json' -d '{

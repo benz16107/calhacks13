@@ -10,12 +10,14 @@ Every agent action on a box is a line in one file: `BOX_HOME/log.jsonl`. Task cr
 One JSON object per line. Each event has a line number, a time, a type, and the task it belongs to:
 
 ```json
-{"seq":214,"at":"2026-10-24T19:02:07.118Z","type":"task.step","task":"tk3m9qz1a2f","text":"Plan: list road bikes under $800 from the shop listing"}
-{"seq":215,"at":"2026-10-24T19:02:09.530Z","type":"tool.call","task":"tk3m9qz1a2f","key":"mcp.apify.run.4f1c2a.1","tool":"apify.run","input":{"actor":"apify/rag-web-browser"}}
-{"seq":216,"at":"2026-10-24T19:02:21.004Z","type":"tool.result","task":"tk3m9qz1a2f","key":"mcp.apify.run.4f1c2a.1","ok":true,"output":{"count":3},"cents":50}
+{"seq":214,"at":"2026-10-24T19:02:07.118Z","type":"task.step","task":"tk3m9qz1a2f","text":"Plan: buy a coffee from the test vendor","prev":"0b9ed912…"}
+{"seq":215,"at":"2026-10-24T19:02:09.530Z","type":"tool.call","task":"tk3m9qz1a2f","key":"mcp.example.spend.4f1c2a9e07b3.1","tool":"example.spend","input":{"cents":50,"on":"coffee"},"prev":"de60578e…"}
+{"seq":216,"at":"2026-10-24T19:02:09.534Z","type":"tool.result","task":"tk3m9qz1a2f","key":"mcp.example.spend.4f1c2a9e07b3.1","ok":true,"output":{"paid":50,"on":"coffee","test":true},"cents":50,"prev":"f355d875…"}
 ```
 
 `seq` starts at 1 and counts lines. The portal shows it on every step, so anything on screen can be found in the file.
+
+`prev` is the SHA-256 of the previous line exactly as written (shortened in the examples above). The first line's is 64 zeros. A line that is edited, removed or reordered breaks the chain after it. Nothing in the box checks the chain by itself, and nothing signs it, so anyone with root can rewrite the whole chain. On a GurtOS Business box each event also has a `who` field with the person who asked, the seat and the approver.
 
 The event types:
 
@@ -61,7 +63,7 @@ From inside the box, an app uses a log reader. The core feeds it every event in 
 
 ## Sending it elsewhere
 
-Two apps follow the log out of the box:
+Two optional apps follow the log out of the box. Each needs an account with that service:
 
 - **Jira** turns every task into an issue with its steps, approvals, blocked attempts and diff. See [connect Jira](/docs/guides/connect-jira/).
 - **Elastic** ships every event to an Elasticsearch index and puts an agent on top that answers questions about it. See [send the log to Elastic](/docs/guides/send-the-log-to-elastic/).
@@ -70,15 +72,16 @@ Both read with a log reader, so they catch up after a restart from where they st
 
 ## What not to put in it
 
-Tool results go into the log, and through it to the portal, Jira and Elastic. A tool must never return a secret. The test suite checks that no vault value reaches a task's files, environment or log, and several apps check their own log entries the same way.
+Tool results go into the log, and through it to the portal and any app that reads it. A tool must never return a secret. The test suite checks that no vault value reaches a task's files, environment or log, and several apps check their own log entries the same way. As a backstop, the core replaces the value of any vault key whose name ends in `KEY`, `TOKEN`, `SECRET`, `PASSWORD` or `ACCESS` (8 characters or more) with `[a vault key]` in every event before it is written.
 
 The log is append-only. Nothing in the core edits or deletes a line. It is root-only (`0600`), so tasks cannot read it.
 
 ## Limits
 
-- The log grows without limit. This release has no rotation or archiving.
-- Every boot reads the whole file. For a long-lived box, that time grows with the log.
-- A failed task's error is `worker exited with <code>` and the worker's last error message. When that message is generic, the cause is usually in the steps right before it.
+- The log grows without limit. This release has no rotation or archiving. Settings, Privacy & Logs offers "Keep the log for" a number of days, but the choice is only stored. Nothing deletes old events.
+- Every boot reads the whole file, and the box keeps every event in memory. For a long-lived box, that time and that memory grow with the log.
+- A task writes to the log through its broker: at most 64 KB per step, question or cost, and 20 MB in all since the box last started. That keeps one task from filling the box's memory with log lines.
+- A failed task's error is a sentence for a person, such as "Your Anthropic key was not accepted. Change it in Settings, Keys.", or else the worker's own last error message. When that message is generic, the cause is usually in the steps right before it.
 
 ## Related
 

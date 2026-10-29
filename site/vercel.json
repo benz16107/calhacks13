@@ -13,6 +13,11 @@
   ],
   "redirects": [
     {
+      "source": "/install(/?)",
+      "destination": "https://raw.githubusercontent.com/benz16107/calhacks13/main/tracks/anthropic/install.sh",
+      "permanent": false
+    },
+    {
       "source": "/project/terms(/?)",
       "destination": "/terms/",
       "permanent": true

@@ -12,8 +12,15 @@ GurtOS is licensed under the [Apache License 2.0](/docs/project/licence/), and i
 [GitHub](https://github.com/benz16107/calhacks13). The licence, not these terms, governs what you may do with the code
 and the install images.
 
-GurtOS v0.1.0-preview is a preview. It has not had a security audit. Verify the image signatures, run it on a machine
-you can wipe, and do not rely on it for anything that matters yet. It comes without warranty, as the licence says.
+GurtOS is a preview (v0.1.0-preview). It has not had a security audit. Verify the image signatures, run it on a
+machine you can wipe, and do not rely on it for anything that matters yet. It comes without warranty, as the licence
+says.
+
+## Services you connect
+
+Agents call your model provider, Anthropic or Factory, with the key you give the box, and that provider bills you
+for the use. Optional apps call other services with your own accounts. Those services' terms apply to that use, and
+you are responsible for what your agents do with your accounts and keys.
 
 ## Test money and sample data
 
@@ -40,4 +47,4 @@ are not liable for any loss from using them.
 
 To ask about these terms, open an issue in the project's [GitHub repository](https://github.com/benz16107/calhacks13/issues).
 
-Last updated Oct 24, 2026. See also the [Privacy policy](/privacy/).
+Last updated Oct 29, 2026. See also the [Privacy policy](/privacy/).

@@ -14,14 +14,14 @@ npm run check     # after a build: every internal link resolves, and nothing pri
   OpenGraph image. The OpenAPI spec and the screenshots hold the name as literal text.
 - The HTTP API pages are generated from `openapi/box-api.yaml`.
 - Screenshots in `src/assets/screens/` are the running portal (`portal/screenshots/`) on a test box with scripted
-  tasks, the GurtOS Personal desktop (`personal/screenshots/`), and three `design-*` frames from `docs/figma/os-v2/`.
+  tasks, the GurtOS Personal desktop (`personal/screenshots/`), and two `design-*` frames from `docs/figma/os-v2/` (Shopper and the wallet, labelled as designs).
   Check every new one for machine names, addresses and personal names before adding it.
 - Theme: `src/styles/theme.css`, from the design tokens in `docs/figma.md`. Diagrams are SVG in
   `src/assets/diagrams/` and take their colours from the theme.
 
 ## Deploy
 
-The site is static. `vercel.json` adds trailing slashes and long-lived caching for built assets. The www.gurtos.com to gurtos.com redirect is set on the project's domain (`vercel api /v9/projects/gurtos-docs/domains/www.gurtos.com -X PATCH -F redirect=gurtos.com -F redirectStatusCode=308`). Deploy the
+The site is static. `vercel.json` adds trailing slashes, long-lived caching for built assets, redirects from the old docs paths, and `/install` to the Ubuntu install script on GitHub (`tracks/anthropic/install.sh`). The www.gurtos.com to gurtos.com redirect is set on the project's domain (`vercel api /v9/projects/gurtos-docs/domains/www.gurtos.com -X PATCH -F redirect=gurtos.com -F redirectStatusCode=308`). Deploy the
 built `dist/` with that file from a folder outside the git checkout, so Vercel does not connect the repository:
 
 ```sh

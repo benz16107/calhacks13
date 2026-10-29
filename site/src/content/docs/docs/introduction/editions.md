@@ -21,7 +21,7 @@ work that arrives from a webhook, a chat or another app.
   See [Install on Ubuntu](/docs/get-started/install-on-ubuntu/).
 
 **Status: Preview.** The core, the portal with its setup wizard, and the OS image work and are tested on x86_64 and
-arm64 virtual machines.
+arm64 virtual machines. It has no Wi-Fi, so it needs a wired network.
 
 ## GurtOS Personal
 
@@ -34,8 +34,8 @@ account the owner. Approvals arrive as desktop notifications, a top-bar indicato
 GurtOS app shows Needs you, running tasks and what is ready to review, and **New Agent Task…** in Files hands an agent a folder. You can undo a Keep
 later, too.
 
-**Status: Preview.** It installs and runs, and has been walked end to end on a fresh install. Pairing a phone still
-needs the box's address set by hand. See [Install GurtOS Personal](/docs/get-started/install-personal/).
+**Status: Preview.** It installs and runs, and has been walked end to end on a fresh install in virtual machines. It
+has not run on a real laptop yet. See [Install GurtOS Personal](/docs/get-started/install-personal/).
 
 ## GurtOS Business
 

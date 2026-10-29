@@ -16,38 +16,58 @@ info:
 
     ## Format
 
-    Requests and responses are JSON. Send `content-type: application/json` with a body. A failed request
-    returns a JSON object with one field, `error`. Bad input, an unknown task field and an id that does not
-    exist are 400. A missing, unknown or revoked device token is 401. An owner's route called by anyone else
-    is 403. An unknown route is 404.
+    Requests and responses are JSON. Send `content-type: application/json` with a body. A body that is not
+    valid JSON is a 400. A body over 10 MB is a 413, and over 1 MB on the routes that need no token. A
+    failed request returns a JSON object with one field, `error`. Bad input, an unknown task field and an
+    id that does not exist are 400. A missing, unknown or revoked device token is 401. An owner's route
+    called by anyone else is 403. An unknown route is 404. A request that clashes with the box's state is
+    409. Too many wrong pairing codes are 429.
 
     ## Who may call what
 
     A request from the box itself (over the Unix socket, or from `127.0.0.1` or `::1` with no proxy header
-    such as `X-Forwarded-For`, `Forwarded`, `X-Real-IP`, `X-Forwarded-Host` or `Tailscale-User-Login`) is
-    the box's own screen and needs no token.
+    such as `X-Forwarded-For`, `Forwarded`, `X-Real-IP`, `X-Forwarded-Host` or `Tailscale-User-Login`, a
+    `Host` of `127.0.0.1`, `localhost` or `[::1]`, and no `Origin` except the box's own address) is the
+    box's own screen and needs no token. A helper on the box that runs as `nobody` or as a task user may
+    read, start tasks and answer approvals like the screen, but never uses the owner's routes.
 
     Every other request must carry a paired device's token, as `Authorization: Bearer <token>` or
-    `?access_token=<token>`. Without one the answer is 401. Three things are open: `GET /health`,
-    `POST /pair` and the portal's own pages.
+    `?access_token=<token>`. Without one the answer is 401. Open without a token: `GET /health` (a short
+    answer), `POST /pair`, the work-account sign-in routes under `/sso`, and the portal's own pages.
 
-    Some routes are the owner's: pairing codes and devices, setup, settings, the vault, apps on and off, the
-    owner, folders on a task, Keep and Undo Keep. From outside the box they need a device that was paired
-    as the owner, else 403.
+    An app's page, served at `/t/<app>/`, is sandboxed and gets a window token from
+    `POST /apps/{id}/window` instead. That token reaches only the app's own routes, `GET /tasks`,
+    `GET /tasks/{id}`, `GET /approvals`, and answers to the app's own requests. Anything else is 403.
+
+    Some routes are the owner's: pairing codes and devices, setup, settings, app permissions, the vault,
+    apps on and off, the owner, folders on a task, Keep and Undo Keep, remote access and Quick Start. From
+    outside the box they need a device that was paired as the owner, else 403. On a GurtOS Business box,
+    people, the policy and the kill switch are for an admin or the owner, and the audit is for an
+    auditor, an admin or the owner.
 
     The box listens on `127.0.0.1` by default. `BOX_LISTEN` changes the address.
 
     ## Cross-origin requests
 
-    The portal is served from the same address as the API and needs no CORS. A browser app on another
-    origin needs `BOX_ORIGINS` (a comma-separated list of origins, or `*`) in the box's environment.
+    The portal is served from the same address as the API and needs no CORS. The GurtOS web app's origin
+    (`BOX_APP`, `https://app.gurtos.com` by default) is always allowed. A browser app on another origin
+    needs `BOX_ORIGINS` (a comma-separated list of origins, or `*`) in the box's environment. A sandboxed
+    app page has the origin `null`, which is allowed too. The box allows the `content-type`,
+    `authorization` and `x-box-person` request headers. A token is required either way.
+
+    ## Remote access
+
+    The remote access, push and Quick Start routes work against a relay. A hosted relay is not running
+    during the preview, so point the box at a relay you run, with `BOX_RELAY` or `PUT /remote/relay`.
 
     ## Not under /api
 
     App routes are served at `/t/<app>/...` and webhooks at `/hook/<app>/<name>`. Neither answers under
-    the `/api` prefix.
+    the `/api` prefix. Every HTML or XML answer from an app route carries
+    `Content-Security-Policy: sandbox` without `allow-same-origin`, so the page has no origin of its own.
   license:
-    name: Licence to be decided
+    name: Apache-2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0
 servers:
   - url: http://127.0.0.1:7700/api
     description: On the box itself (the default listen address)
@@ -79,6 +99,16 @@ tags:
     description: Start tasks from outside. Served without the /api prefix.
   - name: Personal
     description: 'Preview. The owner of a GurtOS Personal box and their real folders: work on a copy, then Keep or Undo.'
+  - name: Business
+    description: 'Preview. People, roles, the policy that routes approvals, the audit and the kill switch on a GurtOS Business box.'
+  - name: Sign-in
+    description: 'Preview. Work-account sign-in (OpenID Connect) on a GurtOS Business box. These routes are open: they say nothing private.'
+  - name: Remote access
+    description: A box's own https address through a relay, and which relay it uses. A hosted relay is not running during the preview.
+  - name: Push notifications
+    description: Notifications on a phone when a task needs an OK. They go through the relay, so they need remote access on.
+  - name: Quick Start
+    description: Set up a new computer from one you own, with your phone as the bridge. It uses a relay.
 
 paths:
   /tasks:
@@ -119,13 +149,20 @@ paths:
       description: |
         Creates a task and starts it straight away. The response is the task after it started, usually
         `running`. If the task cannot start (for example, a Droid task when the vault has no model key,
-        `ANTHROPIC_API_KEY` or `FACTORY_API_KEY`), the task is returned as `failed` with an `error`.
+        `ANTHROPIC_API_KEY` or `FACTORY_API_KEY`, or a workspace that already holds 499 finished tasks), the
+        task is returned as `failed` with an `error` in plain words. A Droid task started while a new
+        computer is still downloading Droid stays `queued` and starts once Droid is there. While the agents
+        are paused, every new task stays `queued`.
 
         Defaults: `workspace` is `home`, `worker` is `droid`, `tools` are empty and `source` is `api`. A task
-        that names no `budgetCents` gets Settings `defaultBudgetCents` (0 unless changed). A task that names
+        that names no `budgetCents` gets Settings `defaultBudgetCents` (100 unless changed). A task that names
         no `hosts` gets none, or Settings `defaultHosts` when `networkDefault` is `allowlist`. The workspace
         must exist and every tool must be installed. A field the box does not know is a 400 that names it.
-        Host names are not checked here; the proxy checks them on every connection.
+        The title is at most 200 characters, the prompt at most 100,000, `budgetCents` a whole number from 0
+        to 100000 ($1,000), and `hosts` at most 50 names. A host is a name like `example.com`,
+        `*.example.com` or `example.com:8080`; it is never `localhost`, a loopback or link-local address, or a
+        whole top-level domain. From a paired device, `source` is always `phone:<the device's name>`,
+        whatever the body says.
 
         **Personal (preview), owner only.** Send `folder`, an absolute path to one of the owner's folders, or
         `folders`, a list of up to 10, instead of `workspace`. A folder must be in the owner's home or in
@@ -151,6 +188,17 @@ paths:
                       items: { type: string }
                       maxItems: 10
                       description: 'Personal (preview), owner only: several real folders in one task. Send `folder` or `folders`, not both.'
+                    files:
+                      type: array
+                      minItems: 1
+                      maxItems: 8
+                      description: Files shared to a new task, 1 to 8, 5 MB in all. They go to a new workspace of their own, so the task cannot also name a `workspace`, `folder` or `folders`. The log keeps names and sizes, never contents.
+                      items:
+                        type: object
+                        required: [name, data]
+                        properties:
+                          name: { type: string, description: A plain file name, not a path. }
+                          data: { type: string, description: The file's contents as base64. }
             example:
               title: Summarise the meeting notes
               prompt: Read notes.md and write a five-line summary to summary.md.
@@ -163,12 +211,17 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Task' }
         '400':
-          description: A missing title or prompt, an unknown field, workspace, worker or tool, or a folder agents may not use.
+          description: A missing title or prompt, a value over its limit, an unknown field, workspace, worker, model or tool, a host that is not a host name, or a folder agents may not use.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
               example: { error: 'no workspace notes' }
         '403': { $ref: '#/components/responses/Forbidden' }
+        '413':
+          description: The body is over 10 MB.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
 
   /tasks/{id}:
     get:
@@ -211,8 +264,16 @@ paths:
         The diff is cut at 200,000 bytes. An undone task's files are deleted, so its diff is empty and
         carries `undone: true`. For a task on several folders, each path starts with its folder's label and
         `roots` maps each label to the real folder.
+
+        With `at`, the task's files as they were right after that log event, read from the flight recorder
+        (`GET /tasks/{id}/replay` lists the events). A file over 1 MB then has `big: true` and no diff.
       parameters:
         - $ref: '#/components/parameters/TaskId'
+        - name: at
+          in: query
+          required: false
+          description: A log event's `seq`. Show the task's layer as it was right after that event.
+          schema: { type: integer, minimum: 1 }
       responses:
         '200':
           description: The task's changes.
@@ -224,6 +285,53 @@ paths:
                   - { path: a.txt, change: modified }
                   - { path: summary.md, change: added }
                 diff: "--- a/a.txt\n+++ b/a.txt\n@@ -1 +1 @@\n-original a\n+changed by A\n"
+        '400':
+          description: No task with this id, or an `at` that is not an event number.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /tasks/{id}/replay:
+    get:
+      tags: [Tasks]
+      operationId: getTaskReplay
+      summary: List the events that changed a task's files
+      description: |
+        The flight recorder. For each log event after which the task's own files were different, the files
+        that changed. Pass an event's `seq` as `at` to `GET /tasks/{id}/diff` to see the files as they were
+        right after it. A file over 1 MB is noted with `big: true` and not kept. A task keeps at most 50 MB
+        of snapshots, after which `capped` is true and nothing more is recorded.
+      parameters:
+        - $ref: '#/components/parameters/TaskId'
+      responses:
+        '200':
+          description: The recorded points.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [points]
+                properties:
+                  points:
+                    type: array
+                    items:
+                      type: object
+                      required: [seq, changes]
+                      properties:
+                        seq: { type: integer, description: The log event after which the files changed. }
+                        changes:
+                          type: array
+                          items:
+                            allOf:
+                              - $ref: '#/components/schemas/Change'
+                              - type: object
+                                properties:
+                                  big: { type: boolean, const: true, description: Over 1 MB, so its content is not kept. }
+                  capped: { type: boolean, const: true }
+              example:
+                points:
+                  - { seq: 14, changes: [{ path: summary.md, change: added }] }
+                  - { seq: 19, changes: [{ path: summary.md, change: modified }] }
         '400':
           description: No task with this id.
           content:
@@ -243,6 +351,10 @@ paths:
 
         Undo removes file changes on the box. It cannot recall something a task already sent out through a
         tool or an allowed host.
+
+        **Personal (preview).** Undoing a task that was kept first takes its changes out of the owner's real
+        folder, as `POST /tasks/{id}/unkeep` does. That is the owner's, so anyone else gets 403. If the owner
+        edited a kept file since, nothing changes and the answer is 409.
       parameters:
         - $ref: '#/components/parameters/TaskId'
       responses:
@@ -256,6 +368,13 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409':
+          description: The task was kept and the owner edited a kept file since. Nothing changed.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+              example: { error: 'You changed intro.md since you kept "Fix the intro", so GurtOS left your folder as it is.' }
 
   /tasks/{id}/keep:
     post:
@@ -270,8 +389,11 @@ paths:
         `POST /tasks/{id}/unkeep`.
 
         If the owner changed, created or deleted any of the same files since the task started, nothing is
-        applied in any folder and the response lists the clashing paths. The task's `review` becomes `kept`
-        or `conflict`, and a `keep` event goes into the log.
+        applied in any folder and the response lists the clashing paths. A file that cannot be written (a full
+        disk, no permission) puts back the files already written and says which file and why. A folder the
+        task removed is listed file by file; Keep removes those files, then the folder once it is empty, so a
+        file the owner added there meanwhile stays. The task's `review` becomes `kept` or `conflict`, and a
+        `keep` event goes into the log.
       parameters:
         - $ref: '#/components/parameters/TaskId'
       responses:
@@ -303,7 +425,7 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
-              example: { error: 'task t3k9x2a1b2 is running; only a done task can be kept' }
+              example: { error: '"Fix the intro" is still working; Keep is for when it is done.' }
         '403': { $ref: '#/components/responses/Forbidden' }
 
   /tasks/{id}/unkeep:
@@ -348,7 +470,7 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
-              example: { error: 'task t3k9x2a1b2 has no Keep to undo' }
+              example: { error: '"Fix the intro" has no Keep to undo.' }
         '403': { $ref: '#/components/responses/Forbidden' }
 
   /owner:
@@ -356,7 +478,7 @@ paths:
       tags: [Personal]
       operationId: getOwner
       summary: Get the box's owner
-      description: Preview. On a GurtOS Personal box, the owner's Linux user, uid and home folder. On a Server box, `null`.
+      description: Preview. On a GurtOS Personal box, the owner's Linux user, the account's full name (empty when unset), uid and home folder. On a Server box, `null`.
       responses:
         '200':
           description: The owner, or null.
@@ -366,7 +488,7 @@ paths:
                 oneOf:
                   - type: 'null'
                   - $ref: '#/components/schemas/Owner'
-              example: { user: alex, uid: 1000, home: /home/alex }
+              example: { user: alex, name: Alex Rivera, uid: 1000, home: /home/alex }
     put:
       tags: [Personal]
       operationId: setOwner
@@ -375,7 +497,8 @@ paths:
         Preview, owner only. Makes an existing account the owner. It must be a person's account: uid 1000 to
         29999 or 40000 and up, not root, a system account or a task user. The choice is saved in
         `BOX_HOME/owner.json` and survives a restart, and the box then reports itself as GurtOS Personal.
-        Once an owner is set, changing it takes the box's Unix socket or a phone paired as the owner.
+        Once an owner is set, changing it takes the box's Unix socket or a phone paired as the owner, so a
+        request over the box's TCP port from the box's own screen gets 403.
       requestBody:
         required: true
         content:
@@ -419,13 +542,18 @@ paths:
       tags: [Approvals]
       operationId: listApprovals
       summary: List approvals
-      description: Every approval, or only those in one state. `state=pending` is the inbox.
+      description: Every approval, or only those in one state. `state=pending` is the inbox. With `for=me` on a GurtOS Business box, only the pending approvals the calling person may answer now (an empty list when no person is calling).
       parameters:
         - name: state
           in: query
           required: false
           description: Only approvals in this state.
           schema: { $ref: '#/components/schemas/ApprovalState' }
+        - name: for
+          in: query
+          required: false
+          description: '`me`: the Business "waiting for me" list.'
+          schema: { type: string, const: me }
       responses:
         '200':
           description: The approvals.
@@ -455,11 +583,17 @@ paths:
         From a paired device, the log records the device's name as who answered, whatever `by` says. `by`
         is used only when the box's own screen answers. Percent-encode an id that holds spaces, such as
         one made from Droid's own question.
+
+        An Apple Watch token may approve only up to Settings `watchLimitCents`, never on a Business box,
+        never a Shopper purchase, and only with `auth: wrist`. Otherwise the answer is 403 with
+        `needs: iphone` and the request keeps waiting. A Watch may always deny. On a GurtOS Business box
+        only a person answers, never their own request, only what the policy sends to them and only within
+        their limit. A refusal is 403 with the reason, and the request keeps waiting.
       parameters:
         - name: id
           in: path
           required: true
-          description: The approval id, `<task id>.<key>`.
+          description: 'The approval id. `<task id>.budget.<action>` is the box''s own spend question, `<task id>.task.<key>` a question the task asked, `<task id>.tool.<call>.ask.<hash>` a question a tool asked.'
           schema: { type: string }
           example: t3k9x2a1b2.budget.example.spend:9f2c41d07a6be315
       requestBody:
@@ -476,6 +610,10 @@ paths:
                 by:
                   type: string
                   description: Who answered, for the log, when the box's own screen answers. Default `api`. Ignored from a paired device.
+                auth:
+                  type: string
+                  enum: [face-id, touch-id, passcode, wrist]
+                  description: How a native app says it checked that it was you. The log keeps it as reported, never as proof.
             example: { approved: true, by: portal }
       responses:
         '200':
@@ -488,8 +626,20 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
-              example: { error: 'no approval t3k9x2a1b2.deploy' }
+              example: { error: 'no approval t3k9x2a1b2.task.deploy' }
         '401': { $ref: '#/components/responses/Unauthorized' }
+        '403':
+          description: A Watch token over its limit, a Business refusal, or an app's window answering another app's request. The Watch and window refusals carry `needs`.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [error]
+                properties:
+                  error: { type: string }
+                  needs: { type: string, enum: [iphone, shell], description: 'Where it may be answered instead: `iphone`, or `shell` (GurtOS itself, not an app window).' }
+                  task: { type: string, description: 'With `needs: shell`, the task whose request it is.' }
+              example: { error: 'Approve this on your iPhone: the Watch approves up to $25.00.', needs: iphone }
 
   /log:
     get:
@@ -580,21 +730,70 @@ paths:
                 type: array
                 items: { $ref: '#/components/schemas/AppEntry' }
               example:
-                - name: wallet
-                  title: 'Agent wallet (Solana devnet, test money)'
+                - name: example
+                  title: Example
                   href: /
-                  track: wallet
-                  id: wallet
+                  track: example
+                  id: example
+                  description: A sample app for developers that shows every way an app can plug into GurtOS. It spends test money only.
                   status: enabled
                   enabled: true
                   access:
-                    tools: [{ name: wallet.pay, description: Pay an x402 API from the box's wallet. }]
-                    jobs: []
+                    tools: [{ name: example.spend, description: 'Spend test money (no real payment). Input: { cents, on }.' }]
+                    jobs: [example.echo]
                     hosts: []
-                    secrets: [{ name: WALLET_SOLANA_KEY, set: true }]
-                    triggers: []
-                    routes: ['GET /']
-                  ui: [{ name: wallet, title: 'Agent wallet (Solana devnet, test money)', href: / }]
+                    secrets: [{ name: DEMO_SECRET, set: false }]
+                    triggers: [start, inbox, hourly]
+                    routes: ['GET /', 'GET /whoami', 'GET /secret-check', 'POST /start']
+                  ui: [{ name: example, title: Example, href: / }]
+
+  /apps/{id}/window:
+    post:
+      tags: [Apps]
+      operationId: openAppWindow
+      summary: Get a token for an app's window
+      description: |
+        The portal calls this to open an app's page. The box's own screen or a paired device may call it, and
+        an auditor too, since it changes nothing. It returns a token that lasts 12 hours, or until the device
+        that opened it is removed. Open the page at `/t/<app>/?access_token=<token>`. The box adds a script
+        at the top of each HTML page that puts the token on the page's own `fetch` calls. A request the
+        browser makes by itself (a module script, an image) carries no header, so add `location.search` to
+        its address.
+
+        The page runs sandboxed with no origin of its own, so it can neither use the box's screen nor read
+        the opener's token. The window token reaches only:
+
+        - the app's own routes, `/t/<app>` and everything under it, as whoever opened the window (the
+          `x-box-caller` header stays what it was)
+        - `GET /tasks` and `GET /tasks/{id}`
+        - `GET /approvals`
+        - `POST /approvals/{id}` for a request of the app's own tasks
+
+        Anything else is a 403 that says so. An approval of another app's task comes back as 403 with
+        `needs: shell` and the task's `id`, and the portal opens that task's window for a person to answer.
+        An expired token, or one whose device was removed, is a 401. The box keeps at most 1000 open
+        windows, and the oldest goes first.
+      parameters:
+        - $ref: '#/components/parameters/AppId'
+      responses:
+        '200':
+          description: The window's token.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [token, expiresAt]
+                properties:
+                  token: { type: string, description: 'The letter `w` and 48 hexadecimal characters.' }
+                  expiresAt: { type: string, format: date-time }
+              example: { token: w3f9a1c2e7b84d05a6c19e0b2f7d83a4c5e61b09d2f8a7c31, expiresAt: '2026-10-24T21:12:03.000Z' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404':
+          description: The app is not installed or is off.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+              example: { error: 'example is not on' }
 
   /apps/{id}/enable:
     post:
@@ -641,12 +840,84 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
 
+  /permissions:
+    get:
+      tags: [Apps]
+      operationId: listPermissions
+      summary: List what each app may do
+      description: |
+        Owner only. For each app, what it declares it needs (the keys it reads, tools that spend money,
+        routes strangers may call) plus what the box has seen it use (hosts its tasks reach, agents with a
+        shell, the owner's folders), and whether the owner allowed each item. Nothing is turned off until the
+        owner turns it off. The box enforces each "off" where it already draws the line: the vault, the
+        broker, task creation and open routes.
+      responses:
+        '200':
+          description: One entry per app.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/AppPermissions' }
+              example:
+                - app: example
+                  title: Example
+                  answered: false
+                  perDayCents: null
+                  diskBytes: 5368709120
+                  items:
+                    - { id: 'key:DEMO_SECRET', kind: key, text: 'Use the key DEMO_SECRET (through GurtOS; the app never sees it)', allowed: true }
+                    - { id: money, kind: money, text: Spend money (each task within its budget), allowed: true }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /permissions/{id}:
+    put:
+      tags: [Apps]
+      operationId: setPermissions
+      summary: Change what one app may do
+      description: |
+        Owner only. Sends the owner's answers for one app. Send only what changes. The app is marked
+        answered, and the change is a `note` event in the log.
+      parameters:
+        - $ref: '#/components/parameters/AppId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                deny:
+                  type: array
+                  items: { type: string }
+                  description: The ids of the items to turn off, such as `money` or `host:example.com`. Replaces the list.
+                perDayCents: { type: ['integer', 'null'], minimum: 0, description: 'The most the app may spend in a day (UTC), in US cents. `null` for no daily limit.' }
+                diskBytes: { type: ['integer', 'null'], minimum: 1048576, description: 'The most disk its tasks may hold, at least 1 MB. `null` for the default, 5 GB.' }
+            example: { deny: ['host:example.com'], perDayCents: 500 }
+      responses:
+        '200':
+          description: The app's permissions after the change.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AppPermissions' }
+        '400':
+          description: A bad value.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404':
+          description: No app with this id.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
   /system:
     get:
       tags: [Setup and settings]
       operationId: getSystem
       summary: Facts about the box
-      description: The product, edition, version and build, hostname, time zone, network, box id and name, owner, whether a model key is set, start time and uptime. For first-run setup and Settings.
+      description: The product, edition, version and build, hostname, time zone, network, box id and name, owner, whether a model key is set and where the Droid download stands, whether agents are paused, start time and uptime. A Business box adds its company. For first-run setup and Settings.
       responses:
         '200':
           description: The facts.
@@ -654,12 +925,35 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/SystemFacts' }
 
+  /update:
+    get:
+      tags: [Setup and settings]
+      operationId: getUpdate
+      summary: Where a system update stands
+      description: |
+        How this computer updates, read from what `box-update` leaves behind. Only an installed image has
+        update slots A and B. A checkout installed with `core/install.sh`, or the install disc running live,
+        has none, and its `state` is `unknown`. Nothing looks for updates by itself yet, so `automatic` is
+        always `false` and Settings `autoUpdate` and `updateChannel` change nothing. See
+        [Update and roll back](/docs/guides/update-and-roll-back/).
+      responses:
+        '200':
+          description: The version and the update state.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UpdateState' }
+              examples:
+                image:
+                  value: { version: 0.1.0, build: 3c4626c, state: current, slot: a, install: image, slots: true, automatic: false, default: a, other: { slot: b } }
+                checkout:
+                  value: { version: 0.1.0, build: dev, state: unknown, install: checkout, slots: false, automatic: false }
+
   /setup:
     get:
       tags: [Setup and settings]
       operationId: getSetup
       summary: First-run setup state
-      description: Until `done` is true, the box's own screen shows the setup steps. A box that already ran tasks when setup arrived is `migrated` and counts as done.
+      description: Until `done` is true, the box's own screen shows the setup steps. A box that already ran tasks when setup arrived is `migrated` and counts as done. `modelKey` is false until the vault holds a model key; without one no Droid task can start. `suggested` lists the usual step ids in order. The box accepts any id.
       responses:
         '200':
           description: The setup state.
@@ -672,7 +966,7 @@ paths:
       tags: [Setup and settings]
       operationId: recordSetupStep
       summary: Record a setup step
-      description: Owner only. Marks a step as taken. `suggested` in `GET /setup` lists the usual ids. `data` is at most 4 KB and holds answers, never keys; keys go to `PUT /vault/{name}`. The log records the step id only.
+      description: Owner only. Marks a step as taken. `suggested` in `GET /setup` lists the usual ids; the box accepts any id. `data` is at most 4 KB and holds answers, never keys; keys go to `PUT /vault/{name}`. The log records the step id only.
       requestBody:
         required: true
         content:
@@ -723,6 +1017,82 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/SetupState' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /setup/doctor:
+    get:
+      tags: [Setup and settings]
+      operationId: setupDoctor
+      summary: What a new computer still needs
+      description: Owner only. Lists what is missing before this computer is ready. Used when an agent sets up a computer from another one.
+      responses:
+        '200':
+          description: Whether it is ready, and what is missing.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok, missing]
+                properties:
+                  ok: { type: boolean }
+                  missing:
+                    type: array
+                    items:
+                      type: object
+                      required: [id, text]
+                      properties:
+                        id: { type: string, enum: [key, droid, owner, phone] }
+                        text: { type: string }
+              example: { ok: false, missing: [{ id: key, text: 'No model key yet: set ANTHROPIC_API_KEY or FACTORY_API_KEY.' }] }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /setup/code:
+    post:
+      tags: [Setup and settings]
+      operationId: makeSetupCode
+      summary: Make a code for setting up from another computer
+      description: |
+        Only on the box's own screen (anyone else gets 403), and only while setup is open (else 409). Makes
+        a one-time code valid for 30 minutes and opens a setup port, 7701 or `BOX_SETUP_PORT`, so another
+        computer can reach the API. The port is plain HTTP, and the image's firewall opens it to private
+        networks only, as it does port 7700. Set a cloud computer up from its provider's console, or over a
+        private network such as Tailscale. That computer trades the code at `POST /pair` with `kind: "setup"` for a
+        token that works until setup finishes, or for two hours at most. `POST /setup/stop`, or finishing
+        setup, closes the port and ends those tokens. See `AGENT-SETUP.md` in the source tree.
+      responses:
+        '200':
+          description: The code and where the setup port answers.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    required: [code, expiresAt]
+                    properties:
+                      code: { type: string, description: Eight hexadecimal characters. Works once. }
+                      expiresAt: { type: string, format: date-time }
+                  - $ref: '#/components/schemas/SetupChannel'
+              example: { code: a1b2c3d4, expiresAt: '2026-10-24T09:47:03.000Z', open: true, until: '2026-10-24T11:17:03.000Z', port: 7701, urls: ['http://192.0.2.10:7701'], devices: [] }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409':
+          description: Setup is finished. Open it again first.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /setup/stop:
+    post:
+      tags: [Setup and settings]
+      operationId: stopSetupPort
+      summary: Close the setup port
+      description: Owner only. Closes the setup port and revokes every setup token. Does nothing if the port is closed.
+      responses:
+        '200':
+          description: The setup port, now closed.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SetupChannel' }
+              example: { open: false }
         '403': { $ref: '#/components/responses/Forbidden' }
 
   /settings:
@@ -798,6 +1168,10 @@ paths:
         Owner only. Sets or replaces one key in `/etc/box/vault.env`, which stays readable by root only. The
         value is one line of up to 8192 characters. The log records that the name was set, never the value.
         No route reads a value back. The box uses the new value straight away.
+
+        An `ANTHROPIC_API_KEY` is tried first with a free call to Anthropic. A key Anthropic rejects is a
+        400 and is not saved. If Anthropic cannot be reached, the key is saved and `check` says `unchecked`.
+        A `FACTORY_API_KEY` is saved unchecked.
       parameters:
         - name: name
           in: path
@@ -826,8 +1200,11 @@ paths:
                 properties:
                   name: { type: string }
                   setAt: { type: string, format: date-time }
+                  check: { type: string, enum: [ok, unchecked], description: For a model key, whether the provider accepted it. }
+                  checked: { type: boolean, description: For a model key, true when the provider accepted it. }
+                  message: { type: string, description: For a model key, a sentence for people. }
         '400':
-          description: A bad name or value. The message never repeats the value.
+          description: A bad name or value, or a model key the provider rejected. The message never repeats the value.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
@@ -839,27 +1216,39 @@ paths:
       operationId: getHealth
       summary: Check the box service
       security: []
-      description: Answers once the box has replayed its log, loaded its apps and opened the API. The OS image's update check waits for `ok` here before it keeps a new system.
+      description: |
+        Answers once the box has replayed its log, loaded its apps and opened the API. The OS image's update
+        check waits for `ok` here before it keeps a new system. Without a token, from outside the box, the
+        answer is only `ok`, `startedAt` and `paused`. From the box's own screen, or with a device token, it
+        also holds the rest.
       responses:
         '200':
           description: The box is up.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Health' }
-              example:
-                ok: true
-                startedAt: '2026-10-24T09:00:01.210Z'
-                resumed: [t3k9x2a1b2]
-                tasks: 12
-                tools: [example.spend, wallet.quote, wallet.pay]
-                spacetime: { port: 3000, database: box }
+              examples:
+                paired:
+                  summary: From the box or with a device token
+                  value:
+                    ok: true
+                    startedAt: '2026-10-24T09:00:01.210Z'
+                    paused: false
+                    cleanStart: true
+                    resumed: [t3k9x2a1b2]
+                    tasks: 12
+                    tools: [example.spend]
+                    spacetime: { port: 3000, database: box }
+                open:
+                  summary: With no token, from outside
+                  value: { ok: true, startedAt: '2026-10-24T09:00:01.210Z', paused: false }
 
   /boxes:
     get:
       tags: [Boxes]
       operationId: listBoxes
       summary: List this box and its peers
-      description: This box first, with `self` set and its `url` from `BOX_URL`, then each peer named in the `BOX_PEERS` environment variable, as given there.
+      description: This box first, with `self` set and its `url` from `BOX_URL` (or its remote access address), then each peer named in the `BOX_PEERS` environment variable, as given there.
       responses:
         '200':
           description: The boxes.
@@ -880,8 +1269,10 @@ paths:
       description: |
         Owner only. A one-time code for the QR code on the box's own screen. It works once and expires after
         5 minutes. With `owner: true`, the phone that redeems it becomes an owner device; the flag is ignored
-        from anyone who is not already the owner. When `BOX_URL` is set, `url` is absolute, so the QR code
-        opens on a phone. `POST /pair/new` is the same route under its older name.
+        from anyone who is not already the owner. `url` opens the GurtOS web app (`BOX_APP`) with the code.
+        `boxUrl` is the box's own pairing page, and is there only when `BOX_URL` or remote access gives the
+        box an address. With remote access off, the portal's QR code opens `boxUrl` on the home network.
+        `POST /pair/new` is the same route under its older name.
       requestBody:
         required: false
         content:
@@ -899,7 +1290,8 @@ paths:
               schema: { $ref: '#/components/schemas/PairCode' }
               example:
                 code: 7f3a9c21
-                url: 'http://box.local:7700/pair#7f3a9c21'
+                url: 'https://app.gurtos.com/pair#code=7f3a9c21&lan=box.local%3A7700&n=gurt-3f9a1c'
+                boxUrl: 'http://box.local:7700/pair#7f3a9c21'
                 expiresAt: '2026-10-24T09:17:03.000Z'
                 box: { id: gurt-3f9a1c, name: gurt-3f9a1c }
         '403': { $ref: '#/components/responses/Forbidden' }
@@ -910,7 +1302,11 @@ paths:
       operationId: redeemPairingCode
       summary: Pair a phone
       security: []
-      description: A phone trades a pairing code for its own device token. The code stops working once used. Keep the token; the box does not show it again. Open without a token.
+      description: |
+        A phone trades a pairing code for its own device token. The code stops working once used. Keep the
+        token; the box does not show it again. Open without a token, so the body is capped at 1 MB. A code read
+        off a screen may be typed as `8120-D849`; case and dashes do not matter. Wrong codes are limited to 5 a
+        minute from one address and 60 a minute from everyone together, then 429.
       requestBody:
         required: true
         content:
@@ -921,6 +1317,11 @@ paths:
               properties:
                 code: { type: string, description: The code from `POST /pair/start`. }
                 name: { type: string, maxLength: 40, description: 'A name for the phone, shown in the log when it answers. Default `phone`.' }
+                kind:
+                  type: string
+                  enum: [web, iphone, mac, setup]
+                  description: 'What the device says it is. Default `web`. It is never used for a security decision. `setup` goes with a code from `POST /setup/code`, and only with one.'
+                identity: { type: string, pattern: '^[0-9a-fA-F]{64}$', description: 'Optional. The phone''s SpacetimeDB identity, so the box vouches for it at once.' }
             example: { code: 7f3a9c21, name: My phone }
       responses:
         '200':
@@ -929,11 +1330,21 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/PairResult' }
         '400':
-          description: The code is wrong, used or expired.
+          description: The code is wrong, used or expired, or `kind` is not allowed.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
               example: { error: 'bad or expired pairing code' }
+        '413':
+          description: The body is over 1 MB.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '429':
+          description: Too many wrong codes from this address, or from everyone together.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
 
   /pair/identity:
     post:
@@ -973,6 +1384,79 @@ paths:
               schema: { $ref: '#/components/schemas/Error' }
         '401':
           description: Not the box's own screen, and no paired device's token.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '403':
+          description: An Apple Watch token. A Watch answers through the HTTP API, where its limit applies.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /pair/self:
+    delete:
+      tags: [Pairing]
+      operationId: forgetSelf
+      summary: Remove this device
+      description: A paired device stops its own token and drops its push subscription. Its next request gets 401. Any paired device may do this, not only the owner's.
+      responses:
+        '200':
+          description: The device is revoked.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id, revoked]
+                properties:
+                  id: { type: string }
+                  revoked: { type: boolean, const: true }
+        '403':
+          description: The request carries no paired device token.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /devices/self/watch:
+    post:
+      tags: [Pairing]
+      operationId: makeWatchToken
+      summary: Make an Apple Watch token
+      description: |
+        Only a device that paired as `iphone`. Returns a separate token for its Apple Watch, with the
+        iPhone's Business person and nothing more. It is never the owner's, so Settings, keys, setup, apps and
+        devices are refused. It cannot vouch for a SpacetimeDB identity, and it approves only up to Settings
+        `watchLimitCents`. A new Watch token replaces the old one, three an hour per iPhone. Revoking the
+        iPhone revokes it too.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string, maxLength: 40, description: 'The Watch''s name. Default `<phone name>''s Watch`.' }
+      responses:
+        '200':
+          description: The Watch's token.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [token, device]
+                properties:
+                  token: { type: string }
+                  device:
+                    type: object
+                    properties:
+                      id: { type: string }
+                      name: { type: string }
+        '403':
+          description: The caller is not the iPhone app.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '429':
+          description: This iPhone added a Watch three times this hour.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
@@ -1019,6 +1503,900 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404':
           description: No device with this id.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /remote:
+    get:
+      tags: [Remote access]
+      operationId: getRemote
+      summary: Remote access state
+      description: |
+        Whether the box has its own https address through a relay, and whether the tunnel is up. The box
+        checks the address again at most every 30 seconds, so a dropped tunnel shows. A hosted relay is not
+        running during the preview. Point the box at a relay you run with `PUT /remote/relay` or `BOX_RELAY`.
+      responses:
+        '200':
+          description: The state.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RemoteState' }
+              example: { enabled: true, name: rosa, url: 'https://rosa.box.example.com', state: connected, relay: box.example.com }
+    post:
+      tags: [Remote access]
+      operationId: enableRemote
+      summary: Turn remote access on
+      description: |
+        Owner only. Asks the relay to enroll `name`, starts the tunnel and a Let's Encrypt certificate on the
+        box, and returns at once with `state: starting`. Poll `GET /remote` until `connected`, which takes 5
+        to 60 seconds for a new certificate. TLS ends on the box, so the relay cannot read the traffic.
+        Requests through the address carry `X-Forwarded-For`, so they need a device token like any outside
+        request.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string, minLength: 3, maxLength: 30, pattern: '^[a-z0-9]+(-[a-z0-9]+)*$', description: 'Lowercase letters, digits and single hyphens, not at either end. The relay reserves some names.' }
+            example: { name: rosa }
+      responses:
+        '200':
+          description: The state, usually `starting`.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RemoteState' }
+        '400':
+          description: A bad name.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409':
+          description: The name is taken or reserved, or this box already has another name. Turn remote access off first to change it.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '429':
+          description: The relay is rate limiting this box.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '502':
+          description: The relay cannot be reached, or sent an answer the box does not accept.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+    delete:
+      tags: [Remote access]
+      operationId: disableRemote
+      summary: Turn remote access off
+      description: Owner only. Stops the tunnel and the certificate service, releases the name at the relay and removes the box's relay secret from the vault. The certificate is kept for next time.
+      responses:
+        '200':
+          description: The state, now off.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/RemoteState'
+                  - type: object
+                    properties:
+                      released: { type: boolean, description: Whether the relay released the name. If not, it expires after 30 days without the tunnel. }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /remote/name/{name}:
+    get:
+      tags: [Remote access]
+      operationId: checkRemoteName
+      summary: Check whether a name is free
+      description: Owner only. Asks the relay whether it would give this name. A name that breaks the rules is answered without asking.
+      parameters:
+        - name: name
+          in: path
+          required: true
+          schema: { type: string }
+          example: rosa
+      responses:
+        '200':
+          description: Whether the name is available.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [name, available]
+                properties:
+                  name: { type: string }
+                  available: { type: boolean }
+                  reason: { type: string, description: Why not, in words. }
+              example: { name: rosa, available: true }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '502':
+          description: The relay cannot be reached.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /remote/relay:
+    get:
+      tags: [Remote access]
+      operationId: getRelay
+      summary: The relay in use
+      description: The relay the box uses, the box's default (`BOX_RELAY`, else `https://box.gurtos.com`, which is not running during the preview), and whether the owner chose this one.
+      responses:
+        '200':
+          description: The relay.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [url, default, custom]
+                properties:
+                  url: { type: string, example: 'https://relay.example.com' }
+                  default: { type: string }
+                  custom: { type: boolean, description: True when the owner chose `url` with `PUT /remote/relay`. }
+    put:
+      tags: [Remote access]
+      operationId: setRelay
+      summary: Choose a relay
+      description: |
+        Owner only, and only while remote access is off. Points the box, its pushes and Quick Start at a relay
+        you run (see [Run your own relay](/docs/guides/self-host/)). The address must be `https://`, a public
+        host name (not an IP address), with no path, query or login, and it must resolve only to public
+        addresses. It is saved in `BOX_HOME/relay.json`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [url]
+              properties:
+                url: { type: ['string', 'null'], description: 'The relay''s address. `null` goes back to the default.' }
+            example: { url: 'https://relay.example.com' }
+      responses:
+        '200':
+          description: The relay now in use.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [url, default, custom]
+                properties:
+                  url: { type: string }
+                  default: { type: string }
+                  custom: { type: boolean }
+        '400':
+          description: A bad address, with the reason.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+              example: { error: 'url: the relay must be https' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409':
+          description: Remote access is on. Turn it off first.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /push:
+    get:
+      tags: [Push notifications]
+      operationId: getPush
+      summary: Whether this phone has notifications on
+      description: For the calling device. `remote` says whether the box has remote access on, which pushes need.
+      responses:
+        '200':
+          description: The state.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [subscribed, remote]
+                properties:
+                  subscribed: { type: boolean }
+                  remote: { type: boolean }
+    put:
+      tags: [Push notifications]
+      operationId: setPush
+      summary: Turn notifications on for this phone
+      description: |
+        A paired device only; the box's own screen gets 403. The app subscribes once with the relay gateway's
+        VAPID key and gives the box the subscription and a 32-byte key it made for this box. On a new approval
+        the box pushes to the phones that should answer: on Business, the people the request is routed to;
+        otherwise phones paired as the owner. Settings `quietHours` hold pushes back. The box encrypts each
+        push for the phone (RFC 8291), so the gateway forwards bytes it cannot read.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [subscription, key]
+              properties:
+                subscription:
+                  type: object
+                  description: The result of `pushManager.subscribe().toJSON()`.
+                  required: [endpoint, keys]
+                  properties:
+                    endpoint: { type: string, format: uri, maxLength: 1024, description: An https address. }
+                    keys:
+                      type: object
+                      required: [p256dh, auth]
+                      properties:
+                        p256dh: { type: string, description: The subscription's P-256 key, base64url. }
+                        auth: { type: string, description: The 16-byte auth secret, base64url. }
+                key: { type: string, description: 32 random bytes, base64url, made by the app for this box. }
+      responses:
+        '200':
+          description: Saved.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  subscribed: { type: boolean, const: true }
+        '400':
+          description: A field is wrong, with the reason.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '403':
+          description: Not a paired phone.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+    delete:
+      tags: [Push notifications]
+      operationId: clearPush
+      summary: Turn notifications off for this phone
+      description: A paired device only; the box's own screen gets 403.
+      responses:
+        '200':
+          description: Cleared.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  subscribed: { type: boolean, const: false }
+        '403':
+          description: Not a paired phone.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /push/test:
+    post:
+      tags: [Push notifications]
+      operationId: testPush
+      summary: Send this phone a test push
+      description: A paired device only. One test every 10 seconds per device, so a phone cannot use up the box's push allowance at the relay.
+      responses:
+        '200':
+          description: Sent.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sent: { type: integer, const: 1 }
+        '403':
+          description: Not a paired phone.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '409':
+          description: Notifications are off on this phone, or remote access is off.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '429':
+          description: Another test within 10 seconds.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '502':
+          description: 'The push was not sent, with the reason in a sentence, such as "The notification was not sent: the relay at box.example.com isn''t answering."'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /quickstart/start:
+    post:
+      tags: [Quick Start]
+      operationId: startQuickStart
+      summary: Start Quick Start on a new computer
+      description: |
+        Only on the new computer's own screen (anyone else gets 403), and only during setup (else 409). Makes
+        a one-time key and a rendezvous slot at the relay, valid for 10 minutes. Show `url` as a QR code and
+        the four-word `phrase` beside it. The owner's phone scans the code and asks a computer it owns to
+        send. The relay sees only ciphertext.
+      responses:
+        '200':
+          description: Where to point the phone.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    required: [url]
+                    properties:
+                      url: { type: string, description: The QR code's address. Everything the phone needs is after the `#`. }
+                  - $ref: '#/components/schemas/QuickStartState'
+        '403':
+          description: Not the box's own screen.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '409':
+          description: Setup is finished. Quick Start is for a new computer.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /quickstart:
+    get:
+      tags: [Quick Start]
+      operationId: getQuickStart
+      summary: Where Quick Start stands
+      description: Owner only. `state` is `off` when none was started.
+      responses:
+        '200':
+          description: The state.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/QuickStartState' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /quickstart/stop:
+    post:
+      tags: [Quick Start]
+      operationId: stopQuickStart
+      summary: Stop Quick Start
+      description: Owner only. The new computer refuses any bundle that arrives later.
+      responses:
+        '200':
+          description: The state.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/QuickStartState' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /quickstart/send:
+    post:
+      tags: [Quick Start]
+      operationId: askQuickStartSend
+      summary: Ask to send this computer's setup
+      description: |
+        A phone paired as the owner, calling the computer it wants to copy from. Nothing leaves yet. The
+        answer holds the exact `question` to put to the owner, naming the keys, the number of apps and the
+        spending rules, and the check phrase to compare with the new computer's screen.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [rv, pk, s, phonePk]
+              properties:
+                rv: { type: string, description: The rendezvous id from the QR code. }
+                pk: { type: string, description: The new computer's public key from the QR code. }
+                s: { type: string, description: The secret from the QR code. }
+                n: { type: string, maxLength: 40, description: The new computer's name. }
+                phonePk: { type: string, description: This phone's one-time public key. }
+                keys: { type: array, items: { type: string }, description: 'The vault keys the owner ticked. Default: the model keys. Never a `BOX_*` key.' }
+      responses:
+        '200':
+          description: The question to ask.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id, phrase, question, keys]
+                properties:
+                  id: { type: string }
+                  phrase: { type: string }
+                  question: { type: string }
+                  keys:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        name: { type: string }
+                        chosen: { type: boolean }
+        '400':
+          description: A field is missing or wrong.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '403':
+          description: Not a phone paired as the owner.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /quickstart/send/{id}:
+    post:
+      tags: [Quick Start]
+      operationId: answerQuickStartSend
+      summary: Approve or refuse the send
+      description: |
+        A phone paired as the owner, answering the question once. On approval the box seals and sends exactly
+        the keys the question named (a `keys` field here is ignored), the apps that are on, and the settings
+        meant to travel (never `paused` or `agentFolders`). The log records names, never values.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [approve]
+              properties:
+                approve: { type: boolean }
+      responses:
+        '200':
+          description: Whether it was sent.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [sent]
+                properties:
+                  sent: { type: boolean }
+                  phrase: { type: string }
+        '403':
+          description: Not a phone paired as the owner.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '404':
+          description: The request expired. It lasts 10 minutes.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '409':
+          description: The new computer stopped.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /business:
+    get:
+      tags: [Business]
+      operationId: getBusiness
+      summary: Business settings and the policy
+      description: Preview. Whether Business is on, the company name, the policy text, each rule with the people who approve under it and who last changed it, warnings about rules nobody can approve, seats, the work-account sign-in settings (never the secret), shadow mode and the pilot record.
+      responses:
+        '200':
+          description: The settings.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BusinessView' }
+    put:
+      tags: [Business]
+      operationId: setBusiness
+      summary: Change Business settings
+      description: |
+        Preview. For an admin or the owner. Only the owner turns Business on or off, or maps a work-account
+        group to the owner role. Send only what changes. A policy line the box cannot read is a 400 that names
+        it. Turning Business off keeps the people and the policy for next time. On a Business box, only people
+        answer in SpacetimeDB.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                on: { type: boolean }
+                company: { type: string, maxLength: 80 }
+                policy: { type: string, maxLength: 8000, description: 'One rule per line, such as `Over $10,000 goes to the Controller.` The first match decides. `#` starts a comment.' }
+                seats:
+                  type: array
+                  maxItems: 20
+                  items:
+                    type: object
+                    required: [name]
+                    properties:
+                      name: { type: string, maxLength: 60 }
+                      about: { type: string, maxLength: 120 }
+                      may: { type: string, maxLength: 80 }
+                shadow: { type: array, items: { type: string }, description: Names of seats to run in shadow mode. }
+                sso: { type: ['object', 'null'], description: 'Work-account sign-in: `{name, issuer, clientId, secretKey, domain?, groups}`. `null` turns it off. `secretKey` is a vault key that starts with `SSO_`.' }
+            example: { on: true, company: Fogline, policy: "Over $10,000 goes to the Controller.\nEverything else goes to any approver." }
+      responses:
+        '200':
+          description: The settings after the change.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BusinessView' }
+        '400':
+          description: An unknown field or a bad value, with the reason.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /business/route:
+    get:
+      tags: [Business]
+      operationId: tryRoute
+      summary: Who would approve this
+      description: Preview. Where the policy would send a request, without asking one.
+      parameters:
+        - name: text
+          in: query
+          description: The words of the request, up to 500 characters.
+          schema: { type: string }
+        - name: amount
+          in: query
+          description: The amount, in US cents.
+          schema: { type: integer, minimum: 0 }
+        - name: app
+          in: query
+          description: The app the request would come from.
+          schema: { type: string }
+        - name: asked
+          in: query
+          description: The id of the person who would ask.
+          schema: { type: string }
+      responses:
+        '200':
+          description: The route.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApprovalRoute' }
+
+  /people:
+    get:
+      tags: [Business]
+      operationId: listPeople
+      summary: List people
+      description: Preview. For an admin or the owner. Each person with the phones paired for them.
+      responses:
+        '200':
+          description: The people.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  allOf:
+                    - $ref: '#/components/schemas/Person'
+                    - type: object
+                      properties:
+                        phones:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              id: { type: string }
+                              name: { type: string }
+                              pairedAt: { type: string, format: date-time }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    post:
+      tags: [Business]
+      operationId: putPerson
+      summary: Add or change a person
+      description: |
+        Preview. For an admin or the owner; only the owner adds or changes an owner. With the `id` of someone
+        who exists, the fields you send change and the rest stay. An approver needs `limitCents`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, role]
+              properties:
+                id: { type: string, pattern: '^[a-z][a-z0-9-]{0,30}$', description: 'Optional for a new person: made from the first name.' }
+                name: { type: string, maxLength: 60 }
+                role: { $ref: '#/components/schemas/Role' }
+                title: { type: string, maxLength: 40 }
+                email: { type: string, maxLength: 120 }
+                limitCents: { type: ['integer', 'null'], minimum: 0, description: 'The most this person may approve, in US cents. `null` for no limit.' }
+                approvesFor: { type: array, maxItems: 10, items: { type: string }, description: 'Names the policy uses, such as `Controller`.' }
+            example: { name: Rosa Delgado, role: approver, title: Controller, limitCents: 5000000, approvesFor: [Controller] }
+      responses:
+        '200':
+          description: The person.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Person' }
+        '400':
+          description: A bad field, with the reason.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /people/{id}:
+    delete:
+      tags: [Business]
+      operationId: removePerson
+      summary: Remove a person
+      description: Preview. For an admin or the owner; only the owner removes an owner. Their paired phones stop working at once.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Removed.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id: { type: string }
+                  removed: { type: boolean, const: true }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404':
+          description: No person with this id.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /people/{id}/pair:
+    post:
+      tags: [Business]
+      operationId: pairPerson
+      summary: Make a pairing code for a person
+      description: Preview. For an admin or the owner; only the owner pairs a phone as the owner. The code is redeemed with `POST /pair`, and every request with that device's token is that person.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: The code.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PairCode'
+                  - type: object
+                    properties:
+                      person: { type: string }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404':
+          description: No person with this id.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /me:
+    get:
+      tags: [Business]
+      operationId: getMe
+      summary: The caller's view
+      description: |
+        Preview. `owner` says whether this caller has the owner's controls, on any edition, so a screen need
+        not probe for them. On a Business box it also holds the caller's `person`, every person's name, title,
+        role and limit in `directory`, the requests this person may approve now (`waiting`), requests nobody
+        can approve that this person may still deny (`stuck`), and their own last 50 (`requests`), each with
+        its route. The box's own screen acts as the owner, or as a person when it sends `x-box-person: <id>`.
+      responses:
+        '200':
+          description: The view.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [owner, edition]
+                properties:
+                  owner: { type: boolean }
+                  edition: { type: string, enum: [server, personal, business] }
+                  company: { type: string }
+                  paused: { oneOf: [{ type: 'null' }, { $ref: '#/components/schemas/PauseInfo' }] }
+                  person: { oneOf: [{ type: 'null' }, { $ref: '#/components/schemas/Person' }] }
+                  directory: { type: array, items: { type: object } }
+                  waiting: { type: array, items: { $ref: '#/components/schemas/Approval' } }
+                  stuck: { type: array, items: { $ref: '#/components/schemas/Approval' } }
+                  requests: { type: array, items: { $ref: '#/components/schemas/Approval' } }
+
+  /audit:
+    get:
+      tags: [Business]
+      operationId: getAudit
+      summary: The audit
+      description: Preview. For an auditor, an admin or the owner. The log as rows that say who asked, which seat did the work and who approved.
+      parameters:
+        - $ref: '#/components/parameters/AuditPerson'
+        - $ref: '#/components/parameters/AuditSeat'
+        - $ref: '#/components/parameters/AuditApp'
+        - $ref: '#/components/parameters/AuditFrom'
+        - $ref: '#/components/parameters/AuditTo'
+      responses:
+        '200':
+          description: The rows.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/AuditRow' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /audit.csv:
+    get:
+      tags: [Business]
+      operationId: getAuditCsv
+      summary: The audit as a CSV file
+      description: Preview. The same rows and filters as `GET /audit`, as `gurtos-audit.csv`. A cell that starts like a formula gets a leading `'`.
+      parameters:
+        - $ref: '#/components/parameters/AuditPerson'
+        - $ref: '#/components/parameters/AuditSeat'
+        - $ref: '#/components/parameters/AuditApp'
+        - $ref: '#/components/parameters/AuditFrom'
+        - $ref: '#/components/parameters/AuditTo'
+      responses:
+        '200':
+          description: The CSV file.
+          content:
+            text/csv:
+              schema: { type: string }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /pause:
+    get:
+      tags: [Business]
+      operationId: getPause
+      summary: Whether agents are paused
+      description: The kill switch's state. The same switch as Settings `paused`.
+      responses:
+        '200':
+          description: The state.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PauseState' }
+    post:
+      tags: [Business]
+      operationId: pauseAgents
+      summary: Pause every agent
+      description: |
+        The owner or, on Business, an admin. Each running task is frozen, no new task starts (it stays
+        `queued`), and a reboot keeps it paused. Approvals can still be answered. Pausing is a `kill-switch`
+        note that says who and from which phone or screen.
+      responses:
+        '200':
+          description: The state.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PauseState' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /resume:
+    post:
+      tags: [Business]
+      operationId: resumeAgents
+      summary: Let the agents carry on
+      description: The owner or, on Business, an admin. Thaws every frozen task and starts the queued ones.
+      responses:
+        '200':
+          description: The state.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PauseState' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /sso:
+    get:
+      tags: [Sign-in]
+      operationId: getSso
+      summary: Is work-account sign-in on
+      security: []
+      description: Preview. Open without a token. Returns only whether sign-in is on and the name for its button.
+      responses:
+        '200':
+          description: The state.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [on]
+                properties:
+                  on: { type: boolean }
+                  name: { type: string }
+              example: { on: true, name: Fogline (Microsoft Entra ID) }
+
+  /sso/start:
+    get:
+      tags: [Sign-in]
+      operationId: startSso
+      summary: Start a work-account sign-in
+      security: []
+      description: |
+        Preview. Open without a token. Sends the browser to the provider's sign-in page, with a state, a
+        nonce and a PKCE challenge, and a cookie that ties the sign-in to this browser. At most 200 sign-ins
+        wait at once, 10 from one address, each for 10 minutes. Past that the browser goes to `/#sso/<code>`,
+        where redeeming the code says to try again in a few minutes. The provider returns the browser to `GET /sso/callback` on the
+        address the person used, which must be a redirect address registered with the provider.
+      parameters:
+        - name: device
+          in: query
+          description: A name for the device that signs in, up to 40 characters.
+          schema: { type: string }
+      responses:
+        '302':
+          description: To the provider. If the sign-in cannot start, to `/#sso/<code>`, where redeeming the code explains why.
+
+  /sso/callback:
+    get:
+      tags: [Sign-in]
+      operationId: ssoCallback
+      summary: The provider's return address
+      security: []
+      description: |
+        Preview. Open without a token. Checks the state, the cookie and the ID token (RS256, issuer, audience,
+        expiry and nonce), maps the person's groups to a role, adds or updates the person, and sends the
+        browser to `/#sso/<one-time code>`. No token is ever in an address. A refusal also goes to
+        `/#sso/<code>`, where redeeming the code gives the reason.
+      parameters:
+        - name: code
+          in: query
+          schema: { type: string }
+        - name: state
+          in: query
+          schema: { type: string }
+      responses:
+        '302':
+          description: To `/#sso/<code>`. The code works once, for 2 minutes.
+
+  /sso/redeem:
+    post:
+      tags: [Sign-in]
+      operationId: redeemSso
+      summary: Trade a sign-in code for a device token
+      security: []
+      description: Preview. Open without a token, so the body is capped at 1 MB. The device token is bound to the person, exactly as pairing a phone for them makes one.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code]
+              properties:
+                code: { type: string }
+      responses:
+        '200':
+          description: The device token.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [token, device, box]
+                properties:
+                  token: { type: string }
+                  device:
+                    type: object
+                    properties:
+                      id: { type: string }
+                      name: { type: string }
+                      person: { type: string }
+                  box:
+                    type: object
+                    properties:
+                      id: { type: string }
+                      name: { type: string }
+        '400':
+          description: The code is unknown, used or expired.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '403':
+          description: The sign-in was refused, or the person was removed. The message gives the reason.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
@@ -1077,7 +2455,7 @@ components:
     deviceToken:
       type: http
       scheme: bearer
-      description: A paired device's token from `POST /pair`. Required from outside the box on every route but `GET /health` and `POST /pair`. Requests from the box itself need none.
+      description: A paired device's token from `POST /pair`. Required from outside the box on every route but `GET /health`, `POST /pair` and the `/sso` sign-in routes. Requests from the box itself need none.
     accessToken:
       type: apiKey
       in: query
@@ -1090,13 +2468,13 @@ components:
       content:
         application/json:
           schema: { $ref: '#/components/schemas/Error' }
-          example: { error: 'pair this phone with the box first' }
+          example: { error: 'pair this phone with this computer first' }
     Forbidden:
       description: The owner's route, called by someone who is not the box's own screen or a device paired as the owner.
       content:
         application/json:
           schema: { $ref: '#/components/schemas/Error' }
-          example: { error: "only the box's own screen or the owner's paired device can do this" }
+          example: { error: "only this computer's own screen or the owner's paired device can do this" }
 
   parameters:
     TaskId:
@@ -1112,7 +2490,32 @@ components:
       required: true
       description: The app's id, its folder name.
       schema: { type: string }
-      example: wallet
+      example: example
+    AuditPerson:
+      name: person
+      in: query
+      description: Only rows where this person asked, approved or acted. A person's id.
+      schema: { type: string }
+    AuditSeat:
+      name: seat
+      in: query
+      description: Only rows for this agent seat.
+      schema: { type: string }
+    AuditApp:
+      name: app
+      in: query
+      description: Only rows for this app.
+      schema: { type: string }
+    AuditFrom:
+      name: from
+      in: query
+      description: Only rows on or after this day, `YYYY-MM-DD` (UTC).
+      schema: { type: string }
+    AuditTo:
+      name: to
+      in: query
+      description: Only rows on or before this day, `YYYY-MM-DD` (UTC).
+      schema: { type: string }
 
   schemas:
     Error:
@@ -1134,8 +2537,8 @@ components:
       type: object
       required: [title, prompt]
       properties:
-        title: { type: string, description: A short name for people. }
-        prompt: { type: string, description: 'What the worker should do. For the `fake` worker, one command per line.' }
+        title: { type: string, maxLength: 200, description: A short name for people. }
+        prompt: { type: string, maxLength: 100000, description: 'What the worker should do. For the `fake` worker, one command per line.' }
         workspace:
           type: string
           pattern: '^[\w.-]+$'
@@ -1155,14 +2558,33 @@ components:
           type: array
           items: { type: string }
           default: []
-          description: 'Hosts the task''s network may reach: `example.com` (any port), `example.com:8080` (one port) or `*.example.com` (subdomains).'
+          maxItems: 50
+          description: 'Hosts the task''s network may reach: `example.com` (any port), `example.com:8080` (one port) or `*.example.com` (subdomains). Never `localhost`, a loopback or link-local address, or a whole top-level domain.'
+        model:
+          type: string
+          description: 'Droid worker: the Claude model. `haiku` (cheap checks), `sonnet` (most work, the default), `opus` (hard tasks), or a full model id that starts with `claude-`. The task records the id it ran on.'
         budgetCents:
-          type: number
-          description: Spending above this, in US cents, pauses the task for an OK. Default Settings `defaultBudgetCents`, 0 unless changed.
+          type: integer
+          minimum: 0
+          maximum: 100000
+          description: Spending above this, in US cents, pauses the task for an OK. Default Settings `defaultBudgetCents`, 100 unless changed.
         source:
           type: string
           default: api
-          description: 'Who started it, for the log and the portal: `api`, `schedule`, `asi1`, `jira:BOX-12`.'
+          description: 'Who started it, for the log and the portal: `api`, `schedule`, `asi1`, `jira:BOX-12`. From a paired device it is always `phone:<device name>`.'
+        seat:
+          type: string
+          maxLength: 60
+          description: The agent seat doing the work, such as `Credit analyst`. Shown in the audit.
+        droid:
+          type: object
+          description: How Droid works on it. Ignored by the `fake` worker.
+          properties:
+            plan: { type: boolean, description: Droid writes a plan first, and starts work once the owner approves the plan. }
+            autonomy:
+              type: string
+              enum: [low, medium, high]
+              description: '`low` gets no network beyond the model and asks before any spending. `medium` keeps its hosts and a budget of at most $1. `high` keeps what the task asked for. The box enforces this too.'
         folder:
           type: string
           description: 'Personal: the first real folder the task works on a copy of.'
@@ -1188,8 +2610,9 @@ components:
             step: { type: string, description: The latest step, up to 200 characters. }
             createdAt: { type: string, format: date-time }
             updatedAt: { type: string, format: date-time }
-            error: { type: string, description: 'Why it failed. A worker that exited with an error ends with its own last error line: `worker exited with 1: Error: ...`.' }
+            error: { type: string, description: 'Why it failed, as a sentence a person can read, such as `Your Anthropic key was not accepted. Change it in Settings, Keys.`' }
             summary: { type: string }
+            requestedBy: { type: string, description: 'Business: the id of the person who asked for the task. Set by the box, never by the caller.' }
             review:
               type: string
               enum: [pending, kept, conflict, undone]
@@ -1203,14 +2626,37 @@ components:
       type: object
       required: [id, task, question, costCents, state]
       properties:
-        id: { type: string, description: '`<task id>.<key>`. The same key asked twice is the same approval.' }
+        id: { type: string, description: '`<task id>.budget.<action>` for the box''s own spend question, `<task id>.task.<key>` for a question the task asked, `<task id>.tool.<call>.ask.<hash>` for one a tool asked, `<task id>.shadow.<action>` for a Business shadow request. The same key asked twice is the same approval. A task can only name keys under `task.`, so it cannot pre-answer the box''s own questions.' }
         task: { type: string }
         question: { type: string, description: The question shown to people. }
         costCents: { type: number, description: The spending being asked about, in US cents. 0 when it is not about money. }
         payee: { type: string, description: Who gets paid, or the host being reached. }
         purpose: { type: string, description: What the spend or action is for. }
         state: { $ref: '#/components/schemas/ApprovalState' }
-        by: { type: string, description: "Who answered: a paired device's name, what the box's own screen sent (such as `box screen`), `jira:<name>`, `asi1`, `undo`, or `task ended`." }
+        by: { type: string, description: "Who answered: a paired device's name, what the box's own screen sent (such as `box screen`), `jira:<name>`, `asi1`, `undo`, or `task ended`. On Business, the person's name." }
+        person: { type: string, description: 'Business: the id of the person who answered.' }
+        via: { type: string, description: 'Business: the phone or screen the answer came from. A native app''s `auth` is kept here as reported.' }
+        askedBy: { type: string, description: 'Business: the id of the person who asked for the task. They may not answer it.' }
+        route: { $ref: '#/components/schemas/ApprovalRoute' }
+        shadow: { type: string, description: 'Business shadow mode: the seat this is a suggestion from.' }
+
+    ApprovalRoute:
+      type: object
+      description: 'Business: where the policy sent a request, and why.'
+      required: [rule, to, amountCents, people, why]
+      properties:
+        rule: { type: string, description: 'The policy line that matched, such as `Over $10,000 goes to the Controller.`' }
+        to: { type: string, description: 'Who it goes to as the policy says it: `the Controller`, `IT`, `any approver`.' }
+        amountCents: { type: integer, description: The amount the rules and limits were checked against, in US cents. }
+        people:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: string }
+              name: { type: string }
+          description: The people who could approve it when it was asked.
+        why: { type: string, description: One sentence for people. }
 
     Change:
       type: object
@@ -1248,7 +2694,17 @@ components:
       properties:
         seq: { type: integer, minimum: 1, description: The line number in `log.jsonl`, from 1. }
         at: { type: string, format: date-time }
+        prev: { type: string, description: The SHA-256 of the previous line, so an edited, removed or reordered line breaks the chain after it. }
         task: { type: string, description: The task the event belongs to, if any. }
+        who:
+          type: object
+          description: 'Business only: who is behind the event.'
+          properties:
+            asked: { type: string }
+            trigger: { type: string }
+            seat: { type: string }
+            approver: { type: string }
+            by: { type: string }
 
     TaskCreatedEvent:
       allOf:
@@ -1259,6 +2715,7 @@ components:
             type: { const: task.created }
             spec: { $ref: '#/components/schemas/TaskSpec', description: 'The spec with every default filled in.' }
             user: { type: string }
+            requestedBy: { type: string }
     TaskStateEvent:
       allOf:
         - $ref: '#/components/schemas/EventBase'
@@ -1319,6 +2776,8 @@ components:
             id: { type: string }
             approved: { type: boolean }
             by: { type: string }
+            person: { type: string }
+            via: { type: string }
     CostEvent:
       allOf:
         - $ref: '#/components/schemas/EventBase'
@@ -1361,6 +2820,7 @@ components:
             type: { const: note }
             track: { type: string, description: The app that wrote the note. }
             data: {}
+            text: { type: string, description: A sentence for people, which the core fills in for its own notes. }
 
     LogEvent:
       description: One line of the action log. See [Log events](/docs/reference/log-events/).
@@ -1425,6 +2885,7 @@ components:
                 properties:
                   name: { type: string }
                   set: { type: boolean, description: Whether the vault holds this key. }
+                  optional: { type: boolean, description: The app runs without this key. }
             triggers: { type: array, items: { type: string } }
             routes: { type: array, items: { type: string } }
         ui:
@@ -1442,42 +2903,77 @@ components:
       required: [user, uid, home]
       properties:
         user: { type: string }
+        name: { type: string, description: The account's full name, or empty when unset. }
         uid: { type: ['integer', 'null'], description: The account's uid, or null if the account does not exist. }
         home: { type: string }
 
     Settings:
       type: object
       properties:
-        approvalThresholdCents: { type: integer, default: 10000, description: 'A single spend above this, in US cents, always asks for an OK, even inside the task''s budget.' }
-        defaultBudgetCents: { type: integer, default: 0, description: The budget of a task that names none. 0 means every spend asks. }
+        approvalThresholdCents: { type: integer, default: 500, minimum: 0, maximum: 100000000, description: 'A single spend above this, in US cents, always asks for an OK, even inside the task''s budget.' }
+        defaultBudgetCents: { type: integer, default: 100, minimum: 0, maximum: 100000000, description: The budget of a task that names none. 0 means every spend asks. }
+        watchLimitCents: { type: integer, default: 2500, minimum: 0, maximum: 100000, description: The most an Apple Watch token may approve. 0 means a Watch may only deny. }
+        paused: { type: boolean, default: false, description: 'The kill switch. While true no task starts (new ones stay `queued`) and running ones hold before their next step, tool call or question. The box sets it itself at start when `permissions.json` cannot be read.' }
         networkDefault: { type: string, enum: [none, allowlist], default: none, description: 'With `allowlist`, a task that names no hosts gets `defaultHosts`.' }
         defaultHosts: { type: array, items: { type: string }, default: [], maxItems: 100 }
         agentFolders: { type: array, items: { type: string }, default: [], maxItems: 50, description: 'Personal. Folders agents may be given besides the owner''s home. Never the system or the box''s own state.' }
         quietHours:
           type: object
+          description: Holds pushes back. The desktop and the phone read it for notifications. `HH:MM`, the box's local time.
           properties:
             enabled: { type: boolean, default: false }
             from: { type: string, default: '22:00' }
             to: { type: string, default: '07:00' }
-        logRetentionDays: { type: integer, default: 365, minimum: 1, maximum: 3650 }
-        updateChannel: { type: string, enum: [stable, beta], default: stable }
-        autoUpdate: { type: boolean, default: true }
+        logRetentionDays: { type: integer, default: 365, minimum: 1, maximum: 3650, description: Stored only. The log is kept forever. }
+        updateChannel: { type: string, enum: [stable, beta], default: stable, description: Stored only. Nothing reads it yet. }
+        autoUpdate: { type: boolean, default: true, description: Stored only. Nothing reads it yet. }
         appearance:
           type: object
           properties:
             theme: { type: string, enum: [light, dark, system], default: system }
             accent: { type: string, description: 'A color like `#5b8cff`, or empty for the default.' }
 
+    ModelState:
+      type: object
+      description: 'Whether tasks can run: the vault holds a model key. `via` is `factory` with FACTORY_API_KEY, `anthropic` with only ANTHROPIC_API_KEY, or null with neither.'
+      properties:
+        ready: { type: boolean }
+        via: { type: [string, 'null'], enum: [factory, anthropic, null] }
+
+    DroidState:
+      type: object
+      description: 'Where the Droid download stands. A task that needs Droid waits, queued, until `ready`.'
+      required: [state, message]
+      properties:
+        state: { type: string, enum: [ready, downloading, offline, retrying, missing] }
+        message: { type: string }
+        at: { type: string }
+
+    SetupChannel:
+      type: object
+      description: The setup port for setting up from another computer.
+      required: [open]
+      properties:
+        open: { type: boolean }
+        until: { type: string, format: date-time, description: When the port closes by itself. }
+        port: { type: integer }
+        urls: { type: array, items: { type: string }, description: The addresses another computer can use. }
+        remote: { type: string, description: The box's remote access address, when it has one. }
+        devices:
+          type: array
+          items:
+            type: object
+            properties:
+              name: { type: string }
+              since: { type: string, format: date-time }
+
     SetupState:
       type: object
       required: [done, steps, suggested]
       properties:
-        model:
-          type: object
-          description: 'Whether tasks can run: the vault holds a model key. `via` is `factory` with FACTORY_API_KEY, `anthropic` with only ANTHROPIC_API_KEY, or null with neither.'
-          properties:
-            ready: { type: boolean }
-            via: { type: [string, 'null'], enum: [factory, anthropic, null] }
+        model: { $ref: '#/components/schemas/ModelState' }
+        droid: { $ref: '#/components/schemas/DroidState' }
+        modelKey: { type: boolean, description: False until the vault holds a model key. Without one no Droid task can start. }
         done: { type: boolean }
         finishedAt: { type: ['string', 'null'], format: date-time }
         migrated: { type: boolean, description: The box already ran tasks when setup arrived, so it counts as done. }
@@ -1491,17 +2987,17 @@ components:
         suggested:
           type: array
           items: { type: string }
-          example: [welcome, network, safety, folders, apps, keys, updates, phone]
+          description: 'The usual step ids, in order. Server''s screen skips `folders`, and Personal''s skips `network`, `name` and `updates`. The box accepts any id.'
+          example: [welcome, network, name, phone, models, folders, safety, updates]
+        channel: { $ref: '#/components/schemas/SetupChannel' }
 
     SystemFacts:
       type: object
       properties:
-        model:
-          type: object
-          description: 'Whether tasks can run: the vault holds a model key. `via` is `factory` with FACTORY_API_KEY, `anthropic` with only ANTHROPIC_API_KEY, or null with neither.'
-          properties:
-            ready: { type: boolean }
-            via: { type: [string, 'null'], enum: [factory, anthropic, null] }
+        model: { $ref: '#/components/schemas/ModelState' }
+        droid: { $ref: '#/components/schemas/DroidState' }
+        company: { type: string, description: 'Business only.' }
+        paused: { $ref: '#/components/schemas/PauseState' }
         product: { type: string, example: GurtOS }
         edition: { type: string, enum: [server, personal, business] }
         editionName: { type: string, example: GurtOS Server }
@@ -1529,21 +3025,24 @@ components:
 
     Health:
       type: object
-      required: [ok, startedAt, resumed, tasks, tools, spacetime]
+      required: [ok, startedAt, paused]
       properties:
         ok: { type: boolean, const: true }
         startedAt: { type: string, format: date-time, description: When the box service started. }
+        paused: { type: boolean, description: Whether the kill switch is on. }
+        cleanStart: { type: boolean, description: 'Not in the short answer. Whether the last stop was clean. False after a power cut.' }
         resumed:
           type: array
           items: { type: string }
-          description: Tasks the box restarted at boot because they were still going when it went down.
-        tasks: { type: integer, description: How many tasks the log holds. }
+          description: Not in the short answer. Tasks the box restarted at boot because they were still going when it went down.
+        tasks: { type: integer, description: Not in the short answer. How many tasks the log holds. }
         tools:
           type: array
           items: { type: string }
-          description: Every installed tool name.
+          description: Not in the short answer. Every installed tool name.
         spacetime:
           type: object
+          description: Not in the short answer.
           required: [port, database]
           properties:
             port: { type: integer, example: 3000 }
@@ -1564,7 +3063,8 @@ components:
       required: [code, url, expiresAt, box]
       properties:
         code: { type: string, description: Eight hexadecimal characters. Works once. }
-        url: { type: string, description: 'Where the phone pairs: `<BOX_URL>/pair#<code>`, or the path `/pair#<code>` when `BOX_URL` is unset.' }
+        url: { type: string, description: 'Opens the GurtOS web app (`BOX_APP`) with the code: `<app>/pair#code=<code>&...`. With remote access on, `<app>/pair?box=<address>#<code>`.' }
+        boxUrl: { type: string, description: 'The box''s own pairing page, `<address>/pair#<code>`. There only when `BOX_URL` or remote access gives the box an address.' }
         expiresAt: { type: string, format: date-time, description: Five minutes after it was made. }
         box:
           type: object
@@ -1577,11 +3077,13 @@ components:
       required: [token, device, box]
       properties:
         token: { type: string, description: 'The phone''s device token. Send it as `Authorization: Bearer <token>`.' }
+        edition: { type: string, enum: [server, personal, business], description: The box's edition, so the phone shows the right home from its first frame. }
         device:
           type: object
           properties:
             id: { type: string }
             name: { type: string }
+            person: { type: string, description: 'Business: the person the code was made for.' }
         box:
           type: object
           properties:
@@ -1596,3 +3098,151 @@ components:
         name: { type: string }
         pairedAt: { type: string, format: date-time }
         owner: { type: boolean, description: Paired as the owner's device. }
+        kind: { type: string, enum: [iphone, mac, watch, setup], description: 'What the device says it is. Absent for the web app. Not proof of anything.' }
+        person: { type: string, description: 'Business: the person this device signs in as.' }
+        parent: { type: string, description: A Watch's iPhone. }
+        identity: { type: string, description: 'The device''s SpacetimeDB identity, if it gave one.' }
+        lastSeen: { type: string, format: date-time }
+        push: { type: boolean, description: Whether it turned notifications on. }
+
+    UpdateState:
+      type: object
+      required: [version, build, state, install, slots, automatic]
+      properties:
+        version: { type: string }
+        build: { type: string }
+        state: { type: string, enum: [current, ready, trial, rolledBack, unknown], description: '`unknown` off an installed image. `ready`: a new system is written and waits for a restart. `trial`: it is running on trial. `rolledBack`: the last update did not start or was rolled back.' }
+        slot: { type: string, enum: [a, b], description: The slot this computer booted, on an installed image. }
+        last: { type: string, description: The last result line `box-update` wrote. }
+        lastAt: { type: string }
+        install: { type: string, enum: [image, disc, checkout] }
+        slots: { type: boolean, description: Whether this install has update slots A and B. }
+        automatic: { type: boolean, const: false, description: Nothing looks for updates by itself yet. }
+        default: { type: string, enum: [a, b], description: The slot the boot menu starts by default. }
+        other:
+          type: object
+          description: The other slot.
+          properties:
+            slot: { type: string, enum: [a, b] }
+            unfinished: { type: boolean, description: A write to it did not finish, so it never starts. }
+        trial: { type: string, description: The slot that is on trial. }
+
+    AppPermissions:
+      type: object
+      required: [app, title, answered, perDayCents, diskBytes, items]
+      properties:
+        app: { type: string }
+        title: { type: string }
+        answered: { type: boolean, description: Whether the owner has answered the app's first prompt. }
+        perDayCents: { type: ['integer', 'null'], description: 'The daily spending limit, or `null` for none.' }
+        diskBytes: { type: integer, description: The most disk its tasks may hold. Default 5 GB. }
+        items:
+          type: array
+          items:
+            type: object
+            required: [id, kind, text, allowed]
+            properties:
+              id: { type: string, description: 'Such as `key:NAME`, `money`, `strangers`, `shell`, `folders` or `host:example.com`.' }
+              kind: { type: string, enum: [key, money, strangers, shell, host, folders] }
+              text: { type: string }
+              seen: { type: boolean, description: The box saw the app use it. }
+              allowed: { type: boolean }
+
+    RemoteState:
+      type: object
+      required: [enabled, name, url, state, relay]
+      properties:
+        enabled: { type: boolean }
+        name: { type: ['string', 'null'] }
+        url: { type: ['string', 'null'], description: The box's own https address. }
+        state: { type: string, enum: [off, starting, connected, error] }
+        error: { type: string, description: 'Why it failed, in words. If the relay no longer holds this box''s name (freed after 30 days offline, or given to another computer), it says to turn remote access off and on again.' }
+        relay: { type: string, description: The relay's host name. }
+
+    QuickStartState:
+      type: object
+      required: [state, steps]
+      properties:
+        state: { type: string, enum: [off, waiting, applying, done, stopped, error] }
+        phrase: { type: string, description: Four words to compare on both screens. }
+        steps: { type: array, items: { type: string }, description: What was applied, in words. }
+        error: { type: string }
+        expiresAt: { type: string, format: date-time }
+
+    PauseInfo:
+      type: object
+      properties:
+        by: { type: string }
+        at: { type: string, format: date-time }
+        via: { type: string }
+
+    PauseState:
+      type: object
+      required: [paused, by, at, via]
+      properties:
+        paused: { type: boolean }
+        by: { type: ['string', 'null'], description: 'Who pulled the switch. `GurtOS` when the box paused itself.' }
+        at: { type: ['string', 'null'], format: date-time }
+        via: { type: ['string', 'null'], description: 'The phone or screen it came from, or `an unreadable permissions file` when the box paused itself. Check Settings, Permissions, then resume.' }
+
+    Role:
+      type: string
+      enum: [owner, admin, approver, requester, auditor]
+      description: |
+        `owner` everything an admin may, plus the owner's controls. `admin` people, the policy, pairing
+        phones and the kill switch. `approver` answers what the policy sends to them, up to `limitCents`.
+        `requester` starts tasks and sees their own requests. `auditor` reads everything and changes nothing.
+
+    Person:
+      type: object
+      required: [id, name, role, limitCents, approvesFor]
+      properties:
+        id: { type: string, example: rosa }
+        name: { type: string }
+        role: { $ref: '#/components/schemas/Role' }
+        title: { type: string }
+        limitCents: { type: ['integer', 'null'], description: 'The most this person may approve, in US cents. `null` for no limit.' }
+        approvesFor: { type: array, items: { type: string }, description: The names in the policy this person approves for. }
+        email: { type: string, description: Their work address from a sign-in. Kept in the box's state only, never in the log. }
+
+    BusinessView:
+      type: object
+      properties:
+        on: { type: boolean }
+        company: { type: string }
+        policy: { type: string }
+        rules:
+          type: array
+          items:
+            type: object
+            properties:
+              line: { type: string }
+              to: { type: string }
+              any: { type: boolean }
+              overCents: { type: integer }
+              phrase: { type: string }
+              app: { type: string }
+              blocked: { type: boolean }
+              approvers: { type: array, items: { type: string }, description: Names of the people who approve under it. }
+              changed: { type: ['object', 'null'], description: 'Who last changed the line, and when: `{by, at}`.' }
+        warnings: { type: array, items: { type: string } }
+        seats: { type: array, items: { type: object } }
+        sso: { type: ['object', 'null'], description: The sign-in settings. Never the secret. }
+        shadow: { type: array, items: { type: string } }
+        pilot: { type: object, description: The one-week pilot record. }
+        paused: { oneOf: [{ type: 'null' }, { $ref: '#/components/schemas/PauseInfo' }] }
+
+    AuditRow:
+      type: object
+      properties:
+        seq: { type: integer }
+        at: { type: string, format: date-time }
+        event: { type: string, description: The log event type. }
+        task: { type: string }
+        title: { type: string }
+        app: { type: string }
+        seat: { type: string }
+        asked: { type: string, description: The person who asked, or what started the task when no person did. }
+        approver: { type: string }
+        by: { type: string }
+        what: { type: string, description: The event in words, up to 1000 characters. }

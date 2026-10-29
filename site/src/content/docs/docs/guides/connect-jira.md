@@ -3,6 +3,10 @@ title: Connect Jira
 description: Turn every agent task into a Jira issue with its prompt, steps, approvals and diff, and approve, deny or roll back a task from a panel in Jira.
 ---
 
+:::note[Optional app]
+Jira is an optional app. It is off on a new box, and it needs a Jira Cloud site and an Atlassian API token. Nothing else in GurtOS needs it.
+:::
+
 The Jira app writes each task on the box to a Jira issue, and keeps it up to date as the task runs. A Forge app adds a **GurtOS agent task** panel to those issues, where people who may edit the issue can approve, deny or roll back the task. In this guide you connect a box to a Jira Cloud site and install the panel.
 
 The panel reaches the box through a reverse proxy. The box asks every request from off the machine for a paired

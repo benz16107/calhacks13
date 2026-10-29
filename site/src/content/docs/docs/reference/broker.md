@@ -15,7 +15,11 @@ Every task gets its own broker: a Unix socket that only the task's Linux user ca
 | Protocol | HTTP with JSON bodies, over the socket |
 | Lifetime | Opened when the task starts or resumes, closed when it ends |
 
-Errors come back as status 400 with `{"error": "..."}`, the same as the [HTTP API](/docs/reference/http-api/#errors).
+Errors come back as status 400 with `{"error": "..."}`, the same as the [HTTP API](/docs/reference/http-api/#errors). An unknown route is 404, and a body over 10 MB is 413.
+
+The broker also limits what a task writes, because the action log is kept in the box's memory. A `POST` other than `/call` (`/step`, `/ask`, `/cost` and `/usage`) is at most 64 KB, or the answer is 413 with `a step, question or cost is at most 64 KB`. Across all its `POST` bodies, a task may write 20 MB in all, counted since the box started. A `POST` that would take it past that is refused with 429 and `this task has written 20 MB to the action log; it may write no more`. The proxy lets a task hold at most 256 open connections at once and closes the rest.
+
+While all agents are paused (the kill switch), `POST /step`, `POST /call` and `POST /ask` wait until they are resumed.
 
 ```sh
 curl -s --unix-socket "$BOX_SOCKET" http://box/task
@@ -26,9 +30,9 @@ curl -s --unix-socket "$BOX_SOCKET" http://box/task
 | Request | Body | Returns |
 |---|---|---|
 | `GET /task` | | `{task, steps}`: the task and every step it already logged, as `{text, data}` |
-| `GET /tools` | | The tools this task may call: `[{name, description, input}]`, with `input` a JSON Schema |
+| `GET /tools` | | The tools this task may call: `[{name, description, input, spends}]`, with `input` a JSON Schema and `spends` true when the tool declares a `cost` |
 | `POST /step` | `{text, data?}` | The `task.step` log event. Flushes the task's files to disk first. |
-| `POST /call` | `{tool, input, key}` | `{ok, output}` or `{ok: false, error}`, or `{ok: false, pending: true, error}` while an OK is outstanding |
+| `POST /call` | `{tool, input, key}` | `{ok, output}` or `{ok: false, error}`, or `{ok: false, pending: true, error}` while an OK is outstanding. A refused call is `{ok: false, error}`. |
 | `POST /ask` | `{question, key, costCents?, payee?, purpose?}` | `{approved: true}` or `{approved: false}`, or `{pending: true}` |
 | `POST /cost` | `{cents, what}` | The `cost` log event |
 | `POST /usage` | `{model, tokens, what?}` | The `cost` log event, priced from the token counts |
@@ -43,23 +47,24 @@ Logs one line of progress: a plan, a step, a summary. Before writing, the box ru
 
 ### `POST /call`
 
-Runs a tool by name. The tool must be in the task's `tools`, and it runs inside the core with the secrets it declares. The task sees only the result.
+Runs a tool by name. The tool must be in the task's `tools`, or the call fails with `this task may not use <tool>`. It runs inside the core with the secrets it declares. The task sees only the result, and the box removes any vault secret from it first.
 
-- **Budget.** If the tool's `cost(input)` would take the task's spending (including other calls already in flight) above `budgetCents`, the broker asks for an OK first. Denied returns `{ok: false, error: "not approved"}` and the tool never runs.
+- **Refused.** Every task holds a fake cloud key in its environment. A call whose input contains it returns `{ok: false, error: "refused by GurtOS"}`, and the box undoes the task and alerts the owner. If the owner turned money off for the app in Settings, a call that spends returns `{ok: false, error}` with the reason and never runs.
+- **Budget and threshold.** If the tool's `cost(input)` would take the task's spending (including other calls already in flight) above `budgetCents`, the broker asks for an OK first. It also asks when one spend is above the box's `approvalThresholdCents` (500, or $5, on a new box), or above the app's per-day money limit. Denied returns `{ok: false, error: "not approved"}` and the tool never runs.
 - **Cost.** The cost is reserved before the tool runs and written on the same `tool.result` line as the output, so it counts once.
-- **Same key, same result.** A `key` already answered in the log returns the logged result without running the tool again. A call cut off by a power cut runs again with the same key, and the tool receives it as `ctx.key` to pass on as an idempotency key.
+- **Same key, same result.** A `key` already answered in the log returns the logged result without running the tool again. A call cut off by a power cut runs again with the same key, and the tool receives it as `ctx.key` (the task id, a dot and the key) to pass on as an idempotency key.
 - **Same call, one run.** The same tool with the same input, called again while the first call is still running or waiting, shares the first call. It is approved once and charged once.
 
 ### `POST /ask`
 
-Pauses the task until someone answers. The approval id is `<task id>.<key>`, so asking again with the same key returns the same approval, even after a restart. The task's state becomes `waiting` and goes back to `running` once nothing of the task's is still pending.
+Pauses the task until someone answers. The approval id is `<task id>.task.<key>`, so asking again with the same key returns the same approval, even after a restart. The `task.` prefix is added by the box. A task cannot choose a key that names one of the box's own questions, such as the budget question for a tool call (`<task id>.budget.<action>`), so it cannot approve a spend ahead of time with a cheaper question. A tool's own `ctx.ask` question has the id `<task id>.tool.<call key>.ask.<hash>`. The task's state becomes `waiting` and goes back to `running` once nothing of the task's is still pending.
 
 ### `POST /cost` and `POST /usage`
 
-`/cost` records spending in US cents directly. `/usage` takes token counts and the model name and lets the box price them at the model's list rates:
+`/cost` records spending in US cents directly. `cents` must be a number of 0 or more (otherwise `cents: a cost of 0 or more`), so a task cannot lower its own total. `/usage` takes token counts and the model name and lets the box price them at the model's list rates (`core/pricing.ts`). A missing count is 0, a negative or non-number count is refused, and an unknown model is priced as `claude-sonnet-5-5`:
 
 ```json
-{ "model": "claude-sonnet-4-6", "what": "model", "tokens": { "input": 12000, "output": 900, "cacheWrite": 0, "cacheRead": 48000 } }
+{ "model": "claude-sonnet-5-5", "what": "model", "tokens": { "input": 12000, "output": 900, "cacheWrite": 0, "cacheRead": 48000 } }
 ```
 
 See [Cost](/docs/concepts/cost/).
@@ -71,14 +76,14 @@ See [Cost](/docs/concepts/cost/).
 - **Stable**: the same logical action gets the same key after a restart, so it is not run or asked twice.
 - **Unique**: two different actions never share a key.
 
-The MCP relay builds keys from a hash of the tool name and input plus a counter. The test worker uses its line number.
+The MCP relay builds keys from the tool name, a hash of the input and a counter. The test worker uses its line number.
 
 ## Waiting longer than a client timeout
 
-An over-budget `/call` and an `/ask` wait for an answer for up to `BOX_APPROVAL_WAIT_MS` (default 150 seconds). If no answer comes in that time, they return a pending result instead of an error:
+A `/call` that needs an OK (over budget, over the threshold or over the app's daily limit) and an `/ask` wait for an answer for up to `BOX_APPROVAL_WAIT_MS` (default 150 seconds). If no answer comes in that time, they return a pending result instead of an error:
 
 ```json
-{ "ok": false, "pending": true, "error": "Waiting for the box owner to approve this spend. Call this tool again to check." }
+{ "ok": false, "pending": true, "error": "Waiting for the owner to approve this spend. Call this tool again to check." }
 ```
 
 ```json
@@ -89,14 +94,14 @@ The approval stays open. Call again with the same key, or the same tool and inpu
 
 ## How Droid reaches the broker
 
-Droid does not call the socket directly. The Droid worker starts a small MCP server inside the task (`core/workers/mcp.ts`) and hands it to Droid as the `box` MCP server. It holds no secrets and forwards every call to the broker.
+Droid itself does not call the socket. The Droid worker starts a small MCP server inside the task (`core/workers/mcp.ts`) and hands it to Droid as the `box` MCP server. It holds no secrets and forwards every call to the broker.
 
 | MCP tool | Becomes |
 |---|---|
-| `box_ask {question}` | `POST /ask` with key `mcp.ask.<hash of the question>` |
-| `<app>__<verb>` (for example `wallet__pay`) | `POST /call` for the tool `<app>.<verb>`, with key `mcp.<tool>.<hash of the input>.<count>` |
+| `box_ask {question}` | `POST /ask` with key `mcp.ask.<hash of the question>`, so the approval id is `<task id>.task.mcp.ask.<hash>` |
+| `<app>__<verb>` (for example `example__spend`) | `POST /call` for the tool `<app>.<verb>`, with key `mcp.<tool>.<hash of the input>.<count>` |
 
-MCP tool names cannot contain dots, so `.` becomes `__`. A pending result is returned to Droid as plain text, not an error, so Droid carries on and calls again. Droid's own questions to the user also become approvals, through `POST /ask`.
+MCP tool names cannot contain dots, so `.` becomes `__`. A pending result is returned to Droid as plain text, not an error, so Droid carries on and calls again. The Droid worker (`core/workers/droid.ts`) calls the broker itself too. It logs each tool call with `POST /step`, reports model tokens with `POST /usage`, and sends Droid's plan, permission requests and questions, and the second-look check's doubts, through `POST /ask`. Droid's hooks (`core/workers/hook.ts`) call `POST /ask` with key `hook.<hash of the command>` before a risky shell command, and `POST /step` after each tool. They ask again until the approval is answered.
 
 ## Related
 

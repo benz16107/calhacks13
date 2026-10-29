@@ -11,7 +11,7 @@ When a task starts, the core creates a system user named `box-<id>`:
 
 - Its uid is between 30000 and 39999. One firewall rule covers that whole range, so every task user is network-limited the moment it exists.
 - It has no password and its shell is `/usr/sbin/nologin`. Nobody can log in as it.
-- It is not in any admin group, and the box has no `sudo` binary on an ISO install.
+- It is in no group but its own, so it is never in `sudo`. GurtOS Server has no `sudo` binary at all.
 - Its home folder is inside the task's own folder, `BOX_HOME/tasks/<id>/home`, readable only by it.
 
 When the task ends, the core stops every process that user runs and deletes the user. A resumed task keeps the same user name, and a whole-system update copies task users into the new system, so a task that resumes after an update keeps its uid.
@@ -32,9 +32,15 @@ The worker does not run as a child of a login session. The core starts it with `
 | `RestrictSUIDSGID=yes` | It cannot create setuid or setgid files |
 | `InaccessiblePaths=-/run/dbus` | It cannot reach D-Bus |
 | `RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6 AF_NETLINK` | No raw sockets or other exotic families |
-| `MemoryMax=2G`, `TasksMax=512` | At most 2 GB of memory and 512 processes or threads |
+| `MemoryMax=2G`, `MemorySwapMax=0`, `TasksMax=512`, `CPUQuota=200%` | At most 2 GB of memory with no swap, 512 processes or threads, and two CPU cores |
+| `SystemCallFilter=`, `SystemCallArchitectures=native` | Mounts, kernel modules, ptrace and perf, raw I/O, reboot, swap, the clock, keyrings and bpf fail with an error. Only the machine's own architecture runs. |
+| `ProtectKernelModules`, `ProtectKernelTunables`, `ProtectKernelLogs`, `ProtectControlGroups`, `ProtectClock`, `ProtectHostname` | Kernel settings, kernel logs, control groups, the clock and the host name are off limits |
 
-The worker's working directory is its copy of the workspace. Its environment holds the path to its broker socket, the proxy's address and, for Droid, a placeholder key. It holds no secret.
+The worker's working directory is its copy of the workspace. Its environment holds the path to its broker socket, the proxy's address and, for Droid, a placeholder key. It also holds a decoy AWS key pair, different for each task and never real. If the decoy shows up in a web request, a tool call or anything the task writes to the log, the core refuses it, undoes the task and writes a `security` note to the log. With remote access on, it also alerts the owner's phone. The environment holds no real secret.
+
+**Disk.** The core measures each running task's own layer every 2 seconds. A task past 5 GB is stopped and undone, with a note in the log. With remote access on, the owner's phone gets an alert too. An app can set another cap with its `diskBytes` permission, and `BOX_TASK_DISK_CAP` sets one for the whole box. This is a check, not a file system quota, so a task can write past the cap until the next check.
+
+**Limits inside the box.** A task also can't use up the box's own memory. It may hold at most 256 connections to the proxy at once, and it may write at most 64 KB per step, question or cost and 20 MB in all to the action log, which the box keeps in memory.
 
 ## What the task user can reach
 

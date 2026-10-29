@@ -7,13 +7,15 @@ The Find app keeps one index of every photo, text file and finished task on the 
 
 ## Before you start
 
-- A box with a root shell and the Find app installed (it ships with GurtOS, in `tracks/find/`).
-- A Moss project, with its project id and key, for search by meaning. Without one, search falls back to matching words.
-- At least one vision model the box can reach. See step 2.
+- A box with a root shell (GurtOS Personal or the Ubuntu install). Find ships with GurtOS, in `tracks/find/`, and
+  GurtOS Personal turns it on in its first Setup. On other boxes, turn it on in the App Center.
+- Optional: a Moss account and project, with its project id and key, for search by meaning. Without one, search
+  matches words. Find needs no key to work.
+- Optional: a vision model the box can reach, so photos are described. See step 2.
 
 ## Steps
 
-1. **Add the Moss keys to the vault.** See [Add a secret](/docs/guides/add-a-secret/).
+1. **Optional: add the Moss keys to the vault.** See [Add a secret](/docs/guides/add-a-secret/).
 
    ```ini
    MOSS_PROJECT_ID=your-project-id
@@ -48,13 +50,13 @@ The Find app keeps one index of every photo, text file and finished task on the 
    curl -s 'http://127.0.0.1:7700/t/find/search?q=whiteboard%20photo&kind=photo&k=3'
    ```
 
-![A search panel over the desktop with results from tasks, the action log, files and photos.](../../../../assets/screens/design-find.png)
+![Find in the GurtOS app on GurtOS Personal: a search for receipt finds photos/IMG_2042.jpg, described by Claude through a Droid task.](../../../../assets/screens/personal-find.png)
 
-*Find, from the current design. The data and photos are examples.*
+*Find in the GurtOS app on GurtOS Personal, on a test box. The photo is a test image.*
 
-:::caution[Planned]
-A Find window in the portal is designed, as above, but not built in this release. Search with the route or, from a task, with `find.search`.
-:::
+On GurtOS Personal, Find is a page in the GurtOS app and a section of GNOME's Activities search. The portal (the
+GurtOS Server screen and the web app) has no Find window yet. There, search with the route, or from a task with
+`find.search`.
 
 ## Check it worked
 

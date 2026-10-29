@@ -3,7 +3,7 @@ title: Triggers
 description: Triggers start GurtOS tasks without you, on a schedule, from a webhook, when a file arrives or from a chat. Each turns an event into a task spec.
 ---
 
-You can start a task by hand: **New task** in the portal's Tasks window, **Ask the box** on a phone, or the [HTTP API](/docs/reference/http-api/). The apps on the box start tasks from their own pages and chats too. Most agent work on an always-on box starts some other way: at night, when a ticket is filed, when a receipt lands in a folder, when you ask in a chat. A trigger is the code that turns such an event into a task.
+You can start a task by hand: **New task** in the portal's Tasks window, the same **New task** button on a phone, or the [HTTP API](/docs/reference/http-api/). The apps on the box start tasks from their own pages and chats too. Most agent work on an always-on box starts some other way: at night, when a ticket is filed, when a receipt lands in a folder, when you ask in a chat. A trigger is the code that turns such an event into a task.
 
 ## How triggers work
 
@@ -31,15 +31,17 @@ triggers: [
 
 ### Schedule
 
-`schedule` runs on a fixed interval with `everyMs`, or once a day at `dailyAt: 'HH:MM'` in the box's local time. A daily schedule computes its next run from the clock each time, so it stays on time after a restart. If the `task` function throws, the error is logged and the schedule carries on.
+`schedule` runs on a fixed interval with `everyMs`, or once a day at `dailyAt: 'HH:MM'` in the box's local time. `dailyAt` is a 24-hour time such as `02:00` or `17:30`. `everyMs` is from 1 millisecond to about 24 days (2,147,483,647 ms). Anything else, or neither one, makes the app fail to load, with a message that names the schedule, and the app shows `status: error`. For a longer wait, use `dailyAt`.
 
-A schedule does not catch up on runs it missed while the box was off. It fires at the next scheduled time.
+A daily schedule computes its next run from the clock each time, so it stays on time after a restart, and it runs once a day even if the clock moves. An interval schedule counts again from when the box started, so a restart moves its next run. If the `task` function throws, the error is logged and the schedule carries on.
+
+A schedule does not catch up on runs it missed while the box was off. A daily one fires at its next usual time, and an interval one fires one interval after the box starts.
 
 ### Webhook
 
 `webhook` serves `POST /hook/<app>/<name>` on the box's API. The JSON body is the payload, and the request headers are passed too, so the `task` function can check a signature. The response is the task the box created, or `{ok: true}` if the event was skipped.
 
-The webhook is served on the box's API address, which listens on `127.0.0.1` by default. For a service on the internet to reach it, you need to publish that path, for example through a reverse proxy that forwards only `/hook/...`. Check the sender in the `task` function, because the core does not authenticate webhook calls.
+The webhook is served on the box's API address, which listens on `127.0.0.1` by default. A request from the box's own machine needs no token. A request from anywhere else, including one that arrives through a reverse proxy, needs a paired device's token as `Authorization: Bearer <token>`, and without one it gets `401`. So an outside service that cannot send that header cannot reach a webhook. The core does not check a signature, so if the sender signs its calls, check the signature in the `task` function. A service that proves itself with its own secret fits an app route listed in `openRoutes` better. See [apps and slots](/docs/concepts/apps-and-slots/).
 
 ### File change
 
@@ -49,11 +51,11 @@ The folder is created if it does not exist. Files in it are not part of any work
 
 ## Writing your own trigger
 
-Anything that can call `box.createTask` from the core can start tasks. The included apps have their own triggers:
+Anything that can call `box.createTask` from the core can start tasks. The included apps have their own triggers. The last two are optional apps that need that service's account:
 
-- The ASI:One app runs a chat agent that starts a task when a paired owner asks for work.
-- The shopping agent runs a check every 20 seconds and starts a purchase task when a watched price drops.
 - /find rescans its workspaces at boot, after every task and every minute. It starts a Claude description task only when you press **Describe with Claude** on the Find page.
+- The shopping agent runs a check every 20 seconds and starts a purchase task when a watched price drops. It buys from a test store only.
+- The ASI:One app runs a chat agent that starts a task when a paired owner asks for work.
 
 A trigger runs inside the core, so it may read the vault keys its app lists in `secrets` with `box.secret(name)`. It must never put a secret in a task's prompt.
 

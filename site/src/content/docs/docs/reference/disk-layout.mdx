@@ -14,15 +14,17 @@ GurtOS keeps two complete systems on disk, slots A and B, and runs from one. An 
 
 ## Partitions
 
-The installer erases the disk and makes these partitions, in this order:
+The installer erases the disk it uses and makes these partitions, in this order:
 
 | Partition | Size | Partition name | Mounted at | Holds |
 |---|---|---|---|---|
 | BIOS boot | 1 MB | `box-bios` | | GRUB for machines that start with BIOS. x86 only. |
 | EFI system partition | 512 MB | `box-esp` (FAT label `BOX-ESP`) | `/boot/efi` | GRUB, its menu, and `grubenv`, which says which slot starts |
-| System slot A | 6 GB, 12 GB on GurtOS Personal | `box-a` | `/` when running | A whole system: kernel, Ubuntu base, the box service, and the desktop on Personal |
-| System slot B | the same as slot A | `box-b` | `/` when running | The other system. Empty until the first update. |
-| Data | the rest | `box-data` | `/data` | Everything that must outlive an update |
+| System slot A | 6 GB, 12 GB on GurtOS Personal | `box-a` (ext4 label `box-a`) | `/` when running | A whole system: kernel, Ubuntu base, the box service, and the desktop on Personal |
+| System slot B | the same as slot A | `box-b` (ext4 label `box-b`) | `/` when running | The other system. Empty until the first update. |
+| Data | the rest | `box-data` (ext4 label `box-data`) | `/data` | Everything that must outlive an update |
+
+GRUB and `/etc/fstab` find the EFI system partition, the slots and the data partition by their file system labels.
 
 | Edition | Both slots | Smallest disk | Use in practice |
 |---|---|---|---|
@@ -31,7 +33,13 @@ The installer erases the disk and makes these partitions, in this order:
 
 The installer refuses a disk too small for both slots, the EFI system partition and 4 GB of data.
 
-The installer uses a blank disk straight away. It erases a disk that has anything on it only after someone types `erase` on the box's screen.
+Which disk the installer uses:
+
+- It never offers the disc or USB stick it started from, a disk with anything mounted or in use as swap, a memory disk, a read-only disk, or a disk too small for the layout.
+- With one internal disk and nothing on it, it installs at once.
+- With several disks, it lists them with a number and what each holds, and someone types the number of the disk to use.
+- For a disk that has anything on it, and for any USB or removable disk even when empty, someone must type `erase` on the box's screen. The installer then erases it.
+- A start line option `box.install=/dev/sdb` names the disk to use. The same `erase` question applies.
 
 ## What lives on the data partition
 
@@ -42,7 +50,7 @@ The data partition is mounted at `/data`, and these paths are bind-mounted from 
 | `/var/lib/box` | The action log, workspaces and tasks (`BOX_HOME`) |
 | `/etc/box` | The vault and the box's identity key |
 | `/var/lib/spacetimedb` | SpacetimeDB's data |
-| `/root/.config/spacetime` | The identity that owns the box's SpacetimeDB database |
+| `/root/.config/spacetime` | The SpacetimeDB login an older install made. The box copies it to `BOX_HOME/spacetime/cli.toml` once, and uses its own copy after that. |
 | `/var/log/journal` | System logs, so a failed update's logs are still there after the rollback |
 
 GurtOS Personal also keeps these on the data partition, and will not start its desktop without them:
@@ -53,10 +61,19 @@ GurtOS Personal also keeps these on the data partition, and will not start its d
 | Network connections | Saved Wi-Fi and wired connections (NetworkManager) |
 | AccountsService | Account pictures and account types |
 | Bluetooth | Paired devices |
+| `/opt/box/voice-venv`, `/opt/box/voice-models` | The speech model for Talk to your computer, downloaded once |
+| `/etc/cups`, `/var/lib/cups` | Printers and print jobs |
 
-`/data/update` holds `trial` and `last`: the update in progress and the last result.
+Two more things sit on the data partition without a bind mount:
 
-An update also copies into the new slot: `/etc/machine-id`, SSH host keys (debug builds), and the task users the core made (uids 30000 to 39999), so a resumed task keeps its uid. On GurtOS Personal it also carries people's accounts (uids 1000 to 29999), their groups, including `sudo`, the time zone, language, computer name and login settings.
+| Path | What |
+|---|---|
+| `/data/update/` | `trial` (the slot on trial), `last` (the last update's result) and `writing` (a slot whose update has not finished) |
+| `/data/droid/droid` | A copy of the Droid CLI, put back into `/usr/local/bin` after an update without a new download |
+
+On a new GurtOS Server the Droid CLI is not in the image. `box-droid.service` downloads it after the first start, and tasks that need it wait, queued. It never gives up and never holds up boot: after a failed try it waits 30 seconds, then 1, 2 and 4 minutes, then 5 minutes between tries, and it tries at once when the network comes back. Where it stands is in `/run/box-os/droid` as `state` (`downloading`, `offline`, `retrying` or `ready`), `message` and `at`.
+
+An update also copies into the new slot: `/etc/machine-id`, the time zone (`/etc/localtime`, `/etc/timezone`), SSH host keys (debug builds), and the task users the core made (uids 30000 to 39999), so a resumed task keeps its uid. On GurtOS Personal it also carries people's accounts (uids 1000 to 29999), their groups, including `sudo`, language, computer name and login settings.
 
 On GurtOS Personal, software someone installs with `apt`, and any other change outside their home folder and the settings above, is gone after the next system update, because the update replaces the whole system.
 
@@ -68,22 +85,24 @@ GRUB reads `grubenv` on the EFI system partition:
 |---|---|
 | `saved_entry` | The default slot, `a` or `b` |
 | `next_entry` | A slot to start once. GRUB clears it as it uses it. |
+| `just_installed` | Set by the installer and cleared by the first healthy start from the disk. While it is set, the install disc starts the installed system at once instead of offering its menu. |
 
 The running slot is on the kernel command line as `box.slot=a` or `box.slot=b`. The kernel starts with `panic=10`, so a kernel that panics restarts by itself after 10 seconds.
 
 ## An update, step by step
 
-1. `box-update apply <file or URL>` fetches `gurtos-<edition>-<arch>.sqfs` with its `.sha256` and `.sig`.
-2. It checks the signature on the hash against `/etc/box-os/update.pub`, then checks the hash against the file. Either failing stops the update.
-3. It formats the other slot, unpacks the image into it, and checks it holds a kernel and the box service, and that it is the same edition as the running system. A GurtOS Server image never replaces GurtOS Personal, which would lose its desktop.
-4. It copies the machine's identity and task users across, as above.
-5. It sets `next_entry` to the new slot, writes `/data/update/trial`, and restarts.
-6. At every start, `box-confirm.service` waits up to 5 minutes for `GET /health` on the box's API to answer `ok`.
+1. `box-update apply <file or URL>` first refuses in three cases. The running system is itself on trial: the other slot holds the last system known to be healthy, so wait until it is confirmed, at most 5 minutes after it started. The running slot is not the default one: restart into the default first. Or the box runs from its install disc.
+2. It fetches `gurtos-<edition>-<arch>.sqfs` with its `.sha256` and `.sig`. A download slower than 10 KB/s for a minute is cut.
+3. It checks the signature on the hash against `/etc/box-os/update.pub`, then checks the hash against the file. Either failing stops the update.
+4. It writes the slot's name to `/data/update/writing`, formats the other slot, and unpacks the image into it. Until the update ends, the slot holds no system that may start. A power cut leaves that mark, and `box-update status` reports the slot as an update that did not finish.
+5. It checks the slot holds a kernel and the box service, is the same edition and the same architecture as the running system, and is not an older build. A GurtOS Server image never replaces GurtOS Personal, which would lose its desktop. `--allow-older` installs an older build anyway.
+6. It copies the machine's identity and task users across, as above, removes the `writing` mark, sets `next_entry` to the new slot, writes `/data/update/trial`, and restarts.
+7. At every start, `box-confirm.service` waits up to 5 minutes for `GET /health` on the box's API at `127.0.0.1:7700` to answer `ok`. That is the only check: it does not test the screen or SpacetimeDB.
    - Healthy on trial: the new slot becomes `saved_entry`, the default. The update is kept.
    - Not healthy: the box restarts. `saved_entry` never changed, so GRUB starts the old slot.
    - The new slot did not start at all: the box is already on the old slot, and the result is recorded.
 
-Each result is written to `/data/update/last` and printed on the serial console.
+Each result is written to `/data/update/last` and printed on the serial console. `box-update` finds the slots by partition name on the disk the running system started from, so it writes only there.
 
 ## Update files
 
@@ -100,12 +119,13 @@ Each result is written to `/data/update/last` and printed on the serial console.
 
 ## `box-update`
 
-Run as root on the box. Release builds have no shell, so today this needs a debug build with SSH.
+Run as root on the box. On GurtOS Personal, open a terminal and use `sudo`. A release build of GurtOS Server has no shell, so today it needs a debug build with SSH.
 
 ```sh
 box-update status                                   # the running slot, the other slot, the default, the last result
 box-update apply https://updates.example/gurtos-server-x86_64.sqfs
 box-update apply /tmp/gurtos-server-x86_64.sqfs --no-reboot  # write the slot now, restart later
+box-update apply gurtos-server-x86_64.sqfs --allow-older     # install an older build anyway
 box-update rollback                                 # make the other slot the default and restart into it
 box-update confirm                                  # what box-confirm.service runs at every start
 ```
@@ -121,7 +141,9 @@ Updates from the portal, and a shell-free way to apply them on release builds, a
 - The slots are plain writable ext4. They are not read-only and not verified at boot (no dm-verity). Changes made by hand inside a running slot are lost at the next update, by design.
 - A system that hangs, instead of panicking or failing its health check, stays hung until someone restarts it. A hardware watchdog would cover that; not every machine or VM has one.
 - The GRUB menu on the EFI system partition is written once at install and never updated. A change to the boot menu itself needs a reinstall.
-- Updates are signed with one ed25519 key held on one build machine. There is no key rotation and no rollback protection: an older signed image installs fine.
+- Updates are signed with one ed25519 key held on one build machine. There is no key rotation. An older signed image installs only with `--allow-older`, a check by build date, not a counter the firmware keeps.
+- GRUB and `/etc/fstab` find partitions by label. With a second disk that also holds GurtOS plugged in, such as an old install on a USB drive, a start can use that disk's slot or data partition. Unplug it or erase it. This is a known limit.
+- The update health check is only the box service's `/health`.
 - The boot loader is not signed, so Secure Boot must be off.
 
 ## Related

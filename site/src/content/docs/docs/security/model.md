@@ -47,10 +47,12 @@ The worker starts as a transient systemd unit, `box-task-<id>`, with these prope
 | `ProtectProc=invisible` | It sees only its own processes in `/proc`, not the box's or other tasks' |
 | `InaccessiblePaths=-/run/dbus` | No D-Bus |
 | `RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6 AF_NETLINK` | No raw packet sockets or other socket families |
-| `MemoryMax=2G` | At most 2 GB of memory |
+| `MemoryMax=2G`, `MemorySwapMax=0` | At most 2 GB of memory, and no swap |
 | `TasksMax=512` | At most 512 processes and threads |
+| `CPUQuota=200%` | At most two CPU cores |
+| `SystemCallFilter=` | No mount, kernel module, debug, raw I/O, reboot, swap or clock system calls, and no `bpf` or keyring calls |
 
-**Stops:** writing outside its copy, seeing or signalling other processes, using devices, gaining privileges, and one task exhausting the machine's memory or process table.
+**Stops:** writing outside its copy, seeing or signalling other processes, using devices, gaining privileges, and one task exhausting the machine's memory, CPU or process table.
 
 ## 3. Its own copy of the files
 
@@ -78,7 +80,8 @@ The proxy knows which task opened each connection from the uid that owns it, so 
 
 - `example.com` allows that host on any port, `example.com:8080` only that port, `*.example.com` its subdomains.
 - It resolves the name once and connects to that address, so the name cannot change between the check and the connection.
-- A name that resolves to the box itself is refused unless the exact `host:port` is listed, and the box's own ports (the API, SpacetimeDB, the proxy range) are always refused.
+- It never reaches link-local addresses (the cloud metadata service). A name that resolves to the box or to a private network needs an exact `host:port`, and the box's own ports (the API, SpacetimeDB, the proxy range) are always refused.
+- A task holds at most 256 proxy connections at once.
 - Every refusal is a `net.blocked` event in the action log.
 
 A task with an empty `hosts` list has no network at all. A task that names no hosts gets none, unless the owner sets Settings `networkDefault` to `allowlist`, which gives it the hosts in `defaultHosts`.
@@ -87,10 +90,12 @@ A task with an empty `hosts` list has no network at all. A task that names no ho
 
 ## 6. The model key stays outside the task
 
-Droid needs a Factory API key for its model calls. A Droid task holds only a placeholder. Its calls go through the box's proxy:
+Droid needs a model key: a Factory API key, or your own Anthropic key. A Droid task holds only a placeholder. Its calls go through the box's proxy:
 
 - Plain API calls go to the proxy as Droid's base URL, and the proxy puts the vault's key on the request.
-- Model calls to `*.factory.ai` over HTTPS are answered by the proxy with a certificate from the box's own certificate authority. Only Droid tasks are told to trust that authority. The proxy swaps the placeholder for the real key and forwards the call over real TLS.
+- Model calls to `*.factory.ai` over HTTPS are answered by the proxy with a certificate from the box's own certificate authority. Only Droid tasks are told to trust that authority. The proxy swaps the placeholder for the real key and forwards the call over real TLS. It relays only the paths Droid calls, and refuses and logs any other.
+- With your own Anthropic key, calls to `api.anthropic.com` get the key in the `authorization` or `x-api-key` header only.
+- On either key, a model call that asks the service to fetch a page, an MCP server or a file by URL for the task is refused.
 
 The authority's private key is in `BOX_HOME/ca`, root only. Tasks that are not Droid tasks get no Factory access through the proxy.
 
@@ -100,8 +105,9 @@ The authority's private key is in `BOX_HOME/ca`, root only. Tasks that are not D
 
 Every tool declares what a call costs. Before a call runs, the broker adds the cost to what the task has spent and to what its other calls in flight have reserved. If the total would pass the task's budget, the task pauses and asks for an OK. The tool runs only after someone approves.
 
-- A single spend above Settings `approvalThresholdCents` always asks, even inside the budget. The default is 10000 cents, $100.
-- A task that names no budget gets Settings `defaultBudgetCents`, 0 by default, so every spend asks.
+- A single spend above Settings `approvalThresholdCents` always asks, even inside the budget. The default is 500 cents, $5.
+- A task that names no budget gets Settings `defaultBudgetCents`, 100 cents ($1) by default, so a spend past $1 asks.
+- The box's own budget question and a task's own questions have different ids (`<task>.budget.<action>` and `<task>.task.<key>`), so a task cannot answer the budget question in advance with a cheap one.
 - One approval per action. A call retried while waiting shares one approval and is charged once.
 - The first answer wins, from any device.
 - A task's pending approvals close when it ends.
@@ -113,24 +119,27 @@ Every tool declares what a call costs. Before a call runs, the broker adds the c
 
 Every state change, step, tool call and result, approval and answer, cost and refused connection is a line in the action log, `BOX_HOME/log.jsonl`. Each line is written and fsynced before the box acts on it. The file is root-only. Tasks cannot read or write it.
 
-**Gives you:** a record of what each agent did, which person approved what and from which device, and the base for undo and resume. The log is append-only by design but not tamper-evident: root on the box can edit it. See [The action log](/docs/concepts/action-log/).
+**Gives you:** a record of what each agent did, which person approved what and from which device, and the base for undo and resume. Each line carries the hash of the line before it (`prev`), so an edit in the middle shows. Nothing signs the log, so root can rewrite the whole chain. A task writes at most 20 MB to it, and 64 KB per step. See [The action log](/docs/concepts/action-log/).
 
 A task's part of the log can also leave the box as a signed receipt that anyone can check in a browser. See
 [Verify a receipt](/docs/guides/verify-a-receipt/).
 
 ## 9. Only paired devices reach the API
 
-On the Ubuntu install and GurtOS Personal, the box's HTTP API listens on `127.0.0.1` unless you set `BOX_LISTEN`. GurtOS Server from the ISO listens on every address behind an inbound firewall (below). Wherever it listens, it sorts each request:
+On the Ubuntu install, the box's HTTP API listens on `127.0.0.1` unless you set `BOX_LISTEN`. GurtOS Server and GurtOS Personal from the ISO listen on every address behind an inbound firewall (below). Wherever it listens, it sorts each request:
 
-- **The box's own screen.** A request over the Unix socket, or from `127.0.0.1` with no proxy header such as `X-Forwarded-For`, may do everything.
+- **The box's own screen.** A request over the Unix socket, or from `127.0.0.1` with no proxy header such as `X-Forwarded-For`, a Host of `127.0.0.1` or `localhost`, and no Origin but the box's own address, may do everything. Another page in a browser on the same machine does not count.
 - **A paired device.** Any other request must carry the token of a device paired with a one-time code from the box's own screen. It may read, start tasks, undo and answer approvals. The log names the device as the approver; the request cannot choose the name.
-- **Anyone else** gets `401`. Only the health check, redeeming a pairing code and the portal's own pages are open.
+- **An app's page** under `/t/<app>/` runs sandboxed in the browser, with a window token that reaches only that app's routes and reads tasks and approvals. It answers only its own app's requests.
+- **Anyone else** gets `401`. Only the health check, redeeming a pairing code and the portal's own pages are open. Wrong pairing codes are limited to 5 a minute per address. Request bodies are capped at 10 MB, or 1 MB without a token.
+
+Answering approvals through the GurtOS MCP server is off unless `BOX_MCP_ANSWER=on`.
 
 Pairing codes, the list of devices, setup, settings, the vault, apps on and off, the owner, folders and Keep are the **owner's**: the box's own screen, or a device paired as the owner from that screen. Anyone else gets `403`. No route returns a vault value.
 
 SpacetimeDB, which mirrors live tasks and approvals for the box's own screen, has no login of its own, so it listens on `127.0.0.1` only. Its `answer` reducer also works only from a connection the box has vouched for (the box's own screen, or a paired phone that told the box its SpacetimeDB identity through the API), and it records the vouched name. Phones follow the box's API instead.
 
-The OS image adds an inbound firewall. It drops everything that comes in except replies to the box's own connections, ping and DHCP. On GurtOS Server it also lets the API on port 7700 in from private networks only (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`, Tailscale's `100.64.0.0/10`, link-local and IPv6 unique local addresses), never from the public internet. SpacetimeDB's port is never open. Debug builds also allow SSH.
+The OS image adds an inbound firewall. It drops everything that comes in except replies to the box's own connections, ping and DHCP. On both editions it lets the API on port 7700, and the setup port 7701 while setup from another computer is open, in from private networks only (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`, Tailscale's `100.64.0.0/10`, link-local and IPv6 unique local addresses), never from the public internet. SpacetimeDB's port is never open. Debug builds also allow SSH.
 
 **Stops:** anyone on the internet reaching the API at all on the OS image, and someone on your network reading tasks, starting work, approving spending or undoing tasks; a paired phone changing settings or the vault; and a forged approval through SpacetimeDB. See [HTTP API](/docs/reference/http-api/#who-may-call-what).
 
@@ -150,8 +159,8 @@ GurtOS Personal is different on purpose: it is your own computer, and your accou
 
 ## 12. Remote access through the relay
 
-Remote access is off until the owner turns it on. Then the box opens one outbound tunnel to the GurtOS relay and gets
-its own address, such as `rosa.box.gurtos.com`, with its own Let's Encrypt certificate. TLS ends on the box, with a
+Remote access is off until the owner turns it on. Then the box opens one outbound tunnel to a relay and gets its own
+address, such as `rosa.box.example.com`, with its own Let's Encrypt certificate. TLS ends on the box, with a
 key that never leaves it. A request through the tunnel carries `X-Forwarded-For`, so the box treats it as remote and
 asks for a paired device's token, as on the home network. Every phone still needs a pairing code from the box's own
 screen. See [Reach your box from anywhere](/docs/guides/reach-your-box-from-anywhere/).
@@ -170,7 +179,7 @@ reaches the relay's gateway, and signs it with a key made for that box alone.
 **Stops:** a network or the relay reading a box's traffic, and one box posing as another when they share a push
 subscription. See the [threat model](/docs/security/threat-model/) for what a relay operator could still try.
 
-You can run the relay yourself instead of ours. See
+A hosted relay is not running during the preview, so remote access works with a relay you run. See
 [Run your own relay, push gateway and web app](/docs/guides/self-host/).
 
 ## What these layers have in common

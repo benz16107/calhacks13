@@ -17,17 +17,26 @@ on the box's screen, through the box's API, or by editing the file. All three ta
 
 ## On the box's screen
 
-1. Open **Settings**, then **Accounts & Keys**. During first-run setup, the **AI models** and **Keys for apps** steps
-   show the same fields.
-2. Paste the key and choose **Save to vault**.
+1. Open **Settings**, then **Accounts & Keys**. The list shows the model keys, the keys of apps that are on, and any
+   key already in the vault. During first-run setup, the **Model key** step takes a model key. Other keys are set only
+   in Settings.
+2. Choose **Set key** (**Replace** if the key is already set) on the key's row, or **Add a key…** for a name that is
+   not listed. Paste the key and choose **Save**.
 
-The screen shows only whether a key is set. It never shows a key again; to change one, paste a new key over it. On
-GurtOS Personal, the GurtOS app on your desktop has the same Settings. A phone paired as the owner can do it too.
+The screen shows only whether a key is set and when. It never shows a key again; to change one, choose **Replace**
+and paste a new key. On GurtOS Personal, open **GurtOS Settings** from the desktop, then **Keys**. Its buttons are
+**Add** or **Replace** on a key's row, **Add a key…** for any other name, and **Save key** in the dialog. The
+**AI models** step of GurtOS Setup takes a model key. A phone paired as the owner can set keys too.
+
+An Anthropic key is checked when you save it: the box asks Anthropic for one model with the key. If Anthropic rejects
+it, the box does not save it and says so. If Anthropic cannot be reached, the key is saved unchecked. A Factory key
+cannot be checked until its first task.
 
 ## With the API
 
-Only the owner may set keys: a request from the box's own machine, or from a phone paired as the owner. Names are
-capital letters, digits and underscores.
+Only the owner may set keys: a request from the box's own machine, or from a phone paired as the owner. A name starts
+with a capital letter, then has capital letters, digits and underscores, 2 to 64 characters in all. A value is one
+line of at most 8,192 characters.
 
 1. **Set the key.** This reads the value without echoing it or leaving it in your shell history:
 
@@ -37,8 +46,11 @@ capital letters, digits and underscores.
    ```
 
    ```json
-   {"name":"FACTORY_API_KEY","setAt":"2026-10-24T07:12:00.000Z"}
+   {"name":"FACTORY_API_KEY","setAt":"2026-10-24T07:12:00.000Z","check":"unchecked","checked":false,"message":"Saved. GurtOS can't check a Factory key before its first task."}
    ```
+
+   For `ANTHROPIC_API_KEY` the answer has `check` set to `ok` or `unchecked`, and a key Anthropic rejects is refused
+   with a `400` and not saved. Any other name has no `check` field.
 
    The box writes the key to `/etc/box/vault.env`, keeps the file root-only, and uses the key at once. The action log
    records that `FACTORY_API_KEY` was set, never the value.

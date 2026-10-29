@@ -17,13 +17,16 @@ To report a security problem, follow [Report a vulnerability](/docs/security/rep
 | `tracks/<name>/` | One folder per app. Each has a `track.ts` that default-exports the app, and a `demo.ts` test step. |
 | `portal/` | The web app for the box's screen, a browser and a phone. Its built `dist/` is committed, so the box needs no build step. |
 | `image/` | The OS image: the build script, the installer, `box-update` and the files the image adds. |
-| `site/` | This documentation. |
+| `personal/` | The GurtOS Personal desktop layer: notifications, the top-bar indicator, the Files action, Keep and Undo. |
+| `relay/` | The relay for remote access and push notifications, and the web app's hosting headers. |
+| `native/` | The iPhone, Apple Watch, Mac and Android apps. |
+| `site/` | This documentation and gurtos.com. |
 
 The core never imports an app. It loads every `tracks/*/track.ts` at boot, and an app that fails to load is skipped.
 
 ## Rules for changes
 
-- **TypeScript on Node.js 22 or newer**, run directly with type stripping: no build step for the core or apps.
+- **TypeScript on Node.js 22.18 or newer**, run directly with type stripping: no build step for the core or apps.
   Use `import type`, `.ts` in import paths, and no enums, namespaces or constructor parameter properties.
 - **It must run on arm64 and x86_64.**
 - **Apps import only types from `core/contract.ts`.** Never another core file, never another app. See the

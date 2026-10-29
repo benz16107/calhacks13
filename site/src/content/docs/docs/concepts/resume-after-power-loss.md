@@ -15,10 +15,16 @@ A box is meant to run unattended. Power cuts, kernel panics and restarts will ha
 4. **It resumes tasks.** For each task that was `queued`, `running` or `waiting`, it stops any leftover processes of that task's user, remounts the task's copy of the workspace over the same layers it started with, opens its broker and starts its worker again.
 5. **It starts serving** the API, then app triggers, then reconnects to SpacetimeDB and refills the live tables.
 
-`GET /api/health` reports when the core started (`startedAt`) and which tasks it resumed (`resumed`). The portal uses
-them to show a notice after a restart that lists the tasks that picked up where they stopped.
+`GET /api/health` reports when the core started (`startedAt`) and whether agents are paused. To the box's own machine or a paired device it also reports which tasks it resumed (`resumed`) and `cleanStart`, which is false when the last stop was not a clean one. The portal uses them to show a notice after a restart that lists the tasks that picked up where they stopped. If the owner had paused all agents before the cut, resumed tasks stay as they were until the agents are resumed.
 
 A task that was waiting for an OK stays waiting. Its approval is still in your inbox, and you can answer it from the portal or phone as if nothing happened.
+
+The core writes its own state files, such as `devices.json`, `owner.json` and `permissions.json`, beside the final name and then renames them, so a power cut leaves the old file or the new one. If a failing disk leaves one unreadable anyway, the core sets it aside as `<name>.torn-<time>`, logs a warning, starts without it and writes a `security` note. It never grants access because a file is unreadable:
+
+- A torn `devices.json` means no phone is paired. Pair your phones again.
+- A torn `owner.json` still counts as an owner being set, so only root or the owner's phone can change the owner.
+- A torn `permissions.json` pauses all agents, because the owner's off switches live there. Check Settings, Permissions, then resume them.
+- A torn `remote.json`, which is kept as `remote.json.torn`, turns remote access off. Turn it on again.
 
 ![The desktop after a power cut, titled Welcome back: 2 requests still need you, 5 tasks resumed, and 0 calls paid twice.](../../../../assets/screens/restored.png)
 

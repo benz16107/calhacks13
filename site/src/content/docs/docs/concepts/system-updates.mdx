@@ -34,8 +34,9 @@ Everything you care about is on the data partition and is bind-mounted into plac
 - `/etc/box`: the vault and the box's identity key.
 - `/var/lib/spacetimedb` and `/root/.config/spacetime`: the live database and the identity that owns it.
 - `/var/log/journal`: system logs, so a failed update's logs are still there after the rollback.
+- `/data/droid`: the Droid download, so an update puts it back without downloading it again.
 
-An update also copies `/etc/machine-id`, SSH host keys on debug builds, and every task user (uids 30000 to 39999) into the new system, so a task resumed after the update keeps its uid.
+An update also copies `/etc/machine-id`, the time zone, SSH host keys where there are any, and every task user (uids 30000 to 39999) into the new system, so a task resumed after the update keeps its uid.
 
 On GurtOS Personal the data partition also holds `/home`, saved network connections, account pictures and Bluetooth pairings. An update carries over people's accounts (uids 1000 to 29999), their groups and `sudo` membership, the time zone, language, computer name and login settings.
 
@@ -43,18 +44,22 @@ Anything else changed by hand inside a running slot is lost at the next update. 
 
 ## How an update runs
 
-`box-update apply <file or URL>` does it in order:
+`box-update apply <file or URL>` does it in order. The options are `--no-reboot`, which stops after step 7, and `--allow-older`, which skips the build-age check in step 5.
 
-1. **Fetch.** It downloads the update image, `gurtos-<edition>-<arch>.sqfs`, with its `.sha256` and `.sig` files, or reads them from disk. For example, `box-update apply https://updates.example.com/gurtos-server-x86_64.sqfs`.
-2. **Verify.** It checks that `.sig` is a valid signature of the `.sha256` file by the build key in `/etc/box-os/update.pub`, and that the image matches the hash. An image signed by any other key does not install.
-3. **Check the edition.** An update must be the same edition as the running system. A Server image does not install on Personal, which would lose its desktop, and the other way round.
-4. **Write.** It formats the spare slot and unpacks the image into it, then copies the identity, task users and, on Personal, people's accounts and settings across.
-5. **Arm a trial.** It sets GRUB's `next_entry` to the spare slot. GRUB clears that value as it uses it, so the new slot starts exactly once. The default slot does not change yet.
-6. **Restart.**
+1. **Check the running system.** It refuses while the running system is itself on trial, because the other slot then holds the last system known to be healthy. Wait until it is confirmed, at most 5 minutes after it started (`box-update status` shows it). It also refuses when the running slot is not the default one. Restart into the default slot first.
+2. **Fetch.** It downloads the update image, `gurtos-<edition>-<arch>.sqfs`, with its `.sha256` and `.sig` files, or reads them from disk. A download slower than 10 KB/s for a minute is cut. For example, `box-update apply https://updates.example.com/gurtos-server-x86_64.sqfs`.
+3. **Verify.** It checks that `.sig` is a valid signature of the `.sha256` file by the build key in `/etc/box-os/update.pub`, and that the image matches the hash. An image signed by any other key does not install.
+4. **Write.** It marks the spare slot as unfinished (`/data/update/writing`), formats it and unpacks the image into it.
+5. **Check the image.** It must be a GurtOS system, the same edition as the running system, for the same architecture, and not an older build. A Server image does not install on Personal, which would lose its desktop, and the other way round. Build ids start with the build's UTC date and time, so they sort by age, and `--allow-older` installs an older build anyway. A refusal here leaves the spare slot marked unfinished.
+6. **Carry over.** It copies the machine identity, the time zone, SSH host keys where there are any, the task users and, on Personal, people's accounts and settings into the new system. Then it clears the unfinished mark.
+7. **Arm a trial.** It sets GRUB's `next_entry` to the spare slot. GRUB clears that value as it uses it, so the new slot starts exactly once. The default slot does not change yet.
+8. **Restart.**
+
+A slot whose write did not finish, from a power cut or a refusal in step 5, stays marked. `box-update status` shows it as "an update that did not finish (it cannot start)", and `box-update rollback` will not switch to it.
 
 ## The health check
 
-At every start, `box-confirm.service` waits up to 5 minutes for the box service to answer `GET /health` with `ok: true`. The first start of a new system can take a while, because it publishes the SpacetimeDB module.
+At every start, `box-confirm.service` waits up to 5 minutes for the box service to answer `GET /health` with `ok: true`. The core answers once its log and apps are loaded and its API is serving. That is the only check. It does not look at the box's screen (the kiosk or GDM) or at SpacetimeDB, which the core publishes to in the background after its API is up.
 
 - **Healthy:** the new slot becomes the default. The update is done.
 - **Not healthy:** the box restarts. GRUB starts the old slot, because the default never changed.
@@ -64,12 +69,14 @@ Either way, the result is written to `/data/update/last` and printed on the seri
 
 ## Rolling back by hand
 
-`box-update rollback` makes the other slot the default again and restarts into it. Use it when an update is healthy by the check but wrong for you. See [update and roll back](/docs/guides/update-and-roll-back/).
+`box-update rollback` makes the other slot the default again and restarts into it. Use it when an update is healthy by the check but wrong for you. It refuses when the other slot holds no system that can start. See [update and roll back](/docs/guides/update-and-roll-back/).
 
 ```sh
-box-update status      # which slot runs, what the other holds, the last result
+box-update status      # which slot runs, what the other holds, the default, any trial, the last result
 box-update rollback    # make the other slot the default again, and restart
 ```
+
+The box reports the update state at `GET /api/update`. Settings, Updates in the portal shows the running version and build. It has no update controls, so updates and rollbacks run through `box-update`.
 
 ## What makes the system an image
 
@@ -83,7 +90,10 @@ These are the trade-offs in this release, written down:
 
 - The slots are plain writable ext4. They are not read-only or verified at boot. dm-verity is not built.
 - Updates are signed with one ed25519 key held on the build machine. There is no key rotation.
-- There is no rollback protection. An older signed image installs as readily as a newer one.
+- Rollback protection is a build-date check only. An older signed image installs only with `--allow-older`. No counter in the firmware stops it.
+- There is no update feed. Nothing looks for updates by itself, so run `box-update apply` yourself. `GET /api/update` reports `automatic: false`, and the settings `autoUpdate` and `updateChannel` are stored only. Nothing reads them.
+- The health check is the box service's `/health` and nothing else. A system whose screen or SpacetimeDB is broken still passes it.
+- GRUB and the system's file table find partitions by label. With a second disk that also holds GurtOS plugged in, such as an old install on a USB drive, a start can use that disk's slot or data partition. Unplug it or erase it. `box-update` itself writes only to the slots on the disk it runs from.
 - A system that hangs instead of panicking or failing its health check stays hung until someone restarts it. A hardware watchdog would cover that, and is not set up.
 - The GRUB menu on the EFI partition is written once at install. A change to the boot menu itself needs a reinstall.
 - The two slots cost 12 GB on Server, with a minimum disk of about 17 GB. On Personal they cost 24 GB, with a minimum disk of about 29 GB.

@@ -3,6 +3,10 @@ title: Let agents pay for APIs
 description: Give the box a test wallet so agents can pay for HTTP APIs with x402 in devnet USDC, within a budget, without ever holding the wallet's key.
 ---
 
+:::note[Optional app]
+The wallet is an optional app. It is off on a new box. It needs no account for devnet, and a Coinbase Developer Platform key is optional.
+:::
+
 Some APIs answer `402 Payment Required` and ask to be paid per call with [x402](https://www.x402.org). The wallet app lets a task pay them. The box holds the wallet's key in its vault, a payment that fits the task's budget goes through, and one above it waits for your OK. In this guide you set up a test wallet, fund it, and run a task that buys from a paid API.
 
 :::caution[Test money only]

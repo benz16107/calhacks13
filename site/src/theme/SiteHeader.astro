@@ -23,7 +23,7 @@ const links = [
   { id: 'docs', label: 'Docs', href: `${origin}/docs/` },
   { id: 'calhacks', label: 'Cal Hacks', href: calhacks },
   { id: 'github', label: 'GitHub', href: REPO },
-];
+].filter((l) => l.id !== 'calhacks' || current === 'calhacks'); // the Cal Hacks link shows on calhacks.gurtos.com only
 ---
 <Tag class="gw-header">
   <div class="gw-bar">

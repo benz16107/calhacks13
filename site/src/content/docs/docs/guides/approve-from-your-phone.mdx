@@ -19,31 +19,35 @@ one it answers `401` and nothing is read, started, approved or undone. A laptop'
 pairing too, the same way as a phone.
 
 :::note[Preview]
-Pairing and answering work from a phone's browser. GurtOS Server from the ISO opens its API to your private network
-and shows a pairing QR code by itself. On the Ubuntu install and on GurtOS Personal you set the address by hand.
-Without remote access, a request shows when the portal is open on the phone. With remote access on, owner phones also get push notifications: see [Reach your box from anywhere](/docs/guides/reach-your-box-from-anywhere/).
+Pairing and answering work from a phone's browser. GurtOS Server and GurtOS Personal from the ISO open the API to
+your private network and show a pairing QR code by themselves. On the Ubuntu install you set the address by hand.
+A request shows when the app is open on the phone. Push notifications need remote access through a relay: see
+[Reach your box from anywhere](/docs/guides/reach-your-box-from-anywhere/).
 :::
 
 ## Before you start
 
 - A running box. See [Install GurtOS Server](/docs/get-started/install-server/) or [Install on Ubuntu](/docs/get-started/install-on-ubuntu/).
 - A phone with a browser, on the same private network as the box (your home network, or a VPN such as Tailscale).
-- On the Ubuntu install or GurtOS Personal, a shell on the box, to change its listen address.
+- On the Ubuntu install, a shell on the box, to change its listen address.
 
-## On GurtOS Server from the ISO
+## On GurtOS Server and GurtOS Personal from the ISO
 
-GurtOS Server does steps 1 and 2 for you. At each start it listens on every address and sets `BOX_URL` to its own
-address, and its firewall lets port 7700 in only from private networks: `10.0.0.0/8`, `172.16.0.0/12`,
-`192.168.0.0/16`, Tailscale's `100.64.0.0/10` and link-local addresses. Never from the public internet. Go to
-step 3.
+The ISO install does steps 1 and 2 for you. At each start the box listens on every address and sets `BOX_URL` to
+its own address on your network, and its firewall lets port 7700 in only from private networks: `10.0.0.0/8`,
+`172.16.0.0/12`, `192.168.0.0/16`, Tailscale's `100.64.0.0/10`, link-local addresses and IPv6 unique local
+addresses. Never from the public internet. Go to step 3.
+
+On GurtOS Personal, `BOX_URL` is worked out when the box starts, so after a laptop moves to another network the QR
+code shows the old address until the next restart.
 
 A cloud instance with only a public address is therefore out of reach from your phone. Put the box and the phone on
 a private network such as Tailscale, or use the provider's console.
 
 ## Steps
 
-1. **Give the phone a route to the box** (Ubuntu install or GurtOS Personal). The box's API listens on `127.0.0.1`
-   only. Pick one way in:
+1. **Give the phone a route to the box** (Ubuntu install). The box's API listens on `127.0.0.1` only. Pick one way
+   in:
 
    - A private network or VPN that the phone and the box are both on, such as WireGuard or Tailscale. Then set the
      box to listen on its address there (step 2).
@@ -72,15 +76,16 @@ a private network such as Tailscale, or use the provider's console.
    trust. `BOX_URL` is the address the phone will use; with it, the pairing code comes with a QR code that opens on
    the phone.
 
-3. **Show a pairing code.** On the box's own screen, open **Settings**, **Devices**. It shows a one-time code that works for
-   5 minutes, and a QR code when `BOX_URL` is set. Only the box itself, or a phone paired as the owner, can make a
-   pairing code.
+3. **Show a pairing code.** On the box's own screen, open **Settings**, **Devices**. Under **Pair a phone** it shows
+   a one-time code that works once, for 5 minutes, and a QR code when `BOX_URL` is set. Only the box itself, or a
+   phone paired as the owner, can make a pairing code. The QR code opens the box's own pairing page, so the phone
+   must be on the same network.
 
-   ![The setup wizard's Owner step: pair my phone, or only this screen, with a paired test phone shown.](../../../../assets/screens/setup-owner.png)
+   ![Step 4 of 8 of GurtOS Setup, Owner: Pair my phone shows a QR code and the code 5FFF-BAEB, beside Only this screen.](../../../../assets/screens/setup-owner.png)
 
    *Pairing the owner's phone during setup. You can pair more phones later in Settings, Devices.*
 
-4. **Pair the phone.** Scan the QR code with the phone's camera, or open `http://192.0.2.10:7700/#pair/<code>` on
+4. **Pair the phone.** Scan the QR code with the phone's camera, or open `http://192.0.2.10:7700/pair#<code>` on
    it. Check that the phone shows the same code as the box's screen, give the phone a name under
    **Name this phone**, and tap **Pair this phone**. The phone keeps its device token in the browser's storage.
 
@@ -88,7 +93,7 @@ a private network such as Tailscale, or use the provider's console.
    answer wins, from any device. The phone sends its device token with the answer, so the log records the phone's
    name. Anything else the phone puts in the answer's `by` field is ignored.
 
-   <div class="docs-phone"><PhoneFrame src={phoneHome} inset edge="#f6f5f2" alt="The portal on a phone: two requests under Needs you, each with Deny and Approve, running tasks below, and an Ask the box button." /></div>
+   <div class="docs-phone"><PhoneFrame src={phoneHome} inset edge="#f6f5f2" alt="Tasks on a phone: two requests marked Needs you, each with Deny and Approve, among running, done, failed and undone tasks." /></div>
 
    *The portal on a phone, from a test box running scripted tasks. Amounts are test money.*
 
@@ -101,10 +106,12 @@ curl -s -X POST http://127.0.0.1:7700/api/pair/start
 ```
 
 ```json
-{"code":"3f9a1c2e","url":"http://192.0.2.10:7700/pair#3f9a1c2e","expiresAt":"2026-10-24T07:05:00.000Z","box":{"id":"gurt-bf07fe","name":"gurt-bf07fe"}}
+{"code":"3f9a1c2e","url":"https://app.gurtos.com/pair#code=3f9a1c2e&lan=192.0.2.10%3A7700&n=gurt-bf07fe","boxUrl":"http://192.0.2.10:7700/pair#3f9a1c2e","expiresAt":"2026-10-24T07:05:00.000Z","box":{"id":"gurt-bf07fe","name":"gurt-bf07fe"}}
 ```
 
-Open `http://192.0.2.10:7700/#pair/3f9a1c2e` on the phone. A program can redeem the code itself with
+Open `boxUrl` on the phone: here `http://192.0.2.10:7700/pair#3f9a1c2e`. `url` is for the hosted web app, which
+reaches the box only when it has an https address through a relay. Everything after `#` stays on the phone and is
+never sent to a server. A program can redeem the code itself with
 `POST /api/pair {"code": "3f9a1c2e", "name": "Kitchen tablet"}`, which returns the device token once. It then sends
 `Authorization: Bearer <token>` with every request, or `?access_token=<token>` for the log stream, because a
 browser's `EventSource` cannot set headers.
@@ -122,7 +129,8 @@ curl -s -X POST http://127.0.0.1:7700/api/pair/start \
   -H 'content-type: application/json' -d '{"owner": true}'
 ```
 
-Redeem it on the phone as in step 4. The portal's Settings does not offer owner pairing yet.
+Redeem it on the phone as in step 4. In **Settings**, **Devices**, the switch **It is the owner's phone** makes the
+code an owner code.
 
 ## Check it worked
 
@@ -149,12 +157,16 @@ token. Pair it again to get a new one.
 
 ## Limits
 
-- On the Ubuntu install and GurtOS Personal, the API listens on `127.0.0.1` until you set `BOX_LISTEN`. GurtOS Server
-  from the ISO opens it to private networks only, so a box with only a public address needs a VPN such as Tailscale.
+- On the Ubuntu install, the API listens on `127.0.0.1` until you set `BOX_LISTEN`. GurtOS Server and GurtOS
+  Personal from the ISO open it to private networks only, so a box with only a public address needs a VPN such as
+  Tailscale.
 - SpacetimeDB listens on `127.0.0.1` only, because it has no login. A phone follows the box's log stream over the
   API instead. You can open SpacetimeDB to a network with `STDB_LISTEN=<address>` in `/etc/box/stdb.env`, but anyone
   who reaches it can then read every task and answer approvals.
-- Push notifications need remote access. Without it, a request shows when the portal is open on the phone.
+- Push notifications need remote access through a relay. Without it, a request shows when the app is open on the
+  phone.
+- Wrong pairing codes are limited: after 5 wrong codes in a minute from one address, or 60 in a minute from
+  everyone, the box answers `429` until the minute has passed.
 
 ## Related
 

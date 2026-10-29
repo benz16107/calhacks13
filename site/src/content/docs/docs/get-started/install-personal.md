@@ -16,29 +16,41 @@ It installs from its own ISO, like [GurtOS Server](/docs/get-started/install-ser
 whole system at once, with an automatic rollback if the new system is not healthy.
 
 :::caution[Preview]
-GurtOS Personal installs and runs, and has been walked end to end on a fresh install. Pairing a phone still needs the
-box's address set by hand. See [What is not finished](#what-is-not-finished).
+GurtOS Personal installs and runs, and has been walked end to end on a fresh install. It has not run on a real
+laptop yet. See [What is not finished](#what-is-not-finished).
+:::
+
+:::note[Which release this page describes]
+This page describes the current source. The v0.1.0-preview ISO is older. Its installer takes the first disk that is
+big enough instead of listing your disks, and its GurtOS Setup has seven steps (it adds an Apps step). The next
+release is cut from the current source.
 :::
 
 ## Requirements
 
 | | Minimum | Recommended |
 |---|---|---|
-| CPU | x86_64 | 4 cores |
+| CPU | x86_64 or arm64 | 4 cores |
 | Memory | 4 GB | 8 GB or more. The desktop needs room, and each task may use up to 2 GB. |
 | Disk | 29 GB | 48 GB. The two system slots take 24 GB. |
-| Firmware | BIOS or UEFI, with **Secure Boot off** | |
+| Firmware | BIOS or UEFI on x86_64, UEFI on arm64, with **Secure Boot off** | |
+| Network | Wired or Wi-Fi, with internet on first start: the computer downloads Factory's Droid CLI (about 300 MB) then, and the voice model for **Talk to your computer** | |
 
-The arm64 image builds natively and was boot-tested in a VM on a Mac.
+The installer refuses a disk smaller than 29 GB. The arm64 image builds natively. An arm64 test disc was installed in
+a VM on a Mac, but the published arm64 ISO has not been booted.
 
 :::danger
-The installer takes the whole disk. Dual boot with another operating system is not supported. A disk with anything
-on it is erased only after you type `erase` on the screen, but back up first.
+The installer takes the whole disk. Dual boot with another operating system is not supported. The installer never
+offers the disc or USB stick it started from. With one empty internal disk it uses that disk at once. With several
+disks it lists them and asks for a number. A disk that holds data, and any USB or removable disk, is erased only after
+you type `erase` on the screen. Back up first.
 :::
 
 ## Get the ISO
 
-Download `gurtos-personal-x86_64.iso` (Intel or AMD), or `gurtos-personal-arm64.iso` (Apple silicon in UTM or Parallels), from the [Download](/download/) page and check its checksum.
+Download `gurtos-personal-x86_64.iso` (Intel or AMD, 2.01 GB), or `gurtos-personal-arm64.iso` (Apple silicon in UTM
+or Parallels, 1.99 GB), from the [Download](/download/) page and check its checksum. Sizes are for the v0.1.0-preview
+release.
 
 Or build it from the [source](https://github.com/benz16107/calhacks13) on an Ubuntu 24.04 build machine where you
 have root:
@@ -56,23 +68,27 @@ The build leaves `gurtos-personal-<arch>.iso` and its update file `gurtos-person
 
 1. Write the ISO to a USB stick, or attach it to a virtual machine, and start from it. The steps are the same as for
    [GurtOS Server](/docs/get-started/install-server/#install-on-a-real-machine): Secure Boot off, then start from the disc.
-2. The disc's menu says GurtOS Personal and waits 5 seconds, then installs. On a disk with data, type `erase` when
-   asked.
+2. The disc's menu says GurtOS Personal and waits 5 seconds, then installs. Answer the installer's questions if it
+   asks any: a number to pick a disk when there are several, and `erase` for a disk with data or a USB disk. The
+   installer's screen says it takes about 2 minutes.
 3. The machine restarts into GNOME's own first-boot setup: language, keyboard, time zone, your name and a password.
    The account it makes is an administrator, so it is in the `sudo` group.
-4. Within a second of that account existing, GurtOS makes it the box's **owner**. Only the owner can hand folders
+4. As soon as that account exists, GurtOS makes it the box's **owner**. Only the owner can hand folders
    to agents, keep their changes and change settings.
-5. Log in. After Ubuntu's welcome, the GurtOS welcome explains what agents can and cannot do. GurtOS is first in the
-   dock, and its indicator is in the top bar.
+5. Log in. After GNOME's welcome, **GurtOS Setup** opens. It has six steps: **Welcome**, **AI models**, **Folders**,
+   **Permissions**, **Pair a phone** and **Done**. The first Setup turns the Find app on and every other app off. You
+   turn on more in GurtOS Settings, then **Apps**. GurtOS is in the dock, and its indicator is in the top bar.
 
 ## Add your model key
 
 Agents need one model key: an **Anthropic API key** from [console.anthropic.com](https://console.anthropic.com), or a
-**Factory API key** from [app.factory.ai](https://app.factory.ai). Open the GurtOS app from the dock, then
-**Settings**, **Accounts & Keys**, paste the key and choose **Save to vault**. The key never shows on screen again,
-and agents never see it. Every app, such as Jira or the wallet, is optional and stays off until you add its keys.
+**Factory API key** from [app.factory.ai](https://app.factory.ai). Paste it at Setup's **AI models** step and press
+Enter. GurtOS checks an Anthropic key with one call to Anthropic and says if it was refused. To add or replace a key
+later, choose **GurtOS Settings** in the top-bar menu, then **Agents** (the model key) or **Keys** (every key). The key
+never shows on screen again, and agents never see it. Apps are optional and off until you turn them on in
+**Apps**, and the apps that need a key say which.
 
-If you start a task before adding a key, it fails at once and a notification says the vault has no model key.
+If you start a task before adding a key, it fails at once, and a notification asks you to add a model key in Settings.
 
 ## Use it
 
@@ -114,9 +130,12 @@ installed and can update the running system, but the next GurtOS update replaces
 
 ## What is not finished
 
-- **Phones.** The box listens on `127.0.0.1` and has no address set for phones, so pairing a phone needs
-  `BOX_LISTEN` and `BOX_URL` set by hand. See [Approve from your phone](/docs/guides/approve-from-your-phone/).
-- **Testing.** Personal x86_64 installs, comes up healthy and survives a power cut in a virtual machine. The arm64 image was boot-tested in a VM on a Mac. Neither has run on a real laptop.
+- **Phones.** The box listens on every address and tells a phone its own address when it starts, so a phone on the same
+  network can pair. A laptop that moves to another network keeps showing the old address in the pairing code until
+  the box restarts (`sudo systemctl restart box.service`). GurtOS Setup's **Pair a phone** step shows a code only when a
+  phone can reach the computer. See [Approve from your phone](/docs/guides/approve-from-your-phone/).
+- **Testing.** Personal x86_64 installs, comes up healthy and survives a power cut in a virtual machine. An arm64 test
+  disc was installed in a VM on a Mac. Neither has run on a real laptop.
 
 ## Related
 

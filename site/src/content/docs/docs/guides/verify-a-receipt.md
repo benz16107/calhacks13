@@ -7,6 +7,10 @@ sidebar:
     variant: note
 ---
 
+:::note[Optional app]
+Receipts is an optional app. It is off on a new box and needs no account. Its Solana check runs on devnet, Solana's test network.
+:::
+
 When an agent finishes a task, GurtOS can make a signed receipt: what the task was, every step, who approved what,
 what it cost, whether it was kept or undone, and the part of the action log it sits in.
 

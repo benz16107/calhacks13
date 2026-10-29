@@ -28,8 +28,9 @@ buttons and dialogs may change.
   ```
 
 - A model key in the vault (`ANTHROPIC_API_KEY` or `FACTORY_API_KEY`). See [add a secret](/docs/guides/add-a-secret/).
-- A folder for the agent, for example `~/Documents/receipts`. It must be inside your home folder, or in one of the
-  folders the owner allows in the box's settings (`agentFolders`). It cannot be a system folder or the box's own
+- A folder for the agent, for example `~/Documents/receipts`. With no list chosen, it must be inside your home
+  folder. Once you choose folders in GurtOS Settings, Permissions (`agentFolders` in the settings API), only those
+  folders, and folders inside them, are allowed, even in your home. It cannot be a system folder or the box's own
   state, and it cannot belong to root. Links are followed to where they really go before the check.
 
 ## With the desktop
@@ -43,7 +44,8 @@ buttons and dialogs may change.
 4. When the task finishes, it waits under **Ready to review**. Its page in the GurtOS app shows every file it added,
    changed or deleted, the changes line by line, what it could reach and the cost.
 5. Choose **Keep changes** or **Undo task…**, on the task's page or in the folder's menu in Files (**Keep Changes**,
-   **Undo Task…**). After a Keep, **Undo task** puts your files back.
+   **Undo Task…**). After a Keep, **Undo task** takes the changes back out of your folder, unless you edited a kept
+   file since. Then it changes nothing and says so.
 
 ![The GurtOS app's page for a finished task: one changed file, what it can reach, its steps, and Undo task and Keep changes buttons.](../../../../assets/screens/personal-review.png)
 
@@ -51,8 +53,8 @@ buttons and dialogs may change.
 
 ## With the API
 
-The desktop uses these routes. Only the owner may call them: from the computer itself, or from a phone paired as
-the owner.
+The desktop uses these routes. Only the owner may start a task on a folder, Keep, or Undo Keep: from the computer
+itself, or from a phone paired as the owner. Undo of a task that was kept is the owner's too.
 
 1. **Start a task on the folder.** Pass `folder` instead of `workspace`:
 
@@ -96,6 +98,10 @@ the owner.
    of the folder it lands in, with mode 0644 (0755 if executable). Before it replaces or deletes one of your files,
    the box saves a copy under `/var/lib/box/timemachine/<task id>/`.
 
+   Keep is all or nothing. If a file cannot be written (a full disk, no permission), the box puts back the files it
+   already wrote and says which file failed and why. A folder the task removed goes once it is empty, so a file you
+   added to it since stays.
+
    If you changed any of the same files after the task started, Keep applies nothing, in any of the task's folders,
    and lists the files instead. The task's `review` becomes `conflict`:
 
@@ -111,8 +117,11 @@ the owner.
    curl -s -X POST 127.0.0.1:7700/api/tasks/<task id>/undo
    ```
 
-5. **Undo Keep** puts back what a Keep changed, from the saved copies: kept files get their old content, owner and
-   mode, and files Keep added are removed.
+   On a task you already kept, Undo first takes the changes out of your folder, then marks the task `undone`. If you
+   edited a kept file since, it changes nothing and answers `409` with the files named. Only the owner may do that.
+
+5. **Undo Keep** puts back what a Keep changed, from the saved copies, and leaves the task `done`. Kept files get
+   their old content, owner and mode, files Keep added are removed, and a folder Keep removed is made again.
 
    ```sh
    curl -s -X POST 127.0.0.1:7700/api/tasks/<task id>/unkeep
@@ -122,7 +131,7 @@ the owner.
 
 ## Check it worked
 
-- The task's `review` is `kept`, `conflict` or `undone`.
+- The task's `review` is `pending`, `kept`, `conflict` or `undone`.
 - The action log has a `keep` event for each decision, with `result` `pending`, `kept`, `conflict` or `reverted`, and
   the changes or conflicts.
 - After Keep, the folder shows the agent's changes. After Undo task, before or after a Keep, it is as it was.
@@ -132,7 +141,7 @@ the owner.
 - Only a task in the `done` state can be kept. A failed task's changes can only be undone.
 - Keep works only on tasks that ran on your folders. Tasks on ordinary workspaces use Undo.
 - The task's copy is a whole copy of the folder, made when it starts. That suits folders of documents. A very large
-  folder takes time and disk space.
+  folder takes time and disk space. The copy stays on disk until the task is undone, even after a Keep.
 - **New Agent Task…** in Files takes one folder, or up to ten selected together.
 
 ## Related

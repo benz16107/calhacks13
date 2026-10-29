@@ -15,31 +15,43 @@ import homeDark from '../assets/home/iphone-home-dark.png';
 import approvalLight from '../assets/home/iphone-approval-light.png';
 import approvalDark from '../assets/home/iphone-approval-dark.png';
 import watch from '../assets/home/watch-small.png';
+import poster from '../assets/home/video-poster.jpg';
 
 const RELEASE = `${REPO}/releases/download/v0.1.0-preview`;
 const isos = (edition: string) => [
   { arch: 'x86_64', label: 'Intel or AMD (x86_64)', file: `gurtos-${edition}-x86_64.iso` },
   { arch: 'arm64', label: 'Apple silicon (arm64)', file: `gurtos-${edition}-arm64.iso` },
 ];
+const VIDEO = 'https://youtu.be/rREjU2ddIyo';
 const core = [
-  { label: 'Undo one task', line: 'Each task works on its own layer.', href: '/docs/concepts/workspaces-and-layers/' },
-  { label: 'Keys stay out of reach', line: 'Tasks never hold a secret.', href: '/docs/concepts/vault-and-broker/' },
-  { label: 'Pause for your OK', line: 'Spending waits for you.', href: '/docs/concepts/approvals-and-budgets/' },
-  { label: 'Every step logged', line: 'One action log, kept on disk.', href: '/docs/concepts/action-log/' },
+  { label: 'Undo one task', line: 'Each task writes to its own layer over your files. Undo drops that layer and keeps every other task\'s work.', href: '/docs/concepts/workspaces-and-layers/' },
+  { label: 'Keys stay out of reach', line: 'Keys live in a root-only vault. The box makes keyed calls for the agent, so a poisoned web page has nothing to steal.', href: '/docs/concepts/vault-and-broker/' },
+  { label: 'Only the hosts you allow', line: 'A task\'s network reaches the box\'s proxy and nothing else. The proxy lets through the hosts that task lists.', href: '/docs/concepts/network-policy/' },
+  { label: 'Pause for your OK', line: 'Spending over the budget or your threshold stops and asks, on the screen or your phone. Other tasks keep running.', href: '/docs/concepts/approvals-and-budgets/' },
+  { label: 'Pull the plug', line: 'After a power cut, the box rebuilds every task from its log and carries on where it stopped.', href: '/docs/concepts/resume-after-power-loss/' },
+  { label: 'Every step logged', line: 'One append-only action log of each step, tool call, approval, cost and blocked connection.', href: '/docs/concepts/action-log/' },
 ];
 ---
 
-<Landing title={NAME} description={`${NAME}: operating systems built for AI agents. Agents get real access to files, the web and money, and never hold your keys. Download GurtOS Server or GurtOS Personal.`}>
+<Landing title={NAME} description={`${NAME}: operating systems built for AI agents, on Ubuntu 24.04. Each agent task runs as its own Linux user on its own copy of your files, never holds your keys, and asks before it spends. Download GurtOS Server or GurtOS Personal.`}>
   <div class="wrap">
     <section class="intro" aria-labelledby="home-h">
-      <h1 id="home-h">Operating systems built for AI agents</h1>
-      <p class="lead">Agents get real access to files, the web and money, and never hold your keys.</p>
-      <p class="actions">
-        <a class="btn primary" href="/download/">Download {NAME}</a>
-        <a class="btn" href="https://try.gurtos.com">Try it live</a>
-        <a class="btn" href="/docs/">Docs</a>
-      </p>
-      <p class="watch"><a href="https://youtu.be/rREjU2ddIyo">Watch the 3-minute video</a></p>
+      <div class="intro-text">
+        <h1 id="home-h">Operating systems built for AI agents</h1>
+        <p class="lead">Each agent task runs as its own Linux user, on its own copy of your files. It never holds your keys, it asks before it spends, and you can undo it without touching any other task.</p>
+        <p class="actions">
+          <a class="btn primary" href="/download/">Download {NAME}</a>
+          <a class="btn" href="/docs/">Read the docs</a>
+        </p>
+        <p class="status">Preview release v0.1.0-preview, built on Ubuntu 24.04. It has not had a security audit, so use a spare computer or a virtual machine.</p>
+      </div>
+      <figure class="video">
+        <a href={VIDEO} aria-label="Watch the 3-minute GurtOS video on YouTube">
+          <Image src={poster} widths={[640, 960, 1280]} sizes="(min-width: 900px) 40vw, 100vw" alt="" loading="eager" fetchpriority="high" />
+          <span class="play" aria-hidden="true"><svg viewBox="0 0 24 24" width="28" height="28"><path d="M8 5v14l11-7z" fill="currentColor" /></svg></span>
+        </a>
+        <figcaption><a href={VIDEO}>Watch the 3-minute video</a> on YouTube: a task stops for an OK, a booby-trapped page is stopped, one task is undone and the power is pulled.</figcaption>
+      </figure>
     </section>
   </div>
 
@@ -55,7 +67,7 @@ const core = [
 
       <article class="edition" id="server">
         <figure class="media rig">
-          <div class="desk"><DisplayFrame src={server} priority alt="The GurtOS Server box screen: what needs you, what is running, what was spent today, and a dock of the system apps." /></div>
+          <div class="desk"><DisplayFrame src={server} alt="The GurtOS Server box screen: what needs you, what is running, what was spent today, and a dock of the system apps." /></div>
           <div class="phone"><PhoneFrame src={homeLight} dark={homeDark} alt="The GurtOS iPhone app: three requests under Needs you, each with Deny and Approve." /></div>
         </figure>
         <div class="text">
@@ -78,6 +90,7 @@ const core = [
         <div class="text">
           <h3><span class="dot personal" aria-hidden="true"></span>{NAME} Personal</h3>
           <p>Your own laptop, with agents working beside you.</p>
+          <p class="facts"><a href="/docs/get-started/install-personal/">Ubuntu's GNOME desktop · your folders change only when you choose Keep</a></p>
           <p class="dl-label">Download</p>
           <div class="dl">
             {isos('personal').map((f) => <a class="btn" href={`${RELEASE}/${f.file}`} data-arch={f.arch}>{f.label}</a>)}
@@ -93,6 +106,7 @@ const core = [
         <div class="text">
           <h3><span class="dot business" aria-hidden="true"></span>{NAME} Business</h3>
           <p>A team's shared box, turned on from Server or Personal.</p>
+          <p class="facts"><a href="/docs/guides/turn-on-business/">Preview · roles · approvals routed by a policy in plain words · audit trail</a></p>
           <div class="dl"><a class="btn" href="/docs/guides/turn-on-business/">Turn on Business</a></div>
         </div>
       </article>
@@ -122,12 +136,20 @@ const core = [
 </script>
 
 <style>
-  .intro { padding: 4rem 0 3rem; max-width: 52rem; }
+  .intro { padding: 4rem 0 3rem; display: grid; gap: 2.5rem; align-items: center; }
   .intro h1 { margin-bottom: 1rem; }
-  .lead { font-size: var(--gw-text-lg); color: var(--gw-ink-2); }
-  .watch { margin-top: 1rem; }
+  .lead { font-size: var(--gw-text-lg); color: var(--gw-ink-2); max-width: 40rem; }
   .actions { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 1.5rem; }
   .actions .btn.primary { font-size: 1.1rem; padding: 0.8rem 1.4rem; }
+  .actions .btn { padding: 0.8rem 1.4rem; }
+  .status { margin-top: 1.5rem; font-size: var(--gw-text-sm); color: var(--gw-ink-2); max-width: 40rem; }
+  .video { margin: 0; }
+  .video > a { position: relative; display: block; }
+  .video img { width: 100%; aspect-ratio: 16 / 9; border: 1px solid var(--gw-rule); border-radius: var(--gw-radius); }
+  .play { position: absolute; left: 50%; top: 50%; translate: -50% -50%; display: grid; place-items: center; width: 3.25rem; height: 3.25rem; border-radius: 50%; background: var(--gw-action); color: var(--gw-on-action); }
+  .video > a:focus-visible { outline-offset: 4px; }
+  .video figcaption { margin-top: 0.75rem; font-size: var(--gw-text-sm); color: var(--gw-ink-2); }
+  @media (min-width: 900px) { .intro { grid-template-columns: 7fr 5fr; } }
   .hills { display: block; width: 100%; height: clamp(70px, 11vw, 170px); }
   .section-h { font-size: var(--gw-h2); }
   .edition { display: grid; gap: 1.5rem 3rem; padding: 2rem 0; border-top: 1px solid var(--gw-rule); align-items: center; }

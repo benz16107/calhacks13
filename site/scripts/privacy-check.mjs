@@ -28,7 +28,7 @@ for (const f of files) {
   const text = fs.readFileSync(f, 'utf8').replace(/data:font\/woff2;base64,[A-Za-z0-9+\/=]+/g, 'data:font');
   for (const [label, re, allowed] of checks) {
     for (const m of text.matchAll(re)) {
-      const at = text.slice(Math.max(0, m.index - 50), m.index + m[0].length + 30).replace(/\s+/g, ' ');
+      const at = text.slice(Math.max(0, m.index - 50), m.index + m[0].length + 45).replace(/\s+/g, ' '); // 45: room for a Markdown link's address after its text
       if (allowed?.(m[0], at)) continue;
       console.log(`${label}: ${path.relative(root, f)}: ${m[0]}  …${at}…`);
       hits++;

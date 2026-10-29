@@ -21,11 +21,12 @@ computer you use every day.
 - Root access (`sudo`).
 - At least 4 GB of memory and 10 GB of free disk. Each task may use up to 2 GB of memory.
   The box has run one task at a time in 1 GB, and adds 1.5 GB of disk ([measured](https://github.com/benz16107/calhacks13/blob/main/tracks/anthropic/README.md)).
-- Internet access during the install, to download Node.js, Droid and SpacetimeDB.
+- Internet access during the install, to download Node.js, Droid (about 300 MB), SpacetimeDB, and the tunnel and
+  web server that remote access uses (`frpc` and Caddy).
 - No other software using user ids 30000 to 39999, TCP port 7700, port 3000, or ports 8800 to 8899.
 - One model key: an Anthropic API key from [console.anthropic.com](https://console.anthropic.com), or a Factory API
-  key from [app.factory.ai](https://app.factory.ai). Tasks never see it. Every app is optional and stays off until
-  you add its keys.
+  key from [app.factory.ai](https://app.factory.ai). Tasks never see it. Apps are optional. On a new box only the
+  model app is on, and every other app stays off until you turn it on in App Center and add the keys it lists.
 
 ## Install
 
@@ -41,15 +42,18 @@ computer you use every day.
    ```
 
    It runs `core/setup.sh`, which installs `nftables` and `ripgrep`, Node.js 24 if no Node.js 22 or newer is
-   present, the Droid CLI (checked against its published SHA-256), and SpacetimeDB as `spacetimedb.service`.
-   Then it copies the source to `/opt/box`, installs its packages, creates an empty vault at
-   `/etc/box/vault.env` with mode `0600`, and installs and starts `box.service`.
+   present, the Droid CLI (checked against a SHA-256 written in the script), the `frpc` and Caddy binaries for
+   remote access (also checked), and SpacetimeDB 2.13.0 from its pinned GitHub release files (checked the same way)
+   as `spacetimedb.service`. No install script from the internet runs.
+   Then it copies what the box runs (the core, the apps and the built portal) to `/opt/box`, installs its packages,
+   creates an empty vault at `/etc/box/vault.env` with mode `0600`, and installs and starts `box.service`.
    It prints `active` when the service is up. Running it again is safe.
 
-3. Add your model key to the vault, in the portal's **Settings**, **Accounts & Keys** (see [Open the portal](#open-the-portal))
-   or through the API. The command below sets a Factory key;
+3. Add your model key to the vault, in the setup wizard's **Model key** step or in the portal's **Settings**,
+   **Accounts & Keys** (see [Open the portal](#open-the-portal)), or through the API. The command below sets a Factory key;
    for an Anthropic key, use the name `ANTHROPIC_API_KEY` instead. A request from the machine itself is allowed to set
-   keys, the key takes effect at once, and the box never returns it:
+   keys, the key takes effect at once, and the box never returns it. The box checks an Anthropic key with Anthropic
+   and refuses one that Anthropic rejects:
 
    ```sh
    read -rs -p 'FACTORY_API_KEY: ' v && echo
@@ -68,20 +72,22 @@ curl -s 127.0.0.1:7700/api/health
 ```
 
 ```json
-{"ok":true,"startedAt":"2026-10-24T07:00:00.000Z","resumed":[],"tasks":0,"tools":["example.spend","..."],"spacetime":{"port":3000,"database":"box"}}
+{"ok":true,"startedAt":"2026-10-24T07:00:00.000Z","paused":false,"cleanStart":false,"resumed":[],"tasks":0,"tools":[],"spacetime":{"port":3000,"database":"box"}}
 ```
 
-`tools` lists every tool the installed apps provide. Check the service log for the line that lists loaded apps:
+`tools` lists every tool the apps that are on provide. A new box has only the model app on, which adds none. Check
+the service log for the line that lists the apps that loaded:
 
 ```sh
 journalctl -u box.service -n 20 --no-pager
 ```
 
 ```text
-box up: 0 tasks in the log, tracks: apify, credit-desk, elastic, example, fetch, find, jira, mana, shopper, wallet
+box up: 0 tasks in the log, tracks: anthropic
 ```
 
-An app that fails to load is skipped and logged there. The box keeps running without it.
+An app that fails to load is skipped and logged there. The box keeps running without it. Turn on more apps in App
+Center, or with `POST /api/apps/<id>/enable`. See [Apps](/docs/reference/apps/).
 
 If the log says `WARNING: the firewall rule did not load, so tasks are not network-limited`, nftables is missing
 or blocked. Fix that before you run tasks: without the rule, tasks can reach any host.
@@ -90,6 +96,10 @@ or blocked. Fix that before you run tasks: without the rule, tasks can reach any
 
 The box serves the portal on the same address as the API. On the machine itself, open
 `http://127.0.0.1:7700/` in a browser.
+
+The first time, the portal shows the same setup wizard as GurtOS Server (see
+[First boot and pairing](/docs/get-started/first-boot/#setup-and-your-keys)). Its **Model key** step does the same
+job as step 3.
 
 The API listens on `127.0.0.1` only. To use the portal from another computer, forward the port over SSH:
 
@@ -126,8 +136,8 @@ sudo rm -rf /opt/box /var/lib/box /etc/box   # deletes the action log, workspace
 sudo rm -rf /var/lib/spacetimedb              # SpacetimeDB's data
 ```
 
-The install also left Node.js, `/usr/local/bin/droid` and the SpacetimeDB CLI in place. Remove them if nothing
-else uses them.
+The install also left Node.js, `/usr/local/bin/droid`, `/usr/local/bin/frpc`, `/usr/local/bin/caddy` and the
+SpacetimeDB CLI in place. Remove them if nothing else uses them.
 
 Task users (`box-<id>`) are removed when each task ends. Check for leftovers with `getent passwd | grep '^box-'`.
 
