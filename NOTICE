@@ -14,10 +14,6 @@ and the licences that need care are in release/licenses.md.
   2.13.0, 2031-10-25 for 2.14.0). Each GurtOS machine runs one SpacetimeDB instance for its own use.
 - npm packages, including Factory's droid SDK (Apache-2.0) and the SpacetimeDB client (ISC). Each package's
   licence is in its folder under node_modules.
-- Moss, by InferEdge Inc., used by the Find app. @moss-js/moss is licensed under the PolyForm Shield License 1.0.0
-  (https://polyformproject.org/licenses/shield/1.0.0). @moss-js/moss-core and its native library are InferEdge's
-  proprietary software. Their terms are in their folders under node_modules.
-  Required Notice: Copyright InferEdge Inc. (https://inferedge.dev)
 - The Atkinson Hyperlegible Next and Mono fonts, from the Fontsource packages, under the SIL Open Font License 1.1
   (https://openfontlicense.org).
   Copyright 2020-2024 The Atkinson Hyperlegible Next Project Authors (https://github.com/googlefonts/atkinson-hyperlegible-next)

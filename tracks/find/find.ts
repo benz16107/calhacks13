@@ -146,7 +146,11 @@ const hashes = () => Object.fromEntries([...docs.values()].map((d) => [d.id, cre
 
 /** Moss, run inside the box: it embeds and searches in memory. Opt-in boxes also keep a copy in Moss's cloud. */
 export async function mossIndex(projectId: string, projectKey: string, name = INDEX): Promise<Index> {
-  const { MossClient } = await import('@moss-js/moss'); // loaded only when used, so the offline demo never needs it
+  // Loaded only when used. GurtOS does not ship Moss (its licence does not allow passing it on), so a box has it only
+  // when its owner installs it: npm install @moss-js/moss in /opt/box (tracks/find/README.md).
+  const { MossClient } = await import('@moss-js/moss').catch((e) => {
+    throw Object.assign(new Error('Moss is not installed on this computer, so Find searches by words. tracks/find/README.md says how to add it.'), { notInstalled: true, cause: e });
+  });
   // Moss's own cache (~/.moss, ~/.cache/moss) keeps one device id and one model download per machine, across demo runs.
   const client = new MossClient(projectId, projectKey);
   type Session = Awaited<ReturnType<typeof client.session>>;

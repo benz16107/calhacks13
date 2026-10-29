@@ -2,13 +2,26 @@
 
 Say "find the whiteboard photo" and the box answers `photos/IMG_2041.jpg`, a photo whose name says nothing
 about a whiteboard. It knows because a vision model looked at the photo when it arrived and wrote down what is
-in it. Every photo, text file and finished task on the box goes into one index, and Moss searches it.
+in it. Every photo, text file and finished task on the box goes into one index. On its own, Find searches that
+index by words, on this computer, with no account. With Moss (below) it also matches by meaning.
+
+**Moss is not part of GurtOS.** Its licence (PolyForm Shield for `@moss-js/moss`, and a proprietary native library
+in `@moss-js/moss-core`) does not let us pass it on, so GurtOS images and `core/install.sh` leave it out. To use it,
+install it yourself on a box you set up from source, accepting InferEdge's terms, then add `MOSS_PROJECT_ID` and
+`MOSS_PROJECT_KEY` in Settings, Keys:
+
+```sh
+cd /opt/box && sudo npm install --no-save @moss-js/moss@1.21.0 && sudo systemctl restart box
+```
+
+Without it, a box with Moss keys says "Moss is not installed on this computer" in its log and keeps searching by
+words. A GurtOS release image has no shell, so Moss is for source installs only.
 
 Agents use it too. A task asks `find.search` through the broker, with no network and no keys of its own, and
 gets the same answers you get on the Find page. That is the box's memory: what an agent did last week, the
 receipt it filed, the note it wrote, all findable by meaning.
 
-## Moss's track
+## How Find uses Moss
 
 Moss asks for one of three things: a voice agent, a personal agent that remembers you, works across your apps
 and handles everyday tasks on its own, or a social post. **This is the second.** The box is a personal agent

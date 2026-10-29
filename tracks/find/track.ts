@@ -32,7 +32,7 @@ function open(secret: Secret) {
       // No network at boot, or Moss is down: search by words meanwhile. Try Moss again in a minute, or in an
       // hour when the project is over its usage limit, so a limited project is not called every minute.
       console.error(`find: Moss did not open, using the word index for now: ${(e as Error).message}`);
-      setTimeout(() => (opening = undefined), isUsageLimit(e) ? 3600_000 : 60_000).unref();
+      setTimeout(() => (opening = undefined), isUsageLimit(e) || (e as { notInstalled?: boolean }).notInstalled ? 3600_000 : 60_000).unref();
       return use(wordIndex());
     }
   })();

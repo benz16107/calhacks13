@@ -6,7 +6,6 @@ Before publishing (see release/README.md and release/licenses.md):
 - Sign the images with the release update key (release/update.pub). v0.1.0-preview boxes take nothing else.
 - Publish the update images (.sqfs, .sha256, .sig) for each edition and architecture, or the Personal upgrade path
   below does not exist. Check each unpacked system fits its slot (6 GB Server, 12 GB Personal).
-- Decide what to do about Moss, the Find app's library (licences.md). Today the images would carry it.
 - Try the Personal upgrade from a v0.1.0-preview install once, and fill in the result under "Upgrade".
 -->
 

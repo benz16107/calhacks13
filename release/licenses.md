@@ -20,7 +20,7 @@ Apache-2.0: `core/`, `tracks/`, `portal/`, `personal/`, `image/`, `native/`, `re
 
 | What | Licence | Where | Why it is flagged |
 |---|---|---|---|
-| **Moss** (`@moss-js/moss` 1.21.0, `@moss-js/moss-core` 0.36.0 and its native library), by InferEdge | `@moss-js/moss`: PolyForm Shield 1.0.0. `moss-core` and its native library: marked "Proprietary", with no licence text in the package | On every box, through the Find app (`tracks/find`), which GurtOS Personal turns on in its first Setup. `npm ci` installs it with the box's other packages, so the images carry it | **Needs a decision before the next release.** PolyForm Shield is source-available, not open source: it forbids using the software in a product that competes with InferEdge's, and anyone who passes it on must pass on its terms and its "Required Notice" line (now in NOTICE). The native library's package grants no licence we could find to redistribute it. Options: written permission from InferEdge, Find downloading Moss when it is first turned on, or Find left out of the images |
+| **Moss** (`@moss-js/moss` 1.21.0, `@moss-js/moss-core` 0.36.0 and its native library), by InferEdge | `@moss-js/moss`: PolyForm Shield 1.0.0. `moss-core` and its native library: marked "Proprietary", with no licence text in the package | **Not on any box or image.** A dev dependency of the Find app only, so `npm ci --omit=dev` (core/install.sh, and so the images) leaves it out. An owner who wants Moss installs it on a source install and accepts InferEdge's terms (tracks/find/README.md) | Decided for the launch: we do not pass it on. PolyForm Shield forbids use in a competing product and the native library has no redistribution grant. Find works without it, searching by words |
 | **SpacetimeDB** (Clockwork Laboratories) | Business Source License 1.1. Each version becomes AGPL-3.0 with a linking exception on its own change date: 2031-10-14 for 2.13.0, 2031-10-25 for 2.14.0 | Both images, as the box's live-status database, installed by `core/setup.sh`; the version it installs sets the change date. The `spacetimedb` client library (ISC) is a separate npm package | Not an open-source licence until the change date. The use grant allows "no more than one SpacetimeDB instance in production" per application or service, and no "Database Service" for third parties. One person's box fits. Someone who runs many GurtOS boxes as one service, or offers GurtOS as a hosted service, must read it and may need a licence from Clockwork Labs |
 | **Factory's Droid CLI** | Factory's EULA and terms (internal use; no redistribution) | **Not in any image.** Each box downloads it on first start. | The one program GurtOS needs that we may not ship. The Droid SDK in `node_modules` is Apache-2.0 and is shipped. Roadmap: a worker we can redistribute. |
 | **linux-firmware** (about 25 packages) | Vendor licences, each marked "Redistributable-...", plus two marked "Unknown" | Both images | Binary firmware blobs, not open source. Ubuntu may redistribute them, so we do; the licences vary by vendor. The "Unknown" ones are `linux-firmware-misc` and `linux-firmware-qlogic`. |
@@ -51,10 +51,10 @@ above.
 
 ## npm packages shipped on the box
 
-`npm ci --omit=dev` (what `core/install.sh` runs on every box and in every image) installs 330 packages on x86_64
+`npm ci --omit=dev` (what `core/install.sh` runs on every box and in every image) installs 327 packages on x86_64
 or arm64, because the apps in `tracks/` are npm workspaces and their packages come too: MIT 288, Apache-2.0 18,
-ISC 10, BSD-3-Clause 6, BSD-2-Clause 2, 0BSD 2, Unlicense 1, and the three Moss packages flagged above (one
-PolyForm Shield, two "Proprietary"). None is copyleft. Most of the Apache-2.0 packages belong to the test-money
+ISC 10, BSD-3-Clause 6, BSD-2-Clause 2, 0BSD 2 and Unlicense 1. The Moss packages are dev dependencies and are not
+among them. None is copyleft. Most of the Apache-2.0 packages belong to the test-money
 apps (the x402, Solana and Sign-In with Ethereum libraries); the others are the Droid SDK, the OpenTelemetry API,
 `axios-retry`, `reflect-metadata` and TypeScript. TypeScript ships its own `NOTICE.txt`, which stays in its folder
 on the box.
@@ -81,7 +81,7 @@ the OFL fonts. Nothing in either lockfile is incompatible with publishing the si
 
 ## Before 1.0
 
-Everything in the "flagged" table needs a decision a lawyer should make, not us: the Moss terms and its native
-library, the SpacetimeDB terms if GurtOS is run as a fleet or offered as a hosted service, the firmware and codec
+Everything in the "flagged" table needs a decision a lawyer should make, not us: whether Moss may ever be shipped,
+the SpacetimeDB terms if GurtOS is run as a fleet or offered as a hosted service, the firmware and codec
 rules per country, the Ubuntu trademark terms for a derivative that ships an Ubuntu desktop, and a replacement for
 the Droid CLI. One smaller fix needs no lawyer: copy the fonts' licence into `portal/dist`. They are on the [roadmap](../ROADMAP.md).
