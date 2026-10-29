@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { box, callMachine, changed, hosted, machine, machines, switchMachine, useBox, type Approval, type Machine } from '../live.ts';
 import { Badge, Button, Icon } from '../kit/ui.tsx';
 import { PRODUCT } from '../product.ts';
+import { APP_HOST } from '../relay.ts';
 import { hhmm, pending } from '../util.ts';
 
 export const sheet = { open: '' as '' | 'machines' | 'add' };
@@ -145,7 +146,7 @@ function AddMachine() {
           try {
             u = hit ? new URL(hit) : undefined;
           } catch {} // not an address
-          if (u && u.pathname === '/pair' && (u.origin === location.origin || u.hostname === 'app.gurtos.com')) return location.assign(`/pair${u.search}${u.hash}`);
+          if (u && u.pathname === '/pair' && (u.origin === location.origin || u.hostname === APP_HOST)) return location.assign(`/pair${u.search}${u.hash}`);
           if (hit) setState("That QR code isn't a GurtOS pairing code.");
           timer = setTimeout(look, 300);
         };
@@ -168,7 +169,7 @@ function AddMachine() {
         {state === 'none' ? (
           <p class="t-body gos-add-hint">
             <Icon name="phone" size={32} />
-            Open the Camera app and point it at the QR code. It offers app.gurtos.com: tap it, and this app adds the computer.
+            Open the Camera app and point it at the QR code. It offers {APP_HOST}: tap it, and this app adds the computer.
           </p>
         ) : (
           <video ref={video} playsInline muted aria-label="Camera" />

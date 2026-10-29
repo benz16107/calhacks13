@@ -135,23 +135,21 @@ access off and on to choose a name again.
 
 ## 4. Build and host the web app
 
-The web app is `portal/dist`, plain static files. Our domains are written into the portal source in a few places.
-List them, then change them to yours:
+The web app is `portal/dist`, plain static files. Our domains are written into the portal source. List them, then
+change them to yours:
 
 ```sh
 grep -rn "gurtos\.com" portal/src | grep -v "[0-9]: *\(//\|/\*\)"
 ```
 
-Two of them decide whether the app works:
+Two lines in `portal/src/relay.ts` decide whether the app works, and every other mention in the portal follows them:
 
-- `portal/src/relay.ts` has `export const RELAY = 'https://box.gurtos.com'`. Change it to your relay.
-- `portal/src/live.ts` turns on the app's hosted mode (a list of machines, none of them this page's own address) when
-  `location.hostname === 'app.gurtos.com'`. Change that host to your app's. Without it your app behaves like a box's
-  own screen and finds no machine. Opening any page once with `?hosted` also turns it on in that browser, but an app
-  added to the iPhone home screen keeps its own storage, so change the source.
+- `export const RELAY = 'https://box.gurtos.com'`: change it to your relay.
+- `export const APP = 'https://app.gurtos.com'`: change it to your app's address. The app turns on its hosted mode (a
+  list of machines, none of them this page's own address) only on that host, and accepts scanned pairing links only
+  from it. Without the change your app behaves like a box's own screen and finds no machine.
 
-The rest are a placeholder address in `shell.tsx`, the check in `machines.tsx` that a scanned link comes from the app,
-and a line of help text. Change them too. Keep `SELF_HOST_DOCS`, which links to this page. Then build and publish:
+Keep `SELF_HOST_DOCS`, which links to this page. Then build and publish:
 
 ```sh
 npm ci

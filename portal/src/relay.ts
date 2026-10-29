@@ -1,9 +1,12 @@
 // The GurtOS relay (relay/): a computer's own https address, push to phones, and the meeting place for pairing and
-// Quick Start. A self-hosted web app changes this one line (docs/self-host.md).
+// Quick Start, and the hosted web app (relay/app) that pairs a phone through it. A self-hosted relay and web app change
+// these two lines (docs/self-host.md).
 import { useEffect, useState } from 'preact/hooks';
 
 export const RELAY = 'https://box.gurtos.com';
+export const APP = 'https://app.gurtos.com';
 export const RELAY_HOST = new URL(RELAY).host;
+export const APP_HOST = new URL(APP).hostname;
 /** A computer's address on the relay: rosa.box.gurtos.com. */
 export const onRelay = (host: string) => host.endsWith(`.${RELAY_HOST}`) && /^[a-z0-9-]{3,30}$/.test(host.slice(0, -RELAY_HOST.length - 1));
 export const SELF_HOST_DOCS = 'https://gurtos.com/docs/guides/self-host/';

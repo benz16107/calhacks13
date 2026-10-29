@@ -4,6 +4,7 @@
 import { useEffect, useReducer } from 'preact/hooks';
 import type { Approval, ApprovalRoute, LogEvent, Task } from '../../core/contract.ts';
 import { DbConnection } from '../../core/spacetime/bindings/index.ts';
+import { APP_HOST } from './relay.ts';
 
 export type { Approval, ApprovalRoute, LogEvent, Task };
 
@@ -137,7 +138,7 @@ export interface Machine extends Pairing { url: string; edition?: string; pushKe
 // app.gurtos.com is the portal in hosted mode: same code, but the machines are a list and none is this page's origin.
 // Opening any page with ?hosted tries it on another address (for testing against a dev box).
 if (new URLSearchParams(location.search).has('hosted')) localStorage.setItem('gurtos.hosted', '1');
-export const hosted = location.hostname === 'app.gurtos.com' || localStorage.getItem('gurtos.hosted') === '1';
+export const hosted = location.hostname === APP_HOST || localStorage.getItem('gurtos.hosted') === '1';
 // A notification opens /?machine=<box id>#task/<id>: show that machine.
 const picked = new URLSearchParams(location.search).get('machine');
 if (picked) localStorage.setItem('gurtos.machine', picked);

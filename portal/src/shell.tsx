@@ -14,7 +14,7 @@ import { Alert, AppIcon, Badge, Button, Icon, Menu, Popover, Progress, Switch } 
 import { focus, focused, minimize, open, phone, wm } from './wm.tsx';
 import { launchable, type Launchable } from './apps/index.tsx';
 import { PRODUCT } from './product.ts';
-import { RELAY, onRelay, useRelayUp } from './relay.ts';
+import { RELAY, RELAY_HOST, onRelay, useRelayUp } from './relay.ts';
 import { appOf, asks, boxList, dollars, hhmm, ofState, pending, plural, selfBox, taskTitle, testMoney, trackOf, useNow, zone, spentToday } from './util.ts';
 
 /** Which shell overlay is open. One at a time, like a real desktop. */
@@ -1246,7 +1246,7 @@ export function PairFirst() {
           {hosted && (
             <label class="gos-field">
               <span class="t-body-strong">Computer's address</span>
-              <input class="g-field" value={boxAddr} placeholder="rosa.box.gurtos.com" inputMode="url" autoComplete="off" autoCapitalize="none" spellcheck={false} onInput={(e) => setBoxAddr((e.target as HTMLInputElement).value)} />
+              <input class="g-field" value={boxAddr} placeholder={`rosa.${RELAY_HOST}`} inputMode="url" autoComplete="off" autoCapitalize="none" spellcheck={false} onInput={(e) => setBoxAddr((e.target as HTMLInputElement).value)} />
             </label>
           )}
           <label class="gos-field">
