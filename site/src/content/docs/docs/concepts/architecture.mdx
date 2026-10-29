@@ -11,7 +11,7 @@ This page names the parts and how they talk to each other. The pages after it ex
 
 <figure class="diagram">
   <Architecture />
-  <figcaption>Your devices talk to the core's API. Each task runs as its own user in its own copy of the files, and reaches the core only through its broker socket and the internet only through the proxy.</figcaption>
+  <figcaption>Your devices talk to the core's API. Each task runs as its own user in its own copy of the files, and reaches the core only through its broker socket and the internet only through the proxy. On an installed GurtOS the API also answers private networks on port 7700, so phones on the same network can pair; from anywhere else it answers only through a relay.</figcaption>
 </figure>
 
 ## The core
