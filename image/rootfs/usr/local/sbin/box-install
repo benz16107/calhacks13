@@ -1,21 +1,23 @@
 #!/bin/bash
 # Install the box on this machine's disk. The install disc runs this when started with the kernel option box.install.
-#   box.install           use the first disk that is not the install disc and is big enough
+#   box.install           choose the disk (below)
 #   box.install=/dev/sdb  use that disk
-# An empty disk is used straight away. A disk with anything on it is erased only after you type "erase".
+# Never offered: the disc or USB stick it started from, a disk with anything mounted or swapping, memory disks
+# (zram), read-only disks and disks too small. The only internal disk, when it is empty, is used straight away.
+# Anything else asks first: which disk, when there are several, and "erase", when the chosen one is not empty or is
+# a USB or removable disk.
 # Layout (GPT): BIOS boot (x86 only), ESP, system slot A, system slot B, data. Slot B stays empty until the
 # first system update. A slot is 6 GB unless the image's /etc/box-os/release says SLOT_MB (the Personal edition).
 set -euo pipefail
-SLOT_MB=$(sed -n 's/^SLOT_MB=//p' /etc/box-os/release) ESP_MB=512 MIN_DATA_MB=4096
-SLOT_MB=${SLOT_MB:-6144}
 src=/run/boxlive/iso/box/root.sqfs
-name=$(. /etc/os-release && echo "$NAME $VARIANT")
 mnt=/run/box-install
+log=/run/box-install.log
+cmdline=/proc/cmdline
+step="getting ready"
 
-# What goes where: the screen shows one title, one reassurance and one bar, redrawn as the install goes (screen).
-# Everything else, tool output included, goes to the serial console and the journal (say, with a box-install: prefix).
-say() { for t in /dev/ttyS0 /dev/ttyAMA0; do { echo "box-install: $*" > $t; } 2>/dev/null || true; done; echo "$*" >> /run/box-install.log; }
-cols=$(stty size 2>/dev/null | cut -d' ' -f2); cols=${cols:-80}
+# What goes where: the screen shows one title, one bar and one reassurance, redrawn as the install goes (screen).
+# Everything else, tool output included, goes to the serial console and the log (say, with a box-install: prefix).
+say() { for t in /dev/ttyS0 /dev/ttyAMA0; do { echo "box-install: $*" > $t; } 2>/dev/null || true; done; echo "$*" >> $log; }
 screen() { # <percent> [message]: the whole screen, cleared and redrawn
   local p=$1 w=$((cols - 4)) n
   n=$((w * p / 100))
@@ -23,99 +25,184 @@ screen() { # <percent> [message]: the whole screen, cleared and redrawn
   printf '\033[H\n\n  Installing %s. %s%%\033[K\n\n  [%s%s]\033[K\n\n  %s\033[K\n' "$name" "$p" \
     "$(head -c $n </dev/zero | tr '\0' '=')" "$(head -c $((w - n)) </dev/zero | tr '\0' ' ')" "${2:-This takes about 2 minutes. Do not turn the computer off.}"
 }
-fail() {
-  say "FAILED: $*"
-  printf '\033[?25h\033[2J\033[H\n\n  Installing %s did not work.\n  %s\n\n  Turn the computer off and start from the disc again. The details are on the serial console.\n' "$name" "$*"
+plain() { drawn=; printf '\033[?25h\033[2J\033[H\n\n'; } # a cleared screen for a question
+fail() { # <what a person reads> [details for a bug report]
+  say "FAILED: $1${2:+ ($2)}"
+  plain
+  printf '  Installing %s did not work.\n  %s\n\n  Turn the computer off, then start it from the disc again to try again.\n' "$name" "$1"
+  if [ -n "${2:-}" ]; then printf '\n  Details, for a bug report: %s\n' "$2"; fi
   sleep infinity
 }
-trap 'fail "line $LINENO: $BASH_COMMAND"' ERR
-[ -f "$src" ] || fail "no system image at $src"
-screen 0 "Looking for a disk."
 
-udevadm settle
-disc=$(findmnt -no SOURCE /run/boxlive/iso)
-disc=$(lsblk -dno PKNAME "$disc" 2>/dev/null | grep . || basename "$disc")
-need=$((1 + ESP_MB + 2 * SLOT_MB + MIN_DATA_MB))
-disk=$(sed -n 's/.*box\.install=\([^ ]*\).*/\1/p' /proc/cmdline)
-for _ in $(seq 30); do
-  [ -n "$disk" ] && break
-  disk=$(lsblk -dnpbo NAME,TYPE,RO,SIZE | awk -v disc="/dev/$disc" -v need=$((need * 1048576)) \
-    '$2 == "disk" && $3 == 0 && $1 != disc && $4 >= need { print $1; exit }')
-  sleep 1
-done
-[ -b "$disk" ] || fail "no disk of at least $((need / 1024 + 1)) GB to install on"
-about="$disk ($(lsblk -dno SIZE,MODEL "$disk" | xargs))"
+# The whole disks under every mounted file system and active swap: the disc or USB stick this runs from among them.
+in_use() {
+  { findmnt -rno SOURCE | sed 's/\[.*//'
+    awk 'NR > 1 { print $1 }' /proc/swaps
+    for f in /sys/block/loop*/loop/backing_file; do if [ -r "$f" ]; then findmnt -rno SOURCE -T "$(cat "$f")" | sed 's/\[.*//'; fi; done
+  } 2>/dev/null | grep '^/dev/' | sort -u | while read -r d; do
+    lsblk -nrpso NAME,TYPE "$d" 2>/dev/null | awk '$2 == "disk" { print $1 }'
+  done | sort -u | paste -sd' '
+}
+# candidates <bytes needed> <disks in use, space separated>: reads `lsblk -dnrbpo NAME,TYPE,RO,SIZE,RM,TRAN` and
+# prints the disks GurtOS may go on as "<disk> internal|removable", internal ones first.
+candidates() {
+  awk -v need="$1" -v busy=" $2 " '
+    $2 != "disk" || $3 != 0 || $4 < need || index(busy, " " $1 " ") || $1 ~ /^\/dev\/(zram|ram|loop)/ { next }
+    $5 == 1 || $6 == "usb" { later = later $1 " removable\n"; next }
+    { print $1, "internal" }
+    END { printf "%s", later }'
+}
+empty() { [ -z "$(wipefs -n "$1"; lsblk -nro NAME "$1" | tail -n +2)" ]; }
+holds() { # what a person would recognise on disk $1: its file systems' names and kinds
+  lsblk -nro FSTYPE,LABEL "$1" | sed 's/\\x20/ /g' |
+    awk 'NF && n++ < 4 { f = $1; $1 = ""; l = substr($0, 2); print (l != "" ? l " (" f ")" : f) }' | paste -sd, | sed 's/,/, /g'
+}
+about() { # <disk>: "/dev/sda, 2T WDC WD20EZRZ, USB"
+  local d
+  d=$(lsblk -dno SIZE,MODEL "$1" | xargs)
+  printf '%s, %s%s' "$1" "$d" "$( [ "$(lsblk -dno TRAN "$1")" = usb ] && echo ', USB')"
+}
 
-if [ -n "$(wipefs -n "$disk"; lsblk -nro NAME "$disk" | tail -n +2)" ]; then
-  say "$about has data on it"
-  drawn=
-  printf '\033[?25h\033[2J\033[H\n\n  %s has data on it.\n  Installing %s erases all of it.\n\n' "$about" "$name"
-  read -r -p '  Type erase and press Enter to go on: ' answer
-  [ "$answer" = erase ] || fail "you did not type erase, so nothing changed"
-fi
+# Which disk. Sets $disk, after the person has said yes where that is needed.
+choose() {
+  local need list i d answer
+  step="choosing a disk"
+  need=$(((1 + ESP_MB + 2 * SLOT_MB + MIN_DATA_MB) * 1048576))
+  disk=$(sed -n 's/.*box\.install=\([^ ]*\).*/\1/p' "$cmdline")
+  if [ -n "$disk" ]; then
+    [ -b "$disk" ] || fail "There is no disk $disk, which the start line names."
+    mapfile -t list < <(lsblk -dnrbpo NAME,TYPE,RO,SIZE,RM,TRAN "$disk" | candidates 0 "$(in_use)")
+    [ ${#list[@]} -eq 1 ] || fail "$disk, which the start line names, is the install disc, is in use, or cannot be written."
+  else
+    for _ in $(seq 30); do # disks on USB and some controllers show up a few seconds late
+      mapfile -t list < <(lsblk -dnrbpo NAME,TYPE,RO,SIZE,RM,TRAN | candidates "$need" "$(in_use)")
+      [ ${#list[@]} -eq 0 ] || break
+      sleep 1
+    done
+    [ ${#list[@]} -gt 0 ] || fail "This computer has no disk of at least $((need / 1073741824 + 1)) GB to install on. The disc or USB stick it started from does not count."
+  fi
+  while :; do
+    i=0
+    if [ ${#list[@]} -gt 1 ]; then
+      plain
+      printf '  Choose the disk for %s. It takes the whole disk.\n\n' "$name"
+      for i in "${!list[@]}"; do
+        d=${list[$i]%% *}
+        printf '  %d   %s, %s\n' $((i + 1)) "$(about "$d")" "$(if empty "$d"; then echo empty; else echo "holds $(holds "$d" | grep . || echo data)"; fi)"
+      done
+      printf '\n'
+      read -r -p '  Type its number and press Enter: ' answer
+      [[ $answer =~ ^[0-9]+$ ]] && [ "$answer" -ge 1 ] && [ "$answer" -le ${#list[@]} ] || continue
+      i=$((answer - 1))
+    fi
+    disk=${list[$i]%% *}
+    # An empty internal disk has nothing to lose. A USB or removable one may be someone's backup drive: ask.
+    if [ "${list[$i]#* }" = internal ] && empty "$disk"; then return; fi
+    say "asking before erasing $(about "$disk")"
+    plain
+    if empty "$disk"; then
+      printf '  %s is a USB or removable disk.\n' "$(about "$disk")"
+    else
+      printf '  %s has data on it: %s.\n' "$(about "$disk")" "$(holds "$disk" | grep . || echo 'files GurtOS cannot name')"
+    fi
+    printf '  Installing %s erases all of it.\n\n' "$name"
+    read -r -p '  Type erase and press Enter to go on: ' answer
+    [ "$answer" = erase ] && return
+    [ ${#list[@]} -gt 1 ] || fail "You did not type erase, so nothing changed."
+  done
+}
 
-say "Installing $name on $about"
-screen 2
-wipefs -qa "$disk"
-sgdisk -Z "$disk" >/dev/null
-bios=()
-[ "$(uname -m)" = x86_64 ] && bios=(-n 0:0:+1M -t 0:ef02 -c 0:box-bios)
-sgdisk "${bios[@]}" \
-  -n 0:0:+${ESP_MB}M -t 0:ef00 -c 0:box-esp \
-  -n 0:0:+${SLOT_MB}M -t 0:8300 -c 0:box-a \
-  -n 0:0:+${SLOT_MB}M -t 0:8300 -c 0:box-b \
-  -n 0:0:0 -t 0:8300 -c 0:box-data "$disk" >/dev/null
-partx -u "$disk" 2>/dev/null || true
-udevadm settle
-part() { lsblk -nrpo NAME,PARTLABEL "$disk" | awk -v l="$1" '$2 == l { print $1 }'; }
-for _ in $(seq 10); do [ -b "$(part box-data)" ] && break; sleep 1; udevadm settle; done
+# Partitions, file systems, slot A and the boot loader on $1. Nothing else on the machine is touched.
+install_to() {
+  local disk=$1 bios=() last=-1
+  step="preparing the disk"
+  say "Installing $name on $(about "$disk")"
+  screen 2
+  wipefs -qa "$disk"
+  sgdisk -Z "$disk" >/dev/null
+  [ "$(uname -m)" = x86_64 ] && bios=(-n 0:0:+1M -t 0:ef02 -c 0:box-bios)
+  sgdisk "${bios[@]}" \
+    -n 0:0:+${ESP_MB}M -t 0:ef00 -c 0:box-esp \
+    -n 0:0:+${SLOT_MB}M -t 0:8300 -c 0:box-a \
+    -n 0:0:+${SLOT_MB}M -t 0:8300 -c 0:box-b \
+    -n 0:0:0 -t 0:8300 -c 0:box-data "$disk" >/dev/null
+  partx -u "$disk" 2>/dev/null || true
+  udevadm settle
+  part() { lsblk -nrpo NAME,PARTLABEL "$disk" | awk -v l="$1" '$2 == l { print $1 }'; }
+  for _ in $(seq 10); do [ -b "$(part box-data)" ] && break; sleep 1; udevadm settle; done
+  [ -b "$(part box-data)" ] || fail "The disk's new partitions did not appear." "no box-data partition on $disk"
+  mkfs.vfat -F 32 -n BOX-ESP "$(part box-esp)" >/dev/null
+  for p in box-a box-b box-data; do mkfs.ext4 -q -F -L $p "$(part $p)"; done
+  screen 5
 
-mkfs.vfat -F 32 -n BOX-ESP "$(part box-esp)" >/dev/null
-for p in box-a box-b box-data; do mkfs.ext4 -q -F -L $p "$(part $p)"; done
-screen 5
+  step="copying the system to the disk"
+  say "Copying the system to slot A"
+  mkdir -p $mnt/a $mnt/data $mnt/esp
+  mount "$(part box-a)" $mnt/a
+  # unsquashfs prints a percentage when it runs on a terminal; script gives it one. 5 to 95 percent of the bar.
+  script -qefc "unsquashfs -percentage -f -d $mnt/a $src" /dev/null 2>>$log | tr '\r' '\n' | while IFS= read -r l; do
+    l=${l//[[:space:]]/}
+    if [[ $l =~ ^[0-9]+$ && $l -le 100 && $l -ne $last ]]; then last=$l; screen $((5 + 90 * l / 100)); fi
+  done
+  [ -f $mnt/a/opt/box/core/box.ts ] || fail "The system did not copy completely. The disc may be damaged." "no opt/box/core/box.ts in slot A"
+  mount "$(part box-data)" $mnt/data
+  mkdir -p $mnt/data/update
+  # Each /data/... bind mount in the system's fstab starts as a copy of what the image has at that path.
+  awk '$1 ~ "^/data/" { print $1, $2 }' $mnt/a/etc/fstab | while read -r from to; do
+    [ -e "$mnt$from" ] || cp -a "$mnt/a$to" "$mnt$from" 2>/dev/null || mkdir -p "$mnt$from"
+  done
+  if [ -d $mnt/data/etc-box ]; then chmod 700 $mnt/data/etc-box; fi # the vault's folder: root only
 
-say "Copying the system to slot A"
-mkdir -p $mnt/a $mnt/data $mnt/esp
-mount "$(part box-a)" $mnt/a
-# unsquashfs prints a percentage when it runs on a terminal; script gives it one. 5 to 95 percent of the bar.
-last=-1
-script -qefc "unsquashfs -percentage -f -d $mnt/a $src" /dev/null 2>>/run/box-install.log | tr '\r' '\n' | while IFS= read -r l; do
-  l=${l//[[:space:]]/}
-  if [[ $l =~ ^[0-9]+$ && $l -le 100 && $l -ne $last ]]; then last=$l; screen $((5 + 90 * l / 100)); fi
-done
-[ -f $mnt/a/opt/box/core/box.ts ] || fail "the system did not copy completely"
-mount "$(part box-data)" $mnt/data
-mkdir -p $mnt/data/update
-# Each /data/... bind mount in the system's fstab starts as a copy of what the image has at that path.
-awk '$1 ~ "^/data/" { print $1, $2 }' $mnt/a/etc/fstab | while read -r from to; do
-  [ -e "$mnt$from" ] || cp -a "$mnt/a$to" "$mnt$from" 2>/dev/null || mkdir -p "$mnt$from"
-done
+  step="installing the boot loader"
+  say "Installing the boot loader"
+  screen 96 "Almost done."
+  mount "$(part box-esp)" $mnt/esp
+  if [ "$(uname -m)" = x86_64 ]; then
+    grub-install --target=i386-pc --boot-directory=$mnt/esp/boot "$disk" 2>>$log
+    grub-install --target=x86_64-efi --efi-directory=$mnt/esp --boot-directory=$mnt/esp/boot --removable --no-nvram 2>>$log
+  else
+    grub-install --target=arm64-efi --efi-directory=$mnt/esp --boot-directory=$mnt/esp/boot --removable --no-nvram 2>>$log
+  fi
+  sed "s/@NAME@/$name/g" /usr/local/lib/box-os/grub.cfg > $mnt/esp/boot/grub/grub.cfg
+  grub-editenv $mnt/esp/boot/grub/grubenv create
+  grub-editenv $mnt/esp/boot/grub/grubenv set saved_entry=a just_installed=1 # the disc starts the new system at once
+  # The menu's font, so the screen does not change between the disc and the installed system.
+  install -D -m 644 /usr/local/lib/box-os/gurtos.pf2 $mnt/esp/boot/grub/fonts/gurtos.pf2
+  sync
+  umount $mnt/a $mnt/data $mnt/esp
+}
 
-say "Installing the boot loader"
-screen 96 "Almost done."
-mount "$(part box-esp)" $mnt/esp
-if [ "$(uname -m)" = x86_64 ]; then
-  grub-install --target=i386-pc --boot-directory=$mnt/esp/boot "$disk" 2>/dev/null
-  grub-install --target=x86_64-efi --efi-directory=$mnt/esp --boot-directory=$mnt/esp/boot --removable --no-nvram 2>/dev/null
-else
-  grub-install --target=arm64-efi --efi-directory=$mnt/esp --boot-directory=$mnt/esp/boot --removable --no-nvram 2>/dev/null
-fi
-sed "s/@NAME@/$name/g" /usr/local/lib/box-os/grub.cfg > $mnt/esp/boot/grub/grub.cfg
-grub-editenv $mnt/esp/boot/grub/grubenv create
-grub-editenv $mnt/esp/boot/grub/grubenv set saved_entry=a just_installed=1 # the disc starts the new system at once
-# The menu's large font, so the screen does not change size between the disc and the installed system.
-install -D -m 644 /usr/local/lib/box-os/gurtos.pf2 $mnt/esp/boot/grub/fonts/gurtos.pf2
+main() {
+  SLOT_MB=$(sed -n 's/^SLOT_MB=//p' /etc/box-os/release) ESP_MB=512 MIN_DATA_MB=4096
+  SLOT_MB=${SLOT_MB:-6144}
+  name=$(. /etc/os-release && echo "$NAME $VARIANT")
+  cols=$(stty size 2>/dev/null | cut -d' ' -f2); cols=${cols:-80}
+  # A failing command stops the install (set -e) and EXIT shows one plain line; ERR (in functions too, set -E) only
+  # notes which command it was, for the details line.
+  set -E
+  trap 'failed="line $LINENO: $BASH_COMMAND"' ERR
+  trap 'rc=$?; [ $rc -eq 0 ] || fail "Something went wrong while $step." "${failed:-exit code $rc}"' EXIT
+  trap 'fail "You stopped the installer, so nothing changed."' INT
+  [ -f "$src" ] || fail "The disc has no system on it. It may be damaged." "no $src"
+  screen 0 "Looking for a disk."
+  udevadm settle
+  disc=$(findmnt -no SOURCE /run/boxlive/iso)
+  disc=$(lsblk -dnpo PKNAME "$disc" 2>/dev/null | grep . || echo "$disc")
+  choose
+  trap '' INT QUIT TSTP # from here on the disk is being written: Ctrl+C would leave half an install
+  install_to "$disk"
+  say "Installed. Restarting into $name."
+  screen 100 "Done. Restarting."
+  # Take the disc out first, or the machine starts from it again. A disc drive opens; a USB stick stays, and the
+  # disc's own menu then starts the installed system. After the eject nothing more can be read from the disc, and
+  # the live system runs from it, so the restart is a sysrq one: shell built-ins only, no program to load. Everything
+  # on the new disk is already written and unmounted.
+  echo 1 > /proc/sys/kernel/sysrq
+  eject -i off "$disc" 2>/dev/null || true
+  eject -m "$disc" 2>/dev/null || true
+  echo s > /proc/sysrq-trigger
+  echo b > /proc/sysrq-trigger
+}
 
-sync
-umount $mnt/a $mnt/data $mnt/esp
-say "Installed. Restarting into $name."
-screen 100 "Done. Restarting."
-# Take the disc out first, or the machine starts from it again. A disc drive opens; a USB stick stays, and the
-# disc's own menu then starts the installed system. After the eject nothing more can be read from the disc, and
-# the live system runs from it, so the restart is a sysrq one: shell built-ins only, no program to load. Everything
-# on the new disk is already written and unmounted.
-echo 1 > /proc/sys/kernel/sysrq
-eject -i off "/dev/$disc" 2>/dev/null || true
-eject -m "/dev/$disc" 2>/dev/null || true
-echo s > /proc/sysrq-trigger
-echo b > /proc/sysrq-trigger
+# Sourced (by image/unit) it only defines the functions above.
+if [[ ${BASH_SOURCE[0]} == "$0" ]]; then main "$@"; fi

@@ -1,10 +1,57 @@
 #!/bin/bash
-# Put the Droid CLI in /usr/local/bin. A copy on the data partition survives system updates, so a new slot
-# gets it back without a download; core/setup.sh droid replaces it if its version pin changed.
+# Put Factory's Droid CLI (the agent worker, about 300 MB) in /usr/local/bin. GurtOS may not ship it, so each machine
+# downloads it with core/setup.sh droid (the pinned version, its checksum checked, over HTTPS from Factory) and keeps
+# a copy on the data partition, which puts it back after a system update without a download.
+# It never gives up. With no network it waits for one. A failed or stalled download (curl's limits are in
+# droid-curl/.curlrc) is tried again after 30 s, then 1, 2 and 4 minutes, then every 5, and at once when the network
+# comes back. Where it stands is in /run/box-os/droid, for the box to show:
+#   state=ready|downloading|offline|retrying   message=<one sentence for a person>   at=<UTC time>
 set -euo pipefail
 keep=/data/droid/droid
-mountpoint -q /data || keep= # running from the install disc
-[ -n "$keep" ] && [ -x $keep ] && [ ! -e /usr/local/bin/droid ] && install -m 0755 $keep /usr/local/bin/droid
-/opt/box/core/setup.sh droid
-[ -n "$keep" ] && ! cmp -s /usr/local/bin/droid $keep && install -D -m 0755 /usr/local/bin/droid $keep.new && mv $keep.new $keep
-exit 0
+bin=/usr/local/bin/droid
+setup=/opt/box/core/setup.sh
+status=/run/box-os/droid
+tmp=/var/tmp/box-droid # a stalled download leaves its part here; each try starts with it empty
+
+report() { # <state> <message>. Once a Droid is in place (an older one while a new pin downloads), it stays ready.
+  if [ "$1" != ready ] && [ -x "$bin" ]; then echo "box-droid: $2"; return; fi
+  mkdir -p "${status%/*}"
+  printf 'state=%s\nmessage=%s\nat=%s\n' "$1" "$2" "$(date -u +%FT%TZ)" > "$status.new"
+  mv "$status.new" "$status"
+  echo "box-droid: $2"
+}
+online() { ip route get 1.1.1.1 >/dev/null 2>&1 || ip route get 2606:4700:4700::1111 >/dev/null 2>&1; }
+minutes() { if [ "$1" -lt 60 ]; then echo "$1 seconds"; elif [ "$1" -lt 120 ]; then echo "1 minute"; else echo "$(($1 / 60)) minutes"; fi; }
+pause() { # up to $1 seconds; less if the network goes away and comes back meanwhile
+  local down=
+  for _ in $(seq $(($1 / 5))); do
+    if online; then [ -z "$down" ] || return 0; else down=1; fi
+    sleep 5
+  done
+}
+
+main() {
+  mountpoint -q /data || keep= # running from the install disc
+  if [ -n "$keep" ] && [ -x "$keep" ] && [ ! -e "$bin" ]; then install -m 0755 "$keep" "$bin"; fi
+  local wait=30 tries=0
+  if [ -x "$bin" ]; then report ready "Droid is ready."; fi
+  while :; do
+    report downloading "Droid, the agent worker, is downloading. Agent tasks can start once it is here."
+    rm -rf "$tmp" && mkdir -p "$tmp"
+    if TMPDIR=$tmp "$setup" droid; then break; fi
+    if ! online; then
+      report offline "Droid, the agent worker, downloads once this computer is online."
+      until online; do sleep 5; done
+      continue
+    fi
+    tries=$((tries + 1))
+    report retrying "Droid's download did not finish (try $tries). Trying again in $(minutes $wait)."
+    pause $wait
+    wait=$((wait * 2)) && [ $wait -le 300 ] || wait=300
+  done
+  rm -rf "$tmp"
+  if [ -n "$keep" ] && ! cmp -s "$bin" "$keep"; then install -D -m 0755 "$bin" "$keep.new" && mv "$keep.new" "$keep"; fi
+  report ready "Droid is ready."
+}
+
+if [[ ${BASH_SOURCE[0]} == "$0" ]]; then main "$@"; fi

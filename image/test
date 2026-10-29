@@ -121,7 +121,7 @@ if vm 'test -f /opt/box/core/gurtos.ts'; then
   fi
   echo "test: command setup: gurtos, AGENT-SETUP.md and the setup port are in place"
 fi
-vm 'systemctl show box-droid -p Type --value | grep -qx exec && grep -q max-time /usr/local/lib/box-os/droid-curl/.curlrc && systemctl show box-droid -p Environment --value | grep -q CURL_HOME' ||
+vm 'systemctl show box-droid -p Type --value | grep -qx exec && grep -q max-time /usr/local/lib/box-os/droid-curl/.curlrc && systemctl show box-droid -p Environment --value | grep -q CURL_HOME && ! systemctl show box-droid -p After --value | grep -q network-online' ||
   { echo "test: FAILED, the Droid download has no time limit or holds the boot"; exit 1; }
 echo "test: the Droid download is a background unit with curl time limits"
 
@@ -144,15 +144,18 @@ if [[ $edition == personal- ]]; then
   owner "after the first account" && echo "test: the box knows its owner: ana"
   check() { out=$(vm "$2" 2>&1) || { echo "test: FAILED, $1"; echo "$out" | tail -n 8 | cut -c1-200; exit 1; }; }
   check "a Python error prints apport's second traceback" '! python3 -c "raise ValueError" 2>&1 | grep -q "package manager"'
-  check "a computer named after the account is not renamed back" 'hostnamectl --static set-hostname ana && /usr/local/lib/box-os/box-hostname && hostnamectl --static | grep -q "^gurt-"'
-  check "a name the person chose is not kept" 'hostnamectl --static set-hostname mycomputer && /usr/local/lib/box-os/box-hostname && [ "$(hostnamectl --static)" = mycomputer ]'
-  check "a computer name typed in first run is not applied" 's=$(hostnamectl --static); p=$(hostnamectl --pretty); hostnamectl --static set-hostname ana && hostnamectl --pretty set-hostname "My Laptop" && /usr/local/lib/box-os/box-hostname; r=$(hostnamectl --static); hostnamectl --pretty set-hostname "$p"; hostnamectl --static set-hostname "$s"; [ "$r" = my-laptop ]'
-  check "Settings still has the Ubuntu Desktop panel (wrapper missing)" 'grep -q XDG_CURRENT_DESKTOP=GNOME /usr/bin/gnome-control-center && test -x /usr/libexec/gnome-control-center.real'
+  # GNOME's first run sets the static hostname: the account name unless the person typed one (box-hostname's header).
+  names() { echo "s=\$(hostnamectl --static); p=\$(hostnamectl --pretty); hostnamectl --static set-hostname $1; /usr/local/lib/box-os/box-hostname;
+    r=\$(hostnamectl --static)/\$(hostnamectl --pretty); hostnamectl --static set-hostname \$s; hostnamectl --pretty set-hostname \$p; echo \$r"; }
+  check "a computer named after the account is not renamed back" "$(names ana) | grep -q '^gurt-[0-9a-f]*/gurt-'"
+  check "a computer name typed in first run is not applied" "[ \$($(names my-laptop)) = my-laptop/my-laptop ]"
+  check "Settings still has the Ubuntu Desktop panel (wrapper missing)" 'grep -q XDG_CURRENT_DESKTOP=GNOME /usr/bin/gnome-control-center /usr/libexec/gnome-control-center-search-provider && test -x /usr/libexec/gnome-control-center.real && test -x /usr/libexec/gnome-control-center-search-provider.real'
   # What a stock Ubuntu desktop has (docs/ux/parity.md): printing, an app store that survives updates, accounts, zram.
   check "no printing system, or its folders are not on the data partition" 'test -x /usr/sbin/cupsd && findmnt -n -o SOURCE /etc/cups | grep -q cups-etc && findmnt -n -o SOURCE /var/lib/cups | grep -q cups-var'
   check "no Flathub for a new account" 'runuser -u ana -- env HOME=/home/ana flatpak remotes --user | grep -q flathub'
   check "no app store, or a snap or deb plugin came with it" 'test -x /usr/bin/gnome-software && ! test -e /usr/bin/snap && ! dpkg -s gnome-software-plugin-deb >/dev/null 2>&1'
-  check "Ubuntu's updater is still in the menus" 'grep -q NoDisplay=true /usr/share/applications/update-manager.desktop && grep -q Prompt=never /etc/update-manager/release-upgrades'
+  check "Ubuntu's Software Updater or update notifier is installed" '! dpkg -s update-manager >/dev/null 2>&1 && ! dpkg -s update-notifier >/dev/null 2>&1 && grep -q Prompt=never /etc/update-manager/release-upgrades'
+  check "the desktop's packages are left for apt autoremove" '[ -z "$(apt-get -s autoremove | grep "^Remv")" ]'
   check "no zram swap or oomd" 'swapon --show | grep -q zram && systemctl is-active systemd-oomd'
   check "no online accounts or sharing" 'test -x /usr/libexec/goa-daemon && test -x /usr/libexec/gnome-remote-desktop-daemon'
   check "no H.264 or AAC decoder" 'gst-inspect-1.0 avdec_h264 >/dev/null && gst-inspect-1.0 avdec_aac >/dev/null'
@@ -180,7 +183,7 @@ if [[ $edition == personal- ]]; then
   echo "test: no apport hook, BOX_URL set, pretty hostname set, no Adwaita icons outside Ubuntu's session"
 fi
 
-droid() { for _ in $(seq $((60 * slow))); do vm "/usr/local/bin/droid --version >/dev/null 2>&1 && [ -x /data/droid/droid ]" && return; sleep 5; done
+droid() { for _ in $(seq $((60 * slow))); do vm "/usr/local/bin/droid --version >/dev/null 2>&1 && [ -x /data/droid/droid ] && grep -qx state=ready /run/box-os/droid" && return; sleep 5; done
   echo "test: FAILED, no Droid after 5 minutes ($1)"; exit 1; }
 droid "first boot" && echo "test: the image has no Droid, and the box downloaded it"
 if [[ $edition == personal- ]]; then

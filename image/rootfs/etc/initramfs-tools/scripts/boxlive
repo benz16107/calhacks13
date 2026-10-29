@@ -19,15 +19,15 @@ mountroot() {
 	mkdir -p /run/boxlive/iso /run/boxlive/ro /run/boxlive/rw
 	i=0
 	until find_disc; do
-		[ $i -lt 60 ] || panic "boxlive: no drive holds the install disc (box/root.sqfs)"
+		[ $i -lt 60 ] || panic "GurtOS could not find its install disc or USB stick (box/root.sqfs on any drive). If it is a USB stick, try another port, or write the ISO to it again."
 		sleep 1
 		i=$((i + 1))
 	done
-	mount -t squashfs -o ro,loop /run/boxlive/iso/box/root.sqfs /run/boxlive/ro || panic "boxlive: cannot mount root.sqfs"
+	mount -t squashfs -o ro,loop /run/boxlive/iso/box/root.sqfs /run/boxlive/ro || panic "GurtOS could not read the system on its install disc (box/root.sqfs). The disc or USB stick may be damaged: write the ISO to it again."
 	mount -t tmpfs -o mode=0755 tmpfs /run/boxlive/rw
 	mkdir -p /run/boxlive/rw/upper /run/boxlive/rw/work
 	mount -t overlay -o lowerdir=/run/boxlive/ro,upperdir=/run/boxlive/rw/upper,workdir=/run/boxlive/rw/work \
-		boxlive "${rootmnt}" || panic "boxlive: cannot mount the root overlay"
+		boxlive "${rootmnt}" || panic "GurtOS could not start from its install disc (the overlay mount failed)."
 	# Running from the disc there is no data partition: everything stays in RAM.
 	sed -i -e '/^LABEL=BOX-ESP/d' -e '/^LABEL=box-data/d' -e '/^\/data\//d' "${rootmnt}/etc/fstab"
 }

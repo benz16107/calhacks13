@@ -1,22 +1,25 @@
-# Factory's Droid CLI (the agent worker) may not ship inside GurtOS images, so each machine downloads it once it
-# has a network, with the version pin and checksum in core/setup.sh, and keeps a copy on the data partition.
-# Tasks that need Droid wait for it with a clear message; nothing else does.
+# Factory's Droid CLI (the agent worker) may not ship inside GurtOS images, so each machine downloads it, with the
+# version pin and checksum in core/setup.sh, and keeps a copy on the data partition. box-droid waits for a network,
+# retries with growing pauses and writes where it stands to /run/box-os/droid. Until it is there, a task that needs
+# Droid fails with a message saying so.
 [Unit]
 Description=Download the Droid CLI for agent tasks
 ConditionKernelCommandLine=!box.install
-Wants=network-online.target
-After=network-online.target
+# No ordering on network-online.target: the script waits for the network itself, so neither the boot nor the screen
+# waits for this unit.
 StartLimitIntervalSec=0
 
 [Service]
 # Type=exec, not oneshot: a oneshot holds multi-user.target (and "Bootup is not yet finished") until it ends, and the
-# download can take minutes on a slow network. A stalled one is cut by curl's own limits (CURL_HOME below), and Restart tries again.
+# download is about 300 MB. A stalled one is cut by curl's own limits (CURL_HOME below) and box-droid tries again;
+# Restart covers the script itself failing.
 Type=exec
 RemainAfterExit=yes
 Environment=CURL_HOME=/usr/local/lib/box-os/droid-curl
 ExecStart=/usr/local/lib/box-os/box-droid
 Restart=on-failure
 RestartSec=30
+Nice=10
 
 [Install]
 WantedBy=multi-user.target

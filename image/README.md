@@ -75,8 +75,11 @@ deleted afterwards. To make one: `openssl genpkey -algorithm ed25519 -out update
 The disc's menu says GurtOS Server or GurtOS Personal, and that installing erases the whole disk. On a machine
 without GurtOS it counts down 5 seconds, then installs; Esc stops the countdown and opens the menu (a stray key
 does not). On a machine that already has GurtOS on its disk it waits 30 seconds, then starts that; pick Install to
-install again. A blank disk is used straight away. A disk with anything on it is erased only after someone types
-`erase` on the screen. The installer shows one screen, "Installing GurtOS Server. 37%" with a full-width bar,
+install again. The installer never offers the disc or USB stick it started from, a disk with anything mounted,
+memory disks or disks that are too small. When the machine has one internal disk and it is empty, the installer
+uses it straight away. When there are several, it lists them (size, model, USB, what each holds) and asks for a
+number. A disk with anything on it, or a USB or removable one, is erased only after someone types `erase` on the
+screen. `box.install=/dev/<disk>` on the menu entry's kernel line names the disk instead. The installer shows one screen, "Installing GurtOS Server. 37%" with a full-width bar,
 and prints one plain line if it fails. It ejects the disc before it restarts, and the system it just installed
 starts at once (`just_installed` in the disc's `grubenv`, cleared by the first healthy start from the disk). The
 installed system's own boot menu (system A, system B) stays hidden; hold Shift at power-on to see it.
@@ -125,7 +128,9 @@ debug build, forward the port over ssh: `ssh -L 7700:127.0.0.1:7700 root@<box>`,
 "Other Linux"), with Secure Boot off.
 
 **A real machine**: write the ISO to a USB stick (`dd if=gurtos-server-x86_64.iso of=/dev/sdX bs=4M`) and start
-from it. Secure Boot must be off: the boot loader is not signed.
+from it. Secure Boot must be off: the boot loader is not signed. With it on, the computer shows its own message
+(for example "Secure Boot Violation" or "Invalid signature detected") or skips the stick, before GurtOS can show
+anything; turn it off in the firmware settings and start again.
 
 ## How updates work
 
@@ -152,10 +157,14 @@ box-update apply https://host/gurtos-server-x86_64.sqfs
 box-update rollback                     # make the other slot the default again
 ```
 
-The update image is the `.sqfs` the build makes, fetched with its `.sha256` and `.sig`. The signature must
-verify against `/etc/box-os/update.pub`, the update key's public half, baked into the image (see
-`BOX_UPDATE_KEY`). Images signed with another key will not install. An update must be
-the same edition: a Personal system updated with a Server image would lose its desktop.
+The update image is the `.sqfs` the build makes, fetched with its `.sha256` and `.sig` (a download slower than
+10 KB/s for a minute is cut). The signature must verify against `/etc/box-os/update.pub`, the update key's public
+half, baked into the image (see `BOX_UPDATE_KEY`). Images signed with another key will not install. An update must be
+the same edition (a Personal system updated with a Server image would lose its desktop) and the same architecture,
+and not an older build than the running one unless `--allow-older` is given. While a new system runs on trial,
+`box-update apply` refuses: the other slot holds the last system known to be healthy. If an update stops halfway
+(a power cut, or it was refused after the slot was wiped), `/data/update/writing` names that slot, and `status`
+and `rollback` treat it as holding no system.
 
 What lives on the data partition, bind-mounted in place: `/var/lib/box` (the action log, workspaces, tasks),
 `/etc/box` (the vault and the box's identity key), `/var/lib/spacetimedb`, `/root/.config/spacetime` (the identity
@@ -171,8 +180,13 @@ after the rollback. An update also copies over `/etc/machine-id`, the time zone,
 - The GRUB menu on the ESP is written once at install and never updated. A change to the boot menu itself
   needs a reinstall.
 - The two 6 GB slots cost 12 GB of disk (24 GB on Personal).
-- Updates are signed with one ed25519 key. There is no key rotation and no rollback protection (an old signed
-  image installs fine).
+- Updates are signed with one ed25519 key. There is no key rotation. An older signed image installs only with
+  `--allow-older`, a check by build date, not a counter the firmware keeps.
+- GRUB and the system's fstab find the partitions by label. With a second disk that also holds GurtOS plugged in
+  (an old install on a USB drive), a start may use that disk's slot or data partition: unplug it, or erase it.
+  `box-update` itself writes only to the slots on the disk the running system started from.
+- The health check is the box service's `/health`: its log loaded, its apps loaded and its API answering. It does
+  not check the screen (the kiosk or GDM) or SpacetimeDB.
 
 ## First-run setup
 
@@ -233,8 +247,10 @@ kiosk:
   fingerprint, Thunderbolt and firmware tools, NTFS and phone file systems, the common GNOME utilities, H.264,
   AAC and other codecs (restricted, universe and multiverse are on), and the HWE kernel. Server has none of
   these.
-- **Ubuntu's updater and release upgrade are hidden** (`NoDisplay`, `Prompt=never`). GurtOS's own update is the
-  way to update. `unattended-upgrades` is installed, so security updates still reach the running slot until the next GurtOS update.
+- **Ubuntu's Software Updater and update notifier are removed**, with the `ubuntu-desktop-minimal` metapackage that
+  pulls them in (every other package is marked as wanted first, so `apt autoremove` keeps the desktop). Software &
+  Updates stays, because GNOME Software depends on it, but is hidden, and `Prompt=never` stops any release-upgrade
+  offer. GurtOS's own update is the way to update. `unattended-upgrades` is installed, so security updates still reach the running slot until the next GurtOS update.
 - **Sharing opens its own ports.** Personal's firewall stays default-drop. While a Settings, Sharing service
   is on, its port is open: remote desktop (3389), file sharing (3490), media sharing (rygel), a shared printer
   (631), mDNS (5353 for discovery), and ssh (22) if openssh-server is installed and running. Turning it off
@@ -252,9 +268,11 @@ kiosk:
 - **The box service** is the same as on Server, from `core/install.sh`. Its screen is the desktop's, not a kiosk.
 - **The Box desktop layer** comes from `personal/install.sh`, with its GurtOS session and theme. See the hook
   below.
-- **The computer's name** is `gurt-<id>` until the person names it in Settings. First boot sets it as the
-  pretty hostname too. GNOME's setup still names the machine after the new account, so `box-hostname` (run by
-  `box-owner.service` right after) puts `gurt-<id>` back, unless the person typed a computer name of their own.
+- **The computer's name** is `gurt-<id>` until the person names it. First boot sets it as the pretty hostname too
+  (Settings, About shows that one). Ubuntu's GNOME first run has a "Computer name" field: it fills it with the
+  account name and sets what it holds as the hostname. `box-hostname` (run by `box-owner.service` when the account
+  appears) puts `gurt-<id>` back when the name is the account's, and otherwise makes the pretty hostname the name
+  the person typed, so Settings shows it.
 
 The data partition also holds `/home`, saved Wi-Fi and network connections, AccountsService (account pictures
 and types) and Bluetooth pairings. These mounts are required on Personal: a desktop that started without `/home`
@@ -265,8 +283,8 @@ would write people's files into the system slot. An update also carries over peo
 **The trade-off:** A/B fits, but a desktop with sudo is a system people change. Software someone installs with
 `apt`, and any other change they make outside their home folder and the settings above, is gone after the next
 system update, because the update replaces the whole system. Their files, accounts and settings stay. That is
-how ChromeOS and Fedora Silverblue behave too. Ubuntu's own update tools are still installed but hidden;
-they can update the running slot, but the next GurtOS update replaces that too. Dual boot with another OS is not
+how ChromeOS and Fedora Silverblue behave too. `apt` and `unattended-upgrades` can still update the running slot,
+but the next GurtOS update replaces that too. Dual boot with another OS is not
 supported: the installer takes the whole disk.
 
 ### The hook with `personal/`
@@ -292,6 +310,13 @@ slot, which is again after each system update. So `personal/install.sh` must als
 account yet, both in the chroot and at boot.
 
 ## Tested
+
+`image/unit` tests the image's own scripts without an ISO. As any user it checks the installer's disk choice,
+box-droid's waits and state file, and box-hostname. In a throwaway x86_64 VM, `sudo image/unit --vm` also
+installs onto a loop device (partitions, slot A, GRUB for BIOS and UEFI), runs box-update's checks against two
+loop partitions (wrong key, wrong hash, another edition or architecture, an older build, an update on trial, a
+slot whose write did not finish, rollback), cuts box-firstboot's key short, and runs `systemd-analyze verify` on
+the units. It works in a private mount and hostname namespace, so the VM's own `/etc` and hostname stay as they are.
 
 With `image/test` in QEMU on an x86_64 Linux machine:
 - Server, x86_64, with BIOS and with UEFI: installs on a blank 24 GB disk in about a minute, starts healthy with
@@ -338,9 +363,13 @@ Stock Ubuntu Server 24.04 has a login prompt, a user with sudo, snapd, cloud-ini
 - **Includes `age`**, which an app's backup uses to encrypt to the owner's key.
 - **Downloads Droid on first start.** Factory's Droid CLI, the agent worker, may not be shipped inside the
   image, so the build runs `core/setup.sh` with `BOX_NO_DROID=1` and stops if Droid is in the image anyway. Once
-  the network is up, `box-droid.service` runs `core/setup.sh droid` (pinned version, checked checksum), retrying
-  every 30 seconds until it works (a download that stalls below 20 KB/s for a minute, or runs over 30 minutes, is cut and retried, and the unit does not hold up the boot), and keeps a copy in `/data/droid`, so a system update puts it back without
-  downloading it again. Until then a Droid task waits with a message saying so.
+  the network is up, `box-droid.service` runs `core/setup.sh droid` (pinned version, checksum checked, over HTTPS
+  from Factory) and keeps a copy in `/data/droid`, so a system update puts it back without downloading it again.
+  Droid is about 300 MB. A download slower than 20 KB/s for a minute is cut, and curl tries 3 more times; the
+  whole download may take 4 hours. Then box-droid waits 30 seconds, 1, 2 and 4 minutes, then every 5, and starts
+  again at once when the network comes back after being away. With no network it waits for one. Neither the boot
+  nor the screen waits for it. Where it stands is in `/run/box-os/droid` (`state=` ready, downloading, offline or
+  retrying, and a `message=` for a person). Until then a Droid task fails with a message saying so.
 - **Its screen is the box.** `box-kiosk.service` runs cage, a Wayland compositor that shows one window, with a
   full-screen WebKit view (`rootfs/usr/local/lib/box-os/kiosk.py`) as the `kiosk` user (no password, no shell).
   seatd, a small root daemon, hands that user the display and keyboard. Ubuntu's own browsers are snaps, which
@@ -354,7 +383,8 @@ Stock Ubuntu Server 24.04 has a login prompt, a user with sudo, snapd, cloud-ini
 - **Boots its install disc live**, with a custom initramfs boot method (`boot=boxlive`): the disc's squashfs
   is a read-only root with a RAM layer on top.
 - **Networking** is systemd-networkd with DHCP on every wired card (no netplan), behind an inbound firewall
-  (above).
+  (above). The network counts as up once any card has a routable address, so an empty second port does not hold
+  the boot for 2 minutes. There is no Wi-Fi on Server.
 
 Every file the image adds is in `rootfs/` (both editions; the kiosk and networking files are Server only) and
 `rootfs-personal/` (Personal only), at the path it gets on the machine. Internal names (the `box` service,
@@ -366,6 +396,7 @@ Every file the image adds is in `rootfs/` (both editions; the kiosk and networki
 |---|---|
 | `build` | The one command. Ubuntu base, core's own install scripts, `rootfs/`, then the squashfs and ISO. |
 | `test` | Boot test in QEMU: install, health, power cut, firewall, update, rollback |
+| `unit` | Tests of the scripts without an ISO (see Tested) |
 | `iso-grub.cfg` | The install disc's menu |
 | `rootfs/usr/local/sbin/box-install` | The installer (partitions, slot A, GRUB) |
 | `rootfs/usr/local/sbin/box-update` | Updates, rollback, and the health check at every start |

@@ -2,130 +2,178 @@
 # Whole-system updates with rollback. The disk holds two systems, slots A and B. The box runs from one. An update
 # is written to the other, which starts once on trial and becomes the default only if the box comes up healthy.
 #   box-update status
-#   box-update apply <root.sqfs | https://.../root-<arch>.sqfs> [--no-reboot]
+#   box-update apply <file.sqfs | https://.../gurtos-<edition>-<arch>.sqfs> [--no-reboot] [--allow-older]
 #   box-update rollback      make the other slot the default again, and restart into it
 #   box-update confirm       box-confirm.service runs this at every start
-# An update is root-<arch>.sqfs from image/build with its .sha256 and .sig beside it. The .sig must verify
-# against /etc/box-os/update.pub, the build machine's key, and the .sha256 must match.
+# An update is the .sqfs from image/build with its .sha256 and .sig beside it. The .sig must verify against
+# /etc/box-os/update.pub (the update key's public half, baked into the image) and the .sha256 must match. It must be
+# the same edition and architecture, and not an older build unless --allow-older. It is not taken while the running
+# system is itself on trial, so the last system known to be healthy is never overwritten.
 set -euo pipefail
 env=/boot/efi/boot/grub/grubenv
 state=/data/update
 work=/run/box-update
-cur=$(sed -n 's/.*box\.slot=\([ab]\).*/\1/p' /proc/cmdline)
+pub=/etc/box-os/update.pub
+cmdline=/proc/cmdline
 other() { [ "$1" = a ] && echo b || echo a; }
 build() { sed -n 's/^BUILD=//p' "$1/etc/box-os/release" 2>/dev/null || true; }
+arch() { sed -n 's/^ARCH=//p' "$1/etc/box-os/release" 2>/dev/null || true; }
+edition() { (. "$1/etc/os-release" && echo "${VARIANT_ID:-}"); }
+default() { grub-editenv $env list | sed -n 's/^saved_entry=//p'; }
 die() { echo "box-update: $*" >&2; exit 1; }
 report() {
   echo "box-update: $*"
   for t in /dev/ttyS0 /dev/ttyAMA0; do { echo "box: $*" > $t; } 2>/dev/null || true; done
 }
-peek() { # mount slot $1 read-only at $work/$1 and print the path, or nothing if it holds no system
+sysdisk() { lsblk -nrpso NAME,TYPE "$(findmnt -no SOURCE /)" | awk '$2 == "disk" { print $1; exit }'; }
+# Slot $1's partition on the disk this system runs from. Not by label alone: another GurtOS disk plugged in (a USB
+# drive it was once installed on) has partitions with the same labels, and an update must never write there.
+slotdev() { lsblk -nrpo NAME,PARTLABEL "$(sysdisk)" | awk -v l="box-$1" '$2 == l { print $1 }'; }
+peek() { # mount slot $1 read-only at $work/$1 and print the path, or nothing if it holds no whole system
+  # $state/writing names a slot whose write did not finish (a power cut or a refused update): it holds no system.
+  [ "$(cat $state/writing 2>/dev/null)" != "$1" ] || return 0
   mkdir -p $work/$1
-  mountpoint -q $work/$1 || mount -o ro LABEL=box-$1 $work/$1 2>/dev/null || return 0
+  mountpoint -q $work/$1 || mount -o ro "$(slotdev $1)" $work/$1 2>/dev/null || return 0
   if [ -e $work/$1/boot/vmlinuz ]; then echo $work/$1; else umount $work/$1; fi
 }
 
-case ${1:-status} in
-status)
-  [ -n "$cur" ] || die "the box is running from its install disc, not a disk"
-  echo "running:  slot $cur, build $(build /)"
-  o=$(other $cur) p=$(peek $o)
-  if [ -n "$p" ]; then echo "other:    slot $o, build $(build $p)"; umount $p; else echo "other:    slot $o, empty"; fi
-  echo "default:  slot $(grub-editenv $env list | sed -n 's/^saved_entry=//p')"
-  if [ -f $state/trial ]; then echo "on trial: slot $(cut -d' ' -f1 $state/trial)"; fi
-  if [ -f $state/last ]; then echo "last:     $(cat $state/last)"; fi
-  ;;
+main() {
+  cur=$(sed -n 's/.*box\.slot=\([ab]\).*/\1/p' "$cmdline")
+  case ${1:-status} in
+  status)
+    [ -n "$cur" ] || die "the box is running from its install disc, not a disk"
+    echo "running:  slot $cur, build $(build /)"
+    local o p
+    o=$(other $cur) p=$(peek $o)
+    if [ -n "$p" ]; then echo "other:    slot $o, build $(build $p)"; umount $p
+    elif [ "$(cat $state/writing 2>/dev/null)" = $o ]; then echo "other:    slot $o, an update that did not finish (it cannot start)"
+    else echo "other:    slot $o, empty"; fi
+    echo "default:  slot $(default)"
+    if [ -f $state/trial ]; then echo "on trial: slot $(cut -d' ' -f1 $state/trial)"; fi
+    if [ -f $state/last ]; then echo "last:     $(cat $state/last)"; fi
+    ;;
 
-apply)
-  [ -n "${2:-}" ] || die "usage: box-update apply <root.sqfs or URL>"
-  [ -n "$cur" ] || die "the box is running from its install disc; install it first"
-  new=$(other $cur)
-  mkdir -p $state $work
-  if [[ $2 == http://* || $2 == https://* ]]; then
-    for ext in "" .sha256 .sig; do curl -fsSL --retry 3 -o $state/new.sqfs$ext "$2$ext"; done
-    file=$state/new.sqfs
-  else
-    file=$2
-    for ext in .sha256 .sig; do cp "$2$ext" $state/new.sqfs$ext; done
-  fi
-  openssl pkeyutl -verify -pubin -inkey /etc/box-os/update.pub -rawin -in $state/new.sqfs.sha256 \
-    -sigfile $state/new.sqfs.sig >/dev/null || die "the update is not signed by this box's build key"
-  [ "$(cut -d' ' -f1 $state/new.sqfs.sha256)" = "$(sha256sum < "$file" | cut -d' ' -f1)" ] ||
-    die "the update does not match its .sha256"
-
-  echo "box-update: writing slot $new"
-  dev=/dev/disk/by-partlabel/box-$new
-  mountpoint -q $work/$new && umount $work/$new
-  mkfs.ext4 -q -F -L box-$new $dev
-  mkdir -p $work/$new && mount $dev $work/$new
-  unsquashfs -f -q -no-progress -d $work/$new "$file"
-  root=$work/$new
-  [ -e $root/boot/vmlinuz ] && [ -e $root/opt/box/core/box.ts ] || die "the update is not a box system"
-  edition() { (. "$1/etc/os-release" && echo "${VARIANT_ID:-}"); }
-  [ "$(edition $root)" = "$(edition /)" ] || { umount $root; die "the update is a different edition: $(edition $root)"; }
-  # The new system keeps this machine's identity and the box's task users (core makes them, uids 30000-39999).
-  cp -a /etc/machine-id /etc/localtime /etc/timezone $root/etc/ # the time zone someone chose stays
-  cp -a /etc/ssh/ssh_host_* $root/etc/ssh/ 2>/dev/null || true
-  for n in $(awk -F: '$3 >= 30000 && $3 <= 39999 { print $1 }' /etc/passwd); do
-    for f in passwd group shadow gshadow; do
-      grep -q "^$n:" $root/etc/$f || grep "^$n:" /etc/$f >> $root/etc/$f || true
+  apply)
+    [ -n "${2:-}" ] || die "usage: box-update apply <file.sqfs or URL> [--no-reboot] [--allow-older]"
+    [ -n "$cur" ] || die "the box is running from its install disc; install it first"
+    local reboot=1 older= a d new file root
+    for a in "${@:3}"; do
+      case $a in --no-reboot) reboot= ;; --allow-older) older=1 ;; *) die "unknown option $a" ;; esac
     done
-  done
-  # An edition can carry more (the Personal edition: people's accounts and settings).
-  for f in /usr/local/lib/box-os/carry.d/*; do if [ -x "$f" ]; then "$f" $root; fi; done
-  sync && umount $root
-  [ "$file" = $state/new.sqfs ] && rm -f $file
+    # On trial, the other slot holds the last system known to be healthy: keep it until this one is confirmed. (An
+    # update written but not started yet is in the other slot, and a new one may replace it.)
+    [ "$(cut -d' ' -f1 $state/trial 2>/dev/null)" != "$cur" ] ||
+      die "this system is on trial; wait until it is confirmed, at most 5 minutes after it started (box-update status)"
+    d=$(default) || true
+    [ -n "$d" ] || die "cannot read the boot settings in $env"
+    [ "$d" = "$cur" ] || die "this system (slot $cur) is not the default one; restart into slot $d first"
+    new=$(other $cur)
+    mkdir -p $state $work
+    if [[ $2 == http://* || $2 == https://* ]]; then
+      # A stalled download is cut (under 10 KB/s for a minute) instead of hanging; the signature check below guards the bytes.
+      for ext in "" .sha256 .sig; do
+        curl -fsSL --retry 3 --connect-timeout 20 --speed-limit 10000 --speed-time 60 -o $state/new.sqfs$ext "$2$ext" ||
+          die "could not download $2$ext"
+      done
+      file=$state/new.sqfs
+    else
+      file=$2
+      [ -f "$file" ] || die "no file $file"
+      for ext in .sha256 .sig; do cp "$2$ext" $state/new.sqfs$ext || die "no $2$ext beside the update"; done
+    fi
+    openssl pkeyutl -verify -pubin -inkey $pub -rawin -in $state/new.sqfs.sha256 \
+      -sigfile $state/new.sqfs.sig >/dev/null 2>&1 || die "the update is not signed by this box's update key"
+    [ "$(cut -d' ' -f1 $state/new.sqfs.sha256)" = "$(sha256sum < "$file" | cut -d' ' -f1)" ] ||
+      die "the update does not match its .sha256"
 
-  grub-editenv $env set next_entry=$new
-  echo "$new $(date -u +%FT%TZ)" > $state/trial
-  report "slot $new holds the update. It starts once on trial and stays only if the box is healthy."
-  [ "${3:-}" = --no-reboot ] || systemctl reboot
-  ;;
+    echo "box-update: writing slot $new"
+    local dev
+    dev=$(slotdev $new)
+    [ -b "$dev" ] || die "found no partition box-$new on this system's disk ($(sysdisk))"
+    if mountpoint -q $work/$new; then umount $work/$new; fi
+    echo $new > $state/writing # from here until the end, slot $new holds no system that may start
+    sync
+    mkfs.ext4 -q -F -L box-$new $dev
+    mkdir -p $work/$new && mount $dev $work/$new
+    root=$work/$new
+    unsquashfs -f -q -no-progress -d $root "$file"
+    refuse() { umount $root; die "$*"; }
+    [ -e $root/boot/vmlinuz ] && [ -e $root/opt/box/core/box.ts ] || refuse "the update is not a GurtOS system"
+    [ "$(edition $root)" = "$(edition /)" ] || refuse "the update is a different edition: $(edition $root), not $(edition /)"
+    [ "$(arch $root)" = "$(arch /)" ] || refuse "the update is for $(arch $root), not $(arch /)"
+    # Build ids start with the build's UTC date and time (20261024-1439-<commit>), so they sort by age.
+    if [ -z "$older" ] && [[ $(build $root) < $(build /) ]]; then
+      refuse "the update (build $(build $root)) is older than this system (build $(build /)); --allow-older installs it anyway"
+    fi
+    # The new system keeps this machine's identity and the box's task users (core makes them, uids 30000-39999).
+    cp -a /etc/machine-id /etc/localtime /etc/timezone $root/etc/ # the time zone someone chose stays
+    cp -a /etc/ssh/ssh_host_* $root/etc/ssh/ 2>/dev/null || true
+    for n in $(awk -F: '$3 >= 30000 && $3 <= 39999 { print $1 }' /etc/passwd); do
+      for f in passwd group shadow gshadow; do
+        grep -q "^$n:" $root/etc/$f || grep "^$n:" /etc/$f >> $root/etc/$f || true
+      done
+    done
+    # An edition can carry more (the Personal edition: people's accounts and settings).
+    for f in /usr/local/lib/box-os/carry.d/*; do if [ -x "$f" ]; then "$f" $root; fi; done
+    sync && umount $root
+    rm -f $state/writing
+    [ "$file" != $state/new.sqfs ] || rm -f "$file"
 
-rollback)
-  [ -n "$cur" ] || die "the box is running from its install disc"
-  o=$(other $cur) p=$(peek $o)
-  [ -n "$p" ] || die "slot $o holds no system"
-  umount $p
-  grub-editenv $env set saved_entry=$o
-  rm -f $state/trial
-  echo "$(date -u +%FT%TZ) rolled back by hand from slot $cur to slot $o" > $state/last
-  report "rolling back to slot $o"
-  systemctl reboot
-  ;;
+    grub-editenv $env set next_entry=$new
+    echo "$new $(date -u +%FT%TZ)" > $state/trial
+    report "slot $new holds the update. It starts once on trial and stays only if the box is healthy."
+    if [ -n "$reboot" ]; then systemctl reboot; fi
+    ;;
 
-confirm)
-  health=
-  for _ in $(seq 150); do # up to 5 minutes: the first start publishes the SpacetimeDB module
-    health=$(curl -fsS --max-time 2 http://127.0.0.1:7700/health 2>/dev/null) && [[ $health == *'"ok":true'* ]] && break
-    health=
-    sleep 2
-  done
-  where=${cur:+slot $cur}
-  where=${where:-the install disc}
-  where+=", build $(build /), $(cat /proc/sys/kernel/hostname)"
-  if [ -n "$health" ]; then
-    report "up and healthy on $where: $health"
-    # A healthy start from the disk: the install disc may now offer its menu again.
-    [ -z "$cur" ] || grub-editenv $env unset just_installed
-  else report "NOT healthy after 5 minutes on $where"; fi
-  [ -n "$cur" ] && [ -f $state/trial ] || { [ -n "$health" ]; exit; }
-
-  trial=$(cut -d' ' -f1 $state/trial)
-  rm -f $state/trial
-  if [ "$trial" != "$cur" ]; then
-    echo "$(date -u +%FT%TZ) the update in slot $trial did not start; still on slot $cur" > $state/last
-    report "the update in slot $trial did not start, so the box stayed on slot $cur"
-  elif [ -n "$health" ]; then
-    grub-editenv $env set saved_entry=$cur
-    echo "$(date -u +%FT%TZ) slot $cur, build $(build /), confirmed" > $state/last
-    report "update confirmed: slot $cur is now the default"
-  else
-    echo "$(date -u +%FT%TZ) slot $cur, build $(build /), was not healthy; rolled back to slot $(other $cur)" > $state/last
-    report "the update in slot $cur is not healthy. Rolling back to slot $(other $cur)."
+  rollback)
+    [ -n "$cur" ] || die "the box is running from its install disc"
+    local o p
+    o=$(other $cur) p=$(peek $o)
+    [ -n "$p" ] || die "slot $o holds no system that can start"
+    umount $p
+    grub-editenv $env set saved_entry=$o
+    rm -f $state/trial
+    echo "$(date -u +%FT%TZ) rolled back by hand from slot $cur to slot $o" > $state/last
+    report "rolling back to slot $o"
     systemctl reboot
-  fi
-  ;;
+    ;;
 
-*) die "usage: box-update status | apply <file or URL> | rollback | confirm" ;;
-esac
+  confirm)
+    local health= where trial
+    for _ in $(seq 150); do # up to about 5 minutes for the box service to answer
+      health=$(curl -fsS --max-time 2 http://127.0.0.1:7700/health 2>/dev/null) && [[ $health == *'"ok":true'* ]] && break
+      health=
+      sleep 2
+    done
+    where=${cur:+slot $cur}
+    where=${where:-the install disc}
+    where+=", build $(build /), $(cat /proc/sys/kernel/hostname)"
+    if [ -n "$health" ]; then
+      report "up and healthy on $where: $health"
+      # A healthy start from the disk: the install disc may now offer its menu again.
+      [ -z "$cur" ] || grub-editenv $env unset just_installed
+    else report "NOT healthy after 5 minutes on $where"; fi
+    [ -n "$cur" ] && [ -f $state/trial ] || { [ -n "$health" ]; return; }
+
+    trial=$(cut -d' ' -f1 $state/trial)
+    rm -f $state/trial
+    if [ "$trial" != "$cur" ]; then
+      echo "$(date -u +%FT%TZ) the update in slot $trial did not start; still on slot $cur" > $state/last
+      report "the update in slot $trial did not start, so the box stayed on slot $cur"
+    elif [ -n "$health" ]; then
+      grub-editenv $env set saved_entry=$cur
+      echo "$(date -u +%FT%TZ) slot $cur, build $(build /), confirmed" > $state/last
+      report "update confirmed: slot $cur is now the default"
+    else
+      echo "$(date -u +%FT%TZ) slot $cur, build $(build /), was not healthy; rolled back to slot $(other $cur)" > $state/last
+      report "the update in slot $cur is not healthy. Rolling back to slot $(other $cur)."
+      systemctl reboot
+    fi
+    ;;
+
+  *) die "usage: box-update status | apply <file or URL> [--no-reboot] [--allow-older] | rollback | confirm" ;;
+  esac
+}
+
+# Sourced (by image/unit) it only defines the functions above.
+if [[ ${BASH_SOURCE[0]} == "$0" ]]; then main "$@"; fi

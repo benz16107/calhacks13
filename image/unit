@@ -1,0 +1,336 @@
+#!/usr/bin/env bash
+# Tests for the image's own scripts that need no ISO build.
+#   image/unit           as any user, anywhere: the installer's disk choice, box-droid's retries and state file,
+#                        box-hostname after GNOME's first run
+#   sudo image/unit --vm only inside a throwaway Ubuntu 24.04 VM: also a whole install onto a loop device (partitions,
+#                        slot A, GRUB for BIOS and UEFI), box-update's checks against two loop partitions, box-firstboot
+#                        after a power cut, and systemd-analyze verify on the units. It works in a private mount and
+#                        hostname namespace, so the VM's own /etc, /usr/local, /boot and hostname stay as they are.
+#                        Needs gdisk, dosfstools, squashfs-tools, grub-pc-bin and grub-efi-amd64-bin (x86_64).
+# The scripts under test keep their main code in main(), so sourcing one only defines its functions.
+set -euo pipefail
+here=$(cd "$(dirname "$0")" && pwd)
+r=$here/rootfs
+p=$here/rootfs-personal
+n=0 fails=0
+check() { # <what> <command...>
+  n=$((n + 1))
+  if "${@:2}"; then echo "ok    $1"; else fails=$((fails + 1)); echo "FAIL  $1"; fi
+}
+eq() { [ "$1" = "$2" ] || { echo "      got:  $1" | head -5; echo "      want: $2" | head -5; return 1; }; }
+has() { [[ $1 == *"$2"* ]] || { echo "      got: $1" | head -5; return 1; }; }
+t=$(mktemp -d)
+cleanup() { for l in ${loops:-}; do losetup -d "$l" 2>/dev/null || true; done; rm -rf "$t"; }
+trap cleanup EXIT
+
+if [[ ${1:-} != --vm-inside ]]; then
+  echo "== box-install: which disks it offers"
+  listing='/dev/sda disk 0 2000398934016 0 sata
+/dev/sdb disk 0 64000000000 1 usb
+/dev/nvme0n1 disk 0 512110190592 0 nvme
+/dev/sr0 rom 1 1400000000 1 sata
+/dev/zram0 disk 0 17179869184 0
+/dev/mmcblk0 disk 0 64000000000 0
+/dev/mmcblk0boot0 disk 1 4194304 0
+/dev/sdc disk 0 8000000000 1 usb
+/dev/sdd disk 0 32000000000 1
+/dev/sde disk 0 128000000000 0 usb
+/dev/vda disk 0 25769803776 0 virtio'
+  got=$( . "$r/usr/local/sbin/box-install"; candidates 17716740096 "/dev/sdb /dev/zram0" <<< "$listing")
+  check "internal disks first, then USB and removable ones; never the disc, a disk in use, zram, a read-only or a small one" \
+    eq "$got" "/dev/sda internal
+/dev/nvme0n1 internal
+/dev/mmcblk0 internal
+/dev/vda internal
+/dev/sdd removable
+/dev/sde removable"
+
+  # choose <listing> <empty disks> <what the person types>: the disk it settles on, or FAIL: <message>
+  choose_with() {
+    ( . "$r/usr/local/sbin/box-install"
+      listing=$1 blank=" $2 " cmdline=$t/cmdline ESP_MB=512 SLOT_MB=6144 MIN_DATA_MB=4096 name="GurtOS Server"
+      : > "$cmdline"
+      lsblk() {
+        case "$*" in
+          "-dnrbpo NAME,TYPE,RO,SIZE,RM,TRAN") printf '%s\n' "$listing" ;;
+          "-dno TRAN "*) awk -v d="${*: -1}" '$1 == d { print $6 }' <<< "$listing" ;;
+          *) echo "2T Disk" ;;
+        esac
+      }
+      in_use() { :; }
+      empty() { [[ $blank == *" $1 "* ]]; }
+      holds() { echo "Windows (ntfs)"; }
+      say() { :; }
+      sleep() { :; }
+      fail() { echo "FAIL: $1" >&3; exit 0; }
+      { choose > /dev/null 2>&1; echo "$disk" >&3; } 3>&1 <<< "$3"
+    )
+  }
+  one='/dev/vda disk 0 25769803776 0 virtio'
+  usb='/dev/sdb disk 0 64000000000 1 usb'
+  two='/dev/sda disk 0 2000398934016 0 sata
+/dev/nvme0n1 disk 0 512110190592 0 nvme'
+  check "the only internal disk, empty: installs without a question" eq "$(choose_with "$one" /dev/vda '')" /dev/vda
+  check "the only disk has data: installs after erase" eq "$(choose_with "$one" '' erase)" /dev/vda
+  check "the only disk has data: anything but erase changes nothing" \
+    eq "$(choose_with "$one" '' 'yes')" "FAIL: You did not type erase, so nothing changed."
+  check "an empty USB disk still asks for erase" eq "$(choose_with "$usb" /dev/sdb '')" "FAIL: You did not type erase, so nothing changed."
+  check "an empty USB disk installs after erase" eq "$(choose_with "$usb" /dev/sdb erase)" /dev/sdb
+  check "two disks: the person picks the empty one, no erase needed" eq "$(choose_with "$two" /dev/nvme0n1 2)" /dev/nvme0n1
+  check "two disks: the one with data needs erase" eq "$(choose_with "$two" /dev/nvme0n1 $'1\nerase')" /dev/sda
+  check "two disks: a wrong number asks again, no to erase goes back to the list" \
+    eq "$(choose_with "$two" /dev/nvme0n1 $'x\n7\n1\nno\n2')" /dev/nvme0n1
+  check "no disk big enough: one plain line" \
+    has "$(choose_with '/dev/sda disk 0 8000000000 0 sata' /dev/sda '')" "FAIL: This computer has no disk of at least 17 GB to install on."
+
+  echo "== box-droid: waits for the network, retries with growing pauses, says where it stands"
+  droid_run() { # <tries that fail before one works> <network up from the start: 1 or ''> <a Droid is already there: 1 or ''>
+    ( . "$r/usr/local/lib/box-os/box-droid"
+      d=$t/droid-$RANDOM && mkdir -p "$d/bin" "$d/data"
+      bin=$d/bin/droid keep=$d/data/droid status=$d/run/droid tmp=$d/tmp setup=$d/setup
+      if [ -n "$3" ]; then echo old > "$bin" && chmod +x "$bin"; fi
+      printf '#!/bin/bash\n[ -z "$(ls -A "$TMPDIR")" ] || echo "a part from the last try is still there" >> %s/errors\n: > "$TMPDIR/part"\nn=$(($(cat %s/tries 2>/dev/null || echo 0) + 1)); echo $n > %s/tries\n[ $n -gt %s ] || exit 1\necho droid-new > %s && chmod +x %s\n' \
+        "$d" "$d" "$d" "$1" "$bin" "$bin" > "$setup" && chmod +x "$setup"
+      net=$2
+      online() { # down at first unless $2, up from the next look on. Notes what the box would show meanwhile.
+        sed -n 's/^state=//p' "$status" >> "$d/seen" 2>/dev/null || true
+        [ -n "$net" ] || { net=1; return 1; }
+      }
+      mountpoint() { return 0; }
+      sleep() { :; }
+      pause() { echo "pause $1" >> "$d/pauses"; }
+      eval "$(declare -f report | sed '1s/report/real_report/')"
+      report() { echo "$1" >> "$d/states"; real_report "$@"; }
+      main > /dev/null
+      echo "states: $(paste -sd' ' "$d/states")"
+      echo "pauses: $(paste -sd' ' "$d/pauses" 2>/dev/null)"
+      echo "status: $(sed -n 's/^state=//p' "$status") / $(sed -n 's/^message=//p' "$status")"
+      echo "kept: $(cat "$keep" 2>/dev/null)"
+      echo "seen: $(sort -u "$d/seen" | paste -sd' ')"
+      echo "tmp: $(ls -A "$tmp" 2>/dev/null | wc -l) $(cat "$d/errors" 2>/dev/null)"
+    )
+  }
+  got=$(droid_run 3 '' '')
+  check "offline at first boot, then two failed downloads: offline, retrying after 30 s and 1 min, ready" \
+    has "$got" "states: downloading offline downloading retrying downloading retrying downloading ready
+pauses: pause 30 pause 60
+status: ready / Droid is ready.
+kept: droid-new
+seen: downloading offline"
+  check "each try starts with no part left from the one before, and the last leaves none" bash -c "[[ \"\$1\" == *'tmp: 0 ' ]]" _ "$got"
+  got=$(droid_run 7 1 '')
+  check "the pause grows to 5 minutes and stays there" has "$got" "pauses: pause 30 pause 60 pause 120 pause 240 pause 300 pause 300 pause 300"
+  got=$(droid_run 1 '' 1)
+  check "an older Droid already there: the state stays ready while the new one waits for the network" \
+    has "$got" "status: ready / Droid is ready."
+  check "and the box is never told it is offline or retrying" has "$got" "seen: ready"
+  if [[ $(sed -n 's/^max-time = //p' "$r/usr/local/lib/box-os/droid-curl/.curlrc") -ge 7200 ]]; then
+    check "curl's whole-download limit leaves a slow line time for about 300 MB" true
+  else check "curl's whole-download limit leaves a slow line time for about 300 MB" false; fi
+
+  echo "== box-hostname: the name after GNOME's first run"
+  hostname_after() { # <static> <pretty> <account>
+    ( . "$p/usr/local/lib/box-os/box-hostname"
+      printf 'root:x:0:0::/root:/bin/bash\n%s:x:1000:1000::/home/%s:/bin/bash\n' "$3" "$3" > "$t/passwd"
+      passwd=$t/passwd st=$1 pr=$2
+      hostnamectl() {
+        case "$*" in
+          --static) echo "$st" ;; --pretty) echo "$pr" ;;
+          "--static set-hostname "*) st=$3 ;; "--pretty set-hostname "*) pr=$3 ;;
+        esac
+      }
+      openssl() { echo key; }
+      main
+      echo "$st / $pr"
+    )
+  }
+  id=$(echo key | sha256sum | cut -c1-6)
+  check "named after the account (nothing typed): back to gurt-<id>" eq "$(hostname_after ana "gurt-$id" ana)" "gurt-$id / gurt-$id"
+  check "a computer name typed in first run: kept, and Settings shows it" eq "$(hostname_after my-laptop "gurt-$id" ana)" "my-laptop / my-laptop"
+  check "the box's own name: unchanged" eq "$(hostname_after "gurt-$id" "gurt-$id" ana)" "gurt-$id / gurt-$id"
+  check "a name chosen in Settings: unchanged" eq "$(hostname_after bens-laptop "Ben's Laptop" ana)" "bens-laptop / Ben's Laptop"
+fi
+
+if [[ ${1:-} == --vm ]]; then
+  [[ $(id -u) == 0 ]] || exec sudo "$0" "$@"
+  systemd-detect-virt -q || { echo "unit: --vm partitions loop devices and runs grub-install; only in a throwaway VM" >&2; exit 2; }
+  [[ $(uname -m) == x86_64 ]] || { echo "unit: --vm tests the x86_64 boot loader; run it in an x86_64 VM" >&2; exit 2; }
+  rm -rf "$t"; trap - EXIT
+  exec unshare --mount --uts --propagation private "$0" --vm-inside "$fails" "$n"
+fi
+
+if [[ ${1:-} == --vm-inside ]]; then
+  fails=$2 n=$3
+  # Private copies of /etc and /usr/local: what the scripts write there stays in this namespace.
+  for d in /etc /usr/local; do
+    mkdir -p "$t/o$d/up" "$t/o$d/work"
+    mount -t overlay overlay -o "lowerdir=$d,upperdir=$t/o$d/up,workdir=$t/o$d/work" "$d"
+  done
+  mkdir -p /usr/local/lib/box-os && cp -a "$r/usr/local/." /usr/local/
+  printf 'set gfxmode=auto\nmenuentry "@NAME@, system A" { true; }\n' > /usr/local/lib/box-os/grub.cfg
+  echo font > /usr/local/lib/box-os/gurtos.pf2
+
+  echo "== box-install: a whole install onto a loop device"
+  in_use=$( . "$r/usr/local/sbin/box-install"; in_use)
+  root_disk=$(lsblk -nrpso NAME,TYPE "$(findmnt -no SOURCE /)" | awk '$2 == "disk" { print $1 }')
+  check "the disk the running system is on counts as in use" has " $in_use " " $root_disk "
+  check "so it is never offered" eq "$( . "$r/usr/local/sbin/box-install"; lsblk -dnrbpo NAME,TYPE,RO,SIZE,RM,TRAN | candidates 0 "$in_use" | grep -c "^$root_disk " || true)" 0
+  echo "box.install=$root_disk" > "$t/cmdline"
+  got=$( . "$r/usr/local/sbin/box-install"; cmdline=$t/cmdline name=GurtOS ESP_MB=512 SLOT_MB=6144 MIN_DATA_MB=4096
+    fail() { echo "FAIL: $1"; exit 0; }; say() { :; }; choose 2>&1)
+  check "box.install=<the running system's disk> is refused" has "$got" "FAIL: $root_disk, which the start line names, is the install disc, is in use"
+
+  mkdir -p "$t/sys/opt/box/core" "$t/sys/etc/box" "$t/sys/var/lib/box" "$t/sys/var/lib/spacetimedb" "$t/sys/root/.config/spacetime" "$t/sys/var/log/journal"
+  touch "$t/sys/opt/box/core/box.ts" && cp "$r/etc/fstab" "$t/sys/etc/fstab"
+  mksquashfs "$t/sys" "$t/root.sqfs" -quiet -no-progress -noappend
+  truncate -s 700M "$t/disk.img"
+  loop=$(losetup -fP --show "$t/disk.img") && loops+=" $loop"
+  sgdisk -n 0:0:0 "$loop" > /dev/null && partx -u "$loop" && udevadm settle && mkfs.ext4 -q -L old "${loop}p1" # the old contents
+  set +e
+  ( . "$r/usr/local/sbin/box-install"
+    src=$t/root.sqfs mnt=$t/mnt log=$t/install.log name="GurtOS Test" cols=80 ESP_MB=64 SLOT_MB=128
+    say() { echo "$*" >> "$log"; }
+    fail() { echo "FAIL: $*" >&2; exit 1; }
+    install_to "$loop" > /dev/null )
+  rc=$?
+  set -e
+  udevadm settle
+  check "the install finishes" eq "$rc" 0
+  check "five partitions with their labels" eq "$(lsblk -nrpo PARTLABEL "$loop" | grep . | paste -sd' ')" "box-bios box-esp box-a box-b box-data"
+  check "their file systems" eq "$(lsblk -nrpo LABEL "$loop" | grep . | paste -sd' ')" "BOX-ESP box-a box-b box-data"
+  part() { lsblk -nrpo NAME,PARTLABEL "$loop" | awk -v l="$1" '$2 == l { print $1 }'; }
+  mkdir -p "$t/m"
+  mount -o ro "$(part box-a)" "$t/m"; check "slot A holds the system" test -f "$t/m/opt/box/core/box.ts"; umount "$t/m"
+  mount -o ro "$(part box-data)" "$t/m"
+  check "the data partition has every /data folder the system's fstab names" \
+    bash -c "for d in update box etc-box spacetimedb spacetime-cli journal; do test -d '$t/m/'\$d || exit 1; done"
+  check "the vault's folder is root only" eq "$(stat -c %a "$t/m/etc-box")" 700
+  umount "$t/m"
+  mount -o ro "$(part box-esp)" "$t/m"
+  check "UEFI boot loader" test -f "$t/m/EFI/BOOT/BOOTX64.EFI"
+  check "BIOS boot loader's files" test -f "$t/m/boot/grub/i386-pc/core.img"
+  check "the menu, with the name filled in" grep -q '"GurtOS Test, system A"' "$t/m/boot/grub/grub.cfg"
+  check "grubenv starts slot A, just installed" eq "$(grub-editenv "$t/m/boot/grub/grubenv" list | sort | paste -sd' ')" "just_installed=1 saved_entry=a"
+  check "the menu's font" test -f "$t/m/boot/grub/fonts/gurtos.pf2"
+  umount "$t/m"
+  check "GRUB's boot code is in the BIOS boot partition" bash -c "[ -n \"\$(head -c 512 '$(part box-bios)' | tr -d '\0')\" ]"
+  check "nothing is left mounted" eq "$(findmnt -rn | grep -c "$t/mnt" || true)" 0
+  losetup -d "$loop" && loops=${loops/ $loop/} && udevadm settle
+
+  echo "== box-update: signature, edition, architecture, older builds, trials and unfinished slots"
+  truncate -s 300M "$t/slots.img"
+  loop=$(losetup -fP --show "$t/slots.img") && loops+=" $loop"
+  sgdisk -n 0:0:+120M -c 0:box-a -n 0:0:+120M -c 0:box-b "$loop" > /dev/null
+  partx -u "$loop" 2> /dev/null || true; udevadm settle
+  mkfs.ext4 -q -L box-a "${loop}p1" && mkfs.ext4 -q -L box-b "${loop}p2"
+  for _ in $(seq 10); do [ -e /dev/disk/by-partlabel/box-b ] && break; sleep 1; udevadm settle; done
+  mkdir -p /etc/box-os && rm -f /etc/os-release
+  printf 'BUILD=20261029-1200-aaaaaaa\nARCH=x86_64\n' > /etc/box-os/release
+  echo VARIANT_ID=server > /etc/os-release
+  [ -f /etc/timezone ] || echo Etc/UTC > /etc/timezone
+  openssl genpkey -algorithm ed25519 -out "$t/k" 2> /dev/null
+  openssl pkey -in "$t/k" -pubout -out /etc/box-os/update.pub
+  mkimg() { # <name> <build> <arch> <edition>
+    local d=$t/img-$1
+    mkdir -p "$d/boot" "$d/opt/box/core" "$d/etc/box-os" "$d/etc/ssh"
+    touch "$d/boot/vmlinuz" "$d/opt/box/core/box.ts"
+    printf 'BUILD=%s\nARCH=%s\n' "$2" "$3" > "$d/etc/box-os/release"
+    echo "VARIANT_ID=$4" > "$d/etc/os-release"
+    for f in passwd group shadow gshadow; do echo "root:x:0:0::/root:/bin/bash" > "$d/etc/$f"; done
+    mksquashfs "$d" "$t/$1.sqfs" -quiet -no-progress -noappend
+    (cd "$t" && sha256sum "$1.sqfs" > "$1.sqfs.sha256")
+    openssl pkeyutl -sign -inkey "$t/k" -rawin -in "$t/$1.sqfs.sha256" -out "$t/$1.sqfs.sig"
+  }
+  mkimg good 20261030-0900-bbbbbbb x86_64 server
+  mkimg same 20261029-1200-aaaaaaa x86_64 server
+  mkimg old 20261024-1439-ccccccc x86_64 server
+  mkimg arm 20261030-0900-bbbbbbb arm64 server
+  mkimg personal 20261030-0900-bbbbbbb x86_64 personal
+  cp "$t/good.sqfs" "$t/unsigned.sqfs" && cp "$t/good.sqfs.sha256" "$t/unsigned.sqfs.sha256"
+  openssl genpkey -algorithm ed25519 -out "$t/k2" 2> /dev/null
+  openssl pkeyutl -sign -inkey "$t/k2" -rawin -in "$t/unsigned.sqfs.sha256" -out "$t/unsigned.sqfs.sig"
+  cp "$t/good.sqfs.sha256" "$t/tampered.sqfs.sha256" && cp "$t/good.sqfs.sig" "$t/tampered.sqfs.sig"
+  cp "$t/old.sqfs" "$t/tampered.sqfs"
+  mkdir -p "$t/esp" "$t/data/update"
+  grub-editenv "$t/esp/grubenv" create && grub-editenv "$t/esp/grubenv" set saved_entry=a
+  bu() { # <slot running> <box-update args...>: its output and exit code
+    echo "box.slot=$1" > "$t/cmdline"
+    ( . "$r/usr/local/sbin/box-update"
+      env=$t/esp/grubenv state=$t/data/update work=$t/work cmdline=$t/cmdline
+      systemctl() { echo "systemctl $*"; }
+      report() { echo "box-update: $*"; }
+      sysdisk() { echo "$loop"; }
+      curl() { if [ -f "$t/healthy" ]; then echo '{"ok":true}'; else return 7; fi; }
+      sleep() { :; }
+      main "${@:2}" 2>&1 )
+    echo "exit $?"
+  }
+  grubvar() { grub-editenv "$t/esp/grubenv" list | sed -n "s/^$1=//p"; }
+  mount "${loop}p2" "$t/m" && touch "$t/m/untouched" && umount "$t/m"
+  slot_b_untouched() { mount -o ro "${loop}p2" "$t/m" && test -f "$t/m/untouched"; local ok=$?; umount "$t/m"; return $ok; }
+  check "status: slot B empty" has "$(bu a status)" "other:    slot b, empty"
+  check "another disk's box-b partition (the loop device here) is never taken for this system's slot B" \
+    eq "$( . "$r/usr/local/sbin/box-update"; slotdev b)" ""
+  got=$(bu a apply "$t/unsigned.sqfs" --no-reboot)
+  check "an image signed with another key is refused" has "$got" "the update is not signed by this box's update key"
+  check "and slot B is not touched" slot_b_untouched
+  got=$(bu a apply "$t/tampered.sqfs" --no-reboot)
+  check "an image that does not match its signed hash is refused" has "$got" "does not match its .sha256"
+  check "and slot B is not touched" slot_b_untouched
+  got=$(bu a apply "$t/good.sqfs" --no-reboot)
+  check "a signed newer image is written to slot B" has "$got" "slot b holds the update"
+  check "it starts once on trial (next_entry), the default stays A" eq "$(grubvar next_entry)/$(grubvar saved_entry)" b/a
+  check "the trial is recorded, nothing is marked unfinished" eq "$(cut -d' ' -f1 "$t/data/update/trial") $(ls "$t/data/update" | grep -c writing)" "b 0"
+  check "--no-reboot does not restart" bash -c "! grep -q 'systemctl reboot' <<< '$got'"
+  check "status names the new build in slot B" has "$(bu a status)" "other:    slot b, build 20261030-0900-bbbbbbb"
+  check "an update written but not started yet may be replaced" has "$(bu a apply "$t/same.sqfs")" "systemctl reboot"
+  got=$(bu b apply "$t/good.sqfs" --no-reboot)
+  check "while slot B runs on trial, no update may overwrite slot A, the last healthy one" has "$got" "this system is on trial"
+  got=$(bu b confirm)
+  check "not healthy on trial: rolls back with a restart" has "$got" "is not healthy. Rolling back to slot a"
+  check "and A stays the default" eq "$(grubvar saved_entry)" a
+  check "and the result is recorded" grep -q "rolled back to slot a" "$t/data/update/last"
+  echo "b now" > "$t/data/update/trial" && touch "$t/healthy" && grub-editenv "$t/esp/grubenv" set just_installed=1
+  got=$(bu b confirm)
+  check "healthy on trial: B becomes the default" eq "$(grubvar saved_entry)" b
+  check "and just_installed is cleared" eq "$(grubvar just_installed)" ""
+  got=$(bu a apply "$t/good.sqfs" --no-reboot)
+  check "a slot that is not the default may not take an update" has "$got" "is not the default one; restart into slot b first"
+  got=$(bu b apply "$t/old.sqfs" --no-reboot)
+  check "an older build is refused" has "$got" "is older than this system"
+  check "status says slot A's write did not finish" has "$(bu b status)" "other:    slot a, an update that did not finish"
+  check "and rollback will not start it" has "$(bu b rollback)" "slot a holds no system that can start"
+  check "--allow-older installs it" has "$(bu b apply "$t/old.sqfs" --no-reboot --allow-older)" "slot a holds the update"
+  rm -f "$t/data/update/trial"; grub-editenv "$t/esp/grubenv" unset next_entry
+  check "rollback to a whole slot restarts into it" has "$(bu b rollback)" "systemctl reboot"
+  check "and makes it the default" eq "$(grubvar saved_entry)" a
+  check "an image for another architecture is refused" has "$(bu a apply "$t/arm.sqfs" --no-reboot)" "the update is for arm64, not x86_64"
+  check "an image of the other edition is refused" has "$(bu a apply "$t/personal.sqfs" --no-reboot)" "a different edition: personal, not server"
+  check "nothing stays mounted" eq "$(findmnt -rn | grep -c "$t/work" || true)" 0
+  losetup -d "$loop" && loops=${loops/ $loop/} && udevadm settle
+
+  echo "== box-firstboot: idempotent, and a power cut never leaves half a key"
+  mkdir -p /etc/box && mount -t tmpfs tmpfs /etc/box
+  echo gurt > /etc/hostname && rm -f /etc/machine-info
+  fb() { bash "$r/usr/local/sbin/box-firstboot" > /dev/null; }
+  fb
+  id=$(openssl pkey -pubin -in /etc/box/identity.pub -outform DER | sha256sum | cut -c1-6)
+  check "hostname gurt-<id>, in /etc/hostname and the kernel" eq "$(cat /etc/hostname) $(hostname)" "gurt-$id gurt-$id"
+  check "the folder, key, public key and vault have the right modes" \
+    eq "$(stat -c %a /etc/box /etc/box/identity.key /etc/box/identity.pub /etc/box/vault.env | paste -sd' ')" "700 600 644 600"
+  check "the pretty hostname, readable by everyone" eq "$(cat /etc/machine-info) $(stat -c %a /etc/machine-info)" "PRETTY_HOSTNAME=gurt-$id 644"
+  fb
+  check "a second start changes nothing" eq "$(cat /etc/hostname)/$(openssl pkey -pubin -in /etc/box/identity.pub -outform DER | sha256sum | cut -c1-6)" "gurt-$id/$id"
+  head -c 20 /etc/box/identity.key > /etc/box/k && mv /etc/box/k /etc/box/identity.key && : > /etc/hostname
+  check "a key cut short and an empty hostname: it starts again with a whole key" fb
+  check "and a name" has "$(cat /etc/hostname)" "gurt-"
+  check "no half-written files are left" eq "$(ls /etc/box | paste -sd' ')" "identity.key identity.pub vault.env"
+
+  echo "== systemd units"
+  units=$(ls "$r"/etc/systemd/system/*.service "$p"/etc/systemd/system/*.service "$p"/etc/systemd/system/*.path)
+  out=$(SYSTEMD_LOG_LEVEL=warning systemd-analyze verify $units 2>&1 | grep -v -E "seatd.service|box.service|gdm.service|nftables.service|spacetimedb.service|Unit is bound to inactive|is not executable: No such file|/opt/box/personal" || true)
+  check "systemd-analyze verify finds nothing wrong" eq "$out" ""
+fi
+
+echo "$((n - fails)) of $n passed"
+[ "$fails" -eq 0 ]

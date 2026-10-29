@@ -1,18 +1,28 @@
 #!/bin/bash
-# GNOME's first-boot setup leaves its "Computer" field empty and names the machine after the new account (ben).
-# Put the box's own name back (gurt-<id>, from its identity key) unless the person chose a name themselves: the
-# only name we replace is one equal to an account name. Runs before the box learns its owner, so the box restarts
-# with the right name.
+# The computer's name after GNOME's first-run setup (box-owner.service runs this when the first account appears).
+# Ubuntu's first-run setup has a "Computer name" field. It fills it with the account name until the person types
+# their own, and sets that as the static hostname when they leave the page, before it makes the account. The
+# pretty hostname, which Settings' About shows, is still gurt-<id> from first boot.
+#   - The name is the account name: the person chose nothing. Put the box's own name back, gurt-<id>.
+#   - The person typed a name: keep it, and make the pretty hostname the same, so Settings shows it too.
+# A pretty name the person set in Settings themselves (not gurt-*) is left alone. Runs before the box learns its
+# owner, so the box restarts with the right name.
 set -euo pipefail
-cur=$(hostnamectl --static)
-# A computer name typed in first run arrives as the pretty name ("My Laptop"). Make the real hostname from it. Our own
-# first-boot name (gurt-<id>) is also the pretty name, and is left alone.
-pretty=$(hostnamectl --pretty)
-if [ -n "$pretty" ] && [[ $pretty != gurt-* ]]; then
-  name=$(printf '%s' "$pretty" | tr 'A-Z ' 'a-z-' | tr -cd 'a-z0-9-' | cut -c1-63 | sed 's/^-*//; s/-*$//')
-  [ -z "$name" ] || { [ "$cur" = "$name" ] || hostnamectl --static set-hostname "$name"; exit 0; }
-fi
-id=$(openssl pkey -pubin -in /etc/box/identity.pub -outform DER | sha256sum | cut -c1-6)
-for u in $(awk -F: '$3 >= 1000 && $3 < 30000 { print $1 }' /etc/passwd); do
-  if [ "$cur" = "$u" ]; then hostnamectl --static set-hostname "gurt-$id"; exit 0; fi
-done
+pub=/etc/box/identity.pub
+passwd=/etc/passwd
+
+main() {
+  local cur pretty id
+  cur=$(hostnamectl --static)
+  pretty=$(hostnamectl --pretty)
+  id=$(openssl pkey -pubin -in $pub -outform DER | sha256sum | cut -c1-6)
+  if awk -F: -v h="$cur" '$3 >= 1000 && $3 < 30000 && $1 == h { found = 1 } END { exit !found }' $passwd; then
+    hostnamectl --static set-hostname "gurt-$id"
+    hostnamectl --pretty set-hostname "gurt-$id"
+  elif [ -n "$cur" ] && [ "$cur" != "gurt-$id" ] && [[ -z $pretty || $pretty == gurt-* ]]; then
+    hostnamectl --pretty set-hostname "$cur"
+  fi
+}
+
+# Sourced (by image/unit) it only defines the functions above.
+if [[ ${BASH_SOURCE[0]} == "$0" ]]; then main "$@"; fi

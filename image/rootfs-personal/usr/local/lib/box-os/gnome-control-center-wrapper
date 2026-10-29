@@ -1,5 +1,10 @@
 #!/bin/sh
-# Settings without Ubuntu's own "Ubuntu Desktop" panel. The GurtOS session names itself "ubuntu" among its desktops
-# (Ubuntu's defaults for the dock and look depend on it), and Settings shows that panel only for such a session.
-# build puts this in place of /usr/bin/gnome-control-center (dpkg-divert keeps updates from undoing it).
-exec env XDG_CURRENT_DESKTOP=GNOME /usr/libexec/gnome-control-center.real "$@"
+# Settings, and its Activities search results, without Ubuntu's own "Ubuntu Desktop" panel (I-7). The GurtOS session
+# names itself "ubuntu" among its desktops (Ubuntu's defaults for the dock and look depend on it), and Settings shows
+# that panel only for such a session. build puts this in place of /usr/bin/gnome-control-center and of
+# /usr/libexec/gnome-control-center-search-provider (dpkg-divert keeps package updates from undoing it).
+case $0 in
+  *search-provider) real=/usr/libexec/gnome-control-center-search-provider.real ;;
+  *) real=/usr/libexec/gnome-control-center.real ;;
+esac
+exec env XDG_CURRENT_DESKTOP=GNOME "$real" "$@"

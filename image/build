@@ -131,7 +131,7 @@ else
 fi
 [[ -f $src/image/.ssh-key ]] && packages+=" openssh-server" # debug builds only
 
-host_tools="mmdebstrap squashfs-tools xorriso mtools grub-common apt-cacher-ng" # apt-cacher-ng: packages download once per build machine
+host_tools="mmdebstrap squashfs-tools xorriso mtools grub-common apt-cacher-ng fonts-dejavu-mono" # apt-cacher-ng: packages download once per build machine
 [[ $edition == personal ]] && host_tools+=" gettext libglib2.0-bin libglib2.0-dev-bin" # the first-boot text and GDM theme
 [[ $arch == x86_64 ]] && host_tools+=" grub-pc-bin grub-efi-amd64-bin" # so x86 builds need an x86 build VM
 [[ $arch == arm64 && $(uname -m) != aarch64 ]] && host_tools+=" qemu-user-static"
@@ -232,8 +232,9 @@ else
   rsync -a "$src/image/rootfs-personal/" "$root/"
 fi
 mkdir -p "$root/etc/box-os"
-# The boot menu's large font, from the same DejaVu Sans as the screens (one file for the disc and the installed disk).
-grub-mkfont -s 22 -o "$root/usr/local/lib/box-os/gurtos.pf2" "$root/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
+# The boot menus' large font (one file for the disc and the installed disk). GRUB draws text on a grid as wide as the
+# font's widest letter, so it must be a monospaced one: DejaVu Sans spaced every letter far apart (I-9).
+grub-mkfont -s 22 -o "$root/usr/local/lib/box-os/gurtos.pf2" /usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf
 
 if [[ $edition == personal ]]; then
   # GNOME's first-boot setup ends on "All done! GurtOS is ready to be used." and a Start button, before the GurtOS
@@ -281,20 +282,20 @@ POEOF
     /usr/share/gnome-shell/theme/GurtOS/gnome-shell-theme.gresource 30
 fi
 if [[ $edition == personal ]]; then
-  # Ubuntu's Software Updater, Software & Updates and the update notifiers offer a release upgrade (to a different
-  # Ubuntu) and know nothing of GurtOS's whole-system updates. gnome-software depends on software-properties-gtk, so
-  # the programs stay installed and are hidden from menus, search and login.
-  for f in update-manager software-properties-gtk software-properties-drivers software-properties-livepatch; do
+  # Ubuntu's Software Updater and its notifier offer a release upgrade (to a different Ubuntu) and know nothing of
+  # GurtOS's whole-system updates (E-3): they are removed in the chroot below. gnome-software depends on Software &
+  # Updates (software-properties-gtk), so that stays installed and is hidden from menus, search and login.
+  for f in software-properties-gtk software-properties-drivers software-properties-livepatch; do
     [[ -f $root/usr/share/applications/$f.desktop ]] && sed -i '/^\[Desktop Entry\]/a NoDisplay=true' "$root/usr/share/applications/$f.desktop"
   done
-  for f in update-notifier ubuntu-advantage-notification gnome-software-service; do
+  for f in ubuntu-advantage-notification gnome-software-service; do
     [[ -f $root/etc/xdg/autostart/$f.desktop ]] && echo 'Hidden=true' >> "$root/etc/xdg/autostart/$f.desktop"
   done
   # About shows the distributor's logo from here (Ubuntu's patch); the GurtOS wordmark replaces it (rootfs-personal).
   sed -i 's/^DISTRIB_DESCRIPTION=.*/DISTRIB_DESCRIPTION="GurtOS Personal"/' "$root/etc/lsb-release"
   # Flathub, as each person's own installation (under their home, which is on the data partition), so an app they
   # install survives a system update. New accounts copy this from /etc/skel.
-  curl -fsSL https://dl.flathub.org/repo/flathub.flatpakrepo -o "$root/tmp/flathub.flatpakrepo"
+  curl -fsSL --retry 3 --connect-timeout 20 --max-time 120 https://dl.flathub.org/repo/flathub.flatpakrepo -o "$root/tmp/flathub.flatpakrepo"
   install -d "$root/etc/skel"
   in_root env HOME=/etc/skel flatpak remote-add --user --if-not-exists flathub /tmp/flathub.flatpakrepo
   [[ -f $root/etc/skel/.local/share/flatpak/repo/config ]] || { say "no Flathub remote for new accounts"; exit 1; }
@@ -363,6 +364,13 @@ if [[ $edition == personal ]]; then in_root bash -euo pipefail -c '
   # State lives on the data partition. These are its mount points; what the image put there is hidden at boot.
   rm -rf /etc/box /var/lib/box /var/lib/spacetimedb /root/.config/spacetime
   mkdir -p /data /boot/efi /etc/box /var/lib/box /var/lib/spacetimedb /root/.config/spacetime /var/log/journal
+  # No Software Updater or update notifier (E-3). Both come with the ubuntu-desktop-minimal metapackage, which goes with
+  # them. Everything installed is marked as wanted first, so nothing else goes, and an apt autoremove later cannot
+  # take the desktop.
+  apt-mark manual $(apt-mark showauto) >/dev/null
+  apt-get purge -y -qq update-manager update-notifier >/dev/null
+  if dpkg -s update-manager >/dev/null 2>&1 || dpkg -s update-notifier >/dev/null 2>&1; then echo "Ubuntu'"'"'s updater is still installed" >&2; exit 1; fi
+  dpkg -s gnome-shell gdm3 gnome-control-center gnome-software gnome-initial-setup >/dev/null
   locale-gen en_US.UTF-8 >/dev/null
   update-locale LANG=en_US.UTF-8
   # Only the GurtOS session at the login screen: the Ubuntu one has no GurtOS top bar.
@@ -374,6 +382,10 @@ if [[ $edition == personal ]]; then in_root bash -euo pipefail -c '
   dpkg-divert --local --rename --add --divert /usr/libexec/gnome-control-center.real /usr/bin/gnome-control-center
   install -m 0755 /usr/local/lib/box-os/gnome-control-center-wrapper /usr/bin/gnome-control-center
   test -x /usr/libexec/gnome-control-center.real
+  s=/usr/libexec/gnome-control-center-search-provider
+  dpkg-divert --local --rename --add --divert $s.real $s
+  install -m 0755 /usr/local/lib/box-os/gnome-control-center-wrapper $s
+  test -x $s.real
   dconf update
   test -f /etc/dconf/db/gurtos-setup
   systemctl enable nftables box-firstboot box-droid box-confirm box-install box-owner.service box-owner.path box-sharing-fw >/dev/null 2>&1

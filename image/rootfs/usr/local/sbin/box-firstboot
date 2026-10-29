@@ -2,22 +2,31 @@
 # First-boot setup. Runs at every start and makes only what is missing, so a system update keeps it all.
 #   identity.key   the box's own ed25519 key. Its id is the first 6 hex digits of the public key's hash, and the
 #                  box takes gurt-<id> as its hostname, which core uses as BOX_ID, so no two boxes share a name.
-#                  A name someone gave the computer (the Personal edition's Settings) wins over the default, gurt.
+#                  A name someone gave the computer (the Personal edition's first run or Settings) wins over the
+#                  default, gurt.
 #   vault.env      the vault, empty until the portal fills it. Root only.
-# Both live on the data partition, in /etc/box. SSH host keys too, on debug builds. Pairing a phone is core's
-# job (POST /api/pair/new), shown in the portal's Settings on the box's screen.
+# Both live on the data partition, in /etc/box (root only). SSH host keys too, on debug builds. Pairing a phone is
+# core's job (POST /api/pair/new), shown in the portal's Settings on the box's screen.
+# A power cut at any point leaves either the old file or the new one, never half of one: each is written beside its
+# final name and moved into place.
 set -euo pipefail
 umask 077
 cd /etc/box
-[ -s identity.key ] || openssl genpkey -algorithm ed25519 -out identity.key
-openssl pkey -in identity.key -pubout -out identity.pub && chmod 644 identity.pub
+chmod 700 .
+if ! openssl pkey -in identity.key -noout 2>/dev/null; then # missing, or cut short (no box can start with it)
+  openssl genpkey -algorithm ed25519 -out identity.key.new && sync identity.key.new && mv identity.key.new identity.key
+fi
+openssl pkey -in identity.key -pubout -out identity.pub.new && chmod 644 identity.pub.new && mv identity.pub.new identity.pub
 id=$(openssl pkey -pubin -in identity.pub -outform DER | sha256sum | cut -c1-6)
 [ -f vault.env ] || install -m 600 /dev/null vault.env
 # Written to /etc/hostname, not only the kernel: NetworkManager (Personal) resets the name from that file.
-if [ "$(cat /etc/hostname)" = gurt ]; then echo "gurt-$id" > /etc/hostname; fi
+case $(cat /etc/hostname 2>/dev/null) in
+  gurt | "") (umask 022 && echo "gurt-$id" > /etc/hostname.new && mv /etc/hostname.new /etc/hostname) ;;
+esac
 cat /etc/hostname > /proc/sys/kernel/hostname
-# GNOME's first-boot setup fills the computer name from the pretty hostname; empty, it names the machine after
-# the person's account instead.
+# The name Settings shows (the pretty hostname) starts as the same gurt-<id>. On Personal, box-hostname makes it
+# follow a name the person types in GNOME's first-run setup.
 grep -q '^PRETTY_HOSTNAME=' /etc/machine-info 2>/dev/null || echo "PRETTY_HOSTNAME=$(cat /etc/hostname)" >> /etc/machine-info
+chmod 644 /etc/machine-info # everyone may read the computer's name (older releases made it root only)
 if command -v sshd >/dev/null; then ssh-keygen -A >/dev/null; fi
 echo "gurt-$id is set up"
