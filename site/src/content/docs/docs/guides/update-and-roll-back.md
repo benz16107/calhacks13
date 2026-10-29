@@ -5,6 +5,8 @@ description: Install a signed system update on a box, let it prove itself health
 
 A machine installed from a GurtOS ISO, Server or Personal, holds two complete systems on its disk, in slots A and B. It runs from one. An update is written to the other slot and started once on trial. It becomes the default only if the box comes up healthy within 5 minutes. In this guide you check which system runs, apply an update, and roll back.
 
+The commands here need a root shell, so they work on GurtOS Personal and on a Server debug build. A release build of GurtOS Server has no shell and no API that applies an update, so it moves to a new release only by reinstalling, which erases its disk.
+
 A box installed on Ubuntu updates differently. See [Update a box installed on Ubuntu](#update-a-box-installed-on-ubuntu) below.
 
 ## Before you start
@@ -45,7 +47,7 @@ A box installed on Ubuntu updates differently. See [Update a box installed on Ub
    box-update: the update is not signed by this box's update key
    ```
 
-   If both pass, it erases the other slot and writes the update there. Three more checks run on what it wrote. The update must be a GurtOS system, of the same edition and the same architecture, and not an older build than the running one unless you add `--allow-older`. If one fails, the update is refused, but the other slot has already been erased. It is marked as an update that did not finish and never starts, so `box-update rollback` has nothing to go back to until the next good update. The running system is untouched.
+   If both pass, it erases the other slot and writes the update there. Then it checks what it wrote. The update must be a GurtOS system, of the same edition and the same architecture, and not an older build than the running one unless you add `--allow-older`. If one fails, the update is refused, but the other slot has already been erased. It is marked as an update that did not finish and never starts, so `box-update rollback` has nothing to go back to until the next good update. The running system is untouched.
 
    If every check passes, the box restarts into the new slot once. Add `--no-reboot` to restart later yourself.
 

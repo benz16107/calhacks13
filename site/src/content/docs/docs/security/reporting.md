@@ -66,7 +66,7 @@ Out of scope:
   upstream.
 - The optional and test apps' own sandbox services (test payments, devnet money), unless the finding reaches the box.
 
-The [threat model](/docs/security/threat-model/#what-gurtos-does-not-defend-against) lists the limits we know about.
+The [threat model](/docs/security/threat-model/#what-gurtos-does-not-defend-against) and the [roadmap](/docs/project/roadmap/) list the limits we know about.
 The attack scoreboard, 41 attacks run against a real box on every merge with each one published as caught or not
 covered, is in
 [`tracks/armadin/SCOREBOARD.md`](https://github.com/benz16107/calhacks13/blob/main/tracks/armadin/SCOREBOARD.md).

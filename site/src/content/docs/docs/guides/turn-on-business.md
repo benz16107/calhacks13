@@ -14,8 +14,10 @@ plain words sends each approval to the person who may answer it. The preview use
 ## Steps
 
 1. Only the owner can turn Business on, and Settings has no switch for it yet. Use the API from a shell on the box, or
-   with the token of a phone paired as the owner. A release build of GurtOS Server has no shell. Use a debug build, or
-   set `BOX_EDITION=business` before the box first starts (see below).
+   from any computer that has the token of a device paired as the owner (see
+   [pair a phone as the owner](/docs/guides/approve-from-your-phone/#pair-a-phone-as-the-owner)). A release build of
+   GurtOS Server has no shell, so use a device token there, or a debug build. From another computer, use the box's
+   address instead of `127.0.0.1:7700` and add `-H 'authorization: Bearer <token>'` to each command below.
 2. Turn it on. A **Company** group then appears in Settings, with **People**, **Rules** and **Kill switch**:
 
    ```sh

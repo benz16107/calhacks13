@@ -50,7 +50,8 @@ The worker starts as a transient systemd unit, `box-task-<id>`, with these prope
 | `MemoryMax=2G`, `MemorySwapMax=0` | At most 2 GB of memory, and no swap |
 | `TasksMax=512` | At most 512 processes and threads |
 | `CPUQuota=200%` | At most two CPU cores |
-| `SystemCallFilter=` | No mount, kernel module, debug, raw I/O, reboot, swap or clock system calls, and no `bpf` or keyring calls |
+| `SystemCallFilter=` | No mount, kernel module, debug, raw I/O, reboot, swap, clock, obsolete or CPU-emulation system calls, and no `bpf`, keyring or `userfaultfd` calls. Only the machine's own architecture. |
+| `ProtectKernelModules`, `ProtectKernelTunables`, `ProtectKernelLogs`, `ProtectControlGroups`, `ProtectClock`, `ProtectHostname`, `LockPersonality`, `RestrictRealtime` | No loading modules, changing kernel settings, reading the kernel log, changing control groups, the clock or the host name, switching personality, or realtime scheduling |
 
 **Stops:** writing outside its copy, seeing or signalling other processes, using devices, gaining privileges, and one task exhausting the machine's memory, CPU or process table.
 
@@ -60,13 +61,13 @@ A task never works on the real files. It gets an overlayfs copy: its own changes
 
 Undo takes the layer out of the view, then deletes its files from disk as soon as no running task still reads it.
 
-On GurtOS Personal a task can work on a copy of the owner's real folders. Only the owner may hand out a folder. It must be in the owner's home or in the folders chosen in Settings (`agentFolders`), must not belong to root, and can never be the system or the box's own state: `/etc`, `/root`, `/proc`, `/sys`, `/dev`, `/boot`, `/run`, `/usr`, `/var/lib`, `/var/log`, `/opt` and the box's data folder are refused, and Settings cannot add them. Links are followed to where they really go before the check. Nothing reaches the real folder until the owner chooses Keep, and Keep keeps each file's owner and mode.
+On GurtOS Personal a task can work on a copy of the owner's real folders. Only the owner may hand out a folder. It must be in the owner's home, or, once the owner has chosen folders in Settings (`agentFolders`), inside one of those folders. It must not belong to root, and can never be the system or the box's own state: `/etc`, `/root`, `/proc`, `/sys`, `/dev`, `/boot`, `/run`, `/usr`, `/bin`, `/sbin`, `/lib`, `/lib32`, `/lib64`, `/var/lib`, `/var/log`, `/opt`, `/snap` and the box's data folder are refused, and Settings cannot add them. Links are followed to where they really go before the check. Nothing reaches the real folder until the owner chooses Keep, and Keep keeps each file's owner and mode.
 
 **Stops:** a task damaging the original files, a task seeing another running task's changes, a bad task's changes outliving an undo, and an agent being given the system's or the box's own files. See [Workspaces and layers](/docs/concepts/workspaces-and-layers/).
 
 ## 4. No secrets in the task
 
-Secrets live in the vault, `/etc/box/vault.env`, readable by root only. The box refuses to start if the file is readable by anyone else. A task's environment holds no secret.
+Secrets live in the vault, `/etc/box/vault.env`, readable by root only. The box refuses to start if the file is readable by anyone else. A task's environment holds no secret. It holds a decoy cloud key (`AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`) that is never real. If the decoy shows up in a plain web request, a step, a tool call or a note, the box stops the task and undoes it, logs it in a `security` note, and alerts the owner's paired phones when remote access is on.
 
 When a task needs something done with a key (call a paid API, pay, sign), it asks its broker to run a tool by name. The broker is a Unix socket owned by the task's user with mode `0600`. The tool runs inside the core, reads only the vault keys it declares, and returns a result. The task never sees the key.
 
@@ -74,7 +75,7 @@ When a task needs something done with a key (call a paid API, pay, sign), it ask
 
 ## 5. Network only through the box's proxy
 
-An nftables rule on the box's output path matches every connection by its owner's uid. Task users (30000 to 39999) may connect to `127.0.0.1` on ports 8800 to 8899, the box's proxy, and nothing else. Every other packet is rejected and counted.
+An nftables rule on the box's output path matches every connection by its owner's uid. Task users (30000 to 39999) may connect to `127.0.0.1` on ports 8800 to 8899 and nothing else. The box's proxy listens on one port in that range (8888 on an installed box), but the rule opens the whole range, so another program of yours that listens there is reachable from a task. Every other packet is rejected and counted.
 
 The proxy knows which task opened each connection from the uid that owns it, so tasks carry no token. It allows only the hosts in the task's `hosts` list:
 
@@ -107,7 +108,7 @@ Every tool declares what a call costs. Before a call runs, the broker adds the c
 
 - A single spend above Settings `approvalThresholdCents` always asks, even inside the budget. The default is 500 cents, $5.
 - A task that names no budget gets Settings `defaultBudgetCents`, 100 cents ($1) by default, so a spend past $1 asks.
-- The box's own budget question and a task's own questions have different ids (`<task>.budget.<action>` and `<task>.task.<key>`), so a task cannot answer the budget question in advance with a cheap one.
+- The box's own budget question, a task's own questions and a tool's questions have different ids (`<task>.budget.<action>`, `<task>.task.<key>` and `<task>.tool.<call>.ask.<hash>`), so a task cannot answer the budget question in advance with a cheap one.
 - One approval per action. A call retried while waiting shares one approval and is charged once.
 - The first answer wins, from any device.
 - A task's pending approvals close when it ends.
@@ -131,7 +132,7 @@ On the Ubuntu install, the box's HTTP API listens on `127.0.0.1` unless you set 
 - **The box's own screen.** A request over the Unix socket, or from `127.0.0.1` with no proxy header such as `X-Forwarded-For`, a Host of `127.0.0.1` or `localhost`, and no Origin but the box's own address, may do everything. Another page in a browser on the same machine does not count.
 - **A paired device.** Any other request must carry the token of a device paired with a one-time code from the box's own screen. It may read, start tasks, undo and answer approvals. The log names the device as the approver; the request cannot choose the name.
 - **An app's page** under `/t/<app>/` runs sandboxed in the browser, with a window token that reaches only that app's routes and reads tasks and approvals. It answers only its own app's requests.
-- **Anyone else** gets `401`. Only the health check, redeeming a pairing code and the portal's own pages are open. Wrong pairing codes are limited to 5 a minute per address. Request bodies are capped at 10 MB, or 1 MB without a token.
+- **Anyone else** gets `401`. Only the health check, redeeming a pairing code, the portal's own pages, Business work-account sign-in and the open routes of apps (see the [threat model](/docs/security/threat-model/#access-to-the-boxs-services)) are open. Wrong pairing codes are limited to 5 a minute per address. Request bodies are capped at 10 MB, or 1 MB without a token.
 
 Answering approvals through the GurtOS MCP server is off unless `BOX_MCP_ANSWER=on`.
 
@@ -139,7 +140,7 @@ Pairing codes, the list of devices, setup, settings, the vault, apps on and off,
 
 SpacetimeDB, which mirrors live tasks and approvals for the box's own screen, has no login of its own, so it listens on `127.0.0.1` only. Its `answer` reducer also works only from a connection the box has vouched for (the box's own screen, or a paired phone that told the box its SpacetimeDB identity through the API), and it records the vouched name. Phones follow the box's API instead.
 
-The OS image adds an inbound firewall. It drops everything that comes in except replies to the box's own connections, ping and DHCP. On both editions it lets the API on port 7700, and the setup port 7701 while setup from another computer is open, in from private networks only (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`, Tailscale's `100.64.0.0/10`, link-local and IPv6 unique local addresses), never from the public internet. SpacetimeDB's port is never open. Debug builds also allow SSH.
+The OS image adds an inbound firewall. It drops everything that comes in except replies to the box's own connections, ping and DHCP. On both editions it lets the API on port 7700, and the setup port 7701 while setup from another computer is open, in from private networks only (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`, Tailscale's `100.64.0.0/10`, link-local and IPv6 unique local addresses), never from the public internet. SpacetimeDB's port is never open. Debug builds also allow SSH. On Personal, the firewall also opens the port of each Settings, Sharing service for as long as that service is on.
 
 **Stops:** anyone on the internet reaching the API at all on the OS image, and someone on your network reading tasks, starting work, approving spending or undoing tasks; a paired phone changing settings or the vault; and a forged approval through SpacetimeDB. See [HTTP API](/docs/reference/http-api/#who-may-call-what).
 

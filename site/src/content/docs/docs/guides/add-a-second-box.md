@@ -23,7 +23,7 @@ Listing and switching boxes is built. Switching opens the other box's own portal
 ## Steps
 
 1. **Name each box and give its address.** On each machine, set an id, a display name and the address its portal
-   answers on. Without `BOX_ID`, the id is the machine's host name, and the name is the id. A GurtOS ISO install names itself `gurt-<id>`, from the first 6 hex digits of the SHA-256 of its public key, for example `gurt-bf07fe`, so two boxes never share an id.
+   answers on. Without `BOX_ID`, the id is the machine's host name, and the name is the id. A GurtOS ISO install names itself `gurt-<id>`, from the first 6 hex digits of the SHA-256 of its public key, for example `gurt-bf07fe`, so two boxes never share an id. On Personal, a name you type in GNOME's first-run setup replaces it.
 
    ```sh
    sudo systemctl edit box.service

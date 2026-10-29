@@ -30,7 +30,7 @@ The main adversary is **the agent inside a task**, whether it is wrong, buggy, o
 | A buggy agent | Make wrong edits | Its changes are one layer. Undo that task alone. |
 | | Loop or grow without bound | Per task: 2 GB of memory with no swap, 512 processes, two CPU cores, a 5 GB copy, 20 MB of log and 256 proxy connections |
 | | Fire the same payment twice | One approval and one charge per action. Tools get a stable idempotency key. |
-| A malicious web page | Plant instructions in the agent | Same limits as a prompt-injected agent. The attempt and any refused connection are in the log. |
+| A malicious web page | Plant instructions in the agent | Same limits as a prompt-injected agent. The attempt and any refused connection are in the log. A decoy cloud key in every task's environment trips an alarm: if it leaves in a web request, a step or a tool call, the box stops the task and undoes it. |
 | Another task | Read or change this task's files or processes | Separate users, private copies, `ProtectProc=invisible`, private `/tmp` |
 | A power cut | Lose work or pay twice | The log is fsynced per line. Tasks resume from their last logged step. A call cut off mid-way runs again with the same key. |
 | Someone on the internet | Reach the box's API or SpacetimeDB | On the OS image, the inbound firewall drops them. Port 7700 and the setup port 7701 are open to private networks only, port 3000 to nothing. |
@@ -39,7 +39,7 @@ The main adversary is **the agent inside a task**, whether it is wrong, buggy, o
 | | Change settings or keys, or pair a new device | These are the owner's: the box's own screen or a device paired as the owner. Others get `403`. No route returns a vault value. |
 | A paired phone that is not the owner's | Read the vault, change settings, hand a task your folders, Keep | All owner-only (`403`) |
 | A stolen phone | Approve requests | Remove the device. Its next request is refused. See the limits below. |
-| A task, or a person, aiming an agent at system files | Give a task `/etc`, the box's own state or a root-owned folder | Folders are owner-only, must be in the owner's home or chosen folders, and the system and the box's state are always refused, links included |
+| A task, or a person, aiming an agent at system files | Give a task `/etc`, the box's own state or a root-owned folder | Folders are owner-only, must be in the owner's home or, once the owner has chosen folders, inside one of them, and the system and the box's state are always refused, links included |
 | A tampered update | Install altered system code | The image must be signed by the build key and match its hash |
 | A broken update | Leave the box unusable | The new system is tried once and kept only if it reports healthy |
 | Someone at the keyboard | Log in to the box | The OS image has no login prompt, no human account and no SSH in release builds |
@@ -52,7 +52,7 @@ These are known limits of the current release. Some are planned work; see the [r
 
 - **Root on the box.** The core runs as root and holds every key. Anyone who gets root, through a kernel bug, a bug in the core, or physical access, gets everything.
 - **Installed apps.** An app runs inside the core, as root. The `secrets` list limits what `box.secret()` returns, but app code can read the vault file directly. Install only apps you trust as much as the core. An app's page runs sandboxed in the browser, with a token for that app's routes only. A bug in it can't use the owner's controls, and it answers only its own app's requests.
-- **Tools extend a task's reach.** A tool runs in the core, outside the task's network limits. A task that may call `apify.run` can have Apify fetch any URL. Give a task only the tools it needs.
+- **Tools extend a task's reach.** A tool runs in the core, outside the task's network limits. A task that may call `apify.run` (from the optional Apify app) can have Apify fetch any URL. Give a task only the tools it needs.
 
 ### Access to the box's services
 
@@ -62,27 +62,27 @@ These are known limits of the current release. Some are planned work; see the [r
 - **Plain HTTP on your own network.** On the home network the API serves plain HTTP, so on a network others can watch, a token or a task's contents can be read on the way. Use a VPN such as Tailscale, or turn on remote access through your own relay: then traffic is HTTPS end to end to the box.
 - **A paired device is trusted with tasks.** Any paired device, not only the owner's, can start tasks, undo any task and answer any approval.
 - **SpacetimeDB has no login.** It listens on `127.0.0.1`, and its `answer` reducer accepts only vouched connections. If you widen it with `STDB_LISTEN`, anyone who can reach port 3000 can still read every task.
-- **A private network is trusted to reach the API.** On GurtOS Server and GurtOS Personal from the ISO, anyone on your home network or tailnet can reach port 7700. They still need a paired device's token for anything but the health check and redeeming a pairing code, and a pairing code comes only from the box's own screen.
+- **A private network is trusted to reach the API.** On GurtOS Server and GurtOS Personal from the ISO, anyone on your home network or tailnet can reach port 7700, and port 7701 while setup from another computer is open. They still need a paired device's token (on port 7701, the setup token) for anything but the health check and redeeming a pairing code, and a pairing code comes only from the box's own screen.
 - **A relay operator could route a name to itself.** A relay answers for every name under its domain, so a
   malicious operator could send a box's name to the relay and pass Let's Encrypt's challenge to get a certificate for
   it. Every certificate is published in public Certificate Transparency logs, where a second one for your name would
-  show. They would still need a pairing code, which comes only from the box's own screen.
+  show. They would still need a pairing code, which comes only from the box's own screen. A hosted relay is not
+  running during the preview, so remote access uses a relay you run, and you are its operator.
 - **A stolen relay secret takes over a name's routing.** Turn remote access off and on again to issue a new one.
 - **The GurtOS app is only as trustworthy as its host.** `app.gurtos.com` is served by Vercel from the public
   repository, so whoever controls that deployment controls the app's code. A box's own address serves the box's own
-  copy. A hosted relay is not running during the preview, so remote access uses a relay you run, and you are its
-  operator.
+  copy. The app reaches a box only at an https address that a relay gives it.
 - **Pushes and a shared subscription.** One box sharing a phone's push subscription cannot pose as another: the app
   drops a push whose signature does not match that box's key. The relay can drop or delay pushes and connections,
   but cannot read them.
-- **Webhooks and app routes** accept any paired device's token. An app can also mark routes as open (`openRoutes`), with no token at all, for a route that is public on purpose or checks its own secret. Mana (7 routes), Jira (8), Apify (`POST /watch`), Receipts (4) and Wallet's sell routes are open. An open route is only as safe as its own check.
+- **Webhooks and app routes** accept any paired device's token. An app can also mark routes as open (`openRoutes`), with no token at all, for a route that is public on purpose or checks its own secret. Mana (7 routes), Jira (8), Apify (`POST /watch`), Receipts (4) and Wallet's sell routes are open. An open route is only as safe as its own check. The owner can refuse these requests per app in the app's permissions.
 
 ### Data that leaves on purpose
 
 - **The model provider sees what the agent sees.** Prompts, files the agent reads and tool results go to the model, through Factory or straight to Anthropic with your own key. Do not give a task files you would not send to that provider.
 - **Allowed hosts are trusted with whatever the task sends.** If a task may reach a site, it can send that site anything in its copy. Allowing a broad host, such as a code host or a paste site, allows sending data there.
 - **Undo cannot recall what already left.** It removes file changes on the box. A payment made, a message sent or a request to an allowed host is not undone.
-- **Photos leave the box only if you choose.** A fresh box sends no photo anywhere. A photo goes to a hosted vision model only if you add that model's key to the vault, and to Claude through Factory only when you press **Describe with Claude**. With Ollama on your own network, nothing leaves it.
+- **Photos leave the box only if you choose.** A fresh box sends no photo anywhere. A photo goes to a hosted vision model only if you add that model's key to the vault, and to Claude, through your Factory or Anthropic key, only when you press **Describe with Claude**. With Ollama on your own network, nothing leaves it.
 - **Search reaches every workspace.** A task given `find.search` can search all workspaces, not only its own, and a photo's description can carry text from the photo into the agent's context.
 
 ### Limits of the controls
@@ -91,9 +91,10 @@ These are known limits of the current release. Some are planned work; see the [r
 - **An agent writes its own questions.** A question a task asks with `box_ask` is the agent's text. Read it as a claim, not a fact. Budget approvals are written by the core from the tool's declared cost. Answering approvals through the MCP server is off unless `BOX_MCP_ANSWER=on`.
 - **No time limit per task.** A task can use up to two CPU cores and run until it ends or is undone.
 - **Shared kernel.** Tasks are separated by Linux users, systemd and overlayfs, not by virtual machines. A kernel exploit inside a task escapes all of them.
+- **Shared network space and `/dev/shm`.** Every task shares the machine's network namespace, so two tasks can talk through an abstract Unix socket and pool what their separate host lists reach, and a task sees the sockets other tasks have open in `/proc/net`. `/dev/shm` is the machine's own, so a file left there outlives the task and its undo. The [attack scoreboard](https://github.com/benz16107/calhacks13/blob/main/tracks/armadin/SCOREBOARD.md) lists these as not covered.
 - **Side channels** between tasks on the same machine, such as timing or cache effects, are not addressed.
 - **The log is not signed.** Each line carries the hash of the line before it (`prev`), so an edit in the middle shows. Nothing signs the log, so root can rewrite the whole chain.
-- **Denial of service.** A task's copy is capped at 5 GB by a check every 2 seconds, so a fast writer can pass it for a moment. Request bodies are capped at 10 MB, or 1 MB without a token. A task writes at most 20 MB to the log (64 KB per step) and holds at most 256 proxy connections. Nothing limits how many tasks or approvals a caller of the API can create.
+- **Denial of service.** A task's copy is capped at 5 GB by a check every 2 seconds, so a fast writer can pass it for a moment. The check measures only the copy, not the task's home folder, `/tmp` or `/dev/shm`, so a task can still fill the disk there. Request bodies are capped at 10 MB, or 1 MB without a token. A task writes at most 20 MB to the log (64 KB per step) and holds at most 256 proxy connections. Nothing limits how many tasks or approvals a caller of the API can create.
 
 ### The machine and its updates
 

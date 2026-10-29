@@ -43,8 +43,8 @@ buttons and dialogs may change.
    with **Deny** and **Approve**, and waits under **Needs you** in the GurtOS app.
 4. When the task finishes, it waits under **Ready to review**. Its page in the GurtOS app shows every file it added,
    changed or deleted, the changes line by line, what it could reach and the cost.
-5. Choose **Keep changes** or **Undo task…**, on the task's page or in the folder's menu in Files (**Keep Changes**,
-   **Undo Task…**). After a Keep, **Undo task** takes the changes back out of your folder, unless you edited a kept
+5. Choose **Keep changes** or **Undo task…**, on the task's page, or in the folder's menu in Files, where each item names the task
+   (**Keep Changes: Tidy the receipts**, **Undo Task: Tidy the receipts…**). After a Keep, **Undo task** takes the changes back out of your folder, unless you edited a kept
    file since. Then it changes nothing and says so.
 
 ![The GurtOS app's page for a finished task: one changed file, what it can reach, its steps, and Undo task and Keep changes buttons.](../../../../assets/screens/personal-review.png)
