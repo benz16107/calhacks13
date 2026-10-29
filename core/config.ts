@@ -219,8 +219,11 @@ export interface SetupState {
   steps: Record<string, { at: string; data?: unknown }>;
 }
 
-/** The steps the wizard walks through, in order. The box accepts any step id; this is the suggested list. */
-export const SETUP_STEPS = ['welcome', 'network', 'safety', 'folders', 'apps', 'keys', 'updates', 'phone'] as const;
+/**
+ * The steps the wizards walk through, in order. The box accepts any step id; this is the suggested list. Server's
+ * screen (portal/src/setup.tsx) skips folders; Personal's Setup (personal/setupwin.py) skips network, name and updates.
+ */
+export const SETUP_STEPS = ['welcome', 'network', 'name', 'phone', 'models', 'folders', 'safety', 'updates'] as const;
 
 /**
  * A box was already in use if a person answered an approval, paired a phone, or started a task themselves.
