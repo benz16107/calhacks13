@@ -2149,7 +2149,9 @@ class Core {
       return r;
     } catch (e) {
       console.error(`push to ${d.name} failed: ${(e as Error).message}`);
-      throw e;
+      // fetch throws a TypeError when the relay does not answer; the gateway's own refusals are plain Errors.
+      const why = e instanceof TypeError ? `the relay at ${new URL(this.remote.relay).host} isn't answering` : (e as Error).message;
+      throw Object.assign(new Error(`The notification was not sent: ${why}.`), { status: 502 });
     }
   }
 

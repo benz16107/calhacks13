@@ -22,7 +22,7 @@ checked.
 | Relay: names, tunnels, certificates | Yes | `relay/deploy` installs it on one Ubuntu 24.04 machine |
 | Web push to phones | Yes | The relay makes its own VAPID key on first start, and the web app fetches it from your relay |
 | The web app (`portal/dist`) | Yes, with a rebuild | Our domains are written into the portal source in a few places (step 4) |
-| The iPhone, Mac and Android apps | No, not without rebuilding them | They are built for `app.gurtos.com`, `box.gurtos.com` and our bundle ids and signing keys |
+| The iPhone, Mac and Android apps | Only by rebuilding them | Build them with `GURTOS_RELAY` and `GURTOS_APP_HOST` set to your domains, and your own bundle ids and signing keys: `native/README.md`, "Point the apps at your own relay" |
 | Apple push (APNs) for the native apps | Only with your own Apple developer account | The relay needs your `apns.p8` key, and the apps would need your bundle ids |
 
 If you only use the web app (add it to the home screen on a phone), everything on this page is enough. The native
@@ -189,8 +189,8 @@ The key is not in the web app's source.
 The native apps use Apple's push service instead. To run that yourself you need an Apple developer account, an APNs
 key (`apns.p8`) and a file `apns.json` with `{"keyId": "...", "teamId": "..."}`, both in
 `/var/lib/gurtos-relay/`, owned by the relay's user with mode 0600. The relay accepts only the GurtOS bundle ids
-unless you set `RELAY_APNS_TOPICS` (comma separated bundle ids) in the `gurtos-relay` service, and you would also
-rebuild the apps with your own ids and domain. Without the files, an APNs address returns
+unless you set `RELAY_APNS_TOPICS` (comma separated bundle ids) in the `gurtos-relay` service. Those ids must match the
+apps you rebuild with your own ids and domain. Without the files, an APNs address returns
 `503 APNs is not set up on this relay` and web push is unaffected.
 
 ## 6. Check the whole path

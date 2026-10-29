@@ -894,6 +894,11 @@ says `auth: "wrist"` (what the Watch reports, not proof). So a Watch can approve
 Business and not Shopper. Anything else is a `403` with `needs: "iphone"`, and the request keeps waiting. A Watch may
 always deny. core/demo.ts checks each of these; native/demo.ts checks every call the apps make.
 
+The apps read `owner` from `GET /api/me` to decide whether to show owner controls such as the kill switch, and pair
+from the link in a pairing QR: the computer's own page on the home network (`boxUrl` from `POST /api/pair/start`)
+unless remote access is on. A test notification that cannot be sent is a `502` whose error is a sentence ("The
+notification was not sent: the relay at box.gurtos.com isn't answering.").
+
 ## Quick Start: set up a new computer from one you own
 
 The phone is the bridge (`core/quickstart.ts`). The new computer shows a QR with its one-time X25519 key, a secret and a
