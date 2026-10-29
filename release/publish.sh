@@ -5,6 +5,7 @@
 #   DRAFT=1 release/publish.sh ...          a draft GitHub release only, which nobody else sees: no mirror upload.
 #                                          Run it again without DRAFT to upload the mirror and publish the draft.
 # Env: RELEASE_KEY  the release signing key (ssh ed25519 private key file)
+#      TARGET       the full commit the ISOs were built from; the release's tag is made there when it is published
 #      S3CFG        s3cmd config for the mirror (Vultr Object Storage, bucket gurtos); not needed with DRAFT=1
 # GitHub caps release files at 2 GiB: a larger file goes to the mirror only, and this says so.
 set -euo pipefail
@@ -42,7 +43,7 @@ if gh release view "$version" >/dev/null 2>&1; then
   if (( ${#todo[@]} )); then gh release upload "$version" --clobber "${todo[@]}"; fi
   gh release edit "$version" --notes-file "$notes"
 else
-  gh release create "$version" --prerelease ${draft:+--draft} --title "GurtOS $version" --notes-file "$notes" "${github[@]}"
+  gh release create "$version" --prerelease ${draft:+--draft} ${TARGET:+--target "$TARGET"} --title "GurtOS $version" --notes-file "$notes" "${github[@]}"
 fi
 if [[ -n $draft ]]; then echo "publish: draft $version on GitHub, not public; run again without DRAFT to publish"; exit 0; fi
 [[ $(gh release view "$version" --json isDraft -q .isDraft) == false ]] || gh release edit "$version" --draft=false
