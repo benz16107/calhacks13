@@ -10,7 +10,7 @@ struct GlanceEntry: TimelineEntry {
 }
 
 struct GlanceProvider: TimelineProvider {
-  func placeholder(in context: Context) -> GlanceEntry { GlanceEntry(date: .now, glance: Glance(machine: "Home box", waiting: 2, running: 3, paused: false, requests: [])) }
+  func placeholder(in context: Context) -> GlanceEntry { GlanceEntry(date: .now, glance: Glance(machine: "Home computer", waiting: 2, running: 3, paused: false, requests: [])) }
   func getSnapshot(in context: Context, completion: @escaping (GlanceEntry) -> Void) { completion(context.isPreview ? placeholder(in: context) : GlanceEntry(date: .now, glance: Glance.load())) }
   func getTimeline(in context: Context, completion: @escaping (Timeline<GlanceEntry>) -> Void) {
     // The app and the push extension reload this when something changes; the hourly refresh only ages it.

@@ -24,6 +24,23 @@ export default async (d: DemoKit) => {
   const phone = as(paired.json.token);
   d.check((await as()('GET', '/tasks')).status === 401, 'off the box, a call without a token is refused');
 
+  // The QR's other form, the computer's own page on the home network (`boxUrl`, http://<ip>:7700/pair#<code>): the app
+  // reads the code from its fragment and calls this same API at that address, so the relay is never involved.
+  const home = await d.api<{ code: string; boxUrl?: string }>('POST', '/api/pair/start');
+  d.check(!home.boxUrl || new URL(home.boxUrl).hash === `#${home.code}` && new URL(home.boxUrl).pathname === '/pair', `a home-network pairing link carries the code in its fragment (${home.boxUrl ? home.boxUrl.replace(/#.*/, '#<code>') : 'this box has no BOX_URL, so none is offered'})`);
+  // A code typed from the screen as "8120-D849" pairs: the computer ignores dashes, spaces and case, the app only trims.
+  const typed = await as()<{ token: string }>('POST', '/pair', { code: `${home.code.slice(0, 4)}-${home.code.slice(4).toUpperCase()}`, name: 'Typed code', kind: 'iphone' });
+  d.check(typed.status === 200 && !!typed.json.token, 'a code typed with a dash and capitals pairs');
+  // A phone says whether it has the owner's controls, so the app hides the kill switch and Quick Start it can't use.
+  const plainMe = await as(typed.json.token)<{ owner: boolean }>('GET', '/me');
+  const refused = await as(typed.json.token)<{ error: string }>('POST', '/pause');
+  d.check(plainMe.json.owner === false && refused.status === 403 && /\w{4}/.test(refused.json?.error ?? ''), `a phone paired without the owner's rights reads owner: false in /api/me, and the kill switch refuses it (${refused.status}: "${refused.json?.error}")`);
+  const ownerCode = await d.api<{ code: string }>('POST', '/api/pair/start', { owner: true });
+  const ownerPhone = as((await as()<{ token: string }>('POST', '/pair', { code: ownerCode.code, name: 'Owner phone', kind: 'iphone' })).json.token);
+  d.check((await ownerPhone<{ owner: boolean }>('GET', '/me')).json.owner === true, 'a phone paired as the owner reads owner: true');
+  await as(typed.json.token)('DELETE', '/pair/self');
+  await ownerPhone('DELETE', '/pair/self');
+
   // What every home reads.
   const reads = await Promise.all(['/system', '/tasks', '/approvals?state=pending', '/pause', '/log?after=0', '/health'].map((p) => phone('GET', p)));
   d.check(reads.every((r) => r.status === 200), 'the app reads the system, tasks, pending requests, the kill switch, the log and health');

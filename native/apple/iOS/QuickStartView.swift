@@ -20,6 +20,8 @@ struct QuickStartSheet: View {
   @State var key = Curve25519.KeyAgreement.PrivateKey()
   @State var busy = false
   @State var error: String?
+  /** The step in flight, stopped when the sheet closes so a cancelled Quick Start can't pair this phone later. */
+  @State var work: Task<Void, Never>?
 
   var from: Machine? { app.model.machines.first { $0.id == source } }
 
@@ -54,6 +56,7 @@ struct QuickStartSheet: View {
       .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } } }
       .onAppear { if source.isEmpty { source = app.model.current?.id ?? app.model.machines.first?.id ?? "" } }
     }
+    .onDisappear { work?.cancel() }
   }
 
   @ViewBuilder var pick: some View {
@@ -107,7 +110,7 @@ struct QuickStartSheet: View {
     guard let m = from else { return }
     busy = true
     error = nil
-    Task {
+    work = Task {
       do {
         let o = try await BoxClient(machine: m).quickstartSend(q, phonePk: Base64URL.encode(key.publicKey.rawRepresentation), keys: keys)
         offer = o
@@ -115,7 +118,8 @@ struct QuickStartSheet: View {
         stage = .review
       } catch let e as BoxError where e.status == 403 {
         error = "This phone isn't paired with \(m.name) as its owner, so it can't send its setup."
-      } catch { self.error = (error as? BoxError)?.message ?? "Couldn't reach \(m.name)." }
+      } catch is CancellationError {
+      } catch { self.error = (error as? BoxError)?.message ?? error.localizedDescription }
       busy = false
     }
   }
@@ -124,8 +128,9 @@ struct QuickStartSheet: View {
     guard let m = from, let offer else { return }
     busy = true
     error = nil
-    Task {
-      defer { busy = false }
+    work = Task {
+      // A failure after the send leaves nothing to wait for: show the error with the first step again, not a spinner.
+      defer { busy = false; if error != nil, stage == .waiting { stage = .pick } }
       do {
         if approve { _ = try await Check.run("Send your setup to \(q.name)") }
         try await BoxClient(machine: m).quickstartAnswer(offer.id, approve: approve)
@@ -139,6 +144,7 @@ struct QuickStartSheet: View {
         error = "\(q.name) stopped Quick Start. Start it again on its screen."
       } catch let e as LAError where e.code == .userCancel || e.code == .appCancel || e.code == .systemCancel {
         // Cancelled Face ID: nothing was sent.
+      } catch is CancellationError {
       } catch { self.error = (error as? BoxError)?.message ?? error.localizedDescription }
     }
   }

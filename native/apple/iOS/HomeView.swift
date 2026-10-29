@@ -11,7 +11,7 @@ struct HomeView: View {
     @Bindable var app = app
     NavigationStack(path: $app.homePath) {
       List {
-        if model.live == .offline { OfflineRow(name: model.current?.name ?? "The computer") }
+        if let p = model.problem { ProblemRow(text: p) } else if model.live == .offline { OfflineRow(name: model.current?.name ?? "The computer") }
         if !app.notificationsAsked { NotificationsCard() }
         if model.current?.isBusiness == true { business } else { owner }
       }
@@ -26,7 +26,7 @@ struct HomeView: View {
 
   @ViewBuilder var owner: some View {
     Section {
-      if model.waiting.isEmpty { Empty(text: "Nothing needs you right now.") }
+      if model.waiting.isEmpty { Empty(text: model.nothing("Nothing needs you right now.")) }
       ForEach(model.waiting) { RequestRow(approval: $0) }
     } header: { Text("Needs you") }
 
@@ -38,7 +38,7 @@ struct HomeView: View {
 
     Section {
       let running = model.tasks.filter(\.isRunning)
-      if running.isEmpty { Empty(text: "No task is running.") }
+      if running.isEmpty { Empty(text: model.nothing("No task is running.")) }
       ForEach(running) { t in NavigationLink(value: Route.task(t.id)) { TaskRow(task: t) } }
     } header: { Text("Running") }
 
@@ -49,7 +49,7 @@ struct HomeView: View {
 
   @ViewBuilder var business: some View {
     Section {
-      if model.waiting.isEmpty { Empty(text: model.mayAnswer ? "Nothing waits for you." : "Your role doesn't answer requests.") }
+      if model.waiting.isEmpty { Empty(text: model.mayAnswer ? model.nothing("Nothing waits for you.") : "Your role doesn't answer requests.") }
       ForEach(model.waiting) { RequestRow(approval: $0) }
     } header: { Text("Waiting for me") } footer: {
       if let p = model.me?.person, model.mayAnswer {
@@ -63,7 +63,7 @@ struct HomeView: View {
     }
     Section("Running") {
       let running = model.tasks.filter(\.isRunning)
-      if running.isEmpty { Empty(text: "No task is running.") }
+      if running.isEmpty { Empty(text: model.nothing("No task is running.")) }
       ForEach(running) { t in NavigationLink(value: Route.task(t.id)) { TaskRow(task: t) } }
     }
     if model.mayPause { KillSwitch() }
@@ -208,7 +208,17 @@ struct KillSwitch: View {
 struct OfflineRow: View {
   var name: String
   var body: some View {
-    Label("\(name) is out of reach. Answers wait until it is back.", systemImage: "wifi.exclamationmark")
+    Label("\(name) is out of reach. You can answer again when it is back.", systemImage: "wifi.exclamationmark")
+      .font(.g(.subheadline, .semibold)).foregroundStyle(Color.gDestructiveFg)
+      .listRowBackground(Color.gDestructive.opacity(0.12))
+  }
+}
+
+/** The computer answered, but this app couldn't use the answer (or no longer knows this device). */
+struct ProblemRow: View {
+  var text: String
+  var body: some View {
+    Label(text, systemImage: "exclamationmark.triangle")
       .font(.g(.subheadline, .semibold)).foregroundStyle(Color.gDestructiveFg)
       .listRowBackground(Color.gDestructive.opacity(0.12))
   }

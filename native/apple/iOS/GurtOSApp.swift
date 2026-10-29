@@ -77,11 +77,11 @@ final class AppState {
     if let r = Rendezvous.parse(url.absoluteString) { pending = nil; pendingRendezvous = r; showPair = true; return }
     if let q = QuickStart.parse(url.absoluteString) { quickStart = q; return }
     // An app.gurtos.com link this app can't read: the web app, in Safari, rather than nothing.
-    if url.host == "app.gurtos.com" { safari = url; return }
+    if url.host == GurtConfig.appHost { safari = url; return }
     guard url.scheme == "gurtos", let parts = URLComponents(url: url, resolvingAgainstBaseURL: false) else { return }
     let machine = parts.queryItems?.first { $0.name == "machine" }?.value
     if let machine, let m = model.machines.first(where: { $0.id == machine || $0.boxId == machine }) { model.select(m) }
-    let id = url.pathComponents.dropFirst().first ?? ""
+    let id = String(url.path.dropFirst()) // the whole path: an id may hold a "/"
     tab = .home
     homePath = NavigationPath()
     switch url.host {
@@ -126,8 +126,10 @@ final class AppState {
     #endif
     let endpoint = apnsEndpoint(topic: Bundle.main.bundleIdentifier ?? "com.benzhou.gurtos", deviceToken: token, sandbox: sandbox)
     for var m in model.machines {
-      if m.pushKey == nil { m.pushKey = Base64URL.encode(randomBytes(32)); model.update(m) }
-      try? await BoxClient(machine: m).subscribe(endpoint: endpoint, p256dh: keys.p256dh, auth: keys.authString, key: m.pushKey!)
+      let key = m.pushKey ?? Base64URL.encode(randomBytes(32))
+      if m.pushKey == nil { m.pushKey = key; model.update(m) }
+      // A computer that is off or out of reach is asked again at the next launch; nothing to say about it now.
+      try? await BoxClient(machine: m).subscribe(endpoint: endpoint, p256dh: keys.p256dh, auth: keys.authString, key: key)
     }
   }
 }
@@ -177,9 +179,13 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
     default:
       let m = Machines().find(boxId: boxId, url: info["url"] as? String)
       await MainActor.run {
-        var u = URLComponents(string: id.isEmpty ? "gurtos://home" : "gurtos://approval/\(id)")!
+        // The request's id can hold any character an agent put in its key, so build the link from parts, never from text.
+        var u = URLComponents()
+        u.scheme = "gurtos"
+        u.host = id.isEmpty ? "home" : "approval"
+        if !id.isEmpty { u.path = "/" + id }
         if let m { u.queryItems = [URLQueryItem(name: "machine", value: m.id)] }
-        app.open(url: u.url!)
+        if let link = u.url { app.open(url: link) }
       }
     }
   }

@@ -48,6 +48,16 @@ public enum WebPush {
   }
 
   /**
+   * What a push says it spends, in cents, whatever number the computer wrote: a fractional cost reads as a cost, never as 0.
+   * Approve from a notification is offered only when this is 0 (NotificationCategories.for).
+   */
+  public static func cents(_ fields: [String: Any]) -> Double {
+    guard let v = fields["costCents"] else { return 0 }
+    if let n = v as? NSNumber { return n.doubleValue }
+    return Double(v as? String ?? "") ?? .infinity // unreadable: treat as money
+  }
+
+  /**
    * The box's message is `JSON.stringify({...fields sorted by key, mac})` (core/push.ts message()), and the mac is
    * HMAC-SHA256 over the same JSON without it. So the signed bytes are the message with its last member, which is
    * always `"mac"`, cut off: no need to rebuild JavaScript's JSON byte for byte.
@@ -83,7 +93,7 @@ public struct PushKeys: Sendable {
       return PushKeys(privateKey: pk, auth: a)
     }
     let keys = PushKeys(privateKey: P256.KeyAgreement.PrivateKey(), auth: randomBytes(16))
-    store.write("push-keys", try! JSONEncoder().encode(["key": Base64URL.encode(keys.privateKey.rawRepresentation), "auth": keys.authString]))
+    if let d = try? JSONEncoder().encode(["key": Base64URL.encode(keys.privateKey.rawRepresentation), "auth": keys.authString]) { store.write("push-keys", d) }
     return keys
   }
 }
@@ -95,5 +105,5 @@ public func randomBytes(_ n: Int) -> Data {
 
 /** The APNs address the relay forwards to (relay/README.md, "The push gateway"). */
 public func apnsEndpoint(topic: String, deviceToken: Data, sandbox: Bool) -> String {
-  "https://box.gurtos.com/v1/apns/\(topic)/\(sandbox ? "sandbox" : "production")/\(deviceToken.map { String(format: "%02x", $0) }.joined())"
+  "\(GurtConfig.relay.absoluteString.trimmingCharacters(in: CharacterSet(charactersIn: "/")))/v1/apns/\(topic)/\(sandbox ? "sandbox" : "production")/\(deviceToken.map { String(format: "%02x", $0) }.joined())"
 }

@@ -14,7 +14,7 @@ struct TasksView: View {
       List {
         Section("Running") {
           let r = m.running.filter(match)
-          if r.isEmpty { Empty(text: "No task is running.") }
+          if r.isEmpty { Empty(text: m.nothing("No task is running.")) }
           ForEach(r) { t in NavigationLink(value: Route.task(t.id)) { TaskRow(task: t) } }
         }
         Section("Finished") {
@@ -47,7 +47,7 @@ struct ActivityView: View {
     NavigationStack {
       List {
         let lines = m.events.reversed().compactMap { e in Words.event(e) { m.task($0)?.title }.map { (e, $0) } }
-        if lines.isEmpty { Empty(text: "Nothing has happened yet.") }
+        if lines.isEmpty { Empty(text: m.nothing("Nothing has happened yet.")) }
         ForEach(lines.prefix(200), id: \.0.seq) { e, text in
           Group {
             if let t = e.task { NavigationLink(value: Route.task(t)) { line(e, text) } } else { line(e, text) }
@@ -107,16 +107,17 @@ struct SettingsView: View {
         Section {
           if app.notificationsOn {
             Label("On", systemImage: "bell.badge.fill")
+            if m.pushRemote == false { Label("Off on this computer", systemImage: "bell.slash").foregroundStyle(Color.gAttentionFg) }
             Button("Send a test notification") {
               Task {
-                do { try await m.client?.testPush(); testSent = "Sent. It should arrive in a few seconds." } catch { testSent = (error as? BoxError)?.status == 409 ? "Turn on remote access on the computer first: notifications go through the GurtOS relay." : error.localizedDescription }
+                do { try await m.client?.testPush(); testSent = "Sent. It should arrive in a few seconds." } catch { testSent = Self.pushProblem(error) }
               }
             }
           } else {
             Button("Turn on notifications") { Task { await app.askForNotifications() } }
           }
         } header: { Text("Notifications") } footer: {
-          Text("The computer encrypts every notification for this phone before it leaves. The relay that delivers it can't read it.")
+          Text(pushFooter)
         }
         Section {
           Button("Forget this computer", role: .destructive) { confirmForget = true }
@@ -136,6 +137,23 @@ struct SettingsView: View {
         Button("Forget", role: .destructive) { if let c = m.current { Task { await m.forget(c) } } }
       }
     }
+  }
+}
+
+extension SettingsView {
+  var pushFooter: String {
+    let m = app.model
+    let same = "The computer encrypts every notification for this phone before it leaves. The relay that delivers it can't read it."
+    guard m.pushRemote == false else { return same }
+    return "Notifications reach this phone through the GurtOS relay, so \(m.current?.name ?? "the computer") needs Reach this computer from anywhere on (its Settings, Remote access). Until then, requests show here while the app is open. " + same
+  }
+
+  /** Why a test notification didn't go, in words for people. 409 is the computer saying remote access is off. */
+  static func pushProblem(_ error: Error) -> String {
+    guard let e = error as? BoxError else { return error.localizedDescription }
+    if e.status == 409 { return "Turn on Reach this computer from anywhere on the computer first. Notifications go through the GurtOS relay." }
+    if e.status == 0 || e.status == 401 || e.status == 403 { return e.message }
+    return "The computer couldn't send it through the GurtOS relay (\(e.message)). The relay may be offline. Requests still show here while the app is open."
   }
 }
 
@@ -243,7 +261,7 @@ struct NotificationsCard: View {
     Section {
       VStack(alignment: .leading, spacing: 8) {
         Label("Get approvals on this phone", systemImage: "bell.badge").font(.g(.headline))
-        Text("GurtOS sends a notification when something needs your OK, and names the computer it came from. Nothing else.")
+        Text("GurtOS sends a notification when something needs your OK, and names the computer it came from. Nothing else.\(app.model.pushRemote == false ? " The computer needs Reach this computer from anywhere on to send them." : "")")
           .font(.g(.subheadline)).foregroundStyle(Color.gSecondary)
         HStack {
           Button("Turn on notifications") { Task { await app.askForNotifications() } }.buttonStyle(.borderedProminent)

@@ -110,7 +110,8 @@ enum MacAnswer {
   @MainActor static func run(_ a: Approval, approved: Bool, model: BoxModel) async {
     let answering = Answering()
     await answering.answer(a, approved: approved, model: model)
-    if let url = answering.passkeyURL { NSWorkspace.shared.open(url) }
+    // The page's address carries this Mac's token, so it never goes to a browser, where it would stay in the history.
+    if answering.passkeyURL != nil { answering.message = "This purchase is approved with a passkey. Open GurtOS on your iPhone to approve it." }
     if let m = answering.message {
       let alert = NSAlert()
       alert.messageText = m
@@ -151,7 +152,7 @@ struct MenuContent: View {
       Text(status(m))
       Divider()
       if model.waiting.isEmpty {
-        Text("Nothing needs you")
+        Text(model.nothing("Nothing needs you"))
       } else {
         Section(m.isBusiness ? "Waiting for me" : "Needs you") {
           ForEach(model.waiting) { a in
@@ -269,7 +270,7 @@ struct MacPairView: View {
         .overlay(Label("Drop a picture of the QR code", systemImage: "qrcode.viewfinder").foregroundStyle(.secondary))
         .onDrop(of: [.fileURL, .image], isTargeted: $dropping) { providers in read(providers); return true }
       Form {
-        TextField("Address or link", text: $address, prompt: Text("rosa.box.gurtos.com"))
+        TextField("Address or link", text: $address, prompt: Text("192.168.1.20 or rosa.\(GurtConfig.relayHost)"))
         TextField("Code", text: $code)
       }
       if let error { Text(error).foregroundStyle(Color.gDestructiveFg) }
@@ -303,13 +304,13 @@ struct MacPairView: View {
     guard r.id != nil else {
       if let lan = r.lanLink { return pair(lan) }
       code = r.code
-      error = "Type \(r.name ?? "the computer")'s address, or turn on Reach from anywhere on it: Settings, Remote access."
+      error = "Type \(r.name ?? "the computer")'s address, or turn on Reach this computer from anywhere on it: Settings, Remote access."
       return
     }
     busy = true
     error = nil
     Task {
-      do { let l = try await r.resolve(); busy = false; pair(l) } catch { self.error = (error as? BoxError)?.message ?? "Couldn't reach the GurtOS relay."; busy = false }
+      do { let l = try await r.resolve(); busy = false; pair(l) } catch { self.error = error.localizedDescription; busy = false }
     }
   }
 
@@ -320,7 +321,7 @@ struct MacPairView: View {
       do {
         try await model.pair(link, name: Host.current().localizedName ?? "Mac")
         dismissWindow(id: "pair")
-      } catch { self.error = (error as? BoxError)?.message ?? "Couldn't reach \(link.box.host ?? "the computer")." }
+      } catch { self.error = error.localizedDescription }
       busy = false
     }
   }

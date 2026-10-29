@@ -54,7 +54,7 @@ final class Answering {
     } catch let e as LAError where e.code == .userCancel || e.code == .appCancel || e.code == .systemCancel {
       // Cancelled: nothing was sent.
     } catch let e as BoxError {
-      message = e.unpaired ? "This device is not paired with \(model.current?.name ?? "the computer") any more." : "Not answered: \(e.message)"
+      message = e.unpaired ? "This device is not paired with \(model.current?.name ?? "the computer") any more." : e.status == 0 ? "\(e.message) Your answer did not go through." : "Not answered: \(e.message)"
     } catch {
       message = model.live == .offline ? "\(model.current?.name ?? "The computer") is out of reach. Your answer did not go through." : "Not answered: \(error.localizedDescription)"
     }
@@ -67,11 +67,14 @@ struct AnswerButtons: View {
   var model: BoxModel
   var answering: Answering
   var large = false
+  @Environment(\.dynamicTypeSize) var typeSize
 
   var body: some View {
     let a = approval
     let done = model.answered[a.id]
-    HStack(spacing: 10) {
+    // At the largest text sizes two buttons side by side clip their words, so they stack.
+    let layout = typeSize.isAccessibilitySize ? AnyLayout(VStackLayout(spacing: 10)) : AnyLayout(HStackLayout(spacing: 10))
+    layout {
       if let done {
         Label(done ? "Approved" : "Denied", systemImage: done ? "checkmark.circle.fill" : "xmark.circle.fill")
           .font(.g(.subheadline, .semibold))

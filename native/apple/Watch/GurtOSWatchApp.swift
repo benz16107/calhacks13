@@ -114,7 +114,7 @@ struct WatchRoot: View {
       List {
         if let m = model.current {
           Section {
-            if model.waiting.isEmpty { Text("Nothing needs you.").foregroundStyle(.secondary) }
+            if model.waiting.isEmpty { Text(model.nothing("Nothing needs you.")).foregroundStyle(.secondary) }
             ForEach(model.waiting) { a in NavigationLink(value: a.id) { WatchRequestRow(approval: a) } }
           } header: { Text(m.name) }
           Section {

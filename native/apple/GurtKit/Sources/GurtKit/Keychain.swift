@@ -44,7 +44,7 @@ public struct Keychain: Sendable {
   public func delete(_ account: String) { SecItemDelete(query(account) as CFDictionary) }
 }
 
-/** The paired machines and which one is showing. */
+/** The paired computers and which one is showing. */
 public struct Machines: Sendable {
   public var keychain: Keychain
   public init(keychain: Keychain = Keychain()) { self.keychain = keychain }
@@ -53,11 +53,14 @@ public struct Machines: Sendable {
     keychain.read("machines").flatMap { try? JSONDecoder().decode([Machine].self, from: $0) } ?? []
   }
 
-  public func save(_ list: [Machine]) {
-    keychain.write("machines", (try? JSONEncoder().encode(list)) ?? Data("[]".utf8))
+  /** False when the keychain refused the write: the tokens would be lost at the next launch. */
+  @discardableResult
+  public func save(_ list: [Machine]) -> Bool {
+    guard let d = try? JSONEncoder().encode(list) else { return false }
+    return keychain.write("machines", d)
   }
 
-  /** The machine a push names: by box id, and by address when two test boxes share an id. */
+  /** The computer a push names: by box id, and by address when two test boxes share an id. */
   public func find(boxId: String, url: String?) -> Machine? {
     let same = load().filter { $0.boxId == boxId }
     if same.count > 1, let url, let host = URL(string: url)?.host { return same.first { URL(string: $0.url)?.host == host } }

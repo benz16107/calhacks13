@@ -53,11 +53,36 @@ func phoneKey() throws -> P256.KeyAgreement.PrivateKey { try P256.KeyAgreement.P
   #expect(PairingLink.parse("https://app.gurtos.com/pair?box=me@evil.com#ab12cd34") == nil)
 }
 
+@Test func readsTheHomeNetworkPageTheQRCodeNowCarries() {
+  // `boxUrl` from POST /api/pair/start: the computer's own pairing page, with remote access off, needs no service of ours.
+  let l = PairingLink.parse("http://192.168.1.20:7700/pair#8120d849")
+  #expect(l == PairingLink(box: URL(string: "http://192.168.1.20:7700")!, code: "8120d849"))
+  #expect(PairingLink.parse("http://gurtos.local:7700/pair#8120d849")?.box.absoluteString == "http://gurtos.local:7700")
+  #expect(PairingLink.parse("http://10.0.0.5:7700/pair#8120d849")?.box.absoluteString == "http://10.0.0.5:7700", "another private network address")
+  #expect(PairingLink.parse("  http://192.168.1.20:7700/pair#8120d849\n")?.code == "8120d849", "a scanned code may carry spaces and a newline")
+  #expect(PairingLink.parse("http://192.168.1.20:7700/pair") == nil, "no code in it")
+  // The pairing call goes to that address, not to the hosted app.
+  #expect(BoxClient(base: l!.box).base?.absoluteString == "http://192.168.1.20:7700")
+}
+
 @Test func readsATypedAddress() {
   #expect(PairingLink.typed(address: "rosa.box.gurtos.com", code: "ab12cd34")?.box.absoluteString == "https://rosa.box.gurtos.com")
   #expect(PairingLink.typed(address: "192.168.1.20", code: "ab12cd34")?.box.absoluteString == "http://192.168.1.20:7700")
   #expect(PairingLink.typed(address: "192.168.1.20:7790", code: "ab12cd34")?.box.absoluteString == "http://192.168.1.20:7790")
   #expect(PairingLink.typed(address: "", code: "ab12cd34") == nil)
+  // A code read off the screen as "8120 D849" or "8120-D849" still pairs: the computer ignores spaces and dashes.
+  #expect(PairingLink.typed(address: "192.168.1.20", code: " 8120 D849 ")?.code == "8120D849")
+  #expect(PairingLink.typed(address: "192.168.1.20", code: "8120-D849")?.code == "8120-D849")
+  #expect(PairingLink.typed(address: "192.168.1.20", code: "81") == nil)
+}
+
+@Test func theRelayAndAppAddressesComeFromOneConfig() {
+  // The defaults are ours; a self-hoster sets GURTOS_RELAY and GURTOS_APP_HOST in project.yml (docs/self-host.md).
+  #expect(GurtConfig.appHost == "app.gurtos.com" && GurtConfig.relayHost == "box.gurtos.com")
+  #expect(GurtConfig.isRelayName("rosa.box.gurtos.com") && !GurtConfig.isRelayName("rosa.example.com") && !GurtConfig.isRelayName("box.gurtos.com"))
+  #expect(PairingLink.parse("https://\(GurtConfig.appHost)/pair?box=rosa.\(GurtConfig.relayHost)#ab12cd34")?.box.host == "rosa.box.gurtos.com")
+  // Another host's link is not the hosted app's: it names that host as the computer, never the ?box= name.
+  #expect(PairingLink.parse("https://app.example.org/pair?box=rosa.box.gurtos.com#ab12cd34")?.box.host == "app.example.org")
 }
 
 @Test func amountFollowsThePortal() {
@@ -67,6 +92,33 @@ func phoneKey() throws -> P256.KeyAgreement.PrivateKey { try P256.KeyAgreement.P
   a.route?.rule = "Fraud referrals go to the fraud reviewer."
   #expect(a.amountCents == 0 && a.isFraud)
   #expect(Money.dollars(4_000_000) == "$40,000" && Money.dollars(1250) == "$12.50")
+}
+
+@Test func meSaysWhetherThisPhoneIsTheOwner() throws {
+  let plain = try JSONDecoder().decode(Me.self, from: Data(#"{"owner":false,"edition":"server","paused":false,"person":null,"directory":[],"waiting":[],"stuck":[],"requests":[]}"#.utf8))
+  #expect(plain.owner == false && plain.person == nil)
+  let older = try JSONDecoder().decode(Me.self, from: Data(#"{"edition":"server","person":null,"waiting":[]}"#.utf8))
+  #expect(older.owner == nil, "a computer that predates the field still decodes")
+}
+
+@Test func aFractionalRouteAmountDoesNotDropTheRequestList() throws {
+  // core/business.ts amountOf() returns Math.max(costCents, ...), so a route's amount can have a fraction too.
+  let json = #"[{"id":"a","task":"t1","question":"Pay?","costCents":12.2,"state":"pending","route":{"rule":"Over $0.10 goes to the Controller.","to":"the Controller","amountCents":12.2,"people":[{"id":"p1","name":"Rosa"}],"why":"Because."}}]"#
+  let list = try JSONDecoder().decode([Approval].self, from: Data(json.utf8))
+  #expect(list.count == 1 && list[0].route?.amountCents == 13 && list[0].amountCents == 13)
+}
+
+@Test func aPushThatSpendsAnythingIsMoney() {
+  // Approve straight from a notification is offered only at 0 cents (NotificationCategories.for), so no cost may read as 0.
+  func fields(_ json: String) -> [String: Any] { (try? JSONSerialization.jsonObject(with: Data(json.utf8))) as? [String: Any] ?? [:] }
+  #expect(WebPush.cents(fields(#"{"costCents":0}"#)) == 0)
+  #expect(WebPush.cents(fields(#"{"type":"test"}"#)) == 0, "a test push names no cost")
+  #expect(WebPush.cents(fields(#"{"costCents":4000}"#)) == 4000)
+  #expect(WebPush.cents(fields(#"{"costCents":12.2}"#)) > 0, "a fraction of a cent is still a cost")
+  #expect(WebPush.cents(fields(#"{"costCents":0.4}"#)) > 0)
+  #expect(WebPush.cents(fields(#"{"costCents":"900"}"#)) == 900)
+  #expect(WebPush.cents(fields(#"{"costCents":"lots"}"#)) > 0, "unreadable is treated as money")
+  #expect(WebPush.cents(fields(#"{"costCents":null}"#)) > 0, "unreadable is treated as money")
 }
 
 @Test func apnsEndpointNamesTopicAndEnvironment() {
@@ -108,12 +160,16 @@ func phoneKey() throws -> P256.KeyAgreement.PrivateKey { try P256.KeyAgreement.P
   }
 }
 
-/** A stand-in relay: answers by path, so resolve() runs without the network. */
+/** A stand-in relay or computer: answers by path, or fails the connection, so calls run without the network. */
 final class StubRelay: URLProtocol {
   nonisolated(unsafe) static var answer: (URLRequest) -> (Int, String) = { _ in (404, "") }
+  nonisolated(unsafe) static var failure: URLError.Code?
+  nonisolated(unsafe) static var seen: [String] = []
   override class func canInit(with request: URLRequest) -> Bool { true }
   override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
   override func startLoading() {
+    StubRelay.seen.append("\(request.httpMethod ?? "GET") \(request.url!.path)")
+    if let code = StubRelay.failure { client?.urlProtocol(self, didFailWithError: URLError(code)); return }
     let (status, body) = StubRelay.answer(request)
     client?.urlProtocol(self, didReceive: HTTPURLResponse(url: request.url!, statusCode: status, httpVersion: nil, headerFields: nil)!, cacheStoragePolicy: .notAllowed)
     client?.urlProtocol(self, didLoad: Data(body.utf8))
@@ -123,23 +179,107 @@ final class StubRelay: URLProtocol {
   static var session: URLSession { let c = URLSessionConfiguration.ephemeral; c.protocolClasses = [StubRelay.self]; return URLSession(configuration: c) }
 }
 
-@Test func rendezvousWaitsForTheAddressOrTheError() async throws {
-  let r = Rendezvous(id: "Ab3_kq9Z", code: "ab12cd34", name: "Home box", lan: nil)
-  nonisolated(unsafe) var hostPolls = 0
-  StubRelay.answer = { req in
-    let p = req.url!.path
-    if p.hasSuffix("/ask") { return req.httpMethod == "PUT" ? (200, "{}") : (405, "") }
-    if p.hasSuffix("/host") { hostPolls += 1; return hostPolls < 3 ? (204, "") : (200, #"{"host":"home-box.box.gurtos.com"}"#) }
-    return (204, "")
+/** These share one stand-in server, so they run one at a time. */
+@Suite(.serialized) struct OverTheNetwork {
+  init() {
+    StubRelay.answer = { _ in (404, "") }
+    StubRelay.failure = nil
+    StubRelay.seen = []
   }
-  let link = try await r.resolve(session: StubRelay.session)
-  #expect(link == PairingLink(box: URL(string: "https://home-box.box.gurtos.com")!, code: "ab12cd34") && hostPolls == 3)
 
-  StubRelay.answer = { req in req.url!.path.hasSuffix("/error") ? (200, #"{"error":"The owner said no."}"#) : req.url!.path.hasSuffix("/ask") ? (200, "{}") : (204, "") }
-  await #expect(throws: BoxError.self) { try await r.resolve(session: StubRelay.session) }
+  let home = URL(string: "http://192.168.1.20:7700")!
+  let rendezvous = Rendezvous(id: "Ab3_kq9Z", code: "ab12cd34", name: "Home box", lan: "192.168.1.20:7700")
 
-  StubRelay.answer = { req in req.url!.path.hasSuffix("/host") ? (200, #"{"host":"evil.example"}"#) : req.url!.path.hasSuffix("/ask") ? (200, "{}") : (204, "") }
-  await #expect(throws: BoxError.self, "an address outside box.gurtos.com is refused") { try await r.resolve(session: StubRelay.session) }
+  @Test func rendezvousWaitsForTheAddressOrTheError() async throws {
+    let r = Rendezvous(id: "Ab3_kq9Z", code: "ab12cd34", name: "Home box", lan: nil)
+    nonisolated(unsafe) var hostPolls = 0
+    StubRelay.answer = { req in
+      let p = req.url!.path
+      if p.hasSuffix("/ask") { return req.httpMethod == "PUT" ? (200, "{}") : (405, "") }
+      if p.hasSuffix("/host") { hostPolls += 1; return hostPolls < 3 ? (404, #"{"error":"nothing there yet"}"#) : (200, #"{"host":"home-box.box.gurtos.com"}"#) }
+      return (404, "")
+    }
+    let link = try await r.resolve(session: StubRelay.session)
+    #expect(link == PairingLink(box: URL(string: "https://home-box.box.gurtos.com")!, code: "ab12cd34") && hostPolls == 3)
+
+    StubRelay.answer = { req in req.url!.path.hasSuffix("/error") ? (200, #"{"error":"The owner said no."}"#) : req.url!.path.hasSuffix("/ask") ? (200, "{}") : (404, "") }
+    await #expect(throws: BoxError.self) { try await r.resolve(session: StubRelay.session) }
+
+    StubRelay.answer = { req in req.url!.path.hasSuffix("/host") ? (200, #"{"host":"evil.example"}"#) : req.url!.path.hasSuffix("/ask") ? (200, "{}") : (404, "") }
+    await #expect(throws: BoxError.self, "an address outside box.gurtos.com is refused") { try await r.resolve(session: StubRelay.session) }
+  }
+
+  @Test func aRelayThatIsDownSaysSoAndOffersTheSameWiFi() async {
+    StubRelay.failure = .cannotFindHost
+    let e = await #expect(throws: BoxError.self) { try await rendezvous.resolve(session: StubRelay.session) }
+    #expect(e?.message.contains("Couldn't reach the GurtOS relay (box.gurtos.com)") == true && e?.message.contains("same Wi-Fi") == true, "\(e?.message ?? "")")
+    // The one-tap way out is there to take: this link names the computer's own address.
+    #expect(rendezvous.lanLink?.box == home)
+  }
+
+  @Test func aDeviceWithNoInternetSaysSo() async {
+    StubRelay.failure = .notConnectedToInternet
+    let e = await #expect(throws: BoxError.self) { try await rendezvous.resolve(session: StubRelay.session) }
+    #expect(e?.message.hasPrefix("This device is offline") == true)
+  }
+
+  @Test func aRelayAnswering503StopsTheWait() async {
+    StubRelay.answer = { req in req.url!.path.hasSuffix("/ask") ? (200, "{}") : (503, "<html>Service unavailable</html>") }
+    let start = Date.now
+    let e = await #expect(throws: BoxError.self) { try await rendezvous.resolve(session: StubRelay.session) }
+    #expect(e?.message.contains("error 503") == true && e?.message.contains("same Wi-Fi") == true)
+    #expect(Date.now.timeIntervalSince(start) < 20, "it gave up in seconds, not after the three minute wait")
+  }
+
+  @Test func quickStartSaysTheRelayIsDown() async throws {
+    StubRelay.failure = .cannotConnectToHost
+    let q = QuickStart(rv: String(repeating: "r", count: 22), pk: String(repeating: "p", count: 43), s: "BQUFBQUFBQUFBQUFBQUFBQ", name: "New box")
+    let e = await #expect(throws: BoxError.self) { try await q.waitForOwnerCode(Curve25519.KeyAgreement.PrivateKey(), session: StubRelay.session) }
+    #expect(e?.message.contains("GurtOS relay") == true && e?.message.contains("on its own screen") == true, "Quick Start has no same-Wi-Fi way out; it says to set up by hand")
+  }
+
+  @Test func pairingOnTheHomeNetworkNeedsNoRelay() async throws {
+    StubRelay.answer = { _ in (200, #"{"token":"t0k3n","box":{"id":"box1","name":"Home box"},"edition":"server","device":{"id":"d1","name":"Rosa's iPhone"}}"#) }
+    let link = try #require(PairingLink.parse("http://192.168.1.20:7700/pair#8120d849"))
+    let m = try await BoxClient.pair(link, name: "Rosa's iPhone", kind: "iphone", session: StubRelay.session)
+    #expect(m.url == "http://192.168.1.20:7700" && m.token == "t0k3n" && m.boxId == "box1" && m.deviceId == "d1")
+    #expect(StubRelay.seen == ["POST /api/pair"], "one call, to the computer, none to the relay")
+  }
+
+  @Test func theComputersOwnSentenceReachesThePerson() async {
+    StubRelay.answer = { _ in (403, #"{"error":"That code has expired. Ask the computer's screen for a new one."}"#) }
+    let e = await #expect(throws: BoxError.self) { try await BoxClient.pair(PairingLink(box: home, code: "ab12cd34"), name: "x", kind: "iphone", session: StubRelay.session) }
+    #expect(e?.message == "That code has expired. Ask the computer's screen for a new one." && e?.status == 403)
+  }
+
+  @Test func aComputerThatIsOffIsNamedByItsAddress() async {
+    StubRelay.failure = .timedOut
+    let e = await #expect(throws: BoxError.self) { try await BoxClient(base: home, token: "t", session: StubRelay.session).tasks() }
+    #expect(e?.message.contains("192.168.1.20") == true && e?.message.contains("Local Network") == true, "\(e?.message ?? "")")
+    StubRelay.failure = .notConnectedToInternet
+    let off = await #expect(throws: BoxError.self) { try await BoxClient(base: home, token: "t", session: StubRelay.session).tasks() }
+    #expect(off?.message.hasPrefix("This device is offline") == true)
+  }
+
+  @Test func aPageThatIsNotAComputerIsNotACrash() async {
+    // A Wi-Fi sign-in page answers 200 with HTML: reading it as JSON used to surface a decoding error.
+    StubRelay.answer = { _ in (200, "<html>Sign in to the Wi-Fi</html>") }
+    let e = await #expect(throws: BoxError.self) { try await BoxClient(base: home, token: "t", session: StubRelay.session).pending() }
+    #expect(e?.message.contains("didn't answer like a GurtOS computer") == true)
+  }
+
+  @Test func aProxyErrorPageSaysTheComputerIsNotAnswering() async {
+    StubRelay.answer = { _ in (502, "<html>Bad gateway</html>") }
+    let e = await #expect(throws: BoxError.self) { try await BoxClient(base: URL(string: "https://rosa.box.gurtos.com")!, token: "t", session: StubRelay.session).tasks() }
+    #expect(e?.message.contains("isn't answering right now (error 502)") == true && e?.message.contains("The box") == false)
+  }
+
+  @Test func aBadSavedAddressSendsNothing() async {
+    let c = BoxClient(machine: Machine(url: "", token: "secret", boxId: "b", name: "x"), session: StubRelay.session)
+    #expect(c.base == nil)
+    await #expect(throws: BoxError.self) { try await c.tasks() }
+    #expect(StubRelay.seen.isEmpty, "the token went nowhere")
+  }
 }
 
 @Test func quickStartOpensWhatCoreSeals() throws {

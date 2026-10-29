@@ -22,6 +22,11 @@ settings:
     MARKETING_VERSION: "0.1.0"
     CURRENT_PROJECT_VERSION: 1
     ENABLE_USER_SCRIPT_SANDBOXING: YES
+    # Where the apps find the GurtOS relay and the hosted web app. To use your own (docs/self-host.md), change these two
+    # and rebuild: they reach GurtKit through each app's Info.plist (GurtKit/Sources/GurtKit/Config.swift) and set the
+    # iPhone app's associated domain. Bundle ids and the team below are ours; change those to sign with your own account.
+    GURTOS_RELAY: https://box.gurtos.com
+    GURTOS_APP_HOST: app.gurtos.com
 
 targets:
   GurtOS:
@@ -43,23 +48,25 @@ targets:
         aps-environment: development
         keychain-access-groups: [$(AppIdentifierPrefix)com.benzhou.gurtos.shared]
         com.apple.developer.usernotifications.time-sensitive: true
-        # Scanning a machine's QR code with the Camera opens the app (app.gurtos.com serves the association).
-        com.apple.developer.associated-domains: [applinks:app.gurtos.com]
+        # Scanning a computer's QR code with the Camera opens the app (the web app's host serves the association).
+        com.apple.developer.associated-domains: [applinks:$(GURTOS_APP_HOST)]
     info:
       path: iOS/Info.plist
       properties:
         CFBundleDisplayName: GurtOS
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        GurtOSRelay: $(GURTOS_RELAY)
+        GurtOSAppHost: $(GURTOS_APP_HOST)
         UILaunchScreen: {}
         UIAppFonts: [AtkinsonHyperlegibleNext-VariableFont_wght.ttf]
         ITSAppUsesNonExemptEncryption: false
         LSApplicationCategoryType: public.app-category.productivity
-        NSCameraUsageDescription: GurtOS uses the camera to scan the pairing QR code on your machine's screen.
+        NSCameraUsageDescription: GurtOS uses the camera to scan the pairing QR code on your computer's screen.
         NSFaceIDUsageDescription: GurtOS asks for Face ID before it approves anything that spends money.
-        NSLocalNetworkUsageDescription: GurtOS talks to your GurtOS machine on your home network.
+        NSLocalNetworkUsageDescription: GurtOS talks to your GurtOS computer on your home network.
         NSAppTransportSecurity:
-          # A box on the home network answers on plain HTTP at its own address; everything else is HTTPS.
+          # A computer on the home network answers on plain HTTP at its own address; everything else is HTTPS.
           NSAllowsLocalNetworking: true
         CFBundleURLTypes:
           - CFBundleURLName: com.benzhou.gurtos
@@ -161,6 +168,9 @@ targets:
         WKApplication: true
         WKCompanionAppBundleIdentifier: com.benzhou.gurtos
         ITSAppUsesNonExemptEncryption: false
+        NSLocalNetworkUsageDescription: GurtOS talks to your GurtOS computer on your home network.
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.benzhou.gurtos.watchkitapp
@@ -216,6 +226,12 @@ targets:
         LSApplicationCategoryType: public.app-category.productivity
         ITSAppUsesNonExemptEncryption: false
         NSHumanReadableCopyright: Apache-2.0
+        GurtOSRelay: $(GURTOS_RELAY)
+        GurtOSAppHost: $(GURTOS_APP_HOST)
+        NSLocalNetworkUsageDescription: GurtOS talks to your GurtOS computer on your home network.
+        NSAppTransportSecurity:
+          # A computer on the home network answers on plain HTTP at its own address; everything else is HTTPS.
+          NSAllowsLocalNetworking: true
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.benzhou.gurtos.mac
@@ -242,6 +258,8 @@ targets:
         CFBundleDisplayName: Send to GurtOS
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
         NSExtension:
           NSExtensionPointIdentifier: com.apple.share-services
           NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).ShareViewController

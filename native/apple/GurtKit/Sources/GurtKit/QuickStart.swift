@@ -12,7 +12,7 @@ public struct QuickStart: Equatable, Sendable {
 
   /** https://app.gurtos.com/quickstart#rv=…&pk=…&s=…&n=…, checked as core's parseSend checks it. */
   public static func parse(_ text: String) -> QuickStart? {
-    guard let u = URLComponents(string: text.trimmingCharacters(in: .whitespacesAndNewlines)), u.scheme == "https", u.host == "app.gurtos.com",
+    guard let u = URLComponents(string: text.trimmingCharacters(in: .whitespacesAndNewlines)), u.scheme == "https", u.host == GurtConfig.appHost,
           u.path == "/quickstart", let f = URLComponents(string: "?" + (u.percentEncodedFragment ?? ""))
     else { return nil }
     let item = { (k: String) in f.queryItems?.first { $0.name == k }?.value }
@@ -44,16 +44,18 @@ public struct QuickStart: Equatable, Sendable {
   }
 
   /** Wait (up to 10 minutes) for the new computer's sealed reply in the relay's rendezvous slot, and open it. */
-  public func waitForOwnerCode(_ key: Curve25519.KeyAgreement.PrivateKey, relay: URL = URL(string: "https://box.gurtos.com")!, session: URLSession = .shared) async throws -> PairingLink {
-    let url = URL(string: relay.appending(path: "v1/rv/\(rv)/owner").absoluteString + "?wait=25")!
-    let end = Date().addingTimeInterval(600)
-    while Date() < end {
-      try Task.checkCancellation()
-      let (d, r) = try await session.data(for: URLRequest(url: url, timeoutInterval: 35))
-      if (r as? HTTPURLResponse)?.statusCode == 200, let b = try? JSONDecoder().decode(Sealed.self, from: d) { return try open(b, with: key) }
-      try await Task.sleep(nanoseconds: 500_000_000)
+  public func waitForOwnerCode(_ key: Curve25519.KeyAgreement.PrivateKey, relay: URL = GurtConfig.relay, session: URLSession = .shared) async throws -> PairingLink {
+    let slot = relay.appending(path: "v1/rv/\(rv)/owner")
+    return try await withThrowingTaskGroup(of: Sealed?.self) { g in
+      g.addTask { try JSONDecoder().decode(Sealed.self, from: try await Relay.poll(slot, session, advice: Relay.byHand)) }
+      g.addTask {
+        try await Task.sleep(nanoseconds: 600_000_000_000)
+        throw BoxError(status: 0, message: "\(self.name) didn't answer. Check that it is still on its Quick Start screen.")
+      }
+      defer { g.cancelAll() }
+      guard let first = try await g.next(), let sealed = first else { throw BoxError(status: 0, message: "No answer.") }
+      return try open(sealed, with: key)
     }
-    throw BoxError(status: 0, message: "\(name) didn't answer. Check that it is still on its Quick Start screen.")
   }
 }
 

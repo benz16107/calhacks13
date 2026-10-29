@@ -1,5 +1,5 @@
-// The state every GurtOS Apple app shows for the machine it is on: tasks, what waits, the kill switch, the log,
-// and whether the box can be reached. It follows the box's log stream and refetches on each change, the way the
+// The state every GurtOS Apple app shows for the computer it is on: tasks, what waits, the kill switch, the log,
+// and whether the computer can be reached. It follows the box's log stream and refetches on each change, the way the
 // web app does when SpacetimeDB is out of reach (portal/src/live.ts).
 import Foundation
 import Observation
@@ -16,6 +16,12 @@ public final class BoxModel {
   public var paused = PauseState(paused: false)
   public var events: [LogEvent] = []
   public var live: Live = .connecting
+  /** True after the first successful read of this computer, so a screen can tell "not loaded yet" from "nothing there". */
+  public private(set) var loaded = false
+  /** Why the last read failed while the computer still answered (an answer this app can't read), else nil. */
+  public private(set) var problem: String?
+  /** Whether this computer can send pushes (its remote access is on), from `GET /api/push`. nil until known. */
+  public private(set) var pushRemote: Bool?
   /** Answers given here, shown for a moment before the request leaves the list. */
   public var answered: [String: Bool] = [:]
 
@@ -49,6 +55,11 @@ public final class BoxModel {
   public var running: [BoxTask] { tasks.filter { $0.isRunning || $0.isWaiting } }
   public var toReview: [BoxTask] { tasks.filter { $0.review == "pending" } }
   public var recent: [BoxTask] { tasks.filter(\.isFinished).sorted { ($0.updatedAt ?? "") > ($1.updatedAt ?? "") } }
+  /** What an empty list says: "nothing" only once the computer has answered, else that nothing can be seen yet. */
+  public func nothing(_ whenEmpty: String) -> String {
+    loaded ? whenEmpty : (problem != nil || live == .offline ? "Can't see this right now." : "Loading…")
+  }
+
   public func task(_ id: String) -> BoxTask? { tasks.first { $0.id == id } }
   public func approval(_ id: String) -> Approval? {
     approvals.first { $0.id == id } ?? me?.waiting?.first { $0.id == id } ?? me?.requests?.first { $0.id == id }
@@ -69,11 +80,11 @@ public final class BoxModel {
     }
   }
 
-  /** Owner or Business admin: the box refuses the kill switch for anyone else, so the button hides too. */
+  /** Owner or Business admin: the computer refuses the kill switch for anyone else, so the button hides too. */
   public var mayPause: Bool {
     guard let m = current else { return false }
-    if m.isBusiness { return ["owner", "admin"].contains(me?.person?.role ?? m.role ?? "") }
-    return true
+    if m.isBusiness { return me?.owner == true || ["owner", "admin"].contains(me?.person?.role ?? m.role ?? "") }
+    return me?.owner ?? true // a phone paired without the owner's rights is told so by /api/me
   }
 
   /** An auditor reads everything and answers nothing. */
@@ -85,7 +96,7 @@ public final class BoxModel {
     guard m.id != current?.id else { return }
     current = m
     UserDefaults.standard.set(m.id, forKey: "gurtos.machine")
-    tasks = []; approvals = []; me = nil; events = []; live = .connecting
+    tasks = []; approvals = []; me = nil; events = []; live = .connecting; loaded = false; problem = nil; pushRemote = nil
     start()
   }
 
@@ -115,12 +126,19 @@ public final class BoxModel {
     if current?.id == m.id { current = m }
   }
 
-  /** Pair with the machine a QR code or typed code names, as this kind of device (iphone, mac). */
+  /** Pair with the computer a QR code or typed code names, as this kind of device (iphone, mac). */
   public func pair(_ link: PairingLink, name: String) async throws {
-    add(try await BoxClient.pair(link, name: name, kind: kind))
+    let m = try await BoxClient.pair(link, name: name, kind: kind)
+    // Without a saved token this device would forget the pairing at its next launch, and the computer would keep a
+    // device nobody holds. Say so now, and take the device off the computer again.
+    guard store.save(machines.filter { $0.id != m.id } + [m]) else {
+      try? await BoxClient(machine: m).unpair()
+      throw BoxError(status: 0, message: "This device couldn't save the pairing in its keychain. Check that it is unlocked and try again.")
+    }
+    add(m)
   }
 
-  /** Forget a machine here and on the box. The box may be out of reach; the token is dropped here anyway. */
+  /** Forget a computer here and on the computer. It may be out of reach; the token is dropped here anyway. */
   public func forget(_ m: Machine) async {
     try? await BoxClient(machine: m).unpair()
     machines.removeAll { $0.id == m.id }
@@ -187,15 +205,20 @@ public final class BoxModel {
       if m.edition == nil || m.isBusiness, let s = try? await c.system() {
         if m.edition != s.edition || m.name != (s.company ?? s.boxName) { m.edition = s.edition; m.name = s.company ?? s.boxName; update(m) }
       }
-      if m.isBusiness, let me = try? await c.me() {
+      // Business reads it every time (what waits changes); elsewhere once, for whether this phone is the owner's.
+      if m.isBusiness || me == nil, let me = try? await c.me() {
         self.me = me
         if let p = me.person, m.person != p.name || m.role != p.role { m.person = p.name; m.personTitle = p.title; m.role = p.role; update(m) }
       }
       if live == .offline { live = .connecting }
+      loaded = true
+      problem = nil
+      if pushRemote == nil { pushRemote = try? await c.pushStatus().remote }
       onChange?(self)
     } catch {
-      if (error as? BoxError)?.unpaired == true { live = .offline }
-      else { live = await c.health() ? live : .offline }
+      if (error as? BoxError)?.unpaired == true { live = .offline; problem = "\(m.name) no longer knows this device. Forget it and pair again." }
+      else if await c.health() { problem = (error as? BoxError)?.message ?? error.localizedDescription }
+      else { live = .offline }
     }
   }
 
@@ -203,7 +226,7 @@ public final class BoxModel {
 
   /** Approve or deny. `auth` says how this device checked it was you (Face ID, Touch ID, the wrist). */
   public func answer(_ a: Approval, approved: Bool, auth: AnswerAuth) async throws -> Approval {
-    guard let c = client else { throw BoxError(status: 0, message: "No machine is paired.") }
+    guard let c = client else { throw BoxError(status: 0, message: "No computer is paired.") }
     let out = try await c.answer(a.id, approved: approved, auth: auth)
     answered[a.id] = approved
     Task { [weak self] in

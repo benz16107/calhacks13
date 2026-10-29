@@ -7,6 +7,7 @@ struct ApprovalView: View {
   var id: String
   @State var answering = Answering()
   @State var detail: TaskDetail?
+  @State var detailFailed = false
 
   var approval: Approval? { app.model.approval(id) ?? detail?.approvals.first { $0.id == id } }
 
@@ -38,7 +39,7 @@ struct ApprovalView: View {
           }
           Section("The agent's checks") {
             let steps = (detail?.events ?? []).filter { $0.type == "task.step" }
-            if steps.isEmpty { Empty(text: detail == nil ? "Loading…" : "No steps before it asked.") }
+            if steps.isEmpty { Empty(text: detail == nil ? (detailFailed ? "Couldn't load the steps." : "Loading…") : "No steps before it asked.") }
             ForEach(steps) { e in Label(e.text ?? "", systemImage: "checkmark").font(.g(.subheadline)) }
           }
         }
@@ -51,6 +52,10 @@ struct ApprovalView: View {
               .padding(.horizontal, 20).padding(.bottom, 8)
           }
         }
+      } else if !app.model.loaded && app.model.live != .offline && !detailFailed {
+        ProgressView("Loading…")
+      } else if !app.model.loaded {
+        ContentUnavailableView("Can't reach \(app.model.current?.name ?? "the computer")", systemImage: "wifi.exclamationmark", description: Text("The request shows here once it is back."))
       } else {
         ContentUnavailableView("This request was answered", systemImage: "checkmark.circle", description: Text("It is no longer waiting."))
       }
@@ -60,7 +65,7 @@ struct ApprovalView: View {
     .answerAlerts(answering)
     .task(id: app.model.events.last?.seq) {
       let task = approval?.task ?? String(id.split(separator: ".").first ?? "")
-      detail = try? await app.model.client?.task(task)
+      do { detail = try await app.model.client?.task(task); detailFailed = false } catch { detailFailed = detail == nil }
     }
   }
 }
@@ -85,6 +90,7 @@ struct TaskView: View {
   @Environment(AppState.self) var app
   var id: String
   @State var detail: TaskDetail?
+  @State var detailFailed = false
   @State var confirmUndo = false
   @State var error: String?
 
@@ -116,7 +122,7 @@ struct TaskView: View {
         }
         Section("Steps") {
           let steps = (detail?.events ?? []).filter { ["task.step", "net.blocked", "approval.answered"].contains($0.type) }
-          if steps.isEmpty { Empty(text: detail == nil ? "Loading…" : "No steps yet.") }
+          if steps.isEmpty { Empty(text: detail == nil ? (detailFailed ? "Couldn't load the steps." : "Loading…") : "No steps yet.") }
           ForEach(steps) { e in
             HStack(alignment: .top) {
               Image(systemName: Words.isAlarm(e) ? "xmark.octagon.fill" : "circle.fill").font(.system(size: Words.isAlarm(e) ? 14 : 6))
@@ -141,7 +147,14 @@ struct TaskView: View {
     .gurtList()
     .navigationTitle("Task")
     .navigationBarTitleDisplayMode(.inline)
-    .task(id: app.model.events.last?.seq) { detail = try? await app.model.client?.task(id) }
+    .task(id: app.model.events.last?.seq) {
+      do { detail = try await app.model.client?.task(id); detailFailed = false } catch { detailFailed = detail == nil }
+    }
+    .overlay {
+      if t == nil {
+        if detailFailed || app.model.live == .offline { ContentUnavailableView("Couldn't load this task", systemImage: "wifi.exclamationmark", description: Text("\(app.model.current?.name ?? "The computer") didn't answer.")) } else { ProgressView("Loading…") }
+      }
+    }
     .confirmationDialog("Undo \(t?.title ?? "this task")?", isPresented: $confirmUndo, titleVisibility: .visible) {
       Button("Undo", role: .destructive) { if let t { act { try await app.model.undo(t) } } }
     } message: { Text("Its files are removed. Every other task keeps its own.") }

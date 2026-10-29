@@ -59,6 +59,8 @@ struct PairSheet: View {
   @State var name = UIDevice.current.name
   @State var busy = false
   @State var error: String?
+  /** The pairing in flight, stopped when the sheet closes so a cancelled pairing can't finish in the background. */
+  @State var work: Task<Void, Never>?
 
   init(link: PairingLink?, rendezvous: Rendezvous? = nil) {
     _link = State(initialValue: link)
@@ -74,6 +76,7 @@ struct PairSheet: View {
       .navigationBarTitleDisplayMode(.inline)
       .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } } }
     }
+    .onDisappear { work?.cancel() }
   }
 
   var scanner: some View {
@@ -84,6 +87,8 @@ struct PairSheet: View {
           else if let q = QuickStart.parse(text) { dismiss(); app.quickStart = q } else { error = "That QR code isn't a GurtOS pairing code." }
         }
         .ignoresSafeArea(edges: .horizontal)
+        .accessibilityLabel("Camera view for the pairing QR code")
+        .accessibilityHint("Point it at the code on the computer's screen, or use Type the code instead")
       } else {
         ContentUnavailableView("The camera isn't available", systemImage: "camera", description: Text("Type the code from the computer's screen instead."))
       }
@@ -102,7 +107,7 @@ struct PairSheet: View {
   var typed: some View {
     Form {
       Section {
-        TextField("rosa.box.gurtos.com or 192.168.1.20", text: $address)
+        TextField("192.168.1.20 or rosa.\(GurtConfig.relayHost)", text: $address)
           .textContentType(.URL).keyboardType(.URL).textInputAutocapitalization(.never).autocorrectionDisabled()
         TextField("Code", text: $code).textInputAutocapitalization(.never).autocorrectionDisabled().font(.g(.title3).monospaced())
       } header: { Text("The computer's address and code") } footer: { Text("Both are under the QR code on the computer's screen.") }
@@ -117,13 +122,15 @@ struct PairSheet: View {
 
   func pair(_ l: PairingLink) {
     busy = true
-    Task {
+    error = nil
+    work = Task {
       do {
         try await app.model.pair(l, name: name.isEmpty ? "iPhone" : name)
         await app.subscribeAll()
         dismiss()
+      } catch is CancellationError {
       } catch {
-        self.error = (error as? BoxError)?.message ?? "Couldn't reach \(l.box.host ?? "the computer"). Is it on, and on this network?"
+        self.error = (error as? BoxError)?.message ?? error.localizedDescription
       }
       busy = false
     }
@@ -146,22 +153,30 @@ struct PairSheet: View {
       }
       Section("Name this phone") { TextField("Name this phone", text: $name) }
       Section {
-        if r.id != nil {
-        Button {
-          asking = true
-          error = nil
-          Task {
-            do { pair(try await r.resolve()) } catch { self.error = (error as? BoxError)?.message ?? "Couldn't reach the GurtOS relay. Check this phone's connection." }
-            asking = false
-          }
-        } label: {
-          HStack { Spacer(); if asking || busy { ProgressView(); Text("Asking \(r.name ?? "the computer")…").font(.g(.headline)) } else { Text("Pair over the internet").font(.g(.headline)) }; Spacer() }
-        }
-        .disabled(asking || busy)
-        }
         if let lan = r.lanLink {
-          Button { pair(lan) } label: { HStack { Spacer(); Text("Same Wi-Fi? Pair on this network").font(.g(.headline)); Spacer() } }
+          Button { pair(lan) } label: { HStack { Spacer(); if busy { ProgressView() } else { Text("Same Wi-Fi? Pair on this network").font(.g(.headline)) }; Spacer() } }
             .disabled(asking || busy)
+        }
+        if r.id != nil {
+          Button {
+            asking = true
+            error = nil
+            work = Task {
+              do {
+                let l = try await r.resolve()
+                asking = false
+                pair(l)
+              } catch is CancellationError {
+                asking = false
+              } catch {
+                self.error = (error as? BoxError)?.message ?? error.localizedDescription
+                asking = false
+              }
+            }
+          } label: {
+            HStack { Spacer(); if asking { ProgressView(); Text("Asking \(r.name ?? "the computer")…").font(.g(.headline)) } else { Text("Pair over the internet").font(.g(.headline)) }; Spacer() }
+          }
+          .disabled(asking || busy)
         }
         if r.id == nil && r.lan == nil {
           Button { address = ""; code = r.code; rendezvous = nil; typing = true } label: { HStack { Spacer(); Text("Type the computer's address").font(.g(.headline)); Spacer() } }
@@ -169,9 +184,9 @@ struct PairSheet: View {
         if let error { Text(error).foregroundStyle(Color.gDestructiveFg) }
       } footer: {
         if r.id != nil {
-          Text("Over the internet, the GurtOS relay asks \(r.name ?? "your computer") to open a secure address for this phone. It never sees what the two of you send.")
+          Text("On the same Wi-Fi, this phone talks to \(r.name ?? "the computer") directly. Over the internet, the GurtOS relay asks it to open a secure address for this phone, and never sees what the two of you send.")
         } else {
-          Text("To pair from anywhere, turn on Reach from anywhere on \(r.name ?? "the computer"): Settings, Remote access.")
+          Text("To pair from anywhere, turn on Reach this computer from anywhere on \(r.name ?? "the computer"): Settings, Remote access.")
         }
       }
     }
@@ -203,6 +218,8 @@ struct PairSheet: View {
         }
         .disabled(busy)
         if let error { Text(error).foregroundStyle(Color.gDestructiveFg) }
+      } footer: {
+        if l.box.scheme == "http" { Text("This address is on your home network and is not encrypted. Pair only on a network you trust.") }
       }
     }
     .font(.g(.body))

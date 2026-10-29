@@ -30,7 +30,7 @@ enum NotificationCategories {
   /** Which buttons a push gets, from its checked fields and what this phone knows about the machine. */
   static func `for`(fields: [String: Any], machine: Machine) -> String {
     if (fields["source"] as? String)?.hasPrefix("shopper:") == true { return requestDenyOnly }
-    if (fields["costCents"] as? Int ?? 0) > 0 || machine.isBusiness { return requestCheck }
+    if WebPush.cents(fields) > 0 || machine.isBusiness { return requestCheck }
     return request
   }
 }

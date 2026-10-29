@@ -29,7 +29,8 @@ public struct BoxTask: Codable, Identifiable, Hashable, Sendable {
 public struct ApprovalRoute: Codable, Hashable, Sendable {
   public var rule: String
   public var to: String
-  public var amountCents: Int
+  /** The amount the rules checked. A cost in fractions of a cent makes this fractional, so it rounds up like `costCents`. */
+  @WholeCents public var amountCents: Int
   public var people: [PersonRef]
   public var why: String
 }
@@ -76,7 +77,7 @@ public struct PauseState: Codable, Hashable, Sendable {
   public var at: String?
 }
 
-/** `GET /api/me` on a Business box: who this phone is, and what waits for them. */
+/** `GET /api/me`: whether this phone has the owner's controls, and on a Business box who it is and what waits for them. */
 public struct Me: Codable, Hashable, Sendable {
   public struct Person: Codable, Hashable, Sendable {
     public var id: String
@@ -85,6 +86,8 @@ public struct Me: Codable, Hashable, Sendable {
     public var role: String
     public var limitCents: Int?
   }
+  /** True when this phone was paired as the owner. nil from a computer that predates the field. */
+  public var owner: Bool?
   public var person: Person?
   public var company: String?
   /** Everyone on the box, so a screen can name who asked. */
