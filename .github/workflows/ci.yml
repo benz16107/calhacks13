@@ -1,11 +1,13 @@
 # What CI checks on every pull request and every push to main:
-#   npm ci, the unit tests, the type check, the public-repo check (no keys, machine names, addresses or private
-#   emails in committed files) and gitleaks over the whole history.
+#   check: npm ci, the unit tests (box, relay, apps and portal), the type check, the portal build (portal/dist must
+#          match its sources, because the box serves the committed copy), the public-repo check (no keys, machine
+#          names, addresses or private emails in committed files) and gitleaks over the whole history.
+#   site:  the docs site at gurtos.com builds, its internal links resolve and its privacy scan is clean.
 #
 # What it does NOT run: ./demo, the merge gate. The gate installs the box on an Ubuntu 24.04 machine with root,
-# creates Linux users, firewall rules and systemd units, and some steps spend model credit, so it needs our own
-# test machines. Run it on a VM before merging anything the box does (see CONTRIBUTING.md). A green CI run means the
-# repository is tidy and compiles; it does not mean the four demo moments work.
+# creates Linux users, firewall rules and systemd units, so it needs a VM. Run it on your own VM before merging
+# anything the box does (see CONTRIBUTING.md). A green CI run means the repository is tidy, compiles and passes its
+# unit tests; it does not mean the four moments work.
 name: CI
 
 on:
@@ -28,14 +30,17 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0 # gitleaks reads every commit
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24
           cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            portal/package-lock.json
 
       - name: Install gitleaks
         run: |
@@ -50,11 +55,42 @@ jobs:
           gitleaks version
 
       - run: npm ci
+      - run: npm ci --prefix portal # the portal's tests import its own packages
       - run: npm test
       - run: npm run check
+
+      - name: Portal build matches portal/dist
+        run: |
+          npm run build --prefix portal
+          changed=$(git status --porcelain -- portal/dist) # modified, deleted and new files
+          if [ -n "$changed" ]; then
+            echo "$changed"
+            echo "::error::portal/dist is not built from the current sources: run 'cd portal && npm ci && npm run build' and commit portal/dist"
+            exit 1
+          fi
 
       - name: Public-repo check (private details, and gitleaks on the files)
         run: node release/check.ts
 
       - name: gitleaks over all history
         run: gitleaks git --log-opts=--all --redact --no-banner .
+
+  site:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: site
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+
+      - run: npm ci
+      - run: npm run build
+      - name: Links and privacy scan
+        run: npm run check

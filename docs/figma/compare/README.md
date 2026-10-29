@@ -58,14 +58,10 @@ tasks, and its screens are captured at 1920 x 1080 (desktop) and 390 x 844 at 2x
 | [setup-02-network](setup-02-network.png) | 1.4% | `docs/figma/os-v2/setup/02-network.png` | `portal/screenshots/setup/02-network.png` |
 | [setup-03-name-and-time-zone](setup-03-name-and-time-zone.png) | 1% | `docs/figma/os-v2/setup/03-name-and-time-zone.png` | `portal/screenshots/setup/03-name-and-time-zone.png` |
 | [setup-04-owner](setup-04-owner.png) | 2.1% | `docs/figma/os-v2/setup/04-owner.png` | `portal/screenshots/setup/04-owner.png` |
-| [setup-05-ai-models](setup-05-ai-models.png) | 1.8% | `docs/figma/os-v2/setup/05-ai-models.png` | `portal/screenshots/setup/05-ai-models.png` |
+| [setup-05-ai-models](setup-05-ai-models.png) | 3.1% | `docs/figma/os-v2/setup/05-ai-models.png` | `portal/screenshots/setup/05-model-key.png` |
 | [setup-06-permissions](setup-06-permissions.png) | 1.8% | `docs/figma/os-v2/setup/06-permissions.png` | `portal/screenshots/setup/06-permissions.png` |
-| [setup-07-apps](setup-07-apps.png) | 8.3% | `docs/figma/os-v2/setup/07-apps.png` | `portal/screenshots/setup/07-apps.png` |
-| [setup-08-keys-for-apps](setup-08-keys-for-apps.png) | 2% | `docs/figma/os-v2/setup/08-keys-for-apps.png` | `portal/screenshots/setup/08-keys-for-apps.png` |
-| [setup-09-updates](setup-09-updates.png) | 0.8% | `docs/figma/os-v2/setup/09-updates.png` | `portal/screenshots/setup/09-updates.png` |
-| [setup-10-privacy-and-logs](setup-10-privacy-and-logs.png) | 1.4% | `docs/figma/os-v2/setup/10-privacy-and-logs.png` | `portal/screenshots/setup/10-privacy-and-logs.png` |
-| [setup-11-appearance](setup-11-appearance.png) | 1.8% | `docs/figma/os-v2/setup/11-appearance.png` | `portal/screenshots/setup/11-appearance.png` |
-| [setup-12-done](setup-12-done.png) | 2.5% | `docs/figma/os-v2/setup/12-done.png` | `portal/screenshots/setup/12-done.png` |
+| [setup-09-updates](setup-09-updates.png) | 1.4% | `docs/figma/os-v2/setup/09-updates.png` | `portal/screenshots/setup/07-updates.png` |
+| [setup-12-done](setup-12-done.png) | 2.7% | `docs/figma/os-v2/setup/12-done.png` | `portal/screenshots/setup/08-done.png` |
 
 ### GurtOS Server: Settings
 

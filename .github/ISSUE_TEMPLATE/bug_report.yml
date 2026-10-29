@@ -1,0 +1,87 @@
+name: Bug report
+description: Something does not work as the docs or the screen say it should
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Is it a security problem?** If it lets someone read a key, escape a task, skip an approval or change the
+        computer without its owner, do not file it here. Report it privately: see
+        [SECURITY.md](https://github.com/benz16107/calhacks13/blob/main/SECURITY.md).
+
+        Remove keys, tokens, pairing codes and addresses you do not want public from anything you paste.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you saw, and what you expected instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+  - type: dropdown
+    id: edition
+    attributes:
+      label: Edition
+      options:
+        - GurtOS Server
+        - GurtOS Personal
+        - Business turned on (Server or Personal)
+        - Box service installed from source on Ubuntu 24.04 (core/install.sh)
+        - Not installed (repository, tests, docs or the merge gate)
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version and build
+      description: >-
+        Server: Settings, About. Personal: GurtOS Settings, About GurtOS in the window menu. From source: the commit
+        (`git rev-parse --short HEAD`).
+      placeholder: 0.1.0-preview, build 20261024-1439-58576a7
+    validations:
+      required: true
+  - type: dropdown
+    id: install
+    attributes:
+      label: How it was installed
+      options:
+        - From a release ISO
+        - From an ISO I built (image/build)
+        - core/install.sh on Ubuntu 24.04
+        - Updated with box-update
+        - Not installed
+    validations:
+      required: true
+  - type: input
+    id: machine
+    attributes:
+      label: Machine
+      description: Real hardware or a VM, which hypervisor or cloud, x86_64 or arm64, memory and disk size.
+      placeholder: UTM on an M2 Mac, arm64, 4 GB, 32 GB disk
+    validations:
+      required: true
+  - type: dropdown
+    id: model
+    attributes:
+      label: Model key in use
+      description: Never paste the key itself.
+      options:
+        - Anthropic API key
+        - Factory API key
+        - None yet
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence
+      description: >-
+        A screenshot, the task's steps from Activity, or log lines (`journalctl -u box.service -n 100` where you have a
+        shell). Remove anything private first.

@@ -105,7 +105,7 @@
   "section": "GurtOS Server: setup",
   "name": "setup-05-ai-models",
   "figma": "docs/figma/os-v2/setup/05-ai-models.png",
-  "app": "portal/screenshots/setup/05-ai-models.png"
+  "app": "portal/screenshots/setup/05-model-key.png"
  },
  {
   "section": "GurtOS Server: setup",
@@ -115,39 +115,15 @@
  },
  {
   "section": "GurtOS Server: setup",
-  "name": "setup-07-apps",
-  "figma": "docs/figma/os-v2/setup/07-apps.png",
-  "app": "portal/screenshots/setup/07-apps.png"
- },
- {
-  "section": "GurtOS Server: setup",
-  "name": "setup-08-keys-for-apps",
-  "figma": "docs/figma/os-v2/setup/08-keys-for-apps.png",
-  "app": "portal/screenshots/setup/08-keys-for-apps.png"
- },
- {
-  "section": "GurtOS Server: setup",
   "name": "setup-09-updates",
   "figma": "docs/figma/os-v2/setup/09-updates.png",
-  "app": "portal/screenshots/setup/09-updates.png"
- },
- {
-  "section": "GurtOS Server: setup",
-  "name": "setup-10-privacy-and-logs",
-  "figma": "docs/figma/os-v2/setup/10-privacy-and-logs.png",
-  "app": "portal/screenshots/setup/10-privacy-and-logs.png"
- },
- {
-  "section": "GurtOS Server: setup",
-  "name": "setup-11-appearance",
-  "figma": "docs/figma/os-v2/setup/11-appearance.png",
-  "app": "portal/screenshots/setup/11-appearance.png"
+  "app": "portal/screenshots/setup/07-updates.png"
  },
  {
   "section": "GurtOS Server: setup",
   "name": "setup-12-done",
   "figma": "docs/figma/os-v2/setup/12-done.png",
-  "app": "portal/screenshots/setup/12-done.png"
+  "app": "portal/screenshots/setup/08-done.png"
  },
  {
   "section": "GurtOS Server: Settings",

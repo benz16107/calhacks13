@@ -1,6 +1,16 @@
 {
-  "name": "calhacks13",
+  "name": "gurtos",
+  "version": "0.1.0",
+  "description": "Operating systems built for AI agents: each task runs as its own Linux user in its own copy of the files, keys stay in a root-only vault, and risky steps wait for the owner.",
   "license": "Apache-2.0",
+  "homepage": "https://gurtos.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/benz16107/calhacks13.git"
+  },
+  "bugs": {
+    "url": "https://github.com/benz16107/calhacks13/issues"
+  },
   "private": true,
   "type": "module",
   "engines": {
@@ -13,7 +23,7 @@
   "scripts": {
     "box": "node --experimental-strip-types --disable-warning=ExperimentalWarning core/box.ts",
     "check": "tsc -p .",
-    "test": "node --experimental-strip-types --disable-warning=ExperimentalWarning --test --test-force-exit 'core/*.test.ts' 'relay/*.test.ts' 'tracks/*/*.test.ts'"
+    "test": "node --experimental-strip-types --disable-warning=ExperimentalWarning --test --test-force-exit 'core/*.test.ts' 'relay/*.test.ts' 'tracks/*/*.test.ts' 'portal/*.test.ts'"
   },
   "devDependencies": {
     "@types/node": "^22.20.5",
@@ -22,6 +32,5 @@
   "dependencies": {
     "@factory/droid-sdk": "0.10.0",
     "spacetimedb": "2.13.0"
-  },
-  "version": "0.1.0"
+  }
 }

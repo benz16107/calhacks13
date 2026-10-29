@@ -1,0 +1,13 @@
+# Only the GitHub Actions CI uses, once a month: they are pinned to commits, and an old pin breaks quietly when GitHub
+# retires its runtime. npm packages are not here on purpose: the six lockfiles (root, portal, site, showcase and two
+# design and app folders) would bring a steady stream of version bumps, and each one needs the VM merge gate, which CI cannot run.
+# Security fixes for npm packages come from Dependabot alerts in the repository's settings instead.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      actions:
+        patterns: ["*"]

@@ -4,7 +4,8 @@ GurtOS's own code is under the [Apache License 2.0](../LICENSE). An image is not
 packages, a few other programs and GurtOS's code, side by side, each under its own licence. Putting a GPL program
 and an Apache-2.0 program on the same disc does not change either licence. This page lists what the images and the
 repository contain, and flags what does not fit a plain Apache-2.0 story. It is a first pass by the maintainers, not
-legal advice, and the roadmap lists a proper licence and trademark audit before 1.0.
+legal advice, and the roadmap lists a proper licence and trademark review before 1.0. The npm numbers below were
+checked against `main`'s lockfiles on Oct 29, 2026; the image numbers come from v0.1.0-preview's SBOMs.
 
 The machine-readable lists are the SBOMs attached to each release, one for the source and one for each image
 (CycloneDX, and SPDX for the source). Each Ubuntu package's licence is read from its own
@@ -19,11 +20,13 @@ Apache-2.0: `core/`, `tracks/`, `portal/`, `personal/`, `image/`, `native/`, `re
 
 | What | Licence | Where | Why it is flagged |
 |---|---|---|---|
-| **SpacetimeDB** (Clockwork Laboratories) | Business Source License 1.1; becomes AGPL-3.0 with a linking exception on 2031-10-14 | Both images, as the box's live-status database; the `spacetimedb` client library (ISC) is a separate npm package | Not an open-source licence until the change date. The use grant allows one instance per box for your own use, which is how GurtOS runs it. It does **not** allow offering a database service to third parties. Anyone who builds a hosted service from GurtOS must read it. |
+| **Moss** (`@moss-js/moss` 1.21.0, `@moss-js/moss-core` 0.36.0 and its native library), by InferEdge | `@moss-js/moss`: PolyForm Shield 1.0.0. `moss-core` and its native library: marked "Proprietary", with no licence text in the package | On every box, through the Find app (`tracks/find`), which GurtOS Personal turns on in its first Setup. `npm ci` installs it with the box's other packages, so the images carry it | **Needs a decision before the next release.** PolyForm Shield is source-available, not open source: it forbids using the software in a product that competes with InferEdge's, and anyone who passes it on must pass on its terms and its "Required Notice" line (now in NOTICE). The native library's package grants no licence we could find to redistribute it. Options: written permission from InferEdge, Find downloading Moss when it is first turned on, or Find left out of the images |
+| **SpacetimeDB** (Clockwork Laboratories) | Business Source License 1.1. Each version becomes AGPL-3.0 with a linking exception on its own change date: 2031-10-14 for 2.13.0, 2031-10-25 for 2.14.0 | Both images, as the box's live-status database, installed by `core/setup.sh`; the version it installs sets the change date. The `spacetimedb` client library (ISC) is a separate npm package | Not an open-source licence until the change date. The use grant allows "no more than one SpacetimeDB instance in production" per application or service, and no "Database Service" for third parties. One person's box fits. Someone who runs many GurtOS boxes as one service, or offers GurtOS as a hosted service, must read it and may need a licence from Clockwork Labs |
 | **Factory's Droid CLI** | Factory's EULA and terms (internal use; no redistribution) | **Not in any image.** Each box downloads it on first start. | The one program GurtOS needs that we may not ship. The Droid SDK in `node_modules` is Apache-2.0 and is shipped. Roadmap: a worker we can redistribute. |
 | **linux-firmware** (about 25 packages) | Vendor licences, each marked "Redistributable-...", plus two marked "Unknown" | Both images | Binary firmware blobs, not open source. Ubuntu may redistribute them, so we do; the licences vary by vendor. The "Unknown" ones are `linux-firmware-misc` and `linux-firmware-qlogic`. |
 | **Ghostscript and the URW fonts** | AGPL-3 (with a font exception for the fonts) | Personal only (the printing stack) | AGPL's network clause applies if you modify and offer it as a service. GurtOS runs it unmodified as a separate program. |
 | **Video and audio codecs** (x264, GStreamer "bad" plugins, libde265, FLAC and others) | GPL-2+ with exceptions, LGPL, and a few marked unknown | Personal only | Some codecs are patent-encumbered in some countries, which a licence page cannot settle. Ubuntu ships them in `universe`. |
+| **Atkinson Hyperlegible Next and Mono** (Fontsource packages) | SIL Open Font License 1.1 | Bundled into `portal/dist` (every box, and app.gurtos.com) and the docs site | The OFL allows bundling with software if each copy carries the fonts' copyright notice and the licence. NOTICE now carries the copyright lines; `portal/dist` does not yet carry the licence text beside the font files |
 | **Ubuntu Font Licence 1.0** (`fonts-ubuntu`) | UFL 1.0 | Personal only | A font licence with a rename-on-modify rule. We do not modify the fonts. |
 | **Ubuntu and GNOME artwork and themes** (Yaru, wallpapers) | CC-BY-SA 3.0 and 4.0, and GPL | Personal only | Share-alike licences on artwork. We ship them unmodified. GurtOS adds its own icon and theme layer under Apache-2.0. |
 | **Papirus icons and Bibata cursors** | GPL-3 | Personal only | Copyleft artwork that GurtOS's icon theme is built from at install time. |
@@ -48,10 +51,27 @@ above.
 
 ## npm packages shipped on the box
 
-`npm ci --omit=dev` installs 107 packages: MIT 92, ISC 10, Apache-2.0 2 (the Droid SDK and one other),
-BSD-3-Clause 2, BSD-2-Clause 1. None is copyleft. The portal's build-time packages are bundled into `portal/dist`:
-preact (MIT), qrcode-generator (MIT), esbuild (MIT, build only) and the Atkinson Hyperlegible fonts from Fontsource
-(SIL Open Font License 1.1, which allows bundling and redistribution with software).
+`npm ci --omit=dev` (what `core/install.sh` runs on every box and in every image) installs 330 packages on x86_64
+or arm64, because the apps in `tracks/` are npm workspaces and their packages come too: MIT 288, Apache-2.0 18,
+ISC 10, BSD-3-Clause 6, BSD-2-Clause 2, 0BSD 2, Unlicense 1, and the three Moss packages flagged above (one
+PolyForm Shield, two "Proprietary"). None is copyleft. Most of the Apache-2.0 packages belong to the test-money
+apps (the x402, Solana and Sign-In with Ethereum libraries); the others are the Droid SDK, the OpenTelemetry API,
+`axios-retry`, `reflect-metadata` and TypeScript. TypeScript ships its own `NOTICE.txt`, which stays in its folder
+on the box.
+
+The licence of each package is the `license` field in `package-lock.json`, checked against the package's own
+`package.json` and licence file where they differ.
+
+## The portal and the docs site
+
+The portal is built into `portal/dist`, which every box serves. Its build-time packages (31 in
+`portal/package-lock.json`) are MIT, apart from the two OFL font packages above. What ends up in `portal/dist` is
+preact (MIT), qrcode-generator (MIT), the fonts, and GurtOS's own code. esbuild (MIT) only builds it.
+
+The docs site (`site/`, 476 packages) is not shipped on a box; only its built pages are published, at gurtos.com.
+Build tools under weaker copyleft run only at build time: lightningcss (MPL-2.0) and sharp's libvips binaries
+(LGPL-3.0-or-later), which make the site's images. The published pages carry the Starlight and Astro code (MIT) and
+the OFL fonts. Nothing in either lockfile is incompatible with publishing the site under Apache-2.0.
 
 ## The native apps
 
@@ -61,6 +81,7 @@ preact (MIT), qrcode-generator (MIT), esbuild (MIT, build only) and the Atkinson
 
 ## Before 1.0
 
-Everything in the "flagged" table needs a decision a lawyer should make, not us: the SpacetimeDB terms if GurtOS is
-ever offered as a hosted service, the firmware and codec rules per country, the Ubuntu trademark terms for a
-derivative that ships an Ubuntu desktop, and a replacement for the Droid CLI. They are on the [roadmap](../ROADMAP.md).
+Everything in the "flagged" table needs a decision a lawyer should make, not us: the Moss terms and its native
+library, the SpacetimeDB terms if GurtOS is run as a fleet or offered as a hosted service, the firmware and codec
+rules per country, the Ubuntu trademark terms for a derivative that ships an Ubuntu desktop, and a replacement for
+the Droid CLI. One smaller fix needs no lawyer: copy the fonts' licence into `portal/dist`. They are on the [roadmap](../ROADMAP.md).

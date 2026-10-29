@@ -1,6 +1,7 @@
 # GurtOS
 
-Instructions for coding agents (and people) working in this repo. Contributor guide: `CONTRIBUTING.md`.
+Instructions for coding agents (and people) working in this repo. Contributor guide: `CONTRIBUTING.md`. To set up
+a GurtOS computer for someone through an agent, follow `AGENT-SETUP.md` instead.
 
 GurtOS is a set of operating systems built for AI agents, watched and controlled from a web
 portal and a phone. It started as a Cal Hacks 13.0 project. It is a preview: see `README.md`.
@@ -49,7 +50,10 @@ and how its screen and controls are presented.
 - SpacetimeDB, self-hosted on the box (TypeScript module), holds live task status and approvals. The action
   log stays on disk so undo and resume don't depend on it.
 - The box's screen and the portal are one web app (`portal/`). Its design comes from Figma.
-- Every app ("track") is one folder that registers itself. The core never imports a track.
+- Every app ("track") is one folder that registers itself. The core never imports a track. A new box turns on only
+  the model app; every other app stays off until the owner turns it on, and must work or stay off without its keys.
+- A box works with no relay. Remote access and phone push go through a relay (`relay/`); the hosted one at
+  `box.gurtos.com` is offline, so anything that calls it must fail with a plain sentence, not hang.
 
 ## Layout
 
@@ -64,8 +68,10 @@ and how its screen and controls are presented.
 - `site/` the public docs at gurtos.com. `showcase/` the Cal Hacks showcase at calhacks.gurtos.com.
 - `native/` the GurtOS apps for iPhone, Apple Watch and Mac (one SwiftUI project, `native/apple`) and the Android APK
   (`native/android`). They use the box API like the portal; `native/demo.ts` checks their calls.
-- `release/` how releases are built, signed and published, and the public-readiness audit.
-- `docs/` design notes and the Figma log. `spikes/` throwaway experiments from the first night.
+- `release/` how releases are built, signed and published, the licence report, and the public-readiness audit.
+- `relay/` the relay for remote access and push. `try/` the public live demo. Both run on their own machines.
+- `docs/` design notes and the hackathon's records; `docs/README.md` says which are current. `spikes/` throwaway
+  experiments from the first night.
 - `demo` the merge gate (below). `deploy` installs origin/main as the box service on a machine you name.
 
 On a box: `BOX_HOME=/var/lib/box` holds `log.jsonl`, `workspaces/`, `views/` and `tasks/<id>/`. The vault is
@@ -74,17 +80,21 @@ On a box: `BOX_HOME=/var/lib/box` holds `log.jsonl`, `workspaces/`, `views/` and
 
 ## Rules for every change
 
-- `npm test` and `npm run check` pass on any machine.
+- `npm test` and `npm run check` pass on any machine (after `npm ci` and `npm ci --prefix portal`).
+  `node release/check.ts` prints "clean". CI runs these, the portal build and the site build on every pull request.
 - **`./demo` is the merge gate.** It ships your checkout to an Ubuntu 24.04 VM with root and runs the four
   moments, then every `tracks/*/demo.ts`. Exit 0 means you may merge; main must always pass. Runs from different
   checkouts are isolated and can share one VM. Real Droid is off by default because it spends model credit:
   `./demo` uses a scripted worker, and `./demo --live-droid` runs the real steps. An app's own real-model step
   must be gated the same way.
 - Done means a step in `demo` that shows your part working, and a README.md in your folder.
+- A change to `portal/src` ships with a rebuilt `portal/dist` (`cd portal && npm run build`): the box serves the
+  committed copy, and CI fails when it does not match.
 - A change to `core/` or the contract is its own change, reviewed on its own.
 - **No keys, tokens, passwords, seeds or pairing codes in the repo**, and no machine names, IP addresses or
   personal email addresses in committed files. Keys live in `/etc/box/vault.env` on the box, or git-ignored files.
 - Never run box code as root on your own machine: it creates users, firewall rules and services. Use a VM.
 - Label test or simulated payments as test, in the UI and the README.
 - Write for people: plain words, no em dashes, short sentences.
-- No Co-Authored-By or "Generated with" lines in commits or pull requests.
+- No Co-Authored-By or "Generated with" lines in commits or pull requests. Pull requests need a DCO sign-off
+  (`git commit -s`, see `CONTRIBUTING.md`); only the person you work for can make that statement, so ask them.

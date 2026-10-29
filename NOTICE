@@ -3,17 +3,25 @@ Copyright 2026 Ben Zhou
 
 This product is licensed under the Apache License, Version 2.0 (see LICENSE).
 
-The GurtOS images and this repository also contain third-party software, each under its own licence:
+The GurtOS images and this repository also contain third-party software, each under its own licence. The full list
+and the licences that need care are in release/licenses.md.
 
 - Ubuntu 24.04 packages. Each package's licence is in /usr/share/doc/<package>/copyright on an installed
   system. GurtOS is not affiliated with or endorsed by Canonical; Ubuntu is a trademark of Canonical Ltd.
 - Node.js, under the MIT licence.
-- SpacetimeDB, by Clockwork Laboratories, under the Business Source License 1.1, which changes to the GNU Affero
-  General Public License v3.0 with a linking exception on 2031-10-14. Each GurtOS machine runs one SpacetimeDB
-  instance for its own use.
+- SpacetimeDB, by Clockwork Laboratories, under the Business Source License 1.1. Each version changes to the GNU
+  Affero General Public License v3.0 with a linking exception on its own change date (2031-10-14 for version
+  2.13.0, 2031-10-25 for 2.14.0). Each GurtOS machine runs one SpacetimeDB instance for its own use.
 - npm packages, including Factory's droid SDK (Apache-2.0) and the SpacetimeDB client (ISC). Each package's
   licence is in its folder under node_modules.
-- The Atkinson Hyperlegible fonts (Fontsource packages), under the SIL Open Font License 1.1.
+- Moss, by InferEdge Inc., used by the Find app. @moss-js/moss is licensed under the PolyForm Shield License 1.0.0
+  (https://polyformproject.org/licenses/shield/1.0.0). @moss-js/moss-core and its native library are InferEdge's
+  proprietary software. Their terms are in their folders under node_modules.
+  Required Notice: Copyright InferEdge Inc. (https://inferedge.dev)
+- The Atkinson Hyperlegible Next and Mono fonts, from the Fontsource packages, under the SIL Open Font License 1.1
+  (https://openfontlicense.org).
+  Copyright 2020-2024 The Atkinson Hyperlegible Next Project Authors (https://github.com/googlefonts/atkinson-hyperlegible-next)
+  Copyright 2020-2024 The Atkinson Hyperlegible Mono Project Authors (https://github.com/googlefonts/atkinson-hyperlegible-next-mono)
 
 Factory's Droid CLI is not distributed with GurtOS. A GurtOS machine downloads it from Factory's servers on
 first start, and its use is governed by Factory's terms.

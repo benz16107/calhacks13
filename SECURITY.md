@@ -1,57 +1,78 @@
 # Security policy
 
-GurtOS is a preview and has not had an outside audit. We still want to hear about problems, and we will treat a
-report seriously.
+GurtOS is a preview maintained by one person, and it has not had an outside audit. We still want to hear about
+problems, and we treat every report seriously.
 
 ## Report a vulnerability
 
 Use GitHub's private vulnerability reporting:
 **<https://github.com/benz16107/calhacks13/security/advisories/new>**
 
-Please do not open a public issue or pull request for a security problem. A private report reaches the
-maintainers only, and lets us fix it before it is public.
+Please do not open a public issue or pull request for a security problem. A private report reaches the maintainer
+only, and lets us fix it before it is public.
 
 Include:
-- what you ran and what you saw, and what you expected;
-- the version (`/etc/os-release` on the box, or the release tag) and the edition (Server or Personal);
-- whether it needs a paired phone, a task, or only network access to the box;
+- what you ran, what you saw, and what you expected;
+- the version and build (Server: Settings, About; Personal: GurtOS Settings, About GurtOS; from source: the commit)
+  and the edition;
+- what the attacker needs: a task on the box, a paired phone, a page an agent reads, or only network access;
 - anything that shows it works, such as a log excerpt or a short script.
 
-We acknowledge a report within a few days and tell you what we plan to do. This is a small project, so we cannot
-promise a fix time, and we cannot pay bounties. We will credit you in the fix if you want that.
+If reporting through GitHub is not possible for you, open a public issue that says only that you need a private way
+to report a security problem, with no details. We will arrange one.
 
-If reporting through GitHub is not possible for you, open a public issue that says only that you need a private
-way to report a security problem, and no details. We will arrange one.
+## What to expect
+
+- We aim to acknowledge a report within 7 days and to tell you what we plan to do. One person reads these, so it
+  can take longer; a second message after 7 days is welcome.
+- We cannot promise a fix date, and we cannot pay bounties.
+- A fix lands on `main` first and ships in the next release. We publish an advisory on GitHub once the fix is
+  released, and credit you in it and in the release notes unless you ask us not to.
+- Please give us 90 days, or until the fix is released if that is sooner, before you publish details.
 
 ## Supported versions
 
 | Version | Supported |
 |---|---|
-| `main` | Fixes land here first |
-| v0.1.0-preview | Yes, until the next release. It is a preview: expect fixes to come as a new image |
-| anything older | No |
+| `main` | Yes. Fixes land here first |
+| The next release | Yes, from when it is published |
+| v0.1.0-preview | No. Several security bugs found since are fixed on `main` only. Use it with test keys, and move to the next release when it is out |
+| Anything older | No |
 
-GurtOS updates as a whole system image (`box-update`). A fix reaches a running box when it applies the next
-signed image.
-
-## What we have published about security
-
-- **The threat model:** what GurtOS protects, who it defends against and what it does not:
-  [gurtos.com/docs/security/threat-model](https://gurtos.com/docs/security/threat-model/), and how it is built:
-  [gurtos.com/docs/security/model](https://gurtos.com/docs/security/model/).
-- **The attack scoreboard:** sixteen OS-level attacks run against a real box on every merge, with the results as
-  they came out, including the two that are **not covered** (a disk fill, and data sent out through a host the task
-  was allowed to reach): [`tracks/armadin/SCOREBOARD.md`](tracks/armadin/SCOREBOARD.md). The mapping to the OWASP
-  lists is in [`tracks/armadin/OWASP.md`](tracks/armadin/OWASP.md).
-- **The known limits** in the [roadmap](ROADMAP.md): one kernel shared by all tasks, no disk quotas, no disk
-  encryption, release keys kept in files, no outside audit.
+GurtOS updates as a whole system image. On GurtOS Personal, `sudo box-update apply <url>` installs a newer signed
+image. A release build of GurtOS Server has no shell, so it cannot install an update in place yet: moving it to a
+new release means reinstalling, which erases its disk. Adding an in-product updater is on the [roadmap](ROADMAP.md).
 
 ## Scope
 
-In scope: the box service and its API, the network proxy and firewall, the sandbox around a task, the vault, the
-update and rollback path and its signature checks, pairing and the phone and desktop apps, the relay in `relay/`,
-and the images and release files.
+In scope:
+- the box service and its API (`core/`), the network proxy and firewall, the sandbox around each task, the vault
+  and the action log;
+- first-run setup, pairing, and setup from another computer (port 7701);
+- the update and rollback path and its signature checks (`image/`), and the release files and their signatures;
+- the portal (`portal/`), the GurtOS Personal desktop layer (`personal/`) and the phone, Watch, Mac and Android apps
+  (`native/`);
+- the relay in `relay/` and the live demo in `try/`, as code you can run. Their hosted copies are offline;
+- the web app at app.gurtos.com.
 
-Out of scope: attacks that need root on the box already, a stolen paired phone that the owner has not revoked, the
-behaviour of a language model (a model that can be talked into asking for something is expected, and the box's
-approvals and limits are what contain it), and findings in software we only package (report those upstream).
+Out of scope:
+- attacks that already need root on the box, or the owner's own account on GurtOS Personal;
+- a stolen paired phone that the owner has not revoked;
+- a language model that can be talked into asking for something. That is expected; the box's approvals, budgets
+  and network limits are what contain it. A way to get past them is in scope;
+- data a task sends to a host it was allowed to reach. GurtOS does not inspect it today, and says so (below);
+- findings in software we only package, such as Ubuntu's packages, Node.js or SpacetimeDB: please report those
+  upstream;
+- the demo and test apps' own sandbox services (test payments, devnet money), unless the finding reaches the box.
+
+## What we have published
+
+- **The threat model:** what GurtOS protects, who it defends against and what it does not:
+  [gurtos.com/docs/security/threat-model](https://gurtos.com/docs/security/threat-model/). How it is built:
+  [gurtos.com/docs/security/model](https://gurtos.com/docs/security/model/).
+- **The attack scoreboard:** sixteen OS-level attacks run against a real box in the merge gate, with their results.
+  Fifteen are caught. The one not covered is data sent out through a host the task was allowed to reach:
+  [`tracks/armadin/SCOREBOARD.md`](tracks/armadin/SCOREBOARD.md). The mapping to the OWASP lists is in
+  [`tracks/armadin/OWASP.md`](tracks/armadin/OWASP.md).
+- **The known limits** in the [roadmap](ROADMAP.md): one kernel shared by every task, a disk limit that is a check
+  every 2 seconds rather than a quota, no disk encryption, release keys kept in files, no outside audit.
