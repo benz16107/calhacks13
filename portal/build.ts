@@ -18,6 +18,9 @@ fs.mkdirSync(`${dir}dist/kit`);
 fs.writeFileSync(`${dir}dist/kit/index.html`, fs.readFileSync(`${dir}src/kit/index.html`, 'utf8').replaceAll('%PRODUCT%', PRODUCT));
 // The installable app: name, colors and icons. The icons are drawn in src/pwa/icon.svg (node src/pwa/icons.mjs).
 for (const size of [180, 192, 512]) fs.copyFileSync(`${dir}src/pwa/icon-${size}.png`, `${dir}dist/icon-${size}.png`);
+// The fonts are bundled into dist/, so their SIL Open Font License travels with them.
+fs.mkdirSync(`${dir}dist/assets`);
+for (const font of ['next', 'mono']) fs.copyFileSync(`${dir}node_modules/@fontsource/atkinson-hyperlegible-${font}/LICENSE`, `${dir}dist/assets/LICENSE-atkinson-hyperlegible-${font}.txt`);
 fs.writeFileSync(
   `${dir}dist/manifest.webmanifest`,
   JSON.stringify(
