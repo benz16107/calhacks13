@@ -29,6 +29,7 @@ const ui = (...args) => Util.spawn([UI, ...args]);
 const SHOWN = 3; // rows per popover section; the rest are one click away in the GurtOS app
 const VOICE = '/opt/box/personal/voice.py'; // "Talk to your computer": press once to listen, press again to stop
 const VOICE_STATE = `${GLib.get_user_runtime_dir()}/gurtos-voice`; // voice.py writes "listening <pid>" here while it hears you
+const UNLOCK_TO_APPROVE_MS = 2 * 60 * 1000; // "Unlock to approve" holds for one unlock within 2 minutes
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 
@@ -87,13 +88,19 @@ class Box {
 
 // ---------- the top-bar item (Figma "GurtOS Personal OS", screen 2) ----------
 
-const ago = iso => {
+/** A time today, in the clock format the owner chose in GNOME's Settings (24-hour or AM/PM). */
+const ago = (iso, twelve) => {
     try {
-        return GLib.DateTime.new_from_iso8601(iso, null).to_local().format('%H:%M');
+        return GLib.DateTime.new_from_iso8601(iso, null).to_local().format(twelve ? '%l:%M %p' : '%H:%M').trim();
     } catch (e) {
         return '';
     }
 };
+
+/** What a menu shows, minus each running task's latest step: an open menu is rebuilt only when this changes, so a
+ *  step update never pulls a row (or the Approve button) out from under the pointer or the keyboard focus. */
+const shape = (ext, c) => JSON.stringify([ext.online === false, !!ext.settings?.paused, ext.settings?.quietHours ?? null, c,
+    ext.pending.map(a => [a.id, a.costCents, a.question, a.task]), ext.tasks.filter(t => isRunning(t) || needsReview(t)).map(t => [t.id, t.title, t.review])]);
 
 /** A labelled switch with a subtitle, for the popover and the Agents menu. */
 function switchRow(title, subtitle, on, onToggle) {
@@ -149,6 +156,10 @@ class Indicator extends PanelMenu.Button {
         this.runIcon.icon_name = off ? 'network-offline-symbolic' : paused ? 'media-playback-pause-symbolic'
             : c.running ? 'media-playback-start-symbolic' : 'gurtos-tasks-symbolic';
         this.runBox.visible = off || !c.needsYou || c.running > 0 || paused;
+        const now = shape(this.ext, c);
+        if (this.menu.isOpen && now === this._shape)
+            return;
+        this._shape = now;
         this.rebuild(); // kept current, so the menu opens on what is true now
     }
 
@@ -255,10 +266,10 @@ class Indicator extends PanelMenu.Button {
         const tcol2 = new St.Label({text: task?.title ?? 'A task', style_class: 'gurtos-approval-title'});
         tcol2.clutter_text.ellipsize = 3;
         tcol.add_child(tcol2);
-        tcol.add_child(new St.Label({text: [a.payee, task ? `asked ${ago(task.updatedAt)}` : null].filter(Boolean).join(' · '), style_class: 'gurtos-subtitle'}));
+        tcol.add_child(new St.Label({text: [a.payee, task ? `asked ${ago(task.updatedAt, this.ext.twelveHour())}` : null].filter(Boolean).join(' · '), style_class: 'gurtos-subtitle'}));
         top.add_child(tcol);
         card.add_child(top);
-        const q = new St.Label({text: a.question, style_class: 'gurtos-approval-question'});
+        const q = new St.Label({text: a.question ?? '', style_class: 'gurtos-approval-question'});
         q.clutter_text.set({line_wrap: true, ellipsize: 0});
         card.add_child(q);
         const buttons = new St.BoxLayout({style_class: 'gurtos-approval-buttons', x_expand: true});
@@ -289,15 +300,26 @@ class AgentsToggle extends QuickMenuToggle {
         const {tasks, pending, settings} = this.ext;
         const c = counts(tasks, pending);
         const quiet = !!settings?.quietHours?.enabled;
+        const off = this.ext.online === false;
         this.checked = c.running > 0 || c.needsYou > 0; // on while agents run
-        this.subtitle = this.ext.online === false ? 'Offline' : c.needsYou ? `${c.needsYou} need${c.needsYou === 1 ? 's' : ''} you` : settings?.paused ? 'Paused'
+        this.subtitle = off ? 'Offline' : c.needsYou ? `${c.needsYou} need${c.needsYou === 1 ? 's' : ''} you` : settings?.paused ? 'Paused'
             : c.running ? `${c.running} running` : quiet ? 'Quiet hours' : 'Nothing running';
+        const now = shape(this.ext, c);
+        if (this.menu.isOpen && now === this._shape)
+            return;
+        this._shape = now;
         this.menu.removeAll();
-        if (settings && 'paused' in settings)
-            this.menu.addMenuItem(switchRow('Pause all agents', 'Running tasks stop where they are', !!settings.paused, v => this.ext.patch({paused: v})));
+        // Offline, nothing here could reach GurtOS: the switches and Talk are off, like the top bar's (I-5).
+        if (settings && 'paused' in settings) {
+            const pause = switchRow('Pause all agents', 'Running tasks stop where they are', !!settings.paused, v => this.ext.patch({paused: v}));
+            pause.setSensitive(!off);
+            this.menu.addMenuItem(pause);
+        }
         const q = settings?.quietHours ?? {};
-        this.menu.addMenuItem(switchRow('Quiet hours', quiet ? `Until ${q.to ?? '07:00'}. Requests wait without a sound` : `${q.from ?? '22:00'} to ${q.to ?? '07:00'}. Requests wait without a sound`,
-            quiet, v => this.ext.patch({quietHours: {enabled: v}})));
+        const quietRow = switchRow('Quiet hours', quiet ? `Until ${q.to ?? '07:00'}. Requests wait without a sound` : `${q.from ?? '22:00'} to ${q.to ?? '07:00'}. Requests wait without a sound`,
+            quiet, v => this.ext.patch({quietHours: {enabled: v}}));
+        quietRow.setSensitive(!off);
+        this.menu.addMenuItem(quietRow);
         this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
         for (const [label, n, amber, open] of [['Needs you', c.needsYou, true, () => ui('app', 'tasks')], ['Running', c.running, false, () => ui('app', 'tasks')]]) {
             const item = new PopupMenu.PopupMenuItem(label);
@@ -307,7 +329,7 @@ class AgentsToggle extends QuickMenuToggle {
             item.connect('activate', open);
             this.menu.addMenuItem(item);
         }
-        this.menu.addAction('Talk to your computer', () => Util.spawn([VOICE]));
+        this.menu.addAction('Talk to your computer', () => Util.spawn([VOICE])).setSensitive(!off);
         this.menu.addAction('GurtOS Settings', () => ui('settings'));
     }
 });
@@ -357,6 +379,11 @@ export default class GurtOS extends Extension {
         this.start();
     }
 
+    /** GNOME's own clock setting, so times here read like the top bar's clock. */
+    twelveHour() {
+        return this.iface?.get_string('clock-format') === '12h';
+    }
+
     showVoice() {
         let state = '';
         try {
@@ -384,11 +411,15 @@ export default class GurtOS extends Extension {
         this.lockCards = null;
         if (!Main.sessionMode.isLocked || this.notOwner) {
             if (this.approveAfterUnlock && !Main.sessionMode.isLocked) {
-                const id = this.approveAfterUnlock;
+                const {id, at} = this.approveAfterUnlock;
                 this.approveAfterUnlock = null;
                 const a = this.pending.find(x => x.id === id);
-                const title = (this.tasks.find(t => t.id === a?.task)?.title ?? 'The task').replace(/\.$/, '');
-                this.answer(id, true).then(ok => ok && this.notice(`Approved: ${title}`, 'It carries on now.'));
+                // Only the unlock that followed the press, and only while it still waits: a cancelled prompt must
+                // not turn a later, ordinary unlock into a spend the owner has forgotten about.
+                if (a && Date.now() - at < UNLOCK_TO_APPROVE_MS) {
+                    const title = (this.tasks.find(t => t.id === a.task)?.title ?? 'The task').replace(/\.$/, '');
+                    this.answer(id, true).then(ok => ok && this.notice(`Approved: ${title}`, 'It carries on now.'));
+                }
             }
             return;
         }
@@ -407,7 +438,7 @@ export default class GurtOS extends Extension {
             const lt = new St.Label({text: `${(titles[a.task] ?? 'A task').replace(/\.$/, '')} needs you`, style_class: 'gurtos-approval-title'});
             lt.clutter_text.ellipsize = 3;
             card.add_child(lt);
-            const q = new St.Label({text: a.question, style_class: 'gurtos-approval-question'});
+            const q = new St.Label({text: a.question ?? '', style_class: 'gurtos-approval-question'});
             q.clutter_text.set({line_wrap: true, ellipsize: 0});
             card.add_child(q);
             const buttons = new St.BoxLayout({style_class: 'gurtos-approval-buttons', x_expand: true});
@@ -418,7 +449,7 @@ export default class GurtOS extends Extension {
             unlock.child.add_child(new St.Label({text: 'Unlock to approve'}));
             deny.connect('clicked', () => this.answer(a.id, false));
             unlock.connect('clicked', () => {
-                this.approveAfterUnlock = a.id;
+                this.approveAfterUnlock = {id: a.id, at: Date.now()};
                 Main.screenShield._dialog?._showPrompt?.();
             });
             buttons.add_child(deny);
@@ -455,14 +486,23 @@ export default class GurtOS extends Extension {
     }
 
     async start() {
-        try { // approvals belong to the computer's owner; other accounts see nothing
+        if (await this.isOtherAccount())
+            return;
+        this.box.follow(() => this.changed(), () => this.offline());
+    }
+
+    /** Approvals belong to the computer's owner; other accounts see nothing. Asked again once GurtOS answers, when it
+     *  was still starting at login. */
+    async isOtherAccount() {
+        try {
             const owner = await this.box.api('GET', '/api/owner');
+            this.ownerKnown = true;
             if (owner && owner.user !== GLib.get_user_name()) {
                 this.notOwner = true;
-                return this.showForMode();
+                this.showForMode();
             }
         } catch (e) {}
-        this.box.follow(() => this.changed(), () => this.offline());
+        return !!this.notOwner;
     }
 
     changed() {
@@ -495,7 +535,9 @@ export default class GurtOS extends Extension {
         } catch (e) {
             return this.offline();
         }
-        if (!this.indicator)
+        if (this.indicator && !this.ownerKnown)
+            await this.isOtherAccount();
+        if (!this.indicator || this.notOwner)
             return;
         this.online = true;
         this.notifyChanges();
@@ -597,7 +639,7 @@ export default class GurtOS extends Extension {
         for (const key of post.filter(k => k.startsWith('approval:'))) {
             const a = approvals[key.slice(9)];
             const title = (tasks[a.task]?.title ?? 'A task').replace(/\.$/, '');
-            const q = a.question.trim();
+            const q = (a.question ?? '').trim();
             // Critical: the task waits for you, so the banner stays. Quiet hours or login: it waits in the list, no banner.
             this.post(key, {
                 title: `${title} needs you`,

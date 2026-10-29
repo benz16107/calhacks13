@@ -8,17 +8,19 @@
 import json
 import os
 import subprocess
+import threading
 import time
 import urllib.parse
 import urllib.request
 
-from gi.repository import GObject, Nautilus
+from gi.repository import GLib, GObject, Nautilus
 
 UI = '/opt/box/personal/box-ui.py'
 BOX = 'http://127.0.0.1:7700'
 EMBLEM = 'emblem-gurtos-agent'
 _cache = [0.0, []]  # (fetched at, tasks): Files asks per folder, so the task list is read at most every 3 seconds
 _changed = {}  # kept task id -> the real paths it added or changed (a kept task's diff does not change)
+_failed = {}  # task id -> when its diff last failed: Files asks once per file, so a slow box must not stall each one
 
 
 def ui(*args):
@@ -44,9 +46,12 @@ def get(path):
 def changed_paths(task):
     """The real files a kept task added or modified, from its diff."""
     if task['id'] not in _changed:
+        if time.monotonic() - _failed.get(task['id'], -60) < 60:
+            return set()
         try:
             d = get(f"/api/tasks/{urllib.parse.quote(task['id'], safe='')}/diff")
-        except Exception:  # noqa: BLE001 (try again on the next look)
+        except Exception:  # noqa: BLE001 (try again in a minute)
+            _failed[task['id']] = time.monotonic()
             return set()
         roots, folder = d.get('roots'), task.get('folder')
         out = set()
@@ -75,22 +80,25 @@ def agent_tasks(path):
 
 
 def keep(task, file):
-    req = urllib.request.Request(f"{BOX}/api/tasks/{urllib.parse.quote(task['id'], safe='')}/keep", data=b'{}', method='POST',
-                                 headers={'content-type': 'application/json'})
-    try:
-        with urllib.request.urlopen(req, timeout=10) as r:
-            out = json.loads(r.read() or b'{}')
-        if out.get('conflicts'):
-            ui('review', task['id'])  # you edited the same files: the task page explains
-        else:
-            n = len(out.get('kept', []))
-            where = ', '.join(os.path.basename(f) for f in (task.get('folders') or [task.get('folder')]) if f) or 'your folder'
-            subprocess.Popen(['notify-send', '-a', 'GurtOS', '-i', 'dev.box.Box', f"Kept {n} change{'s' if n != 1 else ''} in {where}",
-                              'Undo Task in Files or in GurtOS puts the files back.'])
-    except Exception:  # noqa: BLE001
-        ui('review', task['id'])
-    _cache[0] = 0
-    file.invalidate_extension_info()
+    """Keep, off Files' own thread: a big Keep takes seconds, and Files must not freeze meanwhile."""
+    def work():
+        req = urllib.request.Request(f"{BOX}/api/tasks/{urllib.parse.quote(task['id'], safe='')}/keep", data=b'{}', method='POST',
+                                     headers={'content-type': 'application/json'})
+        try:
+            with urllib.request.urlopen(req, timeout=600) as r:
+                out = json.loads(r.read() or b'{}')
+            if out.get('conflicts'):
+                ui('review', task['id'])  # you edited the same files: the task page explains
+            else:
+                n = len(out.get('kept', []))
+                where = ', '.join(os.path.basename(f) for f in (task.get('folders') or [task.get('folder')]) if f) or 'your folder'
+                subprocess.Popen(['notify-send', '-a', 'GurtOS', '-i', 'dev.box.Box', f"Kept {n} change{'s' if n != 1 else ''} in {where}",
+                                  'Undo Task in Files or in GurtOS puts the files back.'])
+        except Exception:  # noqa: BLE001 (refused, or GurtOS stopped: the task page says where it stands)
+            ui('review', task['id'])
+        _cache[0] = 0
+        GLib.idle_add(lambda: file.invalidate_extension_info() and False)
+    threading.Thread(target=work, daemon=True).start()
 
 
 class GurtOSFiles(GObject.GObject, Nautilus.MenuProvider, Nautilus.InfoProvider):

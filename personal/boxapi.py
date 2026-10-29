@@ -91,3 +91,36 @@ def where(task):
     if len(folders) > 2:
         return f'{len(folders)} folders'
     return ' and '.join(tilde(f) for f in folders)
+
+
+def remote_view():
+    """GET /api/remote (remote access through the GurtOS relay), or None when this box has none or the caller isn't the owner."""
+    try:
+        return api('GET', '/api/remote')
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def relay_up(host):
+    """Whether the relay answers (GET /v1/status). It is the only way a phone reaches this computer from another
+    network, and the hosted relay can be offline: then GurtOS says so instead of showing a code that cannot work."""
+    if not host:
+        return False
+    try:
+        with urllib.request.urlopen(f'https://{host}/v1/status', timeout=5) as r:
+            return r.status == 200
+    except Exception:  # noqa: BLE001 (DNS, refused, TLS, timeout: all mean a phone can't get through it now)
+        return False
+
+
+def phone_reach(code, remote, relay_ok):
+    """How a phone reaches this computer with a pairing code: 'anywhere', 'wifi' (the same network) or None.
+    `code` is POST /api/pair/start's answer; `remote` is GET /api/remote's (or None)."""
+    if remote and remote.get('state') == 'connected':
+        return 'anywhere'
+    if remote and remote.get('enabled'):
+        return None  # the code points at the remote address, which isn't connected
+    fragment = (code.get('url') or '').partition('#')[2]
+    if 'rv=' in fragment and relay_ok:  # during setup the phone can ask, through the relay, for remote access
+        return 'anywhere'
+    return 'wifi' if code.get('boxUrl', '').startswith('http://') else None

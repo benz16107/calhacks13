@@ -36,6 +36,7 @@ export function failure(error) {
   if (/key was not accepted/i.test(e)) return { key: true, text: e.split(/\n/)[0].trim() }; // the core's own sentence
   if (/\b401\b|authentication_error|invalid x-api-key|invalid api key/i.test(e)) return { key: true, text: 'Your Anthropic key was not accepted. Change it in Settings, Keys.' };
   if (noModelKey(error)) return { key: true, text: 'Add an Anthropic API key in GurtOS Settings first.' };
-  const first = e.split(/\n/)[0].trim();
+  const line = e.split(/\n/)[0].trim();
+  const first = line.charAt(0).toUpperCase() + line.slice(1);
   return { key: false, text: first ? (/[.?!]$/.test(first) ? first : first + '.') : 'It stopped with an error.' };
 }

@@ -252,10 +252,16 @@ def main(argv):
     else:
         if os.path.exists(STATE):  # already listening: this press means "that's all"
             try:
-                os.kill(int(open(STATE).read().split()[1]), signal.SIGUSR1)
+                pid = int(open(STATE).read().split()[1])
+                with open(f'/proc/{pid}/cmdline', 'rb') as f:  # after a crash the id may belong to another program by now
+                    if b'voice.py' not in f.read():
+                        raise ProcessLookupError(pid)
+                os.kill(pid, signal.SIGUSR1)
+                return 0
             except (OSError, ValueError, IndexError):
-                OWN.append(1)  # a stale file from a crash: clear it
-            return 0
+                OWN.append(1)  # a stale file from a crash: clear it, and listen as asked
+                say_state(None)
+                OWN.clear()
         model = start_model()
         if model is None:
             loading = subprocess.run(['systemctl', 'is-active', 'box-voice'], capture_output=True, text=True).stdout.strip() == 'activating'

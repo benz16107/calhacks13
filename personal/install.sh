@@ -6,9 +6,9 @@
 # What it adds, for every account on the machine:
 #   the GurtOS session           GNOME with GurtOS built in (theme/install.sh): its Shell mode loads the GurtOS
 #                                extension (top bar, Agents tile, approvals as notifications), plus GurtOS defaults
-#   GurtOS (app, first in dock)  the portal in its own window
+#   GurtOS (app, first in dock)  the native app for agents, approvals, Keep and Undo
 #   Files: Ask an agent…         right-click folders; the agent works on copies until you keep or undo
-#   GurtOS Setup                 at the owner's first login, after GNOME's own setup: models, folders, permissions, apps
+#   GurtOS Setup                 at the owner's first login, after GNOME's own setup: model key, folders, permissions, phone
 set -euo pipefail
 here=$(cd "$(dirname "$0")" && pwd)
 [[ $(id -u) == 0 ]] || { echo 'personal/install.sh: run it as root' >&2; exit 1; }

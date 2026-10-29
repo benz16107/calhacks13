@@ -1,7 +1,7 @@
 [Desktop Entry]
 Type=Application
 Name=GurtOS Setup
-Comment=Set up agents on this computer: models, folders, permissions and apps. Opens once, for the owner.
+Comment=Set up agents on this computer: model key, folders, permissions and a phone. Opens once, for the owner.
 Exec=/opt/box/personal/box-ui.py setup --first-login
 Icon=dev.box.Box
 NoDisplay=true

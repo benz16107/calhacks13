@@ -16,7 +16,7 @@ from datetime import datetime
 
 HERE = os.path.dirname(os.path.realpath(__file__))
 sys.path.insert(0, HERE)
-from boxapi import BOX, api, ask_spec, quote  # noqa: E402
+from boxapi import BOX, api, ask_spec, phone_reach, quote  # noqa: E402
 
 LOGIC = os.path.join(HERE, 'shell', 'gurtos@gurtos.dev', 'logic.js')
 NODE = shutil.which('node') or '/usr/local/bin/node'
@@ -196,7 +196,7 @@ check(any(k['name'] == 'GURTOS_SETUP_TEST' and k['setAt'] for k in names) and se
 
 apps = api('GET', '/api/apps?all=1')
 check(apps and all('access' in x and 'enabled' in x for x in apps),
-      f'the Apps step lists all {len(apps)} apps with what each reaches and the keys it needs')
+      f"Settings' Apps page lists all {len(apps)} apps with what each reaches and the keys it needs")
 
 # Talk to your computer: what is said becomes an answer from the box, and voice alone never spends.
 import importlib.util  # noqa: E402
@@ -253,6 +253,26 @@ check(r['hosts'] == [] and r['user'].startswith('box-'), f"a task's page shows w
 plan = tl.go_back_plan(api('GET', '/api/tasks'), tl.since(tl.SPANS[0][1]))
 check(any(t['id'] == t_app['id'] for t in plan) and [t['updatedAt'] for t in plan] == sorted((t['updatedAt'] for t in plan), reverse=True),
       f"Time Machine's go back takes out what finished in the last 15 minutes, newest first ({len(plan)} tasks)")
+
+# Undo after Keep leaves the task done with review "undone": Time Machine must not offer to undo it again.
+kept_then_undone = api('GET', f"/api/tasks/{t3['id']}")['task']
+check(kept_then_undone.get('review') == 'undone' and tl.can_take_out(kept_then_undone) is None
+      and all(t['id'] != t3['id'] for t in tl.go_back_plan(api('GET', '/api/tasks'), tl.since(None))),
+      'a task whose Keep was undone is not offered again by Time Machine, alone or in Undo every task since')
+
+# Times read like GNOME's clock: 24-hour, or AM/PM when the owner chose it.
+noon = datetime(2026, 10, 29, 13, 44)
+tl.TWELVE = True
+twelve = tl.hm(noon)
+tl.TWELVE = False
+check(twelve == '1:44 PM' and tl.hm(noon) == '13:44', f'times follow the clock setting: {twelve} or {tl.hm(noon)}')
+
+# Pairing a phone is offered only when a phone can reach this computer (the hosted relay can be offline).
+lan = {'url': 'https://app.gurtos.com/pair#code=ab12&lan=192.168.1.20%3A7700', 'boxUrl': 'http://192.168.1.20:7700/pair#ab12'}
+rv = {'url': 'https://app.gurtos.com/pair#code=ab12&rv=xyz&n=Home'}
+check(phone_reach(lan, None, False) == 'wifi' and phone_reach(rv, None, False) is None and phone_reach(rv, None, True) == 'anywhere'
+      and phone_reach(rv, {'enabled': True, 'state': 'error'}, True) is None and phone_reach({'url': 'x'}, {'enabled': True, 'state': 'connected'}, False) == 'anywhere',
+      'a pairing code is offered for the same Wi-Fi, for anywhere only while the relay answers, and never while remote access is down')
 
 # GurtOS Settings' System update row reads GET /api/update; a demo box isn't installed from an image, so it hides.
 u = api('GET', '/api/update')

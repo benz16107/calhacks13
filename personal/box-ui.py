@@ -18,6 +18,7 @@ gi.require_version('Adw', '1')
 from gi.repository import Adw, Gdk, Gio, GLib, Gtk  # noqa: E402
 
 sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
+import tasklogic  # noqa: E402
 from agentsapp import AgentsWindow  # noqa: E402
 from askwin import AskWindow  # noqa: E402
 from boxapi import api, background  # noqa: E402
@@ -37,6 +38,9 @@ class Box(Adw.Application):
 
     def do_startup(self):
         Adw.Application.do_startup(self)
+        source = Gio.SettingsSchemaSource.get_default()
+        if source and source.lookup('org.gnome.desktop.interface', True):  # times read like the top bar's clock
+            tasklogic.TWELVE = Gio.Settings(schema_id='org.gnome.desktop.interface').get_string('clock-format') == '12h'
         # The GurtOS system on libadwaita: light tokens always, the dark ones on top while GNOME is dark.
         display = Gdk.Display.get_default()
         # gurtos.css styles GurtOS's own widgets; Figma's libadwaita files (theme/colors) set the named colours.
@@ -70,9 +74,9 @@ class Box(Adw.Application):
         tries = [0]
 
         def check():
-            tries[0] += 1
             if gnome_setup and not os.path.exists(gnome_done):
-                return True  # GNOME's own setup is still on screen
+                return True  # GNOME's own setup is still on screen; that wait is not one of the tries below
+            tries[0] += 1
 
             def decide(state, err):
                 owner, setup = state if not err else (None, None)

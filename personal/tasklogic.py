@@ -3,6 +3,7 @@
 from datetime import datetime, timedelta, timezone
 
 LIVE = ('queued', 'running', 'waiting')
+TWELVE = False  # GNOME's clock is set to AM/PM; box-ui.py reads org.gnome.desktop.interface clock-format at start
 DONE_SHOWN = 20  # the Agents page lists this many finished tasks; Activity and Time Machine have the rest
 
 
@@ -14,12 +15,17 @@ def when(iso):
     return t if t.tzinfo else t.replace(tzinfo=timezone.utc)
 
 
+def hm(t):
+    """A time of day as GNOME's clock shows it: 13:44, or 1:44 PM."""
+    return t.strftime('%-I:%M %p') if TWELVE else t.strftime('%H:%M')
+
+
 def clock(iso):
     t = when(iso)
     if not t:
         return ''
     t = t.astimezone()
-    return t.strftime('%H:%M') if t.date() == datetime.now().astimezone().date() else t.strftime('%b %-d, %H:%M')
+    return hm(t) if t.date() == datetime.now().astimezone().date() else f"{t.strftime('%b %-d')}, {hm(t)}"
 
 
 def dollars(cents):
@@ -105,6 +111,9 @@ def event_text(e, me=None):
     if t == 'approval.asked':
         return 'dialog-question-symbolic', 'Asks: ' + (e.get('approval') or {}).get('question', '')
     if t == 'approval.answered':
+        closed = {'undo': 'Closed: the task was undone', 'task ended': 'Closed: the task ended'}.get(e.get('by'))  # no one answered
+        if closed and not e.get('approved'):
+            return 'process-stop-symbolic', closed
         return ('object-select-symbolic' if e.get('approved') else 'process-stop-symbolic'), f"{'Approved' if e.get('approved') else 'Denied'} by {who(e.get('by'), me)}"
     if t == 'cost':
         return 'gurtos-money-symbolic', f"Spent {dollars(e.get('cents'))} on {e.get('what', 'the model')}"
@@ -132,6 +141,7 @@ def failure_text(error):
     first = e.strip().splitlines()[0] if e.strip() else ''
     if first.startswith('{') or first.startswith('['):
         return 'It stopped with an error. Technical details has the rest.'
+    first = first[:1].upper() + first[1:]  # a sentence, after "Could not finish."
     return (first if first[-1:] in '.?!' else first + '.') if first else 'It stopped with an error.'
 
 
@@ -170,10 +180,11 @@ def matches(e, titles, query='', task=None, app=None):
 
 
 def can_take_out(t):
-    """How Time Machine undoes a finished task: `undo` throws its copy away, `unkeep` reverses a Keep."""
+    """How Time Machine undoes a finished task: `undo` throws its copy away, `unkeep` reverses a Keep. A task whose
+    Keep was already undone stays `done` with review `undone`: there is nothing left to take out."""
     if t.get('review') == 'kept':
         return 'unkeep'
-    if t['state'] == 'done':
+    if t['state'] == 'done' and t.get('review') != 'undone':
         return 'undo'
     return None
 

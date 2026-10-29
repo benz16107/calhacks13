@@ -12,8 +12,8 @@ from gi.repository import Adw, Gdk, GLib, Gtk, Pango
 
 import tasklogic as tl
 from apptiles import tile
-from boxapi import BOX, api, background, quote, tilde
-from setupwin import PERSONAL_APPS
+from boxapi import BOX, api, background, quote, tilde, ui
+from setupwin import PERSONAL_APPS, TEST_APPS
 
 ME = GLib.get_user_name()
 
@@ -94,6 +94,7 @@ class AgentsWindow(Adw.ApplicationWindow):
         super().__init__(application=app, title='GurtOS', default_width=1120, default_height=760, width_request=360, height_request=420)
         self.tasks, self.pending, self.settings, self.apps, self.system, self.events = [], [], {}, [], {}, []
         self.timer = 0
+        self.busy = set()  # tasks with a Keep or an Undo on its way: a second click must not send it again
         self.current = None  # the root page's id: agents, activity, timemachine or app:<name>
         self.refreshers = {}
 
@@ -139,7 +140,7 @@ class AgentsWindow(Adw.ApplicationWindow):
         def done(state, err):
             if err:
                 self.set_offline(True)
-                if first:
+                if first and not self.stop.is_set():
                     self.nav.replace([page('Agents', '', Adw.StatusPage(icon_name='network-offline-symbolic', title="GurtOS isn't answering",
                                                                        description='Your files are unchanged. GurtOS keeps trying.'))])
                     GLib.timeout_add_seconds(3, lambda: self.refresh(first=True) and False)
@@ -223,7 +224,8 @@ class AgentsWindow(Adw.ApplicationWindow):
         self.badge = Gtk.Label(css_classes=['gurt-count'], visible=False, valign=Gtk.Align.CENTER)
         items = [('agents', 'Agents', 'applications-science-symbolic'), ('activity', 'Activity', 'view-list-symbolic'),
                  ('timemachine', 'Time Machine', 'document-open-recent-symbolic')]
-        items += [(f"app:{a['name']}", short(a['title']), a) for a in self.apps]
+        test = lambda a: a.get('track') in TEST_APPS and 'test' not in short(a['title']).lower()  # noqa: E731 ("GurtOS Test Store" says it)
+        items += [(f"app:{a['name']}", short(a['title']) + (' (test)' if test(a) else ''), a) for a in self.apps]
         if self.system.get('edition') == 'business':
             items.append(('business', 'Company (opens in your browser)', 'system-users-symbolic'))
         for n, (pid, title, icon) in enumerate(items):
@@ -259,11 +261,17 @@ class AgentsWindow(Adw.ApplicationWindow):
         p = builders[pid]() if pid in builders else self.app_page(pid[4:])
         self.nav.replace([p])
         self.split.set_show_content(True)
+        self.select(pid)
+
+    def select(self, pid):
+        """Highlight the sidebar row for this page, or none (an app that is off has no row)."""
         r = self.nav_list.get_first_child()
-        while r:
-            if getattr(r, 'pid', None) == pid and self.nav_list.get_selected_row() is not r:
-                self.nav_list.select_row(r)
+        while r and getattr(r, 'pid', None) != pid:
             r = r.get_next_sibling()
+        if r is None:
+            self.nav_list.unselect_all()
+        elif self.nav_list.get_selected_row() is not r:
+            self.nav_list.select_row(r)
 
     def go(self, route):
         """A route from the dock, the top bar, a notification, search or Files: '', tasks, task/<id>, activity, timemachine,
@@ -275,6 +283,7 @@ class AgentsWindow(Adw.ApplicationWindow):
             self.current = f'app:{name}'
             self.refreshers.clear()
             self.nav.replace([self.app_page(name, route)])
+            self.select(self.current)
         elif route.startswith('task/'):
             if self.current != 'agents':
                 self.show_root('agents')
@@ -374,8 +383,9 @@ class AgentsWindow(Adw.ApplicationWindow):
             if s['done']:
                 g = group('Done')
                 for t in s['done']:
-                    words = {'done': 'Kept' if t.get('review') == 'kept' else 'Finished', 'failed': 'Could not finish', 'undone': 'Undone'}[t['state']]
-                    icon = {'done': 'object-select-symbolic', 'failed': 'dialog-error-symbolic', 'undone': 'edit-undo-symbolic'}[t['state']]
+                    st = 'undone' if t.get('review') == 'undone' else t['state']  # Undo after Keep leaves the task done
+                    words = {'done': 'Kept' if t.get('review') == 'kept' else 'Finished', 'failed': 'Could not finish', 'undone': 'Undone'}[st]
+                    icon = {'done': 'object-select-symbolic', 'failed': 'dialog-error-symbolic', 'undone': 'edit-undo-symbolic'}[st]
                     g.add(row(t['title'], f"{words} {tl.clock(t.get('updatedAt'))} · {tl.dollars(t.get('costCents'))}", icon, activate=lambda t=t: self.open_task(t['id'])))
                 out.append(g)
             body.fill(*out)
@@ -389,6 +399,7 @@ class AgentsWindow(Adw.ApplicationWindow):
         body = Scroller()
         state = {}
         undo = icon_button('edit-undo-symbolic', 'Undo task', lambda: self.confirm_undo(state['detail']['task']))
+        undo.set_visible(False)  # until the task is loaded
         replay = Gtk.Button(label='Replay', valign=Gtk.Align.CENTER, tooltip_text='Play this task back step by step', visible=False)
         replay.connect('clicked', lambda _b: self.open_replay(task_id))
         p = page('Task', '', body, undo, replay)
@@ -399,7 +410,7 @@ class AgentsWindow(Adw.ApplicationWindow):
                     return body.fill(Adw.StatusPage(icon_name='dialog-error-symbolic', title='Could not load this task', description=GLib.markup_escape_text(str(err))))
                 detail, diff = result
                 state['detail'] = detail
-                undo.set_visible(detail['task']['state'] != 'undone' and detail['task'].get('review') != 'undone')
+                undo.set_visible(detail['task']['state'] != 'undone' and detail['task'].get('review') != 'undone' and not self.offline)
                 replay.set_visible(detail['task']['state'] not in ('running', 'queued'))
                 body.fill(*self.task_widgets(detail, diff, p))
             background(lambda: (api('GET', f'/api/tasks/{quote(task_id)}'), api('GET', f'/api/tasks/{quote(task_id)}/diff')), done)
@@ -551,7 +562,12 @@ class AgentsWindow(Adw.ApplicationWindow):
                          'Undo task', t['id'], 'undo')
 
     def keep(self, task_id):
+        if task_id in self.busy:
+            return
+        self.busy.add(task_id)
+
         def done(out, err):
+            self.busy.discard(task_id)
             if err:
                 self.toast(f'Keep did not work: {err}')
             elif out.get('conflicts'):
@@ -581,6 +597,11 @@ class AgentsWindow(Adw.ApplicationWindow):
 
     def take_out(self, steps, then=None):
         """Undo or put back one task or several, newest first; stops at the first that cannot go (you edited its files)."""
+        steps = [(i, p) for i, p in steps if i not in self.busy]
+        if not steps:
+            return
+        self.busy.update(i for i, _p in steps)
+
         def work():
             done = []
             for task_id, path in steps:
@@ -591,6 +612,7 @@ class AgentsWindow(Adw.ApplicationWindow):
             return done, None
 
         def finished(result, err):
+            self.busy.difference_update(i for i, _p in steps)
             if err:
                 self.toast(f'That did not work: {err}')
             else:
@@ -837,6 +859,7 @@ class AgentsWindow(Adw.ApplicationWindow):
             d.add_response('cancel', 'Cancel')
             d.add_response('go', f"Undo {len(plan)} task{'s' if len(plan) != 1 else ''}")
             d.set_response_appearance('go', Adw.ResponseAppearance.DESTRUCTIVE)
+            d.set_default_response('cancel')
             d.connect('response', lambda _d, r: r == 'go' and self.take_out([(t['id'], tl.can_take_out(t)) for t in plan]))
             d.present()
 
@@ -890,7 +913,21 @@ class AgentsWindow(Adw.ApplicationWindow):
             Gtk.UriLauncher(uri=uri).launch(self, None, None)
             return True
         web.connect('decide-policy', policy)
+        stack = Gtk.Stack()
+        stack.add_named(web, 'web')
+
+        def loaded(w, event):  # an app that is off answers 404: say so in words, not with the box's error text
+            res = w.get_main_resource()
+            status = res.get_response().get_status_code() if event == WebKit.LoadEvent.FINISHED and res and res.get_response() else 0
+            if status in (403, 404) and w.get_uri().startswith(f"{BOX}/t/") and not stack.get_child_by_name('off'):
+                off = Adw.StatusPage(icon_name='application-x-addon-symbolic', title=f"{short(a['title'])} is off",
+                                     description='Turn it on in GurtOS Settings, Apps.', child=button('Open Settings', lambda: ui('settings', 'apps'), 'pill'))
+                off.get_child().set_halign(Gtk.Align.CENTER)
+                stack.add_named(off, 'off')
+            if status in (403, 404) and w.get_uri().startswith(f"{BOX}/t/"):
+                stack.set_visible_child_name('off')
+        web.connect('load-changed', loaded)
         web.load_uri(url)
-        reload = icon_button('view-refresh-symbolic', 'Reload', lambda: web.reload())
+        reload = icon_button('view-refresh-symbolic', 'Reload', lambda: (stack.set_visible_child_name('web'), web.reload()))
         outside = icon_button('web-browser-symbolic', 'Open in your browser', lambda: Gtk.UriLauncher(uri=web.get_uri() or url).launch(self, None, None))
-        return page(a['title'], 'App', web, outside, reload)
+        return page(a['title'], 'Test money only' if a.get('track') in TEST_APPS else 'App', stack, outside, reload)

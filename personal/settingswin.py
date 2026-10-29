@@ -7,9 +7,10 @@ import subprocess
 import urllib.parse
 
 import setupwin
+import tasklogic as tl
 from gi.repository import Adw, Gio, GLib, Gtk
 
-from boxapi import api, background
+from boxapi import api, background, relay_up, remote_view
 from setupwin import SetupWindow, boxed, page, row
 
 PAGES = [  # (id, title, icon)
@@ -29,11 +30,12 @@ NAME = re.compile(r'^[a-z0-9-]{3,30}$')  # a box's name under box.gurtos.com; th
 
 
 def remote_state():
-    """GET /api/remote, or None when this box has no remote access API or this user is not the owner: the section hides."""
-    try:
-        return api('GET', '/api/remote')
-    except Exception:  # noqa: BLE001
-        return None
+    """GET /api/remote with `relayUp` (whether the relay answers), or None when this box has no remote access API or
+    this user is not the owner: the section hides."""
+    r = remote_view()
+    if r is not None:
+        r['relayUp'] = r.get('state') == 'connected' or relay_up(r.get('relay'))
+    return r
 
 
 def when_saved(iso):
@@ -45,7 +47,7 @@ def when_saved(iso):
         return 'Saved'
     now = datetime.now().astimezone()
     day = 'today' if t.date() == now.date() else 'yesterday' if (now.date() - t.date()).days == 1 else t.strftime('%b %-d')
-    return f"Saved {day} at {t.strftime('%-I:%M %p')}"
+    return f"Saved {day} at {tl.hm(t)}"
 
 
 def button_for(label, fn):
@@ -103,7 +105,7 @@ class SettingsWindow(SetupWindow):
     """Reuses SetupWindow's step builders; its own window, view switcher and pages."""
 
     def __init__(self, app, start='agents'):
-        Adw.ApplicationWindow.__init__(self, application=app, title='GurtOS Settings', default_width=860, default_height=760)
+        Adw.ApplicationWindow.__init__(self, application=app, title='GurtOS Settings', default_width=960, default_height=760)
         setupwin.SHOW_TITLES = False  # the view switcher names the page; Setup's big titles are for setup
         self.settings, self.vault, self.apps, self.boxes, self.taken, self.model = {}, [], [], [], {'folders': True}, None
         self.system, self.devices, self.remote, self.update = {}, [], None, None
@@ -148,7 +150,10 @@ class SettingsWindow(SetupWindow):
                 holder = self.holders[self.at]
                 while (c := holder.get_first_child()) is not None:
                     holder.remove(c)
-                return holder.append(Adw.StatusPage(icon_name='dialog-error-symbolic', title="GurtOS isn't answering", description=GLib.markup_escape_text(str(err)), vexpand=True))
+                again = Gtk.Button(label='Try again', halign=Gtk.Align.CENTER, css_classes=['pill'])
+                again.connect('clicked', lambda _b: self.reload())
+                return holder.append(Adw.StatusPage(icon_name='network-offline-symbolic', title="GurtOS isn't answering",
+                                                    description='It may still be starting. Nothing changed while it was away.', child=again, vexpand=True))
             setup, self.settings, self.vault, self.apps, self.boxes, self.system, self.devices, self.remote, self.update = state
             self.model = setup.get('model') or ({'ready': setup['modelKey']} if 'modelKey' in setup else None)
             self.ready = True
@@ -182,8 +187,8 @@ class SettingsWindow(SetupWindow):
         scroller, box = page('Agents', '')
         take(self.models(), box)
         st = self.settings
-        lst = section(box, 'Updates', 'GurtOS updates as a whole system and rolls itself back if a new version is not healthy.')
-        if self.update:
+        if self.update:  # installed from a GurtOS image; a desktop on plain Ubuntu updates with Ubuntu's tools
+            lst = section(box, 'Updates', 'GurtOS updates as a whole system and rolls itself back if a new version is not healthy.')
             title, sub = update_words(self.update)
             r = Adw.ActionRow(title=GLib.markup_escape_text(title), subtitle=GLib.markup_escape_text(sub))
             icon = {'ready': 'software-update-available-symbolic', 'trial': 'emblem-synchronizing-symbolic',
@@ -194,12 +199,8 @@ class SettingsWindow(SetupWindow):
             elif 'checkedAt' in self.update:  # the box can look for updates
                 r.add_suffix(button_for('Check now', self.check_update))
             lst.append(r)
-        auto = Adw.SwitchRow(title='Update automatically', subtitle='Installs at night; running tasks resume after the restart', active=bool(st.get('autoUpdate', True)))
-        auto.connect('notify::active', lambda r, _p: self.patch({'autoUpdate': r.get_active()}))
-        channel = Adw.ComboRow(title='Channel', model=Gtk.StringList.new(['Stable', 'Beta']), selected=1 if st.get('updateChannel') == 'beta' else 0)
-        channel.connect('notify::selected', lambda r, _p: self.patch({'updateChannel': 'beta' if r.get_selected() else 'stable'}))
-        lst.append(auto)
-        lst.append(channel)
+        # No switch for automatic updates or a channel: nothing installs updates by itself yet, so they would promise
+        # what GurtOS doesn't do. The box keeps those settings for an updater that reads them.
         lst = section(box, 'Action log', 'It records everything every agent did. It never holds a key.')
         days = st.get('logRetentionDays', 365)
         keep = Adw.ComboRow(title='Keep the action log for', model=Gtk.StringList.new(['30 days', '90 days', '1 year', '10 years']),
@@ -317,7 +318,9 @@ class SettingsWindow(SetupWindow):
         saved = {v['name']: v for v in self.vault}
         groups = [('Claude', [k for k, _l, _h in setupwin.MODEL_KEYS])]
         for a in sorted((a for a in self.apps if a.get('enabled') and a['id'] in setupwin.PERSONAL_APPS), key=setupwin.app_title):
-            names = [k['name'] for k in (a.get('access') or {}).get('secrets', []) if k['name'] not in groups[0][1]]
+            # An app's optional keys (another provider, a paid extra) show once set; Add a key… below adds any of them.
+            names = [k['name'] for k in (a.get('access') or {}).get('secrets', [])
+                     if k['name'] not in groups[0][1] and (not k.get('optional') or k['name'] in saved)]
             if names:
                 groups.append((setupwin.app_title(a), names))
         for title, names in groups:
@@ -401,6 +404,13 @@ class SettingsWindow(SetupWindow):
             off.connect('clicked', lambda _b: self.remote_off())
             addr.add_suffix(off)
             lst.append(addr)
+            return
+        if not r.get('relayUp'):  # the hosted relay can be offline: say so, rather than fail on every name
+            lan = any(b.get('self') and str(b.get('url') or '').startswith('http://') for b in self.boxes)
+            down = row('Not available right now', f"This goes through the GurtOS relay at {relay}, and it isn't answering."
+                       + (' Phones on the same Wi-Fi as this computer can still pair.' if lan else ''), 'network-offline-symbolic')
+            down.add_suffix(button_for('Try again', lambda: self.reload('phone')))
+            lst.append(down)
             return
         entry = Adw.EntryRow(title='Name for this computer')
         entry.add_suffix(Gtk.Label(label=f'.{relay}', css_classes=['gurt-secondary']))

@@ -1,7 +1,8 @@
-# GurtOS Setup for Personal: the owner's first login, after GNOME's own setup. Seven steps, one decision each; the
+# GurtOS Setup for Personal: the owner's first login, after GNOME's own setup. Six steps, one decision each; the
 # step list on the left shows progress (docs/figma/system.md, "Setup"; frames in docs/figma/os-v2/personal/setup-*).
-# Every answer goes to the box: settings with PATCH /api/settings, keys with the write-only PUT /api/vault/<NAME>, apps
-# with /api/apps/<id>/enable|disable, each step with POST /api/setup/step, then POST /api/setup/finish.
+# Every answer goes to the box: settings with PATCH /api/settings, keys with the write-only PUT /api/vault/<NAME>,
+# each step with POST /api/setup/step, then POST /api/setup/finish. Setup offers no apps: it turns Find on the first
+# time, and every other app stays optional in GurtOS Settings, Apps.
 import os
 import shutil
 import subprocess
@@ -10,14 +11,15 @@ import urllib.request
 
 from gi.repository import Adw, Gdk, Gio, GLib, Gtk
 
+import tasklogic as tl
 from apptiles import tile
-from boxapi import api, background, dollars, tilde
+from boxapi import api, background, dollars, phone_reach, relay_up, remote_view, tilde
 
 STEPS = [  # (id for /api/setup/step, label in the step list and the header)
     ('welcome', 'Welcome'), ('models', 'AI models'), ('folders', 'Folders'), ('safety', 'Permissions'),
-    ('apps', 'Apps'), ('phone', 'Pair a phone'), ('done', 'Done'),
+    ('phone', 'Pair a phone'), ('done', 'Done'),
 ]
-SKIPPABLE = {'apps', 'phone'}
+SKIPPABLE = {'phone'}
 THRESHOLDS = [100, 500, 2000, 10000]  # cents: always ask before a single spend over this
 BUDGETS = [0, 50, 100, 500, 2000]  # cents: the budget of a task that names none
 SAFE = {'approvalThresholdCents': 500, 'defaultBudgetCents': 100}  # Personal's defaults: ask over $5, budget $1
@@ -29,6 +31,7 @@ KEYS_LINE = "GurtOS keeps keys where agents can't read them. You can replace a k
 # Apps that suit one person on their own computer. The rest (a company's finance desk, team tools, the box's own
 # plumbing, developer samples) stay out of Personal's lists.
 PERSONAL_APPS = ('find', 'shopper', 'wallet', 'factory', 'fetch', 'mana', 'apify')
+TEST_APPS = {'shopper', 'wallet', 'fetch'}  # they pay with test cards, devnet USDC or test FET, never real money
 
 
 def check_key(name, value):
@@ -157,22 +160,37 @@ class SetupWindow(Adw.ApplicationWindow):
         self.set_content(Adw.NavigationSplitView(sidebar=sidebar, content=Adw.NavigationPage(title='Setup', child=view),
                                                  min_sidebar_width=260, max_sidebar_width=300))
         self.set_default_widget(self.next)
-        self.builders = [self.welcome, self.models, self.folders, self.safety, self.app_list, self.phone, self.done]
+        self.builders = [self.welcome, self.models, self.folders, self.safety, self.phone, self.done]
         self.present()
-        background(lambda: (api('GET', '/api/setup'), api('GET', '/api/settings'), api('GET', '/api/vault'), api('GET', '/api/apps?all=1'),
-                            api('GET', '/api/boxes')), self.loaded)
+        self.load()
 
     # ---------- state and moving between steps ----------
 
+    def load(self):
+        background(lambda: (api('GET', '/api/setup'), api('GET', '/api/settings'), api('GET', '/api/vault'), api('GET', '/api/apps?all=1'),
+                            api('GET', '/api/boxes')), self.loaded)
+
     def loaded(self, state, err):
         if err:
-            self.stack.add_named(Adw.StatusPage(icon_name='dialog-error-symbolic', title="GurtOS isn't answering",
-                                                description=f'{err}. Setup opens again at your next login.'), 'error')
-            self.next.set_sensitive(False)
+            old = self.stack.get_child_by_name('error')
+            if old:
+                self.stack.remove(old)
+            again = Gtk.Button(label='Try again', halign=Gtk.Align.CENTER, css_classes=['pill'])
+            again.connect('clicked', lambda _b: self.load())
+            self.stack.add_named(Adw.StatusPage(icon_name='network-offline-symbolic', title="GurtOS isn't answering",
+                                                description='It may still be starting. Try again in a moment. Setup also opens again at your next login.',
+                                                child=again), 'error')
+            self.stack.set_visible_child_name('error')
+            for b in (self.next, self.back, self.skip):
+                b.set_sensitive(False)
             return
+        self.back.set_sensitive(True)
+        self.skip.set_sensitive(True)
         setup, self.settings, self.vault, self.apps, self.boxes = state
         self.model = setup.get('model') or ({'ready': setup['modelKey']} if 'modelKey' in setup else None)
         self.taken = setup.get('steps', {})
+        if not setup.get('done') and 'apps' not in self.taken:
+            self.first_apps()
         first_open = next((i for i, (sid, _l) in enumerate(STEPS) if sid not in self.taken and sid != 'done'), len(STEPS) - 1)
         self.go(0 if setup.get('done') else first_open)
 
@@ -425,15 +443,26 @@ class SetupWindow(Adw.ApplicationWindow):
         self.summary.set_label('A spend over the limit always asks.')
         return scroller
 
+    def first_apps(self):
+        """The first Setup: Find on and every other app off, so nothing runs that the owner didn't pick. No app is
+        offered here; they stay optional in GurtOS Settings, Apps. Recorded as the 'apps' step, so it happens once."""
+        self.taken['apps'] = True
+        changes = []
+        for a in self.apps:
+            want = a['id'] == 'find'
+            if a.get('enabled') != want and a['id'] not in ('spacetime', 'anthropic'):
+                a['enabled'] = want
+                changes.append((a['id'], want))
+
+        def work():
+            for app_id, want in changes:
+                api('POST', f"/api/apps/{app_id}/{'enable' if want else 'disable'}", {})
+            api('POST', '/api/setup/step', {'id': 'apps'})
+        background(work, lambda _o, _e: None)
+
     def app_list(self):
-        scroller, box = page('Choose apps', 'Find is on. Turn on others when you want them; each says what it needs first.')
-        if SHOW_TITLES and 'apps' not in self.taken and not getattr(self, 'apps_reset', False):  # Setup only, never Settings
-            self.apps_reset = True  # first time here: everything off but Find, so nothing runs that the owner didn't pick
-            for a in self.apps:
-                want = a['id'] == 'find'
-                if a.get('enabled') != want and a['id'] not in ('spacetime', 'anthropic'):
-                    a['enabled'] = want
-                    background(lambda a=a, want=want: api('POST', f"/api/apps/{a['id']}/{'enable' if want else 'disable'}", {}), lambda _o, _e: None)
+        """GurtOS Settings, Apps: every app for one person, all optional. Setup offers none."""
+        scroller, box = page('Apps', 'All optional. Each one says what it reaches and which keys it needs before it is on.')
         lst = boxed()
         lst.connect('row-activated', lambda _l, r: getattr(r, 'on_activate', lambda: None)())
         mine = [a for a in self.apps if a['id'] in PERSONAL_APPS]
@@ -459,6 +488,8 @@ class SetupWindow(Adw.ApplicationWindow):
             shown.append(chip('Needs a key', 'dialog-password-symbolic', attention=bool(a.get('enabled'))))
         if access.get('hosts'):
             shown.append(chip('Uses the internet', 'web-browser-symbolic'))
+        if a['id'] in TEST_APPS:
+            shown.append(chip('Test money only', 'dialog-information-symbolic'))
         for c in shown:
             chips.append(c)
         text.append(chips)
@@ -554,29 +585,61 @@ class SetupWindow(Adw.ApplicationWindow):
     def phone(self):
         scroller, box = page('Pair a phone (optional)', 'Approvals and running agents can come to your phone when you are away from this computer.')
         self.summary.set_label('You can pair a phone later in GurtOS settings.')
-        # The code's link always opens app.gurtos.com. During setup it can reach this computer through the relay from any network;
-        # afterwards that needs Reach this computer from anywhere (Settings, Phone), or the same Wi-Fi.
+        # The code's link opens app.gurtos.com, which then reaches this computer: on the same network through its
+        # address there, or from anywhere through the GurtOS relay (remote access, or during setup a request to turn it
+        # on). Only what can work right now is offered.
         card = Gtk.Box(spacing=24, css_classes=['card'], margin_top=6)
         steps = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10, margin_top=18, margin_bottom=18, margin_start=18, margin_end=18, valign=Gtk.Align.START)
-        for n, line in enumerate(("Point your phone's camera at the code.", 'Check that the phone shows the same code.',
-                                  'Name it. It can approve and undo, and never holds a key.'), 1):
-            steps.append(Gtk.Label(label=f'{n}. {line}', xalign=0, wrap=True))
         card.append(steps)
         box.append(card)
+        wait = Gtk.Label(label='Getting a pairing code…', xalign=0, css_classes=['gurt-secondary'])
+        steps.append(wait)
 
-        def show(code, err):
+        def show(state, err):
+            steps.remove(wait)
             if err:
                 return steps.append(Gtk.Label(label=f'No pairing code: {err}', xalign=0, wrap=True))
+            code, remote, relay_ok = state
+            reach = phone_reach(code, remote, relay_ok)
+            if reach is None:
+                if remote and remote.get('enabled'):
+                    why = ("This computer's remote address isn't connected, so a phone can't reach it right now. "
+                           'GurtOS Settings, Phone, says why.')
+                elif relay_ok and not SHOW_TITLES:
+                    why = 'A phone can reach this computer once you turn on Reach this computer from anywhere above.'
+                else:
+                    why = ("No phone can reach this computer yet. GurtOS here answers only this computer, and the GurtOS relay "
+                           "that reaches it from anywhere isn't answering.")
+                steps.append(Gtk.Label(label=why, xalign=0, wrap=True))
+                if SHOW_TITLES:
+                    steps.append(Gtk.Label(label='Skip this step. You can pair a phone later in GurtOS Settings, Phone.', xalign=0, wrap=True,
+                                           css_classes=['gurt-caption', 'gurt-secondary']))
+                return None
             qr = qr_image(code['url']) if code.get('url', '').startswith('http') else None
             if qr:
                 card.prepend(qr)
+            for n, line in enumerate(("Point your phone's camera at the code.", 'Check that the phone shows the same code.',
+                                      'Name it. It can approve and undo, and never holds a key.'), 1):
+                steps.append(Gtk.Label(label=f'{n}. {line}', xalign=0, wrap=True))
             steps.append(Gtk.Label(label=code['code'], xalign=0, selectable=True, css_classes=['gurt-mono', 'gurt-title-2']))
-            remote = getattr(self, 'remote', None) or {}  # Settings reads GET /api/remote; Setup has none
-            anywhere = SHOW_TITLES or remote.get('state') == 'connected'  # during setup the phone can turn remote access on itself
-            steps.append(Gtk.Label(label="Your phone doesn't need to be on the same Wi-Fi." if anywhere else
-                                   'Your phone needs to be on the same Wi-Fi as this computer, unless you turn on Reach this computer from anywhere above.',
-                                   xalign=0, wrap=True, css_classes=['gurt-caption', 'gurt-secondary']))
-        background(lambda: api('POST', '/api/pair/start', {'owner': True}), show)
+            steps.append(Gtk.Label(label=f"Works once, until {clock_text(code.get('expiresAt'))}.", xalign=0, css_classes=['gurt-caption', 'gurt-secondary']))
+            if reach == 'anywhere':
+                where = "Your phone doesn't need to be on the same Wi-Fi."
+            elif relay_ok and not SHOW_TITLES:
+                where = 'Your phone needs to be on the same Wi-Fi as this computer, unless you turn on Reach this computer from anywhere above.'
+            else:
+                where = 'Your phone needs to be on the same Wi-Fi as this computer.'
+            steps.append(Gtk.Label(label=where, xalign=0, wrap=True, css_classes=['gurt-caption', 'gurt-secondary']))
+            fresh = Gtk.Button(label='New code', halign=Gtk.Align.START)
+            fresh.connect('clicked', lambda _b: self.go(self.at))
+            steps.append(fresh)
+            return None
+
+        def work():
+            remote = remote_view()
+            relay = (remote or {}).get('relay', 'box.gurtos.com')
+            return api('POST', '/api/pair/start', {'owner': True}), remote, relay_up(relay)
+        background(work, show)
         return scroller
 
     def done(self):
@@ -769,7 +832,7 @@ class RemoteSetup(Adw.Window):
 def clock_text(iso):
     from datetime import datetime
     try:
-        return datetime.fromisoformat(iso.replace('Z', '+00:00')).astimezone().strftime('%-I:%M %p')
+        return tl.hm(datetime.fromisoformat(iso.replace('Z', '+00:00')).astimezone())
     except (ValueError, AttributeError):
         return 'it runs out'
 

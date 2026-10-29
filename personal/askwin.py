@@ -1,12 +1,13 @@
 # New task: the owner's words, the folders it may change (GNOME's folder chooser, through the portal),
 # its internet and its budget. Opened from the GurtOS app, the dock, the top bar and Files.
 import os
-import subprocess
 import time
 
 from gi.repository import Adw, Gio, GLib, Gtk
 
-from boxapi import api, ask_spec, background, dollars, tilde
+from boxapi import api, ask_spec, background, dollars, tilde, ui
+
+DROID_STATE = '/run/box-os/droid'  # on a GurtOS image: state=ready|downloading|offline|retrying, message=<a sentence>, at=
 
 
 def headed(window, title, content, subtitle=None):
@@ -19,6 +20,23 @@ def headed(window, title, content, subtitle=None):
     view.set_content(toasts)
     window.set_content(view)
     return header, view, toasts
+
+
+def has_model_key(setup):
+    model = setup.get('model') or {}
+    return model.get('ready') if 'ready' in model else setup.get('modelKey')
+
+
+def droid_waits():
+    """Why agents can't start yet because Droid is still on its way, in the image's own words, or '' when it is here."""
+    try:
+        with open(DROID_STATE) as f:
+            st = dict(line.rstrip('\n').split('=', 1) for line in f if '=' in line)
+        if st.get('state') != 'ready':
+            return st.get('message') or 'Agents can start in a minute. GurtOS is still getting ready.'
+        return ''
+    except OSError:  # an older image writes no state file; a desktop on plain Ubuntu has none either
+        return 'Agents can start in a minute. GurtOS is still getting ready.' if os.path.exists('/etc/box-os') and not os.path.exists('/usr/local/bin/droid') else ''
 
 
 # ---------- New task ----------
@@ -64,10 +82,10 @@ class AskWindow(Adw.ApplicationWindow):
         body.append(self.list)
         # Why Start is off, when it is: no model key yet, or Droid still arriving (I-2). Checked before Start, not after.
         self.blocked = None
-        self.blocker = Adw.ActionRow(visible=False)
+        self.blocker = Adw.ActionRow()  # its list shows and hides; the row itself stays visible (I-2)
         self.blocker.add_prefix(Gtk.Image(icon_name='dialog-information-symbolic', accessible_role=Gtk.AccessibleRole.PRESENTATION))
         self.open_settings = Gtk.Button(label='Open Settings', valign=Gtk.Align.CENTER)
-        self.open_settings.connect('clicked', lambda _b: subprocess.Popen(['/opt/box/personal/box-ui.py', 'settings', 'agents'], start_new_session=True))
+        self.open_settings.connect('clicked', lambda _b: ui('settings', 'agents'))
         self.blocker.add_suffix(self.open_settings)
         blk = Gtk.ListBox(selection_mode=Gtk.SelectionMode.NONE, css_classes=['boxed-list'])
         blk.append(self.blocker)
@@ -99,17 +117,21 @@ class AskWindow(Adw.ApplicationWindow):
         background(lambda: api('GET', '/api/setup'), self.readiness)
 
     def readiness(self, setup, err):
-        if err:
-            return
-        model = setup.get('model') or {}
-        has_key = model.get('ready') if 'ready' in model else setup.get('modelKey')
-        if not has_key:
+        if err:  # GurtOS is down or still starting: say so before Start, and look again while the window is open
+            self.blocked = ("GurtOS isn't answering. Start works again once it does.", False)
+            GLib.timeout_add_seconds(5, lambda: self.get_visible() and background(lambda: api('GET', '/api/setup'), self.readiness) and False)
+        elif not has_model_key(setup):
             self.blocked = ('Add a model key in GurtOS Settings first.', True)
-        elif not os.path.exists('/usr/local/bin/droid') and os.path.exists('/etc/box-os'):  # an image fetches Droid after first boot
-            self.blocked = ('Agents can start in a minute. GurtOS is still getting ready.', False)
-            GLib.timeout_add_seconds(10, lambda: background(lambda: api('GET', '/api/setup'), self.readiness) and False)
+        elif droid_waits():  # an image fetches Droid, the agent worker, after first boot
+            self.blocked = (droid_waits(), False)
+            GLib.timeout_add_seconds(10, lambda: self.get_visible() and background(lambda: api('GET', '/api/setup'), self.readiness) and False)
         else:
             self.blocked = None
+        if not err and not getattr(self, 'got_defaults', False):  # back after being down: the budget and sites too
+            background(lambda: api('GET', '/api/settings'), self.defaults)
+        self.show_blocker()
+
+    def show_blocker(self):
         self.blocker_box.set_visible(bool(self.blocked))
         if self.blocked:
             self.blocker.set_title(GLib.markup_escape_text(self.blocked[0]))
@@ -118,8 +140,9 @@ class AskWindow(Adw.ApplicationWindow):
 
     def defaults(self, s, err):
         """What a new task gets from Settings: its internet, and the budget closest to the default."""
-        if err:
+        if err or getattr(self, 'got_defaults', False):
             return
+        self.got_defaults = True
         hosts = s.get('defaultHosts') or []
         self.sites.set_text(', '.join(hosts))
         self.internet.set_active(bool(s.get('networkDefault') == 'allowlist' and hosts))
@@ -143,6 +166,7 @@ class AskWindow(Adw.ApplicationWindow):
                             subtitle=GLib.markup_escape_text(f'May change, on a copy · in {tilde(os.path.dirname(path))}'))
         row.add_prefix(Gtk.Image(icon_name='folder-symbolic'))
         remove = Gtk.Button(icon_name='list-remove-symbolic', tooltip_text=f'Remove {os.path.basename(path)}', valign=Gtk.Align.CENTER, css_classes=['flat'])
+        remove.update_property([Gtk.AccessibleProperty.LABEL], [f'Remove {os.path.basename(path)}'])  # an icon alone has no name for Orca
 
         def drop(_b):
             self.folders.remove(path)
@@ -178,7 +202,7 @@ class AskWindow(Adw.ApplicationWindow):
 
         def done(task, err):
             if err:
-                self.toasts.add_toast(Adw.Toast(title=f'GurtOS did not start it: {err}', timeout=0))
+                self.toasts.add_toast(Adw.Toast(title=GLib.markup_escape_text(f'GurtOS did not start it: {err}'), timeout=0))
                 return self.validate()
             names = [os.path.basename(f) for f in self.folders] or ['a task']
             app = self.get_application()
