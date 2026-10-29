@@ -7,7 +7,7 @@ const inbox = `${process.env.BOX_HOME ?? '/var/lib/box'}/inbox/example`;
 export default {
   name: 'example',
   title: 'Example',
-  description: 'A sample app for developers. It shows every way an app can add to GurtOS.',
+  description: 'A sample app for developers that shows every way an app can plug into GurtOS. It spends test money only.',
   secrets: ['DEMO_SECRET'],
 
   // All three generic triggers, which any track reuses. A real track returns a Droid task here.
@@ -40,12 +40,22 @@ export default {
     // A route reading a vault secret directly (no model-job workaround). It returns a derived fact, never the secret.
     // Who is calling, as the box says: 'screen', 'owner', 'device:<id>', 'service' or 'none'.
     'GET /whoami': (req) => Response.json({ caller: req.headers.get('x-box-caller') }),
-    'GET /secret-check': (_req, box) => Response.json({ looksLikeTestKey: box.secret('DEMO_SECRET').startsWith('sk_test_') }),
+    'GET /secret-check': (_req, box) => {
+      try {
+        return Response.json({ looksLikeTestKey: box.secret('DEMO_SECRET').startsWith('sk_test_') });
+      } catch (e) {
+        return Response.json({ error: (e as Error).message }, { status: 404 }); // the key is not in the vault
+      }
+    },
+    // A route reads its body defensively and answers a bad request with a 400 and a reason, not a crash.
     'POST /start': async (req, box) => {
-      const { title = 'Example task', prompt = 'write hello.txt hi', workspace = 'example' } = await req.json();
-      box.workspace(workspace); // makes it the first time, then leaves it alone
-      const task = await box.createTask({ title, prompt, workspace, worker: 'fake' });
-      return Response.json(task);
+      const { title = 'Example task', prompt = 'write hello.txt hi', workspace = 'example' } = (await req.json().catch(() => null)) ?? {};
+      try {
+        box.workspace(workspace); // makes it the first time, then leaves it alone
+        return Response.json(await box.createTask({ title, prompt, workspace, worker: 'fake' }));
+      } catch (e) {
+        return Response.json({ error: (e as Error).message }, { status: 400 });
+      }
     },
   },
 

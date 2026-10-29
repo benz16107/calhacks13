@@ -10,23 +10,32 @@
 // Exit code: 0 done, 1 failed or undone, 2 bad arguments.
 import { parseArgs } from 'node:util';
 
-const { values: a, positionals } = parseArgs({
-  allowPositionals: true,
-  options: {
-    box: { type: 'string', default: process.env.GURTOS_BOX ?? 'http://127.0.0.1:7700' },
-    token: { type: 'string', default: process.env.GURTOS_TOKEN },
-    repo: { type: 'string' },
-    auto: { type: 'string', default: 'medium' },
-    plan: { type: 'boolean', default: false },
-    team: { type: 'boolean', default: false },
-    host: { type: 'string', multiple: true, default: [] },
-    output: { type: 'string', short: 'o', default: 'text' },
-    worker: { type: 'string' }, // 'fake' for tests: a scripted worker, no model
-  },
-});
+const help = 'usage: gurtos-exec [--box URL] [--token T] [--repo URL] [--auto low|medium|high] [--plan] [--team] [--host H] [-o text|json] "prompt"';
+function parse() {
+  try {
+    return parseArgs({
+      allowPositionals: true,
+      options: {
+        box: { type: 'string', default: process.env.GURTOS_BOX ?? 'http://127.0.0.1:7700' },
+        token: { type: 'string', default: process.env.GURTOS_TOKEN },
+        repo: { type: 'string' },
+        auto: { type: 'string', default: 'medium' },
+        plan: { type: 'boolean', default: false },
+        team: { type: 'boolean', default: false },
+        host: { type: 'string', multiple: true, default: [] },
+        output: { type: 'string', short: 'o', default: 'text' },
+        worker: { type: 'string' }, // 'fake' for tests: a scripted worker, no model
+      },
+    });
+  } catch (e) {
+    console.error(`${(e as Error).message}\n${help}`);
+    return process.exit(2);
+  }
+}
+const { values: a, positionals } = parse();
 const prompt = positionals.join(' ').trim();
 if (!prompt || !['low', 'medium', 'high'].includes(a.auto!) || !['text', 'json'].includes(a.output!)) {
-  console.error('usage: gurtos-exec [--box URL] [--token T] [--repo URL] [--auto low|medium|high] [--plan] [--team] [--host H] [-o text|json] "prompt"');
+  console.error(help);
   process.exit(2);
 }
 const json = a.output === 'json';
@@ -37,20 +46,36 @@ async function api(method: string, path: string, body?: unknown) {
     method,
     headers: { ...(a.token ? { authorization: `Bearer ${a.token}` } : {}), ...(body ? { 'content-type': 'application/json' } : {}) },
     body: body ? JSON.stringify(body) : undefined,
+    signal: AbortSignal.timeout(30_000),
   });
   const j: any = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(`${method} ${path}: ${r.status} ${j.error ?? ''}`);
+  if (!r.ok) throw new Error(`${method} ${path}: ${r.status} ${j.error ?? (r.status === 401 || r.status === 403 ? 'this box wants a paired device: pass its token with --token or GURTOS_TOKEN' : '')}`.trim());
   return j;
 }
 
-const { task } = await api('POST', '/t/factory/run', { prompt, repo: a.repo, autonomy: a.auto, plan: a.plan, team: a.team, hosts: a.host, worker: a.worker });
+let started;
+try {
+  started = await api('POST', '/t/factory/run', { prompt, repo: a.repo, autonomy: a.auto, plan: a.plan, team: a.team, hosts: a.host, worker: a.worker });
+} catch (e) {
+  console.error(`gurtos-exec: ${(e as Error).message}`);
+  process.exit(1);
+}
+const { task } = started;
 say(`task ${task.id} on ${a.box} (${a.auto} autonomy${a.plan ? ', plan first' : ''})`);
 
 let seen = 0;
+let lost = 0;
 const asked = new Set<string>();
 let t = task;
 for (;;) {
-  const d = await api('GET', `/api/tasks/${task.id}`);
+  // A dropped connection while waiting is not the end of the job: it keeps running on the box. Try again a few times.
+  const d = await api('GET', `/api/tasks/${task.id}`).catch(async (e) => {
+    if (++lost > 10) throw e;
+    await new Promise((r) => setTimeout(r, 3000));
+    return undefined;
+  });
+  if (!d) continue;
+  lost = 0;
   t = d.task;
   const steps = d.events.filter((e: { type: string }) => e.type === 'task.step');
   for (const s of steps.slice(seen)) say(`  ${s.text.split('\n')[0].slice(0, 160)}`);

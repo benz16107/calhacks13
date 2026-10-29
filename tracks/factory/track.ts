@@ -8,7 +8,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import type { DroidOptions, TaskSpec, Track } from '../../core/contract.ts';
-import { clone, issues, openPullRequest } from './github.ts';
+import { clone, issues, openPullRequest, repoName } from './github.ts';
 
 const HOME = process.env.BOX_HOME ?? '/var/lib/box';
 const EVERY_MS = Number(process.env.FACTORY_GITHUB_EVERY_MS ?? 120_000);
@@ -57,32 +57,54 @@ const maybe = (box: BoxApi, name: string) => {
   }
 };
 
-let lastCheck: { at?: string; repo?: string; found?: number; started?: string[]; error?: string } = {};
+type Check = { at?: string; repo?: string; found?: number; started?: string[]; error?: string };
+let lastCheck: Check = {};
 
-async function checkGithub(box: BoxApi) {
-  const repo = maybe(box, 'FACTORY_GITHUB_REPO').trim();
-  if (!repo) return (lastCheck = { at: new Date().toISOString(), error: 'No GitHub repo connected. Add one in Settings, Accounts & Keys.' });
-  const token = maybe(box, 'GITHUB_TOKEN'); // a public repo can be read without one
+async function readIssues(box: BoxApi): Promise<Check> {
+  const at = new Date().toISOString();
+  const typed = maybe(box, 'FACTORY_GITHUB_REPO').trim();
+  if (!typed) return { at, error: 'No GitHub repo connected. Add one in Settings, Accounts & Keys.' };
+  let repo: string;
   try {
-    const seen = new Set(box.tasks().map((t) => t.source));
-    const open = await issues(repo, token);
-    const started: string[] = [];
-    for (const issue of open.filter((i) => !seen.has(sourceOf(repo, i.number)))) {
-      const ws = `gh-${repo.replace(/\W+/g, '-')}-${issue.number}`.toLowerCase();
-      const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'factory-clone-'));
-      try {
-        clone(repo, dir);
-        box.workspace(ws, dir);
-      } finally {
-        fs.rmSync(dir, { recursive: true, force: true });
-      }
-      started.push((await box.createTask(issueTask(repo, issue, ws))).id);
-    }
-    return (lastCheck = { at: new Date().toISOString(), repo, found: open.length, started });
+    repo = repoName(typed);
   } catch (e) {
-    return (lastCheck = { at: new Date().toISOString(), repo, error: `Couldn't read its issues. Check the repository name and the GitHub key. (${(e as Error).message})` });
+    return { at, repo: typed, error: (e as Error).message };
   }
+  const token = maybe(box, 'GITHUB_TOKEN'); // a public repo can be read without one
+  let open: Awaited<ReturnType<typeof issues>>;
+  try {
+    open = await issues(repo, token);
+  } catch (e) {
+    return { at, repo, error: `Couldn't read its issues. Check the repository name and the GitHub key. (${(e as Error).message})` };
+  }
+  const seen = new Set(box.tasks().map((t) => t.source));
+  const started: string[] = [];
+  const failed: string[] = [];
+  // One issue that can't start (a clone that fails, a refused task) must not hold up the ones after it.
+  for (const issue of open.filter((i) => !seen.has(sourceOf(repo, i.number)))) {
+    const ws = `gh-${repo.replace(/\W+/g, '-')}-${issue.number}`.toLowerCase();
+    let dir = '';
+    try {
+      dir = fs.mkdtempSync(path.join(os.tmpdir(), 'factory-clone-'));
+      clone(repo, dir, undefined, token);
+      box.workspace(ws, dir);
+      started.push((await box.createTask(issueTask(repo, issue, ws))).id);
+    } catch (e) {
+      failed.push(`#${issue.number}: ${(e as Error).message}`);
+    } finally {
+      if (dir) fs.rmSync(dir, { recursive: true, force: true });
+    }
+  }
+  return { at, repo, found: open.length, started, ...(failed.length ? { error: `Couldn't start ${failed.join('; ')}` } : {}) };
 }
+
+let checking: Promise<Check> | undefined;
+/** One check at a time. The timer and "Check now" can overlap, and two checks would each start a task for the same issue. */
+export const checkGithub = (box: BoxApi) =>
+  (checking ??= readIssues(box)
+    .catch((e): Check => ({ at: new Date().toISOString(), error: `The GitHub check failed. (${(e as Error).message})` }))
+    .then((c) => (lastCheck = c))
+    .finally(() => (checking = undefined)));
 
 // Factory credits per task, from the worker's "Factory usage" steps in the action log. Read from the file each
 // time: a log reader resumes from its saved place after a restart, so a total kept in memory would start again at 0.
@@ -100,15 +122,25 @@ function creditsByTask() {
   return m;
 }
 
-async function limits(key: string) {
+let limitsSeen: { key: string; at: number; value: unknown } | undefined;
+/** The plan's limits, asked of Factory at most every 30 s: the window asks every 4 s, and Factory rate-limits keys. */
+export async function limits(key: string): Promise<unknown> {
   if (!key) return { error: 'Add a Factory API key in Settings, Accounts & Keys to see your plan here.' };
+  if (limitsSeen?.key === key && Date.now() - limitsSeen.at < 30_000) return limitsSeen.value;
+  const value = await askFactory(key);
+  limitsSeen = { key, at: Date.now(), value };
+  return value;
+}
+
+async function askFactory(key: string) {
   try {
     const r = await fetch('https://api.factory.ai/api/billing/limits', { headers: { authorization: `Bearer ${key}` }, signal: AbortSignal.timeout(8000) });
-    const std = (await r.json()).limits?.standard;
+    if (r.status === 401 || r.status === 403) return { error: "Factory didn't accept this API key. Check it in Settings, Accounts & Keys." };
+    const std = ((await r.json().catch(() => ({}))) as any).limits?.standard;
     if (!std?.fiveHour) return { error: `Factory didn't send your plan's limits (error ${r.status}).` };
     const pick = (l: any) => ({ usedPercent: l.usedPercent, resetsInMin: Math.round((l.secondsRemaining ?? 0) / 60) });
     return { fiveHour: pick(std.fiveHour), weekly: pick(std.weekly) };
-  } catch (e) {
+  } catch {
     return { error: "Couldn't reach Factory. Check this computer's internet connection." };
   }
 }
@@ -116,7 +148,7 @@ async function limits(key: string) {
 export default {
   name: 'factory',
   title: 'Factory',
-  description: 'Hand a coding job to Droid. It plans first, works inside your limits and opens a pull request for you to review.',
+  description: 'Turns GitHub issues labelled droid into pull requests: Droid plans, you approve the plan, a reviewer droid checks the change. Needs a GitHub token and a repository name; a Factory key shows your plan usage.',
   secrets: ['GITHUB_TOKEN', 'FACTORY_GITHUB_REPO', 'FACTORY_API_KEY'],
   optionalSecrets: ['GITHUB_TOKEN', 'FACTORY_GITHUB_REPO', 'FACTORY_API_KEY'],
 
@@ -138,6 +170,7 @@ export default {
       input: { type: 'object', properties: { title: { type: 'string' }, body: { type: 'string' } }, required: ['title', 'body'] },
       secrets: ['GITHUB_TOKEN'],
       async run(input: { title: string; body: string }, ctx) {
+        if (typeof input?.title !== 'string' || !input.title.trim() || typeof input.body !== 'string') throw new Error('title and body: text for the pull request');
         const repo = /^github:([^#]+)#(\d+)$/.exec(ctx.task?.source ?? '');
         if (!ctx.task || !repo) throw new Error('only a task started from a GitHub issue can open a pull request');
         const pr = await openPullRequest({
@@ -159,8 +192,9 @@ export default {
 
     // The safe runner for `droid exec`: a headless job on its own copy of a repo (or of the files sent), on this box.
     'POST /run': async (req, box) => {
-      const b = await req.json().catch(() => ({}));
-      if (typeof b.prompt !== 'string' || !b.prompt.trim()) return Response.json({ error: 'prompt: what Droid should do' }, { status: 400 });
+      const b = await req.json().catch(() => null);
+      if (typeof b?.prompt !== 'string' || !b.prompt.trim()) return Response.json({ error: 'prompt: what Droid should do' }, { status: 400 });
+      if (b.hosts !== undefined && !Array.isArray(b.hosts)) return Response.json({ error: 'hosts: a list of host names' }, { status: 400 });
       const ws = `exec-${Date.now().toString(36)}`;
       const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'factory-exec-'));
       try {
@@ -187,7 +221,7 @@ export default {
           prompt: b.team ? teamPrompt(b.prompt) : b.prompt,
           workspace: ws,
           source: 'droid-exec',
-          hosts: Array.isArray(b.hosts) ? b.hosts : [],
+          hosts: b.hosts ?? [],
           ...(b.budgetCents !== undefined ? { budgetCents: b.budgetCents } : {}),
           ...(b.worker === 'fake' ? { worker: 'fake' as const } : { droid: opts(b) }),
         });

@@ -2,7 +2,7 @@
 // Always: a bad model name is refused at the door.
 // DEMO_LIVE=droid,anthropic ./demo (or anthropic-models for just the first) also spends model credit on two live runs (both print their numbers):
 //   1. one tiny task per model alias (haiku, sonnet, opus), to show the model and the cost the box records for each;
-//   2. the attack test (attacks/cases.ts): ten attacks and two clean controls against real Claude tasks. It prints
+//   2. the attack test (attacks/cases.ts): twelve attacks and two clean controls against real Claude tasks. It prints
 //      one ATTACK_RESULT_JSON line with every case, caught or missed. Misses do not fail the step: they are the result.
 // BOX_REVIEW=off ./demo runs the same attacks with the second look switched off, for comparison.
 import fs from 'node:fs';

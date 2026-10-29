@@ -33,7 +33,7 @@ import { ACTIONS, ANALYST_TOOLS, AP_TOOLS, CLERK_TOOLS, CONTROLLER_ACTIONS, OUTC
 export default {
   name: 'credit-desk',
   title: 'Credit desk',
-  description: 'Agents review credit applications and supplier bills for a company, on test data. A person approves every decision.',
+  description: 'Agents review credit applications and supplier bills for a made-up company, on test data, and a person approves every decision. Needs a Stitch Credit sandbox login and a Nessie test-bank key.',
 
   tools: [
     {

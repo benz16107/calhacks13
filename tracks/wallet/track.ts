@@ -138,7 +138,8 @@ const sell = sellRoutes({ latestAudit, publicUrl: process.env.BOX_PUBLIC_URL });
 
 export default {
   name: 'wallet',
-  description: 'Lets agents pay with test money (USDC on Solana devnet), within a limit you set, and asks you above it.',
+  title: 'Wallet (test money)',
+  description: 'Lets agents pay with test money (USDC on Solana devnet, which has no value), within a limit you set, and asks you above it. Needs a devnet wallet key; Coinbase keys are optional.',
 
   tools: [
     {

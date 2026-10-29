@@ -10,25 +10,47 @@ export const DB = process.env.BOX_STDB_DB ?? 'box';
 // The box's own SpacetimeDB login, which core/live.ts publishes the module with (BOX_HOME/spacetime/cli.toml).
 const token = () => fs.readFileSync(path.join(process.env.BOX_HOME ?? '/var/lib/box', 'spacetime', 'cli.toml'), 'utf8').match(/spacetimedb_token\s*=\s*"([^"]+)"/)?.[1];
 
+const WAIT_MS = Number(process.env.BOX_STDB_WAIT_MS ?? 10_000);
 let conn: Promise<DbConnection> | undefined;
+let generation = 0;
 
-/** One connection, opened on first use and again after it drops. It follows the queue and the agents. */
-export function local(): Promise<DbConnection> {
-  conn ??= new Promise<DbConnection>((resolve, reject) => {
-    const fail = (e: unknown) => ((conn = undefined), reject(e instanceof Error ? e : new Error(`SpacetimeDB: ${String(e)}`)));
+async function connect(): Promise<DbConnection> {
+  const mine = ++generation;
+  let auth: string | undefined;
+  try {
+    auth = token();
+  } catch {
+    throw new Error("Live state (SpacetimeDB) is not set up on this computer yet: the box's login for it is missing."); // not kept: the next call looks again
+  }
+  return new Promise<DbConnection>((resolve, reject) => {
+    const timer = setTimeout(() => fail(`no answer in ${WAIT_MS / 1000} s`), WAIT_MS);
+    const fail = (e: unknown) => {
+      clearTimeout(timer);
+      reject(new Error(`Live state (SpacetimeDB) is not reachable on this computer: ${e instanceof Error ? e.message : String(e)}`));
+    };
     DbConnection.builder()
       .withUri(URI)
       .withDatabaseName(DB)
-      .withToken(token())
+      .withToken(auth)
       .onConnect((c) => {
         c.subscriptionBuilder()
-          .onApplied(() => resolve(c))
+          .onApplied(() => (clearTimeout(timer), resolve(c)))
           .onError((_ctx) => fail('the subscription was refused'))
           .subscribe(['SELECT * FROM job', 'SELECT * FROM agent', 'SELECT * FROM meter', 'SELECT * FROM activity', 'SELECT * FROM approval']);
       })
       .onConnectError((_ctx, e) => fail(e))
-      .onDisconnect(() => (conn = undefined))
+      .onDisconnect(() => {
+        if (mine === generation) conn = undefined; // not a connection that was already replaced
+      })
       .build();
+  });
+}
+
+/** One connection, opened on first use and again after it drops. It follows the queue and the agents. A failed attempt is not kept: the next call tries again. */
+export function local(): Promise<DbConnection> {
+  conn ??= connect().catch((e) => {
+    conn = undefined;
+    throw e;
   });
   return conn;
 }
@@ -39,8 +61,9 @@ export async function withBox<T>(fn: (c: DbConnection) => Promise<T>): Promise<T
     return await fn(await local());
   } catch (e) {
     if (!/only the box/.test(String((e as Error)?.message ?? e))) throw e;
-    (await conn)?.disconnect();
+    const old = conn;
     conn = undefined;
+    (await old)?.disconnect();
     return fn(await local());
   }
 }

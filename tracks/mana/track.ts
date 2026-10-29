@@ -14,7 +14,7 @@ const newest = (ts: Task[]) => ts.sort((a, b) => b.updatedAt.localeCompare(a.upd
 export default {
   name: 'mana',
   title: 'Mana',
-  description: 'Plan rules and small apps in Mana, then run them here. Anything that spends waits for your OK.',
+  description: 'Lets apps built in Mana ask this computer for work, with your OK first, and turns on a public status page of task titles and states. Needs a Mana account.',
   // The public Mana apps call these through the box's public address; every other route still needs a paired phone.
   offByDefault: true, // its status page is public: the owner turns it on
   openRoutes: ['GET /status', 'OPTIONS /guest', 'POST /guest', 'GET /guest', 'OPTIONS /policy', 'POST /policy', 'GET /policy'],

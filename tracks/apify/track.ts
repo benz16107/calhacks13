@@ -465,7 +465,7 @@ const same = (a: string, b: string) => timingSafeEqual(createHash('sha256').upda
 export default {
   name: 'apify',
   title: 'Apify',
-  description: 'Lets agents read web pages, check prices and stock, and find places, through Apify. Agents never get a browser or a key.',
+  description: 'Lets agents read web pages, check prices and stock, and find places through Apify, without ever holding a browser or a key. Needs an Apify account.',
   secrets: ['APIFY_TOKEN', 'APIFY_WEBHOOK_URL', 'APIFY_WEBHOOK_SECRET'],
   optionalSecrets: ['APIFY_WEBHOOK_URL', 'APIFY_WEBHOOK_SECRET'],
   tools,

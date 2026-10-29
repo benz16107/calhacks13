@@ -8,6 +8,7 @@ import { addPreference, allowed, clean, isGuest, preferences, recall, remember, 
 import { answerLocal, answerMoss, countMossAnswer, inferenceOn, setInference, type Engine } from './answer.ts';
 
 const MOSS = ['MOSS_PROJECT_ID', 'MOSS_PROJECT_KEY'];
+const KEYS = [...MOSS, 'FIND_OLLAMA_URL', 'FIND_OLLAMA_MODEL', 'VULTR_INFERENCE_KEY', 'FACTORY_API_KEY', 'MOSS_INFERENCE_API_KEY', 'MOSS_INFERENCE_URL'];
 const KINDS = ['photo', 'file', 'task', 'memory'];
 type Secret = (name: string) => string;
 const round = (n: number) => Math.round(n * 100) / 100;
@@ -225,9 +226,11 @@ const summaries = new Map<string, string>(); // task id -> Droid's final message
 export default {
   name: 'find',
   title: 'Find',
-  description: 'Search your photos, files and past tasks by what is in them, like "the whiteboard photo".',
+  description: 'Search your files, past tasks and notes on this computer by their words, with no account. A photo is searchable once a vision model describes it (your own Ollama, or a Vultr or Factory key), and a Moss account adds search by meaning.',
   // FACTORY_API_KEY: only checked for presence before starting a Claude describe task; its value is never read here.
-  secrets: [...MOSS, 'FIND_OLLAMA_URL', 'FIND_OLLAMA_MODEL', 'VULTR_INFERENCE_KEY', 'FACTORY_API_KEY', 'MOSS_INFERENCE_API_KEY', 'MOSS_INFERENCE_URL'],
+  secrets: KEYS,
+  // Find runs on this computer with none of them: the word index searches files, tasks and notes. Each key adds something (tests: find.test.ts).
+  optionalSecrets: KEYS,
 
   // Before every task starts, the core asks for what we remember: the owner's preferences, and the few notes from
   // earlier tasks that match its prompt and that this task's permissions allow.

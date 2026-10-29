@@ -27,8 +27,10 @@ function boxKey(box: Box): BoxKey {
   if (fs.existsSync(file)) return JSON.parse(fs.readFileSync(file, 'utf8'));
   fs.mkdirSync(DIR, { recursive: true, mode: 0o700 });
   const key = newKey();
-  fs.writeFileSync(file, JSON.stringify(key), { mode: 0o600 });
+  // Logged first, so a key that signs a receipt always has its name in the log; a crash before the file is saved only means a new key and a second note.
   box.note({ kind: 'receipts.key', fingerprint: fingerprint(key.publicJwk), algorithm: 'ECDSA P-256' });
+  fs.writeFileSync(`${file}.new`, JSON.stringify(key), { mode: 0o600 });
+  fs.renameSync(`${file}.new`, file); // all or nothing: a power cut half way must not leave a key file that cannot be read
   return key;
 }
 
@@ -41,7 +43,14 @@ const logLines = () => {
 function solanaAnchor(to: number): NonNullable<Receipt['anchors']['solana']> | null {
   const f = path.join(HOME, 'wallet', 'audit.jsonl');
   if (!fs.existsSync(f)) return null;
-  const rows = fs.readFileSync(f, 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l) as { date: string; seq: number; sha256: string; prev: string; head?: string; tx?: string; explorer?: string });
+  type Row = { date: string; seq: number; sha256: string; prev: string; head?: string; tx?: string; explorer?: string };
+  const rows = fs.readFileSync(f, 'utf8').split('\n').filter(Boolean).flatMap((l): Row[] => {
+    try {
+      return [JSON.parse(l)];
+    } catch {
+      return []; // a line cut short by a power failure
+    }
+  });
   const a = rows.filter((r) => r.head && r.tx && r.seq >= to).sort((x, y) => x.seq - y.seq)[0];
   return a ? { seq: a.seq, head: a.head!, sha256: a.sha256, prev: a.prev, tx: a.tx!, explorer: a.explorer, date: a.date } : null;
 }
@@ -54,6 +63,7 @@ async function elasticCheck(box: Box, lines: [number, string | null, string][], 
     const r = await fetch(`${url.replace(/\/$/, '')}/_query`, {
       method: 'POST',
       headers: { authorization: `ApiKey ${key}`, 'content-type': 'application/json' },
+      signal: AbortSignal.timeout(10_000),
       body: JSON.stringify({ query: 'FROM box-actions | WHERE box.machine == ?m AND box.run == "installed" AND event.seq >= ?a AND event.seq <= ?b | KEEP event.seq, event.hash | LIMIT 10000', params: [{ m: machine }, { a: from }, { b: to }] }),
     });
     if (!r.ok) return null;
@@ -81,7 +91,8 @@ const json = (v: unknown, status = 200, extra: Record<string, string> = {}) => R
 
 export default {
   name: 'receipts',
-  description: 'A signed receipt for a finished task that anyone can check in a browser, tied to the box\'s add-only copy in Elastic and the daily Solana fingerprint.',
+  title: 'Receipts',
+  description: 'Makes a signed receipt for a finished task that anyone can check in a browser, with no account. With an Elastic account it also compares the log with Elastic\'s copy.',
   secrets: ['ELASTIC_URL', 'ELASTIC_BOX_KEY'],
   optionalSecrets: ['ELASTIC_URL', 'ELASTIC_BOX_KEY'],
   apps: [{ name: 'receipts', title: 'Receipts', href: '/' }],
@@ -113,6 +124,7 @@ export default {
         const lines = logLines();
         // The anchor first, so the receipt's chain can run on to it; then Elastic's view of the same entries.
         const mine = lines.map((l, i) => [i + 1, l] as const).filter(([, l]) => { try { return JSON.parse(l).task === task; } catch { return false; } });
+        if (!mine.length) return json({ error: `the log no longer holds the entries of task ${task}` }, 404);
         const to = mine.at(-1)![0];
         const solana = solanaAnchor(to);
         const probe = buildReceipt({ lines, taskId: task, mode, box: { name: boxName(box), machine }, key, id: 'probe', anchors: { solana } });

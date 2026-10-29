@@ -21,7 +21,7 @@ let running: Promise<unknown> | undefined;
 export default {
   name: 'vultr',
   title: 'Vultr cloud',
-  description: 'Backs up this computer, encrypted, to Vultr storage, and sets the cloud firewall when GurtOS runs on Vultr.',
+  description: 'Backs up this computer, encrypted, to Vultr Object Storage, and sets the Vultr cloud firewall when GurtOS runs on Vultr. Needs a Vultr account and an age key for the backups.',
   secrets: ['VULTR_OBJ_ACCESS', 'VULTR_OBJ_SECRET', 'BACKUP_AGE_RECIPIENT', 'VULTR_API_KEY', 'VULTR_OBJ_HOST', 'VULTR_OBJ_BUCKET'],
   // Backups need the first three; the firewall needs VULTR_API_KEY; the last two have defaults.
   optionalSecrets: ['VULTR_API_KEY', 'VULTR_OBJ_HOST', 'VULTR_OBJ_BUCKET'],

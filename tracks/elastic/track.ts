@@ -181,7 +181,7 @@ let labelled = false;
 export default {
   name: 'elastic',
   title: 'Ask GurtOS',
-  description: 'Keeps a copy of the action log in Elastic that this computer can\'t change, and answers questions like "what did my agents do yesterday?"',
+  description: 'Keeps a copy of the action log in Elastic that this computer can\'t change, and answers questions like "what did my agents do yesterday?" Needs an Elastic Cloud Serverless project.',
   secrets: SECRETS,
 
   logReaders: [

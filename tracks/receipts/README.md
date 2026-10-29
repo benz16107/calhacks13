@@ -1,14 +1,20 @@
-# Receipts anyone can check
+# Receipts
 
-When an agent finishes a task, GurtOS can hand you a **signed receipt**: what the task was, every step it took,
-who approved what, what it cost, whether it was kept or undone, and the stretch of the box's action log it sits in.
-Give the receipt to a customer, an auditor or a judge, and they check it in their own browser. Nothing is uploaded,
-and they do not have to trust the box, GurtOS or you.
+When an agent finishes a task, GurtOS can hand you a **signed receipt**: what the task was, every step it took, who
+approved what, what it cost, whether it was kept or undone, and the stretch of the box's action log it sits in. Give it
+to a customer or an auditor, and they check it in their own browser at [gurtos.com/verify](https://gurtos.com/verify/).
+Nothing is uploaded, and they do not have to trust the box, GurtOS or you.
+
+**It needs no account.** Two extras need one. Elastic (an Elastic Cloud Serverless project, see `tracks/elastic`) holds a
+copy of the log that the box cannot rewrite, and the receipt records whether the box's entries matched it. The daily
+fingerprint of the log on Solana devnet, written by the wallet app, lets the receipt prove the log was not rewritten
+afterward. Without them the receipt still proves the box signed it and that its entries are an unbroken stretch of the log.
+The app is off on a new box. Turn it on in the App Center.
 
 Open **Receipts** in the app list (portal, Personal or phone), pick a finished task, and choose **Receipt** or
-**Redacted**. The page shows a QR code. Scanning it opens the public check page, `gurtos.com/verify`.
+**Redacted**. The page shows a QR code. Scanning it opens the public check page.
 
-![gurtos.com/verify checking a receipt from the cloud box: signature, key, chain and entries pass](screenshots/verify-ok.png)
+![gurtos.com/verify checking a receipt: signature, key, chain and entries pass](screenshots/verify-ok.png)
 
 The same receipt with one character of the title changed: the signature fails, and the page says so.
 
@@ -20,8 +26,8 @@ The same receipt with one character of the title changed: the signature fails, a
 |---|---|
 | The box signed exactly this receipt, and nothing in it changed afterward. | An ECDSA P-256 signature over the whole receipt, made with a key that never leaves the box. One changed byte fails it. |
 | The entries are the ones the box wrote, in order, with nothing taken out of the middle. | The core chains every log entry to the one before (`prev`, `core/log.ts`). The receipt carries every link from the task's first entry on, and the page recomputes each line's SHA-256 and each link. |
-| The key belongs to this box. | The key's short name was written into the box's own log when the key was made. That log reaches Elastic's add-only copy and the daily Solana fingerprint. |
-| The log was not rewritten after the fact. | Elastic holds a copy written with a key that can only create documents. The daily Solana fingerprint holds the hash of the log, and the receipt's chain must reach it. |
+| The key belongs to this box. | The key's short name was written into the box's own log when the key was made. With Elastic and the Solana fingerprint set up, that log reaches both. |
+| The log was not rewritten after the fact (only with Elastic or the Solana fingerprint set up). | Elastic holds a copy written with a key that can only create documents. The daily Solana fingerprint holds the hash of the log, and the receipt's chain must reach it. |
 
 It does **not** prove that the agent was right, or that the box told the truth when it wrote the entry. It shows the
 record is the record.
@@ -59,7 +65,7 @@ It returns a link for the QR code. Open it, or drop the receipt's JSON on `gurto
 character of the JSON and check again: the signature fails and the page says so. To see the chain fail, edit a line
 of `/var/lib/box/log.jsonl` on a scratch box and make a new receipt: the page names the entry.
 
-`./demo` does the same: it finishes a task that needs an OK, makes a receipt, checks it with the code the public
+`DEMO_ONLY=receipts ./demo` does the same: it finishes a task that needs an OK, makes a receipt, checks it with the code the public
 page runs, flips one byte and watches it fail, then edits the real log and watches the chain fail.
 
 ## Files
@@ -69,9 +75,9 @@ page runs, flips one byte and watches it fail, then edits the real log and watch
 | `receipt.ts` | Builds and signs a receipt from the log (Node, `node:crypto`) |
 | `verify.html` | The public check page. One file, no build. The checker inside it is what the tests and the demo run |
 | `track.ts` | The box's routes: make a receipt, serve it, serve the page |
-| `app.html` | The Receipts app: finished tasks and the QR code |
+| `app.html` | The Receipts window: finished tasks and the QR code |
 | `qrcode.js` | The MIT-licensed QR generator by Kazuhiko Arase, unchanged |
-| `receipts.test.ts`, `demo.ts` | The tests and the demo step |
+| `receipts.test.ts`, `share.test.ts`, `demo.ts` | The tests (the checker, and the share route with a damaged audit file) and the demo step |
 
 ## Limits
 

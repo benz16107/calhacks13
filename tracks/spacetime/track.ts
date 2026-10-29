@@ -41,13 +41,22 @@ async function team(queue?: string) {
   };
 }
 
+/** A route that reads the live state answers 503 with the reason when SpacetimeDB is down, so a screen can say so. */
+const live = (route: (req: Request) => Promise<Response>) => async (req: Request) => {
+  try {
+    return await route(req);
+  } catch (e) {
+    return Response.json({ error: (e as Error).message }, { status: 503 });
+  }
+};
+
 const owner = (req: Request) => ['screen', 'owner'].includes(req.headers.get('x-box-caller') ?? '');
 const forbid = () => Response.json({ error: "only the box's owner can change this" }, { status: 403 });
 
 export default {
   name: 'spacetime',
   title: 'Live board',
-  description: 'Shows tasks, requests and spending on every screen the moment they change, and lets agents share one work queue.',
+  description: 'Shows tasks, requests and spending on every screen as they change, and lets agents share one work queue. Needs no account; an optional fleet view that sends task counts to SpacetimeDB Maincloud is off until you turn it on.',
 
   tools: [
     {
@@ -127,9 +136,9 @@ export default {
     'GET /': () => new Response(page(), { headers: { 'content-type': 'text/html; charset=utf-8' } }),
     'GET /live.js': () => new Response(bundle(), { headers: { 'content-type': 'text/javascript; charset=utf-8' } }),
     /** The queues and agents as JSON, for a screen that is not connected to SpacetimeDB. */
-    'GET /team': async (req) => Response.json(await team(new URL(req.url).searchParams.get('queue') ?? undefined)),
+    'GET /team': live(async (req) => Response.json(await team(new URL(req.url).searchParams.get('queue') ?? undefined))),
     /** Everything the Live window shows, as JSON, for a screen that cannot reach SpacetimeDB (it listens on the box only). */
-    'GET /snapshot': async (req) => {
+    'GET /snapshot': live(async (req) => {
       const c = await local();
       // On a Business box a person's phone is not sent the box's approvals (their own are in Waiting for me).
       const scoped = !!req.headers.get('x-box-person');
@@ -143,7 +152,7 @@ export default {
         approvals: scoped ? [] : [...c.db.approval.iter()].filter((a) => a.state === 'pending'),
         scoped,
       });
-    },
+    }),
     /** Put jobs on a queue from the box's screen or a helper on the box. */
     'POST /jobs': async (req, box) => {
       if (!['screen', 'owner', 'service'].includes(req.headers.get('x-box-caller') ?? '')) return forbid();

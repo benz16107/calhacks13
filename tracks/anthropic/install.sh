@@ -1,17 +1,18 @@
 #!/bin/sh
 # Turn an Ubuntu 24.04 machine you already own into a GurtOS box. Nothing else on the machine is touched.
-#   curl -fsSL https://gurtos.com/install | sudo sh
+#   curl -fsSL https://raw.githubusercontent.com/benz16107/calhacks13/main/tracks/anthropic/install.sh | sudo sh
 # It installs git, rsync and curl, clones this repository to /opt/gurtos, and runs core/install.sh from it: Node,
 # the Droid CLI, SpacetimeDB, the box service (systemd unit box.service) and the portal on 127.0.0.1:7700.
 # Environment: GURTOS_REPO and GURTOS_REF pick another clone or branch. ANTHROPIC_API_KEY or FACTORY_API_KEY, if
-# set, goes into the vault (/etc/box/vault.env, root only) so the first task can run. GURTOS_FORCE=1 skips the
-# Ubuntu and size checks.
+# set, goes into the vault (/etc/box/vault.env, root only) so the first task can run. sudo drops your environment, so
+# a key has to be on the command line (sudo ANTHROPIC_API_KEY=... sh) or, better, added in Setup afterwards.
+# GURTOS_FORCE=1 skips the Ubuntu and size checks.
 set -eu
 
 say() { printf 'gurtos: %s\n' "$*"; }
 die() { printf 'gurtos: %s\n' "$*" >&2; exit 1; }
 
-[ "$(id -u)" = 0 ] || die "run as root: curl -fsSL https://gurtos.com/install | sudo sh"
+[ "$(id -u)" = 0 ] || die "run as root: pipe the script to  sudo sh  (tracks/anthropic/README.md has the command)"
 start=$(date +%s)
 
 if [ -z "${GURTOS_FORCE:-}" ]; then
@@ -32,6 +33,9 @@ apt-get install -y -qq git rsync curl ca-certificates xz-utils acl >/dev/null
 
 repo=${GURTOS_REPO:-https://github.com/benz16107/calhacks13}
 ref=${GURTOS_REF:-main}
+if [ -e /opt/gurtos ] && [ ! -d /opt/gurtos/.git ]; then
+  die "/opt/gurtos exists and is not a GurtOS checkout. Move it away and run this again."
+fi
 if [ -d /opt/gurtos/.git ]; then
   say "updating /opt/gurtos to $ref"
   git -C /opt/gurtos fetch -q --depth 1 origin "$ref"

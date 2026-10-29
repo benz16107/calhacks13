@@ -588,7 +588,7 @@ let jsmNow = () => {};
 export default {
   name: 'jira',
   title: 'Jira',
-  description: 'Send Jira issues to agents, see every agent action in Jira, and roll back the ones that were wrong.',
+  description: 'Send Jira issues to agents, see every agent action in Jira, and roll back the ones that were wrong. Needs an Atlassian site, email and API token.',
 
   triggers: [
     { name: 'jsm', start: (box) => void (jsmNow = every('JSM approvals', 10_000, () => jsmTick(box))) },
