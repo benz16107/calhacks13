@@ -84,7 +84,7 @@ The build leaves `gurtos-personal-<arch>.iso` and its update file `gurtos-person
 Agents need one model key: an **Anthropic API key** from [console.anthropic.com](https://console.anthropic.com), or a
 **Factory API key** from [app.factory.ai](https://app.factory.ai). Paste it at Setup's **AI models** step and press
 Enter. GurtOS checks an Anthropic key with one call to Anthropic and says if it was refused. To add or replace a key
-later, choose **GurtOS Settings** in the top-bar menu, then **Agents** (the model key) or **Keys** (every key). The key
+later, choose **GurtOS Settings** in the top-bar menu, then **Agents** (the model key) or **Accounts & Keys** (every key). The key
 never shows on screen again, and agents never see it. Apps are optional and off until you turn them on in
 **Apps**, and the apps that need a key say which.
 

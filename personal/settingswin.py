@@ -17,7 +17,7 @@ PAGES = [  # (id, title, icon)
     ('agents', 'Agents', 'applications-science-symbolic'),
     ('permissions', 'Permissions', 'security-medium-symbolic'),
     ('apps', 'Apps', 'view-app-grid-symbolic'),
-    ('keys', 'Keys', 'dialog-password-symbolic'),
+    ('keys', 'Accounts & Keys', 'dialog-password-symbolic'),
     ('phone', 'Phone', 'phone-symbolic'),
 ]
 OLD = {'general': 'agents', 'models': 'agents', 'updates': 'agents', 'privacy': 'agents', 'about': 'agents',
@@ -314,7 +314,7 @@ class SettingsWindow(SetupWindow):
             dst.append(r)
 
     def keys(self):
-        scroller, box = page('Keys', setupwin.KEYS_LINE)
+        scroller, box = page('Accounts & Keys', setupwin.KEYS_LINE)
         saved = {v['name']: v for v in self.vault}
         groups = [('Claude', [k for k, _l, _h in setupwin.MODEL_KEYS])]
         for a in sorted((a for a in self.apps if a.get('enabled') and a['id'] in setupwin.PERSONAL_APPS), key=setupwin.app_title):

@@ -24,7 +24,7 @@ on the box's screen, through the box's API, or by editing the file. All three ta
    not listed. Paste the key and choose **Save**.
 
 The screen shows only whether a key is set and when. It never shows a key again; to change one, choose **Replace**
-and paste a new key. On GurtOS Personal, open **GurtOS Settings** from the desktop, then **Keys**. Its buttons are
+and paste a new key. On GurtOS Personal, open **GurtOS Settings** from the desktop, then **Accounts & Keys**. Its buttons are
 **Add** or **Replace** on a key's row, **Add a key…** for any other name, and **Save key** in the dialog. The
 **AI models** step of GurtOS Setup takes a model key. A phone paired as the owner can set keys too.
 
