@@ -161,8 +161,8 @@
   $('try-attack').onclick = function () { $('try-over').hidden ? openAttack() : ($('try-over').hidden = true); };
 
   // A prepared page is a choice, not an immediate run. Clicking one selects it; "Run this attack" runs the
-  // selection (or the pasted text). Typing in the box clears the selection. This is what judges expect, and it
-  // is why a prepared page used to 400: the page ran on click, then "Run this attack" posted empty text.
+  // selection (or the pasted text). Typing in the box clears the selection. A click that ran at once is why
+  // a prepared page used to 400: the page ran on click, then "Run this attack" posted empty text.
   var selected = null;
   function selectPage(id, btn) {
     selected = id;

@@ -3,15 +3,18 @@
 #   relay/deploy <ssh-host>      (an ssh config name; keep real hosts out of the repo)
 # Safe to run again: keys, names and certificates already there are kept.
 # DNS must already point <domain> and *.<domain> at the machine (RELAY_DOMAIN, default box.gurtos.com).
+# RELAY_ACME_CA=<directory url> makes the relay's own certificate come from that ACME CA instead of Let's Encrypt, for a
+# dry run (Let's Encrypt staging, or a private CA in a test). Boxes use their own BOX_ACME_CA; docs/self-host.md.
 set -euo pipefail
 cd "$(dirname "$0")"
 HOST=${1:?usage: relay/deploy <ssh-host>}
 DOMAIN=${RELAY_DOMAIN:-box.gurtos.com}
+[[ $DOMAIN =~ ^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$ ]] || { echo "relay/deploy: RELAY_DOMAIN must be a lowercase domain name like box.example.com, got \"$DOMAIN\"" >&2; exit 2; }
 
 ssh "$HOST" 'mkdir -p /opt/gurtos-relay'
 rsync -a --delete --chown=root:root --chmod=D755,F644 --exclude '*.test.ts' --exclude demo.ts ./ "$HOST:/opt/gurtos-relay/"
 
-ssh "$HOST" DOMAIN="$DOMAIN" bash -s <<'REMOTE'
+ssh "$HOST" DOMAIN="$DOMAIN" ACME_CA="$(printf %q "${RELAY_ACME_CA:-}")" bash -s <<'REMOTE'
 set -euo pipefail
 FRP=0.71.1 CADDY=2.11.7 NODE_MAJOR=24
 arch=$(dpkg --print-architecture) # amd64 or arm64
@@ -41,7 +44,8 @@ install -d -m 700 /etc/gurtos-relay
 
 # The tunnel port's certificate, from a CA made here. Boxes fetch the CA over HTTPS (Let's Encrypt) and pin it.
 # The CA's key is deleted once it has signed, so nothing here can sign another.
-if [ ! -f /etc/gurtos-relay/tunnel.pem ]; then
+# A certificate made for another domain is replaced, so changing RELAY_DOMAIN and deploying again works.
+if ! openssl x509 -in /etc/gurtos-relay/tunnel.pem -noout -ext subjectAltName 2>/dev/null | grep -qx " *DNS:$DOMAIN"; then
   cd /etc/gurtos-relay
   openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:prime256v1 -nodes -keyout ca.key -out tunnel-ca.pem -days 3650 -subj "/CN=GurtOS relay tunnel CA" 2>/dev/null
   openssl req -newkey ec -pkeyopt ec_paramgen_curve:prime256v1 -nodes -keyout tunnel.key -out tunnel.csr -subj "/CN=$DOMAIN" 2>/dev/null
@@ -80,7 +84,7 @@ systemctl restart gurtos-relay.service
 
 sed "s/@DOMAIN@/$DOMAIN/g" /opt/gurtos-relay/frps.toml > /etc/gurtos-relay/frps.toml
 sed -e "s/@DOMAIN@/$DOMAIN/g" -e "s|@SECRET@|$(cat /var/lib/gurtos-relay/self.secret)|" /opt/gurtos-relay/frpc-self.toml > /etc/gurtos-relay/frpc-self.toml
-sed "s/@DOMAIN@/$DOMAIN/g" /opt/gurtos-relay/Caddyfile > /etc/gurtos-relay/Caddyfile
+sed -e "s/@DOMAIN@/$DOMAIN/g" -e "s|@ACME_CA@|${ACME_CA:+acme_ca $ACME_CA}|" /opt/gurtos-relay/Caddyfile > /etc/gurtos-relay/Caddyfile
 chmod 600 /etc/gurtos-relay/frpc-self.toml
 
 # frps holds the public ports. It routes HTTPS by the name the browser asks for and never decrypts it.
@@ -148,9 +152,13 @@ WantedBy=multi-user.target
 UNIT
 systemctl daemon-reload
 systemctl enable gurtos-frps gurtos-relay-caddy gurtos-relay-frpc >/dev/null 2>&1
-systemctl restart gurtos-frps gurtos-relay-caddy gurtos-relay-frpc
-
-ufw allow 80/tcp >/dev/null; ufw allow 443/tcp >/dev/null; ufw allow 7000/tcp >/dev/null
+# Caddy goes last, once the local frpc has published the API's routes: its first certificate is requested at start, and
+# the challenge comes back through that tunnel. Asked too early, the challenge fails and Caddy waits before it tries again.
+systemctl restart gurtos-frps gurtos-relay-frpc
 sleep 3
+systemctl restart gurtos-relay-caddy
+
+if command -v ufw >/dev/null; then ufw allow 80/tcp >/dev/null; ufw allow 443/tcp >/dev/null; ufw allow 7000/tcp >/dev/null; fi
+sleep 2
 systemctl is-active gurtos-relay gurtos-frps gurtos-relay-caddy gurtos-relay-frpc
 REMOTE

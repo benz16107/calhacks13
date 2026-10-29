@@ -1,4 +1,4 @@
-// try.gurtos.com: the public live demo. Each visitor gets a throwaway GurtOS box (try/boxpool.ts). The browser
+// The public live demo (try.gurtos.com when ours is running). Each visitor gets a throwaway GurtOS box (try/boxpool.ts). The browser
 // only ever talks to this gateway; the gateway forwards a short whitelist of read/approve/undo routes to the
 // visitor's box over loopback, always adding X-Forwarded-For so the box treats the request as remote and demands
 // the paired token the gateway injected. Task creation, the attack runs and the plug are the gateway's own
@@ -13,7 +13,7 @@ import { classify, PAGES, visitorPage } from './menu.ts';
 const PORT = Number(process.env.TRY_PORT ?? 7788); // Caddy proxies to this loopback port
 const MAX_BOXES = Number(process.env.TRY_MAX_BOXES ?? 5);
 const BODY_MAX = 8 * 1024;
-const NEW_PER_HOUR = 10; // new boxes per IP per hour (judges often share one venue NAT IP); total cap still bounds it
+const NEW_PER_HOUR = 10; // new boxes per IP per hour (visitors at one event or office share an address); total cap still bounds it
 const ATTACKS_PER_HOUR = 20; // attack runs per IP per hour
 const REQ_PER_SEC = 100; // request burst per IP; a normal portal load is ~25 requests at once (fonts, assets, API)
 const PLUG_COOLDOWN = 30_000;
@@ -172,7 +172,7 @@ function landingPage(count: number): string {
      <li>The worker is scripted. No AI model runs, and there are no real keys anywhere on this host.</li>
      <li>The defences are the real operating system. The agent is acted out, so this does not test the model itself.</li>
    </ul>
-   <p>More: <a href="https://calhacks.gurtos.com">the walkthrough and video</a>.</p>
+   <p>More: <a href="https://gurtos.com">what GurtOS is, and how to install it</a>.</p>
  </div>
 </div>
 <script>
@@ -236,7 +236,7 @@ const server = http.createServer(async (req, res) => {
       if (method === 'POST' && p === '/try/start') {
         if (!sameSite(req)) return void json(res, 403, { error: 'start the demo from the page' });
         if (!b) {
-          // Each browser session gets its own box (judges often share one venue NAT IP, so never hand a new
+          // Each browser session gets its own box (visitors on one network share an address, so never hand a new
           // visitor someone else's box). The total cap and the per-IP hourly limit still bound abuse.
           if (pool.count() >= MAX_BOXES) return void json(res, 503, { error: 'all demo computers are in use; try again in a moment', count: pool.count(), max: MAX_BOXES });
           if (!within(newLog, ip, NEW_PER_HOUR)) return void json(res, 429, { error: 'you have started a few already; try again in a bit' });

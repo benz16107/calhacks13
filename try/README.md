@@ -1,12 +1,16 @@
-# try: the public live demo (try.gurtos.com)
+# try: the public live demo
 
-Most sponsors judge from Devpost, so this puts GurtOS in a judge's hands. Every visitor gets a real, throwaway
-GurtOS box in the browser: the real portal on a real box, the same isolation `./demo` uses. They can start safe
-tasks, approve or deny, undo, and pull the plug. They can also **attack it** with their own prompt-injection text
-or a prepared booby-trapped page, and watch each defence stop it, in plain words, with the log lines.
+A web page where anyone can try GurtOS without installing it. Every visitor gets a real, throwaway GurtOS box in the
+browser: the real portal on a real box, with the same isolation `./demo` uses. They can start safe tasks, approve or
+deny, undo, and pull the plug. They can also **attack it** with their own prompt-injection text or a prepared
+booby-trapped page, and watch each defence stop it, in plain words, with the log lines.
 
 **Scripted worker only. No model runs, and there are no real keys on the host.** The vault holds `demo-` placeholders
 and the box's per-task tripwire decoys. Nothing a visitor does can reach a real box, the relay, or anything private.
+
+**Status.** The demo ran at `try.gurtos.com` on a rented machine that was deleted after the Cal Hacks weekend, so
+that address is offline. Running it again is one command on a fresh machine (see "Running it" below). It is not part
+of an installed box.
 
 ## What a visitor sees
 
@@ -41,7 +45,7 @@ and the box's per-task tripwire decoys. Nothing a visitor does can reach a real 
 
 ## Limits (all in `gateway.ts` and `boxpool.ts`)
 
-- At most 5 boxes at once; past that, a "full, try again" page. Each browser session gets its own box; up to 10 new boxes an hour per IP (judges may share one venue IP).
+- At most 5 boxes at once; past that, a "full, try again" page. Each browser session gets its own box; up to 10 new boxes an hour per IP (visitors on one network share an address).
 - A box is destroyed after 20 minutes idle and after an hour at most. The host resets (wipes every box) every 6 hours.
 - 100 requests a second and 20 attack runs an hour per IP. Request bodies are capped at 8 KB; pasted attack text at 4 KB.
 - One attack at a time per box; a 30-second cooldown on pull-the-plug.
@@ -63,16 +67,55 @@ and the box's per-task tripwire decoys. Nothing a visitor does can reach a real 
 
 - The defences are real OS controls, but the agent is **acted out** by a script, so this does not test whether
   Claude falls for the text. That is the point: the defences do not depend on the model refusing.
-- **A disk fill** has no per-task quota in GurtOS yet. A visitor can't reach it here (fixed scripts, tiny files,
-  scheduled wipe), but a real box could still be filled.
+- **A disk fill** is stopped by GurtOS's disk watcher, not a hard quota. Every two seconds it measures each running
+  task's own copy, and a task past its cap (200 MB here) is stopped and undone. A writer can pass the cap until the next
+  check, and the attack page shows this defence too.
 - The proxy checks which host a task may reach, not the body of an HTTPS request to a host it is allowed to reach.
   The tripwire still catches the decoy key in plain HTTP or any request the box can read.
 
 ## Running it
 
+You need a fresh Ubuntu 24.04 machine used for nothing else, a domain name, and a checkout of this repository on the
+machine. It must hold no real keys and must not be on a private network such as a tailnet: setup refuses if it finds
+a non-demo value in `/etc/box/vault.env` or a running Tailscale. Make the machine's firewall (at your cloud
+provider too) accept ports 80 and 443, and ssh on 22. Point the domain's `A` record at the machine first, because
+Caddy asks for the certificate as soon as it starts. A box idles at about 100 to 200 MB of memory, and a task caps at 2 GB, so a machine with 4 GB of memory, 2 vCPUs and
+20 GB of disk is a sensible start for the five-box limit.
+
 ```
-sudo DOMAIN=try.gurtos.com try/setup.sh    # on a fresh Ubuntu 24.04 host with no real keys
-sudo node --experimental-strip-types try/demo.ts   # the self-check and attack test, on a test VM
+git clone https://github.com/benz16107/calhacks13.git && cd calhacks13
+sudo DOMAIN=try.example.com try/setup.sh
 ```
 
-Delete the host after judging. It holds nothing to keep.
+That is the whole install. It is safe to run again. In order, `try/setup.sh`:
+
+1. Refuses to continue on a machine that holds real keys or is on a tailnet.
+2. Installs Node, SpacetimeDB, Caddy and nftables through `core/setup.sh`, without the Droid worker, then the box's
+   npm packages (`npm ci --omit=dev`).
+3. Installs `try-gateway.service` (the one process a browser talks to) and `box-try-caddy.service` (HTTPS for
+   `DOMAIN` to the gateway on `127.0.0.1:7788`, and it overwrites `X-Forwarded-For` so the per-IP limits cannot be
+   spoofed).
+4. Sets the firewall. Inbound is 80, 443 and ssh (`SSH_ALLOW=<cidr>` limits ssh). Outbound, the machine may not reach
+   the private ranges, the cloud metadata address, or any host listed in `TRY_BLOCKED_IPS` (or one per line in
+   `/etc/try/blocked-ips`). Its own DNS resolvers and DHCP server stay reachable.
+5. Starts `try-reset.timer`, which restarts the gateway every 6 hours. A restart wipes every box.
+
+Then open `https://DOMAIN/`. Logs are `journalctl -u try-gateway` and `journalctl -u box-try-caddy`. Each visitor's box
+logs to `/var/lib/box-try/<id>/box.log` while it lives.
+
+To run the self-check and attack test instead, on a test machine that holds no real keys and with the gateway not
+running: `sudo node --experimental-strip-types try/demo.ts` (with `TRY_VAULT=<a demo-only file>` if the machine has a real vault). It starts two boxes, runs every defence, pulls a plug and
+checks the reaper.
+
+### Taking it down
+
+The simplest way is to delete the machine. It holds nothing to keep. To keep the machine, run `sudo try/setup.sh remove`.
+That stops the services, deletes their unit files, the firewall tables and `/var/lib/box-try`, and leaves Node,
+SpacetimeDB, Caddy and the npm packages installed. It refuses to run on a machine that holds real keys, the same as setup.
+
+### Notes
+
+- The fake web that tasks may reach listens on `127.0.0.1:8080`. Do not run the relay (`relay/`) on the same machine,
+  which uses that port too.
+- `try/setup.sh` was reviewed and its firewall rules were loaded and exercised in an isolated network namespace, but
+  the full script has not been run on a fresh public machine since the Cal Hacks weekend.

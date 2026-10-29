@@ -14,7 +14,9 @@ transport.tls.keyFile = "{{ .Envs.CREDENTIALS_DIRECTORY }}/tunnel.key"
 transport.maxPoolCount = 5
 transport.heartbeatTimeout = 90
 log.to = "console"
-log.level = "info"
+# "warn" keeps visitors' and boxes' addresses out of the journal: at "info" frps writes one line, with the caller's
+# address, for every connection. Raise it to "info" while debugging a first setup, then lower it again.
+log.level = "warn"
 
 [[httpPlugins]]
 name = "gurtos"

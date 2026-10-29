@@ -1,7 +1,7 @@
 // Remote access and push, in ./demo. Offline by default: a relay in this process (names, the frps plugin, the push
 // gateway) with a stand-in push service, the box's push encryption read back by a stand-in phone, and the box's own
 // API for remote access and notifications. DEMO_LIVE=remote adds the real thing: this demo box enrolls a name with
-// the real relay, gets its own certificate, answers at https://<name>.box.gurtos.com, sends a real push through
+// the real relay (BOX_RELAY, default box.gurtos.com), gets its own certificate, answers at https://<name>.<relay>, sends a real push through
 // the gateway and Mozilla's push service to a stand-in phone, then releases the name.
 import { execFileSync } from 'node:child_process';
 import { createECDH, createHmac, randomBytes } from 'node:crypto';
@@ -12,8 +12,8 @@ import path from 'node:path';
 import type { DemoKit } from '../core/contract.ts';
 import { send } from '../core/push.ts';
 import { keyPair, open as openSealed, phrase } from '../core/quickstart.ts';
-import { nameProblem as boxRule } from '../core/remote.ts';
-import { RESERVED, load, nameProblem as relayRule, serve } from './server.ts';
+import { APP, RELAY, nameProblem as boxRule } from '../core/remote.ts';
+import { DOMAIN, RESERVED, load, nameProblem as relayRule, serve } from './server.ts';
 import { decrypt, testPhone } from './testphone.ts';
 
 const LIVE = /\bremote\b/.test(process.env.DEMO_LIVE ?? '');
@@ -29,7 +29,8 @@ export default async function (d: DemoKit) {
   d.check(tries.every((n) => !!relayRule(n) === (!!boxRule(n) || RESERVED.has(n))), 'the box and the relay agree on names: lowercase, 3 to 30 characters, reserved names blocked');
 
   // ---------- a relay in this process ----------
-  const relay = load(fs.mkdtempSync(path.join(os.tmpdir(), 'relay-demo-')));
+  const relayDir = fs.mkdtempSync(path.join(os.tmpdir(), 'relay-demo-'));
+  const relay = load(relayDir);
   const { pluginServer, apiServer } = serve(relay, 0, 0);
   const gw = `http://127.0.0.1:${await listening(apiServer)}`;
   const frp = `http://127.0.0.1:${await listening(pluginServer)}/frp`;
@@ -56,9 +57,9 @@ export default async function (d: DemoKit) {
     const ask = async (op: string, content: unknown) => (await post(`${frp}?op=${op}&version=0.1.0`, { version: '0.1.0', op, content })).body;
     const as = (s: string) => ({ user: name, metas: { secret: s } });
     d.check((await ask('Login', { ...as(secret) })).reject === false && (await ask('Login', { ...as('wrong') })).reject === true, 'the tunnel accepts a box only with its own secret');
-    const own = await ask('NewProxy', { user: as(secret), proxy_type: 'https', custom_domains: [`${name}.box.gurtos.com`] });
+    const own = await ask('NewProxy', { user: as(secret), proxy_type: 'https', custom_domains: [`${name}.${DOMAIN}`] });
     d.check(own.reject === false && own.content.bandwidth_limit_mode === 'server', "a box may route its own name (HTTPS passed through by SNI), with the relay's bandwidth limit");
-    const other = await ask('NewProxy', { user: as(secret), proxy_type: 'https', custom_domains: ['rosa.box.gurtos.com'] });
+    const other = await ask('NewProxy', { user: as(secret), proxy_type: 'https', custom_domains: [`rosa.${DOMAIN}`] });
     const tcp = await ask('NewProxy', { user: as(secret), proxy_type: 'tcp', remote_port: 22 });
     d.check(other.reject === true && tcp.reject === true, "a box can't take another box's name or open a raw port");
 
@@ -67,7 +68,7 @@ export default async function (d: DemoKit) {
     phone.generateKeys();
     const auth = randomBytes(16);
     const sub = { endpoint: `http://127.0.0.1:${pushPort}/push/1`, p256dh: phone.getPublicKey().toString('base64url'), auth: auth.toString('base64url'), key: randomBytes(32).toString('base64url'), at: '' };
-    const fields = { v: 1, type: 'approval', machine: 'demo-box', box: 'Demo box', url: `https://${name}.box.gurtos.com`, id: 't1.k1', task: 't1', title: 'Approve $20.00 to Box Test Store?', body: 'Buy the USB-C cable', costCents: 2000 };
+    const fields = { v: 1, type: 'approval', machine: 'demo-box', box: 'Demo box', url: `https://${name}.${DOMAIN}`, id: 't1.k1', task: 't1', title: 'Approve $20.00 to Box Test Store?', body: 'Buy the USB-C cable', costCents: 2000 };
     await send(gw, name, secret, sub, fields, 't1.k1');
     const got = pushed.at(-1)!;
     const text = decrypt(got.body, phone.getPrivateKey(), auth);
@@ -80,6 +81,7 @@ export default async function (d: DemoKit) {
     pluginServer.close();
     apiServer.close();
     pushService.close();
+    fs.rmSync(relayDir, { recursive: true, force: true }); // it holds the stand-in relay's keys; every run used to leave one in /tmp
   }
 
   // ---------- the box's own API ----------
@@ -103,9 +105,9 @@ export default async function (d: DemoKit) {
   const noToken = await raw('GET', '/api/push', undefined, { 'x-forwarded-for': '203.0.113.7' });
   d.check(notOwner.status === 403 && noToken.status === 401, "only the owner turns remote access on, and nothing answers without a paired phone's token");
   d.check((await raw('POST', '/api/remote', { name: 'ab' })).status === 400, 'a bad name is refused before the relay is asked');
-  const cors = await fetch(`${d.url}/api/tasks`, { method: 'OPTIONS', headers: { origin: 'https://app.gurtos.com', 'access-control-request-method': 'GET', 'access-control-request-headers': 'authorization' } });
+  const cors = await fetch(`${d.url}/api/tasks`, { method: 'OPTIONS', headers: { origin: APP, 'access-control-request-method': 'GET', 'access-control-request-headers': 'authorization' } });
   const evil = await fetch(`${d.url}/api/tasks`, { method: 'OPTIONS', headers: { origin: 'https://evil.example', 'access-control-request-method': 'GET' } });
-  d.check(cors.headers.get('access-control-allow-origin') === 'https://app.gurtos.com' && !evil.headers.get('access-control-allow-origin'), 'the GurtOS app (app.gurtos.com) may call the box from the browser; other sites may not');
+  d.check(cors.headers.get('access-control-allow-origin') === APP && !evil.headers.get('access-control-allow-origin'), 'the GurtOS app (the app address) may call the box from the browser; other sites may not');
   d.check((await raw('DELETE', '/api/push', undefined, phoneH)).body.subscribed === false, 'the phone turns notifications off');
   const forgot = await raw('DELETE', '/api/pair/self', undefined, phoneH);
   d.check(forgot.body.revoked === true && (await raw('GET', '/api/push', undefined, phoneH)).status === 401, 'a phone that forgets the box revokes its own pairing');
@@ -117,7 +119,7 @@ export default async function (d: DemoKit) {
   const frag = (u: URL) => new URLSearchParams(u.hash.slice(1));
   if (!setupDone) await d.api('POST', '/setup/finish', {});
   const after = new URL((await d.api('POST', '/pair/start', { owner: true })).url);
-  d.check(after.origin === 'https://app.gurtos.com' && !frag(after).get('rv') && !after.search, 'after setup, a pairing link has no rendezvous id, so no code can switch remote access on, and nothing about the box rides in the query (which reaches server logs)');
+  d.check(after.origin === APP && !frag(after).get('rv') && !after.search, 'after setup, a pairing link has no rendezvous id, so no code can switch remote access on, and nothing about the box rides in the query (which reaches server logs)');
   await d.api('POST', '/setup/reopen', {});
   let start: any, link: URL, qrText: string | undefined;
   try {
@@ -128,7 +130,7 @@ export default async function (d: DemoKit) {
     await d.api('POST', '/setup/finish', {});
   }
   d.check(qrText === undefined || qrText === start.url, qrText === undefined ? '(qrencode and zbarimg are not on this machine: the QR image itself was not decoded)' : 'the setup QR, drawn and read back, holds exactly the link the box gave');
-  d.check(link.origin === 'https://app.gurtos.com' && link.pathname === '/pair' && !link.search && frag(link).get('code') === start.code && (frag(link).get('rv') ?? '').length >= 22, 'during setup, with remote access off, the QR opens the GurtOS app with the code and a rendezvous id in the fragment, not an address only the box\'s own network can reach');
+  d.check(link.origin === APP && link.pathname === '/pair' && !link.search && frag(link).get('code') === start.code && (frag(link).get('rv') ?? '').length >= 22, 'during setup, with remote access off, the QR opens the GurtOS app with the code and a rendezvous id in the fragment, not an address only the box\'s own network can reach');
   const viaQr = await raw('POST', '/api/pair', { code: frag(link).get('code'), name: 'Phone from the QR' });
   const qrPhone = { authorization: `Bearer ${viaQr.body.token}`, 'x-forwarded-for': '203.0.113.8' };
   d.check(viaQr.status === 200 && (await raw('GET', '/api/tasks', undefined, qrPhone)).status === 200, 'the code read from the QR pairs a phone with the box');
@@ -144,7 +146,7 @@ export default async function (d: DemoKit) {
   try {
     const st = await d.api('POST', '/quickstart/start', {});
     const qu = new URL(st.url);
-    d.check(qu.origin === 'https://app.gurtos.com' && qu.pathname === '/quickstart' && !qu.search && qs(qu).get('pk')?.length === 43 && (qs(qu).get('s') ?? '').length >= 22 && st.phrase === phrase(qs(qu).get('pk')!), "Quick Start's QR carries the new computer's one-time key, the secret and the rendezvous id after #, and its check phrase");
+    d.check(qu.origin === APP && qu.pathname === '/quickstart' && !qu.search && qs(qu).get('pk')?.length === 43 && (qs(qu).get('s') ?? '').length >= 22 && st.phrase === phrase(qs(qu).get('pk')!), "Quick Start's QR carries the new computer's one-time key, the secret and the rendezvous id after #, and its check phrase");
     const send = { rv: qs(qu).get('rv'), pk: qs(qu).get('pk'), s: qs(qu).get('s'), n: 'Demo box', phonePk: keyPair().pk };
     const plainCode = (await d.api('POST', '/pair/start', {})).code;
     const plainPhone = { authorization: `Bearer ${(await raw('POST', '/api/pair', { code: plainCode, name: 'Family phone' })).body.token}`, 'x-forwarded-for': '203.0.113.10' };
@@ -164,25 +166,25 @@ export default async function (d: DemoKit) {
   await d.api('POST', '/setup/reopen', {});
   const scan = await d.api('POST', '/pair/start', { owner: true });
   const rv = new URLSearchParams(new URL(scan.url).hash.slice(1)).get('rv');
-  await fetch(`https://box.gurtos.com/v1/rv/${rv}/ask`, { method: 'PUT', headers: { 'content-type': 'application/json' }, body: '{}' });
+  await fetch(`${RELAY}/v1/rv/${rv}/ask`, { method: 'PUT', headers: { 'content-type': 'application/json' }, body: '{}' });
   let name = '';
   try {
     const host: string = await d.waitFor('the box to turn on remote access and post its address', async () => {
-      const e = await fetch(`https://box.gurtos.com/v1/rv/${rv}/error`);
+      const e = await fetch(`${RELAY}/v1/rv/${rv}/error`);
       if (e.ok) throw new Error(((await e.json()) as any).error);
-      const r = await fetch(`https://box.gurtos.com/v1/rv/${rv}/host?wait=20`);
+      const r = await fetch(`${RELAY}/v1/rv/${rv}/host?wait=20`);
       return r.ok ? ((await r.json()) as any).host : undefined;
     }, 180_000);
     name = host.split('.')[0];
     const base = `https://${host}`;
-    d.check(/^[a-z0-9-]+\.box\.gurtos\.com$/.test(host) && (await raw('GET', '/api/remote')).body.state === 'connected', `live: the phone asked through the relay, and the box turned on ${host} by itself`);
+    d.check(host.endsWith(`.${new URL(RELAY).host}`) && /^[a-z0-9-]+$/.test(host.split('.')[0]) && (await raw('GET', '/api/remote')).body.state === 'connected', `live: the phone asked through the relay, and the box turned on ${host} by itself`);
     const health = await fetch(`${base}/api/health`);
     d.check(health.ok && (await fetch(`${base}/api/tasks`)).status === 401, `live: ${base} answers with a trusted certificate, and refuses a request without a token`);
     const owner = (await (await fetch(`${base}/api/pair`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ code: scan.code, name: 'Owner phone' }) })).json()) as any;
     d.check(typeof owner.token === 'string', 'live: the phone paired over https with the code from the QR it scanned before the box had an address');
     const next = await d.api('POST', '/pair/start', { owner: true });
-    d.check(next.url.startsWith(`https://app.gurtos.com/pair?box=${host}#`), 'live: with remote access on, the pairing QR opens the GurtOS app with this box');
-    const key = (await (await fetch('https://box.gurtos.com/v1/push/key')).json()).publicKey;
+    d.check(next.url.startsWith(`${APP}/pair?box=${host}#`), 'live: with remote access on, the pairing QR opens the GurtOS app with this box');
+    const key = (await (await fetch(`${RELAY}/v1/push/key`)).json()).publicKey;
     const tp = await testPhone(key);
     try {
       const pushKey = randomBytes(32).toString('base64url');
@@ -228,7 +230,7 @@ export default async function (d: DemoKit) {
     }, 200_000);
     d.check(sent.body.sent === true && done.steps.some((x: any) => /app/.test(x.text)) && done.steps.some((x: any) => /^Reach from anywhere/.test(x.text)), `live: after the owner's OK, the new computer applied each step: ${done.steps.map((x: any) => x.text).join('; ')}`);
     d.check(done.steps.filter((x: any) => / added \(from /.test(x.text)).length === named.length, `live: only the keys the question named left the source (${named.join(', ') || 'none'}), though the answer asked for all ${asked.body.keys.length}`);
-    const sealedOwner = await (await fetch(`https://box.gurtos.com/v1/rv/${f.get('rv')}/owner`)).json();
+    const sealedOwner = await (await fetch(`${RELAY}/v1/rv/${f.get('rv')}/owner`)).json();
     const { host: qhost, code: qcode } = openSealed(phone.privateKey, f.get('s')!, sealedOwner as any);
     const qp = (await (await fetch(`https://${qhost}/api/pair`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ code: qcode, name: 'Phone from Quick Start' }) })).json()) as any;
     d.check(typeof qp.token === 'string' && (await fetch(`https://${qhost}/api/tasks`, { headers: { authorization: `Bearer ${qp.token}` } })).ok, 'live: only the phone could open its pairing code, and it paired with the new computer over https as the owner');
@@ -241,7 +243,7 @@ export default async function (d: DemoKit) {
   } finally {
     await d.api('POST', '/setup/finish', {});
     const offAgain = await raw('DELETE', '/api/remote');
-    const free = name ? ((await (await fetch(`https://box.gurtos.com/v1/names/${name}`)).json()) as any) : { available: true };
+    const free = name ? ((await (await fetch(`${RELAY}/v1/names/${name}`)).json()) as any) : { available: true };
     d.check(offAgain.body.enabled === false && (!name || offAgain.body.released) && free.available, 'live: turning it off released the name');
   }
 }

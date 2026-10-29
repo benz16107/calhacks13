@@ -1,6 +1,7 @@
 // A self-check for the live demo, runnable on a test VM as root (sudo node try/demo.ts). It drives the box pool
 // the way the gateway does and the way an attacker would: it checks visitor isolation, that a menu task runs,
 // that every attack defence fires, that a plug-pull resumes the box, and that a box is wiped on reap. Exit 0 = ok.
+// On a machine that has a real /etc/box/vault.env, run it with TRY_VAULT=<a demo-only file> so the boxes never load real keys.
 import assert from 'node:assert';
 import http from 'node:http';
 import { call } from '../core/client.ts';

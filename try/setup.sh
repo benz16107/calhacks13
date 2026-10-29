@@ -1,20 +1,22 @@
 #!/usr/bin/env bash
-# Set up the public live-demo host (try.gurtos.com) on a fresh Ubuntu 24.04 VM with root and NO real keys.
-# Safe to run again. It installs Node, SpacetimeDB and Caddy (via core/setup.sh), then the gateway service,
-# Caddy for HTTPS, a light firewall, and a 6-hour reset. It never installs Droid or writes any real secret.
+# Set up the public live demo (a try.<your domain> host) on a fresh Ubuntu 24.04 machine with root and NO real keys.
+# Safe to run again. It installs Node, SpacetimeDB and Caddy (via core/setup.sh), the box's npm packages, then the
+# gateway service, Caddy for HTTPS, a firewall, and a 6-hour reset. It never installs Droid or writes any real secret.
 #
-#   sudo DOMAIN=try.gurtos.com SSH_ALLOW=<cidr> try/setup.sh
+#   sudo DOMAIN=try.example.com try/setup.sh          set it up (DNS for the name must already point here)
+#   sudo try/setup.sh remove                           take it down again, on a host you want to keep
 #
-# DOMAIN   the public name Caddy gets a certificate for (default try.gurtos.com)
+# DOMAIN    the public name Caddy gets a certificate for (required)
 # SSH_ALLOW a CIDR allowed to reach port 22 (default 0.0.0.0/0, so you are not locked out; tighten later)
+# TRY_BLOCKED_IPS  hosts the machine must never reach, besides the private ranges (or one per line in /etc/try/blocked-ips)
+# TRY_PORT  the gateway's loopback port (default 7788)
 set -euo pipefail
 cd "$(dirname "$0")/.."
 ROOT=$(pwd)
-DOMAIN=${DOMAIN:-try.gurtos.com}
 SSH_ALLOW=${SSH_ALLOW:-0.0.0.0/0}
 TRY_PORT=${TRY_PORT:-7788}
 
-[ "$(id -u)" = 0 ] || { echo "run as root on a test VM" >&2; exit 1; }
+[ "$(id -u)" = 0 ] || { echo "run as root on a machine used only for this" >&2; exit 1; }
 
 echo "== refusing to run if this host holds real keys or is on the real network =="
 if [ -f /etc/box/vault.env ] && grep -Eqv '^\s*(#|$|[A-Z0-9_]+=demo-)' /etc/box/vault.env; then
@@ -24,15 +26,36 @@ if command -v tailscale >/dev/null && tailscale status >/dev/null 2>&1; then
   echo "FAIL: tailscale is up on this host. The demo host must not be on the private tailnet." >&2; exit 1
 fi
 
+if [ "${1:-}" = remove ]; then
+  echo "== removing the live demo (Node, SpacetimeDB, Caddy and the npm packages stay) =="
+  systemctl disable --now try-reset.timer try-gateway.service box-try-caddy.service >/dev/null 2>&1 || true
+  rm -f /etc/systemd/system/try-gateway.service /etc/systemd/system/box-try-caddy.service /etc/systemd/system/try-reset.service /etc/systemd/system/try-reset.timer
+  systemctl daemon-reload
+  nft delete table inet try_guard 2>/dev/null || true
+  nft delete table inet try_in 2>/dev/null || true
+  sed -i '/nftables-try/d' /etc/nftables.conf 2>/dev/null || true
+  rm -f /etc/nftables-try.conf /etc/nftables-try-in.conf
+  rm -rf /etc/box-try /var/lib/box-try
+  echo "removed. Rules added to ufw for ports 80 and 443 are left in place."
+  exit 0
+fi
+
+DOMAIN=${DOMAIN:?set DOMAIN to the public name of this host, for example: sudo DOMAIN=try.example.com try/setup.sh}
+[[ $DOMAIN =~ ^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$ ]] || { echo "DOMAIN must be a lowercase domain name like try.example.com, got \"$DOMAIN\"" >&2; exit 2; }
+
 echo "== base: node, spacetimedb, caddy, nftables (no droid) =="
 BOX_NO_DROID=1 "$ROOT/core/setup.sh" >/dev/null
 echo "node $(node -v), caddy $(/usr/local/bin/caddy version | head -1)"
+
+echo "== the box's npm packages (production only) =="
+lock=$(sha256sum package-lock.json | cut -c1-16)
+[ -f "node_modules/.lock-$lock" ] || { npm ci --omit=dev --no-audit --no-fund --loglevel=error && touch "node_modules/.lock-$lock"; }
 
 echo "== the gateway service =="
 install -d -m 0700 /var/lib/box-try
 cat > /etc/systemd/system/try-gateway.service <<UNIT
 [Unit]
-Description=GurtOS public live demo gateway (try.gurtos.com)
+Description=GurtOS public live demo gateway
 After=network-online.target spacetimedb.service
 Wants=network-online.target spacetimedb.service
 
@@ -91,7 +114,7 @@ echo "== firewall =="
 # Egress guard: a task is already confined to the fake web by the box proxy; this is defence in depth so that
 # even a hypothetical escape to the host cannot reach the real boxes, the relay or any private network.
 #
-# Inbound: Ubuntu on Vultr ships UFW enabled (default-deny, only 22 open), so open 80/443 there, or the ACME
+# Inbound: some providers ship UFW enabled (default-deny, only 22 open), so open 80/443 there, or the ACME
 # challenge and the site are unreachable. If UFW is not present, fall back to our own input table.
 if command -v ufw >/dev/null && ufw status 2>/dev/null | grep -q "Status: active"; then
   ufw allow 80/tcp >/dev/null; ufw allow 443/tcp >/dev/null
@@ -126,6 +149,12 @@ blocked=${TRY_BLOCKED_IPS:-}
 blocked_set=$(printf '%s' "$blocked" | tr ', ' '\n\n' | grep -E '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+(/[0-9]+)?$' | paste -sd, -)
 hosts_rule=""
 [ -n "$blocked_set" ] && hosts_rule="ip daddr { $blocked_set } drop"
+# The host's own DNS resolvers and DHCP server may sit inside the private ranges below (some providers put them
+# there), so they are let through first, on their own ports only.
+dns_set=$(awk '$1 == "nameserver" && $2 ~ /^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$/ {print $2}' /run/systemd/resolve/resolv.conf /etc/resolv.conf 2>/dev/null | sort -u | paste -sd, -)
+infra_rule="udp dport 67 accept"
+[ -n "$dns_set" ] && infra_rule="ip daddr { $dns_set } meta l4proto { tcp, udp } th dport 53 accept
+    $infra_rule"
 cat > /etc/nftables-try.conf <<NFT
 table inet try_guard {
   chain output {
@@ -133,6 +162,7 @@ table inet try_guard {
     oif "lo" accept
     # never reach the specific hosts in TRY_BLOCKED_IPS / /etc/try/blocked-ips, or any private range
     ${hosts_rule}
+    ${infra_rule}
     ip daddr { 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 100.64.0.0/10, 169.254.0.0/16 } drop
     ip6 daddr { fc00::/7, fe80::/10 } drop
   }

@@ -106,7 +106,8 @@ function spawnProc(b: Box) {
 // The vault lives where a real box keeps it (/etc/box/vault.env, root-only), so a task reading it gets EACCES,
 // not "file not found". Every value is a demo- placeholder (BOX_DEMO accepts them); none is real, and no task
 // can read the file. Shared by every demo box here; nothing a visitor does can change or read it.
-export const VAULT = '/etc/box/vault.env';
+// TRY_VAULT is for a test machine that already has a real vault: point the boxes at a demo-only file instead.
+export const VAULT = process.env.TRY_VAULT ?? '/etc/box/vault.env';
 export function ensureVault() {
   if (fs.existsSync(VAULT)) return;
   fs.mkdirSync(path.dirname(VAULT), { recursive: true, mode: 0o700 });
@@ -125,8 +126,8 @@ export async function create(ip: string): Promise<Box> {
   fs.mkdirSync(home, { recursive: true, mode: 0o711 });
   // Skip the first-run wizard: a visitor should land on the desktop, not "GurtOS is being set up".
   fs.writeFileSync(path.join(home, 'setup.json'), JSON.stringify({ done: true, finishedAt: new Date().toISOString(), steps: {} }));
-  // Turn remote access off for good on this box, even during setup, so a visitor's box can never enroll a
-  // <name>.box.gurtos.com address through the relay and use up relay names (core's note).
+  // Turn remote access off for good on this box, even during setup, so a visitor's box can never enroll an
+  // address through the relay and use up its names (core's note).
   fs.writeFileSync(path.join(home, 'remote-off'), new Date().toISOString());
   const now = Date.now();
   const b: Box = { id, home, sock: path.join(home, 'api.sock'), port: 0, token: '', name: 'Your GurtOS', createdAt: now, lastSeen: now, ip, attacks: 0, plugAt: 0, busyAttack: false, interacted: false };

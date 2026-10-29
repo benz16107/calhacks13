@@ -4,6 +4,9 @@ The relay gives a GurtOS box an address like `https://rosa.box.gurtos.com` with 
 forwards push notifications to the GurtOS app on a phone. It runs on its own small machine with a public address,
 not on a box. A box opts in from Settings ("Reach this box from anywhere"); nothing changes until the owner does.
 
+The hosted relay at `box.gurtos.com` is not running as of October 29, 2026. To use remote access today, run your own
+([`docs/self-host.md`](../docs/self-host.md)) and point boxes at it with `BOX_RELAY`.
+
 ```
 phone ──TLS for rosa.box.gurtos.com──▶ relay :443 ──same bytes, by SNI──▶ tunnel ──▶ box: Caddy (TLS ends here) ──▶ box API
                                                    ▲
@@ -62,11 +65,13 @@ answers both HTTP-01 and TLS-ALPN-01 through the tunnel.
 | `GET /v1/push/key` | The app's VAPID public key, for `pushManager.subscribe()`. |
 | `POST /v1/push` | Forward one push: `{endpoint, payload, ttl?, urgency?, topic?}` with the box's `Bearer <name>.<secret>`. 600 an hour per box. |
 | `GET /v1/status` | `{ok, domain, boxes}` (a count, never the names). |
+| `GET` or `PUT /v1/rv/<id>/<slot>` | The rendezvous: a drop box two devices use to find each other while they pair or set up a new computer. `<id>` is a random 22 to 64 character capability shown only on the box's screen. A slot (`ask`, `host`, `error`, `bundle`, `owner`) is written once, holds at most 8 KB, and a drop lives 10 minutes and holds 8 slots. `GET ?wait=25` waits for a write. 30 writes and 240 reads a minute per address. Only the box that holds a name can write the `host` slot, and only with its own address in it. |
 
 **Names:** lowercase letters, digits and hyphens, 3 to 30 characters, no leading, trailing or double hyphen
 (which also blocks `xn--` look-alikes), and a reserved list (`www`, `app`, `api`, `relay`, `admin`, `calhacks`,
-`login`, `pay`, and others in `server.ts`). A name nobody has connected with for 30 days is free again, so a box
-that was wiped without turning remote access off doesn't hold its name forever.
+`login`, `pay`, and others in `server.ts`). A name that no tunnel has logged in or sent a heartbeat for in 30 days is free again, so a box
+that was wiped without turning remote access off doesn't hold its name forever. A tunnel that stays up keeps its name
+however long it stays up.
 
 ## The frps plugin
 
@@ -75,7 +80,9 @@ frps asks `server.ts` before each `Login`, `NewProxy` and `Ping` (heartbeat, eve
 - a login only with a known name and that name's secret (constant-time compare), at most 30 a minute per box;
 - an `https` or `http` route only for exactly `<name>.box.gurtos.com`: no other domains, no raw TCP or UDP ports,
   no subdomains of other names. The relay, not the box, sets a 4 MB/s bandwidth limit per route;
-- a heartbeat only while the name is still enrolled, so releasing a name cuts its tunnel within 30 s.
+- a heartbeat only while the name is still enrolled, so releasing a name cuts its tunnel within 30 s. A heartbeat
+  also counts as the box being seen, at most one write an hour, which is what keeps a long-lived tunnel's name from
+  expiring.
 
 ## The push gateway
 
@@ -86,19 +93,22 @@ with the key whose private half is on the relay, and hands that subscription to 
    (`mac`), so a second box that shares the subscription can't pose as the first.
 2. It encrypts the message for the phone with RFC 8291 (aes128gcm), using the subscription's own keys.
 3. It posts the ciphertext to `/v1/push` with its secret. The gateway checks the endpoint is a real push service
-   (Google, Apple, Mozilla, Microsoft), signs a VAPID JWT for it, and forwards the bytes unchanged.
+   (Google, Apple, Mozilla, Microsoft), signs a VAPID JWT for it, and forwards the bytes unchanged. It does not
+   follow a redirect from the push service. The JWT's contact address is `RELAY_CONTACT`, or `https://<the relay's
+   domain>`, or `https://gurtos.com` on `box.gurtos.com`.
 
 ### The native apps (APNs)
 
 The GurtOS iPhone and Mac apps (`native/`) can't use web push, so they subscribe with an address on the relay,
 `https://box.gurtos.com/v1/apns/<app>/<production|sandbox>/<device token>`, and the same keys and per-box `mac` key
 as the web app. A box needs no change: it encrypts for that subscription and posts it to `/v1/push` as always. The
-gateway accepts only the two GurtOS apps (`com.benzhou.gurtos`, `com.benzhou.gurtos.mac`) and a hex token, and sends
+gateway accepts only the two GurtOS apps (`com.benzhou.gurtos`, `com.benzhou.gurtos.mac`, or the ids in `RELAY_APNS_TOPICS`) and a hex token, and sends
 Apple `{"aps": {"alert": {"title": "GurtOS", "body": "A request needs you"}, "mutable-content": 1}, "e": "<ciphertext>"}`.
 The app's notification service extension decrypts `e`, checks the `mac`, and only then shows the machine's name and
 the question. A token Apple no longer knows comes back as `gone: true`.
 
-The APNs key is Ben's (developer.apple.com, Keys, Apple Push Notifications service). On the relay it is
+The APNs key comes from the operator's Apple developer account (developer.apple.com, Keys, Apple Push Notifications
+service). On the relay it is
 `apns.p8` and `apns.json` (`{"keyId": "...", "teamId": "..."}`) in the state folder, owned by the relay's user, 0600,
 never in git. Without them an APNs address gets `503 APNs is not set up on this relay`; web push is unchanged.
 
@@ -108,6 +118,12 @@ It **can** see: which names exist; when each box's tunnel connects and from whic
 to a box, the caller's IP address, the time, the name asked for (SNI) and how many bytes went each way; the
 plain-HTTP requests on port 80 (certificate challenges and redirects, nothing else is served there); and for each
 push, the push service endpoint (for a native app: the app and its APNs device token), the time and the size.
+
+What it **keeps** is less. `relay/deploy` sets `gurtos-frps` to log at `warn`, so the journal holds no caller addresses
+(at `info`, frps writes one line with the address for every connection and login). `server.ts` logs only the name
+behind a refused login or route, never a secret. The names file holds each name, the hash of its secret and when it
+was created and last seen. Nothing records a push's endpoint or size. An operator who raises the log level, or runs
+a packet capture, can see more, and anyone who runs a relay should say what they keep.
 
 It **can't** see: anything inside a box's HTTPS connections (pages, API calls, pairing codes, device tokens,
 approvals, files), because TLS ends on the box with a key that never leaves it; or what a push says, because the
@@ -129,21 +145,27 @@ What someone who controlled the relay **could** do, and what limits it:
 ## Run and test
 
 ```
-relay/deploy <ssh-host>           # install or update on the relay machine, over ssh as root
+RELAY_DOMAIN=box.example.com relay/deploy <ssh-host>   # install or update on the relay machine, over ssh as root
 npm test                          # includes relay/server.test.ts and core/push.test.ts
 ./demo                            # relay/demo.ts: the protocol and push payloads, offline
-DEMO_LIVE=remote ./demo           # plus the real relay: a real name, certificate and push, then released
+DEMO_LIVE=remote ./demo           # plus a real relay: a real name, certificate and push, then released
 ```
+
+`DEMO_LIVE=remote` uses the relay in `BOX_RELAY` (default `box.gurtos.com`), so while the hosted relay is down it
+needs your own, with `BOX_RELAY` set where the demo runs.
 
 `relay/testphone.ts` is a stand-in phone for the live test: a real subscription at Mozilla's push service, made
 by speaking its WebSocket protocol, which decrypts what arrives.
 
 ## Limits
 
-- One relay, in one region (San Jose). If it is down, boxes are reachable only on their home network.
-- Every box's certificate comes from Let's Encrypt under `gurtos.com`, which allows 50 new certificates a week for
-  the whole domain. Renewals don't count. Turning remote access off keeps the box's certificate, so turning the
+- One relay, in one region. If it is down, boxes are reachable only on their home network. Restarting the relay
+  service drops a tunnel whose heartbeat falls in the gap; the box reconnects within a minute.
+- Every box's certificate comes from Let's Encrypt under the relay's domain, which allows 50 new certificates a week
+  for the whole registered domain. Renewals don't count. Turning remote access off keeps the box's certificate, so turning the
   same name back on reuses it.
 - The tunnel uses TCP port 7000 outbound. A network that allows only 80 and 443 out blocks it.
-- Names are first come, first served. There is no account behind a name, only the box's secret.
+- Names are first come, first served. There is no account behind a name, only the box's secret. Anyone can enroll
+  names, 20 an hour per address and 200 an hour in all, and an unused name stays taken for 30 days, so a determined
+  caller can use up a relay's enrollments for a while.
 - The rate limits are kept in memory and reset when the relay restarts.

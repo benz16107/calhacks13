@@ -3,12 +3,25 @@
 # (one app for every paired machine). Static files on Vercel, project gurtos-app. Run it from a checkout of main on
 # a machine logged in to Vercel:   relay/deploy-app
 # Roll back: `vercel rollback` in the deploy folder, or promote the previous deployment in Vercel's dashboard.
+#
+# For your own copy (docs/self-host.md): build portal/dist first, then
+#   RELAY_DOMAIN=box.example.com VERCEL_PROJECT=my-app relay/deploy-app    deploy to your Vercel project
+#   RELAY_DOMAIN=box.example.com relay/deploy-app --out <dir>              only write the files and headers to <dir>
+# RELAY_DOMAIN goes into the Content-Security-Policy, so the browser lets the app reach your relay and your boxes. The
+# iPhone and Android link files name our apps, so they are left out when it is not box.gurtos.com.
 set -euo pipefail
 cd "$(dirname "$0")/.."
-out=$(mktemp -d)/gurtos-app
-cp -r portal/dist "$out"
-cp relay/app/vercel.json "$out/"
-cp -r relay/app/.well-known "$out/" # the Android app (Digital Asset Links) and the iPhone app (universal links for /pair)
+DOMAIN=${RELAY_DOMAIN:-box.gurtos.com}
+[[ $DOMAIN =~ ^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$ ]] || { echo "relay/deploy-app: RELAY_DOMAIN must be a lowercase domain name like box.example.com, got \"$DOMAIN\"" >&2; exit 2; }
+[[ -f portal/dist/index.html ]] || { echo "relay/deploy-app: portal/dist is missing; run 'npm run build' in portal/ first" >&2; exit 2; }
+if [[ ${1:-} == --out ]]; then out=${2:?usage: relay/deploy-app --out <dir>}; else out=$(mktemp -d)/gurtos-app; fi
+mkdir -p "$out"
+cp -r portal/dist/. "$out/"
+sed "s/box\.gurtos\.com/$DOMAIN/g" relay/app/vercel.json > "$out/vercel.json"
+if [[ $DOMAIN == box.gurtos.com ]]; then
+  cp -r relay/app/.well-known "$out/" # the Android app (Digital Asset Links) and the iPhone app (universal links for /pair)
+fi
+if [[ ${1:-} == --out ]]; then echo "relay/deploy-app: wrote $out (serve it with the headers and the index.html fallback from $out/vercel.json)"; exit; fi
 cd "$out"
-vercel link --yes --project gurtos-app >/dev/null
+vercel link --yes --project "${VERCEL_PROJECT:-gurtos-app}" >/dev/null
 vercel deploy --prod --yes

@@ -2,6 +2,7 @@
 # frps hands it connections through the local frpc with a PROXY header, so the API learns the caller's address.
 {
 	admin off
+	@ACME_CA@
 	http_port 8080
 	https_port 8443
 	default_bind 127.0.0.1

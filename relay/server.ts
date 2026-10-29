@@ -7,7 +7,9 @@
 // It never terminates a box's TLS: frps routes those connections by SNI, as bytes.
 //   node --experimental-strip-types relay/server.ts
 // Env: RELAY_STATE (default /var/lib/gurtos-relay), RELAY_DOMAIN (default box.gurtos.com),
-//      RELAY_PLUGIN_PORT (7400), RELAY_API_PORT (7401), RELAY_TUNNEL_PORT (7000, announced to boxes).
+//      RELAY_PLUGIN_PORT (7400), RELAY_API_PORT (7401), RELAY_TUNNEL_PORT (7000, announced to boxes),
+//      RELAY_CONTACT (an https: or mailto: address push services can reach the operator at; default this relay's address),
+//      RELAY_APNS_TOPICS (comma separated bundle ids the APNs gateway sends to; default the GurtOS apps).
 import { createHash, createHmac, generateKeyPairSync, createPrivateKey, randomBytes, sign, timingSafeEqual, type KeyObject } from 'node:crypto';
 import fs from 'node:fs';
 import http from 'node:http';
@@ -15,6 +17,8 @@ import http2 from 'node:http2';
 import path from 'node:path';
 
 export const DOMAIN = process.env.RELAY_DOMAIN ?? 'box.gurtos.com';
+/** The VAPID `sub` claim: where a push service can reach the operator. Ours for box.gurtos.com, else this relay's own address. */
+const CONTACT = process.env.RELAY_CONTACT ?? (DOMAIN === 'box.gurtos.com' ? 'https://gurtos.com' : `https://${DOMAIN}`);
 const STATE = process.env.RELAY_STATE ?? '/var/lib/gurtos-relay';
 const TUNNEL_PORT = Number(process.env.RELAY_TUNNEL_PORT ?? 7000);
 /** A name nobody has logged in with for this long is free again (a box that was wiped never released it). */
@@ -190,7 +194,7 @@ export function loadVapid(dir: string): Vapid {
 /** RFC 8292: a JWT for one push service (`aud`), signed ES256 with the app's key. */
 export function vapidHeader(vapid: Vapid, endpoint: string, now = Date.now()) {
   const b64 = (o: unknown) => Buffer.from(JSON.stringify(o)).toString('base64url');
-  const unsigned = `${b64({ typ: 'JWT', alg: 'ES256' })}.${b64({ aud: new URL(endpoint).origin, exp: Math.floor(now / 1000) + 12 * 3600, sub: 'https://gurtos.com' })}`;
+  const unsigned = `${b64({ typ: 'JWT', alg: 'ES256' })}.${b64({ aud: new URL(endpoint).origin, exp: Math.floor(now / 1000) + 12 * 3600, sub: CONTACT })}`;
   const sig = sign('sha256', Buffer.from(unsigned), { key: vapid.privateKey, dsaEncoding: 'ieee-p1363' }).toString('base64url');
   return `vapid t=${unsigned}.${sig}, k=${vapid.publicKey}`;
 }
@@ -204,8 +208,8 @@ const topicOf = (t: unknown) => (typeof t === 'string' && t ? createHmac('sha256
 // browser (RFC 8291); the relay sends Apple only that ciphertext, in `e`, with a generic alert. The app's
 // notification service extension decrypts it and checks the box's mac before showing anything.
 
-/** The only apps the relay sends to: the GurtOS iPhone app and the Mac app. */
-export const APNS_TOPICS = ['com.benzhou.gurtos', 'com.benzhou.gurtos.mac'];
+/** The only apps the relay sends to: the GurtOS iPhone app and the Mac app, or yours: RELAY_APNS_TOPICS="com.example.app,com.example.app.mac". */
+export const APNS_TOPICS = (process.env.RELAY_APNS_TOPICS ?? 'com.benzhou.gurtos,com.benzhou.gurtos.mac').split(',').map((t) => t.trim()).filter((t) => /^[a-z0-9]+(\.[a-z0-9-]+)+$/i.test(t));
 
 export function apnsTarget(endpoint: unknown): { topic: string; sandbox: boolean; token: string } | undefined {
   let u: URL;
@@ -218,7 +222,7 @@ export function apnsTarget(endpoint: unknown): { topic: string; sandbox: boolean
   return m && APNS_TOPICS.includes(m[1]) ? { topic: m[1], sandbox: m[2] === 'sandbox', token: m[3] } : undefined;
 }
 
-/** Ben's APNs key: `apns.p8` and `apns.json` ({keyId, teamId}) in the state folder, readable by the relay only. */
+/** The operator's APNs key: `apns.p8` and `apns.json` ({keyId, teamId}) in the state folder, readable by the relay only. */
 export interface Apns { keyId: string; teamId: string; key: KeyObject; jwt?: { token: string; at: number } }
 
 export function loadApns(dir: string): Apns | undefined {
@@ -273,7 +277,7 @@ export interface Relay {
   tunnelCa: string;
   /** Extra push hosts, for tests (a local fake push service). */
   testPushHosts?: RegExp[];
-  /** Absent until Ben's APNs key is installed: then APNs addresses get a 503. */
+  /** Absent until the operator's APNs key is installed: then APNs addresses get a 503. */
   apns?: Apns;
   /** How APNs is called; tests swap in a fake. */
   apnsSend?: ApnsSend;
@@ -297,6 +301,8 @@ export function load(dir = STATE): Relay {
 
 interface Drop { at: number; slots: Map<string, unknown>; waiting: Map<string, ((v: unknown) => void)[]> }
 const RV_TTL = 10 * 60_000;
+/** The flows use five slots (ask, error, host, owner, and a sealed bundle). Anyone who knows an id can write, so cap it. */
+const MAX_SLOTS = 8;
 
 export class Rendezvous {
   drops = new Map<string, Drop>();
@@ -309,7 +315,7 @@ export class Rendezvous {
   /** Write once. False if the slot already holds something. */
   put(id: string, slot: string, value: unknown) {
     const d = this.get(id);
-    if (!d || d.slots.has(slot)) return false;
+    if (!d || d.slots.has(slot) || d.slots.size >= MAX_SLOTS) return false;
     d.slots.set(slot, value);
     for (const w of d.waiting.get(slot) ?? []) w(value);
     d.waiting.delete(slot);
@@ -373,7 +379,7 @@ export async function api(r: Relay, method: string, url: URL, body: any, auth: s
   }
 
   if (method === 'POST' && p === '/v1/push') {
-    if (!isBox()) return limits.bad.ok(ip), err(403, 'a push needs the box name and its secret');
+    if (!isBox()) return limits.bad.ok(ip) ? err(403, 'a push needs the box name and its secret') : err(429, 'too many tries');
     if (!limits.push.ok(who)) return err(429, 'too many pushes from this box this hour');
     const apple = apnsTarget(body?.endpoint);
     if (apple) return apnsPush(r, apple, body);
@@ -388,6 +394,7 @@ export async function api(r: Relay, method: string, url: URL, body: any, auth: s
       method: 'POST',
       headers: { authorization: vapidHeader(r.vapid, body.endpoint), 'content-encoding': 'aes128gcm', 'content-type': 'application/octet-stream', ttl: String(ttl), urgency, ...(topic ? { topic } : {}) },
       body: payload,
+      redirect: 'manual', // a push service never redirects; following one would let it point this relay at any host
       signal: AbortSignal.timeout(15_000),
     });
     // 404 and 410 mean the phone dropped the subscription: the box should forget it.
@@ -410,7 +417,7 @@ export async function api(r: Relay, method: string, url: URL, body: any, auth: s
         const [who, secret] = (auth ?? '').replace(/^Bearer /i, '').split('.', 2);
         if (!r.names.check(who, secret) || body?.host !== `${who}.${DOMAIN}`) return err(403, 'only the box that holds this address can write it');
       }
-      return rv.put(id, slot, body) ? ok({ ok: true }) : err(409, 'already written');
+      return rv.put(id, slot, body) ? ok({ ok: true }) : err(409, 'already written, or this drop has no room for another slot');
     }
   }
 

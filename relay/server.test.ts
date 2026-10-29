@@ -3,6 +3,7 @@ import { createPublicKey, generateKeyPairSync, verify } from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import http from 'node:http';
 import test from 'node:test';
 import { DOMAIN, Limit, SELF, api, apnsTarget, load, nameProblem, plugin, pushTargetProblem, vapidHeader, type ApnsSend } from './server.ts';
 
@@ -174,4 +175,55 @@ test('rendezvous: slots are write-once, a reader can wait for one, and only the 
   assert.equal((await api(r, 'PUT', at('host'), { host: `rosa.${DOMAIN}` }, `Bearer rosa.${secret}`, '203.0.113.21')).status, 200);
   assert.deepEqual((await api(r, 'GET', at('host'), {}, undefined, '203.0.113.20')).body, { host: `rosa.${DOMAIN}` });
   assert.equal((await api(r, 'GET', u('/v1/rv/short/ask'), {}, undefined, '203.0.113.20')).status, 404, 'ids are long random capabilities');
+});
+
+test('a heartbeat keeps a name: a tunnel that stays up for 30 days cannot lose its name to someone else', () => {
+  const r = fresh();
+  const day = 24 * 3600 * 1000;
+  const secret = r.names.enroll('rosa', Date.now() - 20 * day); // last logged in 20 days ago, tunnel up ever since
+  assert.equal(r.names.taken('rosa', Date.now() + 15 * day), false, 'without a heartbeat it would be free in 10 days');
+  assert.equal(plugin('Ping', { user: { user: 'rosa', metas: { secret } } }, r.names, r.selfSecret).reject, false);
+  assert.equal(r.names.taken('rosa', Date.now() + 15 * day), true, 'a heartbeat counts as seen');
+  const other = r.names.enroll('olds', Date.now() - 31 * day);
+  assert.equal(r.names.taken('olds'), false, 'a name nobody connected with is still released');
+  assert.equal(plugin('Ping', { user: { user: 'olds', metas: { secret: other } } }, r.names, r.selfSecret).reject, false);
+});
+
+test('push gateway: a redirect from a push service is not followed', async () => {
+  const hits: string[] = [];
+  const elsewhere = http.createServer((req, res) => (hits.push(req.url ?? ''), res.writeHead(200).end())).listen(0, '127.0.0.1');
+  await new Promise((ok) => elsewhere.once('listening', ok));
+  const target = `http://127.0.0.1:${(elsewhere.address() as any).port}/internal`;
+  const push = http.createServer((req, res) => (req.resume(), res.writeHead(302, { location: target }).end())).listen(0, '127.0.0.1');
+  await new Promise((ok) => push.once('listening', ok));
+  try {
+    const r = fresh();
+    r.testPushHosts = [new RegExp(`^127\\.0\\.0\\.1:${(push.address() as any).port}$`)];
+    const secret = r.names.enroll('rosa');
+    const body = { endpoint: `http://127.0.0.1:${(push.address() as any).port}/push/1`, payload: Buffer.alloc(120, 7).toString('base64url') };
+    const a = await api(r, 'POST', u('/v1/push'), body, `Bearer rosa.${secret}`, '203.0.113.30');
+    assert.equal((a.body as any).status, 302);
+    assert.deepEqual(hits, [], 'the redirect target was never asked');
+  } finally {
+    push.close();
+    elsewhere.close();
+  }
+});
+
+test('push gateway: wrong secrets are rate limited per address', async () => {
+  const r = fresh();
+  r.names.enroll('rosa');
+  const body = { endpoint: 'https://web.push.apple.com/QW', payload: Buffer.alloc(120, 7).toString('base64url') };
+  const codes = [];
+  for (let i = 0; i < 22; i++) codes.push((await api(r, 'POST', u('/v1/push'), body, 'Bearer rosa.guess', '198.51.100.77')).status);
+  assert.deepEqual(codes, [...Array(20).fill(403), 429, 429]);
+});
+
+test('rendezvous: a drop holds a few slots, not as many as a caller writes', async () => {
+  const r = fresh();
+  const id = 'q'.repeat(22);
+  const codes = [];
+  for (let i = 0; i < 10; i++) codes.push((await api(r, 'PUT', u(`/v1/rv/${id}/s${i}`), { n: i }, undefined, `203.0.113.${40 + i}`)).status);
+  assert.deepEqual(codes, [...Array(8).fill(200), 409, 409]);
+  assert.equal((await api(r, 'GET', u(`/v1/rv/${id}/s0`), {}, undefined, '203.0.113.60')).status, 200, 'what was written stays readable');
 });
