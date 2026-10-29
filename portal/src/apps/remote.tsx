@@ -7,8 +7,7 @@ import { api, callMachine, machine, machines, updateMachine, useBox, type Machin
 import { Alert, Badge, Button, Group, Icon, Row } from '../kit/ui.tsx';
 import { ios, standalone } from '../pwa/pwa.tsx';
 import { PRODUCT } from '../product.ts';
-
-const GATEWAY_KEY = 'https://box.gurtos.com/v1/push/key';
+import { RELAY, SELF_HOST_DOCS, relayDown } from '../relay.ts';
 const b64url = (b: Uint8Array) => btoa(String.fromCharCode(...b)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 const unb64url = (s: string) => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/')), (c) => c.charCodeAt(0));
 
@@ -19,7 +18,11 @@ export const needsHomeScreen = () => ios() && !standalone();
 /** This browser's subscription with the gateway's key (a new one if the key changed). */
 async function subscription() {
   const reg = await navigator.serviceWorker.ready;
-  const { publicKey } = (await fetch(GATEWAY_KEY).then((r) => r.json())) as { publicKey: string };
+  const { publicKey } = (await fetch(`${RELAY}/v1/push/key`, { signal: AbortSignal.timeout(10_000) }).then(
+    (r) => (r.ok ? r.json() : Promise.reject()),
+  ).catch(() => {
+    throw new Error(`${PRODUCT}'s push service isn't answering right now. Try again later.`);
+  })) as { publicKey: string };
   let sub = await reg.pushManager.getSubscription();
   const key = sub?.options.applicationServerKey;
   if (sub && (!key || b64url(new Uint8Array(key)) !== publicKey)) {
@@ -81,7 +84,7 @@ export function Notifications() {
       caption={`Requests arrive here even when ${PRODUCT} is closed, with Approve and Deny. They reach the owner's phone (in Business, whoever the rules send them to). Quiet hours hold them back.`}
     >
       {!pushWorks() ? (
-        <Row icon="preferences-system-notifications" title="This browser can't show notifications" sub={isSecureContext ? 'Open GurtOS in Safari, Chrome or Firefox.' : "Open GurtOS at its https address. Notifications don't work on a plain http page."} />
+        <Row icon="preferences-system-notifications" title="This browser can't show notifications" sub={isSecureContext ? 'Open GurtOS in Safari, Chrome or Firefox.' : "Notifications need an https address, which Remote access gives this computer. They don't work on a plain http page."} />
       ) : needsHomeScreen() ? (
         <Row icon="preferences-system-notifications" title="Add GurtOS to your Home Screen first" sub="An iPhone shows notifications only for apps on the Home Screen. In Safari tap Share, then Add to Home Screen, and pair again from there." />
       ) : (
@@ -158,7 +161,7 @@ export function RemoteAccess({ title = 'Reach this computer from anywhere' }: { 
   const [error, setError] = useState('');
   const [typed, setName] = useState<string>();
   const name = typed ?? slug(b.system?.boxName); // starts from the computer's name, so Turn on works in one tap
-  const [check, setCheck] = useState<{ name: string; available: boolean; reason?: string }>();
+  const [check, setCheck] = useState<{ name: string; available: boolean; reason?: string; failed?: string }>();
   const [busy, setBusy] = useState(false);
   const [confirm, setConfirm] = useState(false);
   const load = () => api<Remote>('GET', '/remote').then((x) => (setR(x), setError('')), (e) => setError((e as Error).message));
@@ -169,17 +172,22 @@ export function RemoteAccess({ title = 'Reach this computer from anywhere' }: { 
     const t = setInterval(load, 2000);
     return () => clearInterval(t);
   }, [r?.state]);
+  const relay = r?.relay ?? new URL(RELAY).host;
+  // The box asks its relay; when the relay doesn't answer, say so instead of waiting on the name for ever.
+  const words = (m: string) => (relayDown(m) ? `The relay at ${relay} isn't answering, so remote access can't turn on right now. Phones on your own network can still pair in Devices.` : m);
   useEffect(() => {
     setCheck(undefined);
     if (!NAME.test(name)) return;
-    const t = setTimeout(() => api<{ name: string; available: boolean; reason?: string }>('GET', `/remote/name/${name}`).then(setCheck, () => {}), 400);
+    const t = setTimeout(
+      () => api<{ name: string; available: boolean; reason?: string }>('GET', `/remote/name/${name}`).then(setCheck, (e) => setCheck({ name, available: false, failed: words((e as Error).message) })),
+      400,
+    );
     return () => clearTimeout(t);
-  }, [name]);
+  }, [name, r?.relay]);
   const act = (f: () => Promise<Remote>) => {
     setBusy(true);
-    f().then((x) => (setR(x), setError('')), (e) => setError((e as Error).message)).finally(() => setBusy(false));
+    f().then((x) => (setR(x), setError('')), (e) => setError(words((e as Error).message))).finally(() => setBusy(false));
   };
-  const relay = r?.relay ?? 'box.gurtos.com';
   const valid = NAME.test(name);
   const ready = valid && check?.available && check.name === name;
   const why = !b.owner
@@ -190,9 +198,12 @@ export function RemoteAccess({ title = 'Reach this computer from anywhere' }: { 
         ? 'Use 3 to 30 lowercase letters, digits and hyphens.'
         : !check
           ? 'Checking the name…'
-          : !check.available
+          : check.failed
+            ? check.failed
+            : !check.available
             ? `That name is taken${check.reason ? `: ${check.reason}` : ''}. Try another.`
             : undefined;
+  const down = relayDown(error) || !!check?.failed;
   const state = r?.state === 'connected' ? (['Connected', 'success'] as const) : r?.state === 'starting' ? (['Getting a certificate…', 'accent'] as const) : r?.state === 'error' ? (['Not working', 'destructive'] as const) : undefined;
   return (
     <Group
@@ -202,7 +213,7 @@ export function RemoteAccess({ title = 'Reach this computer from anywhere' }: { 
       {error && <Row icon="dialog-warning" title="Remote access is not available" sub={error} />}
       {r?.enabled ? (
         <>
-          <Row icon="web-browser" title={r.url ? <a href={r.url} target="_blank" rel="noopener">{r.url.replace(/^https:\/\//, '')}</a> : r.name} sub={r.state === 'error' ? r.error : r.state === 'starting' ? 'This takes up to a minute.' : 'Phones paired from now on use this address.'}>
+          <Row icon="web-browser" title={r.url ? <a href={r.url} target="_blank" rel="noopener">{r.url.replace(/^https:\/\//, '')}</a> : r.name} sub={r.state === 'error' ? words(r.error ?? 'It stopped working.') : r.state === 'starting' ? 'This takes up to a minute.' : 'Phones paired from now on use this address.'}>
             {state && <Badge kind={state[1]}>{state[0]}</Badge>}
           </Row>
           <Row title="Turn off" sub="The address stops working and its name is released.">
@@ -227,6 +238,16 @@ export function RemoteAccess({ title = 'Reach this computer from anywhere' }: { 
             </Row>
           </>
         )
+      )}
+      {(down || r?.state === 'error') && (
+        <a class="g-row" href={SELF_HOST_DOCS} target="_blank" rel="noopener">
+          <Icon name="network-server" />
+          <span class="g-row-text">
+            <span class="g-row-title">Use your own relay</span>
+            <span class="g-row-sub">Run the relay on a domain you control and point this computer at it with BOX_RELAY. How: {SELF_HOST_DOCS.replace(/^https:\/\//, '')}</span>
+          </span>
+          <Icon name="pan-end" />
+        </a>
       )}
       {confirm && (
         <Alert

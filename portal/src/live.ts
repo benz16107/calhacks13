@@ -97,7 +97,7 @@ export interface Settings {
 /** Command setup: an agent on another computer sets this one up with a one-time code (core's /api/setup/code). */
 /** The code and its time limit come only from POST /api/setup/code; GET /api/setup carries the rest ({open: false} when closed). */
 export interface SetupChannel { code?: string; expiresAt?: string; open: boolean; port?: number; urls?: string[]; remote?: string; devices?: { name: string; since?: string }[] }
-export interface SetupState { done: boolean; finishedAt?: string; migrated?: boolean; steps: Record<string, { at: string; data?: any }>; suggested: string[]; channel?: SetupChannel | null }
+export interface SetupState { done: boolean; /** false until the vault holds a model key: no task can start. */ modelKey?: boolean; finishedAt?: string; migrated?: boolean; steps: Record<string, { at: string; data?: any }>; suggested: string[]; channel?: SetupChannel | null }
 export interface System {
   product: string;
   edition: string;
@@ -196,10 +196,14 @@ export function signIn(id: string | undefined) {
 }
 /** Whether this screen may change setup, settings, apps and keys: the box's own screen or an owner. */
 async function loadOwnerRights() {
-  box.owner = await api('GET', '/vault').then(
-    () => true,
-    () => false,
-  );
+  // A Business person's role says it. Anyone else asks the vault, which answers only the owner (a 403 otherwise).
+  const person = box.business.on ? box.business.me?.person : undefined;
+  box.owner = person
+    ? person.role === 'owner'
+    : await api('GET', '/vault').then(
+        () => true,
+        () => false,
+      );
   changed();
 }
 /** The person signed in here, on a Business box. */

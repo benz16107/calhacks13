@@ -14,7 +14,8 @@ import { Alert, AppIcon, Badge, Button, Icon, Menu, Popover, Progress, Switch } 
 import { focus, focused, minimize, open, phone, wm } from './wm.tsx';
 import { launchable, type Launchable } from './apps/index.tsx';
 import { PRODUCT } from './product.ts';
-import { appOf, asks, boxList, dollars, hhmm, ofState, pending, plural, selfBox, taskTitle, trackOf, useNow, zone, spentToday } from './util.ts';
+import { RELAY, onRelay, useRelayUp } from './relay.ts';
+import { appOf, asks, boxList, dollars, hhmm, ofState, pending, plural, selfBox, taskTitle, testMoney, trackOf, useNow, zone, spentToday } from './util.ts';
 
 /** Which shell overlay is open. One at a time, like a real desktop. */
 export const shell = { open: '' as '' | 'notifications' | 'control' | 'apps' | 'menu' | 'boxes' | 'person', locked: false };
@@ -248,7 +249,7 @@ function askNotices(): Notice[] {
         app: app.id,
         appTitle: app.title,
         title: a.costCents ? `${taskTitle(a.task)} needs you` : a.question,
-        body: a.costCents ? `${a.question}${a.question.includes('test') ? '' : ' Test money.'}` : `${taskTitle(a.task)} asks. Other tasks keep running.`,
+        body: a.costCents ? `${a.question}${testMoney(box.tasks.get(a.task)) && !/\btest\b/i.test(a.question) ? ' Test money.' : ''}` : `${taskTitle(a.task)} asks. Other tasks keep running.`,
         open: () => open(box.business.on ? `request/${a.id}` : `task/${a.task}`),
         ...(box.business.on ? { title: askInfo(a).fraud ? `Fraud flag on ${askInfo(a).title}` : `${askInfo(a).title} needs you`, body: a.route?.why ?? a.question } : {}),
       };
@@ -649,8 +650,10 @@ export function DesktopHome() {
   const blocked = b.today.blocked;
   const summary = r
     ? `${r.lostAt ? `${selfBox().name} was out of reach from ${hhmm(r.lostAt)}` : `${selfBox().name} restarted`} and came back at ${hhmm(r.at)}. Every task is where it was.`
-    : !b.tasks.size
-      ? 'Start a task, or open App Center to turn on apps.'
+    : b.setup?.modelKey === false
+      ? "Add a model key in Settings, Agents & Models, so agents can start tasks."
+      : !b.tasks.size
+        ? 'Start a task, or open App Center to turn on apps.'
       : [need.length ? `${plural(need.length, 'task')} ${need.length === 1 ? 'needs' : 'need'} you.` : 'Nothing needs you.', `${running.length} ${running.length === 1 ? 'is' : 'are'} running.`, blocked ? `${plural(blocked, 'attempt')} ${blocked === 1 ? 'was' : 'were'} blocked today.` : ''].filter(Boolean).join(' ');
   const twice = paidTwice();
   return (
@@ -670,7 +673,7 @@ export function DesktopHome() {
         {r ? (
           <Widget label="Paid twice" value={twice} lines={twice ? ['A payment was made again after the restart'] : ['A payment that went through before', 'the power cut was not made again']} onClick={() => open('activity')} />
         ) : (
-          <Widget label="Spent today" value={spentToday()} lines={[`${plural(b.tasks.size, 'task')}, ${plural(blocked, 'blocked attempt')}`, 'Test money']} onClick={() => open('activity')} />
+          <Widget label="Spent today" value={spentToday()} lines={[`${plural(b.tasks.size, 'task')}, ${plural(blocked, 'blocked attempt')}`, 'Models and tools, estimated']} onClick={() => open('activity')} />
         )}
       </div>
       <div class="gos-desk-actions">
@@ -830,7 +833,7 @@ export function PhoneHome() {
           <Icon name="pan-down" />
         </button>
         <p class="t-caption t-secondary">
-          {editionName(b.system?.edition)} · {b.down ? 'Out of reach' : 'Online'} · {running.length} running · {spentToday()} today (test money)
+          {editionName(b.system?.edition)} · {b.down ? 'Out of reach' : 'Online'} · {running.length} running · {spentToday()} today
         </p>
       </header>
       <InstallCard />
@@ -1061,14 +1064,12 @@ export async function pairWith(url: string, body: { code: string; name: string }
   addMachine({ token: p.token, device: p.device, box: p.box, url, edition: sys.edition });
 }
 
-/** The relay's rendezvous for a computer without its own address yet (POST /api/pair/start with remote access off). */
-const RV = 'https://box.gurtos.com/v1/rv';
-const HOST = /^[a-z0-9-]{3,30}\.box\.gurtos\.com$/;
 /** Ask the computer to turn on remote access, then wait for its address (or its reason) for up to 3 minutes. */
 async function rendezvous(rv: string): Promise<string> {
-  const at = `${RV}/${encodeURIComponent(rv)}`;
-  const put = await fetch(`${at}/ask`, { method: 'PUT', headers: { 'content-type': 'application/json' }, body: '{}' }).catch(() => undefined);
-  if (!put?.ok) throw new Error("This phone couldn't reach GurtOS's relay. Check its internet connection and try again.");
+  // The relay's rendezvous for a computer without its own address yet (POST /api/pair/start with remote access off).
+  const at = `${RELAY}/v1/rv/${encodeURIComponent(rv)}`;
+  const put = await fetch(`${at}/ask`, { method: 'PUT', headers: { 'content-type': 'application/json' }, body: '{}', signal: AbortSignal.timeout(10_000) }).catch(() => undefined);
+  if (!put?.ok) throw new Error("GurtOS's relay isn't answering, so pairing over the internet isn't available right now.");
   const end = Date.now() + 180_000;
   while (Date.now() < end) {
     const ctl = new AbortController();
@@ -1086,7 +1087,7 @@ async function rendezvous(rv: string): Promise<string> {
     ctl.abort();
     if (got?.error) throw new Error(got.error);
     if (got?.host) {
-      if (!HOST.test(got.host)) throw new Error('The relay answered with an address that is not a GurtOS address.');
+      if (!onRelay(got.host)) throw new Error('The relay answered with an address that is not a GurtOS address.');
       return got.host;
     }
     if (Date.now() - started < 2000) await new Promise((r) => setTimeout(r, 2000)); // the relay answered at once: don't spin
@@ -1097,11 +1098,18 @@ async function rendezvous(rv: string): Promise<string> {
 /** app.gurtos.com/pair?rv=…&n=…&lan=…#<code>: the phone can't reach the computer yet. Ask it to get an address. */
 function MeetBox({ rv, code, name, lan, onHost }: { rv?: string; code: string; name: string; lan?: string; onHost: (host: string) => void }) {
   const [state, setState] = useState<'ask' | 'busy' | string>('ask');
+  // Pairing over the internet goes through the relay. Without it, the home network is the only way, so it leads.
+  const up = useRelayUp();
   const go = () => {
     if (!rv) return;
     setState('busy');
     rendezvous(rv).then(onHost, (e) => setState((e as Error).message));
   };
+  const local = lan && (
+    <a class={`g-btn g-btn-large${up === false ? ' g-btn-suggested' : ''}`} href={`http://${lan}/pair#${code}`}>
+      {up === false ? `Open ${name} on this network` : `Same Wi-Fi as ${name}? Open it on this network`}
+    </a>
+  );
   return (
     <div class="gos-setup-layer">
       <section class="g-window gos-pair-first" aria-labelledby="meet-title">
@@ -1112,32 +1120,40 @@ function MeetBox({ rv, code, name, lan, onHost }: { rv?: string; code: string; n
           <h1 class="t-title2" id="meet-title">
             Pair with {name}
           </h1>
-          <p class="t-body t-secondary">
-            {rv
-              ? `This phone can't reach ${name} directly yet. It can ask ${name} for its own address and pair over the internet.`
-              : `To pair from anywhere, turn on Reach from anywhere on ${name}: Settings, Remote access.`}
-          </p>
-          {!rv ? null : state === 'busy' ? (
-            <p class="t-body" role="status">
-              Asking {name} to turn on its address… about 10 to 60 seconds.
-            </p>
+          {up === false ? (
+            <>
+              <p class="t-body t-secondary">
+                {lan ? `Connect this phone to the same Wi-Fi or network as ${name}, then open it.` : `Connect this phone to the same Wi-Fi or network as ${name}, then open ${PRODUCT} at its address on that network and type the code from its screen.`}
+              </p>
+              {local}
+              <p class="t-caption t-secondary">Pairing over the internet needs {PRODUCT}'s relay, which isn't answering right now.</p>
+            </>
           ) : (
             <>
-              <Button kind="suggested" large onClick={go}>
-                Pair over the internet
-              </Button>
-              <p class="t-caption t-secondary">{name} turns on Remote access, so this phone can reach it and get notifications.</p>
+              <p class="t-body t-secondary">
+                {rv
+                  ? `This phone can't reach ${name} directly yet. It can ask ${name} for its own address and pair over the internet.`
+                  : `To pair from anywhere, turn on Reach from anywhere on ${name}: Settings, Remote access.`}
+              </p>
+              {!rv ? null : state === 'busy' ? (
+                <p class="t-body" role="status">
+                  Asking {name} to turn on its address… about 10 to 60 seconds.
+                </p>
+              ) : (
+                <>
+                  <Button kind="suggested" large disabled={up === undefined} onClick={go}>
+                    Pair over the internet
+                  </Button>
+                  <p class="t-caption t-secondary">{name} turns on Remote access, so this phone can reach it and get notifications.</p>
+                </>
+              )}
+              {state !== 'ask' && state !== 'busy' && (
+                <p class="gos-error" role="alert">
+                  {state}
+                </p>
+              )}
+              {local}
             </>
-          )}
-          {state !== 'ask' && state !== 'busy' && (
-            <p class="gos-error" role="alert">
-              {state}
-            </p>
-          )}
-          {lan && (
-            <a class="g-btn g-btn-large" href={`http://${lan}/pair#${code}`}>
-              Same Wi-Fi as {name}? Open it on this network
-            </a>
           )}
         </div>
       </section>
@@ -1161,6 +1177,8 @@ export function PairFirst() {
   // On app.gurtos.com the link names the box: /pair?box=rosa.box.gurtos.com#<code>.
   const [boxAddr, setBoxAddr] = useState(new URLSearchParams(location.search).get('box') ?? '');
   const adding = hosted && machines().length > 0;
+  // app.gurtos.com reaches a computer only through the relay.
+  const relay = useRelayUp(hosted);
   // Remote access off: the link names no address, only the computer (n), its home address (lan) and, during setup, a
   // rendezvous (rv).
   const meet = hosted && !boxAddr && !!frag && !!fromLink && ['rv', 'n', 'lan'].some((k) => frag.has(k));
@@ -1217,6 +1235,14 @@ export function PairFirst() {
             {revoked ? 'This device was unpaired, so it needs a new code. ' : ''}
             {PRODUCT} shows tasks and requests only to paired devices. On the computer's own screen, open Settings, then Devices, and scan the QR code. Or type {hosted ? 'its address and ' : ''}the code it shows.
           </p>
+          {hosted && relay === false && (
+            <div class="g-banner" role="status">
+              <Icon name="dialog-warning" />
+              <div class="t-caption">
+                {PRODUCT}'s relay isn't answering right now, so this page can't reach a computer over the internet. On the same Wi-Fi, open {PRODUCT} at the computer's own address instead, like http://192.168.1.20:7700, and pair there.
+              </div>
+            </div>
+          )}
           {hosted && (
             <label class="gos-field">
               <span class="t-body-strong">Computer's address</span>

@@ -441,6 +441,13 @@ dialog.g-dialog::backdrop { background: var(--color-scrim); }
 .g-banner-accent { background: var(--color-accent-subtle); }
 .g-banner > div { flex: 1; min-width: 0; }
 .g-banner > :is(.g-icon, g-icon) { align-self: flex-start; margin-top: 3px; }
+/* On a phone a banner's or a row's controls go under its text when both don't fit, so the text keeps the width. */
+@media (max-width: 699px) {
+  .g-banner { flex-wrap: wrap; }
+  .g-banner > div { flex-basis: calc(100% - 40px); }
+  .g-row { flex-wrap: wrap; }
+  .g-row-text { flex: 1 1 170px; }
+}
 
 /* Reduce motion: everything fades in place. */
 @media (prefers-reduced-motion: reduce) {

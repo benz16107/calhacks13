@@ -65,6 +65,7 @@ const APP_SYMBOLS: Record<string, { icon: string; tile: string }> = {
   mana: { icon: 'dialog-information', tile: 'var(--color-app-mana)' },
   vultr: { icon: 'network-server', tile: 'var(--color-app-find)' },
   example: { icon: 'preferences-desktop-apps', tile: 'var(--color-app-other)' },
+  receipts: { icon: 'x-office-document', tile: 'var(--color-app-audit)' },
 };
 export const hasAppIcon = (id: string) => id in APP_ICONS || id in APP_SYMBOLS;
 

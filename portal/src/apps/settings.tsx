@@ -12,7 +12,8 @@ import { AddRow, Alert, AppIcon, Badge, Button, ComboRow, Group, Icon, IconButto
 import { HeaderBar, InWindow, open, phone, useWin } from '../wm.tsx';
 import { access } from '../shell.tsx';
 import { PRODUCT } from '../product.ts';
-import { dollars, keyLabel, plural, selfBox, sentence, useNow } from '../util.ts';
+import { dollars, keyLabel, plural, selfBox, sentence, testApp, byApp, useNow } from '../util.ts';
+import { pairLink as link, pairNote, useRelayUp, type PairCode } from '../relay.ts';
 import { KillSwitchPage, PeoplePage, RulesPage } from './company.tsx';
 /** One model key lets agents think: an Anthropic key or a Factory key. */
 const MODEL_KEYS = ['ANTHROPIC_API_KEY', 'FACTORY_API_KEY'];
@@ -37,8 +38,8 @@ const ALL_PAGES: (Page | 'sep' | 'company')[] = [
   ['devices', 'Devices', 'phone', 'phones pair revoke qr code notifications push'],
   ['remote', 'Remote access', 'web-browser', 'reach from anywhere address https relay name'],
   'sep',
-  ['updates', 'Updates', 'software-update-available', 'system update channel automatic go back rollback'],
-  ['privacy', 'Privacy & Logs', 'preferences-system-privacy', 'action log keep retention size sharing elastic mana lock screen'],
+  ['updates', 'Updates', 'software-update-available', 'system update version build rollback'],
+  ['privacy', 'Privacy & Logs', 'preferences-system-privacy', 'action log keep retention size sharing'],
   ['appearance', 'Appearance', 'preferences-desktop-appearance', 'style light dark theme accent color wallpaper larger text contrast motion'],
   'sep',
   ['about', 'About', 'help-about', 'version build edition box id uptime credits icons typeface'],
@@ -90,7 +91,7 @@ export function KeySheet({ name, onClose, onSaved }: { name?: string; onClose: (
     try {
       await api('PUT', `/vault/${key}`, { value });
       setValue('');
-      await loadApps();
+      await Promise.all([loadApps(), loadSetup()]); // a model key lets tasks start: the desktop and New task stop warning
       onSaved?.();
       onClose();
       win?.toast(`${keyLabel(key)} saved`);
@@ -347,9 +348,9 @@ function Agents() {
       <Group title="Model key" caption="One is enough: an Anthropic API key (console.anthropic.com, bills your Anthropic account) or a Factory API key (app.factory.ai, uses Factory credits). Write-only. Agents never see it.">
         {keyRow('ANTHROPIC_API_KEY', 'Anthropic API key')}
         {keyRow('FACTORY_API_KEY', 'Factory API key')}
-        <LinkRow title="Other keys" sub="Every key the apps need" onClick={() => open('settings/keys')} />
+        <LinkRow title="Other keys" sub="Keys for the apps that are on" onClick={() => open('settings/keys')} />
       </Group>
-      <Group title="Today" caption="Test money and model estimates, from the action log">
+      <Group title="Today" caption="Estimates, from the action log">
         <Row title="Spent on models">
           <Value>{dollars(model)}</Value>
         </Row>
@@ -387,7 +388,7 @@ function Permissions() {
           sub={s.networkDefault === 'none' ? 'A task reaches only the sites it names. The rest is blocked and logged.' : 'Other sites are blocked and logged'}
           value={s.networkDefault}
           options={[
-            ['none', 'No internet'],
+            ['none', 'Only sites the task names'],
             ['allowlist', 'Only the sites below'],
           ]}
           onChange={(v) => set({ networkDefault: v })}
@@ -395,6 +396,7 @@ function Permissions() {
         />
         <LinkRow title="Sites any task may reach" sub={s.defaultHosts.length ? s.defaultHosts.join(', ') : undefined} value={s.defaultHosts.length ? plural(s.defaultHosts.length, 'site') : 'None'} onClick={() => !ro && setSheet('hosts')} />
       </Group>
+      {(b.system?.owner || s.agentFolders.length > 0) && (
       <Group title="Folders agents may use" caption={s.agentFolders.length ? 'Agents work on a copy. You keep or undo their changes in Time Machine.' : 'None chosen yet, so a task may work on a copy of any folder you give it.'}>
         {s.agentFolders.map((f) => (
           <Row icon="folder" title={f.split('/').filter(Boolean).at(-1) ?? f} sub={f} key={f}>
@@ -404,7 +406,8 @@ function Permissions() {
         ))}
         {ro ? !s.agentFolders.length && <Row title="No folders chosen" /> : <AddRow title="Add a folder…" onClick={() => setSheet('folder')} />}
       </Group>
-      <Group title="Spending" caption="Test money. A task stops and asks before going over.">
+      )}
+      <Group title="Spending" caption="A task stops and asks before going over.">
         <ComboRow
           title="Always ask before a single spend over"
           value={String(s.approvalThresholdCents)}
@@ -496,7 +499,8 @@ function Keys() {
   const [devices, setDevices] = useState<Device[]>();
   useEffect(() => void api<Device[]>('GET', '/devices').then(setDevices, () => setDevices([])), []);
   const users = new Map<string, string[]>(MODEL_KEYS.map((k) => [k, ['Agents (one model key is enough)']]));
-  for (const a of b.allApps) for (const s of a.access.secrets) users.set(s.name, [...(users.get(s.name) ?? []), appTitle(a)]);
+  // Keys of apps that are on, and any key already in the vault. An app that is off lists its keys in App Center.
+  for (const a of b.allApps) if (a.status !== 'disabled') for (const s of a.access.secrets) users.set(s.name, [...(users.get(s.name) ?? []), appTitle(a)]);
   // Droid's key first, then the rest by name.
   const names = [...new Set([...(vault ?? []).map((k) => k.name), ...users.keys()])].sort((x, y) => +MODEL_KEYS.includes(y) - +MODEL_KEYS.includes(x) || x.localeCompare(y));
   const owners = devices?.filter((d) => d.owner) ?? [];
@@ -506,7 +510,7 @@ function Keys() {
         <Icon name="security-high" />
         <div class="t-body">GurtOS keeps keys where agents can't read them. You can replace a key but never see it. No screen, phone or log shows one.</div>
       </div>
-      <Group title="Keys">
+      <Group title="Keys" caption="The model keys, and the keys of apps that are on. App Center lists the keys each app needs before you turn it on.">
         {names.map((n) => {
           const k = vault?.find((x) => x.name === n);
           const by = users.get(n)?.join(', ');
@@ -544,14 +548,14 @@ function Apps() {
   return (
     <>
       <Group title="Installed apps" caption="Turning an app off takes out its tools, windows and triggers at once. Nothing is uninstalled.">
-        {b.allApps.map((a) => {
+        {[...b.allApps].sort(byApp).map((a) => {
           const st = appStatus(a);
           return (
             <label class="g-approw" key={a.id}>
               <AppIcon id={a.id} title={appTitle(a)} size={44} />
               <span class="g-approw-text">
                 <span class="g-approw-name">{appTitle(a)}</span>
-                <span class={`g-approw-desc${st.tone ? ` t-${st.tone}` : ''}`}>{st.text}</span>
+                <span class={`g-approw-desc${st.tone ? ` t-${st.tone}` : ''}`}>{testApp(a) ? `${st.text} · test only` : st.text}</span>
               </span>
               <input
                 type="checkbox"
@@ -586,25 +590,19 @@ interface Device {
   /** When it last called GurtOS, if GurtOS reports it. */
   lastSeen?: string;
 }
-interface PairCode {
-  code: string;
-  url: string;
-  expiresAt: string;
-}
 export const formatCode = (c: string) => c.toUpperCase().match(/.{1,4}/g)?.join('-') ?? c;
 const loopback = ['127.0.0.1', 'localhost'].includes(location.hostname);
+/** The link in a pairing QR (relay.ts pairLink), with this page's own address for an older core's bare code. */
+export function pairLink(c: PairCode, relayUp: boolean | undefined) {
+  const self = selfBox().url;
+  return link(c, relayUp, self ? new URL(self).origin : loopback ? undefined : location.origin);
+}
 
-export function Qr({ text, label }: { text: string; label: string }) {
+export function Qr({ text, label, class: cls }: { text: string; label: string; class?: string }) {
   const q = qrcode(0, 'M');
   q.addData(text);
   q.make();
-  // Remote access off: the link goes through app.gurtos.com, which reaches this computer over the internet.
-  return (
-    <>
-      <div role="img" aria-label={label} dangerouslySetInnerHTML={{ __html: q.createSvgTag({ cellSize: 6, margin: 0, scalable: true }) }} />
-      {/[?&]rv=/.test(text) && <p class="t-caption t-secondary">Your phone doesn't need to be on the same Wi-Fi.</p>}
-    </>
-  );
+  return <div class={cls} role="img" aria-label={label} dangerouslySetInnerHTML={{ __html: q.createSvgTag({ cellSize: 6, margin: 0, scalable: true }) }} />;
 }
 
 function Devices() {
@@ -651,11 +649,8 @@ function Devices() {
       () => (setDevices(devices?.filter((x) => x.id !== d.id)), setRevoke(undefined), win?.toast(`${d.name} can no longer answer`)),
       (e) => (setRevoke(undefined), win?.toast(`Could not revoke: ${(e as Error).message}`)),
     );
-  // The phone opens the app's own pairing route on the box's address, from BOX_URL when the box knows it.
-  const selfUrl = selfBox().url;
-  const origin =
-    typeof code === 'object' ? (/^https?:/.test(code.url) ? new URL(code.url).origin : selfUrl ? new URL(selfUrl).origin : loopback ? undefined : location.origin) : undefined;
-  const url = typeof code === 'object' && /^https?:/.test(code.url) ? code.url : origin && typeof code === 'object' ? `${origin}/#pair/${code.code}` : undefined;
+  const up = useRelayUp();
+  const url = typeof code === 'object' ? pairLink(code, up) : undefined;
   const left = typeof code === 'object' ? Math.max(0, Math.round((Date.parse(code.expiresAt) - now) / 1000)) : 0;
   const paired = (d: Device) => new Date(d.pairedAt).toLocaleString('en-US', { weekday: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).replace(',', '');
   // The same phone paired twice leaves an older pairing with its name: offer to remove those.
@@ -709,16 +704,17 @@ function Devices() {
               <Qr text={url} label="Pairing link as a QR code" />
             ) : typeof code === 'string' ? (
               `Pairing is not available: ${code}`
-            ) : code ? (
-              `This screen does not know the address phones use (set BOX_URL). Open ${PRODUCT} from a laptop for the QR code.`
+            ) : code && up !== undefined ? (
+              `This screen does not know the address phones use. Open ${PRODUCT} from a laptop for the QR code.`
             ) : (
               'Making a code…'
             )}
           </div>
           <div class="gos-set-pair-text">
             <p class="t-body">1. Point the phone's camera at the code.</p>
-            <p class="t-body">2. {PRODUCT} opens on the phone, on this computer's address.</p>
+            <p class="t-body">2. {PRODUCT} opens on the phone.</p>
             <p class="t-body">3. Check the phone shows the same code, then name it.</p>
+            {url && <p class="t-caption t-secondary">{pairNote(url)}</p>}
             {typeof code === 'object' && (
               <>
                 <p class="gos-set-code" aria-label={`Code ${code.code.split('').join(' ')}`}>
@@ -762,12 +758,7 @@ function Devices() {
 // ---------- Updates ----------
 
 function Updates() {
-  const b = useBox();
-  const set = useSet();
-  const s = b.settings;
-  const sys = b.system;
-  if (!s) return <Loading />;
-  const ro = !b.owner;
+  const sys = useBox().system;
   return (
     <>
       <div class="gos-set-slots">
@@ -782,18 +773,8 @@ function Updates() {
           </p>
         </div>
       </div>
-      <Group title="Updates">
-        <SwitchRow title="Install updates automatically" sub="At night, when no task is running" checked={s.autoUpdate} onChange={(v) => set({ autoUpdate: v })} disabled={ro} />
-        <ComboRow
-          title="Channel"
-          value={s.updateChannel}
-          options={[
-            ['stable', 'Stable'],
-            ['beta', 'Beta'],
-          ]}
-          onChange={(v) => set({ updateChannel: v })}
-          disabled={ro}
-        />
+      <Group title="How updates work">
+        <Row icon="software-update-available" title="A whole system at a time" sub={`Each update installs into a second copy of the system. If it doesn't start cleanly, ${PRODUCT} goes back to this one by itself.`} />
       </Group>
     </>
   );
@@ -810,14 +791,12 @@ function Privacy() {
   const ro = !b.owner;
   const days = String(s.logRetentionDays);
   const label = (d: number) => (d % 365 === 0 ? plural(d / 365, 'year') : plural(d, 'day'));
+  // Optional apps that send the log or task titles out. Listed here only while one is on, so it can be turned off.
   const share = (id: string, title: string, sub: string) => {
-    const a = b.allApps.find((x) => x.id === id);
-    return a ? (
-      <SwitchRow title={title} sub={sub} checked={a.status === 'enabled'} onChange={(v) => void toggle(a, v)} disabled={ro} />
-    ) : (
-      <Row title={title} sub="Not installed on this computer" />
-    );
+    const a = b.allApps.find((x) => x.id === id && x.status === 'enabled');
+    return a && <SwitchRow title={title} sub={sub} checked onChange={(v) => void toggle(a, v)} disabled={ro} />;
   };
+  const sharing = [share('elastic', 'Copy the log to Elastic', 'With the Ask GurtOS app'), share('mana', 'Public status page', 'Mana status shows task titles and states, never prompts or files')].filter(Boolean);
   return (
     <>
       <Group title="The action log" caption="Every step every agent takes. It stays on this computer and holds no keys.">
@@ -840,9 +819,8 @@ function Privacy() {
           <Button onClick={() => open('activity')}>Open Activity</Button>
         </Row>
       </Group>
-      <Group title="Sharing" caption="Off unless you turn it on.">
-        {share('elastic', 'Copy the log to Elastic', 'With the Elastic insights app')}
-        {share('mana', 'Public status page', 'Mana status shows task titles and states, never prompts or files')}
+      <Group title="Sharing" caption={sharing.length ? 'Turn one off and nothing more is sent.' : undefined}>
+        {sharing.length ? sharing : <Row icon="preferences-system-privacy" title="Nothing is shared" sub="The log and your tasks stay on this computer." />}
       </Group>
     </>
   );

@@ -24,7 +24,7 @@ fs.writeFileSync(
     {
       name: PRODUCT,
       short_name: PRODUCT,
-      description: 'Your box of AI agents: approve requests, follow tasks, undo any one.',
+      description: 'Approve what your AI agents ask, follow their tasks and undo any one.',
       id: '/',
       start_url: '/',
       scope: '/',

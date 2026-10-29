@@ -267,7 +267,9 @@ html.is-dragging iframe { pointer-events: none; }
 .gos-track { overflow: hidden; background: var(--color-view-bg); }
 .gos-track-frame { display: block; width: 100%; height: 100%; border: 0; background: var(--color-view-bg); }
 
-.gos-pair { max-width: 480px; margin: 0 auto; padding: var(--space-xl) var(--space-lg); display: flex; flex-direction: column; gap: var(--space-md); }
+.gos-pair { max-width: 480px; margin: 0 auto; padding: var(--space-xl) var(--space-lg); display: flex; flex-direction: column; gap: var(--space-md); flex-shrink: 0; }
+/* A short phone scrolls the pairing page instead of squeezing its icon and fields. */
+.gos-pair > * { flex-shrink: 0; }
 .gos-pair-form { display: flex; flex-direction: column; gap: var(--space-md); }
 .gos-pair-icon { display: grid; place-items: center; width: 64px; height: 64px; border-radius: 50%; background: var(--color-accent-subtle); color: var(--color-accent-fg); }
 .gos-code { font-size: calc(28px * var(--text-scale)); line-height: 1.2; letter-spacing: 4px; text-align: center; padding: var(--space-md); background: var(--color-view-bg); border: 1px solid var(--color-border-default); border-radius: var(--radius-md); }
@@ -313,10 +315,10 @@ html.is-dragging iframe { pointer-events: none; }
   .gos-tasks .g-thead { display: none; }
   .gos-tasks .g-tr { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: 'task state' 'now cost' 'ask ask'; row-gap: 4px; padding: 10px var(--space-sm); }
   .gos-tasks .g-tr > :nth-child(1) { grid-area: task; }
-  .gos-tasks .g-tr > :nth-child(4) { grid-area: state; justify-self: end; }
-  .gos-tasks .g-tr > :nth-child(5) { grid-area: now; white-space: normal; }
-  .gos-tasks .g-tr > :nth-child(6) { grid-area: cost; justify-self: end; }
-  .gos-tasks .g-tr > :nth-child(2), .gos-tasks .g-tr > :nth-child(3), .gos-tasks .g-tr > :nth-child(7) { display: none; }
+  .gos-tasks .g-tr > .gos-c-state { grid-area: state; justify-self: end; }
+  .gos-tasks .g-tr > .gos-c-now { grid-area: now; white-space: normal; }
+  .gos-tasks .g-tr > .gos-c-cost { grid-area: cost; justify-self: end; }
+  .gos-tasks .g-tr > :is(.gos-c-app, .gos-c-started) { display: none; }
   .gos-tasks .gos-row-ask { display: flex; grid-area: ask; gap: var(--space-sm); padding-top: var(--space-xs); }
   .gos-tasks .gos-row-ask > .g-btn, .gos-tasks .gos-row-ask > .gos-answered { flex: 1; }
   .gos-tasks .g-summary { display: none; }
@@ -399,6 +401,7 @@ html.is-dragging iframe { pointer-events: none; }
 /* Phones: the home screen's own tap targets reach 44 px too (the kit covers buttons and fields). */
 @media (max-width: 699px), (pointer: coarse) {
   .gos-home-box, .gos-home-row { min-height: 44px; }
+  .gos-link { min-height: 44px; padding-inline: var(--space-xs); }
 }
 /* The pairing page's longer link buttons wrap on a phone instead of widening the page. */
 .gos-pair a.g-btn { height: auto; min-height: 44px; padding-block: 10px; white-space: normal; text-align: center; }

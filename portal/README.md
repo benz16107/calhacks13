@@ -13,7 +13,7 @@ and Preact components in `src/kit/`. Track apps get the same kit at `/kit/gurtos
 see [KIT.md](KIT.md) and the live style guide at `/kit/index.html`.
 
 Every screen shows the box's real state: tasks and approvals from SpacetimeDB on the box's own screen, and the action
-log over Server-Sent Events everywhere. Money on these screens is test money.
+log over Server-Sent Events everywhere. Money from a test app (Shopper, Agent wallet) is test money and says so.
 
 ## Figma and the real app
 
@@ -46,12 +46,19 @@ Show Apps, with search: ![](screenshots/show-apps.png)
 |---|---|
 | ![](../docs/figma/os-v2/setup/01-welcome.png) | ![](screenshots/setup/01-welcome.png) |
 | ![](../docs/figma/os-v2/setup/04-owner.png) | ![](screenshots/setup/04-owner.png) |
-| ![](../docs/figma/os-v2/setup/05-ai-models.png) | ![](screenshots/setup/05-ai-models.png) |
+| ![](../docs/figma/os-v2/setup/05-ai-models.png) | ![](screenshots/setup/05-model-key.png) |
 | ![](../docs/figma/os-v2/setup/06-permissions.png) | ![](screenshots/setup/06-permissions.png) |
-| ![](../docs/figma/os-v2/setup/07-apps.png) | ![](screenshots/setup/07-apps.png) |
-| ![](../docs/figma/os-v2/setup/12-done.png) | ![](screenshots/setup/12-done.png) |
+| ![](../docs/figma/os-v2/setup/12-done.png) | ![](screenshots/setup/08-done.png) |
 
-All twelve steps are in `screenshots/setup/`.
+All eight steps are in `screenshots/setup/`: welcome, network, name and time zone, owner, model key, permissions,
+updates, done. Setup asks only what GurtOS needs. Apps are optional and stay in App Center, so the frames' Apps, Keys
+for apps, Remote access, Privacy and Appearance steps are left out; each is in Settings. The screenshots are from a
+fresh dev box (`DEV_SEED=fresh ./dev-box.sh`): no keys, no tasks.
+
+The pairing QR opens this computer's own pairing page on the home network, so the phone has to be on the same
+Wi-Fi. It goes through app.gurtos.com only when that helps: with remote access on, or during setup when GurtOS's relay
+answers (then the phone can pair over the internet). When the relay doesn't answer, Remote access says so and points
+to running your own (`src/relay.ts` holds the relay's address; docs/self-host.md).
 
 ### Settings (1920 x 1080)
 
@@ -142,7 +149,7 @@ Differences from the frames, on purpose:
    reach, and that it never held a key. Each blocked step is red in the steps and in Activity.
 3. **A pause for your OK.** A request arrives as a banner on the desktop and on every paired phone at once. The
    first answer wins: the request shows "Approved" for a moment, and another screen shows "Already approved on
-   Judge's iPhone".
+   Rosa's iPhone".
 4. **Pull the plug.** The box's screen shows the boot screen while the box is out of reach, then "Welcome back":
    how many tasks resumed, what still needs you, and "Paid twice: 0", counted from the log. Windows come back where
    they were. A phone shows a red bar within about 10 seconds and won't send an answer until the box is back.
@@ -197,7 +204,7 @@ Center's key names, a phone paired the ordinary way refused (403) for settings, 
 
 The QA scenarios were replayed with Playwright against a dev box, with the phones' requests sent through a proxy
 header so the box treats them as off-box: an unpaired phone, live hosts on a new task, two taps 0.4 s apart (one
-approval), the second phone's "Already denied on Judge's iPhone", and an outage noticed in 9 seconds.
+approval), the second phone's "Already denied on Rosa's iPhone", and an outage noticed in 9 seconds.
 
 Files: `src/live.ts` (the box's state: HTTP, SpacetimeDB, the log stream, answers, outage detection),
 `src/wm.tsx` (windows), `src/shell.tsx` (top bar, desktop, dock, notifications, Control Center, lock, boot,
@@ -219,9 +226,10 @@ App Center, track windows, pairing), `src/kit/` (tokens, components, icons, app 
   (setup keeps those answers in the step's data only); `box-update` status and rollback over the API; the log's size
   and path; a screen passcode; a per-folder read or change mode.
 - **Track pages that need restyling to the kit** (their threads own them): Example (`/t/example/`), ASI:One
-  (`/t/fetch/`) and Agent wallet (`/t/wallet/`) are unstyled HTML; Shopper and Box Test Store (`/t/shopper/`) use
+  (`/t/fetch/`) and Agent wallet (`/t/wallet/`) are unstyled HTML; Shopper and GurtOS Test Store (`/t/shopper/`) use
   their own look and draw their own title, which the window already shows. Figma has frames for each in
   `docs/figma/os-v2/tracks/`. Loading `/kit/gurtos.js` also makes their own fetches carry the phone's token.
-- Track titles: apify, credit-desk, elastic, find, jira and mana report their id as their title; Settings and App
-  Center turn those into words. Elastic, Mana and Apify have no GurtOS app glyph yet, so they show a letter tile.
+- **For the core and the image:** nothing reads Settings `autoUpdate` and `updateChannel` yet, so Settings and setup
+  don't show them; Updates shows the running system and how updates work. Owner rights on a phone that is not the
+  owner are found by a `GET /api/vault` that answers 403 (a console error); a field in `GET /api/system` would do.
 - Progress bars measure only when a task's step says "n of m"; otherwise they move without a number.

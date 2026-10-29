@@ -3,17 +3,16 @@
 // setup and main.tsx shows the desktop. Switches and lists apply at once, like everywhere else in GurtOS.
 import type { ComponentChildren } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
-import qrcode from 'qrcode-generator';
-import { api, box, loadApps, loadSetup, patchSettings, surface, useBox, type AppInfo, type SetupChannel } from './live.ts';
-import { AppIcon, Badge, Button, Chip, ComboRow, Group, Icon, IconButton, LinkRow, Popover, Row, Sheet, SwitchRow, ToggleGroup } from './kit/ui.tsx';
+import { api, box, loadSetup, patchSettings, surface, useBox, type SetupChannel } from './live.ts';
+import { AppIcon, Badge, Button, ComboRow, Group, Icon, IconButton, LinkRow, Popover, Row, Sheet, SwitchRow, ToggleGroup } from './kit/ui.tsx';
 import { access } from './shell.tsx';
 import { phone } from './wm.tsx';
 import { PRODUCT } from './product.ts';
-import { dollars, hhmm, keyLabel, plural, selfBox, sentence, useNow } from './util.ts';
+import { dollars, hhmm, selfBox, sentence, useNow } from './util.ts';
 import './setup.css';
-import { RemoteAccess } from './apps/remote.tsx';
 import { QuickStartHere, hasQuickStart } from './apps/quickstart.tsx';
-import { askPermissions } from './apps/permissions.tsx';
+import { Qr, pairLink } from './apps/settings.tsx';
+import { pairNote, relayUp, useRelayUp, type PairCode } from './relay.ts';
 
 interface Step {
   id: string;
@@ -39,17 +38,11 @@ interface Wiz {
   set: (p: Partial<Draft>) => void;
   vault: Vault[];
   reloadVault: () => void;
-  setKey: (name: string) => void;
   fail: (e: unknown) => void;
 }
 interface Vault {
   name: string;
   setAt: string | null;
-}
-interface PairCode {
-  code: string;
-  url: string;
-  expiresAt: string;
 }
 interface Device {
   id: string;
@@ -65,24 +58,6 @@ const setText = (w: Wiz, name: string) => {
   const at = vaultEntry(w, name)?.setAt;
   return at ? `Set at ${hhmm(at)}` : 'Set';
 };
-/** An app's name for people: its window's title, else its id in sentence case ('credit-desk' is Credit desk). */
-const nice = (a: AppInfo) => {
-  const t = (a.ui[0]?.title ?? a.title).replace(/\s*\(.*\)$/, '');
-  return t === a.id ? a.id[0].toUpperCase() + a.id.slice(1).replaceAll('-', ' ') : t;
-};
-// Setup offers six apps; the rest are in App Center. The model app has its own step.
-const ORDER = ['find', 'shopper', 'wallet', 'credit-desk', 'jira', 'fetch'];
-const offered = () => ORDER.map((id) => box.allApps.find((a) => a.id === id)).filter((a): a is AppInfo => !!a);
-const enabled = () => offered().filter((a) => a.status === 'enabled');
-/** The keys the apps that are on need, each once: the Apps step's footer and the Keys step count the same list. */
-const needed = () => [...new Map(enabled().flatMap((a) => a.access.secrets.filter((s) => !s.optional)).map((s) => [s.name, s])).values()];
-const list = (xs: string[]) => (xs.length < 2 ? xs.join('') : `${xs.slice(0, -1).join(', ')} and ${xs.at(-1)}`);
-/** What an app may reach, in words: "Reaches visa.com and cybersource.com", or that it stays on this computer. */
-function reach(a: AppInfo) {
-  const domains = [...new Set(a.access.hosts.filter((h) => /^[a-z0-9.-]+\.[a-z]{2,}$/i.test(h)).map((h) => h.split('.').slice(-2).join('.')))];
-  if (!domains.length) return a.access.hosts.length ? 'Stays on this computer' : 'No internet';
-  return `Reaches ${list(domains.length > 3 ? [...domains.slice(0, 2), `${domains.length - 2} more`] : domains)}`;
-}
 /** The model key that lets agents think: an Anthropic key or a Factory key. Either one is enough. */
 const MODEL_KEYS = ['ANTHROPIC_API_KEY', 'FACTORY_API_KEY'] as const;
 const modelKey = (w: Wiz) => MODEL_KEYS.find((k) => keySet(w, k));
@@ -99,7 +74,7 @@ export const STEPS: Step[] = [
       <div class="gos-setup-split">
         <div class="gos-setup-col">
           <Intro big title={`Welcome to ${PRODUCT}`}>
-            {PRODUCT} runs AI agents on this computer. Each agent works in its own space and asks you before it spends money or reaches somewhere new. Setup takes about 10 minutes. Steps marked optional can be skipped.
+            {PRODUCT} runs AI agents on this computer. Each agent works in its own space and asks you before it spends money or reaches somewhere new. Setup takes a few minutes.
           </Intro>
           <div class="g-list">
             <ComboRow icon="preferences-desktop-locale" title="Language" value={w.draft.language} options={[['en-US', 'English (United States)']]} onChange={(v) => w.set({ language: v })} />
@@ -130,13 +105,15 @@ export const STEPS: Step[] = [
             ))}
             {!all.some((i) => !wifi(i.name)) && <Row icon="network-offline" title="No cable" sub="Plug a network cable into this computer." />}
           </Group>
-          <Group title="Wi-Fi" caption="Use Wi-Fi when there is no cable.">
-            {all.filter((i) => wifi(i.name)).map((i) => (
-              <Row icon="network-wireless-signal-excellent" title={`Wi-Fi (${i.name})`} sub={i.address} key={i.name}>
-                <span class="t-success">Connected</span>
-              </Row>
-            ))}
-          </Group>
+          {all.some((i) => wifi(i.name)) && (
+            <Group title="Wi-Fi">
+              {all.filter((i) => wifi(i.name)).map((i) => (
+                <Row icon="network-wireless-signal-excellent" title={`Wi-Fi (${i.name})`} sub={i.address} key={i.name}>
+                  <span class="t-success">Connected</span>
+                </Row>
+              ))}
+            </Group>
+          )}
         </div>
       );
     },
@@ -152,7 +129,7 @@ export const STEPS: Step[] = [
     label: 'Name and time zone',
     page: (w) => <NameStep w={w} />,
     ready: (w) => NAME_OK.test(w.draft.boxName.trim()),
-    summary: (w) => (NAME_OK.test(w.draft.boxName.trim()) ? 'Quiet hours and update times use this time zone.' : 'Give this computer a name to go on.'),
+    summary: (w) => (NAME_OK.test(w.draft.boxName.trim()) ? 'Quiet hours use this time zone.' : 'Give this computer a name to go on.'),
     data: (w) => ({ boxName: w.draft.boxName.trim(), timezone: w.draft.timezone, autoTime: w.draft.autoTime }),
   },
   {
@@ -161,18 +138,6 @@ export const STEPS: Step[] = [
     page: (w) => <OwnerStep w={w} />,
     summary: () => "You can add more phones later. Only the owner's phone can change settings.",
     data: (w) => ({ owner: w.draft.owner, device: ownerDevice?.name ?? null }),
-  },
-  {
-    id: 'remote',
-    label: 'Remote access',
-    optional: true,
-    page: () => (
-      <div class="gos-setup-col">
-        <Intro title="Reach this computer from anywhere">Optional. Off until you turn it on, and you can change it later in Settings.</Intro>
-        <RemoteAccess title="" />
-      </div>
-    ),
-    summary: () => 'Without it, phones reach this computer only on your own network.',
   },
   {
     id: 'models',
@@ -194,58 +159,10 @@ export const STEPS: Step[] = [
     },
   },
   {
-    id: 'apps',
-    label: 'Apps',
-    optional: true,
-    page: (w) => <AppsStep w={w} />,
-    summary: (w) => {
-      const keys = needed().filter((s) => !keySet(w, s.name)).length;
-      return `${plural(enabled().length, 'app')} on.${keys ? ` The next step asks for the ${plural(keys, 'key')} they need.` : ' They need no more keys.'}`;
-    },
-    data: () => ({ on: enabled().map((a) => a.id) }),
-  },
-  {
-    id: 'keys',
-    label: 'Keys for apps',
-    optional: true,
-    page: (w) => <KeysStep w={w} />,
-    summary: (w) => {
-      const all = needed();
-      if (!all.length) return 'No app you turned on needs a key.';
-      return `${all.filter((s) => keySet(w, s.name)).length} of ${all.length} keys set. An app with a missing key waits until you add it.`;
-    },
-    data: (w) => ({ set: needed().filter((s) => keySet(w, s.name)).map((s) => s.name), missing: needed().filter((s) => !keySet(w, s.name)).map((s) => s.name) }),
-  },
-  {
     id: 'updates',
     label: 'Updates',
-    page: (w) => <UpdatesStep w={w} />,
-    summary: () => 'You can go back to the previous system in Settings > Updates.',
-    data: () => ({ autoUpdate: box.settings?.autoUpdate, updateChannel: box.settings?.updateChannel }),
-  },
-  {
-    id: 'privacy',
-    label: 'Privacy and logs',
-    optional: true,
-    page: (w) => <PrivacyStep w={w} />,
-    summary: () => {
-      const shared = [on('elastic') && 'the log copy to Elastic', on('mana') && 'the public status page'].filter(Boolean) as string[];
-      return shared.length ? `On: ${list(shared)}. Everything else stays on this computer.` : 'Nothing leaves this computer unless you turn it on here.';
-    },
-    data: () => ({ logRetentionDays: box.settings?.logRetentionDays, elastic: on('elastic'), mana: on('mana') }),
-  },
-  {
-    id: 'appearance',
-    label: 'Appearance',
-    optional: true,
-    page: (w) => <AppearanceStep w={w} />,
-    summary: () => {
-      const a = box.settings?.appearance;
-      const theme = THEMES.find(([v]) => v === a?.theme)?.[1] ?? 'Follow the system';
-      const accent = ACCENTS.find(([v]) => v === (a?.accent || ACCENTS[0][0]))?.[1] ?? 'custom';
-      return `${theme}, ${accent} accent.`;
-    },
-    data: () => ({ ...box.settings?.appearance }),
+    page: () => <UpdatesStep />,
+    summary: () => '',
   },
   {
     id: 'done',
@@ -254,7 +171,6 @@ export const STEPS: Step[] = [
     summary: () => '',
   },
 ];
-const on = (id: string) => box.allApps.find((a) => a.id === id)?.status === 'enabled';
 
 // ---------- the wizard ----------
 
@@ -280,7 +196,6 @@ export function SetupWizard() {
   const [vault, setVault] = useState<Vault[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const [keyFor, setKeyFor] = useState<string>();
   const [accessAt, setAccessAt] = useState<HTMLElement | null>(null);
   const heading = useRef<HTMLDivElement>(null);
   const reloadVault = () => void api<Vault[]>('GET', '/vault').then(setVault, () => setVault([]));
@@ -299,7 +214,7 @@ export function SetupWizard() {
   // Each step starts with its heading focused, so Tab goes on from there (in the kiosk too, which starts unfocused).
   useEffect(() => (window.focus(), (heading.current?.querySelector('h1') as HTMLElement | null)?.focus()), [cur]);
 
-  const w: Wiz = { draft, set: (p) => setDraft((d) => ({ ...d, ...p })), vault, reloadVault, setKey: setKeyFor, fail: (e) => setError((e as Error).message) };
+  const w: Wiz = { draft, set: (p) => setDraft((d) => ({ ...d, ...p })), vault, reloadVault, fail: (e) => setError((e as Error).message) };
   const step = STEPS[cur];
   const last = cur === STEPS.length - 1;
 
@@ -389,7 +304,6 @@ export function SetupWizard() {
             </footer>
           </form>
         </div>
-        {keyFor && <KeySheet name={keyFor} onClose={() => setKeyFor(undefined)} after={() => (reloadVault(), void loadApps())} />}
       </section>
       {accessAt && (
         <Popover anchor={accessAt} onClose={() => setAccessAt(null)} align="end" label="Accessibility" class="gos-setup-access-pop">
@@ -477,25 +391,19 @@ function usePairing() {
     return () => ((done = true), clearInterval(t), clearTimeout(timer));
   }, []);
   const now = useNow(1000);
-  // The phone opens the app's own pairing route on the box's address (BOX_URL), never this screen's loopback.
-  const origin = typeof code === 'object' ? (/^https?:/.test(code.url) ? new URL(code.url).origin : selfBox().url ? new URL(selfBox().url!).origin : loopback ? undefined : location.origin) : undefined;
+  const up = useRelayUp();
   const showCode = !owner || now - owner.at < 10_000;
-  const url = showCode && typeof code === 'object' && /^https?:/.test(code.url) ? code.url : origin && typeof code === 'object' ? `${origin}/#pair/${code.code}` : undefined;
-  return { code: showCode ? code : undefined, url, owner: owner?.device, showCode };
+  const url = showCode && typeof code === 'object' ? pairLink(code, up) : undefined;
+  return { code: showCode ? code : undefined, url, owner: owner?.device, showCode, checking: typeof code === 'object' && !url && up === undefined };
 }
 
-function Qr({ text, label }: { text: string; label: string }) {
-  const q = qrcode(0, 'M');
-  q.addData(text);
-  q.make();
-  // Remote access off: the link goes through app.gurtos.com, which reaches this computer over the internet.
-  return (
-    <>
-      <div class="gos-setup-qr" role="img" aria-label={label} dangerouslySetInnerHTML={{ __html: q.createSvgTag({ cellSize: 6, margin: 0, scalable: true }) }} />
-      {/[?&]rv=/.test(text) && <p class="t-caption t-secondary">Your phone doesn't need to be on the same Wi-Fi.</p>}
-    </>
-  );
-}
+/** The pairing QR, and where the phone has to be for it to work. */
+const PairQr = ({ text, label }: { text: string; label: string }) => (
+  <>
+    <Qr class="gos-setup-qr" text={text} label={label} />
+    <p class="t-caption t-secondary">{pairNote(text)}</p>
+  </>
+);
 
 function PairState({ p }: { p: ReturnType<typeof usePairing> }) {
   const now = useNow(1000);
@@ -518,7 +426,8 @@ const Paired = ({ name }: { name: string }) => (
   </div>
 );
 
-const NoQr = () => <p class="t-caption t-secondary gos-setup-noqr">This screen does not know the address phones use to reach this computer. Set BOX_URL on it, or open {PRODUCT} from a laptop to show the code.</p>;
+const NoQr = ({ checking }: { checking?: boolean }) =>
+  checking ? <div class="gos-setup-qr gos-skeleton" role="status" aria-label="Making a code" /> : <p class="t-caption t-secondary gos-setup-noqr">This screen does not know the address phones use to reach this computer. Open {PRODUCT} from a laptop on the same network to show the code.</p>;
 
 /** Another computer's agent sets this one up: a one-time code, the addresses, what to tell the agent, who is connected. */
 function AgentSetup({ onStop }: { onStop: () => void }) {
@@ -584,7 +493,8 @@ function PhoneHandoff() {
   // Quick Start and command setup start on the new computer's own screen only, and only with a core that has them.
   const [quick, setQuick] = useState<boolean>();
   const [mode, setMode] = useState<'' | 'quick' | 'agent'>('');
-  useEffect(() => void (loopback && hasQuickStart().then(setQuick)), []);
+  // Quick Start meets the other computer through the relay: offer it only when the relay answers.
+  useEffect(() => void (loopback && Promise.all([hasQuickStart(), relayUp()]).then(([q, up]) => setQuick(q && up))), []);
   const agent = loopback && !!b.setup && 'channel' in b.setup;
   if (mode === 'quick')
     return (
@@ -617,7 +527,7 @@ function PhoneHandoff() {
       ) : (
         <>
           <p class="t-caption t-secondary">Scan the code with your phone's camera. Every step works there too, and this screen follows along.</p>
-          {p.url ? <Qr text={p.url} label="Set up from your phone: a QR code" /> : <NoQr />}
+          {p.url ? <PairQr text={p.url} label="Set up from your phone: a QR code" /> : <NoQr checking={p.checking} />}
           {typeof p.code === 'object' && <p class="gos-setup-code">{formatCode(p.code.code)}</p>}
           <p class="t-caption t-secondary">Check that your phone shows the same code.</p>
           <PairState p={p} />
@@ -671,7 +581,7 @@ function OwnerStep({ w }: { w: Wiz }) {
             {w.draft.owner === 'phone' && !p.showCode && p.owner && <Paired name={p.owner.name} />}
             {w.draft.owner === 'phone' && p.showCode && (
               <div class="gos-setup-pair">
-                {p.url ? <Qr text={p.url} label="Pair the owner's phone: a QR code" /> : <NoQr />}
+                {p.url ? <PairQr text={p.url} label="Pair the owner's phone: a QR code" /> : <NoQr checking={p.checking} />}
                 <div class="gos-setup-pair-text">
                   <p class="t-caption t-secondary">Scan with your phone's camera, then check the code matches.</p>
                   {typeof p.code === 'object' && <p class="gos-setup-code">{formatCode(p.code.code)}</p>}
@@ -749,7 +659,6 @@ function ModelsStep({ w }: { w: Wiz }) {
       (e) => (setSaved(''), setRefused(sentence((e as Error).message))),
     );
   };
-  const vultr = 'VULTR_INFERENCE_KEY';
   return (
     <div class="gos-setup-col">
       <Intro title="Add a model key">
@@ -800,40 +709,7 @@ function ModelsStep({ w }: { w: Wiz }) {
           </Row>
         ))}
       </Group>
-      <Group title="Other models (optional)">
-        <Row icon="dialog-password" title="Vultr inference" sub={`${vultr} · photo descriptions for Find`}>
-          {keySet(w, vultr) ? <span class="t-success">{setText(w, vultr)}</span> : <Button onClick={() => w.setKey(vultr)}>Add key</Button>}
-        </Row>
-      </Group>
     </div>
-  );
-}
-
-/** Set one key: a password field, straight into the vault. The value never comes back. */
-function KeySheet({ name, onClose, after }: { name: string; onClose: () => void; after: () => void }) {
-  const [value, setValue] = useState('');
-  const [error, setError] = useState('');
-  const [busy, setBusy] = useState(false);
-  const save = () => {
-    setBusy(true);
-    api('PUT', `/vault/${name}`, { value: value.trim() }).then(
-      () => (after(), onClose()),
-      (e) => (setError((e as Error).message), setBusy(false)),
-    );
-  };
-  return (
-    <Sheet title={`Set ${name}`} onCancel={onClose} onDone={save} done="Save" doneDisabled={!value.trim() || busy}>
-      <label class="gos-setup-field">
-        <span class="t-heading">Paste the key</span>
-        <input class="g-field" type="password" autoComplete="off" spellcheck={false} value={value} onInput={(e) => setValue((e.target as HTMLInputElement).value)} onKeyDown={(e) => e.key === 'Enter' && value.trim() && (e.preventDefault(), save())} />
-        <span class="t-caption t-secondary">It goes into the vault, readable only by root. No screen shows it again.</span>
-      </label>
-      {error && (
-        <p class="t-caption t-destructive" role="alert">
-          {sentence(error)}
-        </p>
-      )}
-    </Sheet>
   );
 }
 
@@ -888,80 +764,9 @@ function SafetyStep({ w }: { w: Wiz }) {
   );
 }
 
-// ---------- apps and their keys ----------
+// ---------- updates ----------
 
-function AppRow({ a, w }: { a: AppInfo; w: Wiz }) {
-  const [busy, setBusy] = useState(false);
-  const keys = a.access.secrets.filter((s) => !s.optional).length;
-  const missing = a.access.secrets.filter((s) => !s.optional && !keySet(w, s.name)).length;
-  const toggle = (v: boolean) => {
-    setBusy(true);
-    api('POST', `/apps/${a.id}/${v ? 'enable' : 'disable'}`)
-      .then(() => (void loadApps(), v && void askPermissions(a.id)), w.fail)
-      .finally(() => setBusy(false));
-  };
-  return (
-    <div class="g-approw">
-      <AppIcon id={a.id} title={a.title} size={44} />
-      <div class="g-approw-text">
-        <span class="g-approw-name">{nice(a)}</span>
-        {a.description && <span class="g-approw-desc">{a.description}</span>}
-        <span class="g-chip-set">
-          <Chip icon={a.access.hosts.length ? 'web-browser' : 'process-stop'}>{reach(a)}</Chip>
-          <Chip icon="dialog-password">{keys ? (missing ? `Needs ${plural(missing, 'key')}` : 'Keys set') : 'No keys needed'}</Chip>
-        </span>
-        {a.status === 'error' && <span class="t-caption t-destructive">{a.error ?? 'It did not start.'}</span>}
-      </div>
-      <input type="checkbox" role="switch" class="g-switch" aria-label={`${nice(a)} on`} checked={a.status === 'enabled'} disabled={busy} onChange={(e) => toggle((e.target as HTMLInputElement).checked)} />
-    </div>
-  );
-}
-
-function AppsStep({ w }: { w: Wiz }) {
-  return (
-    <div class="gos-setup-col">
-      <Intro title="Choose apps">Optional. Turn on the apps you want. Each one says what it can reach and how many keys it needs. App Center has more, and you can change this any time.</Intro>
-      <div class="g-list">
-        {offered().map((a) => (
-          <AppRow a={a} w={w} key={a.id} />
-        ))}
-        {!offered().length && <Row title="No apps are installed" sub="Apps you add later show up in App Center." />}
-      </div>
-    </div>
-  );
-}
-
-function KeysStep({ w }: { w: Wiz }) {
-  // The keys the footer counts, each once, under the first app that needs it. Optional keys are in App Center.
-  const seen = new Set<string>();
-  const apps = enabled()
-    .map((a) => ({ a, keys: a.access.secrets.filter((s) => !s.optional && !seen.has(s.name) && seen.add(s.name)) }))
-    .filter((x) => x.keys.length);
-  return (
-    <div class="gos-setup-col">
-      <Intro title="Keys for your apps">GurtOS keeps keys where agents can't read them. You can replace a key but never see it. Optional keys are in App Center.</Intro>
-      {apps.map(({ a, keys }) => (
-        <Group title={nice(a)} caption={/shopper|wallet/.test(a.id) ? 'Test payments only: no real money moves.' : undefined} key={a.id}>
-          {keys.map((s) => (
-            <Row title={keyLabel(s.name)} sub={s.name} key={s.name}>
-              {keySet(w, s.name) ? <span class="t-success">{setText(w, s.name)}</span> : <Button onClick={() => w.setKey(s.name)}>Set key</Button>}
-            </Row>
-          ))}
-        </Group>
-      ))}
-      {!apps.length && (
-        <div class="g-list">
-          <Row icon="object-select" title="No keys needed" sub="None of the apps you turned on needs a key." />
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ---------- updates, privacy, appearance ----------
-
-function UpdatesStep({ w }: { w: Wiz }) {
-  const s = box.settings;
+function UpdatesStep() {
   const sys = box.system;
   return (
     <div class="gos-setup-col">
@@ -984,133 +789,6 @@ function UpdatesStep({ w }: { w: Wiz }) {
           <span class="t-caption t-secondary">The next update installs here. The one after goes back to A.</span>
         </div>
       </div>
-      {s && (
-        <Group title="How to update">
-          <SwitchRow title="Install updates automatically" sub="When no task is running" checked={s.autoUpdate} onChange={(v) => apply(w, { autoUpdate: v })} />
-          <ComboRow
-            title="Channel"
-            value={s.updateChannel}
-            options={[
-              ['stable', 'Stable'],
-              ['beta', 'Beta'],
-            ]}
-            onChange={(v) => apply(w, { updateChannel: v })}
-          />
-        </Group>
-      )}
-    </div>
-  );
-}
-
-const DAYS: [number, string][] = [
-  [30, '30 days'],
-  [90, '3 months'],
-  [180, '6 months'],
-  [365, '1 year'],
-  [730, '2 years'],
-];
-
-function PrivacyStep({ w }: { w: Wiz }) {
-  const s = box.settings;
-  const share = (id: string, title: string, sub: string) => {
-    const a = box.allApps.find((x) => x.id === id);
-    return (
-      <SwitchRow
-        title={title}
-        sub={a ? sub : `${sub}. Not installed on this computer.`}
-        checked={a?.status === 'enabled'}
-        disabled={!a}
-        onChange={(v) => void api('POST', `/apps/${id}/${v ? 'enable' : 'disable'}`).then(() => (void loadApps(), v && void askPermissions(id)), w.fail)}
-      />
-    );
-  };
-  const days = s?.logRetentionDays ?? 365;
-  return (
-    <div class="gos-setup-col">
-      <Intro title="Privacy and logs">The action log records every step every agent takes. It stays on this computer and holds no keys.</Intro>
-      <Group title="The action log">
-        <ComboRow
-          title="Keep the log for"
-          value={String(days)}
-          options={[...DAYS, ...(DAYS.some(([d]) => d === days) ? [] : [[days, `${days} days`] as [number, string]])].map(([d, l]) => [String(d), l])}
-          onChange={(v) => apply(w, { logRetentionDays: +v })}
-        />
-        <Row icon="computer" title="Where it lives">
-          <span class="g-row-value">On this computer</span>
-        </Row>
-        <Row title="Who can read it">
-          <span class="g-row-value">You and your paired phones</span>
-        </Row>
-      </Group>
-      <Group title="Sharing" caption="Off unless you turn it on.">
-        {share('elastic', 'Copy the log to Elastic', 'Needs the Elastic insights app and its key')}
-        {share('mana', 'Public status page', 'Mana status shows task titles and states, never prompts or files')}
-      </Group>
-    </div>
-  );
-}
-
-const THEMES: ['light' | 'dark' | 'system', string][] = [
-  ['light', 'Light'],
-  ['dark', 'Dark'],
-  ['system', 'Follow the system'],
-];
-// The app tile colors from the design system, so an accent always has a tested contrast pair.
-const ACCENTS: [string, string][] = [
-  ['#2f64a6', 'blue'],
-  ['#2e6b5e', 'teal'],
-  ['#3c6b3f', 'green'],
-  ['#5a6270', 'slate'],
-  ['#8a4f3a', 'rust'],
-];
-
-function radioKeys<T>(list: T[], cur: T, pick: (v: T) => void) {
-  return (e: KeyboardEvent) => {
-    const d = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : 0;
-    if (!d) return;
-    e.preventDefault();
-    pick(list[(list.indexOf(cur) + d + list.length) % list.length]);
-    requestAnimationFrame(() => ((e.currentTarget as HTMLElement)?.querySelector('[aria-checked="true"]') as HTMLElement | null)?.focus());
-  };
-}
-
-function AppearanceStep({ w }: { w: Wiz }) {
-  const a = box.settings?.appearance;
-  if (!a) return <div class="gos-skeleton" aria-busy="true" />;
-  const accent = a.accent || ACCENTS[0][0];
-  const theme = (v: (typeof THEMES)[number][0]) => apply(w, { appearance: { theme: v } });
-  const color = (v: string) => apply(w, { appearance: { accent: v === ACCENTS[0][0] ? '' : v } });
-  return (
-    <div class="gos-setup-col">
-      <Intro title="Appearance">How this computer's screen and the portal look. Each phone can choose its own.</Intro>
-      <div class="gos-setup-themes" role="radiogroup" aria-label="Style" onKeyDown={radioKeys(THEMES.map(([v]) => v), a.theme, theme)}>
-        {THEMES.map(([v, label]) => (
-          <button type="button" role="radio" aria-checked={a.theme === v} tabIndex={a.theme === v ? 0 : -1} class="gos-setup-theme" onClick={() => theme(v)} key={v}>
-            <span class={`gos-setup-preview is-${v}`} aria-hidden="true">
-              <span class="gos-setup-mini">
-                <span />
-                <span>
-                  <i />
-                  <i />
-                  <i />
-                </span>
-              </span>
-            </span>
-            <span class={a.theme === v ? 't-heading' : 't-body'}>{label}</span>
-          </button>
-        ))}
-      </div>
-      <div class="gos-setup-field">
-        <span class="t-heading" id="gos-setup-accent">
-          Accent color
-        </span>
-        <div class="gos-setup-swatches" role="radiogroup" aria-labelledby="gos-setup-accent" onKeyDown={radioKeys(ACCENTS.map(([v]) => v), accent, color)}>
-          {ACCENTS.map(([v, name]) => (
-            <button type="button" role="radio" aria-checked={accent === v} aria-label={name} title={name} tabIndex={accent === v ? 0 : -1} class="gos-setup-swatch" style={{ background: v }} onClick={() => color(v)} key={v} />
-          ))}
-        </div>
-        <span class="t-caption t-secondary">Amber and red keep their meaning in every style: amber waits for you, red undoes or blocks.</span>
-      </div>
     </div>
   );
 }
@@ -1118,7 +796,6 @@ function AppearanceStep({ w }: { w: Wiz }) {
 // ---------- done ----------
 
 function DoneStep({ w }: { w: Wiz }) {
-  const s = box.settings;
   const i = iface();
   const owner = ownerDevice?.name ?? (w.draft.owner === 'screen' ? 'This screen' : 'Not paired yet');
   const tour: [ComponentChildren, string, string][] = [
@@ -1159,12 +836,6 @@ function DoneStep({ w }: { w: Wiz }) {
         </Row>
         <Row title="Worker">
           <span class="g-row-value">{modelKey(w) === 'ANTHROPIC_API_KEY' ? 'Claude, with your Anthropic key' : modelKey(w) ? 'Claude, with your Factory key' : "No model key yet: agents can't start"}</span>
-        </Row>
-        <Row title="Apps">
-          <span class="g-row-value">{enabled().map(nice).join(', ') || 'None'}</span>
-        </Row>
-        <Row title="Updates">
-          <span class="g-row-value">{s ? `${s.autoUpdate ? 'Automatic' : 'By hand'}, ${s.updateChannel}` : ''}</span>
         </Row>
       </Group>
       {surface !== 'box screen' && <p class="t-caption t-secondary">This computer's own screen opens the desktop at the same time.</p>}

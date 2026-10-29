@@ -1,7 +1,7 @@
 // Tasks, like a system monitor (Figma 57:722): views in the header bar, one row per task with the user it runs as,
 // its state, what it does now, its cost of its budget, and a summary strip. And one task's own window.
 import type { JSX } from 'preact';
-import { useEffect, useState } from 'preact/hooks';
+import { useState } from 'preact/hooks';
 import { api, box, pairing, surface, undo, useBox, type Task } from '../live.ts';
 import { Alert, AppIcon, Badge, Button, ContextMenu, Icon, IconButton, Menu, Popover, Progress, Sheet, StatusPage, ToggleGroup, type MenuItem } from '../kit/ui.tsx';
 import { HeaderBar, InWindow, open, useWin } from '../wm.tsx';
@@ -180,14 +180,14 @@ export function TasksApp({ view }: { view: string }) {
                     </span>
                   </span>
                   {showApp && (
-                    <span class="g-td t-body" role="gridcell">
+                    <span class="g-td t-body gos-c-app" role="gridcell">
                       {app.title}
                     </span>
                   )}
-                  <span class="g-td" role="gridcell">
+                  <span class="g-td gos-c-state" role="gridcell">
                     <Badge kind={kind}>{word}</Badge>
                   </span>
-                  <span class={`g-td t-caption${n.tone ? ` t-${n.tone}` : ' t-secondary'}`} role="gridcell" title={n.text}>
+                  <span class={`g-td gos-c-now t-caption${n.tone ? ` t-${n.tone}` : ' t-secondary'}`} role="gridcell" title={n.text}>
                     {p !== undefined || t.state === 'running' ? (
                       <span class="gos-now">
                         <span class="gos-ellipsis">{n.text}</span>
@@ -197,10 +197,10 @@ export function TasksApp({ view }: { view: string }) {
                       n.text
                     )}
                   </span>
-                  <span class="g-td t-body" role="gridcell">
+                  <span class="g-td gos-c-cost t-body" role="gridcell">
                     {costOf(t)}
                   </span>
-                  <span class="g-td t-body t-secondary" role="gridcell">
+                  <span class="g-td gos-c-started t-body t-secondary" role="gridcell">
                     {hhmm(t.createdAt)}
                   </span>
                   {t.state === 'waiting' && approvalFor(t.id) && (
@@ -232,7 +232,7 @@ export function TasksApp({ view }: { view: string }) {
           <div>
             <span class="g-summary-label">Spent today</span>
             <span class="g-summary-value">{spentToday()}</span>
-            <span class="g-summary-sub">{b.settings?.defaultBudgetCents ? `default budget ${dollars(b.settings.defaultBudgetCents)} a task` : 'models and tools, test money'}</span>
+            <span class="g-summary-sub">{b.settings?.defaultBudgetCents ? `default budget ${dollars(b.settings.defaultBudgetCents)} a task` : 'models and tools, estimated'}</span>
           </div>
           <div>
             <span class="g-summary-label">Blocked today</span>
@@ -268,6 +268,7 @@ function NewTaskSheet({ onClose }: { onClose: () => void }) {
   const [budget, setBudget] = useState(b.settings?.defaultBudgetCents ? (b.settings.defaultBudgetCents / 100).toFixed(2) : '');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const noKey = b.setup?.modelKey === false;
   const go = async () => {
     setBusy(true);
     setError('');
@@ -292,6 +293,13 @@ function NewTaskSheet({ onClose }: { onClose: () => void }) {
   return (
     <InWindow>
       <Sheet title="New task" onCancel={onClose} onDone={() => void go()} done="Start" doneDisabled={!ok || busy}>
+        {noKey && (
+          <div class="g-banner" role="note">
+            <Icon name="dialog-password" />
+            <div class="t-body">Agents can't start a task until GurtOS has a model key.</div>
+            <Button onClick={() => (onClose(), open('settings/agents'))}>Add a key</Button>
+          </div>
+        )}
         <label class="gos-field">
           <span class="t-body-strong">Title</span>
           <input class="g-field" value={title} maxLength={120} placeholder="Tidy the budget sheet" onInput={(e) => setTitle((e.target as HTMLInputElement).value)} />

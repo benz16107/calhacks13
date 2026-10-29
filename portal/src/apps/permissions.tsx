@@ -79,7 +79,7 @@ function PermSheet({ a, ask, onClose, onSaved }: { a: AppPerms; ask: boolean; on
         <label class="gos-field gos-perm-limit">
           <span class="t-body-strong">Up to, each day (optional)</span>
           <input class="g-field" inputMode="decimal" value={limit} placeholder="No daily limit" aria-invalid={bad} onInput={(e) => setLimit((e.target as HTMLInputElement).value)} />
-          <span class={`t-caption ${bad ? 't-destructive' : 't-secondary'}`}>{bad ? 'Type an amount in dollars, like 5 or 12.50.' : 'Above it, a spend asks you first. Test money stays test money.'}</span>
+          <span class={`t-caption ${bad ? 't-destructive' : 't-secondary'}`}>{bad ? 'Type an amount in dollars, like 5 or 12.50.' : 'Above it, a spend asks you first.'}</span>
         </label>
       )}
       <p class="t-caption t-secondary">You can change these any time in Settings, Permissions. GurtOS logs every refusal in Activity.</p>

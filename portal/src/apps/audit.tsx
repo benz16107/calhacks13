@@ -52,7 +52,7 @@ const short = (day: string) => new Date(`${day}T12:00:00Z`).toLocaleDateString('
 const dayLabel = (t: string) => new Date(t).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', ...zone() });
 const whenOf = (t: string) => new Date(t).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23', ...zone() }).replace(',', '');
 const initials = (name: string) => name.split(/\s+/).map((w) => w[0]).slice(0, 2).join('').toUpperCase();
-const TILES = ['shopper', 'credit-desk', 'tasks', 'time-machine', 'waiting', 'wallet', 'app-center', 'audit'];
+const TILES = ['tasks', 'activity', 'time-machine', 'settings', 'app-center', 'waiting', 'audit', 'web'];
 const tile = (name: string) => `var(--color-app-${TILES[[...name].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7) % TILES.length]})`;
 
 /** Map the ids in the log to the names in the rows, so the People filter can send an id. */

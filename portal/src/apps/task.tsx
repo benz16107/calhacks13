@@ -4,7 +4,7 @@ import { useEffect, useState } from 'preact/hooks';
 import { api, box, hosted, machine, onEvent, undo, useBox, type Approval, type LogEvent, type Task } from '../live.ts';
 import { Alert, AppIcon, Badge, Button, Icon, IconButton, Menu, Popover, StatusPage } from '../kit/ui.tsx';
 import { HeaderBar, open, useWin } from '../wm.tsx';
-import { STATE, appOf, clock, dollars, needsModelKey, sentence, taskTitle } from '../util.ts';
+import { STATE, appOf, clock, dollars, needsModelKey, sentence, taskTitle, testMoney } from '../util.ts';
 import { PRODUCT } from '../product.ts';
 import { DiffView, describe, silent, undoCopy, type Diff } from './log.tsx';
 import { AnswerButtons } from './answer.tsx';
@@ -185,7 +185,7 @@ export function TaskApp({ id }: { id: string }) {
                 <Icon name="dialog-question" />
                 <div>
                   <p class="t-body-strong">{a.question}</p>
-                  <p class="t-caption t-secondary">{a.costCents ? `${dollars(a.costCents)} (test money)` : 'No money involved'} · the first answer wins</p>
+                  <p class="t-caption t-secondary">{a.costCents ? `${dollars(a.costCents)}${testMoney(t) ? ' (test money)' : ''}` : 'No money involved'} · the first answer wins</p>
                 </div>
                 <span class="gos-actions">
                   <AnswerButtons a={a} />

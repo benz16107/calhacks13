@@ -5,7 +5,7 @@ import { useState } from 'preact/hooks';
 import { useBox, type AppInfo } from '../live.ts';
 import { AppIcon, Badge, Button, Group, Icon, IconButton, Row, StatusPage } from '../kit/ui.tsx';
 import { HeaderBar, open, phone, useWin } from '../wm.tsx';
-import { plural } from '../util.ts';
+import { byApp, keyLabel, plural, testApp } from '../util.ts';
 import { KeySheet, ReadOnly, appTitle, useToggleApp } from './settings.tsx';
 
 type Filter = 'all' | 'on' | 'off' | 'key';
@@ -16,8 +16,13 @@ const FILTERS: [Filter, string, string, (a: AppInfo) => boolean][] = [
   ['key', 'Needs a key', 'dialog-password', (a) => a.access.secrets.some((s) => !s.set && !s.optional)],
 ];
 
-const badge = (a: AppInfo) =>
-  a.status === 'error' ? <Badge kind="destructive">Error</Badge> : a.status === 'enabled' ? <Badge kind="success">On</Badge> : <Badge kind="neutral">Off</Badge>;
+const badge = (a: AppInfo) => (
+  <>
+    {a.status === 'error' ? <Badge kind="destructive">Error</Badge> : a.status === 'enabled' ? <Badge kind="success">On</Badge> : <Badge kind="neutral">Off</Badge>}
+    {testApp(a) && <Badge kind="neutral">Test only</Badge>}
+  </>
+);
+
 const missing = (a: AppInfo) => a.access.secrets.filter((s) => !s.set && !s.optional);
 /** "3 hosts · 1 key missing", or the error in red. */
 function meta(a: AppInfo): { text: string; tone?: string } {
@@ -39,7 +44,7 @@ export function AppCenterApp({ id }: { id: string }) {
   const app = id ? b.allApps.find((a) => a.id === id) : undefined;
   const [, label, , test] = FILTERS.find((f) => f[0] === filter)!;
   const needle = q.trim().toLowerCase();
-  const shown = b.allApps.filter((a) => test(a) && (!needle || `${a.title} ${a.description} ${a.id}`.toLowerCase().includes(needle)));
+  const shown = [...b.allApps].sort(byApp).filter((a) => test(a) && (!needle || `${a.title} ${a.description} ${a.id}`.toLowerCase().includes(needle)));
   const on = b.allApps.filter((a) => a.status === 'enabled').length;
   const run = async (a: AppInfo, enable: boolean) => {
     setBusy(a.id);
@@ -150,12 +155,12 @@ export function AppCenterApp({ id }: { id: string }) {
         </div>
       </div>
       <Group title="What it can reach" caption={app.access.hosts.length ? 'Its tools reach only these. Everything else is blocked and logged.' : undefined}>
-        {app.access.hosts.length ? app.access.hosts.map((h) => <Row icon="web-browser" title={h} key={h} />) : <Row icon="network-offline" title="No internet" sub="Its tools reach nothing outside this box" />}
+        {app.access.hosts.length ? app.access.hosts.map((h) => <Row icon="web-browser" title={h.replace(/\bthe box\b/g, 'this computer')} key={h} />) : <Row icon="network-offline" title="No internet" sub="Its tools reach nothing outside this computer" />}
       </Group>
       <Group title="Keys it needs" caption={app.access.secrets.length ? 'GurtOS keeps them where agents can\'t read them. The app never sees one either.' : undefined}>
         {app.access.secrets.length ? (
           app.access.secrets.map((s) => (
-            <Row title={<span class="gos-set-mono">{s.name}</span>} sub={s.optional ? 'Optional: the app works without it' : undefined} key={s.name}>
+            <Row title={keyLabel(s.name)} sub={<><span class="gos-set-mono">{s.name}</span>{s.optional ? ' · optional, the app works without it' : ''}</>} key={s.name}>
               {s.set ? (
                 <span class="gos-set-value t-success">Set</span>
               ) : (

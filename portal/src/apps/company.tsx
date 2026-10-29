@@ -2,14 +2,14 @@
 // People and the rules come from GET /api/people and GET /api/business; every change goes back through the API, which
 // checks it, writes it to the audit log and refuses what it can't read.
 import './company.css';
-import type { ComponentChildren } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { api, box, loadBusiness, pairing, surface, useBox, type Person, type Pilot, type Role, type RuleView } from '../live.ts';
 import { AddRow, Alert, AppIcon, Badge, Button, ComboRow, Group, Icon, IconButton, LinkRow, Menu, Popover, Row, Sheet, StatusPage, SwitchRow, type MenuItem } from '../kit/ui.tsx';
 import { InWindow, useWin } from '../wm.tsx';
 import { PRODUCT } from '../product.ts';
-import { appOf, hhmm, ofState, plural, selfBox, useNow, zone } from '../util.ts';
-import { Qr, formatCode } from './settings.tsx';
+import { appOf, hhmm, ofState, plural, useNow, zone } from '../util.ts';
+import { Qr, formatCode, pairLink } from './settings.tsx';
+import { pairNote, type PairCode } from '../relay.ts';
 
 // ---------- shared ----------
 
@@ -74,7 +74,7 @@ function Pick({ value, label, options, onChange, disabled }: { value: string; la
 
 // ---------- People ----------
 
-const TILES = ['shopper', 'settings', 'wallet', 'find', 'credit-desk', 'app-center', 'waiting'];
+const TILES = ['tasks', 'activity', 'time-machine', 'settings', 'app-center', 'waiting', 'audit'];
 const tileOf = (id: string) => `var(--color-app-${TILES[[...id].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7) % TILES.length]})`;
 const Avatar = ({ p }: { p: Person }) => (
   <span class="gos-co-avatar" style={{ background: tileOf(p.id) }} aria-hidden="true">
@@ -317,13 +317,6 @@ function PersonSheet({ person, onClose }: { person?: Person; onClose: () => void
   );
 }
 
-interface PairCode {
-  code: string;
-  url: string;
-  expiresAt: string;
-}
-const loopback = ['127.0.0.1', 'localhost'].includes(location.hostname);
-
 /** A one-time code that pairs a phone as this person, as a QR code (the same card as Devices). */
 function PairSheet({ person, added, onClose }: { person: Person; added: boolean; onClose: () => void }) {
   const now = useNow(1000);
@@ -338,9 +331,7 @@ function PairSheet({ person, added, onClose }: { person: Person; added: boolean;
   }, []);
   const close = () => (void loadBusiness(), onClose());
   const joined = phones.find((p) => !known.current.has(p.id));
-  const selfUrl = selfBox().url;
-  const origin = typeof code === 'object' ? (/^https?:/.test(code.url) ? new URL(code.url).origin : selfUrl ? new URL(selfUrl).origin : loopback ? undefined : location.origin) : undefined;
-  const url = origin && typeof code === 'object' ? `${origin}/#pair/${code.code}` : undefined;
+  const url = typeof code === 'object' ? pairLink(code, false) : undefined; // a person's code never meets over the relay
   const left = typeof code === 'object' ? Math.max(0, Math.round((Date.parse(code.expiresAt) - now) / 1000)) : 0;
   return (
     <InWindow>
@@ -352,15 +343,16 @@ function PairSheet({ person, added, onClose }: { person: Person; added: boolean;
             ) : typeof code === 'string' ? (
               `Pairing is not available: ${code}`
             ) : code ? (
-              `This screen does not know the address phones use (set BOX_URL). Open ${PRODUCT} from a laptop for the QR code.`
+              `This screen does not know the address phones use. Open ${PRODUCT} from a laptop for the QR code.`
             ) : (
               'Making a code…'
             )}
           </div>
           <div class="gos-set-pair-text">
             <p class="t-body">1. Point {person.name}'s phone camera at the code.</p>
-            <p class="t-body">2. {PRODUCT} opens on the phone, on this computer's address.</p>
+            <p class="t-body">2. {PRODUCT} opens on the phone.</p>
             <p class="t-body">3. Check the phone shows the same code, then name it.</p>
+            {url && <p class="t-caption t-secondary">{pairNote(url)}</p>}
             {typeof code === 'object' && (
               <>
                 <p class="gos-set-code" aria-label={`Code ${code.code.split('').join(' ')}`}>

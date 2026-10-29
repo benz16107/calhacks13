@@ -4,6 +4,7 @@
 //   NODE_PATH=<dir with playwright> AXE=<path to axe.min.js> node docs/ux/check.mjs [--only <substring>] [--out <dir>]
 //   SRV=http://127.0.0.1:7781 BIZ=http://127.0.0.1:7782   two dev boxes (portal/dev-box.sh; DEV_SEED=business for BIZ)
 //   SETUP=1   also reopen setup on SRV and walk every step (it finishes setup again at the end)
+//   FRESH=http://127.0.0.1:7783   also a new install as a stranger gets it (DEV_SEED=fresh portal/dev-box.sh), after setup
 // Writes <out>/<scene>.png and <out>/report.json, and prints one line per scene. Exit 1 if any P0 check fails.
 import fs from 'node:fs';
 import path from 'node:path';
@@ -21,6 +22,7 @@ const axe = axePath && fs.existsSync(axePath) ? fs.readFileSync(axePath, 'utf8')
 fs.mkdirSync(out, { recursive: true });
 
 const DESK = { width: 1920, height: 1080 }, KIOSK = { width: 1280, height: 800 }, PHONE = { width: 390, height: 844 };
+const LAPTOP = { width: 1440, height: 900 }, SMALL = { width: 1280, height: 720 }, PHONE_S = { width: 360, height: 740 };
 const OFFBOX = { 'x-forwarded-for': '203.0.113.9' }; // what a phone's request through a proxy looks like
 
 async function pairToken(base, person) {
@@ -72,6 +74,14 @@ S('phone-settings', { path: '/', vp: PHONE, pair: 'owner', headers: OFFBOX, mobi
 S('phone-settings-remote', { path: '/', vp: PHONE, pair: 'owner', headers: OFFBOX, mobile: true, hash: 'settings/remote' });
 S('phone-machines', { path: '/', vp: PHONE, pair: 'owner', headers: OFFBOX, mobile: true, act: click('.gos-home-box') });
 S('hosted-pair', { path: '/pair?hosted', vp: PHONE, headers: OFFBOX, mobile: true });
+// The hosted app's pairing page for a computer without its own address (with the relay offline, the home network leads)
+S('hosted-meet', { path: '/pair?hosted#code=abcd1234&rv=AAAAAAAAAAAAAAAAAAAAAA&lan=192.168.1.20%3A7700&n=Home', vp: PHONE_S, headers: OFFBOX, mobile: true });
+S('kiosk-720-desktop', { vp: SMALL });
+S('laptop-settings-remote', { vp: LAPTOP, hash: 'settings/remote' });
+S('phone-s-home', { path: '/', vp: PHONE_S, pair: 'owner', headers: OFFBOX, mobile: true });
+S('phone-s-task-waiting', { path: '/', vp: PHONE_S, pair: 'owner', headers: OFFBOX, mobile: true, hash: async () => `task/${await firstTask(SRV, 'waiting')}` });
+// A new install: no keys, no tasks, only the model app on (FRESH, after its setup)
+if (process.env.FRESH) for (const r of ['', 'tasks/new', 'app-center', 'settings/keys', 'settings/privacy', 'settings/permissions']) S(`fresh-${r.replace('/', '-') || 'desktop'}`, { base: process.env.FRESH, vp: LAPTOP, hash: r || undefined });
 // Business: the box screen signed in as each person, and the phones
 const B = (name, o) => S(name, { base: BIZ, ...o });
 for (const who of ['rosa', 'sam', 'priya', 'owen']) B(`biz-desktop-${who}`, { person: who });

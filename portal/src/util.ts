@@ -76,6 +76,18 @@ export function appOf(t: Pick<Task, 'source'>): { id: string; title: string } {
   return app ? { id, title: app.title.replace(/\s*\(.*\)$/, '') } : { id: 'tasks', title: 'Tasks' };
 }
 
+/** An app that moves only test money or works on sandbox data (Shopper, Agent wallet, Credit desk), from its own words. */
+export const testApp = (a: { title: string; description?: string }) => /\btest (money|payments?|data)\b|\bdevnet\b|\bsandbox\b/i.test(`${a.title} ${a.description ?? ''}`);
+/** App lists show GurtOS's own apps first (the model, Factory, the live board, the attack tests, the developer sample), then by name. */
+const OWN = ['anthropic', 'factory', 'spacetime', 'armadin', 'example'];
+const rank = (id: string) => (OWN.includes(id) ? OWN.indexOf(id) : OWN.length);
+export const byApp = (x: { id: string; title: string }, y: { id: string; title: string }) => rank(x.id) - rank(y.id) || x.title.localeCompare(y.title);
+/** A task whose money is test money: one started by a test app. */
+export const testMoney = (t: Pick<Task, 'source'> | undefined) => {
+  const app = t && box.allApps.find((a) => a.id === trackOf(t));
+  return !!app && testApp(app);
+};
+
 /** This box and its peers. Before GET /api/boxes answers, just this box. */
 export function boxList() {
   const name = box.system?.boxName ?? (['127.0.0.1', 'localhost'].includes(location.hostname) ? 'this computer' : location.hostname);

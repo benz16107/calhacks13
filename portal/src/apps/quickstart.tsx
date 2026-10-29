@@ -8,9 +8,8 @@ import { keyLabel } from '../util.ts';
 import { Qr } from './settings.tsx';
 import { pairWith } from '../shell.tsx';
 import { openSealed, phoneKey, type Sealed } from './qs-crypto.ts';
+import { RELAY, onRelay } from '../relay.ts';
 
-const RELAY = 'https://box.gurtos.com/v1/rv';
-const HOST = /^[a-z0-9-]{3,30}\.box\.gurtos\.com$/;
 
 interface View {
   state: 'off' | 'waiting' | 'applying' | 'done' | 'stopped' | 'error';
@@ -95,7 +94,7 @@ interface Ask {
 async function waitForOwnerCode(rv: string): Promise<Sealed> {
   for (const end = Date.now() + 300_000; Date.now() < end; ) {
     const started = Date.now();
-    const r = await fetch(`${RELAY}/${encodeURIComponent(rv)}/owner?wait=25`).catch(() => undefined);
+    const r = await fetch(`${RELAY}/v1/rv/${encodeURIComponent(rv)}/owner?wait=25`, { signal: AbortSignal.timeout(35_000) }).catch(() => undefined);
     if (r?.status === 200) return (await r.json()) as Sealed;
     if (Date.now() - started < 2000) await new Promise((x) => setTimeout(x, 2000)); // answered at once: don't spin
   }
@@ -140,7 +139,7 @@ export function QuickStartPhone() {
       await callMachine(from, 'POST', `/quickstart/send/${ask.id}`, { approve: true });
       setStage('waiting');
       const { host, code } = await openSealed<{ host: string; code: string }>(key.privateKey, link.s, await waitForOwnerCode(link.rv));
-      if (!HOST.test(host)) throw new Error('The new computer answered with an address that is not a GurtOS address.');
+      if (!onRelay(host)) throw new Error('The new computer answered with an address that is not a GurtOS address.');
       setStage('pairing');
       await pairWith(`https://${host}`, { code, name: from.device.name });
       setStage('done');
