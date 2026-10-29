@@ -15,10 +15,21 @@ export const pushWorks = () => typeof window !== 'undefined' && 'serviceWorker' 
 /** An iPhone allows web push only for apps added to the Home Screen. */
 export const needsHomeScreen = () => ios() && !standalone();
 
+/**
+ * The relay whose push gateway this browser subscribes with: the one the computer on screen uses (the owner may have
+ * chosen their own), else the default. shortcut: one subscription has one gateway key, so computers on different
+ * relays can't all push to one browser; fine while an owner runs one relay, revisit if people mix relays.
+ */
+async function pushRelay() {
+  const m = machine() ?? machines()[0];
+  const host = m ? await callMachine<{ relay?: string }>(m, 'GET', '/remote').then((r) => r.relay, () => undefined) : undefined;
+  return host ? `https://${host}` : RELAY;
+}
+
 /** This browser's subscription with the gateway's key (a new one if the key changed). */
 async function subscription() {
   const reg = await navigator.serviceWorker.ready;
-  const { publicKey } = (await fetch(`${RELAY}/v1/push/key`, { signal: AbortSignal.timeout(10_000) }).then(
+  const { publicKey } = (await fetch(`${await pushRelay()}/v1/push/key`, { signal: AbortSignal.timeout(10_000) }).then(
     (r) => (r.ok ? r.json() : Promise.reject()),
   ).catch(() => {
     throw new Error(`${PRODUCT}'s push service isn't answering right now. Try again later.`);

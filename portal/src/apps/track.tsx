@@ -25,12 +25,20 @@ export function TrackApp({ arg }: { arg: string }) {
   const src = a ? `${base()}/t/${a.track}${a.href}` : '';
   // The page runs sandboxed, with no origin of its own, so it never holds this device's token or acts as the box's
   // screen: the box gives each window a token of its own, for that app's routes only (core/box.ts, windowGate). The
-  // URL carries it and /kit/gurtos.js carries it on. A box too old to give one gets the old way: the pairing token.
+  // URL carries it and /kit/gurtos.js carries it on. Only a box too old to have the route (its 404 "not found") gets the
+  // old way, the pairing token; any other failure shows why instead, so the page never holds this device's token.
   const [win, setWin] = useState<string | undefined>();
+  const [winError, setWinError] = useState('');
+  const [tries, setTries] = useState(0);
   useEffect(() => {
     setWin(undefined);
-    if (a) api<{ token: string }>('POST', `/apps/${encodeURIComponent(a.track)}/window`).then((r) => setWin(r.token), () => setWin(''));
-  }, [a?.track]);
+    setWinError('');
+    if (a)
+      api<{ token: string }>('POST', `/apps/${encodeURIComponent(a.track)}/window`).then(
+        (r) => setWin(r.token),
+        (e: Error & { status?: number }) => (e.status === 404 && e.message === 'not found' ? setWin('') : setWinError(e.message)),
+      );
+  }, [a?.track, tries]);
   const sep = src.includes('?') ? '&' : '?';
   const old = () => src + tokenQuery(sep) + (signedIn() ? `${src.includes('?') || tokenQuery() ? '&' : '?'}person=${encodeURIComponent(signedIn()!)}` : '');
   const load = src && win !== undefined ? (win ? `${src}${sep}access_token=${encodeURIComponent(win)}` : old()) : '';
@@ -59,7 +67,11 @@ export function TrackApp({ arg }: { arg: string }) {
         }
       />
       <div class="g-window-content gos-track">
-        {a && !load ? null : a ? (
+        {a && winError ? (
+          <StatusPage icon="dialog-warning" title={`${a.title} can't open right now`} action={<Button onClick={() => setTries((n) => n + 1)}>Try again</Button>}>
+            {winError}
+          </StatusPage>
+        ) : a && !load ? null : a ? (
           <iframe ref={frame} class="gos-track-frame" title={a.title} src={load} onLoad={applyTheme} allow="publickey-credentials-get; publickey-credentials-create" />
         ) : (
           <StatusPage

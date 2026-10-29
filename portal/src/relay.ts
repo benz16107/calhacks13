@@ -42,9 +42,12 @@ export interface PairCode {
 export function pairLink(c: PairCode, relayUp: boolean | undefined, here?: string): string | undefined {
   const meet = /[#&]rv=/.test(c.url);
   if (meet && relayUp === undefined) return undefined;
-  if (/[?&]box=/.test(c.url) || (meet && relayUp)) return c.url;
+  // The hosted app reaches only computers on its own relay: one on an owner's own relay pairs on its own page.
+  const named = c.url.match(/[?&]box=([^&#]+)/)?.[1];
+  if ((named && onRelay(decodeURIComponent(named))) || (meet && relayUp)) return c.url;
   if (c.boxUrl) return c.boxUrl;
-  if (/^https?:/.test(c.url)) return c.url;
+  if (meet) return undefined; // the relay is down and this computer has no address of its own: no QR that cannot work
+  if (/^https?:/.test(c.url) && !named) return c.url;
   return here && `${here}/#pair/${c.code}`;
 }
 /** Where the phone has to be for a pairing link to work. */

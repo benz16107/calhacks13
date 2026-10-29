@@ -1,6 +1,7 @@
 # The box's HTTP API, as the owner sees it from their desktop session. Shared by box-desktop.py and box-ui.py.
 import json
 import os
+import re
 import subprocess
 import urllib.error
 import urllib.parse
@@ -111,6 +112,25 @@ def relay_up(host):
             return r.status == 200
     except Exception:  # noqa: BLE001 (DNS, refused, TLS, timeout: all mean a phone can't get through it now)
         return False
+
+
+HOSTED_RELAY = 'box.gurtos.com'  # the relay app.gurtos.com reaches (portal/src/relay.ts, RELAY)
+
+
+def pair_link(code, relay_ok):
+    """The link a pairing QR carries, by the portal's rule (portal/src/relay.ts, pairLink): the hosted app only for a
+    computer on the hosted relay, or during setup while the relay answers; else the computer's own pairing page."""
+    url, own = code.get('url') or '', code.get('boxUrl')
+    meet = re.search(r'[#&]rv=', url)
+    named = re.search(r'[?&]box=([^&#]+)', url)
+    host = urllib.parse.unquote(named[1]) if named else ''
+    if (host.endswith('.' + HOSTED_RELAY) and re.fullmatch(r'[a-z0-9-]{3,30}', host[:-len(HOSTED_RELAY) - 1])) or (meet and relay_ok):
+        return url
+    if own:
+        return own
+    if meet:
+        return None  # the relay is down and this computer has no address of its own: no QR that cannot work
+    return url if url.startswith('http') and not named else None
 
 
 def phone_reach(code, remote, relay_ok):

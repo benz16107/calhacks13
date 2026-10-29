@@ -19,6 +19,11 @@ test('a pairing QR uses the home network unless the relay can help', () => {
   // Remote access on: the hosted app with the computer's own address.
   const remote = { ...code, url: 'https://app.gurtos.com/pair?box=home.box.gurtos.com#eef8169a', boxUrl: 'https://home.box.gurtos.com/pair#eef8169a' };
   assert.equal(pairLink(remote, false), remote.url);
+  // Remote access on through the owner's own relay: the hosted app cannot reach it, so the computer's own page.
+  const own = { ...code, url: 'https://app.gurtos.com/pair?box=rosa.box.example.com#eef8169a', boxUrl: 'https://rosa.box.example.com/pair#eef8169a' };
+  assert.equal(pairLink(own, true), own.boxUrl);
+  // During setup with the relay down and no address of its own: no QR rather than one that cannot work.
+  assert.equal(pairLink({ ...meet, boxUrl: undefined }, false), undefined);
   // No BOX_URL: the hosted link is all there is. An older core's bare code uses this page's address.
   assert.equal(pairLink({ ...plain, boxUrl: undefined }, false), plain.url);
   assert.equal(pairLink({ ...code, url: '/pair' }, false, 'http://10.0.0.5:7700'), 'http://10.0.0.5:7700/#pair/eef8169a');

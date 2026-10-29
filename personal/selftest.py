@@ -16,7 +16,7 @@ from datetime import datetime
 
 HERE = os.path.dirname(os.path.realpath(__file__))
 sys.path.insert(0, HERE)
-from boxapi import BOX, api, ask_spec, phone_reach, quote  # noqa: E402
+from boxapi import BOX, api, ask_spec, pair_link, phone_reach, quote  # noqa: E402
 
 LOGIC = os.path.join(HERE, 'shell', 'gurtos@gurtos.dev', 'logic.js')
 NODE = shutil.which('node') or '/usr/local/bin/node'
@@ -273,6 +273,11 @@ rv = {'url': 'https://app.gurtos.com/pair#code=ab12&rv=xyz&n=Home'}
 check(phone_reach(lan, None, False) == 'wifi' and phone_reach(rv, None, False) is None and phone_reach(rv, None, True) == 'anywhere'
       and phone_reach(rv, {'enabled': True, 'state': 'error'}, True) is None and phone_reach({'url': 'x'}, {'enabled': True, 'state': 'connected'}, False) == 'anywhere',
       'a pairing code is offered for the same Wi-Fi, for anywhere only while the relay answers, and never while remote access is down')
+own = {'url': 'https://app.gurtos.com/pair?box=rosa.box.example.com#ab12', 'boxUrl': 'https://rosa.box.example.com/pair#ab12'}
+hosted = {'url': 'https://app.gurtos.com/pair?box=rosa.box.gurtos.com#ab12', 'boxUrl': 'https://rosa.box.gurtos.com/pair#ab12'}
+check(pair_link(lan, False) == lan['boxUrl'] and pair_link(rv, True) == rv['url'] and pair_link(rv, False) is None
+      and pair_link(own, True) == own['boxUrl'] and pair_link(hosted, False) == hosted['url'],
+      "the QR carries the computer's own page unless the hosted app can reach it (the portal's pairLink rule)")
 
 # GurtOS Settings' System update row reads GET /api/update; a demo box isn't installed from an image, so it hides.
 u = api('GET', '/api/update')

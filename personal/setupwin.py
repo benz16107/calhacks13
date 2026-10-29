@@ -13,7 +13,7 @@ from gi.repository import Adw, Gdk, Gio, GLib, Gtk
 
 import tasklogic as tl
 from apptiles import tile
-from boxapi import api, background, dollars, phone_reach, relay_up, remote_view, tilde
+from boxapi import api, background, dollars, pair_link, phone_reach, relay_up, remote_view, tilde
 
 STEPS = [  # (id for /api/setup/step, label in the step list and the header)
     ('welcome', 'Welcome'), ('models', 'AI models'), ('folders', 'Folders'), ('safety', 'Permissions'),
@@ -189,7 +189,8 @@ class SetupWindow(Adw.ApplicationWindow):
         setup, self.settings, self.vault, self.apps, self.boxes = state
         self.model = setup.get('model') or ({'ready': setup['modelKey']} if 'modelKey' in setup else None)
         self.taken = setup.get('steps', {})
-        if not setup.get('done') and 'apps' not in self.taken:
+        # Only a truly first Setup: a reopened one, or one finished elsewhere (the portal, Quick Start) records steps.
+        if not setup.get('done') and not self.taken and not setup.get('migrated'):
             self.first_apps()
         first_open = next((i for i, (sid, _l) in enumerate(STEPS) if sid not in self.taken and sid != 'done'), len(STEPS) - 1)
         self.go(0 if setup.get('done') else first_open)
@@ -456,7 +457,10 @@ class SetupWindow(Adw.ApplicationWindow):
 
         def work():
             for app_id, want in changes:
-                api('POST', f"/api/apps/{app_id}/{'enable' if want else 'disable'}", {})
+                try:  # one app that refuses must not stop the rest, or leave the step unrecorded to run again
+                    api('POST', f"/api/apps/{app_id}/{'enable' if want else 'disable'}", {})
+                except Exception as e:  # noqa: BLE001
+                    print(f'setup: could not turn {app_id} {"on" if want else "off"}: {e}', flush=True)
             api('POST', '/api/setup/step', {'id': 'apps'})
         background(work, lambda _o, _e: None)
 
@@ -615,7 +619,8 @@ class SetupWindow(Adw.ApplicationWindow):
                     steps.append(Gtk.Label(label='Skip this step. You can pair a phone later in GurtOS Settings, Phone.', xalign=0, wrap=True,
                                            css_classes=['gurt-caption', 'gurt-secondary']))
                 return None
-            qr = qr_image(code['url']) if code.get('url', '').startswith('http') else None
+            link = pair_link(code, relay_ok)
+            qr = qr_image(link) if link else None
             if qr:
                 card.prepend(qr)
             for n, line in enumerate(("Point your phone's camera at the code.", 'Check that the phone shows the same code.',
