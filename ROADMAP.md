@@ -5,9 +5,9 @@ what has to happen before we would call it 1.0, and what comes after. Dates are 
 
 ## What exists today
 
-Everything in this list is on `main`. The latest release, v0.1.0-preview, has the isolation, the log, undo,
-approvals, resume after a power cut and the images. The disk limit, app permissions, Replay and setup from another
-computer came after it and ship in the next release ([release/notes/NEXT.md](release/notes/NEXT.md)).
+Everything in this list is on `main` and in the latest release, v0.2.0-preview. v0.1.0-preview had the isolation, the
+log, undo, approvals, resume after a power cut and the images. v0.2.0-preview adds the disk limit, app permissions,
+Replay and setup from another computer ([release notes](release/notes/v0.2.0-preview.md)).
 
 - Each agent task runs as its own Linux user, in its own overlay copy of the files, as a locked-down systemd unit
   (no capabilities, a system call filter, 2 GB of memory, 512 processes, a private `/tmp`). Its network reaches only
@@ -58,7 +58,7 @@ Nothing here is done. We would not call GurtOS 1.0 until these are.
 - Release keys held in hardware, with rotation and several signers. Today there is one signing key and one update
   key, each a file, backed up in a second place.
 - Reproducible builds, so anyone can build an ISO and get the same bytes.
-- A software bill of materials (SBOM) made and signed automatically with every release. v0.1.0-preview's were made
+- A software bill of materials (SBOM) made and signed automatically with every release. So far they were made
   by hand at release time.
 
 **Self-hosting**

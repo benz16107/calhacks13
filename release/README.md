@@ -12,7 +12,7 @@ How a GurtOS release is built, signed and published, and how to check one.
 | `publish.sh` | Signs `SHA256SUMS` and uploads a release folder to GitHub |
 | `image-sbom.py` | Writes the software bill of materials for an image |
 | `licenses.md` | What each licence in the images and the repository is, and what needs a decision |
-| `notes/<version>.md` | Release notes, with each file's size and SHA-256. `notes/NEXT.md` is the draft for the next one |
+| `notes/<version>.md` | Release notes, with each file's size and SHA-256. Copy the last release's and edit it |
 
 ## Build it yourself
 
@@ -43,7 +43,7 @@ few minutes. To start clean, delete `/var/lib/box-image`.
 
 ## Keys
 
-Two ed25519 keys, both made for v0.1.0-preview and kept off the build machines and out of git:
+Two ed25519 keys, both made for v0.1.0-preview, used again for v0.2.0-preview, and kept off the build machines and out of git:
 
 - **The release signing key** signs `SHA256SUMS`. Its public half is `allowed_signers` here and on each release.
   Fingerprint `SHA256:FWKFb1eAvEBmMhVJwMwTnLnhrmZ5yQZ5947pDvFKcpY`.
@@ -60,7 +60,7 @@ The steps, as they were run for v0.1.0-preview and tightened since. About 75 min
 release. Each build machine is a fresh Ubuntu 24.04 VM of the right architecture, deleted afterwards.
 
 1. **Pick the commit.** `node release/check.ts` and the history scans in `audit.md` are clean, and `./demo` passes
-   on that commit. Pin its SHA. Move `notes/NEXT.md` to `notes/<version>.md` and fill in the version.
+   on that commit. Pin its SHA. Write `notes/<version>.md` from the last release's notes and `git log <last tag>..<sha>`.
 2. **Build, in parallel** (about 13 minutes). Each build is `git clone`, then `git checkout <sha>`, then
    `BOX_VERSION=<version> BOX_UPDATE_KEY=<update key file> image/build [personal] [arm64]`.
    - x86_64 Server then Personal on a 4 vCPU, 8 GB VM (5.5 and 7 minutes). Copy the update key to the VM for the

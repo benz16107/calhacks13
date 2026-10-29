@@ -34,30 +34,24 @@ come up healthy.
 
 ## Download
 
-The current release is [v0.1.0-preview](https://github.com/benz16107/gurtos/releases/tag/v0.1.0-preview), from
-Oct 25, 2026. Each file is on GitHub Releases, with signed checksums.
+The current release is [v0.2.0-preview](https://github.com/benz16107/gurtos/releases/tag/v0.2.0-preview). Each
+file is on GitHub Releases, with signed checksums.
 
 | Machine | File | Download |
 |---|---|---|
-| Server on a PC, server or cloud VM (Intel or AMD) | `gurtos-server-x86_64.iso` (1.37 GB) | [download](https://github.com/benz16107/gurtos/releases/download/v0.1.0-preview/gurtos-server-x86_64.iso) |
-| Server on an Apple silicon Mac (UTM or Parallels) or an arm64 server | `gurtos-server-arm64.iso` (1.37 GB) | [download](https://github.com/benz16107/gurtos/releases/download/v0.1.0-preview/gurtos-server-arm64.iso) |
-| Personal on a PC or laptop (Intel or AMD) | `gurtos-personal-x86_64.iso` (2.01 GB) | [download](https://github.com/benz16107/gurtos/releases/download/v0.1.0-preview/gurtos-personal-x86_64.iso) |
-| Personal on an Apple silicon Mac (UTM or Parallels) | `gurtos-personal-arm64.iso` (1.99 GB) | [download](https://github.com/benz16107/gurtos/releases/download/v0.1.0-preview/gurtos-personal-arm64.iso) |
-| Checksums, signature, public key | `SHA256SUMS`, `SHA256SUMS.sig`, `allowed_signers` | [release page](https://github.com/benz16107/gurtos/releases/tag/v0.1.0-preview) |
+| Server on a PC, server or cloud VM (Intel or AMD) | `gurtos-server-x86_64.iso` (1.37 GB) | [download](https://github.com/benz16107/gurtos/releases/download/v0.2.0-preview/gurtos-server-x86_64.iso) |
+| Server on an Apple silicon Mac (UTM or Parallels) or an arm64 server | `gurtos-server-arm64.iso` (1.36 GB) | [download](https://github.com/benz16107/gurtos/releases/download/v0.2.0-preview/gurtos-server-arm64.iso) |
+| Personal on a PC or laptop (Intel or AMD) | `gurtos-personal-x86_64.iso` (2.00 GB) | [download](https://github.com/benz16107/gurtos/releases/download/v0.2.0-preview/gurtos-personal-x86_64.iso) |
+| Personal on an Apple silicon Mac (UTM or Parallels) | `gurtos-personal-arm64.iso` (1.99 GB) | [download](https://github.com/benz16107/gurtos/releases/download/v0.2.0-preview/gurtos-personal-arm64.iso) |
+| Checksums, signature, public key | `SHA256SUMS`, `SHA256SUMS.sig`, `allowed_signers` | [release page](https://github.com/benz16107/gurtos/releases/tag/v0.2.0-preview) |
 
-**v0.1.0-preview is older than this page.** The steps below describe `main`, which the next release is cut from.
-On the v0.1.0-preview discs:
-
-- Several security bugs fixed on `main` since are still open. One let a task report a negative cost and get past its
-  budget. Use test keys only.
-- The installer takes the first disk that is large enough, without a list. It still asks you to type `erase` before
-  it overwrites a disk with data on it.
-- Setup also asks about apps and their keys. You can skip those steps.
-- Pairing a phone and remote access were built for the hosted relay, which is offline (see
-  [Remote access](#remote-access-and-phone-notifications)).
-- GurtOS Server has no shell, so it cannot install the next release in place. Moving to it means reinstalling.
-
-What changed since is in [release/notes/NEXT.md](release/notes/NEXT.md).
+v0.2.0-preview fixes security bugs in v0.1.0-preview, so move to it if you run the older one. The
+[release notes](release/notes/v0.2.0-preview.md) say what changed, what was tested and how to upgrade. Personal
+upgrades in place with `sudo box-update apply <url of its .sqfs image>`. Server has no shell, so it is installed again
+from the new ISO, which erases its disk. The Mac and Android apps were not rebuilt: `gurtos-mac-0.1.0.dmg` and
+`gurtos-android-0.1.0.apk` are on the
+[v0.1.0-preview release](https://github.com/benz16107/gurtos/releases/tag/v0.1.0-preview), and the iPhone app is in
+TestFlight internal testing only.
 
 ### Minimum hardware
 
