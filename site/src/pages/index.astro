@@ -17,7 +17,7 @@ import approvalDark from '../assets/home/iphone-approval-dark.png';
 import watch from '../assets/home/watch-small.png';
 import poster from '../assets/home/video-poster.jpg';
 
-const RELEASE = `${REPO}/releases/download/v0.1.0-preview`;
+const RELEASE = `${REPO}/releases/download/v0.2.0-preview`;
 const isos = (edition: string) => [
   { arch: 'x86_64', label: 'Intel or AMD (x86_64)', file: `gurtos-${edition}-x86_64.iso` },
   { arch: 'arm64', label: 'Apple silicon (arm64)', file: `gurtos-${edition}-arm64.iso` },
@@ -43,7 +43,7 @@ const core = [
           <a class="btn primary" href="/download/">Download {NAME}</a>
           <a class="btn" href="/docs/">Read the docs</a>
         </p>
-        <p class="status">Preview release v0.1.0-preview, built on Ubuntu 24.04. It has not had a security audit, so use a spare computer or a virtual machine.</p>
+        <p class="status">Preview release v0.2.0-preview, built on Ubuntu 24.04. It has not had a security audit, so use a spare computer or a virtual machine.</p>
       </div>
       <figure class="video">
         <a href={VIDEO} aria-label="Watch the 3-minute GurtOS video on YouTube">

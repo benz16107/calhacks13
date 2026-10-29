@@ -36,8 +36,8 @@ Please test only on a box you own, with test keys. Do not use real payment keys 
 
 ## Supported versions
 
-`main` and the next release, once it is published, get security fixes. v0.1.0-preview does not: several security
-bugs found since are fixed on `main` only. Use it with test keys, and move to the next release when it is out.
+`main` and v0.2.0-preview get security fixes. v0.1.0-preview does not: several security bugs found since are fixed in
+v0.2.0-preview and on `main`. Use v0.1.0-preview with test keys only, and move to v0.2.0-preview.
 
 On GurtOS Personal, `sudo box-update apply <url>` installs a newer signed image. A release build of GurtOS Server has
 no shell, so it cannot install an update in place yet: moving it to a new release means reinstalling, which erases

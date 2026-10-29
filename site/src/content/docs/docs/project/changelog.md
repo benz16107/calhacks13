@@ -1,13 +1,15 @@
 ---
 title: Changelog
-description: What changed in GurtOS, newest first. Changes on main that are not in a release yet are under Unreleased.
+description: What changed in GurtOS, release by release, newest first.
 ---
 
 Everything here is a preview and may change. Dates are in Eastern Time.
 
-## Unreleased
+## v0.2.0-preview
 
-On main since v0.1.0-preview. The next release will include these; the v0.1.0-preview images do not.
+Released <date>, from commit `ef08913`. GurtOS Server and GurtOS Personal for x86_64 and arm64, on the
+[Download](/download/) page and the [release page](https://github.com/benz16107/calhacks13/releases/tag/v0.2.0-preview),
+where the release notes say how to upgrade and what was tested. The v0.1.0-preview images do not have these changes.
 
 **Setup**
 - Set up a new computer from one you already own: the new computer shows a code on its screen, and an agent or the

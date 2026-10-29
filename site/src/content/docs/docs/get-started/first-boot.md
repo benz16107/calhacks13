@@ -10,11 +10,6 @@ sidebar:
 The first time a box starts from its disk, it sets itself up. You do not log in. The screen then runs a setup wizard.
 This page explains what happens, what the screen shows, and how to pair phones.
 
-:::note[Which release this page describes]
-This page describes the current source. The v0.1.0-preview ISO has a longer wizard (it adds Remote access, Apps, Keys
-for apps, Privacy and logs, and Appearance). The next release is cut from the current source.
-:::
-
 ## What first boot sets up
 
 `box-firstboot.service` runs before the GurtOS service at every start. It creates only what is missing, so a system

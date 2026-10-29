@@ -20,12 +20,6 @@ GurtOS Personal installs and runs, and has been walked end to end on a fresh ins
 laptop yet. See [What is not finished](#what-is-not-finished).
 :::
 
-:::note[Which release this page describes]
-This page describes the current source. The v0.1.0-preview ISO is older. Its installer takes the first disk that is
-big enough instead of listing your disks, and its GurtOS Setup has seven steps (it adds an Apps step). The next
-release is cut from the current source.
-:::
-
 ## Requirements
 
 | | Minimum | Recommended |
@@ -37,7 +31,7 @@ release is cut from the current source.
 | Network | Wired or Wi-Fi, with internet on first start: the computer downloads Factory's Droid CLI (about 300 MB) then, and the voice model for **Talk to your computer** | |
 
 The installer refuses a disk smaller than 29 GB. The arm64 image builds natively. An arm64 test disc was installed in
-a VM on a Mac, but the published arm64 ISO has not been booted.
+a VM on a Mac, but the published Personal arm64 ISO has not been booted.
 
 :::danger
 The installer takes the whole disk. Dual boot with another operating system is not supported. The installer never
@@ -48,8 +42,8 @@ you type `erase` on the screen. Back up first.
 
 ## Get the ISO
 
-Download `gurtos-personal-x86_64.iso` (Intel or AMD, 2.01 GB), or `gurtos-personal-arm64.iso` (Apple silicon in UTM
-or Parallels, 1.99 GB), from the [Download](/download/) page and check its checksum. Sizes are for the v0.1.0-preview
+Download `gurtos-personal-x86_64.iso` (Intel or AMD, 2.00 GB), or `gurtos-personal-arm64.iso` (Apple silicon in UTM
+or Parallels, 1.99 GB), from the [Download](/download/) page and check its checksum. Sizes are for the v0.2.0-preview
 release.
 
 Or build it from the [source](https://github.com/benz16107/gurtos) on an Ubuntu 24.04 build machine where you

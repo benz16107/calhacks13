@@ -35,8 +35,8 @@ to report a security problem, with no details. We will arrange one.
 | Version | Supported |
 |---|---|
 | `main` | Yes. Fixes land here first |
-| The next release | Yes, from when it is published |
-| v0.1.0-preview | No. Several security bugs found since are fixed on `main` only. Use it with test keys, and move to the next release when it is out |
+| v0.2.0-preview | Yes |
+| v0.1.0-preview | No. Several security bugs found since are fixed in v0.2.0-preview and on `main`. Use it with test keys only, and move to v0.2.0-preview |
 | Anything older | No |
 
 GurtOS updates as a whole system image. On GurtOS Personal, `sudo box-update apply <url>` installs a newer signed

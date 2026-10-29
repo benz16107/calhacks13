@@ -14,12 +14,6 @@ box screen. For GurtOS on your own desktop computer, see [Install GurtOS Persona
 This page covers getting the ISO and installing it four ways: a real machine, UTM on a Mac, QEMU on Linux, and a
 cloud instance. If you would rather keep an existing Ubuntu system, see [Install on Ubuntu](/docs/get-started/install-on-ubuntu/).
 
-:::note[Which release this page describes]
-This page describes the current source. The v0.1.0-preview ISO is older. Its installer takes the first disk that is
-big enough instead of listing your disks, and its setup wizard has more steps (it adds Remote access, Apps, Keys for
-apps, Privacy and logs, and Appearance). The next release is cut from the current source.
-:::
-
 :::note[What you need]
 One model key, so agents can think: an **Anthropic API key** from
 [console.anthropic.com](https://console.anthropic.com), or a **Factory API key** from
@@ -65,8 +59,9 @@ image itself has not been measured at 1 GB.
 ## Get the ISO
 
 Download the ISO from the [Download](/download/) page. Use `gurtos-server-x86_64.iso` for a PC or an x86_64 cloud
-instance, and `gurtos-server-arm64.iso` for a Mac with Apple silicon in UTM or an arm64 machine. Each is 1.37 GB in the
-v0.1.0-preview release. Check its checksum before you use it; the Download page shows how.
+instance, and `gurtos-server-arm64.iso` for a Mac with Apple silicon in UTM or an arm64 machine. In the v0.2.0-preview
+release the x86_64 ISO is 1.37 GB and the arm64 ISO is 1.36 GB. Check its checksum before you use it; the Download page
+shows how.
 
 ### Build it yourself
 

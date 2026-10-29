@@ -12,7 +12,7 @@ GurtOS is licensed under the [Apache License 2.0](/docs/project/licence/), and i
 [GitHub](https://github.com/benz16107/gurtos). The licence, not these terms, governs what you may do with the code
 and the install images.
 
-GurtOS is a preview (v0.1.0-preview). It has not had a security audit. Verify the image signatures, run it on a
+GurtOS is a preview (v0.2.0-preview). It has not had a security audit. Verify the image signatures, run it on a
 machine you can wipe, and do not rely on it for anything that matters yet. It comes without warranty, as the licence
 says.
 

@@ -19,7 +19,7 @@ intended. **Not built** means a known gap with no plan yet; it is listed so you 
 | Remote access and push notifications through a relay you run | Preview | Built: an https address per box and push to phones. See [Run your own relay](/docs/guides/self-host/). |
 | A hosted relay at `box.gurtos.com` | Not running | It is not running during the preview. Until it is, use your home network, a private network such as Tailscale, or your own relay. |
 | The web app's relay address set by configuration | Not built | A self-hosted web app changes one line in `portal/src/relay.ts`. A box's own copy of the web app cannot turn on push through a self-hosted relay. |
-| Public downloads of the ISO | Preview | v0.1.0-preview images on the [Download](/download/) page. |
+| Public downloads of the ISO | Preview | v0.2.0-preview images on the [Download](/download/) page. |
 
 ## The OS image
 

@@ -2,16 +2,18 @@
 import Landing from '../layouts/Landing.astro';
 import { NAME, REPO } from '../product.ts';
 
-const RELEASE = `${REPO}/releases/download/v0.1.0-preview`;
+const RELEASE = `${REPO}/releases/download/v0.2.0-preview`;
+// The Mac and Android apps were not rebuilt for v0.2.0-preview.
+const NATIVE = `${REPO}/releases/download/v0.1.0-preview`;
 const SUMS: Record<string, string> = {
-  'gurtos-server-x86_64.iso': 'a0e679ad64e81fc20d2c8b6f106096d56f1a247f4591c811f14f58865ccfe69a',
-  'gurtos-server-arm64.iso': '02b91a1ebf75a57143bada5fd8de992cc1ede752438812f993789cafbcf39ef5',
-  'gurtos-personal-x86_64.iso': '677894c059475db164f33774ee2490bb48648fb1339eb171caab1db0024ccb6f',
-  'gurtos-personal-arm64.iso': '4575187509be5c2d8e9cf770f05080764f9357de66a5f519056d70d99d6f8165',
+  'gurtos-server-x86_64.iso': '1879b64bade0589e1b85764f4d1c27ca3348305ccb8ff6245ebd2848640d4eb6',
+  'gurtos-server-arm64.iso': 'ff259fc3a5f2fdd7feea11df25081dc9ae4de071baab32e2929200f298322635',
+  'gurtos-personal-x86_64.iso': '5d6f3c588df596ca70d8317eee8bc0a4b73b900a5971df0fb87639a2c9018b39',
+  'gurtos-personal-arm64.iso': 'e1f34a7716a067bf986d43bf833b1788092222c4b41ac8be20337ad3bf0ce40f',
 };
 const editions = [
-  { id: 'server', name: `${NAME} Server`, size: { x86_64: '1.37 GB', arm64: '1.37 GB' } },
-  { id: 'personal', name: `${NAME} Personal`, size: { x86_64: '2.01 GB', arm64: '1.99 GB' } },
+  { id: 'server', name: `${NAME} Server`, size: { x86_64: '1.37 GB', arm64: '1.36 GB' } },
+  { id: 'personal', name: `${NAME} Personal`, size: { x86_64: '2.00 GB', arm64: '1.99 GB' } },
 ] as const;
 const archs = [
   { id: 'x86_64', name: 'x86_64', note: 'Intel or AMD PC, server or cloud VM' },
@@ -21,10 +23,10 @@ const file = (e: string, a: string) => `gurtos-${e}-${a}.iso`;
 const url = (e: string, a: string) => `${RELEASE}/${file(e, a)}`;
 ---
 
-<Landing title="Download GurtOS" description="Download GurtOS v0.1.0-preview, the signed install images for GurtOS Server and GurtOS Personal, with checksums, minimum hardware and install steps." prose={false}>
+<Landing title="Download GurtOS" description="Download GurtOS v0.2.0-preview, the signed install images for GurtOS Server and GurtOS Personal, with checksums, minimum hardware and install steps." prose={false}>
   <div class="wrap dl-page">
     <section class="top" aria-labelledby="dl-h">
-      <h1 id="dl-h">Download {NAME} v0.1.0-preview</h1>
+      <h1 id="dl-h">Download {NAME} v0.2.0-preview</h1>
       <p class="lead">Signed install images, built on Ubuntu 24.04. This is a preview that has not had a security audit. Use a spare computer or a virtual machine, because the installer erases the disk it installs to.</p>
 
       <div class="big">
@@ -85,8 +87,8 @@ const url = (e: string, a: string) => `${RELEASE}/${file(e, a)}`;
         <div>
           <dt>Mac</dt>
           <dd>
-            <a class="btn" href={`${RELEASE}/gurtos-mac-0.1.0.dmg`}>Download the DMG <span class="size">1.3 MB</span></a>
-            <p>A menu bar app for macOS 26 or later, with Approve by Touch ID, ⌥⌘G to ask your computer for a task, and Send to GurtOS in the Share menu. Open the DMG, drag GurtOS to Applications and open it. Choose Add a computer, then paste the box's pairing link or type its address and code. It is signed and notarized by Apple, and it has no auto-update yet. <a href={`${RELEASE}/gurtos-mac-0.1.0.dmg.sha256`}>SHA-256</a>: <code>ef8a7e72441b10dc3d6bacd1308d670cb551ffd8644403429b57e1d733ae994b</code></p>
+            <a class="btn" href={`${NATIVE}/gurtos-mac-0.1.0.dmg`}>Download the DMG <span class="size">1.3 MB</span></a>
+            <p>A menu bar app for macOS 26 or later, with Approve by Touch ID, ⌥⌘G to ask your computer for a task, and Send to GurtOS in the Share menu. Open the DMG, drag GurtOS to Applications and open it. Choose Add a computer, then paste the box's pairing link or type its address and code. It is signed and notarized by Apple, and it has no auto-update yet. <a href={`${NATIVE}/gurtos-mac-0.1.0.dmg.sha256`}>SHA-256</a>: <code>ef8a7e72441b10dc3d6bacd1308d670cb551ffd8644403429b57e1d733ae994b</code></p>
           </dd>
         </div>
         <div>
@@ -106,13 +108,13 @@ const url = (e: string, a: string) => `${RELEASE}/${file(e, a)}`;
         <pre>{`ssh-keygen -Y verify -f allowed_signers -I gurtos -n gurtos-release -s SHA256SUMS.sig < SHA256SUMS
 sha256sum -c SHA256SUMS --ignore-missing          # Linux
 shasum -a 256 -c SHA256SUMS --ignore-missing      # macOS`}</pre>
-        <p>The first line must say <code>Good "gurtos-release" signature for gurtos with ED25519 key SHA256:FWKFb1eAvEBmMhVJwMwTnLnhrmZ5yQZ5947pDvFKcpY</code>. That fingerprint is also at <code>release/allowed_signers</code> in the repository. On Windows, compare <code>Get-FileHash &lt;file&gt;.iso</code> with the line in <code>SHA256SUMS</code>. Every file is also on the <a href={`${REPO}/releases/tag/v0.1.0-preview`}>release page</a>.</p>
+        <p>The first line must say <code>Good "gurtos-release" signature for gurtos with ED25519 key SHA256:FWKFb1eAvEBmMhVJwMwTnLnhrmZ5yQZ5947pDvFKcpY</code>. That fingerprint is also at <code>release/allowed_signers</code> in the repository. On Windows, compare <code>Get-FileHash &lt;file&gt;.iso</code> with the line in <code>SHA256SUMS</code>. Every file is also on the <a href={`${REPO}/releases/tag/v0.2.0-preview`}>release page</a>.</p>
         <pre>{Object.entries(SUMS).map(([f, s]) => `${s}  ${f}`).join('\n')}</pre>
       </details>
 
       <details>
         <summary>What is inside, and the licences</summary>
-        <p>Each image comes with a software bill of materials in CycloneDX, listing every package in it. The source has one in CycloneDX and one in SPDX. They are on the <a href={`${REPO}/releases/tag/v0.1.0-preview`}>release page</a>:</p>
+        <p>Each image comes with a software bill of materials in CycloneDX, listing every package in it. The source has one in CycloneDX and one in SPDX. They are on the <a href={`${REPO}/releases/tag/v0.2.0-preview`}>release page</a>:</p>
         <ul>
           {['server-x86_64', 'server-arm64', 'personal-x86_64', 'personal-arm64'].map((n) => <li><a href={`${RELEASE}/gurtos-${n}.cdx.json.gz`}><code>gurtos-{n}.cdx.json.gz</code></a></li>)}
           <li><a href={`${RELEASE}/gurtos-source.cdx.json.gz`}><code>gurtos-source.cdx.json.gz</code></a> and <a href={`${RELEASE}/gurtos-source.spdx.json.gz`}><code>gurtos-source.spdx.json.gz</code></a></li>
@@ -145,11 +147,11 @@ shasum -a 256 -c SHA256SUMS --ignore-missing      # macOS`}</pre>
       <details>
         <summary>Known limits</summary>
         <ul>
-          <li>GurtOS Server has no shell, and updates need one today, so moving a Server box to the next release means reinstalling, which erases its disk. GurtOS Personal updates with <code>sudo box-update</code>.</li>
+          <li>GurtOS Personal updates in place with <code>sudo box-update apply</code> and the <code>.sqfs</code> file for its edition and architecture, as the <a href={`${REPO}/releases/tag/v0.2.0-preview`}>release notes</a> say. GurtOS Server has no shell, and updates need one today, so moving a Server box to a newer release means reinstalling, which erases its disk.</li>
           <li>On Server, the first-boot setup clock reads UTC until the wizard's time zone step.</li>
           <li>On Personal, GNOME's first "Welcome!" page still shows Ubuntu's wallpaper behind it.</li>
           <li>Both editions include <code>age</code> for encrypted backups. The owner holds the key.</li>
-          <li>These images were built on Oct 24, 2026. Main has changed since, for example a shorter setup with no apps step. The <a href="/docs/project/changelog/">changelog</a> lists what the next release adds, and the docs describe main.</li>
+          <li>The Mac and Android apps were not rebuilt for this release, so their files are from v0.1.0-preview. The <a href="/docs/project/changelog/">changelog</a> lists what changed in this release.</li>
         </ul>
       </details>
 
@@ -168,10 +170,10 @@ image/build personal        # GurtOS Personal`}</pre>
 <script>
   // Pick the downloads for this computer. A Mac is assumed to be Apple silicon, because Intel Macs cannot run an
   // arm64 VM and the user agent does not say which Mac it is. Nothing is stored or sent.
-  const RELEASE = 'https://github.com/benz16107/gurtos/releases/download/v0.1.0-preview';
+  const RELEASE = 'https://github.com/benz16107/calhacks13/releases/download/v0.2.0-preview';
   const SIZES: Record<string, Record<string, string>> = {
-    server: { x86_64: '1.37 GB', arm64: '1.37 GB' },
-    personal: { x86_64: '2.01 GB', arm64: '1.99 GB' },
+    server: { x86_64: '1.37 GB', arm64: '1.36 GB' },
+    personal: { x86_64: '2.00 GB', arm64: '1.99 GB' },
   };
   const ua = navigator.userAgent;
   const mac = /Macintosh|Mac OS X/.test(ua);
