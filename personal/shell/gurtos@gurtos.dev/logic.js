@@ -34,7 +34,7 @@ export const noModelKey = (error) => /no model key/i.test(error ?? '') || (/vaul
 export function failure(error) {
   const e = (error ?? '').replace(/^worker exited with \d+:\s*/i, '').replace(/^Error:\s*/i, '');
   if (/key was not accepted/i.test(e)) return { key: true, text: e.split(/\n/)[0].trim() }; // the core's own sentence
-  if (/\b401\b|authentication_error|invalid x-api-key|invalid api key/i.test(e)) return { key: true, text: 'Your Anthropic key was not accepted. Change it in Settings, Keys.' };
+  if (/\b401\b|authentication_error|invalid x-api-key|invalid api key/i.test(e)) return { key: true, text: 'Your Anthropic key was not accepted. Change it in Settings, Accounts & Keys.' };
   if (noModelKey(error)) return { key: true, text: 'Add an Anthropic API key in GurtOS Settings first.' };
   const line = e.split(/\n/)[0].trim();
   const first = line.charAt(0).toUpperCase() + line.slice(1);

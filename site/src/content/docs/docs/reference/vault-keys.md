@@ -46,7 +46,7 @@ Before an event reaches the action log, or a tool's result reaches a task, the b
 
 ## Model keys
 
-A box needs one of these before a Droid task can start. Without one, the task fails at once with `No model key yet. Add an Anthropic or Factory API key in Settings, Keys, then start the task again.`
+A box needs one of these before a Droid task can start. Without one, the task fails at once with `No model key yet. Add an Anthropic or Factory API key in Settings, Accounts & Keys, then start the task again.`
 
 | Key | Read by | For |
 |---|---|---|

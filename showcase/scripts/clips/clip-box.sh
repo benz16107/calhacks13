@@ -21,7 +21,7 @@ kill="[ -s $pid ] && kill -9 -\$(cat $pid) 2>/dev/null; rm -f $pid
 wipe="$kill
   for u in \$(awk -F: '\$3>=30000 && \$3<40000 {print \$1}' /etc/passwd); do [ -d $home/tasks/\${u#box-} ] && userdel \$u || true; done 2>/dev/null
   rm -rf $home
-  flock /run/lock/box-spacetime-cli.lock spacetime delete --server local -y box-showcase >/dev/null 2>&1 || true"
+  flock /run/box/spacetime-cli.lock spacetime delete --server local -y box-showcase >/dev/null 2>&1 || true"
 start="cd $dest
   BOX_ID=home-box BOX_NAME='home box' BOX_URL=http://gurtos.local:$port BOX_PEERS='[{\"id\":\"cloud-box\",\"name\":\"cloud box\",\"stdb\":\"box\"}]' \
   BOX_HOME=$home BOX_PORT=$port BOX_VAULT=$home/vault.env BOX_STDB_DB=box-showcase BOX_PROXY_PORT=auto \

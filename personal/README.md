@@ -64,7 +64,7 @@ ISO walked as a new person, on Wayland (Ubuntu's default) and Xorg.
 
 ![GurtOS Settings, Agents](screenshots/os/09b-settings-agents.png)
 
-![GurtOS Settings, Keys](screenshots/os/10-settings-keys.png)
+![GurtOS Settings, Accounts & Keys](screenshots/os/10-settings-keys.png)
 
 ![About GurtOS](screenshots/os/09c-settings-about.png)
 

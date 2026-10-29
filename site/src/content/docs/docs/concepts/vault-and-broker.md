@@ -75,7 +75,7 @@ Droid sends its model key itself, so a Droid task gets a fixed placeholder inste
 
 With either key, the proxy reads each model call first and refuses one that asks the model service to fetch something for the task: a web fetch or MCP tool, an MCP server, or an image or file by URL. The service would reach that address around the task's host list. The refusal is a `403` and a `net.blocked` event.
 
-With neither key, a Droid task fails at once with "No model key yet. Add an Anthropic or Factory API key in Settings, Keys, then start the task again." Every request from the task goes through the box's proxy. For model calls over HTTPS, the proxy answers TLS itself with a certificate from the box's own certificate authority, which only Droid tasks are told to trust. The real key never enters the task's memory, files or environment.
+With neither key, a Droid task fails at once with "No model key yet. Add an Anthropic or Factory API key in Settings, Accounts & Keys, then start the task again." Every request from the task goes through the box's proxy. For model calls over HTTPS, the proxy answers TLS itself with a certificate from the box's own certificate authority, which only Droid tasks are told to trust. The real key never enters the task's memory, files or environment.
 
 ## Why this design
 

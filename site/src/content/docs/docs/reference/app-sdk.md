@@ -78,6 +78,7 @@ What `track.ts` default-exports.
 | `apps` | `App[]` | Pages listed in the portal's app grid. |
 | `routes` | `Record<string, Route>` | HTTP routes keyed `'METHOD /path'`, served at `/t/<name>/path`. The path matches exactly, with no wildcards. |
 | `openRoutes` | `string[]` | Route keys, as in `routes`, that need no paired device's token from off the box. For a route that is public on purpose, or checks its own credential such as a shared secret. An open route must return nothing private unless its own check passes. |
+| `ownOrigin` | `string[]?` | Route keys, as in `routes`, whose HTML page is served with the box's own origin instead of the sandbox every other app page gets. Only for a page that cannot work without a real origin, such as a passkey (WebAuthn) ceremony. Shopper's Face ID page (`GET /approve`) is the one. Such a page runs with the box's origin, so review it like core code: it shows an agent's text only escaped and loads nothing from another site. The window token and every other rule still apply. |
 
 ## `TaskSpec`
 
@@ -114,10 +115,11 @@ A `TaskSpec` with every field filled in, plus:
 | `costCents` | `number` | Tool spending plus model cost, not rounded |
 | `step` | `string?` | The latest step, up to 200 characters |
 | `createdAt`, `updatedAt` | `string` | ISO 8601 times |
-| `error` | `string?` | Why it failed, as a sentence a person can read, such as `Your Anthropic key was not accepted. Change it in Settings, Keys.` |
+| `error` | `string?` | Why it failed, as a sentence a person can read, such as `Your Anthropic key was not accepted. Change it in Settings, Accounts & Keys.` |
 | `summary` | `string?` | A summary, if one was recorded |
 | `review` | `string?` | GurtOS Personal, for a task on real folders: `pending` (done, waiting for the owner), `kept`, `conflict` or `undone` |
 | `requestedBy` | `string?` | GurtOS Business: the id of the person who asked for the task. The core sets it, never the caller. |
+| `app` | `string?` | The app whose box started the task, whatever `source` it gave. The core sets it, never the caller. An app's window answers only the requests of tasks with its own name here. |
 
 ## `TaskState`
 
@@ -259,10 +261,10 @@ An app's page is whatever its routes return as HTML or XML, usually `GET /`. Gur
 The sandbox leaves out `allow-same-origin`, so the page has no origin of its own. It cannot read the portal around it, the device's token or the box's storage, and it cannot act as the box's screen. A bug or injected script in one app's page cannot use the owner's controls. In return:
 
 - **No browser storage.** `localStorage`, cookies and `sessionStorage` are unavailable. Keep state in memory or in the app's own routes.
-- **No passkeys.** They need a real origin. Shopper's passkey approval is unavailable in its window.
+- **No passkeys, unless the route is in `ownOrigin`.** They need a real origin. Shopper's Face ID page (`GET /approve`) is listed in `ownOrigin` and served without the sandbox. Every other page has no origin.
 - **A token of its own.** `POST /api/apps/<app>/window` (from the box's own screen or a paired device) returns `{token, expiresAt}`. A token starts with `w`, lasts 12 hours and ends when the device that opened it is removed (401 `this window has expired: close it and open the app again`). The app must be on, or the answer is 404. The box keeps at most 1000 open windows and drops the oldest. GurtOS opens the page at `/t/<app><href>?access_token=<token>`.
 - **The token is carried for you.** The box puts a small script first in every HTML page that adds `Authorization: Bearer <token>` to the page's own `fetch` calls to the box. `/kit/gurtos.js` also adds it to links, forms and `EventSource`. A request the browser makes by itself, such as `<script type="module" src>` or `<img>`, carries no header, so add `location.search` to its address.
-- **What the token reaches.** The app's own routes (`/t/<app>/...`), `GET /api/tasks`, `GET /api/tasks/<id>`, `GET /api/approvals`, and `POST /api/approvals/<id>` for requests from the app's own tasks. Everything else is 403: the vault, settings, pairing, another app's routes, and opening another window.
+- **What the token reaches.** The app's own routes (`/t/<app>/...`), `GET /api/tasks`, `GET /api/tasks/<id>`, `GET /api/approvals`, and `POST /api/approvals/<id>` for requests from the app's own tasks (`task.app`). Everything else is 403: the vault, settings, pairing, another app's routes, and opening another window.
 - **Another app's request.** Answering a request that belongs to another app, or to a task no app started, is 403 with `needs: 'shell'` and the task's id. The injected script then asks GurtOS to open that task in its own window, where a person answers.
 
 A page at `/t/hello/` needs no code for tokens. If the app defined a route `'POST /greet'`, the page could do this:

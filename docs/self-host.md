@@ -27,7 +27,7 @@ checked.
 
 If you only use the web app (add it to the home screen on a phone), everything on this page is enough. The native
 apps stay tied to `gurtos.com` until you rebuild them from [`native/`](../native/) with your own domain, bundle ids
-and Apple and Google credentials. The [roadmap](../ROADMAP.md) lists this under self-hosting.
+and Apple and Google credentials. The [roadmap](../ROADMAP.md) lists the gaps.
 
 ## What you need
 
@@ -95,10 +95,35 @@ variable and deploy again to switch to a real certificate.
 
 ## 3. Point boxes at the relay
 
+There are two ways. Either one works only while remote access is off.
+
+### In Settings or with the API
+
+On GurtOS Server's screen, or a phone paired as the owner, open **Settings**, **Remote access** while remote access
+is off. Type your relay's address under **Relay** and choose **Save**. **Use the default** goes back. The Relay row
+shows while the default relay is not answering, or once you have chosen your own. This is the way on GurtOS Server,
+which has no shell. GurtOS Personal's own Settings has no Relay field yet: use the API or the environment.
+
+The same setting through the API, from the box itself or with an owner device's token:
+
+```sh
+curl -s -X PUT http://127.0.0.1:7700/api/remote/relay \
+  -H 'content-type: application/json' -d '{"url": "https://box.example.com"}'
+# {"url":"https://box.example.com","default":"https://box.gurtos.com","custom":true}
+```
+
+The box saves the choice in `BOX_HOME/relay.json`, so it survives restarts and system updates. It refuses an address
+that is not https, is an IP address or a local name, or resolves to a private address. `{"url": null}` goes back to
+the default, and `GET /api/remote/relay` shows the relay in use. This sets the relay, but not the web app: see
+Known gaps.
+
+### With the environment
+
 A box reads two environment variables, `BOX_RELAY` (the relay) and `BOX_APP` (the web app, which the box allows to
 call its API and which its pairing links open). A box also needs `frpc` and `caddy` in `/usr/local/bin`, which
-`core/setup.sh` and the GurtOS images install. Use the same frp version on the box and the relay (0.71.1). On an
-installed GurtOS image, add the variables to the box service and restart it:
+`core/setup.sh` and the GurtOS images install. Use the same frp version on the box and the relay (0.71.1). On GurtOS
+Personal or the Ubuntu install, add the variables to the box service and restart it. On a GurtOS image this drop-in
+lives in the system slot, which a system update replaces, so make it again after an update.
 
 ```sh
 sudo systemctl edit box.service
@@ -115,14 +140,9 @@ sudo systemctl restart box.service
 curl -s http://127.0.0.1:7700/api/remote     # "relay":"box.example.com"
 ```
 
-A GurtOS release image has no shell. On one, open Settings, Remote access while remote access is off, and type your
-relay's address under Relay (the same as `PUT /api/remote/relay {"url": "https://box.example.com"}` as the owner;
-`{"url": null}` goes back to the default). Phones then pair through the computer's own address on your relay, so the
-box needs no `BOX_APP` for that.
-
 A box built from this repository on your own machine can do the same with a drop-in file, or by exporting the two
-variables before it starts. Then open Settings on the box and choose "Reach this computer from anywhere", or ask for a
-name from the box itself:
+variables before it starts. Then open **Settings**, **Remote access** on the box (on GurtOS Personal, GurtOS Settings,
+**Reach this computer from anywhere**) and choose **Turn on**, or ask for a name from the box itself:
 
 ```sh
 curl -s -X POST http://127.0.0.1:7700/api/remote -H 'content-type: application/json' -d '{"name":"rosa"}'
@@ -196,7 +216,7 @@ apps you rebuild with your own ids and domain. Without the files, an APNs addres
 ## 6. Check the whole path
 
 1. Open `https://app.example.com` on a phone and add it to the Home Screen.
-2. Turn on "Reach this computer from anywhere" on a box and wait for its address.
+2. Turn on remote access on a box and wait for **Connected** and its address.
 3. Pair the phone with the box from the box's own screen, as the owner.
 4. Turn on notifications in the app and send the test push.
 5. Start a task that asks for approval. The request should arrive as a push, and approving it on the phone should
@@ -222,7 +242,8 @@ outbound TCP 7000.
   is in `relay/README.md`.
 - **Privacy:** you are the relay's operator, so you can see the same metadata we describe in `relay/README.md`:
   names, connection times, caller addresses and byte counts, but not the contents of anything.
-- **Undo:** boxes stop using your relay by deleting the two `Environment=` lines and restarting `box.service`. Boxes
+- **Undo:** boxes stop using your relay with `PUT /api/remote/relay {"url": null}`, or by deleting the two
+  `Environment=` lines and restarting `box.service`. Boxes
   keep working on their home network the whole time. To remove the relay machine's setup, stop and disable the four
   services and delete `/opt/gurtos-relay`, `/etc/gurtos-relay`, `/var/lib/gurtos-relay` and
   `/var/lib/gurtos-relay-caddy`.
@@ -230,6 +251,10 @@ outbound TCP 7000.
 ## Known gaps
 
 - The web app's relay address and its hosted-mode host are edited in source, not set by configuration.
+- A box also serves its own copy of the web app, built for `box.gurtos.com`. Opened at the box's https address on
+  your relay, that copy cannot turn on push notifications. Use your own web app for push.
+- GurtOS Server has no shell to set `BOX_APP`, so with remote access on its pairing QR codes open `app.gurtos.com`,
+  which cannot reach your relay's names. On the phone, open `https://<name>.box.example.com/pair#<code>` instead.
 - The native apps and APNs cannot be redirected without rebuilding them.
 - There is no multi-relay or failover. If your relay is down, boxes are reachable on their home network only.
 - This setup was run on one test domain with a private certificate authority. A run against Let's Encrypt on a public

@@ -83,9 +83,9 @@ Anything that is not already undone can be undone. Undo is final: an undone task
 
 ## How a task ends
 
-The worker is a process. When it exits with code 0, the task is `done`. Any other exit makes it `failed`. The error is a sentence a person can read, such as "Your Anthropic key was not accepted. Change it in Settings, Keys." The core words the common causes itself: a refused key, a busy model, no route to the model, a full disk, a task stopped for using more memory than it may. Otherwise the error is the worker's own last error message. It never starts with `worker exited with` and never holds a command line.
+The worker is a process. When it exits with code 0, the task is `done`. Any other exit makes it `failed`. The error is a sentence a person can read, such as "Your Anthropic key was not accepted. Change it in Settings, Accounts & Keys." The core words the common causes itself: a refused key, a busy model, no route to the model, a full disk, a task stopped for using more memory than it may. Otherwise the error is the worker's own last error message. It never starts with `worker exited with` and never holds a command line.
 
-If the core cannot start the worker at all, the task fails at once with the reason. For a Droid task with no model key (`ANTHROPIC_API_KEY` or `FACTORY_API_KEY`), that is "No model key yet. Add an Anthropic or Factory API key in Settings, Keys, then start the task again." A Droid task started while a new computer is still downloading Droid waits, queued, and starts once Droid is there.
+If the core cannot start the worker at all, the task fails at once with the reason. For a Droid task with no model key (`ANTHROPIC_API_KEY` or `FACTORY_API_KEY`), that is "No model key yet. Add an Anthropic or Factory API key in Settings, Accounts & Keys, then start the task again." A Droid task started while a new computer is still downloading Droid waits, queued, and starts once Droid is there.
 
 Two safety stops undo a task instead of failing it: a task whose own layer passes its disk cap, and a task that tries to send out its decoy key. See [agents as their own users](/docs/concepts/agent-users/).
 

@@ -135,7 +135,7 @@ def failure_text(error):
     if re.search(r'key was not accepted', e, re.I):
         return e.strip().splitlines()[0]  # the core's own sentence
     if re.search(r'\b401\b|authentication_error|invalid x-api-key|invalid api key', e, re.I):
-        return 'Your Anthropic key was not accepted. Change it in Settings, Keys.'
+        return 'Your Anthropic key was not accepted. Change it in Settings, Accounts & Keys.'
     if re.search(r'vault has no', e, re.I):
         return 'Add an Anthropic API key in GurtOS Settings first.'
     first = e.strip().splitlines()[0] if e.strip() else ''

@@ -2610,9 +2610,10 @@ components:
             step: { type: string, description: The latest step, up to 200 characters. }
             createdAt: { type: string, format: date-time }
             updatedAt: { type: string, format: date-time }
-            error: { type: string, description: 'Why it failed, as a sentence a person can read, such as `Your Anthropic key was not accepted. Change it in Settings, Keys.`' }
+            error: { type: string, description: 'Why it failed, as a sentence a person can read, such as `Your Anthropic key was not accepted. Change it in Settings, Accounts & Keys.`' }
             summary: { type: string }
             requestedBy: { type: string, description: 'Business: the id of the person who asked for the task. Set by the box, never by the caller.' }
+            app: { type: string, description: 'The app whose box started the task, whatever `source` it gave. Set by the box, never by the caller.' }
             review:
               type: string
               enum: [pending, kept, conflict, undone]
@@ -2716,6 +2717,7 @@ components:
             spec: { $ref: '#/components/schemas/TaskSpec', description: 'The spec with every default filled in.' }
             user: { type: string }
             requestedBy: { type: string }
+            app: { type: string }
     TaskStateEvent:
       allOf:
         - $ref: '#/components/schemas/EventBase'

@@ -70,8 +70,10 @@ Out of scope:
 - **The threat model:** what GurtOS protects, who it defends against and what it does not:
   [gurtos.com/docs/security/threat-model](https://gurtos.com/docs/security/threat-model/). How it is built:
   [gurtos.com/docs/security/model](https://gurtos.com/docs/security/model/).
-- **The attack scoreboard:** sixteen OS-level attacks run against a real box in the merge gate, with their results.
-  Fifteen are caught. The one not covered is data sent out through a host the task was allowed to reach:
+- **The attack scoreboard:** 41 OS-level attacks run against a real box in the merge gate, with their results.
+  36 are caught and 5 are not covered: data sent out through a host the task was allowed to reach; what tasks share
+  through the machine's network space (an abstract Unix socket between two tasks, root services on abstract sockets,
+  and `/proc/net`); and a command that skips Droid's second look by calling the broker itself:
   [`tracks/armadin/SCOREBOARD.md`](tracks/armadin/SCOREBOARD.md). The mapping to the OWASP lists is in
   [`tracks/armadin/OWASP.md`](tracks/armadin/OWASP.md).
 - **The known limits** in the [roadmap](ROADMAP.md): one kernel shared by every task, a disk limit that is a check

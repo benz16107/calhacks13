@@ -81,6 +81,22 @@ SHA256:FWKFb1eAvEBmMhVJwMwTnLnhrmZ5yQZ5947pDvFKcpY`, the same key as v0.1.0-prev
 - The Factory app's pull request tool no longer runs git as root inside a task's `.git`, where a planted hook could
   run with the vault in reach. A failed push no longer puts the GitHub token in the error.
 - Root no longer writes Droid's settings file through a link a task left behind.
+- A task can no longer approve the box's own budget question in advance. A task's questions have their own ids, they
+  show as plain text of at most 2,000 characters, and direction-override characters are dropped.
+- App pages run sandboxed, with a token that reaches only their own app. The one exception is Shopper's Face ID page.
+- Factory and Anthropic model calls are relayed only on the paths Droid uses, and a compressed or non-JSON model
+  call is refused. Approving through the MCP server is off unless `BOX_MCP_ANSWER=on`.
+- SpacetimeDB installs from pinned files whose checksums are checked.
+- Each task has limits: 64 KB per step, 20 MB of log, 256 proxy connections, and model calls of 32 MB each and 64 MB
+  at once.
+- The setup port, 7701, answers private networks only.
+- State files are written in one piece. A torn one is set aside and pauses the agents until you check Settings,
+  instead of granting anything.
+- Each task has its own `/dev/shm` and System V IPC, may not make namespaces, and reaches only the proxy's own port.
+  Other programs listening in 8800 to 8899 are out of its reach.
+- The disk limit counts the task's home and `/tmp` as well as its copy, and Undo deletes the home.
+- The box's locks are in a folder only root can open, so a task cannot hold one.
+- Moss is not shipped. Find searches by words unless you install Moss yourself.
 
 ### New
 
@@ -102,7 +118,7 @@ SHA256:FWKFb1eAvEBmMhVJwMwTnLnhrmZ5yQZ5947pDvFKcpY`, the same key as v0.1.0-prev
   Find and leaves every other app off.
 - Accounts & Keys lists the model keys, the keys of apps that are on, and keys you saved, instead of every app's.
 - A warning with a link to Settings when no model key is set. Errors read as sentences, such as "Your Anthropic key
-  was not accepted. Change it in Settings, Keys."
+  was not accepted. Change it in Settings, Accounts & Keys."
 - Only money from test apps is labelled test, and those apps say so in App Center. Real model spend on your key is
   not labelled test.
 - Settings no longer shows automatic updates or an update channel, which nothing read.
@@ -124,6 +140,16 @@ SHA256:FWKFb1eAvEBmMhVJwMwTnLnhrmZ5yQZ5947pDvFKcpY`, the same key as v0.1.0-prev
   started before it finishes waits in the queue and starts once Droid is there. Droid is pinned to 0.248.0 with
   checked SHA-256 sums.
 - First boot survives a power cut.
+- A refused update (wrong edition, wrong architecture, or an older build) leaves the spare slot's system in place, so
+  rollback still works.
+
+### Native apps and pairing
+
+- The iPhone app asks for Face ID (or the passcode) before any approval that spends money. The Apple Watch approves
+  only up to a limit you set ($25 by default), and the phone handles the rest.
+- When the relay is down, the apps say so in one sentence instead of waiting.
+- Build the apps with `GURTOS_RELAY` and `GURTOS_APP_HOST` set to your own domains to use a relay you run.
+- A pairing QR code opens the computer's own page, unless the hosted app can reach the computer.
 
 ### Reliability
 
@@ -137,6 +163,11 @@ SHA256:FWKFb1eAvEBmMhVJwMwTnLnhrmZ5yQZ5947pDvFKcpY`, the same key as v0.1.0-prev
 
 - No outside security audit. Every task shares one Linux kernel. GurtOS checks which hosts a task reaches, not what
   it sends them. The disk is not encrypted.
+- The attack suite runs 41 attacks and catches 36. The 5 it does not catch: data sent out through a host the task may
+  reach; two tasks talking through an abstract Unix socket; root services on abstract Unix sockets; a task reading
+  other tasks' open sockets in `/proc/net` (these three are one cause: tasks share the machine's network space);
+  and a command that skips Droid's second look by calling the broker itself (budgets and your threshold still apply).
+- A task that runs a fork bomb up to its 512-process limit can slow other tasks while it runs. Undo it to stop it.
 - The hosted relay (`box.gurtos.com`) and the live demo (`try.gurtos.com`) are offline. Pair your phone on the same
   network as the computer. Remote access and push notifications to a phone need a relay you run yourself.
 - A release build of GurtOS Server cannot be updated in place.

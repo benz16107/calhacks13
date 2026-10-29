@@ -170,7 +170,7 @@ See [Disk layout and updates](/docs/reference/disk-layout/).
 | 7700 | `127.0.0.1` by default (`BOX_LISTEN`). Both editions from the ISO listen on every address, and their firewall lets private networks in. | The HTTP API and the portal |
 | 7701 | Every address, only while setup from another computer is open (`BOX_SETUP_PORT`). The image's firewall lets it in from private networks only, like 7700. | The setup channel. It closes at finish, at Stop, or after two hours, and every request needs the setup token. |
 | 3000 | `127.0.0.1` by default (`STDB_LISTEN`) | SpacetimeDB |
-| 8888 | `127.0.0.1` | The task proxy on the installed box. Test runs pick a free port in 8800 to 8887. The firewall lets task users reach 8800 to 8899 on `127.0.0.1` and nothing else. A task may hold at most 256 open connections to it. |
+| 8888 | `127.0.0.1` | The task proxy on the installed box. Test runs pick a free port in 8800 to 8887. The firewall lets task users reach the proxy ports in use on `127.0.0.1` and nothing else. A task may hold at most 256 open connections to it. |
 
 Tasks can never reach the API, SpacetimeDB or the proxy range through a host name either: the proxy refuses an address on the box itself unless the task's hosts name that exact `host:port`, and then still never those ports. It never reaches link-local addresses, such as a cloud metadata service.
 

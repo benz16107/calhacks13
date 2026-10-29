@@ -28,10 +28,10 @@ The main adversary is **the agent inside a task**, whether it is wrong, buggy, o
 | | Spend money | Tools that spend declare a cost. Above the budget, a person must approve. |
 | | Damage your files | It writes only to its own copy. Undo removes its layer. |
 | A buggy agent | Make wrong edits | Its changes are one layer. Undo that task alone. |
-| | Loop or grow without bound | Per task: 2 GB of memory with no swap, 512 processes, two CPU cores, a 5 GB copy, 20 MB of log and 256 proxy connections |
+| | Loop or grow without bound | Per task: 2 GB of memory with no swap, 512 processes, two CPU cores, 5 GB of disk (its copy, home and `/tmp`), 20 MB of log and 256 proxy connections |
 | | Fire the same payment twice | One approval and one charge per action. Tools get a stable idempotency key. |
 | A malicious web page | Plant instructions in the agent | Same limits as a prompt-injected agent. The attempt and any refused connection are in the log. A decoy cloud key in every task's environment trips an alarm: if it leaves in a web request, a step or a tool call, the box stops the task and undoes it. |
-| Another task | Read or change this task's files or processes | Separate users, private copies, `ProtectProc=invisible`, private `/tmp` |
+| Another task | Read or change this task's files or processes | Separate users, private copies, `ProtectProc=invisible`, private `/tmp`, `/dev/shm` and IPC. Not covered: a channel over an abstract Unix socket, and `/proc/net` |
 | A power cut | Lose work or pay twice | The log is fsynced per line. Tasks resume from their last logged step. A call cut off mid-way runs again with the same key. |
 | Someone on the internet | Reach the box's API or SpacetimeDB | On the OS image, the inbound firewall drops them. Port 7700 and the setup port 7701 are open to private networks only, port 3000 to nothing. |
 | Someone on your network | Read tasks, start work, approve spending, undo tasks | Every request from off the box needs a paired device's token, else `401`. SpacetimeDB listens on `127.0.0.1` only, and its `answer` works only from a connection the box vouched for. |
@@ -88,13 +88,13 @@ These are known limits of the current release. Some are planned work; see the [r
 ### Limits of the controls
 
 - **Model spending does not pause a task.** Model cost is counted in `costCents` after each run, and it counts toward the budget check for the next tool call. A task's own model use never stops it for an OK.
-- **An agent writes its own questions.** A question a task asks with `box_ask` is the agent's text. Read it as a claim, not a fact. Budget approvals are written by the core from the tool's declared cost. Answering approvals through the MCP server is off unless `BOX_MCP_ANSWER=on`.
+- **An agent writes its own questions.** A question a task asks with `box_ask` is the agent's text. Read it as a claim, not a fact. Budget approvals are written by the core from the tool's declared cost. A task's own questions have their own ids, and are shown as plain text, at most 2,000 characters with no direction-override characters. Answering approvals through the MCP server is off unless `BOX_MCP_ANSWER=on`.
 - **No time limit per task.** A task can use up to two CPU cores and run until it ends or is undone.
 - **Shared kernel.** Tasks are separated by Linux users, systemd and overlayfs, not by virtual machines. A kernel exploit inside a task escapes all of them.
-- **Shared network space and `/dev/shm`.** Every task shares the machine's network namespace, so two tasks can talk through an abstract Unix socket and pool what their separate host lists reach, and a task sees the sockets other tasks have open in `/proc/net`. `/dev/shm` is the machine's own, so a file left there outlives the task and its undo. The [attack scoreboard](https://github.com/benz16107/calhacks13/blob/main/tracks/armadin/SCOREBOARD.md) lists these as not covered.
+- **Shared network space.** Every task shares the machine's network namespace, so two tasks can talk through an abstract Unix socket and pool what their separate host lists reach, and a task sees the sockets other tasks have open in `/proc/net`. The [attack scoreboard](https://github.com/benz16107/calhacks13/blob/main/tracks/armadin/SCOREBOARD.md) lists these as not covered.
 - **Side channels** between tasks on the same machine, such as timing or cache effects, are not addressed.
 - **The log is not signed.** Each line carries the hash of the line before it (`prev`), so an edit in the middle shows. Nothing signs the log, so root can rewrite the whole chain.
-- **Denial of service.** A task's copy is capped at 5 GB by a check every 2 seconds, so a fast writer can pass it for a moment. The check measures only the copy, not the task's home folder, `/tmp` or `/dev/shm`, so a task can still fill the disk there. Request bodies are capped at 10 MB, or 1 MB without a token. A task writes at most 20 MB to the log (64 KB per step) and holds at most 256 proxy connections. Nothing limits how many tasks or approvals a caller of the API can create.
+- **Denial of service.** A task's copy is capped at 5 GB by a check every 2 seconds, so a fast writer can pass it for a moment. The check measures the copy, the task's home and its `/tmp`; `/dev/shm` is the task's own, in its memory. A task that runs a fork bomb up to its 512-process limit can slow other tasks for as long as it runs. The owner can undo it. Request bodies are capped at 10 MB, or 1 MB without a token. A task writes at most 20 MB to the log (64 KB per step, refused requests counted) and holds at most 256 proxy connections. Nothing limits how many tasks or approvals a caller of the API can create.
 
 ### The machine and its updates
 

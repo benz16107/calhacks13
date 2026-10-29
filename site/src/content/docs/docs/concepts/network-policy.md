@@ -9,7 +9,7 @@ A task that can reach any host can send your files anywhere. In GurtOS, a task r
 
 Two parts work together.
 
-**A firewall rule.** At boot the core loads one nftables table, `inet box`. It matches packets by the uid of the process that sent them. For uids 30000 to 39999, the range every task user gets, it accepts only TCP to `127.0.0.1` on the proxy's ports, 8800 to 8899. It rejects everything else from those users and counts it. Every task user is covered the moment it exists, with no per-task rule.
+**A firewall rule.** At boot the core loads one nftables table, `inet box`. It matches packets by the uid of the process that sent them. For uids 30000 to 39999, the range every task user gets, it accepts only TCP to `127.0.0.1` on the proxy ports in use. Each box adds its port to an nftables set when it starts and removes it when it stops, so nothing else that listens in 8800 to 8899 is open to a task. It rejects everything else from those users and counts it. Every task user is covered the moment it exists, with no per-task rule.
 
 **A proxy.** The core runs an HTTP proxy on `127.0.0.1:8888` and points each task at it with `HTTP_PROXY` and `HTTPS_PROXY`. When a connection arrives, the proxy finds which task it belongs to by looking up the uid that owns the socket in `/proc/net/tcp`. So a task carries no token, and cannot pretend to be another task. The proxy then checks the destination against that task's `hosts`.
 

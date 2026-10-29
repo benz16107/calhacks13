@@ -42,7 +42,7 @@ export function ReplayApp({ id }: { id: string }) {
   const [final, setFinal] = useState<Diff & { undone?: boolean }>();
   // The file state at each point, where this computer records it (GET /api/tasks/:id/replay); else the final files only.
   const [recorded, setRecorded] = useState<Recorded[] | null>();
-  const [capped, setCapped] = useState(false); // core stops recording a task at 50 MB
+  const [capped, setCapped] = useState(false); // core stops recording a task at 50 MB or 20,000 entries
   const [diffs, setDiffs] = useState<Record<number, Diff>>({});
   const [error, setError] = useState('');
   const [i, setI] = useState(0);
@@ -128,7 +128,7 @@ export function ReplayApp({ id }: { id: string }) {
             keptOrUndone?.kind === 'undone'
               ? 'As they were before Undo removed them.'
               : capped && at === recorded.at(-1)?.seq && p.seq > at
-                ? 'Recording stopped at 50 MB for this task, so this shows the last files it kept.'
+                ? 'Recording stopped for this task (it reached 50 MB, or its files passed 20,000 entries), so this shows the last files it kept.'
                 : `Files in the task's own layer at this point, against your files.`,
         }
     : final?.undone || (recorded && !final?.changes.length)

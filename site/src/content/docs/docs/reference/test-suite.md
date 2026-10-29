@@ -103,11 +103,19 @@ The Business steps turn Business on and off again, so they run near the end. The
 - **A hijacked payment.** In `cases/bec`, a lookalike sender's email says the bank account changed. The credit desk's payment tool refuses the new account in code, before any person is asked. A second, honest bill is over the AP clerk's $5,000 limit, so the task pauses for the controller, who says no. Neither bill is paid. This step uses the credit desk app, which `./demo` leaves on.
 - **The attack scoreboard.** Forty-one OS-level attacks, each with an expected result, run as a task's own Linux user inside its sandbox. The step fails if an attack expected to be caught gets through, or if an attack leaves no evidence. A row published as not covered that the core has since closed passes, tagged `FIXED`.
 
-The scoreboard, `tracks/armadin/SCOREBOARD.md`, has 41 rows. In the runs of 2026-10-29, 25 were caught and 16 are published as not covered, each with the fix it needs. Six of the caught rows (reading another task's workspace, reading the vault, sending to a disallowed host, going around the proxy, and reaching the box's API or SpacetimeDB to approve itself) are proved by the core scenarios above, and armadin cites them without running them again.
+The scoreboard, `tracks/armadin/SCOREBOARD.md`, has 41 rows. In the runs of 2026-10-29, 36 were caught and 5 are published as not covered, each with the fix it needs. Six of the caught rows (reading another task's workspace, reading the vault, sending to a disallowed host, going around the proxy, and reaching the box's API or SpacetimeDB to approve itself) are proved by the core scenarios above, and armadin cites them without running them again.
 
-Caught include: a symlink out of the task's copy, another user's `/proc/<pid>/environ`, `ptrace`, another task's `/tmp`, DNS and IPv6 exfiltration, a fork bomb, a memory hog, a disk fill of the task's layer, the box's API socket and state files, and the box's ports reached through an allowed name.
+Caught include: a symlink out of the task's copy, another user's `/proc/<pid>/environ`, `ptrace`, another task's `/tmp` and `/dev/shm`, DNS and IPv6 exfiltration, a fork bomb, a memory hog, a disk fill in the task's copy, home or `/tmp`, the box's API socket, state files and lock, a task forging the box's budget question, a flood of log lines or proxy connections, a huge question in the owner's inbox, an app's page running with the box's own origin, and the box's ports reached through an allowed name.
 
-Not covered include: data sent through a host the task may reach (GurtOS checks where a task connects, not what it sends, except for the decoy cloud key), a disk fill outside the task's layer (`$HOME`, `/tmp`, `/dev/shm`), channels between tasks through `/dev/shm`, abstract Unix sockets and `/proc/net`, and a few thousand small files stalling the box while Find indexes them.
+Not covered, in full:
+
+- Data sent through a host the task may reach. GurtOS checks where a task connects, not what it sends, except for the decoy cloud key.
+- A channel between two tasks over an abstract Unix socket.
+- Root services on abstract Unix sockets, such as `multipathd` and `iscsid` on a stock Ubuntu Server.
+- Another task's open sockets, read from `/proc/net`.
+- Skipping the worker, and Droid's second look, by calling the broker straight from a command. Budgets and the owner's threshold still apply.
+
+The three network-space rows share a fix, a network namespace for each task.
 
 `tracks/armadin/OWASP.md` maps these controls to the OWASP Top 10 for LLM Applications (2025) and for Agentic Applications (2026). `README.md` in the same folder has the table with evidence from real runs.
 

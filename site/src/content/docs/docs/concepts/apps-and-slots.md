@@ -94,7 +94,7 @@ The portal opens a page with a window token. It asks `POST /api/apps/<app>/windo
 - answers requests of the tasks that app started, and no one else's;
 - lasts 12 hours, or until the device that opened it is removed.
 
-Anything else is a `403`. A request of another app's task comes back with `needs: 'shell'` and the task's id, and GurtOS opens that task's window so a person answers it there. The box puts a short script first in the page that adds the token to the page's own `fetch` calls, and `/kit/gurtos.js` carries it on links, forms and `EventSource`. A request the browser makes by itself, such as a `<script type="module" src>` or an `<img>`, carries no header, so add `location.search` to its address. Passkeys need a real origin, so the shopping agent's are unavailable in its window.
+Anything else is a `403`. A request of another app's task comes back with `needs: 'shell'` and the task's id, and GurtOS opens that task's window so a person answers it there. The box puts a short script first in the page that adds the token to the page's own `fetch` calls, and `/kit/gurtos.js` carries it on links, forms and `EventSource`. A request the browser makes by itself, such as a `<script type="module" src>` or an `<img>`, carries no header, so add `location.search` to its address. A page that cannot work without a real origin, such as a passkey ceremony, is listed in the app's `ownOrigin` (route keys, as in `routes`) and served without the sandbox. Only the shopping agent's Face ID page is. Such a page runs with the box's origin, so it is reviewed like core code. An app's own tasks are the ones its box started, recorded as `task.app` whatever `source` they gave.
 
 ## The rules
 

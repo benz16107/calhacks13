@@ -31,7 +31,7 @@ export function now(t: Task): { text: string; tone?: 'attention' | 'destructive'
     return { text: a ? `Asks: ${a.question}` : 'Waiting for you', tone: 'attention' };
   }
   const blocked = box.events.filter((e) => e.task === t.id && e.type === 'net.blocked').length;
-  if (needsModelKey(t)) return { text: 'No model key. Add one in Settings, Agents & Models.', tone: 'destructive' };
+  if (needsModelKey(t)) return { text: 'No model key. Add one in Settings, Accounts & Keys.', tone: 'destructive' };
   if (t.state === 'failed') return { text: t.error ?? 'Failed', tone: 'destructive' };
   if (t.state === 'undone') return { text: `Undone at ${hhmm(t.updatedAt)}.${blocked ? ` ${plural(blocked, 'attempt')} blocked.` : ''}` };
   if (t.state === 'done') return { text: t.summary || t.step || 'Done' };

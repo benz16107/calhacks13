@@ -22,9 +22,9 @@ computer came after it and ship in the next release ([release/notes/NEXT.md](rel
 - Two images (Server and Personal) for x86_64 and arm64, updated as a whole system with automatic rollback.
 - Setup from another computer: an agent with a one-time code from the screen can set up a new box over the home
   network, with the `gurtos` command or an MCP server (see [AGENT-SETUP.md](AGENT-SETUP.md)).
-- Sixteen OS-level attacks run against a real box in the merge gate. Fifteen are caught; the one not covered is
-  data sent out through a host the task was allowed to reach:
-  [`tracks/armadin/SCOREBOARD.md`](tracks/armadin/SCOREBOARD.md).
+- 41 OS-level attacks run against a real box in the merge gate. 36 are caught; 5 are not covered (data sent out
+  through a host the task was allowed to reach, three ways tasks share the machine's network space, and a command
+  that skips Droid's second look): [`tracks/armadin/SCOREBOARD.md`](tracks/armadin/SCOREBOARD.md).
 - A first threat model on the docs site: [gurtos.com/docs/security/threat-model](https://gurtos.com/docs/security/threat-model/).
 - A relay for remote access and phone push that anyone can run with one command ([`relay/`](relay/),
   [`docs/self-host.md`](docs/self-host.md)). Our hosted relay at `box.gurtos.com` is offline.
@@ -42,6 +42,10 @@ Nothing here is done. We would not call GurtOS 1.0 until these are.
   by root.
 - A way to limit what a task sends to a host it may reach. Today GurtOS checks where a task connects, not what it
   sends.
+- A network namespace for each task. Today every task shares the machine's, so two tasks can talk through an abstract
+  Unix socket and a task can read the others' open sockets in `/proc/net`.
+- Droid's second look run by the core. Today it runs inside the task, so a command can skip it by calling the broker
+  itself. Budgets and the owner's threshold still apply.
 
 **Review**
 - An outside security audit.

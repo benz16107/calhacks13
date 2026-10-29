@@ -52,6 +52,7 @@ The example lines below leave out `prev` to stay short.
 | `spec` | `TaskSpec` | The full spec, with every default filled in. For a `droid` task it holds the exact `model` id the task will run on, and the prompt ends with anything an app handed over. On GurtOS Personal it can also hold `folder` and `folders`. |
 | `user` | string | The Linux user it will run as |
 | `requestedBy` | string, optional | GurtOS Business: the id of the person who asked for the task |
+| `app` | string, optional | The app whose box started the task, whatever `source` it gave |
 
 ```json
 {"seq":1,"at":"2026-10-24T09:12:03.411Z","type":"task.created","task":"t3k9x2a1b2","spec":{"workspace":"home","worker":"droid","tools":[],"hosts":[],"budgetCents":25,"source":"api","title":"Fix the failing test","prompt":"Fix the failing test in this project.","model":"claude-sonnet-5-5"},"user":"box-t3k9x2a1b2"}
@@ -64,7 +65,7 @@ The example lines below leave out `prev` to stay short.
 | `task` | string | |
 | `state` | `TaskState` | The new state |
 | `layers` | string[], optional | On the move to `running`: the done tasks whose changes this task sees, newest first |
-| `error` | string, optional | On `failed`: why, as a sentence a person can read, such as `Your Anthropic key was not accepted. Change it in Settings, Keys.` The core maps common causes (a rejected key, a busy model, no internet, a full disk) to plain words. Otherwise it is the worker's own last error line, cut to 300 characters. |
+| `error` | string, optional | On `failed`: why, as a sentence a person can read, such as `Your Anthropic key was not accepted. Change it in Settings, Accounts & Keys.` The core maps common causes (a rejected key, a busy model, no internet, a full disk) to plain words. Otherwise it is the worker's own last error line, cut to 300 characters. |
 | `summary` | string, optional | A summary, if one was recorded |
 
 The states are `queued`, `running`, `waiting` (the task asked for an OK), `done`, `failed` and `undone`. A `done` or `failed` task can only move to `undone`, and `undone` is final. The core does not write `task.state` again on a restart: a task that was `running` or `waiting` keeps its state and starts again.
@@ -74,7 +75,7 @@ The states are `queued`, `running`, `waiting` (the task asked for an OK), `done`
 ```
 
 ```json
-{"seq":9,"at":"2026-10-24T09:13:12.004Z","type":"task.state","task":"t7p1q5r2s3","state":"failed","error":"Your Anthropic key was not accepted. Change it in Settings, Keys."}
+{"seq":9,"at":"2026-10-24T09:13:12.004Z","type":"task.state","task":"t7p1q5r2s3","state":"failed","error":"Your Anthropic key was not accepted. Change it in Settings, Accounts & Keys."}
 ```
 
 ### `task.step`

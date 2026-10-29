@@ -79,7 +79,7 @@ for f in ('box-ui.py', 'agentsapp.py', 'askwin.py', 'tasklogic.py', 'setupwin.py
 check(True, 'the GurtOS app (native), New task, Setup, Settings, voice, the search provider and the Files extension compile under the system Python')
 ext = os.path.join(HERE, 'shell', 'gurtos@gurtos.dev', 'extension.js')
 subprocess.run([NODE, '--check', ext], check=True, capture_output=True)
-check(js('noModelKey', 'the vault has no FACTORY_API_KEY') and js('noModelKey', 'No model key yet. Add an Anthropic or Factory API key in Settings, Keys, then start the task again.') and not js('noModelKey', 'network refused'),
+check(js('noModelKey', 'the vault has no FACTORY_API_KEY') and js('noModelKey', 'No model key yet. Add an Anthropic or Factory API key in Settings, Accounts & Keys, then start the task again.') and not js('noModelKey', 'network refused'),
       'the Shell extension parses, and its missing-key check works (the same logic.js GNOME Shell runs)')
 
 with urllib.request.urlopen(f'{BOX}/api/log/stream?after=0', timeout=5) as r:

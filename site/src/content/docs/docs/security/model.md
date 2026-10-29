@@ -43,6 +43,10 @@ The worker starts as a transient systemd unit, `box-task-<id>`, with these prope
 | `ReadWritePaths=` its copy and its home | The only two places it can write |
 | `ProtectHome=yes` | `/home`, `/root` and `/run/user` are invisible |
 | `PrivateTmp=yes` | Its own `/tmp`, not shared with other tasks |
+| `TemporaryFileSystem=/dev/shm` | Its own `/dev/shm`, 256 MB of its memory, gone when it stops |
+| `PrivateIPC=yes` | Its own System V IPC |
+| `RestrictNamespaces=yes` | It cannot make namespaces |
+| `IPAddressDeny=any` with `IPAddressAllow=localhost` | No packet leaves except to the box itself |
 | `PrivateDevices=yes` | No access to physical devices |
 | `ProtectProc=invisible` | It sees only its own processes in `/proc`, not the box's or other tasks' |
 | `InaccessiblePaths=-/run/dbus` | No D-Bus |
@@ -59,7 +63,7 @@ The worker starts as a transient systemd unit, `box-task-<id>`, with these prope
 
 A task never works on the real files. It gets an overlayfs copy: its own changes on top of the changes of tasks that finished before it, on top of the workspace's base files. The base files are in a folder only root can enter. The copy's top folder belongs to the task's user with mode `0700`, so no other task can enter it. When the task finishes, its changes become a layer that later tasks see, and undo takes that one layer out.
 
-Undo takes the layer out of the view, then deletes its files from disk as soon as no running task still reads it.
+Undo takes the layer out of the view, then deletes its files and the task's home from disk as soon as no running task still reads them.
 
 On GurtOS Personal a task can work on a copy of the owner's real folders. Only the owner may hand out a folder. It must be in the owner's home, or, once the owner has chosen folders in Settings (`agentFolders`), inside one of those folders. It must not belong to root, and can never be the system or the box's own state: `/etc`, `/root`, `/proc`, `/sys`, `/dev`, `/boot`, `/run`, `/usr`, `/bin`, `/sbin`, `/lib`, `/lib32`, `/lib64`, `/var/lib`, `/var/log`, `/opt`, `/snap` and the box's data folder are refused, and Settings cannot add them. Links are followed to where they really go before the check. Nothing reaches the real folder until the owner chooses Keep, and Keep keeps each file's owner and mode.
 
@@ -75,7 +79,7 @@ When a task needs something done with a key (call a paid API, pay, sign), it ask
 
 ## 5. Network only through the box's proxy
 
-An nftables rule on the box's output path matches every connection by its owner's uid. Task users (30000 to 39999) may connect to `127.0.0.1` on ports 8800 to 8899 and nothing else. The box's proxy listens on one port in that range (8888 on an installed box), but the rule opens the whole range, so another program of yours that listens there is reachable from a task. Every other packet is rejected and counted.
+An nftables rule on the box's output path matches every connection by its owner's uid. Task users (30000 to 39999) may connect to `127.0.0.1` only on the ports where a box's proxy listens (8888 on an installed box), held in the nftables set `proxies`. Each box adds its port when it starts and removes it when it stops, so another program listening in 8800 to 8899 is out of a task's reach. Every other packet is rejected and counted.
 
 The proxy knows which task opened each connection from the uid that owns it, so tasks carry no token. It allows only the hosts in the task's `hosts` list:
 
@@ -95,7 +99,7 @@ Droid needs a model key: a Factory API key, or your own Anthropic key. A Droid t
 
 - Plain API calls go to the proxy as Droid's base URL, and the proxy puts the vault's key on the request.
 - Model calls to `*.factory.ai` over HTTPS are answered by the proxy with a certificate from the box's own certificate authority. Only Droid tasks are told to trust that authority. The proxy swaps the placeholder for the real key and forwards the call over real TLS. It relays only the paths Droid calls, and refuses and logs any other.
-- With your own Anthropic key, calls to `api.anthropic.com` get the key in the `authorization` or `x-api-key` header only.
+- With your own Anthropic key, only `/v1/messages`, `/v1/messages/count_tokens` and `/v1/models` are relayed, with the key in the `authorization` or `x-api-key` header only; a compressed or non-JSON model call is refused.
 - On either key, a model call that asks the service to fetch a page, an MCP server or a file by URL for the task is refused.
 
 The authority's private key is in `BOX_HOME/ca`, root only. Tasks that are not Droid tasks get no Factory access through the proxy.

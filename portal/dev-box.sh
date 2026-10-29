@@ -36,7 +36,7 @@ kill="pid=\$(cat /run/box-$name.pid 2>/dev/null || true); rm -f /run/box-$name.p
 wipe="$kill
   for u in \$(awk -F: '\$3>=30000 && \$3<40000 {print \$1}' /etc/passwd); do [ -d $home/tasks/\${u#box-} ] && userdel \$u || true; done 2>/dev/null
   rm -rf $home
-  flock /run/lock/box-spacetime-cli.lock spacetime delete --server local -y box-$name >/dev/null 2>&1 || true"
+  flock /run/box/spacetime-cli.lock spacetime delete --server local -y box-$name >/dev/null 2>&1 || true"
 start="cd $dest
   BOX_ID=${DEV:-dev-box} BOX_NAME='${DEV_NAME:-dev box}' BOX_URL=${DEV_URL:-http://192.168.1.20:7700} BOX_PEERS='[{\"id\":\"peer\",\"name\":\"second box\",\"stdb\":\"box\"}]' \
   BOX_DEMO=${DEV_DEMO} BOX_ORIGINS='${DEV_ORIGINS:-}' BOX_HOME=$home BOX_PORT=$port BOX_VAULT=$home/vault.env BOX_STDB_DB=box-$name BOX_PROXY_PORT=auto \

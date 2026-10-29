@@ -651,7 +651,7 @@ export function DesktopHome() {
   const summary = r
     ? `${r.lostAt ? `${selfBox().name} was out of reach from ${hhmm(r.lostAt)}` : `${selfBox().name} restarted`} and came back at ${hhmm(r.at)}. Every task is where it was.`
     : b.setup?.modelKey === false
-      ? "Add a model key in Settings, Agents & Models, so agents can start tasks."
+      ? "Add a model key in Settings, Accounts & Keys, so agents can start tasks."
       : !b.tasks.size
         ? 'Start a task, or open App Center to turn on apps.'
       : [need.length ? `${plural(need.length, 'task')} ${need.length === 1 ? 'needs' : 'need'} you.` : 'Nothing needs you.', `${running.length} ${running.length === 1 ? 'is' : 'are'} running.`, blocked ? `${plural(blocked, 'attempt')} ${blocked === 1 ? 'was' : 'were'} blocked today.` : ''].filter(Boolean).join(' ');

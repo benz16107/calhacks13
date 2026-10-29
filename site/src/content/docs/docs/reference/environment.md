@@ -33,7 +33,7 @@ Then run `systemctl daemon-reload && systemctl restart box.service`. On a GurtOS
 | `BOX_MODEL` | `claude-sonnet-5-5` | The model a Droid task uses when it names none: `haiku`, `sonnet`, `opus` or a model id that starts with `claude-`. The task records the exact id it ran on. |
 | `BOX_REVIEW` | on | `off` switches off the second look, the Haiku check of risky agent steps in Droid tasks. |
 | `BOX_TASK_DISK_CAP` | 5 GiB | How many bytes a task may write to its own copy before the box stops and undoes it. An app's own permission can set a different limit; this variable wins over both. |
-| `BOX_PROXY_PORT` | `8888` | The task proxy's port. `auto` picks a free port in 8800 to 8887. It must stay in 8800 to 8899, the range the firewall lets tasks reach. |
+| `BOX_PROXY_PORT` | `8888` | The task proxy's port. `auto` picks a free port in 8800 to 8887. It must stay in 8800 to 8899: the proxy refuses that whole range as a destination, and a new box finds the other boxes' proxies there. The firewall opens only the ports in use. |
 | `BOX_SETUP_PORT` | `7701` | The port of the setup channel, which opens on every address while setup from another computer is on and closes within two hours. The image's firewall lets it in from private networks only. `auto` takes any free port. |
 | `BOX_STDB_URL` | `ws://127.0.0.1:3000` | Where the box reaches SpacetimeDB |
 | `BOX_STDB_DB` | `box` | The SpacetimeDB database name |

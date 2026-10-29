@@ -8,7 +8,7 @@ index by words, on this computer, with no account. With Moss (below) it also mat
 **Moss is not part of GurtOS.** Its licence (PolyForm Shield for `@moss-js/moss`, and a proprietary native library
 in `@moss-js/moss-core`) does not let us pass it on, so GurtOS images and `core/install.sh` leave it out. To use it,
 install it yourself on a box you set up from source, accepting InferEdge's terms, then add `MOSS_PROJECT_ID` and
-`MOSS_PROJECT_KEY` in Settings, Keys:
+`MOSS_PROJECT_KEY` in Settings, Accounts & Keys:
 
 ```sh
 cd /opt/box && sudo npm install --no-save @moss-js/moss@1.21.0 && sudo systemctl restart box

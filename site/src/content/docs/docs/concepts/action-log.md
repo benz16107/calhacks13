@@ -81,7 +81,7 @@ The log is append-only. Nothing in the core edits or deletes a line. It is root-
 - The log grows without limit. This release has no rotation or archiving. Settings, Privacy & Logs offers "Keep the log for" a number of days, but the choice is only stored. Nothing deletes old events.
 - Every boot reads the whole file, and the box keeps every event in memory. For a long-lived box, that time and that memory grow with the log.
 - A task writes to the log through its broker: at most 64 KB per step, question or cost, and 20 MB in all since the box last started. That keeps one task from filling the box's memory with log lines.
-- A failed task's error is a sentence for a person, such as "Your Anthropic key was not accepted. Change it in Settings, Keys.", or else the worker's own last error message. When that message is generic, the cause is usually in the steps right before it.
+- A failed task's error is a sentence for a person, such as "Your Anthropic key was not accepted. Change it in Settings, Accounts & Keys.", or else the worker's own last error message. When that message is generic, the cause is usually in the steps right before it.
 
 ## Related
 

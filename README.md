@@ -151,7 +151,7 @@ What it does not protect against yet:
 - The disk is not encrypted, and root can read the vault and rewrite the log.
 
 The full model is at [gurtos.com/docs/security/threat-model](https://gurtos.com/docs/security/threat-model/), and
-the attack scoreboard, with the one attack it does not cover, is in
+the attack scoreboard (41 attacks, 36 caught, the 5 it does not cover named) is in
 [tracks/armadin/SCOREBOARD.md](tracks/armadin/SCOREBOARD.md). Report security problems privately: see
 [SECURITY.md](SECURITY.md).
 
