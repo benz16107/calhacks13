@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
+import { execFileSync } from 'node:child_process';
 import test from 'node:test';
 import type { Task } from './contract.ts';
 
@@ -66,3 +67,84 @@ test('undoing a Keep refuses when the owner edited the kept file since', () => {
 function sha(file: string) {
   return createHash('sha256').update(fs.readFileSync(file)).digest('hex');
 }
+
+// A task controls every name in its own layer. The box reads that layer as root, so a link there must never lead it
+// to a file the task could not read itself, and a pipe must never hang it.
+test('a link in a task\'s layer is shown and kept as a link, never followed as root', () => {
+  const secret = path.join(home, 'vault.env');
+  fs.writeFileSync(secret, 'ANTHROPIC_API_KEY=sk-real-key\n');
+  const real = path.join(home, 'links');
+  fs.mkdirSync(real);
+  sb.linkBase('ws3', real);
+  const task = { id: 't3', workspace: 'ws3', layers: [] } as unknown as Task;
+  fs.mkdirSync(sb.dirs.task('t3'), { recursive: true });
+  fs.writeFileSync(path.join(sb.dirs.task('t3'), 'manifest.json'), '{}');
+  const upper = sb.dirs.upper('t3');
+  fs.mkdirSync(upper, { recursive: true });
+  fs.symlinkSync(secret, path.join(upper, 'notes.txt'));
+  fs.writeFileSync(path.join(upper, 'plain.txt'), 'hello\n');
+
+  const d = sb.diff(task);
+  assert.deepEqual(d.changes.map((c) => c.path).sort(), ['notes.txt', 'plain.txt']);
+  assert.ok(!d.diff.includes('sk-real-key'), 'the diff must not show what the link points at');
+  assert.match(d.diff, /notes\.txt[\s\S]*link to .*vault\.env/);
+  assert.match(d.diff, /\+hello/);
+
+  assert.ok(sb.keep(task).kept);
+  assert.ok(fs.lstatSync(path.join(real, 'notes.txt')).isSymbolicLink(), 'kept as a link');
+  assert.equal(fs.readlinkSync(path.join(real, 'notes.txt')), secret);
+  assert.equal(fs.readFileSync(path.join(real, 'plain.txt'), 'utf8'), 'hello\n');
+  fs.rmSync(secret); // a link to nowhere still undoes cleanly
+  assert.ok(sb.unkeep(task).reverted);
+  assert.deepEqual(fs.readdirSync(real), []);
+});
+
+test('Keep never writes through a link in the real folder to somewhere outside it', () => {
+  const outside = path.join(home, 'outside');
+  fs.mkdirSync(outside);
+  const real = path.join(home, 'project');
+  fs.mkdirSync(real);
+  fs.symlinkSync(outside, path.join(real, 'conf')); // the owner's own link, out of the folder
+  sb.linkBase('ws4', real);
+  const task = { id: 't4', workspace: 'ws4', layers: [] } as unknown as Task;
+  fs.mkdirSync(sb.dirs.task('t4'), { recursive: true });
+  fs.writeFileSync(path.join(sb.dirs.task('t4'), 'manifest.json'), '{}');
+  const upper = sb.dirs.upper('t4');
+  fs.mkdirSync(path.join(upper, 'conf'), { recursive: true }); // the task replaced the link with a folder of its own
+  fs.writeFileSync(path.join(upper, 'conf', 'job'), '* * * * * root evil\n');
+  const out = sb.keep(task);
+  assert.deepEqual(out.conflicts, ['conf/job']);
+  assert.deepEqual(fs.readdirSync(outside), [], 'nothing written outside the folder');
+});
+
+test('a pipe in a task\'s layer is not a change, so nothing reads it', () => {
+  const task = { id: 't5', workspace: 'ws5', layers: [] } as unknown as Task;
+  fs.mkdirSync(sb.dirs.workspace('ws5'), { recursive: true });
+  const upper = sb.dirs.upper('t5');
+  fs.mkdirSync(upper, { recursive: true });
+  execFileSync('mkfifo', [path.join(upper, 'pipe')]);
+  fs.writeFileSync(path.join(upper, 'a.txt'), 'a\n');
+  const d = sb.diff(task); // would block forever reading the pipe
+  assert.deepEqual(d.changes, [{ path: 'a.txt', change: 'added' }]);
+});
+
+test('a layer file is opened only where it really is: never through a link on the way', () => {
+  // The diff and the flight recorder run while a task can still swap a folder for a link, so they open each file
+  // themselves and check where it landed, instead of trusting the name they listed a moment before.
+  const secret = path.join(home, 'secret2');
+  fs.writeFileSync(secret, 'TOP-SECRET\n');
+  const root = path.join(home, 'layer7');
+  fs.mkdirSync(path.join(root, 'ok'), { recursive: true });
+  fs.writeFileSync(path.join(root, 'ok', 'f'), 'fine\n');
+  fs.symlinkSync(home, path.join(root, 'd'));
+  fs.symlinkSync(secret, path.join(root, 'l'));
+  execFileSync('mkfifo', [path.join(root, 'p')]);
+  const fd = sb.openPlain(root, 'ok/f');
+  assert.ok(fd !== undefined);
+  fs.closeSync(fd!);
+  assert.equal(sb.openPlain(root, 'd/secret2'), undefined, 'a link on the way');
+  assert.equal(sb.openPlain(root, 'l'), undefined, 'a link at the end');
+  assert.equal(sb.openPlain(root, 'p'), undefined, 'a pipe, without waiting for a writer');
+  assert.equal(sb.openPlain(root, 'missing'), undefined);
+});
+

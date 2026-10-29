@@ -32,11 +32,17 @@ and resumes what was running. SpacetimeDB only mirrors live status and approvals
 
 Task users reach nothing but the box's proxy (an nftables rule on their uids), and the proxy lets a task
 reach only the hosts in its spec. `example.com` allows any port, `example.com:8080` one port, `*.example.com`
-subdomains. A name that lands on the box itself (like `shop.localhost`) needs the exact `host:port`, and
-never reaches the box's own ports. Every refusal is a `net.blocked` event in the log.
+subdomains. A name that lands on the box itself (like `shop.localhost`) or on a private network (10/8, 172.16/12,
+192.168/16, 100.64/10 for a tailnet, fc00::/7) needs the exact `host:port`, so a public name that its owner points
+at the home network cannot take a task there. The box's own ports and link-local addresses (169.254.169.254, the
+cloud's metadata service) are never reached. Every refusal is a `net.blocked` event in the log.
 
 Droid tasks hold placeholder keys. The proxy swaps in the vault's key on the way out, for plain calls and,
-through the box's own TLS certificate, for model calls. So the real key never enters a task.
+through the box's own TLS certificate, for model calls. So the real key never enters a task. The key goes only into
+the `authorization` and `x-api-key` headers, never into another header a service might quote back in an error. On
+your own Anthropic key, a model call that asks Anthropic to fetch something for the task (a `web_fetch` tool, an
+MCP server, an image or document by URL) is refused with a 403: Anthropic would reach that host for the task,
+around its allow-list. Factory's calls are passed through unread: a limit, listed in the threat model (gurtos.com/docs/security/threat-model/).
 
 **One model key is enough: Factory's or your own Anthropic key.** With `FACTORY_API_KEY` in the vault, Droid uses
 Factory. With only `ANTHROPIC_API_KEY`, the box writes a bring-your-own-key model into the task user's
@@ -64,7 +70,9 @@ asks the owner through `POST /ask` like any other approval, and the step waits f
 
 A task never holds a secret. The vault is `/etc/box/vault.env` (root only, `KEY=value`). A task asks its
 broker, a Unix socket only its user can open, to run a tool by name. The tool runs inside the core, reads
-the secrets it declared, and returns a result. That result goes into the log, so **never return a secret**.
+the secrets it declared, and returns a result. That result goes into the log, so **never return a secret**. As a
+backstop, the box cuts the value of any vault key whose name ends in `KEY`, `TOKEN`, `SECRET`, `PASSWORD` or `ACCESS`
+(8 characters or more) out of every log event and every tool result a task gets back, as `[a vault key]`.
 
 Worker side of the socket (`BOX_SOCKET` in the worker's environment), JSON over HTTP:
 
@@ -74,7 +82,7 @@ Worker side of the socket (`BOX_SOCKET` in the worker's environment), JSON over 
 | `POST /step {text, data?}` | Log progress: a plan, a step, a diff |
 | `POST /call {tool, input, key}` | Run a tool. Above the remaining budget it asks for an OK first. A key already answered returns the logged result. A call cut off mid-way runs again with the same `ctx.key`, so tools pass it on as an idempotency key and a resumed task never pays twice. |
 | `POST /ask {question, key}` | Pause for an OK, returns `{approved}`. The same key returns the same approval. |
-| `POST /cost {cents, what}` | Count model spending |
+| `POST /cost {cents, what}` | Count model spending. `cents` is 0 or more; anything else is refused, so a task can't lower its own spend. Token counts (`POST /usage`) and a question's `costCents` are checked the same way. |
 
 ## Approvals
 
@@ -357,10 +365,12 @@ it again with no reinstall. The choice is saved in `apps.json`, so it survives a
 
 ## Who may reach the API
 
-**From the box's own screen** (a request on this machine, over the socket or loopback, with no proxy header, and
-no `Origin` other than the box's own address) the API is open, as it always was. A web page from another site in a
-browser on the box (GurtOS Personal) also arrives from loopback, but its `Origin` gives it away, so it is treated
-as remote and needs a paired token. **From anywhere else every request must carry a paired phone's token**, as
+**From the box's own screen** (a request on this machine, over the socket or loopback, with no proxy header, a
+`Host` that is `127.0.0.1`, `localhost` or `[::1]`, and no `Origin` other than the box's own address on the API's
+port) the API is open, as it always was. A web page from another site in a browser on the box (GurtOS Personal)
+also arrives from loopback, but its `Origin` gives it away, and a page that points its own name at 127.0.0.1 (DNS
+rebinding) sends its own `Host`; both are treated as remote and need a paired token. So does a page any other
+server on this machine serves (an agent's dev server on `localhost:8000`), unless its origin is in `BOX_ORIGINS`. **From anywhere else every request must carry a paired phone's token**, as
 `Authorization: Bearer <token>` or `?access_token=<token>` (an EventSource cannot set headers, so the SSE stream
 takes the query form). Without one the answer is `401` and nothing is read, started, approved or undone. The
 only open routes are `GET /api/health`, `POST /api/pair` (redeeming a pairing code), the work-account sign-in
@@ -382,6 +392,12 @@ and answer approvals, so only do that on a network you trust.
 in the owner's home or in one of Settings `agentFolders`, must not belong to root, and can never be the system or
 the box's own state (`/etc`, `/root`, `/proc`, `/var/lib`, `/opt`, `/usr`, the box's data folder...). Links are
 followed to where they really go. A Server box (no owner, no `agentFolders`) hands out no folders.
+
+**Wrong pairing codes** are limited: five a minute from one address, and 60 a minute from everyone together, then
+`429`. The address is the one the box's own proxy (the setup port, Caddy) put last in `X-Forwarded-For`.
+
+**Request bodies** are at most 10 MB, and 1 MB on the routes open without a token (pairing, the work-account
+sign-in, a track's open routes). A bigger one is a `413`, and the box stops reading it.
 
 **Undo removes the task's files**: its layer is deleted from disk (once no running task still reads it), and
 `GET /api/tasks/<id>/diff` for an undone task is empty.
@@ -413,6 +429,10 @@ A task can work on one of the owner's real folders:
 - `POST /api/tasks/<id>/unkeep` undoes a Keep from the Time Machine before-images: kept files go back with
   their old content, owner and mode, and files Keep added are removed. If the owner edited a kept file since,
   it changes nothing and returns `{conflicts}`.
+
+**Links and odd files in a task's copy.** The box reads a task's layer as root, so it never follows a link the task
+made: the diff shows a link as `link to <target>`, and Keep copies it as a link. A pipe, socket or device the task made
+is not a change at all. Keep never writes through a link in the real folder: a change under one is a conflict.
 
 **Keep never changes ownership or widens permissions.** A kept file keeps the real file's owner, group and mode.
 A new file or folder takes the owner of the folder it lands in; files are 0644 (0755 if executable), and new
@@ -503,7 +523,8 @@ verifies its own credential, maps it to a person (the Jira track keeps a Jira ac
 the API over the box's socket with `x-box-person`. Without a mapped person an outside panel can still read and Undo,
 but its Approve is refused, so turning Business on never lets an unknown outside account approve.
 
-**Waiting for me.** `GET /api/me` returns `{person, company, edition, paused, directory, waiting, requests}`: the
+**Waiting for me.** `GET /api/me` returns `{owner, person, company, edition, paused, directory, waiting, requests}`
+(`owner` is true when this caller has the owner's controls, on any edition, so a screen need not probe for them): the
 requests this person may approve now, and their own requests (the last 50, newest first, answered ones too), each with
 its route. `directory` is every person's id, name, title, role, limit and approvesFor (no phones), so any screen,
 an auditor's too, can name who asked and who may approve. `GET /api/approvals?for=me` is
@@ -685,7 +706,7 @@ answers without `/api`, which is what the demo and tracks use.
 | `GET /api/apps` | Apps from tracks: `{name, title, href, track}`. Open `/t/<track><href>`. |
 | `GET /api/health` | `{ok, startedAt, resumed: [taskId...], tasks, tools, spacetime: {port, database}}`. `resumed` is the tasks boot restarted after a power cut, for the screen's session-restore banner. |
 | `GET /api/boxes` | This box and its peers (`BOX_PEERS`), so one portal lists and drives several boxes (the Vultr second box): `[{id, name, stdb, self}, ...]` |
-| `POST /api/pair/start` | Mint a one-time pairing code for the box screen's QR: `{code, url, expiresAt, box}` (localhost) |
+| `POST /api/pair/start` | Owner. Mint a one-time pairing code for the box screen's QR: `{code, url, boxUrl?, expiresAt, box}`. `url` opens the GurtOS app (app.gurtos.com); `boxUrl` is the box's own pairing page, when `BOX_URL` or remote access gives it an address |
 | `POST /api/pair {code, name, kind?}` | A phone redeems the code for its own device token: `{token, box:{id,name}, device}`. One-time. `kind` is what the device says it is, `web` (default), `iphone` or `mac`; anything else is a 400. It is never used for a security decision. |
 | `POST /api/devices/self/watch {name}` | An `iphone` token only: a separate token for its Apple Watch, `{token, device}`, with the iPhone's Business person and nothing more: never `owner`, so Settings, keys, setup, apps and devices are refused. It can't vouch for a SpacetimeDB identity. A new one replaces the old; 3 an hour per iPhone. Revoking the iPhone, or removing its person, revokes it. |
 | `GET /api/devices`, `DELETE /api/devices/<id>` | List paired phones; revoke one |
@@ -707,9 +728,10 @@ What a screen needs, and where it comes from:
 `?after=<seq>` or the `Last-Event-ID` header and the box replays from there, then streams live. `GET /api/log?after=`
 is the same data by polling if a reader prefers a cursor.
 
-**Pairing a phone, and more than one box.** The box screen shows a QR of a one-time code (`POST /api/pair/new`);
-a phone scans it and redeems the code for its own device token (`POST /api/pair`). Any phone at the judging
-table pairs this way for the Hacker's Choice demo. A phone sends its token as `Authorization: Bearer <token>`
+**Pairing a phone, and more than one box.** The box screen shows a QR of a one-time code (`POST /api/pair/start`);
+a phone scans it and redeems the code for its own device token (`POST /api/pair`). On the home network, with remote
+access off, the portal's QR is the box's own pairing page (`boxUrl`); with remote access on, it is `url`, the GurtOS
+app with the box's https address. A phone sends its token as `Authorization: Bearer <token>`
 when it approves, so the log records which phone said yes; revoke it with `POST /api/pair/devices/<id>/revoke`
 and that token stops working. Set `BOX_URL` (the image sets it from the box's address at first boot) and `POST /api/pair/start` returns an
 absolute `url`, so the QR on the box's screen opens on a phone. `GET /api/boxes` lists this box plus the peers named in the `BOX_PEERS`
@@ -720,6 +742,8 @@ Each entry is `{id, name, url, stdb, self?}`; this box's own `url` comes from `B
 the same address as the API: files as they are, and `index.html` for any other page load, so client-side
 routes work. Then the box's own screen and a phone need one address and no CORS. During development a portal
 on another origin needs `BOX_ORIGINS=http://localhost:5173` (comma separated, or `*`) in the box's environment.
+An origin listed there by name is also treated as the box's own screen when it calls from this machine; `*` only
+lets other sites call with a paired token.
 
 ### Live: SpacetimeDB
 
@@ -786,6 +810,8 @@ device's token like any other off-box request. Code: `core/remote.ts`. State: `B
 | `GET /api/remote/name/<name>` | Owner. Asks the relay: `{name, available, reason?}` |
 | `POST /api/remote {name}` | Owner. Enrolls the name, starts the tunnel and TLS, returns `state: starting`; poll until `connected` (5 to 60 s for a new certificate). Names: lowercase letters, digits and hyphens, 3 to 30 characters, some reserved. |
 | `DELETE /api/remote` | Owner. Stops both, releases the name at the relay (`released`), removes the secret. The certificate is kept for next time. |
+| `GET /api/remote/relay` | `{url, default, custom}`: the relay in use (`https://...`), the box's default (`BOX_RELAY`, else `https://box.gurtos.com`), and whether the owner chose this one |
+| `PUT /api/remote/relay {url}` | Owner, while remote access is off (`409` otherwise). Use your own relay (`relay/README.md`): an `https://` host name with no path, query or login, that resolves only to public addresses; anything else is a `400` naming why. `{url: null}` goes back to the default. Saved in `BOX_HOME/relay.json`. Pushes and Quick Start use the same relay. |
 
 While it is on, `POST /api/pair/start` returns `url: https://app.gurtos.com/pair?box=<name>.box.gurtos.com#<code>` (the
 GurtOS app adds the box to its machines) and `boxUrl`, the box's own `https://.../pair#<code>`; `GET /api/boxes`

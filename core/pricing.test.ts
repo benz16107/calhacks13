@@ -36,3 +36,10 @@ test('a task names its model by alias or id; the box records the id', () => {
   assert.equal(resolveModel(null as any), 'claude-sonnet-5-5');
   assert.ok(modelProblem(5));
 });
+
+test('token counts a task reports are checked: missing is 0, a negative or non-number one is refused', () => {
+  assert.equal(usageCents(MODELS.sonnet, { input: 1e6 } as never), 200); // a field the SDK left out counts as none, not NaN
+  for (const bad of [-1e9, NaN, Infinity, '5', {}]) {
+    assert.throws(() => usageCents(MODELS.sonnet, { input: bad, output: 0, cacheWrite: 0, cacheRead: 0 } as never), /tokens\.input/);
+  }
+});

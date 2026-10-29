@@ -125,6 +125,69 @@ export function uidOf(sock: net.Socket): number | undefined {
   }
 }
 
+/**
+ * Whether a request is from the box's own screen: over the box's socket (no address), or from loopback with no proxy
+ * header, a Host that names this machine and no Origin but the box's own address (`port`) or one in `origins`
+ * (BOX_ORIGINS, for a portal dev server). A web page on another site that points its own name at 127.0.0.1 (DNS
+ * rebinding) still sends its own Host; a page served by anything else on this machine, an agent's dev server say,
+ * sends its own Origin. Neither is the box's screen.
+ */
+export function fromScreen(addr: string | undefined, h: http.IncomingHttpHeaders, port: number, origins: string[] = []): boolean {
+  if (addr === undefined) return true; // the root-only socket
+  if (addr !== '127.0.0.1' && addr !== '::1' && addr !== '::ffff:127.0.0.1') return false;
+  if (h['x-forwarded-for'] || h.forwarded || h['x-real-ip'] || h['tailscale-user-login'] || h['x-forwarded-host']) return false; // relayed by a proxy on the box
+  const name = /^(127\.0\.0\.1|localhost|\[::1\])(:\d+)?$/i;
+  if (h.host !== undefined && !name.test(h.host)) return false;
+  if (h.origin === undefined || origins.includes(h.origin)) return true;
+  try {
+    const o = new URL(h.origin);
+    return /^https?:$/.test(o.protocol) && name.test(o.hostname) && Number(o.port || (o.protocol === 'https:' ? 443 : 80)) === port;
+  } catch {
+    return false; // "null", from a sandboxed page or a file
+  }
+}
+
+/**
+ * Where a request really comes from, for rate limits: the address a proxy on this machine (the setup port, Caddy for
+ * remote access, a tailnet serve) put last in X-Forwarded-For, else the connection's own address.
+ */
+export function sourceOf(addr: string | undefined, h: http.IncomingHttpHeaders): string {
+  const xff = String(h['x-forwarded-for'] ?? '').split(',').pop()?.trim();
+  return (addr === undefined || addr === '127.0.0.1' || addr === '::1' || addr === '::ffff:127.0.0.1') && xff ? xff : (addr ?? 'socket');
+}
+
+/**
+ * Wrong guesses at a code, in the last minute: at most `each` from one address and `all` from everyone together. One
+ * address can't lock everyone else out, and many together still get too few guesses to matter (60 a minute for the
+ * 30 minutes a setup code lasts is 1,800 tries at a 1 in 4,294,967,296 code).
+ */
+export class Tries {
+  each: number;
+  all: number;
+  from = new Map<string, number[]>();
+  constructor(each = 5, all = 60) {
+    this.each = each;
+    this.all = all;
+  }
+  private recent(source: string, now: number) {
+    const list = (this.from.get(source) ?? []).filter((at) => now - at < 60_000);
+    if (list.length) this.from.set(source, list);
+    else this.from.delete(source);
+    return list;
+  }
+  /** Why this address may not guess now, or undefined. */
+  refusal(source: string, now = Date.now()): string | undefined {
+    let total = 0;
+    for (const s of [...this.from.keys()]) total += this.recent(s, now).length;
+    if (this.recent(source, now).length >= this.each) return 'too many wrong pairing codes from here; wait a minute and ask the screen for a new one';
+    if (total >= this.all) return 'too many wrong pairing codes; wait a minute and ask the screen for a new one';
+  }
+  wrong(source: string, now = Date.now()) {
+    if (this.from.size > 10_000) this.from.clear(); // shortcut: a flood from many addresses resets the window
+    this.from.set(source, [...this.recent(source, now), now]);
+  }
+}
+
 /** 'example.com' allows that host on any port, 'example.com:8080' only that port, '*.example.com' its subdomains. */
 export function allowed(hosts: string[], host: string, port: string) {
   return hosts.some((h) => h === host || h === `${host}:${port}` || (h.startsWith('*.') && host.endsWith(h.slice(1))));
@@ -134,6 +197,23 @@ export function allowed(hosts: string[], host: string, port: string) {
 const reserved = new Set([3000]);
 export const reservePort = (port: number) => reserved.add(port);
 const boxPort = (port: number) => reserved.has(port) || (port >= 8800 && port <= 8899);
+
+/** Link-local: the cloud's metadata service (169.254.169.254, with the machine's own credentials) and the like. */
+const subnets = (...cidrs: string[]) => {
+  const list = new net.BlockList();
+  for (const [a, bits] of cidrs.map((c) => c.split('/'))) list.addSubnet(a, Number(bits), net.isIPv6(a) ? 'ipv6' : 'ipv4');
+  return list;
+};
+const LINK_LOCAL = subnets('169.254.0.0/16', 'fe80::/10');
+/** Private networks: the home or office network, a tailnet (100.64.0.0/10), a cloud VPC. */
+const PRIVATE = subnets('10.0.0.0/8', '172.16.0.0/12', '192.168.0.0/16', '100.64.0.0/10', 'fc00::/7');
+const inList = (list: net.BlockList, ip: string) => {
+  const v4 = ip.replace(/^::ffff:(?=\d+\.)/i, '');
+  return list.check(v4, net.isIPv4(v4) ? 'ipv4' : 'ipv6');
+};
+
+/** Not an address on the public internet: loopback, unspecified, link-local or a private network. */
+export const notPublic = (ip: string) => inList(LINK_LOCAL, ip) || inList(PRIVATE, ip) || /^(127\.|0\.)/.test(ip.replace(/^::ffff:/i, '')) || ip === '::1' || ip === '::';
 
 /** An address on the box itself: loopback, link-local, or one of its own interfaces. */
 function onTheBox(ip: string) {
@@ -157,14 +237,50 @@ function aliasOf(host: string): string | undefined {
 
 /**
  * The address a task may connect to for host:port, resolved once so the name cannot change in between.
- * A name that lands on the box itself needs host:port listed exactly, and never reaches a box port.
+ * A name that lands on the box itself or on a private network needs host:port listed exactly, so a public name whose
+ * owner points it at 10.0.0.1 (or rebinds it) cannot walk a task into the home network. The box's own ports and
+ * link-local addresses (the cloud's metadata service) are never reached.
  */
 export async function destination(hosts: string[], host: string, port: string): Promise<string | undefined> {
   if (!allowed(hosts, host, port)) return;
   const address = aliasOf(host) ?? (await dns.lookup(host).catch(() => undefined))?.address;
-  if (!address) return;
-  if (onTheBox(address) && (!hosts.includes(`${host}:${port}`) || boxPort(Number(port)))) return;
+  if (!address || inList(LINK_LOCAL, address)) return;
+  const exact = hosts.includes(`${host}:${port}`);
+  if (onTheBox(address) && (!exact || boxPort(Number(port)))) return;
+  if (inList(PRIVATE, address) && !exact) return;
   return address;
+}
+
+/**
+ * Why a model call asks the model service to reach the internet for the task, or undefined. A web fetch tool, an MCP
+ * server or a file by URL would be fetched from the service's side, to any host, around the task's allow-list. Droid
+ * sends none of them (its tools run in the task). What the model wrote into its own earlier tool calls is not looked at.
+ */
+export function fetchesOnItsOwn(body: unknown): string | undefined {
+  const web = (v: unknown) => typeof v === 'string' && /^\s*https?:/i.test(v);
+  const walk = (v: unknown): string | undefined => {
+    if (Array.isArray(v)) return v.map(walk).find(Boolean);
+    if (!v || typeof v !== 'object') return undefined;
+    const o = v as Record<string, unknown>;
+    if (o.mcp_servers !== undefined) return 'an MCP server';
+    const type = typeof o.type === 'string' ? o.type : '';
+    if (/^(web_fetch|mcp$)/.test(type)) return `a ${type} tool`;
+    if (type === 'url' || web(o.image_url) || web(o.file_url) || web((o.image_url as { url?: unknown } | undefined)?.url)) return 'a file by its address';
+    return Object.entries(o).filter(([k]) => !(k === 'input' && /tool_use$/.test(type))).map(([, x]) => walk(x)).find(Boolean);
+  };
+  return walk(body);
+}
+
+/** Only the key headers get the vault's key. Others go as sent: a service may quote a bad header back in its error. */
+const KEY_HEADERS = new Set(['authorization', 'x-api-key']);
+
+/** A task's request headers on their way to the model service, with the placeholder swapped for the real key. */
+export function withKey(headers: http.IncomingHttpHeaders, host: string, placeholder: string, key: string): http.OutgoingHttpHeaders {
+  const out: http.OutgoingHttpHeaders = { host };
+  for (const [name, value] of Object.entries(headers)) {
+    if (value !== undefined && name !== 'host') out[name] = KEY_HEADERS.has(name) && typeof value === 'string' ? value.replaceAll(placeholder, key) : value;
+  }
+  return out;
 }
 
 export interface ProxyHooks {
@@ -208,12 +324,27 @@ export async function startProxy(hooks: ProxyHooks, cert: { key: Buffer; cert: B
     const anthropic = host === ANTHROPIC;
     const key = anthropic ? hooks.anthropicKey() : hooks.factoryKey();
     if (!key) return fail(res, 503, `the vault has no ${anthropic ? 'ANTHROPIC_API_KEY' : 'FACTORY_API_KEY'}`);
-    const placeholder = anthropic ? ANTHROPIC_PLACEHOLDER : PLACEHOLDER_KEY;
-    const headers: http.OutgoingHttpHeaders = { host };
-    for (const [name, value] of Object.entries(req.headers)) {
-      if (value !== undefined && name !== 'host') headers[name] = Array.isArray(value) ? value : value.replaceAll(placeholder, key);
-    }
-    forward(req, res, https.request({ host, path: req.url, method: req.method, headers }));
+    const headers = withKey(req.headers, host, anthropic ? ANTHROPIC_PLACEHOLDER : PLACEHOLDER_KEY, key);
+    if (!anthropic) return forward(req, res, https.request({ host, path: req.url, method: req.method, headers }));
+    // Your own Anthropic key: read the call first, so the model service never fetches for the task (fetchesOnItsOwn).
+    // shortcut: Factory's calls are passed through unread; its formats are its own (core/README.md, The network).
+    const chunks: Buffer[] = [];
+    let size = 0;
+    req.on('data', (c: Buffer) => ((size += c.length) > 64 * 1024 ** 2 ? req.destroy() : chunks.push(c)));
+    req.on('error', () => res.destroy());
+    req.on('end', () => {
+      const body = Buffer.concat(chunks);
+      let why: string | undefined;
+      try {
+        why = body.length ? fetchesOnItsOwn(JSON.parse(body.toString())) : undefined;
+      } catch {} // not JSON: nothing for the service to fetch
+      if (why) return fail(res, 403, `blocked by the box: a model call may not ask Anthropic to fetch ${why} for the task`);
+      const { 'transfer-encoding': _chunked, ...sized } = headers;
+      const up = https.request({ host, path: req.url, method: req.method, headers: { ...sized, 'content-length': String(body.length) } });
+      up.on('response', (r) => (r.on('error', () => res.destroy()), res.writeHead(r.statusCode ?? 502, r.headers), r.pipe(res)));
+      up.on('error', () => fail(res, 502, 'upstream failed'));
+      up.end(body);
+    });
   };
 
   // HTTPS to Factory, after the proxy has answered TLS itself. The task was checked at CONNECT.

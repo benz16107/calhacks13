@@ -49,3 +49,20 @@ export function removeVaultKey(name: string): void {
   fs.writeFileSync(tmp, lines.join('\n'), { mode: 0o600 });
   fs.renameSync(tmp, file);
 }
+
+/** The vault values that are secrets: names ending in KEY, TOKEN, SECRET, PASSWORD or ACCESS. A site address or a model
+ *  name kept beside them (ATLASSIAN_SITE, FIND_OLLAMA_MODEL) is not, and may appear in the log as it is. */
+export const secretValues = (vault: Map<string, string>) => [...vault].filter(([k]) => /(KEY|TOKEN|SECRET|PASSWORD|ACCESS)$/.test(k)).map(([, v]) => v);
+
+/**
+ * `v` with every vault value in it replaced by "[a vault key]". The log and a task's tool results go through this, so
+ * a tool that quotes its own request in an error (a URL with ?key=, a header) never hands a key to the task, the
+ * model or the log. Values under 8 characters are left alone: they are not keys, and would match ordinary text.
+ */
+export function redact<T>(v: T, secrets: Iterable<string>): T {
+  const text = JSON.stringify(v);
+  if (text === undefined) return v;
+  let out = text;
+  for (const s of secrets) if (s.length >= 8) out = out.replaceAll(JSON.stringify(s).slice(1, -1), '[a vault key]'); // as it is written inside JSON
+  return out === text ? v : JSON.parse(out);
+}

@@ -12,31 +12,50 @@ import type { App, Approval, ApprovalRoute, Box, FullSpec, Ctx, LogEvent, LogRea
 import { DEFAULT_POLICY, amountOf, approversFor, auditRows, checkPerson, checkSeats, checkShadow, goLiveRules, holds, notifyPeople, parsePolicy, pilot, refusal, route, toCsv, whoOf, type Business, type Person } from './business.ts';
 import { DB, Live } from './live.ts';
 import { Log, apply, canMove, doneLayers, fold, type State } from './log.ts';
-import { ANTHROPIC_PLACEHOLDER, PLACEHOLDER_KEY, firewall, logBlocked, stopLoggingBlocked, uidOf, relayCert, reservePort, startProxy } from './net.ts';
+import { ANTHROPIC_PLACEHOLDER, PLACEHOLDER_KEY, Tries, firewall, fromScreen, logBlocked, sourceOf, stopLoggingBlocked, uidOf, relayCert, reservePort, startProxy } from './net.ts';
 import * as sandbox from './sandbox.ts';
 import { HOME, dirs } from './sandbox.ts';
 import { MODELS, modelProblem, resolveModel } from './models.ts';
 import { usageCents } from './pricing.ts';
 import { DEFAULT_SETTINGS, SETUP_STEPS, applyPatch, folderRefusal, hadHumanUse, hostProblem, insideAny, neverFolder, loadDisabled, loadSetup, loadSettings, readJson, recordStep, saveDisabled, saveSettings, saveSetup, writeJson, type Settings, type SetupState } from './config.ts';
 import * as system from './system.ts';
-import { VAULT_NAME, loadVault, removeVaultKey, writeVaultKey } from './vault.ts';
+import { VAULT_NAME, loadVault, redact, removeVaultKey, secretValues, writeVaultKey } from './vault.ts';
 import { challenge, checkSso, noGroup, personId, provider, random, roleFor, verifyIdToken, whoIs, type Claims, type Sso } from './sso.ts';
 import * as push from './push.ts';
-import { APP, RELAY, Remote, SECRET_KEY } from './remote.ts';
+import { APP, Remote, SECRET_KEY } from './remote.ts';
 import * as quick from './quickstart.ts';
 import * as perms from './permissions.ts';
 
 type Handler = (method: string, url: URL, body: any, headers: http.IncomingHttpHeaders, req: http.IncomingMessage) => unknown;
 
+/** The most a request body may hold: files shared to a task are 5 MB, so 6.7 MB as base64. */
+const MAX_BODY = 10 * 1024 ** 2;
+/** For routes anyone may call without a token: pairing, the work-account sign-in, a track's open routes. */
+const MAX_OPEN_BODY = 1024 ** 2;
+
+/** Read a request's body, at most `limit` bytes: past that it is a 413, and the connection closes after the answer. */
+async function readBody(req: http.IncomingMessage, res: http.ServerResponse, limit = MAX_BODY) {
+  const chunks: Buffer[] = [];
+  let size = 0;
+  for await (const c of req) {
+    size += (c as Buffer).length;
+    if (size > limit) {
+      if (!res.headersSent) res.setHeader('connection', 'close'); // the rest is never read
+      throw Object.assign(new Error(`the request body is over ${Math.round(limit / 1024 ** 2)} MB`), { status: 413 });
+    }
+    chunks.push(c as Buffer);
+  }
+  return Buffer.concat(chunks);
+}
+
 /** A JSON-over-HTTP server. Thrown errors become 400s. */
 function jsonServer(handler: Handler, raw?: (req: http.IncomingMessage, res: http.ServerResponse) => boolean) {
   const server = http.createServer(async (req, res) => {
     if (raw?.(req, res)) return;
-    let text = '';
-    for await (const chunk of req) text += chunk;
     let status = 200;
     let out: unknown;
     try {
+      const text = (await readBody(req, res)).toString();
       let body: unknown = {};
       try {
         body = text ? JSON.parse(text) : {};
@@ -51,7 +70,8 @@ function jsonServer(handler: Handler, raw?: (req: http.IncomingMessage, res: htt
     }
     res.writeHead(status, { 'content-type': 'application/json' }).end(JSON.stringify(out));
   });
-  server.requestTimeout = 0; // approvals can wait for hours
+  // requestTimeout (Node's 5 minutes) covers receiving the request only, so approvals still wait for hours, and a
+  // client that sends its body a byte at a time cannot hold a connection forever.
   // Keep idle connections well past any client's own idle time (Node's fetch keeps them 4 s), so the box never closes
   // a socket just as a client reuses it (ECONNRESET). headersTimeout must stay above keepAliveTimeout.
   server.keepAliveTimeout = 65_000;
@@ -455,6 +475,7 @@ class Core {
   }
 
   write(e: NewEvent): LogEvent {
+    e = redact(e, secretValues(this.vault)); // a key that slipped into an event (a tool's error, say) never reaches the log
     if (e.type === 'note' && !e.text) {
       const text = this.noteText(e.track, e.data as Record<string, any>);
       if (text) e = { ...e, text };
@@ -1094,6 +1115,8 @@ class Core {
     const pending = [...this.state.approvals.values()].filter((a) => a.state === 'pending');
     const withRoute = (a: Approval) => ({ ...a, route: a.route ?? this.routeOf(a, this.must(a.task)) });
     return {
+      // Whether this caller has the owner's controls (settings, keys, apps, devices), so a screen need not probe for them.
+      owner: this.isOwner(req),
       edition: system.edition(this.owner, this.business.on),
       company: this.business.company,
       paused: this.paused,
@@ -1237,6 +1260,7 @@ class Core {
 
   private async runTool(t: Task, key: string, name: string, input: unknown, action: string, entry: { tool: Tool; track: string }) {
     const result = (r: { ok: boolean; output?: unknown; error?: string; cents?: number }) => {
+      r = redact(r, secretValues(this.vault)); // what goes back to the task, too
       this.write({ type: 'tool.result', task: t.id, key, ...r });
       return r;
     };
@@ -1318,14 +1342,22 @@ class Core {
         sandbox.flush(t);
         return this.write({ type: 'task.step', task: t.id, text: String(body.text), data: body.data });
       }
-      if (route === 'POST /cost') return this.write({ type: 'cost', task: t.id, cents: Number(body.cents), what: String(body.what) });
+      if (route === 'POST /cost') {
+        // The task reports its own model spending: a negative or non-number cost would lower costCents and let a later
+        // spend pass the budget and the owner's threshold without asking.
+        const cents = Number(body.cents);
+        if (!Number.isFinite(cents) || cents < 0) throw new Error('cents: a cost of 0 or more');
+        return this.write({ type: 'cost', task: t.id, cents, what: String(body.what) });
+      }
       if (route === 'POST /usage') {
         const tokens = body.tokens;
         return this.write({ type: 'cost', task: t.id, cents: usageCents(String(body.model), tokens), what: String(body.what ?? 'model'), model: String(body.model), tokens });
       }
       if (route === 'POST /call') return this.callTool(t, String(body.key), String(body.tool), body.input);
       if (route === 'POST /ask') {
-        const outcome = await this.askFor(t, String(body.key), { question: String(body.question), costCents: Number(body.costCents ?? 0), payee: body.payee, purpose: body.purpose });
+        const costCents = Number(body.costCents ?? 0);
+        if (!Number.isFinite(costCents) || costCents < 0) throw new Error('costCents: an amount of 0 or more');
+        const outcome = await this.askFor(t, String(body.key), { question: String(body.question), costCents, payee: body.payee, purpose: body.purpose });
         return outcome === 'pending' ? { pending: true } : { approved: outcome === 'approved' };
       }
     });
@@ -1797,9 +1829,10 @@ class Core {
     const code = randomBytes(4).toString('hex');
     const expiry = Date.now() + 5 * 60 * 1000;
     this.pairCodes.set(code, { expiry, owner, ...(person ? { person } : {}) });
-    // The QR always opens the GurtOS app (app.gurtos.com), which any phone can reach. Everything after `#` stays on
-    // the phone: the code, and, with remote access off, the box's address on its own network (`lan`, which a phone
-    // elsewhere, or a VM's private address, can't reach) and its name. During setup it also carries a rendezvous id
+    // `url` opens the GurtOS app (app.gurtos.com). Everything after `#` stays on the phone: the code, and, with remote
+    // access off, the box's address on its own network (`lan`, which a phone elsewhere, or a VM's private address,
+    // can't reach) and its name. `boxUrl` is the box's own pairing page, which the portal's QR prefers on the home
+    // network while remote access is off; with it on, the QR is `url`, through the box's https address. During setup it also carries a rendezvous id
     // (`rv`): the app can ask this box, through the relay, to turn remote access on and pair over https
     // (watchPairing). Never after setup, or once the owner turned remote access off: other codes (Business people,
     // new phones) must not be able to switch it on. `boxUrl` is the box's own copy of the pairing page.
@@ -1819,17 +1852,16 @@ class Core {
   }
 
   /** A phone redeems the code for a durable device token. */
-  wrongCodes: number[] = [];
-  pair(body: { code?: string; name?: string; identity?: string; kind?: unknown }) {
+  wrongCodes = new Tries(); // pairing is reachable from outside the box (and the setup port), so guessing is limited
+  pair(body: { code?: string; name?: string; identity?: string; kind?: unknown }, from = 'socket') {
     if (body.kind !== undefined && !['web', 'iphone', 'mac', 'setup'].includes(body.kind as string)) throw new Error('kind: web, iphone or mac');
-    // Pairing is reachable from outside the box, so guessing codes is limited: 10 wrong ones a minute, from everyone together.
-    this.wrongCodes = this.wrongCodes.filter((at) => Date.now() - at < 60_000);
-    if (this.wrongCodes.length >= 10) throw Object.assign(new Error('too many wrong pairing codes; wait a minute and ask this computer\'s screen for a new one'), { status: 429 });
+    const busy = this.wrongCodes.refusal(from);
+    if (busy) throw Object.assign(new Error(busy), { status: 429 });
     // A code read off a screen may come back as "8120D849" or "8120-D849": letters and digits only, lower case.
     const code = String(body.code ?? '').replace(/[^0-9a-z]/gi, '').toLowerCase();
     const entry = code ? this.pairCodes.get(code) : undefined;
     if (!entry || entry.expiry < Date.now()) {
-      this.wrongCodes.push(Date.now());
+      this.wrongCodes.wrong(from);
       throw Object.assign(new Error('bad or expired pairing code'), { status: 400 });
     }
     // A setup code pairs only as `setup` (an owner that lasts until setup finishes), and only a setup code does.
@@ -1874,8 +1906,7 @@ class Core {
     }
     if (m !== 'POST' || p !== '/sso/redeem') return false;
     void (async () => {
-      let text = '';
-      for await (const c of req) text += c;
+      const text = (await readBody(req, res, MAX_OPEN_BODY).catch(() => Buffer.alloc(0))).toString();
       const code = (() => {
         try {
           return String(JSON.parse(text).code ?? '');
@@ -2017,7 +2048,7 @@ class Core {
     if (!d.push) throw Object.assign(new Error('turn on notifications on this phone first'), { status: 409 });
     if (!s || !secret) throw Object.assign(new Error('notifications go through the relay: turn on "Reach this box from anywhere" first'), { status: 409 });
     try {
-      const r = await push.send(RELAY, s.name, secret, d.push, { v: 1, machine: BOX_ID, box: this.boxName(), url: s.url, ...fields }, topic);
+      const r = await push.send(this.remote.relay, s.name, secret, d.push, { v: 1, machine: BOX_ID, box: this.boxName(), url: s.url, ...fields }, topic);
       if (r.gone) delete d.push, this.saveDevices(); // the phone dropped the subscription
       return r;
     } catch (e) {
@@ -2032,7 +2063,7 @@ class Core {
   quickTarget?: quick.Target;
   quickTargetFor() {
     return (this.quickTarget ??= new quick.Target({
-      relay: RELAY,
+      relay: this.remote.relay,
       app: APP,
       apply: { putKey: (n, v, w) => this.putKey(n, v, w), changeSettings: (p, w) => this.changeSettings(p, w), enableApp: (id) => this.enableApp(id), disableApp: (id) => this.disableApp(id), setupStep: (k, st, d) => this.setupStep(k, st, d) },
       apps: () => [...this.installed.keys()].filter((id) => id !== 'example').map((id) => ({ id, on: !this.disabled.has(id) })),
@@ -2077,7 +2108,7 @@ class Core {
     if (body?.approve !== true) return { sent: false };
     const keys = p.keys.filter((k) => this.vault.has(k)); // exactly the keys the question named; `keys` on the answer is ignored
     const b = quick.bundle({ from: this.boxName(), keys: Object.fromEntries(keys.map((k) => [k, this.vault.get(k)!])), settings: this.settings as never, apps: apps(), phonePk: p.phonePk });
-    return quick.deliver(RELAY, p, b).then(() => {
+    return quick.deliver(this.remote.relay, p, b).then(() => {
       // Names only, never values; and the new computer's key, so the owner can match it later.
       this.write({ type: 'note', track: 'quickstart', data: { text: `Quick Start: ${d.name} sent ${keys.length ? keys.join(', ') : 'no keys'}, ${b.apps.length} apps and spending rules to "${p.n}" (key ${quick.fingerprint(p.pk)})`, to: p.n, keys, pk: quick.fingerprint(p.pk) } });
       return { sent: true, phrase: quick.phrase(p.pk) };
@@ -2103,6 +2134,8 @@ class Core {
     const phone = () => d ?? (() => { throw Object.assign(new Error('only a paired phone gets notifications'), { status: 403 }); })();
     let act: ((body: any) => unknown) | undefined;
     if (p === '/remote' && m === 'GET') act = () => this.remote.refresh();
+    else if (p === '/remote/relay' && m === 'GET') act = () => this.remote.relayView();
+    else if (p === '/remote/relay' && m === 'PUT') act = (b) => (this.requireOwner(req), this.remote.setRelay(b?.url));
     else if (p === '/remote' && m === 'POST') act = (b) => (this.requireOwner(req), this.remote.enable(b?.name));
     else if (p === '/remote' && m === 'DELETE') act = () => (this.requireOwner(req), this.remote.disable());
     else if (name && m === 'GET') act = () => (this.requireOwner(req), this.remote.available(decodeURIComponent(name)));
@@ -2125,11 +2158,10 @@ class Core {
     void (async () => {
       const json = (status: number, obj: unknown) => res.writeHead(status, { 'content-type': 'application/json' }).end(JSON.stringify(obj));
       try {
-        const chunks: Buffer[] = [];
-        for await (const c of req) chunks.push(c as Buffer);
+        const text = (await readBody(req, res)).toString();
         let body = {};
         try {
-          body = chunks.length ? JSON.parse(Buffer.concat(chunks).toString()) : {};
+          body = text ? JSON.parse(text) : {};
         } catch {
           throw new Error("the request body isn't valid JSON");
         }
@@ -2158,15 +2190,8 @@ class Core {
    * carries forwarding headers, so it does not count.
    */
   isLocal(req: http.IncomingMessage): boolean {
-    const addr = req.socket.remoteAddress; // undefined on a unix socket
-    const loopback = addr === undefined || addr === '127.0.0.1' || addr === '::1' || addr === '::ffff:127.0.0.1';
-    const h = req.headers;
-    const relayed = !!(h['x-forwarded-for'] || h.forwarded || h['x-real-ip'] || h['tailscale-user-login'] || h['x-forwarded-host']);
-    // A web page in a browser on this machine also arrives from loopback. Only the box's own pages count: a request
-    // a browser marks as coming from another site (Origin) is not the box's screen, whatever address it came from.
-    const origin = h.origin;
-    const foreign = !!origin && !/^https?:\/\/(127\.0\.0\.1|localhost|\[::1\])(:\d+)?$/.test(origin);
-    return loopback && !relayed && !foreign;
+    // A web page in a browser on this machine also arrives from loopback. Only the box's own pages count (net.ts).
+    return fromScreen(req.socket.remoteAddress, req.headers, this.apiPort, (process.env.BOX_ORIGINS ?? '').split(',').map((o) => o.trim()).filter((o) => o && o !== '*'));
   }
 
   /**
@@ -2279,10 +2304,9 @@ class Core {
     void (async () => {
       const json = (status: number, obj: unknown) => res.writeHead(status, { 'content-type': 'application/json' }).end(JSON.stringify(obj));
       try {
-        const chunks: Buffer[] = [];
-        for await (const c of req) chunks.push(c as Buffer);
-        const body = chunks.length ? JSON.parse(Buffer.concat(chunks).toString()) : {};
-        json(200, act ? act(body) : this.pair(body));
+        const text = (await readBody(req, res, MAX_OPEN_BODY)).toString();
+        const body = text ? JSON.parse(text) : {};
+        json(200, act ? act(body) : this.pair(body, sourceOf(req.socket.remoteAddress, req.headers)));
       } catch (e) {
         json((e as { status?: number }).status ?? 400, { error: (e as Error).message });
       }
@@ -2551,13 +2575,11 @@ data: ${JSON.stringify(e)}
     if (req.method !== 'POST' || !handler) return false;
     void (async () => {
       try {
-        const chunks: Buffer[] = [];
-        for await (const c of req) chunks.push(c as Buffer);
-        const text = Buffer.concat(chunks).toString();
+        const text = (await readBody(req, res)).toString();
         const out = await handler(text ? JSON.parse(text) : {}, req.headers as Record<string, string>);
         res.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify(out ?? { ok: true }));
       } catch (e) {
-        res.writeHead(400, { 'content-type': 'application/json' }).end(JSON.stringify({ error: (e as Error).message }));
+        res.writeHead((e as { status?: number }).status === 413 ? 413 : 400, { 'content-type': 'application/json' }).end(JSON.stringify({ error: (e as Error).message }));
       }
     })();
     return true;
@@ -2569,18 +2591,19 @@ data: ${JSON.stringify(e)}
     if (!entry) return false;
     void (async () => {
       try {
-        const chunks: Buffer[] = [];
-        for await (const c of req) chunks.push(c as Buffer);
+        const caller = this.callerOf(req);
+        const raw = await readBody(req, res, caller === 'none' ? MAX_OPEN_BODY : MAX_BODY); // 'none': an open route, no token
         const hasBody = req.method !== 'GET' && req.method !== 'HEAD';
         const person = this.personOf(req);
-        const headers: Record<string, string> = { ...(req.headers as Record<string, string>), 'x-box-caller': this.callerOf(req) }; // set by the box, never by the caller
+        const headers: Record<string, string> = { ...(req.headers as Record<string, string>), 'x-box-caller': caller }; // set by the box, never by the caller
         delete headers['x-box-person']; // Business: the person's id, set by the box below, never by the caller
         if (person) headers['x-box-person'] = person.id;
-        const request = new Request(url, { method: req.method, headers, body: hasBody ? Buffer.concat(chunks) : undefined });
+        const request = new Request(url, { method: req.method, headers, body: hasBody ? raw : undefined });
         const r = await entry.route(request, this.boxFor(entry.track, person));
         res.writeHead(r.status, Object.fromEntries(r.headers)).end(Buffer.from(await r.arrayBuffer()));
       } catch (e) {
-        res.writeHead(500, { 'content-type': 'application/json' }).end(JSON.stringify({ error: (e as Error).message }));
+        if (res.headersSent) return void res.destroy();
+        res.writeHead((e as { status?: number }).status === 413 ? 413 : 500, { 'content-type': 'application/json' }).end(JSON.stringify({ error: (e as Error).message }));
       }
     })();
     return true;

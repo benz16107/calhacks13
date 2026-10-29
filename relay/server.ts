@@ -131,7 +131,12 @@ export function plugin(op: string, content: any, names: Names, selfSecret: strin
     if (!self) names.seen(user);
     return { reject: false, unchange: true };
   }
-  if (op === 'Ping') return { reject: false, unchange: true }; // the check above runs again: a released name is cut off
+  if (op === 'Ping') {
+    // The check above runs again, so a released name is cut off. A heartbeat is use too: a box that stays connected
+    // for a month never logs in again, and its name must not expire under it for someone else to claim.
+    if (!self) names.seen(user);
+    return { reject: false, unchange: true };
+  }
   if (op === 'NewProxy') {
     const type = content.proxy_type;
     if (type !== 'https' && type !== 'http') return no('only https and http routes');

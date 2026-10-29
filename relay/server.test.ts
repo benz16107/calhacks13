@@ -45,6 +45,14 @@ test('a name nobody used for 30 days is free again', () => {
   assert.equal(r.names.taken('olds'), false);
 });
 
+test('a box that stays connected keeps its name: each heartbeat counts as use', () => {
+  // frpc logs in once and then only sends heartbeats; a box online for 31 days straight must not look abandoned.
+  const r = fresh();
+  const secret = r.names.enroll('steady', Date.now() - 31 * 24 * 3600 * 1000);
+  assert.equal(plugin('Ping', { user: { user: 'steady', metas: { secret } } }, r.names, r.selfSecret).reject, false);
+  assert.equal(r.names.taken('steady'), true);
+});
+
 test('frps plugin: a box logs in only with its secret and routes only its own name', () => {
   const r = fresh();
   const secret = r.names.enroll('rosa');

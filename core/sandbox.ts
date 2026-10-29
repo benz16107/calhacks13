@@ -41,6 +41,19 @@ function realOf(ws: string, rel: string): string {
   return path.join(folders[label], ...rest);
 }
 
+/** True when a folder on the way to this change's real file is a link: Keep, which runs as root, would write wherever it points. */
+function linkOnTheWay(ws: string, rel: string): boolean {
+  const folders = multis.get(ws);
+  const [root, inner] = folders ? [folders[rel.split('/')[0]], rel.split('/').slice(1)] : [dirs.workspace(ws), rel.split('/')];
+  let p = root;
+  for (const part of inner.slice(0, -1)) {
+    const st = fs.lstatSync((p = path.join(p, part)), { throwIfNoEntry: false });
+    if (!st) return false; // Keep makes the rest as real folders
+    if (!st.isDirectory()) return true;
+  }
+  return false;
+}
+
 /** The clean copy a linked task works on, taken when it started. */
 const taskBase = (id: string) => path.join(HOME, 'tasks', id, 'base');
 
@@ -230,7 +243,8 @@ export function changes(task: Task): Change[] {
       const st = fs.lstatSync(path.join(upper, r));
       if (st.isCharacterDevice() && st.rdev === 0) out.push({ path: r, change: 'deleted' }); // overlayfs whiteout
       else if (st.isDirectory()) walk(r);
-      else out.push({ path: r, change: below(r) ? 'modified' : 'added' });
+      // Files and links only: a pipe, socket or device a task made would hang or mislead the box that reads it.
+      else if (st.isFile() || st.isSymbolicLink()) out.push({ path: r, change: below(r) ? 'modified' : 'added' });
     }
   };
   if (fs.existsSync(upper)) walk('');
@@ -240,20 +254,72 @@ export function changes(task: Task): Change[] {
 /** What a task changed, from its own layer only, and a unified diff of it. */
 export function diff(task: Task, maxBytes = 200_000): { changes: Change[]; diff: string } {
   const upper = dirs.upper(task.id);
-  const lowers = [...task.layers.map(dirs.upper), isLinked(task.workspace) && fs.existsSync(taskBase(task.id)) ? taskBase(task.id) : dirs.workspace(task.workspace)];
-  const below = (rel: string) => lowers.map((l) => path.join(l, rel)).find((f) => fs.existsSync(f));
+  const lowers = lowersOf(task);
+  const below = (rel: string) => holder(lowers, rel);
   const changes = changesOf(task);
   let text = '';
   for (const c of changes) {
     if (text.length > maxBytes) break;
-    const before = c.change === 'added' ? '/dev/null' : below(c.path)!;
-    const after = c.change === 'deleted' ? '/dev/null' : path.join(upper, c.path);
-    const r = spawnSync('diff', ['-u', '--label', `a/${c.path}`, '--label', `b/${c.path}`, before, after], { encoding: 'utf8' });
-    text += r.stdout;
+    const before = c.change === 'added' ? undefined : below(c.path);
+    text += diffFiles(c.path, before ? { root: before, rel: c.path } : undefined, c.change === 'deleted' ? undefined : { root: upper, rel: c.path });
   }
   return { changes, diff: text.slice(0, maxBytes) };
 }
 const changesOf = changes;
+
+/**
+ * Open `root/rel` to read as root, only if it is a regular file that really is there: no link at the end or on the
+ * way (a task can swap a folder in its layer for a link between the listing and the read), and never a pipe.
+ */
+export function openPlain(root: string, rel: string): number | undefined {
+  let fd: number;
+  try {
+    fd = fs.openSync(path.join(root, rel), fs.constants.O_RDONLY | fs.constants.O_NOFOLLOW | fs.constants.O_NONBLOCK);
+  } catch {
+    return undefined; // missing, or a link at the end
+  }
+  try {
+    if (fs.fstatSync(fd).isFile() && fs.readlinkSync(`/proc/self/fd/${fd}`) === path.join(fs.realpathSync(root), rel)) return fd;
+  } catch {}
+  fs.closeSync(fd);
+}
+
+/** The top layer that holds `rel`, or undefined when none does or the top one deleted it (an overlayfs whiteout). */
+function holder(layers: string[], rel: string): string | undefined {
+  for (const l of layers) {
+    const st = fs.lstatSync(path.join(l, rel), { throwIfNoEntry: false });
+    if (st) return st.isCharacterDevice() && st.rdev === 0 ? undefined : l;
+  }
+}
+
+/** What a side of a change is, when it is not a file to compare: a link and where it points. */
+const describe = (f: string) => {
+  const st = fs.lstatSync(f, { throwIfNoEntry: false });
+  return st?.isSymbolicLink() ? `link to ${fs.readlinkSync(f)}` : st ? `(not shown: not a plain file here)` : undefined;
+};
+
+/** A unified diff of one change. Each side is read from a descriptor the box opened itself (openPlain), never by name. */
+function diffFiles(p: string, a?: { root: string; rel: string }, b?: { root: string; rel: string }): string {
+  const fa = a && openPlain(a.root, a.rel);
+  const fb = b && openPlain(b.root, b.rel);
+  try {
+    if ((a && fa === undefined) || (b && fb === undefined)) {
+      // A link (or something odd) on either side: say what each side is, in the diff's own form.
+      const da = a && (fa === undefined ? describe(path.join(a.root, a.rel)) : '(a file)');
+      const db = b && (fb === undefined ? describe(path.join(b.root, b.rel)) : '(a file)');
+      return `--- a/${p}\n+++ b/${p}\n@@ -${da ? 1 : '0,0'} +${db ? 1 : '0,0'} @@\n${da ? `-${da}\n` : ''}${db ? `+${db}\n` : ''}`;
+    }
+    // The child reads the open files as /dev/fd/3 and /dev/fd/4, so no path is looked up again.
+    const r = spawnSync('diff', ['-u', '--label', `a/${p}`, '--label', `b/${p}`, fa === undefined ? '/dev/null' : '/dev/fd/3', fb === undefined ? '/dev/null' : '/dev/fd/4'], {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore', fa ?? 'ignore', fb ?? 'ignore'],
+    });
+    return r.stdout ?? '';
+  } finally {
+    if (fa !== undefined) fs.closeSync(fa);
+    if (fb !== undefined) fs.closeSync(fb);
+  }
+}
 
 // ---------- the flight recorder: a task's own layer at each step, for replay ----------
 type ReplayChange = Change & { big?: true };
@@ -306,9 +372,15 @@ export function recordReplay(task: Task, seq: number) {
       r.capped = true;
       break;
     }
+    const fd = openPlain(upper, p); // the task is running: the name may lead elsewhere by now
+    if (fd === undefined) continue;
     const dst = path.join(dirs.task(task.id), 'replay', String(seq), p);
-    fs.mkdirSync(path.dirname(dst), { recursive: true, mode: 0o700 });
-    fs.copyFileSync(path.join(upper, p), dst, fs.constants.COPYFILE_FICLONE);
+    try {
+      fs.mkdirSync(path.dirname(dst), { recursive: true, mode: 0o700 });
+      fs.writeFileSync(dst, fs.readFileSync(fd), { mode: 0o600 });
+    } finally {
+      fs.closeSync(fd);
+    }
     r.bytes += size;
     out.push({ path: p, change });
   }
@@ -333,7 +405,7 @@ export function diffAt(task: Task, seq: number, maxBytes = 200_000): { changes: 
     for (const c of pt.changes) view.set(c.path, c.change === 'deleted' ? { change: 'deleted' } : { change: c.change, ...(c.big ? { big: true } : { file: path.join(dirs.task(task.id), 'replay', String(pt.seq), c.path) }) });
   }
   const lowers = lowersOf(task);
-  const below = (rel: string) => lowers.map((l) => path.join(l, rel)).find((f) => fs.existsSync(f));
+  const below = (rel: string) => holder(lowers, rel);
   const changes: ReplayChange[] = [];
   let text = '';
   for (const [p, v] of [...view.entries()].sort(([a], [b]) => a.localeCompare(b))) {
@@ -341,17 +413,17 @@ export function diffAt(task: Task, seq: number, maxBytes = 200_000): { changes: 
     if (v.change === 'deleted' && !before) continue; // made and removed within the task: nothing to show
     changes.push({ path: p, change: v.change === 'deleted' ? 'deleted' : before ? 'modified' : 'added', ...(v.big ? { big: true } : {}) });
     if (v.big || text.length > maxBytes) continue;
-    const r = spawnSync('diff', ['-u', '--label', `a/${p}`, '--label', `b/${p}`, before ?? '/dev/null', v.file ?? '/dev/null'], { encoding: 'utf8' });
-    text += r.stdout;
+    text += diffFiles(p, before ? { root: before, rel: p } : undefined, v.file ? { root: v.file.slice(0, -p.length - 1), rel: p } : undefined);
   }
   return { changes, diff: text.slice(0, maxBytes) };
 }
 
 const sha = (file: string) => createHash('sha256').update(fs.readFileSync(file)).digest('hex');
 const exec = promisify(execFile);
-// A file's size and modification time: enough to tell an owner's edit, without reading the file.
+// A file's size and modification time: enough to tell an owner's edit, without reading the file. A link is its own
+// entry, not what it points at.
 const stamp = (file: string) => {
-  const st = fs.statSync(file);
+  const st = fs.lstatSync(file);
   return `${st.size}:${st.mtimeMs}`;
 };
 // Records from before stamps hold a SHA-256 and are still checked that way.
@@ -362,7 +434,8 @@ const place = (src: string, dst: string) => {
   try {
     fs.linkSync(src, dst);
   } catch {
-    fs.copyFileSync(src, dst, fs.constants.COPYFILE_FICLONE);
+    if (fs.lstatSync(src).isSymbolicLink()) fs.symlinkSync(fs.readlinkSync(src), dst); // the link, never what it points at
+    else fs.copyFileSync(src, dst, fs.constants.COPYFILE_FICLONE);
   }
 };
 
@@ -425,6 +498,10 @@ export function keep(task: Task): { kept?: Change[]; conflicts?: string[] } {
   const conflicts: string[] = [];
   for (const c of cs) {
     const real = realOf(task.workspace, c.path);
+    if (linkOnTheWay(task.workspace, c.path)) {
+      conflicts.push(c.path); // the real folder has a link where the task made a folder: never write through it
+      continue;
+    }
     const isFile = fs.existsSync(real) && fs.statSync(real).isFile();
     if (c.change === 'added' && isFile) conflicts.push(c.path); // the owner created it too
     if ((c.change === 'modified' || c.change === 'deleted') && !(isFile ? unchanged(real, manifest[c.path]) : manifest[c.path] === undefined)) conflicts.push(c.path);
@@ -450,14 +527,21 @@ export function keep(task: Task): { kept?: Change[]; conflicts?: string[] } {
     } else {
       mkdirOwned(path.dirname(real));
       const src = path.join(upper, c.path);
-      const srcMode = fs.statSync(src).mode;
+      const srcStat = fs.lstatSync(src);
       const dirStat = fs.statSync(path.dirname(real));
-      const mode = m.before?.mode ?? (srcMode & 0o111 ? 0o755 : 0o644);
+      const mode = m.before?.mode ?? (srcStat.mode & 0o111 ? 0o755 : 0o644);
       const owner = m.before ?? { uid: dirStat.uid, gid: dirStat.gid };
       const tmp = `${real}.box-${process.pid}`;
-      fs.copyFileSync(src, tmp, fs.constants.COPYFILE_FICLONE);
-      fs.chownSync(tmp, owner.uid, owner.gid);
-      fs.chmodSync(tmp, mode);
+      if (srcStat.isSymbolicLink()) {
+        // A link the task made stays a link: copying what it points at would hand the owner's folder (and the next
+        // task) a file the task could not read, read by root.
+        fs.symlinkSync(fs.readlinkSync(src), tmp);
+        fs.lchownSync(tmp, owner.uid, owner.gid);
+      } else {
+        fs.copyFileSync(src, tmp, fs.constants.COPYFILE_FICLONE);
+        fs.chownSync(tmp, owner.uid, owner.gid);
+        fs.chmodSync(tmp, mode);
+      }
       fs.renameSync(tmp, real); // atomic per file
       m.after = stamp(real);
     }
@@ -477,10 +561,10 @@ export function unkeep(task: Task): { reverted?: Change[]; conflicts?: string[] 
   if (!fs.existsSync(file) || fs.existsSync(path.join(saveDir, 'reverted.json'))) throw new Error(`task ${task.id} has no Keep to undo`);
   const { changes } = JSON.parse(fs.readFileSync(file, 'utf8')) as { changes: KeepMeta[] };
   const conflicts = changes
-    .filter((m) => m.after !== undefined)
+    .filter((m) => m.after !== undefined || linkOnTheWay(task.workspace, m.path))
     .filter((m) => {
       const real = realOf(task.workspace, m.path);
-      return !fs.existsSync(real) || !unchanged(real, m.after);
+      return linkOnTheWay(task.workspace, m.path) || !fs.lstatSync(real, { throwIfNoEntry: false }) || !unchanged(real, m.after);
     })
     .map((m) => m.path);
   if (conflicts.length) return { conflicts };

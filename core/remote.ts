@@ -10,12 +10,41 @@
 // State: BOX_HOME/remote.json (name, ports), BOX_HOME/remote/ (configs, certificates), the secret in the vault.
 import { execFileSync, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
+import dns from 'node:dns/promises';
 import fs from 'node:fs';
 import https from 'node:https';
 import net from 'node:net';
 import path from 'node:path';
+import { notPublic } from './net.ts';
 
+/** The relay a box uses unless its owner chose another in Settings (Remote.relay). */
 export const RELAY = (process.env.BOX_RELAY ?? 'https://box.gurtos.com').replace(/\/+$/, '');
+
+/** Why this can't be a relay address, or undefined: https, a host name (not an address), no login, path or query. */
+export function relayProblem(url: unknown): string | undefined {
+  let u: URL;
+  try {
+    u = new URL(String(url));
+  } catch {
+    return 'url: the relay\'s https address, like https://relay.example.com';
+  }
+  if (u.protocol !== 'https:') return 'url: the relay must be https';
+  if (u.username || u.password || u.search || u.hash || (u.pathname !== '/' && u.pathname !== '')) return 'url: only the address, like https://relay.example.com (no path, query or login)';
+  if (net.isIP(u.hostname.replace(/^\[|\]$/g, '')) || !/^[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(u.hostname)) return 'url: use the relay\'s public host name, like relay.example.com, not an IP address';
+  if (/\.(localhost|local|internal|lan|home|arpa)$/.test(u.hostname)) return 'url: the relay must be on the public internet, so phones anywhere can reach it';
+  return undefined;
+}
+
+/** relayProblem, then where the name really leads: never this machine or a private network (phones could not reach it). */
+export async function checkRelay(url: unknown, lookup = (h: string) => dns.lookup(h, { all: true })): Promise<string> {
+  const problem = relayProblem(url);
+  if (problem) throw err(400, problem);
+  const u = new URL(String(url));
+  const found = await lookup(u.hostname).catch(() => []);
+  if (!found.length) throw err(400, `url: ${u.hostname} does not resolve`);
+  if (found.some((a) => notPublic(a.address))) throw err(400, `url: ${u.hostname} leads to a private or local address; the relay must be on the public internet`);
+  return u.origin;
+}
 /** The GurtOS app: one web app for every machine a person pairs. Each box lets it call the API (CORS). */
 export const APP = (process.env.BOX_APP ?? 'https://app.gurtos.com').replace(/\/+$/, '');
 const FRPC = process.env.BOX_FRPC ?? '/usr/local/bin/frpc';
@@ -57,6 +86,15 @@ export interface RemoteDeps {
 type State = 'off' | 'starting' | 'connected' | 'error';
 const err = (status: number, message: string) => Object.assign(new Error(message), { status });
 
+/** A call to the relay. When it can't be reached (it is down, or this box is offline), say so in words. */
+async function toRelay(url: string, init: RequestInit = {}) {
+  try {
+    return await fetch(url, init);
+  } catch {
+    throw err(502, `GurtOS can't reach the relay at ${new URL(url).host} right now, so remote access can't be turned on. Check this computer's internet connection and try again later, or run your own relay (gurtos.com/docs/guides/self-host/).`);
+  }
+}
+
 export class Remote {
   file: string;
   dir: string;
@@ -73,7 +111,19 @@ export class Remote {
   /** The one pairing rendezvous being watched; a newer code replaces it. */
   watching?: AbortController;
 
+  /** The owner's own relay (Settings), saved in relay.json; else RELAY. */
+  relayFile: string;
+  custom?: string;
+  get relay() {
+    return this.custom ?? RELAY;
+  }
+
   constructor(home: string, deps: RemoteDeps) {
+    this.relayFile = path.join(home, 'relay.json');
+    try {
+      const c = JSON.parse(fs.readFileSync(this.relayFile, 'utf8')).url;
+      if (!relayProblem(c)) this.custom = new URL(c).origin;
+    } catch {} // none chosen
     this.file = path.join(home, 'remote.json');
     this.offFile = path.join(home, 'remote-off');
     this.dir = path.join(home, 'remote');
@@ -85,7 +135,28 @@ export class Remote {
 
   view() {
     const s = this.saved;
-    return { enabled: !!s, name: s?.name ?? null, url: s?.url ?? null, state: this.state, ...(this.error ? { error: this.error } : {}), relay: new URL(RELAY).host };
+    return { enabled: !!s, name: s?.name ?? null, url: s?.url ?? null, state: this.state, ...(this.error ? { error: this.error } : {}), relay: new URL(this.relay).host };
+  }
+
+  /** GET /api/remote/relay: the relay in use, the box's default, and whether the owner chose this one. */
+  relayView() {
+    return { url: this.relay, default: RELAY, custom: !!this.custom };
+  }
+
+  /** PUT /api/remote/relay {url}: the owner's own relay, or null for the default. Only while remote access is off. */
+  async setRelay(url: unknown) {
+    if (this.saved) throw err(409, `turn remote access off first: this computer's address ${this.saved.host} is on the relay it uses now`);
+    if (url === null || url === '' || url === undefined) {
+      fs.rmSync(this.relayFile, { force: true });
+      this.custom = undefined;
+    } else {
+      const origin = await checkRelay(url);
+      fs.writeFileSync(this.relayFile, JSON.stringify({ url: origin, at: new Date().toISOString() }), { mode: 0o600 });
+      this.custom = origin === RELAY ? undefined : origin;
+      if (!this.custom) fs.rmSync(this.relayFile, { force: true });
+    }
+    this.deps.note({ remote: 'relay', relay: this.relay, text: `Remote access relay: ${new URL(this.relay).host}${this.custom ? '' : ' (the default)'}` });
+    return this.relayView();
   }
 
   /** At boot: bring the address back if it was on. */
@@ -104,11 +175,11 @@ export class Remote {
     const mine = (this.watching = new AbortController());
     const live = () => alive() && !mine.signal.aborted;
     const put = (slot: string, body: unknown, headers: Record<string, string> = {}) =>
-      fetch(`${RELAY}/v1/rv/${rv}/${slot}`, { method: 'PUT', headers: { 'content-type': 'application/json', ...headers }, body: JSON.stringify(body), signal: AbortSignal.timeout(10_000) });
+      fetch(`${this.relay}/v1/rv/${rv}/${slot}`, { method: 'PUT', headers: { 'content-type': 'application/json', ...headers }, body: JSON.stringify(body), signal: AbortSignal.timeout(10_000) });
     let failures = 0;
     while (live() && failures < 3) {
       try {
-        const r = await fetch(`${RELAY}/v1/rv/${rv}/ask?wait=25`, { signal: AbortSignal.any([mine.signal, AbortSignal.timeout(35_000)]) });
+        const r = await fetch(`${this.relay}/v1/rv/${rv}/ask?wait=25`, { signal: AbortSignal.any([mine.signal, AbortSignal.timeout(35_000)]) });
         if (r.status === 404) continue; // nobody asked yet
         if (!r.ok) throw new Error(`relay answered ${r.status}`);
         if (!this.saved) {
@@ -152,7 +223,7 @@ export class Remote {
   async available(name: string) {
     const problem = nameProblem(name);
     if (problem) return { name, available: false, reason: problem };
-    const r = await fetch(`${RELAY}/v1/names/${name}`, { signal: AbortSignal.timeout(10_000) });
+    const r = await toRelay(`${this.relay}/v1/names/${name}`, { signal: AbortSignal.timeout(10_000) });
     if (!r.ok) throw err(502, `the relay answered ${r.status}`);
     return r.json();
   }
@@ -165,12 +236,12 @@ export class Remote {
     const problem = nameProblem(name);
     if (problem) throw err(400, `name: ${problem}`);
     for (const bin of [FRPC, CADDY]) if (!fs.existsSync(bin)) throw err(500, `${bin} is missing: this box needs a newer GurtOS for remote access`);
-    const r = await fetch(`${RELAY}/v1/names`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name }), signal: AbortSignal.timeout(15_000) });
+    const r = await toRelay(`${this.relay}/v1/names`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name }), signal: AbortSignal.timeout(15_000) });
     const out = (await r.json().catch(() => ({}))) as any;
     if (!r.ok) throw err(r.status === 409 || r.status === 400 || r.status === 429 ? r.status : 502, out.error ?? `the relay answered ${r.status}`);
     // What the relay sends goes into config files: accept only plain host names, a port and a token-like secret.
     const hostOk = (h: unknown) => typeof h === 'string' && /^[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(h);
-    if (out.host !== `${name}.${new URL(RELAY).host}` || !hostOk(out.tunnel?.host) || !hostOk(out.tunnel?.serverName) || !Number.isInteger(out.tunnel?.port) || !/^[A-Za-z0-9_-]{20,200}$/.test(out.secret ?? ''))
+    if (out.host !== `${name}.${new URL(this.relay).host}` || !hostOk(out.tunnel?.host) || !hostOk(out.tunnel?.serverName) || !Number.isInteger(out.tunnel?.port) || !/^[A-Za-z0-9_-]{20,200}$/.test(out.secret ?? ''))
       throw err(502, 'the relay sent an answer this box does not accept');
     this.deps.setSecret(out.secret);
     fs.rmSync(this.offFile, { force: true });
@@ -188,7 +259,7 @@ export class Remote {
     this.stopUnits();
     let released = true;
     try {
-      const r = await fetch(`${RELAY}/v1/names/${s.name}`, { method: 'DELETE', headers: { authorization: `Bearer ${s.name}.${this.deps.secret() ?? ''}` }, signal: AbortSignal.timeout(10_000) });
+      const r = await fetch(`${this.relay}/v1/names/${s.name}`, { method: 'DELETE', headers: { authorization: `Bearer ${s.name}.${this.deps.secret() ?? ''}` }, signal: AbortSignal.timeout(10_000) });
       released = r.ok;
     } catch {
       released = false; // the name expires by itself after 30 days without the tunnel
@@ -216,7 +287,7 @@ export class Remote {
       // in case the relay's API is down when the box starts.
       const caFile = path.join(this.dir, 'relay-ca.pem');
       try {
-        const t = (await (await fetch(`${RELAY}/v1/tunnel`, { signal: AbortSignal.timeout(10_000) })).json()) as { ca: string };
+        const t = (await (await fetch(`${this.relay}/v1/tunnel`, { signal: AbortSignal.timeout(10_000) })).json()) as { ca: string };
         if (t.ca?.includes('BEGIN CERTIFICATE')) fs.writeFileSync(caFile, t.ca, { mode: 0o600 });
       } catch (e) {
         if (!fs.existsSync(caFile)) throw new Error(`can't reach the relay: ${(e as Error).message}`);

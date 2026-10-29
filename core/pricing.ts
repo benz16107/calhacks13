@@ -34,9 +34,17 @@ function priceFor(model: string): Price {
   return PRICES['claude-sonnet-5-5']; // the box's default model
 }
 
+/** A token count from a task: missing is 0; a negative or non-number one would lower the task's spend, so it is refused. */
+const count = (v: unknown, name: string) => {
+  if (v === undefined || v === null) return 0;
+  if (typeof v !== 'number' || !Number.isFinite(v) || v < 0) throw new Error(`tokens.${name}: a count of 0 or more`);
+  return v;
+};
+
 /** US cents for this usage, not rounded, so sub-cent tasks still count. */
 export function usageCents(model: string, t: Tokens): number {
   const p = priceFor(model);
-  const dollars = (t.input * p.in + t.output * p.out + t.cacheWrite * p.cacheWrite + t.cacheRead * p.cacheRead) / 1e6;
+  const n = (k: keyof Tokens) => count((t as Partial<Record<keyof Tokens, unknown>> | undefined)?.[k], k);
+  const dollars = (n('input') * p.in + n('output') * p.out + n('cacheWrite') * p.cacheWrite + n('cacheRead') * p.cacheRead) / 1e6;
   return dollars * 100;
 }

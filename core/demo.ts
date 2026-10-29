@@ -99,7 +99,7 @@ async function startBox() {
   box = spawn(process.execPath, [...process.execArgv, new URL('./box.ts', import.meta.url).pathname], {
     detached: true,
     stdio: ['ignore', out, out],
-    env: { ...process.env, BOX_HOME: HOME, BOX_PORT: 'auto', BOX_VAULT: path.join(HOME, 'vault.env'), BOX_STDB_DB: DB, BOX_PROXY_PORT: 'auto', BOX_SETUP_PORT: 'auto', BOX_APPROVAL_WAIT_MS: String(WINDOW), BOX_OWNER: 'owner', BOX_NO_DROID: LIVE_DROID ? '' : '1', BOX_HOSTS: JSON.stringify({ 'shop.demo': '127.0.0.1' }), BOX_DEMO: '1', BOX_ID: 'demo-box', BOX_NAME: 'Demo box', BOX_PEERS: JSON.stringify([{ id: 'vultr', name: 'Vultr box', stdb: 'box' }]) },
+    env: { ...process.env, BOX_HOME: HOME, BOX_PORT: 'auto', BOX_VAULT: path.join(HOME, 'vault.env'), BOX_STDB_DB: DB, BOX_PROXY_PORT: 'auto', BOX_SETUP_PORT: 'auto', BOX_APPROVAL_WAIT_MS: String(WINDOW), BOX_OWNER: 'owner', BOX_NO_DROID: LIVE_DROID ? '' : '1', BOX_HOSTS: JSON.stringify({ 'shop.demo': '127.0.0.1', 'meta.demo': '169.254.169.254' }), BOX_DEMO: '1', BOX_ID: 'demo-box', BOX_NAME: 'Demo box', BOX_PEERS: JSON.stringify([{ id: 'vultr', name: 'Vultr box', stdb: 'box' }]) },
   });
   for (let i = 0; i < 300; i++) {
     if (await api('GET', '/health').catch(() => undefined)) {
@@ -198,7 +198,7 @@ let pending = 0;
 // DEMO_ONLY=anthropic ./demo runs just that track's step (a developer's loop; the merge gate runs everything).
 const ONLY = process.env.DEMO_ONLY;
 async function moment(title: string, fn?: () => Promise<void>, why = 'not built yet') {
-  if (ONLY && title !== `track ${ONLY}`) return;
+  if (ONLY && title !== `track ${ONLY}` && !title.startsWith(`${ONLY}:`)) return; // DEMO_ONLY=security: the core moments named "security: ..."
   if (!fn) {
     console.log(`${title}: PENDING (${why})`);
     pending++;
@@ -1068,6 +1068,73 @@ await moment('security: an outside caller gets nothing, and a folder cannot be t
   const after = await api<{ changes: unknown[]; diff: string }>('GET', `/api/tasks/${U.id}/diff`);
   await waitFor('the layer to be deleted', async () => (fs.existsSync(path.join(HOME, 'tasks', U.id, 'upper')) ? undefined : true));
   check(after.changes.length === 0 && after.diff === '', 'after undo, the diff is empty and the task\'s layer is deleted from disk');
+});
+
+await moment('security: a task cannot lower its spend, read through a link, hang the box or reach the cloud metadata', async () => {
+  const canary = 'sk_test_canary_never_leaves_the_vault';
+  // The task reports its own model cost on its broker. A negative or made-up number would make room in its budget.
+  workspace('spender', {});
+  const post = (route: string, json: string) => `curl -s --unix-socket "$BOX_SOCKET" -X POST http://box${route} -H content-type:application/json -d '${json}'`;
+  const S = await api<Task>('POST', '/tasks', { title: 'Lowers its spend', workspace: 'spender', worker: 'fake', source: 'demo', prompt: [
+    `sh c1.txt ${post('/cost', '{"cents":-100000000,"what":"model"}')}`,
+    `sh c2.txt ${post('/cost', '{"cents":"lots","what":"model"}')}`,
+    `sh c3.txt ${post('/usage', '{"model":"claude-sonnet-5-5","tokens":{"input":-1000000000000}}')}`,
+    `sh c4.txt ${post('/ask', '{"key":"k","question":"ok?","costCents":-5}')}`,
+  ].join('\n') });
+  await settled([S.id]);
+  const spent = (await task(S.id)).costCents;
+  check(Number.isFinite(spent) && spent >= 0 && [1, 2, 3, 4].every((i) => /0 or more/.test(view('spender', `c${i}.txt`) ?? '')), `a negative or made-up cost, token count or amount from a task is refused, and its spend stays ${spent}`);
+
+  // A link a task leaves in its copy is shown as a link: the box, reading as root, never follows it.
+  workspace('linky', {});
+  const L = await api<Task>('POST', '/tasks', { title: 'Leaves a link and a pipe', workspace: 'linky', worker: 'fake', source: 'demo', prompt: [
+    `sh l.txt ln -s ${path.join(HOME, 'vault.env')} keys.txt`, 'sh p.txt mkfifo pipe', 'write note.txt hello',
+  ].join('\n') });
+  await settled([L.id]);
+  const t0 = Date.now();
+  const d = await api<{ changes: { path: string }[]; diff: string }>('GET', `/api/tasks/${L.id}/diff`);
+  check(!d.diff.includes(canary) && /link to .*vault\.env/.test(d.diff) && !d.changes.some((c) => c.path === 'pipe') && Date.now() - t0 < 5000, `the diff shows "keys.txt" as a link to the vault, not the vault's contents, and leaves out the pipe (answered in ${Date.now() - t0} ms)`);
+  const dir = path.join(OWNER_ROOT, 'linkkeep');
+  fs.mkdirSync(dir, { recursive: true });
+  const K = await api<Task>('POST', '/tasks', { title: 'Links the vault into a real folder', worker: 'fake', source: 'demo', folder: dir, prompt: `sh l.txt ln -s ${path.join(HOME, 'vault.env')} keys.txt` });
+  await settled([K.id]);
+  await api('POST', `/api/tasks/${K.id}/keep`);
+  const kept = fs.lstatSync(path.join(dir, 'keys.txt'), { throwIfNoEntry: false });
+  check(kept?.isSymbolicLink() && !fs.readdirSync(dir).some((f) => !fs.lstatSync(path.join(dir, f)).isSymbolicLink() && fs.readFileSync(path.join(dir, f), 'utf8').includes(canary)), "Keep copies the link as a link: no copy of the vault lands in the owner's folder");
+
+  // The cloud's metadata service (169.254.169.254) holds the machine's own credentials: never a task's, even if listed.
+  workspace('meta', {});
+  const M = await api<Task>('POST', '/tasks', { title: 'Asks the metadata service', workspace: 'meta', worker: 'fake', source: 'demo', hosts: ['meta.demo:80'], prompt: 'fetch http://meta.demo/latest/meta-data/ m.txt' });
+  await settled([M.id]);
+  const mBlocked = (await api<{ events: LogEvent[] }>('GET', `/api/tasks/${M.id}`)).events.some((e) => e.type === 'net.blocked' && e.host === 'meta.demo:80');
+  check(/blocked/.test(view('meta', 'm.txt') ?? '') && mBlocked, `a name that leads to 169.254.169.254 is refused even on its exact host:port ("${view('meta', 'm.txt')}", logged as net.blocked)`);
+
+  // From a browser: a page on another site that points its name at 127.0.0.1, or a page any other server on this
+  // machine serves, is not the box's own screen.
+  const rebind = await viaTcp('GET', '/api/log', undefined, { host: `rebind.attacker.example:${PORT}` });
+  const otherPort = await viaTcp('POST', '/api/vault/STOLEN', { value: 'x' }, { origin: `http://localhost:${PORT + 1}` });
+  check(rebind.status === 401 && otherPort.status === 401 && !(await api<{ name: string }[]>('GET', '/api/vault')).some((k) => k.name === 'STOLEN'), `a rebound name gets nothing (${rebind.status}), and neither does a page from another port on this machine (${otherPort.status})`);
+
+  // Guessing pairing codes: five wrong ones a minute from one address, and that address alone has to wait.
+  const guesses: number[] = [];
+  for (let i = 0; i < 6; i++) guesses.push((await viaTcp('POST', '/api/pair', { code: `0000000${i}`, name: 'guess' }, { 'x-forwarded-for': '198.51.100.20' })).status);
+  const fair = await viaTcp('POST', '/api/pair', { code: (await api<{ code: string }>('POST', '/api/pair/start')).code, name: 'fair' }, { 'x-forwarded-for': '198.51.100.21' });
+  check(guesses.join(' ') === '400 400 400 400 400 429' && fair.status === 200, `wrong pairing codes are limited per address (${guesses.join(' ')}), and another address still pairs (${fair.status})`);
+
+  // A screen learns whether it has the owner's controls from /api/me, and only the owner picks the relay.
+  const plain = await api<{ token: string }>('POST', '/api/pair', { code: (await api<{ code: string }>('POST', '/api/pair/start')).code, name: 'plain phone' });
+  const asPhone = { ...RELAYED, authorization: `Bearer ${plain.token}` };
+  const meScreen = await api<{ owner: boolean }>('GET', '/api/me');
+  const mePhone = await viaTcp('GET', '/api/me', undefined, asPhone);
+  const relayByPhone = await viaTcp('PUT', '/api/remote/relay', { url: 'https://relay.example.com' }, asPhone);
+  const relayBad = await api('PUT', '/api/remote/relay', { url: 'http://203.0.113.5' }).then(() => 'ALLOWED', (e: Error) => e.message);
+  const relayNow = await api<{ url: string; custom: boolean }>('GET', '/api/remote/relay');
+  check(meScreen.owner === true && mePhone.body?.owner === false && relayByPhone.status === 403 && /https/.test(relayBad) && !relayNow.custom, `GET /api/me says owner for the screen and not for a plain phone; a phone can't change the relay (${relayByPhone.status}), and the owner's choice is checked ("${relayBad}")`);
+
+  // Nobody can make the box read an endless body before it checks who is asking.
+  // (The box answers 413 and hangs up mid-upload, so the sender may see the reset before the answer.)
+  const big = await viaTcp('POST', '/api/pair', { code: 'x'.repeat(2 * 1024 ** 2), name: 'big' }, RELAYED).catch((e: NodeJS.ErrnoException) => ({ status: /ECONNRESET|EPIPE/.test(e.code ?? '') ? 413 : 0, body: e.code }));
+  check(big.status === 413 && (await viaTcp('GET', '/api/health')).status === 200, `a 2 MB body to an open route is refused (413) before it is read, and the box carries on`);
 });
 
 // ---------- first-run setup, settings, the vault, apps on and off, system facts ----------
