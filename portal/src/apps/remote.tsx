@@ -150,6 +150,8 @@ interface Remote {
   relay: string;
 }
 const NAME = /^[a-z0-9-]{3,30}$/;
+/** The box's "url: the relay must be ..." as a sentence: "The relay must be ...." */
+const said = (m: string) => { const t = m.replace(/^url:\s*/, ''); return t.charAt(0).toUpperCase() + t.slice(1) + (/[.?!]$/.test(t) ? '' : '.'); };
 
 /** An address name from the computer's name: "Home box" becomes "home-box". */
 export const slug = (n = '') => n.toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 30);
@@ -166,6 +168,17 @@ export function RemoteAccess({ title = 'Reach this computer from anywhere' }: { 
   const [confirm, setConfirm] = useState(false);
   const load = () => api<Remote>('GET', '/remote').then((x) => (setR(x), setError('')), (e) => setError((e as Error).message));
   useEffect(() => void load(), []);
+  // The relay this computer uses: the default, or the owner's own (PUT /api/remote/relay, only while remote access is off).
+  const [own, setOwn] = useState<{ url: string; default: string; custom: boolean }>();
+  const [ownTyped, setOwnTyped] = useState<string>();
+  const [ownError, setOwnError] = useState('');
+  useEffect(() => void api<NonNullable<typeof own>>('GET', '/remote/relay').then(setOwn, () => {}), []);
+  const chooseRelay = (url: string | null) => {
+    setBusy(true);
+    api<NonNullable<typeof own>>('PUT', '/remote/relay', { url })
+      .then((x) => (setOwn(x), setOwnTyped(undefined), setOwnError(''), load()), (e) => setOwnError(said((e as Error).message)))
+      .finally(() => setBusy(false));
+  };
   // A certificate takes 10 to 60 s: follow it until it connects or fails.
   useEffect(() => {
     if (r?.state !== 'starting') return;
@@ -239,15 +252,30 @@ export function RemoteAccess({ title = 'Reach this computer from anywhere' }: { 
           </>
         )
       )}
-      {(down || r?.state === 'error') && (
+      {(down || r?.state === 'error' || own?.custom) && (
         <a class="g-row" href={SELF_HOST_DOCS} target="_blank" rel="noopener">
           <Icon name="network-server" />
           <span class="g-row-text">
             <span class="g-row-title">Use your own relay</span>
-            <span class="g-row-sub">Run the relay on a domain you control and point this computer at it with BOX_RELAY. How: {SELF_HOST_DOCS.replace(/^https:\/\//, '')}</span>
+            <span class="g-row-sub">Run the relay on a domain you control, then type its address below. How: {SELF_HOST_DOCS.replace(/^https:\/\//, '')}</span>
           </span>
           <Icon name="pan-end" />
         </a>
+      )}
+      {own && b.owner && !r?.enabled && (down || r?.state === 'error' || own.custom) && (
+        <Row title="Relay" sub={ownError || (own.custom ? `Your own relay. The default is ${new URL(own.default).host}.` : 'The default relay.')}>
+          <span class="gos-remote-name">
+            <input class="g-field" value={ownTyped ?? own.url} inputMode="url" autoCapitalize="none" autoComplete="off" spellcheck={false} aria-label="Relay address" placeholder="https://relay.example.com" onInput={(e) => setOwnTyped((e.target as HTMLInputElement).value.trim())} />
+            <Button onClick={() => chooseRelay(ownTyped ?? own.url)} disabled={busy || !ownTyped || ownTyped === own.url}>
+              Save
+            </Button>
+            {own.custom && (
+              <Button kind="flat" onClick={() => chooseRelay(null)} disabled={busy}>
+                Use the default
+              </Button>
+            )}
+          </span>
+        </Row>
       )}
       {confirm && (
         <Alert
