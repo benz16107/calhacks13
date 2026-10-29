@@ -345,8 +345,11 @@ from the disc booting to the box's screen, came back about 25 s after a hard pow
 box from disk when it was already installed. GurtOS Personal was also installed on a Vultr VM and walked through
 its first run on Wayland.
 
-Not tested: Parallels, a real PC, the kernel-panic path of a bad update, an update fetched by URL, and Personal
-on arm64.
+- Server and Personal, arm64, the v0.2.0-preview release discs under emulation with UEFI: install, start healthy,
+  and survive the disc being removed and a power cut.
+
+Not tested: Parallels, a real PC, the kernel-panic path of a bad update, an update fetched by URL, and an update on
+arm64.
 
 ## What is different from stock Ubuntu
 

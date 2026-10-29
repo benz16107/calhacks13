@@ -30,8 +30,8 @@ laptop yet. See [What is not finished](#what-is-not-finished).
 | Firmware | BIOS or UEFI on x86_64, UEFI on arm64, with **Secure Boot off** | |
 | Network | Wired or Wi-Fi, with internet on first start: the computer downloads Factory's Droid CLI (about 300 MB) then, and the voice model for **Talk to your computer** | |
 
-The installer refuses a disk smaller than 29 GB. The arm64 image builds natively. An arm64 test disc was installed in
-a VM on a Mac, but the published Personal arm64 ISO has not been booted.
+The installer refuses a disk smaller than 29 GB. The published Personal arm64 ISO was installed in an emulated arm64
+VM, started healthy and survived a power cut; it has not been tried on a Mac yet.
 
 :::danger
 The installer takes the whole disk. Dual boot with another operating system is not supported. The installer never
