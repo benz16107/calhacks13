@@ -19,8 +19,8 @@ The agent's computer must reach that address: be on the same home or office netw
 network such as Tailscale. The setup address is plain HTTP, so the code, the setup token and any key you send
 cross the network unencrypted. Use a network you trust, or a private network that encrypts, such as Tailscale.
 
-Do not set up a cloud VM over its public address: the code, the token and the key would cross the internet
-unencrypted. Run setup in the provider's web console, which shows the box's screen, or join the VM to a private
+Do not set up a cloud VM over its public address: the setup port answers only private networks, so the box's
+firewall refuses it, and the code, the token and the key would cross the internet unencrypted. Run setup in the provider's web console, which shows the box's screen, or join the VM to a private
 network such as Tailscale first. Remote access (`<name>.box.gurtos.com`) does not help here: it can only be turned on during or after setup,
 and it needs a relay (step 6).
 

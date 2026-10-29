@@ -115,8 +115,13 @@ sudo systemctl restart box.service
 curl -s http://127.0.0.1:7700/api/remote     # "relay":"box.example.com"
 ```
 
+A GurtOS release image has no shell. On one, open Settings, Remote access while remote access is off, and type your
+relay's address under Relay (the same as `PUT /api/remote/relay {"url": "https://box.example.com"}` as the owner;
+`{"url": null}` goes back to the default). Phones then pair through the computer's own address on your relay, so the
+box needs no `BOX_APP` for that.
+
 A box built from this repository on your own machine can do the same with a drop-in file, or by exporting the two
-variables before it starts. Then open Settings on the box and choose "Reach this box from anywhere", or ask for a
+variables before it starts. Then open Settings on the box and choose "Reach this computer from anywhere", or ask for a
 name from the box itself:
 
 ```sh
@@ -191,7 +196,7 @@ rebuild the apps with your own ids and domain. Without the files, an APNs addres
 ## 6. Check the whole path
 
 1. Open `https://app.example.com` on a phone and add it to the Home Screen.
-2. Turn on "Reach this box from anywhere" on a box and wait for its address.
+2. Turn on "Reach this computer from anywhere" on a box and wait for its address.
 3. Pair the phone with the box from the box's own screen, as the owner.
 4. Turn on notifications in the app and send the test push.
 5. Start a task that asks for approval. The request should arrive as a push, and approving it on the phone should

@@ -19,8 +19,13 @@ has the header bar with the app's name, minimize, maximize and close, so **the p
 bar or window frame**. Start the page with its content. The window is 1280 x 820 by default and can be resized down to
 360 x 240, so the page must reflow.
 
-The page is in an iframe on the same origin. `gurtos.js` copies the desktop's Light or Dark style, high contrast,
-larger text and reduce motion onto the page as they change. Opened on its own (a browser tab), the page follows the
+The page is in an iframe, sandboxed: the box sends it with `Content-Security-Policy: sandbox` and no same origin, so
+the page has no origin of its own and cannot use the owner's controls. The box puts a small script first in the page
+so its `fetch` calls carry a window token, which reaches only this app's own routes and reads tasks and approvals;
+answering another app's request opens that task's window instead. A request the browser makes by itself
+(`<script type=module src>`, `<img>`) carries no token, so add `location.search` to its address. A sandboxed page
+has no `localStorage`: keep state in memory or in the app's own routes. `gurtos.js` copies the desktop's Light or
+Dark style, high contrast, larger text and reduce motion onto the page as they change (by message). Opened on its own (a browser tab), the page follows the
 system's light or dark setting.
 
 ## Tokens
