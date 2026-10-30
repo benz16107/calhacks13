@@ -133,6 +133,6 @@ export default {
             { n: '42', label: 'minutes of ideation', at: 0.1, color: 'done' }, { n: '61', label: 'minutes of prototyping', at: 0.4, color: 'done' },
             { n: '67', label: 'minutes of handoff', at: 0.7, color: 'done' }, { n: '349', label: 'minutes of code generation', at: 1.0, color: 'done' }],
           source: 'docs/stagelog.md', sourceAt: { at: 1.4 } } },
-        { cue: 'open', v: { type: 'end', lines: ['gurtos.com', 'github.com/benz16107/calhacks13', 'Open source, Apache-2.0'] } }] },
+        { cue: 'open', v: { type: 'end', lines: ['gurtos.com', 'github.com/benz16107/gurtos', 'Open source, Apache-2.0'] } }] },
   ],
 };

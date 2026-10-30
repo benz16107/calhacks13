@@ -384,7 +384,7 @@ const V = {
   },
 
   end(id, v, dur, ctx) {
-    const lines = v.lines ?? ['gurtos.com', 'github.com/benz16107/calhacks13', 'Open source, Apache-2.0'];
+    const lines = v.lines ?? ['gurtos.com', 'github.com/benz16107/gurtos', 'Open source, Apache-2.0'];
     return scene(id, dur, { hills: true,
       css: `#${id}-b { position: absolute; left: 0; right: 0; top: 200px; display: flex; flex-direction: column; align-items: center; gap: 26px; }
         #${id}-lock { display: flex; align-items: center; gap: 30px; } #${id}-logo { width: 130px; height: 130px; } #${id}-word { font-size: 124px; font-weight: 700; }

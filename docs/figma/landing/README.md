@@ -31,8 +31,8 @@ The Figma MCP can't create a Sites file, so this takes a few clicks:
    (Cmd+C). In the Site, paste it as the page. Sites keeps the auto layout.
 3. In the Site, add a **Mobile** breakpoint, then paste `Landing / Mobile 390` into it.
 4. Link the buttons and footer links: Download to
-   `https://github.com/benz16107/calhacks13/releases/tag/v0.1.0-preview`, Docs to `https://gurtos.com`, Showcase
-   to `https://calhacks.gurtos.com`, GitHub to `https://github.com/benz16107/calhacks13`, and the Figma link to the
+   `https://github.com/benz16107/gurtos/releases/tag/v0.1.0-preview`, Docs to `https://gurtos.com`, Showcase
+   to `https://calhacks.gurtos.com`, GitHub to `https://github.com/benz16107/gurtos`, and the Figma link to the
    Community file once it is published.
 5. Click **Publish**. On an Education plan Figma allows one published site, on a `figma.site` address (no custom
    domain). Put the address in `docs/figma.md`.

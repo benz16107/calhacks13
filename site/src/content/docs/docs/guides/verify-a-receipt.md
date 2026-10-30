@@ -48,4 +48,4 @@ The Solana fingerprint is on devnet, Solana's test network.
 
 - [The action log](/docs/concepts/action-log/)
 - [Security model](/docs/security/model/)
-- [Receipts README](https://github.com/benz16107/calhacks13/blob/main/tracks/receipts/README.md)
+- [Receipts README](https://github.com/benz16107/gurtos/blob/main/tracks/receipts/README.md)

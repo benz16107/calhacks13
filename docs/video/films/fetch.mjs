@@ -117,6 +117,6 @@ export default {
             { text: 'Isolation', cue: 'isolation' }, { text: 'Approvals', cue: 'approvals' }, { text: 'Undo', cue: 'undo' }] } },
         { cue: 'fetch', v: { type: 'lines', kicker: 'The Fetch integration adds', lines: [
             { text: 'Pairing', cue: 'pairing' }, { text: 'Screening', cue: 'screening' }, { text: 'Payments', cue: 'payments' }] } },
-        { cue: 'gurt', after: 'payments', v: { type: 'end', lines: ['gurtos.com', 'github.com/benz16107/calhacks13', 'Open source, Apache-2.0'] } }] },
+        { cue: 'gurt', after: 'payments', v: { type: 'end', lines: ['gurtos.com', 'github.com/benz16107/gurtos', 'Open source, Apache-2.0'] } }] },
   ],
 };

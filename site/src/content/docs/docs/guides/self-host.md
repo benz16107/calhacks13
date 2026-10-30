@@ -14,7 +14,7 @@ relay is not running, so remote access and push work only through a relay you ru
 point your boxes at it. `app.gurtos.com` is still up, but it can only reach boxes through the relay it was built for,
 so a self-hosted setup needs its own copy of the web app too (step 4).
 
-Read [`relay/README.md`](https://github.com/benz16107/calhacks13/blob/main/relay/README.md) first for how the relay works and what it can and cannot see. This page is
+Read [`relay/README.md`](https://github.com/benz16107/gurtos/blob/main/relay/README.md) first for how the relay works and what it can and cannot see. This page is
 the how-to. It was run end to end on an Ubuntu 24.04 virtual machine with a private certificate authority and a test
 domain: a relay, a box, a phone pairing over the relay and a push reaching the phone. Node.js and Caddy were already
 on that machine, so their download steps in `relay/deploy` were not exercised, although the pinned checksums were
@@ -27,11 +27,11 @@ checked.
 | Relay: names, tunnels, certificates | Yes | `relay/deploy` installs it on one Ubuntu 24.04 machine |
 | Web push to phones | Yes | The relay makes its own VAPID key on first start, and the web app fetches it from your relay |
 | The web app (`portal/dist`) | Yes, with a rebuild | Our domains are written into the portal source in a few places (step 4) |
-| The iPhone, Mac and Android apps | Only by rebuilding them | Build them with `GURTOS_RELAY` and `GURTOS_APP_HOST` set to your domains, and your own bundle ids and signing keys: [`native/README.md`](https://github.com/benz16107/calhacks13/blob/main/native/README.md), "Point the apps at your own relay" |
+| The iPhone, Mac and Android apps | Only by rebuilding them | Build them with `GURTOS_RELAY` and `GURTOS_APP_HOST` set to your domains, and your own bundle ids and signing keys: [`native/README.md`](https://github.com/benz16107/gurtos/blob/main/native/README.md), "Point the apps at your own relay" |
 | Apple push (APNs) for the native apps | Only with your own Apple developer account | The relay needs your `apns.p8` key, and the apps would need your bundle ids |
 
 If you only use the web app (add it to the home screen on a phone), everything on this page is enough. The native
-apps stay tied to `gurtos.com` until you rebuild them from [`native/`](https://github.com/benz16107/calhacks13/tree/main/native) with your own domain, bundle ids
+apps stay tied to `gurtos.com` until you rebuild them from [`native/`](https://github.com/benz16107/gurtos/tree/main/native) with your own domain, bundle ids
 and Apple and Google credentials. The [roadmap](/docs/project/roadmap/) lists the gaps.
 
 ## What you need

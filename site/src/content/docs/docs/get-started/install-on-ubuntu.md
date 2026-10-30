@@ -20,7 +20,7 @@ computer you use every day.
 - Ubuntu 24.04, on x86_64 or arm64.
 - Root access (`sudo`).
 - At least 4 GB of memory and 10 GB of free disk. Each task may use up to 2 GB of memory.
-  The box has run one task at a time in 1 GB, and adds 1.5 GB of disk ([measured](https://github.com/benz16107/calhacks13/blob/main/tracks/anthropic/README.md)).
+  The box has run one task at a time in 1 GB, and adds 1.5 GB of disk ([measured](https://github.com/benz16107/gurtos/blob/main/tracks/anthropic/README.md)).
 - Internet access during the install, to download Node.js, Droid (about 300 MB), SpacetimeDB, and the tunnel and
   web server that remote access uses (`frpc` and Caddy).
 - No other software using user ids 30000 to 39999, TCP port 7700, port 3000, or ports 8800 to 8899.
@@ -33,7 +33,7 @@ computer you use every day.
 1. Get the GurtOS source on the machine:
 
    ```sh
-   git clone https://github.com/benz16107/calhacks13.git gurtos && cd gurtos
+   git clone https://github.com/benz16107/gurtos.git gurtos && cd gurtos
    ```
 2. From the top folder of the source, run the install script as root:
 

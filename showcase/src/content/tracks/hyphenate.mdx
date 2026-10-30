@@ -48,25 +48,25 @@ shots:
     caption: 'The analyst''s steps from the action log.'
 links:
   - label: 'Final live run bd5c61: October, three seats, 16 of 17'
-    href: https://github.com/benz16107/calhacks13/tree/main/tracks/credit-desk/runs/2026-10-24-live-bd5c61-rules-0.3
+    href: https://github.com/benz16107/gurtos/tree/main/tracks/credit-desk/runs/2026-10-24-live-bd5c61-rules-0.3
     note: 'The analyst''s, clerk''s and AP clerk''s reports, the score, the books and the run''s action log.'
   - label: 'Live run 35c20d: the January review, 2 of 2'
-    href: https://github.com/benz16107/calhacks13/tree/main/tracks/credit-desk/runs/2026-10-24-live-35c20d-january-review
+    href: https://github.com/benz16107/gurtos/tree/main/tracks/credit-desk/runs/2026-10-24-live-35c20d-january-review
     note: 'Bright Harbor''s October $40,000 reopened after two returned payments.'
   - label: 'Crash handoff 853015: pull the plug mid-request'
-    href: https://github.com/benz16107/calhacks13/tree/main/tracks/credit-desk/runs/2026-10-24-crash-handoff-853015
+    href: https://github.com/benz16107/gurtos/tree/main/tracks/credit-desk/runs/2026-10-24-crash-handoff-853015
     note: 'What was checked from the log after the reboot: each request asked once and answered once, each bill paid once.'
   - label: The credit desk's code and README
-    href: https://github.com/benz16107/calhacks13/tree/main/tracks/credit-desk
+    href: https://github.com/benz16107/gurtos/tree/main/tracks/credit-desk
     note: 'Tools, seats, scorer, the planted case and the rules.'
   - label: Live run 73c47b, the original-case run
-    href: https://github.com/benz16107/calhacks13/tree/main/tracks/credit-desk/runs/2026-10-24-live-73c47b-rules-0.2
+    href: https://github.com/benz16107/gurtos/tree/main/tracks/credit-desk/runs/2026-10-24-live-73c47b-rules-0.2
     note: 'Both seats'' reports, <code>score.json</code> and the run''s full action log (440 lines).'
   - label: The answer key
-    href: https://github.com/benz16107/calhacks13/blob/main/tracks/credit-desk/cases/fogline-2026-10/answer_key.json
+    href: https://github.com/benz16107/gurtos/blob/main/tracks/credit-desk/cases/fogline-2026-10/answer_key.json
     note: 'Every planted error, where it is, the right conclusion and the rules it rests on. The seats never see this file.'
   - label: The rules file, version 0.2
-    href: https://github.com/benz16107/calhacks13/blob/main/tracks/credit-desk/rules/credit-rules.yaml
+    href: https://github.com/benz16107/gurtos/blob/main/tracks/credit-desk/rules/credit-rules.yaml
     note: '67 rules. 35 of them came from a public Mana chat (see the Mana page).'
   - label: 'Docs: the credit desk app'
     href: https://gurtos.com/docs/reference/apps/#credit-desk
@@ -123,10 +123,10 @@ Fogline Supply is a made-up Oakland wholesaler. Three AI employees run its credi
 </Lead>
 
 <Numbers items={[
-  { value: "16 of 17", label: "planted errors found, live run with real Droid on all three seats", href: "https://github.com/benz16107/calhacks13/tree/main/tracks/credit-desk/runs/2026-10-24-live-bd5c61-rules-0.3", source: "run bd5c61" },
-  { value: "6 of 6", label: "credit decisions match the key: outcome, band, limit and terms", href: "https://github.com/benz16107/calhacks13/tree/main/tracks/credit-desk/runs/2026-10-24-live-bd5c61-rules-0.3", source: "run bd5c61 score" },
-  { value: "$20,000", label: "a simple rule approves for a fake applicant; the desk held it", href: "https://github.com/benz16107/calhacks13/tree/main/tracks/credit-desk/runs/2026-10-24-live-bd5c61-rules-0.3", source: "run bd5c61 log" },
-  { value: "12 min, $5.24", label: "for the whole October case, three live seats, model cost", href: "https://github.com/benz16107/calhacks13/tree/main/tracks/credit-desk/runs/2026-10-24-live-bd5c61-rules-0.3", source: "run bd5c61" }
+  { value: "16 of 17", label: "planted errors found, live run with real Droid on all three seats", href: "https://github.com/benz16107/gurtos/tree/main/tracks/credit-desk/runs/2026-10-24-live-bd5c61-rules-0.3", source: "run bd5c61" },
+  { value: "6 of 6", label: "credit decisions match the key: outcome, band, limit and terms", href: "https://github.com/benz16107/gurtos/tree/main/tracks/credit-desk/runs/2026-10-24-live-bd5c61-rules-0.3", source: "run bd5c61 score" },
+  { value: "$20,000", label: "a simple rule approves for a fake applicant; the desk held it", href: "https://github.com/benz16107/gurtos/tree/main/tracks/credit-desk/runs/2026-10-24-live-bd5c61-rules-0.3", source: "run bd5c61 log" },
+  { value: "12 min, $5.24", label: "for the whole October case, three live seats, model cost", href: "https://github.com/benz16107/gurtos/tree/main/tracks/credit-desk/runs/2026-10-24-live-bd5c61-rules-0.3", source: "run bd5c61" }
 ]} />
 
 Best shown in **GurtOS Business**. The scored runs were on GurtOS Server. The Business screens on this page come from a box seeded as Fogline Supply, with scripted seats and test data.
@@ -189,15 +189,15 @@ It runs on a computer the company owns: one Node service, 4 GB of memory and 17 
 ## What Hyphenate asked for, and where each answer is
 
 <CriteriaMap sponsor="Hyphenate" source="Hyphenate's brief, as copied into the project's track plan (docs/tracks.md)." items={[
-  { ask: "An autonomous system for one corner of a company's finance team, plus the company around it.", status: "met", how: "Credit for new customers, collections and supplier payments at Fogline Supply Co., with a company profile and a rules file that is the policy the seats follow.", evidence: [{ label: "Company profile", href: "https://github.com/benz16107/calhacks13/blob/main/tracks/credit-desk/company/profile.md" }, { label: "Credit rules", href: "https://github.com/benz16107/calhacks13/blob/main/tracks/credit-desk/rules/credit-rules.yaml" }] },
-  { ask: "Pick a company and a few seats.", status: "met", how: "A credit analyst, a collections clerk and an AP clerk, each its own box task with different tools, plus a human controller who signs off above $10,000 and on every fraud referral.", evidence: [{ label: "The desk's README", href: "https://github.com/benz16107/calhacks13/tree/main/tracks/credit-desk" }] },
-  { ask: "Messy data with planted errors.", status: "met", how: "Case fogline-2026-10: twelve trade customers, six credit applications, six suppliers, 17 planted errors in October and 2 more in January, plus things that look wrong but are fine. Names are remitted several ways and there is an 'Oakalnd' typo.", evidence: [{ label: "The answer key", href: "https://github.com/benz16107/calhacks13/blob/main/tracks/credit-desk/cases/fogline-2026-10/answer_key.json" }] },
-  { ask: "Handle sources that disagree.", status: "met", how: "Three bureaus that disagree on one applicant (760, no file, 700 with a collection), an application against the business credit file and the bank, and a ledger against Nessie deposits whose memo names a different invoice.", evidence: [{ label: "Run bd5c61", href: "https://github.com/benz16107/calhacks13/tree/main/tracks/credit-desk/runs/2026-10-24-live-bd5c61-rules-0.3" }] },
-  { ask: "Time.", status: "met", how: "Aging runs from the case date. The case holds a post-dated check booked as cash, an invoice dated a year early that looks 359 days late, a limit last reviewed 29 months ago, and a January review that reopens October's $40,000 decision from the log.", evidence: [{ label: "January review run", href: "https://github.com/benz16107/calhacks13/tree/main/tracks/credit-desk/runs/2026-10-24-live-35c20d-january-review" }] },
+  { ask: "An autonomous system for one corner of a company's finance team, plus the company around it.", status: "met", how: "Credit for new customers, collections and supplier payments at Fogline Supply Co., with a company profile and a rules file that is the policy the seats follow.", evidence: [{ label: "Company profile", href: "https://github.com/benz16107/gurtos/blob/main/tracks/credit-desk/company/profile.md" }, { label: "Credit rules", href: "https://github.com/benz16107/gurtos/blob/main/tracks/credit-desk/rules/credit-rules.yaml" }] },
+  { ask: "Pick a company and a few seats.", status: "met", how: "A credit analyst, a collections clerk and an AP clerk, each its own box task with different tools, plus a human controller who signs off above $10,000 and on every fraud referral.", evidence: [{ label: "The desk's README", href: "https://github.com/benz16107/gurtos/tree/main/tracks/credit-desk" }] },
+  { ask: "Messy data with planted errors.", status: "met", how: "Case fogline-2026-10: twelve trade customers, six credit applications, six suppliers, 17 planted errors in October and 2 more in January, plus things that look wrong but are fine. Names are remitted several ways and there is an 'Oakalnd' typo.", evidence: [{ label: "The answer key", href: "https://github.com/benz16107/gurtos/blob/main/tracks/credit-desk/cases/fogline-2026-10/answer_key.json" }] },
+  { ask: "Handle sources that disagree.", status: "met", how: "Three bureaus that disagree on one applicant (760, no file, 700 with a collection), an application against the business credit file and the bank, and a ledger against Nessie deposits whose memo names a different invoice.", evidence: [{ label: "Run bd5c61", href: "https://github.com/benz16107/gurtos/tree/main/tracks/credit-desk/runs/2026-10-24-live-bd5c61-rules-0.3" }] },
+  { ask: "Time.", status: "met", how: "Aging runs from the case date. The case holds a post-dated check booked as cash, an invoice dated a year early that looks 359 days late, a limit last reviewed 29 months ago, and a January review that reopens October's $40,000 decision from the log.", evidence: [{ label: "January review run", href: "https://github.com/benz16107/gurtos/tree/main/tracks/credit-desk/runs/2026-10-24-live-35c20d-january-review" }] },
   { ask: "Approvals.", status: "met", how: "Above the analyst's $10,000 authority or on a fraud hold, the tool answers needs controller. The box pauses that task, asks the right person on the portal or phone, and records the decision only after the yes.", evidence: [{ label: "The moment in the log", href: "#proof-in-depth" }] },
   { ask: "Segregation of duties.", status: "met", how: "By tool access and by routing. Only the analyst records credit decisions, only the clerk collections actions. The gate checks the analyst cannot approve $40,000 alone, the clerk cannot release a credit hold and seven answers on Business are refused (your own request, above your limit, by anything that is not a person).", evidence: [{ label: "Seats and tools", href: "#proof-in-depth" }] },
-  { ask: "Every call traceable.", status: "met", how: "Every tool call and result is a line in the append-only action log. A decision carries its rule ids, the figures used, the request ids of the seven CRS checks and who approved. The tools refuse a rule id the rules file does not have.", evidence: [{ label: "Run log", href: "https://github.com/benz16107/calhacks13/blob/main/tracks/credit-desk/runs/2026-10-24-live-bd5c61-rules-0.3/log.jsonl" }] },
-  { ask: "Proof (planted errors + answer key).", status: "met", how: "The scorer reads the log and the key: 16 of 17 caught, 1 false alarm, 6 of 6 credit decisions, 8 of 11 collection steps, 5 of 6 order decisions and 7 of 8 supplier bills match. The one miss is E14, the three disagreeing bureaus.", evidence: [{ label: "Score", href: "https://github.com/benz16107/calhacks13/blob/main/tracks/credit-desk/runs/2026-10-24-live-bd5c61-rules-0.3/score.json" }, { label: "All 17, one by one", href: "#proof-in-depth" }] },
+  { ask: "Every call traceable.", status: "met", how: "Every tool call and result is a line in the append-only action log. A decision carries its rule ids, the figures used, the request ids of the seven CRS checks and who approved. The tools refuse a rule id the rules file does not have.", evidence: [{ label: "Run log", href: "https://github.com/benz16107/gurtos/blob/main/tracks/credit-desk/runs/2026-10-24-live-bd5c61-rules-0.3/log.jsonl" }] },
+  { ask: "Proof (planted errors + answer key).", status: "met", how: "The scorer reads the log and the key: 16 of 17 caught, 1 false alarm, 6 of 6 credit decisions, 8 of 11 collection steps, 5 of 6 order decisions and 7 of 8 supplier bills match. The one miss is E14, the three disagreeing bureaus.", evidence: [{ label: "Score", href: "https://github.com/benz16107/gurtos/blob/main/tracks/credit-desk/runs/2026-10-24-live-bd5c61-rules-0.3/score.json" }, { label: "All 17, one by one", href: "#proof-in-depth" }] },
   { ask: "Live demo (they may run their own case).", status: "met", how: "Press Quick run, or use the Bring your own tab: one application on any of CRS's 20 test people, or your own case files, checked before anything runs.", evidence: [{ label: "Try it", href: "#try-it" }] },
   { ask: "One line on the seats.", status: "met", how: "A credit analyst, a collections clerk and an AP clerk at a small wholesaler, with a human controller who signs off above $10,000 and on every fraud referral.", evidence: [] },
   { ask: "A video that opens with your 'moment'.", status: "partly", how: "This page opens on the moment. The narrated video is produced after the build.", evidence: [] }

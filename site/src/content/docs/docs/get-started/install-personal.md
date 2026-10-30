@@ -52,7 +52,7 @@ Download `gurtos-personal-x86_64.iso` (Intel or AMD, 2.01 GB), or `gurtos-person
 or Parallels, 1.99 GB), from the [Download](/download/) page and check its checksum. Sizes are for the v0.1.0-preview
 release.
 
-Or build it from the [source](https://github.com/benz16107/calhacks13) on an Ubuntu 24.04 build machine where you
+Or build it from the [source](https://github.com/benz16107/gurtos) on an Ubuntu 24.04 build machine where you
 have root:
 
 ```sh

@@ -78,6 +78,6 @@ export default {
             { n: '1', label: 'not covered: send through a host it may reach', cue: 'one', after: 'fifteen', color: 'blocked' },
             { n: '2', label: 'machines, same score', cue: 'machines', after: 'two', color: 'accent' }],
           source: 'tracks/armadin/SCOREBOARD.md · Oct 24 · laptop VM (no swap) and cloud box (8 GB swap)', srcTop: 720, sourceAt: { cue: 'attacks' } } },
-        { cue: 'gurt', v: { type: 'end', lines: [{ slot: 'try-live', text: 'Try GurtOS live: {url}' }, 'Attacks stop at the OS, whatever the model does.', 'gurtos.com', 'github.com/benz16107/calhacks13', 'Open source, Apache-2.0'] } }] },
+        { cue: 'gurt', v: { type: 'end', lines: [{ slot: 'try-live', text: 'Try GurtOS live: {url}' }, 'Attacks stop at the OS, whatever the model does.', 'gurtos.com', 'github.com/benz16107/gurtos', 'Open source, Apache-2.0'] } }] },
   ],
 };

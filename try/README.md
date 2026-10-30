@@ -83,7 +83,7 @@ Caddy asks for the certificate as soon as it starts. A box idles at about 100 to
 20 GB of disk is a sensible start for the five-box limit.
 
 ```
-git clone https://github.com/benz16107/calhacks13.git && cd calhacks13
+git clone https://github.com/benz16107/gurtos.git && cd gurtos
 sudo DOMAIN=try.example.com try/setup.sh
 ```
 

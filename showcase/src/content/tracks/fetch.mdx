@@ -74,7 +74,7 @@ On an ordinary computer, an agent that takes orders from a chat runs as you: it 
   { ask: 'Agent on Agentverse, speaking the Agent Chat Protocol.', how: 'A uAgent (<code>agent.py</code>) speaking <code>ChatMessage</code> and <code>ChatAcknowledgement</code>, reading an Agentverse mailbox, so the box needs no open port. Seven agents in all: GurtOS, its Shopper, Find and Credit Desk team, and three labelled TEST.', evidence: [{ label: 'The agents', href: '#the-agents' }] },
   { ask: 'Main flow inside an ASI:One chat.', how: 'Pairing, requests, progress, approvals, results and undo all happen in the chat. The portal is not needed.', evidence: [{ label: 'The chat', href: '#a-chat-start-to-finish' }] },
   { ask: 'Real tool use.', how: 'Droid with Claude reads the repo, runs <code>node --test</code>, edits the code and checks the fix, as its own Linux user. Web searches run Apify through a box tool, with the token kept where tasks cannot read it.', evidence: [{ label: 'Merge gate lines', href: '#evidence' }] },
-  { ask: 'Public repo with run steps; README with agent names, addresses and badges.', how: 'The repo is public under Apache-2.0. <code>tracks/fetch/README.md</code> and the agent profile carry the names, addresses and both badges.', evidence: [{ label: 'tracks/fetch/README.md', href: 'https://github.com/benz16107/calhacks13/tree/main/tracks/fetch' }] },
+  { ask: 'Public repo with run steps; README with agent names, addresses and badges.', how: 'The repo is public under Apache-2.0. <code>tracks/fetch/README.md</code> and the agent profile carry the names, addresses and both badges.', evidence: [{ label: 'tracks/fetch/README.md', href: 'https://github.com/benz16107/gurtos/tree/main/tracks/fetch' }] },
   { ask: '3 to 5 minute video.', status: 'partly', how: 'Produced after the build, inside ASI:One. Until then this page shows the transcript and the live run.' },
   { ask: 'Also submit through the ASI:One Submission Agent.', status: 'open', how: 'Sent with the Devpost link on submission day.' },
   { ask: 'Bonus: multi-agent.', how: "GurtOS routes a request to its Shopper, Find or Credit Desk agent and relays the reply, naming who said it; a list of items becomes jobs that three box agents claim from a SpacetimeDB queue; and it talks to strangers' agents, treating every reply as data." },
@@ -135,7 +135,7 @@ Without a pairing code, the agent only answers with the pairing step. Anyone can
 </Details>
 
 <Evidence title="Evidence" run="The offline chat check in the merge gate (<code>./demo</code>, x86 test VM, Oct 24). It talks to the chat logic over stdin instead of Agentverse, with a scripted worker. The live runs through Agentverse and ASI:One are <code>DEMO_LIVE=fetch</code>." sources={[
-  { label: 'tracks/fetch/README.md', href: 'https://github.com/benz16107/calhacks13/tree/main/tracks/fetch' },
+  { label: 'tracks/fetch/README.md', href: 'https://github.com/benz16107/gurtos/tree/main/tracks/fetch' },
   { label: 'ASI:One Interactive Cards', href: 'https://innovationlab.fetch.ai/resources/docs/interactive-cards/asi-interactive-cards' },
 ]}>
 

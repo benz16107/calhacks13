@@ -654,7 +654,7 @@ class SetupWindow(Adw.ApplicationWindow):
             ('folder', 'New task', 'Open GurtOS, or right-click a folder in Files, and say what to do.'),
             ('tasks', 'The top bar', 'It shows what needs you and what runs.'),
             ('credit-desk', 'Keep or Undo', 'Every finished task waits for your review.'),
-            ('time-machine', 'Time Machine', "Undo any task, even after Keep. Your own changes stay."),
+            ('time-machine', 'History', "Undo any task, even after Keep. Your own changes stay."),
         ):
             inner = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6, margin_top=16, margin_bottom=16, margin_start=16, margin_end=16)
             inner.append(tile(app, title, 36))

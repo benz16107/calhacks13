@@ -103,9 +103,9 @@ export default {
         { cue: 'security', v: { type: 'clip', src: cap('docs.mp4'), from: 11.7 } },
         { cue: 'check', v: { type: 'clip', src: cap('docs.mp4'), from: 15.7 } }] },
     // 14. A suite, open source, end card. Slot: try it live, with the public link on the end card.
-    { hold: 1.4, slot: { id: 'try-live', parts: [{ v: SUITE }, { cue: 'gurt', v: { type: 'end', lines: ['Try GurtOS live: {url}', 'gurtos.com', 'gurtos.com/download', 'github.com/benz16107/calhacks13', 'Open source, Apache-2.0'] } }] },
+    { hold: 1.4, slot: { id: 'try-live', parts: [{ v: SUITE }, { cue: 'gurt', v: { type: 'end', lines: ['Try GurtOS live: {url}', 'gurtos.com', 'gurtos.com/download', 'github.com/benz16107/gurtos', 'Open source, Apache-2.0'] } }] },
       parts: [
         { v: SUITE },
-        { cue: 'gurt', v: { type: 'end', lines: ['gurtos.com', 'gurtos.com/download', 'github.com/benz16107/calhacks13', 'Open source, Apache-2.0'] } }] },
+        { cue: 'gurt', v: { type: 'end', lines: ['gurtos.com', 'gurtos.com/download', 'github.com/benz16107/gurtos', 'Open source, Apache-2.0'] } }] },
   ],
 };

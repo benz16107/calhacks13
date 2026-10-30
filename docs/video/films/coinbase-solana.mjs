@@ -76,6 +76,6 @@ export default {
         { v: { type: 'shot', frame: 'window', src: cap('a30.mp4'), from: 13.5, crop: { x: 340, y: 96, w: 1240, h: 820 }, enter: 'wipe-down', note: MADE_UP,
             lt: { kicker: 'GurtOS Business · a credit request, not a wallet payment', title: 'Over $10,000 goes to the Controller', t: 0.2, dur: 4.2 },
             marks: [{ cue: 'goes', kind: 'box', x: 0.43, y: 0.228, w: 0.478, h: 0.122, color: 'accent', label: 'The person the rules name', side: 'below', labelW: 560 }] } },
-        { cue: 'gurt', v: { type: 'end', lines: ['gurtos.com', 'github.com/benz16107/calhacks13', 'Open source, Apache-2.0'] } }] },
+        { cue: 'gurt', v: { type: 'end', lines: ['gurtos.com', 'github.com/benz16107/gurtos', 'Open source, Apache-2.0'] } }] },
   ],
 };

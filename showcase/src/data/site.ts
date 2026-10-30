@@ -1,6 +1,6 @@
 // Links used on more than one page. Change a link here and every page follows.
 export const LINKS = {
-  repo: 'https://github.com/benz16107/calhacks13',
+  repo: 'https://github.com/benz16107/gurtos',
   site: 'https://gurtos.com', // the product landing page, editions and downloads
   docs: 'https://gurtos.com/docs',
   devpost: '', // set once the Devpost page exists

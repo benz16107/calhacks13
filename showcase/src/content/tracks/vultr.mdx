@@ -19,7 +19,7 @@ Most agent setups either stay on a laptop that sleeps or go to a cloud where eve
 <Numbers items={[
   { value: '~5 min', label: 'to install the real release disc on a 1 vCPU, 1 GB Vultr instance', href: '#evidence', source: 'live test, Oct 24' },
   { value: '2.8 s', label: 'to restore an encrypted backup from Object Storage onto a fresh instance', href: '#evidence', source: 'live test, Oct 24' },
-  { value: '5.5 min', label: 'to build the Server disc on a fresh Vultr VM (Personal: 7 min)', href: 'https://github.com/benz16107/calhacks13/blob/main/release/README.md', source: 'release README' },
+  { value: '5.5 min', label: 'to build the Server disc on a fresh Vultr VM (Personal: 7 min)', href: 'https://github.com/benz16107/gurtos/blob/main/release/README.md', source: 'release README' },
   { value: '< $0.20', label: 'for the three live Vultr tests, instances destroyed after', href: '#evidence', source: 'Vultr thread' },
 ]} />
 
@@ -61,7 +61,7 @@ Putting an agent on a rented server usually means one Linux user with every key 
 
 <Details summary="Run GurtOS on your own Vultr instance">
 
-1. **The disc.** `tracks/vultr/up.ts --iso-url https://sjc1.vultrobjects.com/gurtos/v0.1.0-preview/gurtos-server-x86_64.iso` adds the disc to your account, creates the instance, waits for the installer and detaches the disc. Or by hand: Orchestration, ISOs, add by URL, then deploy from it ([the docs](https://gurtos.com/docs/get-started/install-server/#install-on-a-cloud-instance)).
+1. **The disc.** `tracks/vultr/up.ts --iso-url https://github.com/benz16107/gurtos/releases/download/v0.1.0-preview/gurtos-server-x86_64.iso` adds the disc to your account, creates the instance, waits for the installer and detaches the disc. Or by hand: Orchestration, ISOs, add by URL, then deploy from it ([the docs](https://gurtos.com/docs/get-started/install-server/#install-on-a-cloud-instance)).
 2. **Or on Ubuntu.** Deploy Ubuntu 24.04, copy the repo over and run `sudo core/install.sh`.
 3. **Backups.** Make an age key pair on your own computer, put the public half and an Object Storage key on the box, and turn backups on. Vultr only ever holds ciphertext.
 4. **The merge gate.** From a checkout: `BOX_SHELL='ssh root@<your instance>' ./demo`.
@@ -69,9 +69,9 @@ Putting an agent on a rented server usually means one Linux user with every key 
 </Details>
 
 <Evidence title="Evidence" run="Live Vultr tests on Oct 24 (disc, backup and restore, firewall), the public routes probed from outside on Oct 24 at 1:25 PM PT, and the release build." sources={[
-  { label: 'The Vultr track README', href: 'https://github.com/benz16107/calhacks13/tree/main/tracks/vultr' },
-  { label: 'The release README, with build times', href: 'https://github.com/benz16107/calhacks13/blob/main/release/README.md' },
-  { label: 'The mirror', href: 'https://sjc1.vultrobjects.com/gurtos/v0.1.0-preview/SHA256SUMS' },
+  { label: 'The Vultr track README', href: 'https://github.com/benz16107/gurtos/tree/main/tracks/vultr' },
+  { label: 'The release README, with build times', href: 'https://github.com/benz16107/gurtos/blob/main/release/README.md' },
+  { label: 'The signed checksums', href: 'https://github.com/benz16107/gurtos/releases/download/v0.1.0-preview/SHA256SUMS' },
 ]}>
 
 **Booting the real disc.** `tracks/vultr/up.ts` added the release disc (`gurtos-server-x86_64`, 1.37 GB) by URL and created a `vc2-1c-1gb`. From creating the instance: running with an address in 12 s, the installer at 50% after about 3 minutes, the home screen after about 5 minutes, and about a minute more to come back from its own disk once the disc was detached. The first attempt detached the disc after 300 s and cut the installer off, so the script now waits 480 s on one vCPU.
@@ -89,7 +89,7 @@ Putting an agent on a rented server usually means one Linux user with every key 
 | `GET /t/wallet/sell/audit` | 402 Payment Required, $0.01 devnet USDC |
 | `GET /api/tasks` | 401, pair this phone with this computer first |
 
-**The mirror.** Vultr Object Storage serves all four discs, `SHA256SUMS` and its signature (the list: `https://sjc1.vultrobjects.com/gurtos/v0.1.0-preview/SHA256SUMS`); the checksums match the GitHub release. gurtos.com/download links the mirror for verifying a download.
+**The mirror.** During judging, Vultr Object Storage served all four discs, `SHA256SUMS` and its signature, with the same checksums as the GitHub release. The mirror is off now; every file is on the [GitHub release](https://github.com/benz16107/gurtos/releases/tag/v0.1.0-preview).
 
 </Evidence>
 

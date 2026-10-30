@@ -41,7 +41,7 @@ Inside GurtOS you need nothing below: the box already gives its tasks these tool
 the owner's approvals on the portal and phone. Elsewhere, one command installs the wallet as an MCP server:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/benz16107/calhacks13/main/tracks/wallet/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/benz16107/gurtos/main/tracks/wallet/install.sh | sh
 ```
 
 It needs Node 22.18 or newer and git, makes a devnet key in `~/.gurtos-wallet/key` (mode 0600), prints the address

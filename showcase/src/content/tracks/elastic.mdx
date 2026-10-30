@@ -19,12 +19,12 @@ criteria:
 video: main
 links:
   - label: The agent and its tools as code, tracks/elastic/agent.ts
-    href: https://github.com/benz16107/calhacks13/blob/main/tracks/elastic/agent.ts
+    href: https://github.com/benz16107/gurtos/blob/main/tracks/elastic/agent.ts
     note: 'The Kibana project itself needs a sign-in to the project''s Elastic account. The screenshots above are from it, at <code>/app/agent_builder/agents/gurtos-log</code>.'
   - label: The log reader and mapping, tracks/elastic/track.ts
-    href: https://github.com/benz16107/calhacks13/blob/main/tracks/elastic/track.ts
+    href: https://github.com/benz16107/gurtos/blob/main/tracks/elastic/track.ts
   - label: The track README
-    href: https://github.com/benz16107/calhacks13/tree/main/tracks/elastic
+    href: https://github.com/benz16107/gurtos/tree/main/tracks/elastic
   - label: 'Docs: send the log to Elastic'
     href: https://gurtos.com/docs/guides/send-the-log-to-elastic/
 status:
@@ -48,9 +48,9 @@ After a week of agents working, an ordinary operating system cannot tell you wha
 
 <Numbers items={[
   { value: "466-474", label: "log entries the agent named after an edit planted as root would, hashes rewritten", href: "#the-record-root-cannot-rewrite", source: "below" },
-  { value: "16", label: "custom tools on the agent: 14 ES|QL, 1 workflow, 1 index search, all code in the repo", href: "https://github.com/benz16107/calhacks13/blob/main/tracks/elastic/agent.ts", source: "agent.ts" },
-  { value: "403", label: "Elastic's answer to overwrite, update and delete on the copy, with the box's key", href: "https://github.com/benz16107/calhacks13/blob/main/tracks/elastic/README.md", source: "README" },
-  { value: "6,401", label: "documents in the box-actions index on Serverless, read Oct 24", href: "https://github.com/benz16107/calhacks13/blob/main/tracks/elastic/track.ts", source: "log reader" }
+  { value: "16", label: "custom tools on the agent: 14 ES|QL, 1 workflow, 1 index search, all code in the repo", href: "https://github.com/benz16107/gurtos/blob/main/tracks/elastic/agent.ts", source: "agent.ts" },
+  { value: "403", label: "Elastic's answer to overwrite, update and delete on the copy, with the box's key", href: "https://github.com/benz16107/gurtos/blob/main/tracks/elastic/README.md", source: "README" },
+  { value: "6,401", label: "documents in the box-actions index on Serverless, read Oct 24", href: "https://github.com/benz16107/gurtos/blob/main/tracks/elastic/track.ts", source: "log reader" }
 ]} />
 
 ## Why this needs an operating system
@@ -105,7 +105,7 @@ Someone with root can edit one entry and then recompute every hash after it, so 
 
 The live demo planted an edit and the agent named entries 466 to 474. A rewrite of every hash after the edit was still named. Overwrite, update and delete on Elastic's copy returned 403. **What it does not catch:** an entry changed in the seconds before Elastic has it, and a fully taken-over box that stops sending or lies about its own check. For that case, `node tracks/elastic/agent.ts verify log.jsonl <machine id>` checks a copy of a log without asking the box.
 
-**A receipt anyone can check.** For a finished task the box can sign a receipt: its steps, who approved what, its cost, and every link of the log's hash chain from the task's first entry. The receipt's Elastic line is what the box found when it compared the task's entries with Elastic's add-only copy when the receipt was made. A viewer's own browser checks the box's signature and every link, and one changed byte in the receipt or one changed log line fails in red, naming the entry. The check page cannot ask Elastic itself, since that needs a key, and says so. A receipt proves the entries are the ones the box wrote and were not changed afterward, not that the agent was right or that the box told the truth when writing them. Anyone can check one at [gurtos.com/verify](https://gurtos.com/verify/). How it works: [tracks/receipts/README.md](https://github.com/benz16107/calhacks13/blob/main/tracks/receipts/README.md).
+**A receipt anyone can check.** For a finished task the box can sign a receipt: its steps, who approved what, its cost, and every link of the log's hash chain from the task's first entry. The receipt's Elastic line is what the box found when it compared the task's entries with Elastic's add-only copy when the receipt was made. A viewer's own browser checks the box's signature and every link, and one changed byte in the receipt or one changed log line fails in red, naming the entry. The check page cannot ask Elastic itself, since that needs a key, and says so. A receipt proves the entries are the ones the box wrote and were not changed afterward, not that the agent was right or that the box told the truth when writing them. Anyone can check one at [gurtos.com/verify](https://gurtos.com/verify/). How it works: [tracks/receipts/README.md](https://github.com/benz16107/gurtos/blob/main/tracks/receipts/README.md).
 
 <Shot src="track/elastic/verify-ok.png" alt="The Verify a GurtOS receipt page with a receipt from the cloud box: This receipt checks out. Passed: Signature, Signing key, Chain (18 log entries, 671 to 688) and Entries (7). Not checked: Solana, no daily fingerprint covers this task yet. Not checked: Elastic, when the receipt was made the box compared 18 of these entries with Elastic's add-only copy and they matched; this page cannot ask Elastic itself." caption="A real receipt from the cloud box, checked in the browser at gurtos.com/verify. The Elastic line is what the box found when it made the receipt: 18 entries matched Elastic's add-only copy. The page marks it Not checked because it cannot ask Elastic itself. Solana is checked only when the daily fingerprint covers the task, which had not happened yet for this one." />
 
@@ -139,7 +139,7 @@ The four rules are Kibana alerting rules, not Security detection rules, because 
   sponsor="Elastic"
   source="Elastic had not published judging criteria when this was built (Oct 23, 8 PM PT). The track asks for an Elastic Agent Builder agent on a Serverless instance; each part of that is a row here."
   items={[
-    { ask: "An Elastic Agent Builder agent", status: "met", how: "A custom agent, <code>gurtos-log</code>, with 14 ES|QL tools, a workflow tool and an index search tool, created or updated with one command through the Agent Builder API.", evidence: [{ label: "tracks/elastic/agent.ts", href: "https://github.com/benz16107/calhacks13/blob/main/tracks/elastic/agent.ts" }] },
+    { ask: "An Elastic Agent Builder agent", status: "met", how: "A custom agent, <code>gurtos-log</code>, with 14 ES|QL tools, a workflow tool and an index search tool, created or updated with one command through the Agent Builder API.", evidence: [{ label: "tracks/elastic/agent.ts", href: "https://github.com/benz16107/gurtos/blob/main/tracks/elastic/agent.ts" }] },
     { ask: "On a Serverless instance", status: "met", how: "An Elasticsearch Serverless project on GCP us-east4. The <code>box-actions</code> index, the data and the agent all live there. The agent still answered on Oct 24.", evidence: [{ label: "Ask it", href: "#ask-it" }] },
     { ask: "Real data used for something that matters", status: "met", how: "Every document comes from a box's own action log: the installed GurtOS boxes, and demo runs with Droid tasks running Claude, the credit desk and the four demo moments. The questions are the ones an owner asks the morning after.", evidence: [{ label: "The record root cannot rewrite", href: "#the-record-root-cannot-rewrite" }] }
   ]}
@@ -154,7 +154,7 @@ The four rules are Kibana alerting rules, not Security detection rules, because 
 
 </Steps>
 
-<Evidence run="Live run, Oct 24: a demo run shipped to Serverless, then the agent asked about it" numbers={[{ value: "156", label: "events of one demo run shipped, each exactly once" }]} sources={[{ label: "The track README", href: "https://github.com/benz16107/calhacks13/tree/main/tracks/elastic" }]}>
+<Evidence run="Live run, Oct 24: a demo run shipped to Serverless, then the agent asked about it" numbers={[{ value: "156", label: "events of one demo run shipped, each exactly once" }]} sources={[{ label: "The track README", href: "https://github.com/benz16107/gurtos/tree/main/tracks/elastic" }]}>
 
 Asked "Why did the job routine fail? Look at demo run a18523.", the agent used `box.failures`, read the task's timeline and named the root cause itself. A live `DEMO_LIVE=elastic` run passed every Elastic check: shipping, the keys, the agent, and the alert and request flows.
 

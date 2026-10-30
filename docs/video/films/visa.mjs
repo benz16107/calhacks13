@@ -74,6 +74,6 @@ export default {
             { n: '209,000', label: 'payment card numbers taken from Equifax, 2017', cue: 'two', color: 'blocked' },
             { n: '0', label: 'cards the agent holds', cue: 'agent', color: 'done' }],
           source: 'FTC, July 2019', sourceAt: { cue: 'equifax' } } },
-        { cue: 'gurt', off: 0.1, v: { type: 'end', lines: ['Every payment shown was test money', 'gurtos.com', 'github.com/benz16107/calhacks13', 'Open source, Apache-2.0'] } }] },
+        { cue: 'gurt', off: 0.1, v: { type: 'end', lines: ['Every payment shown was test money', 'gurtos.com', 'github.com/benz16107/gurtos', 'Open source, Apache-2.0'] } }] },
   ],
 };

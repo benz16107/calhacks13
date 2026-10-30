@@ -92,6 +92,6 @@ export default {
             marks: [{ cue: 'score', kind: 'underline', x: 0.036, y: 0.084, w: 0.91, h: 0.024, color: RED }] } },
         { cue: 'os', v: { type: 'lines', kicker: 'Two parts, both open source', lines: [
             { text: 'The OS: isolation, log, undo', cue: 'os' }, { text: 'The Forge app: panel, Rovo, bulk action, gadget', cue: 'forge' }] } },
-        { cue: 'open', v: { type: 'end', lines: ['gurtos.com', 'github.com/benz16107/calhacks13', 'Open source, Apache-2.0'] } }] },
+        { cue: 'open', v: { type: 'end', lines: ['gurtos.com', 'github.com/benz16107/gurtos', 'Open source, Apache-2.0'] } }] },
   ],
 };

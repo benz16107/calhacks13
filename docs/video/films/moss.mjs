@@ -56,6 +56,6 @@ export default {
             marks: [{ cue: 'ask', kind: 'circle', x: 0.488, y: 0.764, w: 0.171, h: 0.026, color: 'amber' }] } },
         { cue: 'voice', v: { type: 'lines', kicker: 'Voice can approve only', size: 120, lines: [
             { text: 'A request', cue: 'request' }, { text: 'that spends', cue: 'spends' }, { text: 'nothing', cue: 'nothing' }] } },
-        { cue: 'gurt', v: { type: 'end', lines: ['gurtos.com', 'github.com/benz16107/calhacks13', 'Open source, Apache-2.0'] } }] },
+        { cue: 'gurt', v: { type: 'end', lines: ['gurtos.com', 'github.com/benz16107/gurtos', 'Open source, Apache-2.0'] } }] },
   ],
 };

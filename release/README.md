@@ -9,7 +9,7 @@ How a GurtOS release is built, signed and published, and how to check one.
 | `scan-history.py` | Searches every blob in every ref for real secret values read from files you name |
 | `allowed_signers` | The release signing key, in the format `ssh-keygen -Y verify` reads |
 | `update.pub` | The update-signing key that release images trust for `box-update` |
-| `publish.sh` | Signs `SHA256SUMS` and uploads a release folder to the mirror and GitHub |
+| `publish.sh` | Signs `SHA256SUMS` and uploads a release folder to GitHub |
 | `image-sbom.py` | Writes the software bill of materials for an image |
 | `licenses.md` | What each licence in the images and the repository is, and what needs a decision |
 | `notes/<version>.md` | Release notes, with each file's size and SHA-256. `notes/NEXT.md` is the draft for the next one |
@@ -20,7 +20,7 @@ Any Ubuntu 24.04 machine or VM with root can build every edition. The build down
 and SpacetimeDB, so it needs the internet.
 
 ```sh
-git clone https://github.com/benz16107/calhacks13.git gurtos && cd gurtos
+git clone https://github.com/benz16107/gurtos.git gurtos && cd gurtos
 image/build                     # GurtOS Server, x86_64
 image/build personal            # GurtOS Personal, x86_64
 image/build arm64               # GurtOS Server, arm64 (on an x86_64 machine: emulated, about an hour)
@@ -74,32 +74,26 @@ release. Each build machine is a fresh Ubuntu 24.04 VM of the right architecture
    - Check that each unpacked system fits its update slot, 6 GB on Server and 12 GB on Personal
      (`unsquashfs -s` or `du -sh` on the mounted image). An image that does not fit cannot be installed with
      `box-update`.
-3. **Upload to the mirror's `staging/` folder** with `s3cmd put --acl-public`. A live folder keeps matching its
-   published checksums until the swap in step 6.
-4. **Test the final bits.** Install the staged x86_64 Server ISO on a cloud VM by URL, check its md5 against the
-   build's, run setup at the console with only a model key, and run one task. A release disc has no sshd, so test
-   a Server **update and rollback** with a debug build of the same commit: build Server x86_64 with
+3. **Copy the files off the build VM** into one folder on the machine that holds the release key, and `sha256sum`
+   them against the build VM's hashes.
+4. **Test the final bits.** Boot-test every ISO with `ISO=<file> image/test` (add `--personal` and `--arm64` as
+   needed): it installs the disc in QEMU, starts it, and checks it comes back after a power cut. A release disc has
+   no sshd, so test a Server **update and rollback** with a debug build of the same commit: build Server x86_64 with
    `BOX_SSH_KEY=<public key file>` on the build VM (about 6 minutes), then
    `SSH_PORT=<free port> BUILD_HOST=root@<build vm> image/test --debug` on a machine with KVM (it installs, updates
-   to slot B, and checks that a broken update rolls back by itself). Boot-test Personal x86_64 with
-   `SSH_PORT=<free port> ISO=<file> image/test --personal` where memory allows. Then update a Personal install of
-   the previous release to the new `.sqfs` with `sudo box-update apply <url>`.
-5. **Sign.** On the machine that holds the release key: download the staged ISOs and `sha256sum` them against the
-   build hosts' hashes. `RELEASE_KEY=<key> S3CFG=<s3cmd config> release/publish.sh <version> <folder>` writes
-   `SHA256SUMS` for the ISOs and update images, signs it and uploads every ISO, update image (`.sqfs` with its
-   `.sha256` and `.sig`) and bill of materials to the mirror and GitHub. `DRAFT=1` uploads a draft GitHub release
-   only, which nobody else sees; run it again without `DRAFT` to fill the mirror and publish. To include the Android app
-   (`gurtos-android-<version>.apk`), write `SHA256SUMS` by hand with its line too and sign it with
+   to slot B, and checks that a broken update rolls back by itself). Do the same for Personal with `--personal`.
+   Then update a Personal install of the previous release to the new `.sqfs` with `sudo box-update apply <url>`.
+5. **Sign and stage.** `DRAFT=1 TARGET=<full commit> RELEASE_KEY=<key> release/publish.sh <version> <folder>`
+   writes `SHA256SUMS` for the ISOs and update images, signs it and uploads every ISO, update image (`.sqfs` with
+   its `.sha256` and `.sig`) and bill of materials to a draft GitHub release, which nobody else sees. To include the
+   Android app (`gurtos-android-<version>.apk`), write `SHA256SUMS` by hand with its line too and sign it with
    `ssh-keygen -Y sign -f <release key> -n gurtos-release SHA256SUMS`. Verify with `release/allowed_signers`.
-6. **Publish.** Move each staged ISO into `<version>/` on the mirror with `s3cmd mv --acl-public`, and put
-   `SHA256SUMS`, `SHA256SUMS.sig` and `allowed_signers` there. Publish the update images too: each
-   `gurtos-<edition>-<arch>.sqfs` with its `.sha256` and `.sig` side by side, so `box-update apply <url>` finds them.
-   Tag the commit (`git tag -a <version>`), push the tag, update `README.md`, `notes/<version>.md` and
-   `showcase/src/data/downloads.ts`, then `gh release create` or `gh release edit <tag> --notes-file ...` and
-   `gh release upload <tag> --clobber ...`. GitHub caps files at 2 GiB: a larger file goes on the mirror only, and
-   the notes say so.
-7. **Verify as a stranger** on a clean VM as a new user: download everything from GitHub, run the two commands
-   below, and compare the checksum files from the mirror.
+6. **Publish.** Update `README.md`, `notes/<version>.md` and the download page in `site/`, then run the same
+   command without `DRAFT`. It uploads what the draft lacks, makes the tag at `TARGET`, publishes the release and
+   checks the public `SHA256SUMS`. GitHub caps files at 2 GiB; the script stops before uploading a larger file.
+   Each `gurtos-<edition>-<arch>.sqfs` sits beside its `.sha256` and `.sig`, so `box-update apply <url>` finds them.
+7. **Verify as a stranger** on a clean VM as a new user: download everything from GitHub and run the two commands
+   below.
 8. **Update the download pages** (gurtos.com/download in `site/`, and the showcase) with the new checksums. Then
    delete the build VM, the test VMs and their custom ISOs, and the staging files.
 

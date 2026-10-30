@@ -14,10 +14,10 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 OUT = HERE / "out"
 ACCOUNT = "youtube_video-rannel"  # Composio routes to a default account unless told (memory: composio-instagram-account-routing)
-THUMB_BASE = "https://raw.githubusercontent.com/benz16107/calhacks13/videos/docs/video/thumbs"
+THUMB_BASE = "https://raw.githubusercontent.com/benz16107/gurtos/videos/docs/video/thumbs"
 LINKS = """Download the signed discs: https://gurtos.com/download/
 Docs: https://gurtos.com/docs/
-Code (Apache-2.0): https://github.com/benz16107/calhacks13
+Code (Apache-2.0): https://github.com/benz16107/gurtos
 Every Cal Hacks track, with its evidence: https://calhacks.gurtos.com"""
 
 

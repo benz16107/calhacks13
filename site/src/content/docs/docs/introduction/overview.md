@@ -17,7 +17,7 @@ can undo any single task.
 | **The portal and phone app** | One web app on the box's own screen, in a browser and on your phone. A phone can install it to its home screen. It shows tasks, their steps and diffs, and the requests waiting for you. | Preview |
 | **Remote access** | Reach your box from your phone when you are away from its network. Use a private network such as Tailscale or WireGuard, or a relay you run yourself ([Run your own relay](/docs/guides/self-host/)). A hosted relay is not running during the preview. | Preview. Works with a private network or your own relay |
 | **An app platform** | Apps add tools, triggers, windows and log readers through a small [app SDK](/docs/reference/app-sdk/). The example app shows every slot. Optional apps such as Jira, Elastic, Apify and a test-money wallet connect the same way and need that service's account. See [Apps](/docs/reference/apps/). | Preview |
-| **Docs and open source** | These docs, and the [source code](https://github.com/benz16107/calhacks13) under the Apache License 2.0. | Public |
+| **Docs and open source** | These docs, and the [source code](https://github.com/benz16107/gurtos) under the Apache License 2.0. | Public |
 
 ## GurtOS and "the box"
 
@@ -59,8 +59,8 @@ GurtOS closes these gaps in the operating system itself:
 - **It is lightweight.** GurtOS Server is built from 40 named Ubuntu 24.04 packages, with no desktop and no
   package manager, on a 1.37 GB disc. Each task is a Linux user and a systemd unit, not a virtual machine. The box
   ran a real Claude task in a 1 GB virtual machine with 261 MB to spare
-  ([measured](https://github.com/benz16107/calhacks13/blob/main/tracks/anthropic/README.md)). GurtOS Personal idles at about 900 MB with its full desktop, about
-  150 MB less than stock Ubuntu Desktop measured the same way ([parity audit](https://github.com/benz16107/calhacks13/blob/main/docs/ux/parity.md)). See
+  ([measured](https://github.com/benz16107/gurtos/blob/main/tracks/anthropic/README.md)). GurtOS Personal idles at about 900 MB with its full desktop, about
+  150 MB less than stock Ubuntu Desktop measured the same way ([parity audit](https://github.com/benz16107/gurtos/blob/main/docs/ux/parity.md)). See
   [Why it is light](/docs/get-started/install-server/#why-it-is-light).
 - **Security is built in.** Separate users, a vault, a per-task network allow-list, budgets and approvals are part of
   the OS, not add-ons. See the [security model](/docs/security/model/).
@@ -108,7 +108,7 @@ how the agent behaves: the limits above hold whether the agent follows its instr
 
 The **portal** is one web app that shows on the box's own screen, in a browser and on a phone. It lists tasks
 and what each is doing now, shows each task's steps and file changes, and holds the approvals waiting for you.
-Time Machine shows a workspace's layers so you can undo one task. Apps can add their own windows.
+History shows a workspace's layers so you can undo one task. Apps can add their own windows.
 
 The box also has an [HTTP API](/docs/reference/http-api/) and a live feed through SpacetimeDB, so other software
 can do the same things the portal does.

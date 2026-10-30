@@ -1,5 +1,5 @@
 # The GurtOS app on GurtOS Personal (dev.box.Box): the agent tools as a native GTK 4 and libadwaita app, like Files or
-# Settings, not the Server screen in a window. A sidebar with Agents, Activity, Time Machine and the installed apps;
+# Settings, not the Server screen in a window. A sidebar with Agents, Activity, History and the installed apps;
 # a task's own page with its steps, what it can reach, its cost and Keep or Undo. It talks to the box through
 # boxapi.py and follows the action log live (GET /api/log/stream). The decisions live in tasklogic.py.
 import json
@@ -223,7 +223,7 @@ class AgentsWindow(Adw.ApplicationWindow):
             self.nav_list.remove(r)
         self.badge = Gtk.Label(css_classes=['gurt-count'], visible=False, valign=Gtk.Align.CENTER)
         items = [('agents', 'Agents', 'applications-science-symbolic'), ('activity', 'Activity', 'view-list-symbolic'),
-                 ('timemachine', 'Time Machine', 'document-open-recent-symbolic')]
+                 ('timemachine', 'History', 'document-open-recent-symbolic')]
         test = lambda a: a.get('track') in TEST_APPS and 'test' not in short(a['title']).lower()  # noqa: E731 ("GurtOS Test Store" says it)
         items += [(f"app:{a['name']}", short(a['title']) + (' (test)' if test(a) else ''), a) for a in self.apps]
         if self.system.get('edition') == 'business':
@@ -841,11 +841,11 @@ class AgentsWindow(Adw.ApplicationWindow):
         GLib.idle_add(lambda: search.grab_focus() and False)
         return p
 
-    # ----- Time Machine -----
+    # ----- History -----
 
     def timemachine_page(self):
         body = Scroller()
-        p = page('Time Machine', 'Undo one task, or every task since a time', body)
+        p = page('History', 'Undo one task, or every task since a time', body)
         span = Adw.ComboRow(title='Undo every task since', model=Gtk.StringList.new([s for s, _d in tl.SPANS]), selected=1)
         go = button('Undo…', lambda: go_back(), 'destructive-action')
         span.add_suffix(go)

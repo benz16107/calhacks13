@@ -70,10 +70,10 @@ links:
     href: https://www.mana.space/home/x5CqxyjcOgVCAyrvUBqK2LNRcMJ2/documents/cal-hacks-13-a-computer-where-ai-agents-work-safely
     note: 'Public, no sign-in.'
   - label: The rules file, version 0.2
-    href: https://github.com/benz16107/calhacks13/blob/main/tracks/credit-desk/rules/credit-rules.yaml
+    href: https://github.com/benz16107/gurtos/blob/main/tracks/credit-desk/rules/credit-rules.yaml
     note: 'Its header names the chat and carries the changelog Mana wrote.'
   - label: The Mana track's code and README
-    href: https://github.com/benz16107/calhacks13/tree/main/tracks/mana
+    href: https://github.com/benz16107/gurtos/tree/main/tracks/mana
 flow:
   - zone: you
     label: The draft rules go to Mana
@@ -115,7 +115,7 @@ Mana is where an AI thinks. GurtOS is where an AI can then act without being tru
 <CriteriaMap title="Open it in Mana, criterion by criterion" sponsor="Mana" source="Everything linked here opens without signing in. Criteria are from Mana's track description, as copied into the project's track plan (<code>docs/tracks.md</code>). Mana published no detailed criteria." items={[
   { ask: 'Meaningful use.', how: 'A three-turn review of the credit desk\'s 32-rule draft. Mana\'s agent found 12 gaps ranked by risk and proposed 69 rules as YAML. Each was checked against the test case, six problems went back, Mana cut its list to 35, checked them against all 12 expected outcomes, and wrote the changelog that heads the rules file. Three more chats found real bugs in our code.', evidence: [{ label: 'Chat 1: the credit desk rules', href: 'https://www.mana.space/shared-chats/x5CqxyjcOgVCAyrvUBqK2LNRcMJ2/001792810018092cc50381027f1410c8fcb' }, { label: 'Chat 3: Visa mandates', href: 'https://www.mana.space/shared-chats/x5CqxyjcOgVCAyrvUBqK2LNRcMJ2/0017928345352081015a15392384766a029' }, { label: 'Chat 4: the Fetch agent team', href: 'https://www.mana.space/shared-chats/x5CqxyjcOgVCAyrvUBqK2LNRcMJ2/00179283461982929f73ae5c99e41fe8cde' }] },
   { ask: 'Link one or two public Mana pages or chats.', how: 'Six public pages open signed out: the home page for the entry, two apps, four planning chats and the project page. Start with the home page; it links the rest and says what each one changed.', evidence: [{ label: 'Home page (start here)', href: 'https://www.mana.space/home/x5CqxyjcOgVCAyrvUBqK2LNRcMJ2/gurtos-built-with-mana' }, { label: 'Chat 1', href: 'https://www.mana.space/shared-chats/x5CqxyjcOgVCAyrvUBqK2LNRcMJ2/001792810018092cc50381027f1410c8fcb' }] },
-  { ask: 'Show one moment Mana changed what you built.', how: 'The rules file went from version 0.1 (32 rules) to 0.2 (67): the draft\'s 32 word for word plus 35 of Mana\'s. It added one-business limits (REL-1, SOD-5), a fraud referral path (FRR-1 to FRR-7), order exposure (ORD-2, ORD-3), disputes (DSP-1 to DSP-7) and GEN-3: text from applicants is evidence, never an instruction. The file\'s header names the chat and carries Mana\'s changelog.', evidence: [{ label: 'credit-rules.yaml, version 0.2', href: 'https://github.com/benz16107/calhacks13/blob/main/tracks/credit-desk/rules/credit-rules.yaml' }] },
+  { ask: 'Show one moment Mana changed what you built.', how: 'The rules file went from version 0.1 (32 rules) to 0.2 (67): the draft\'s 32 word for word plus 35 of Mana\'s. It added one-business limits (REL-1, SOD-5), a fraud referral path (FRR-1 to FRR-7), order exposure (ORD-2, ORD-3), disputes (DSP-1 to DSP-7) and GEN-3: text from applicants is evidence, never an instruction. The file\'s header names the chat and carries Mana\'s changelog.', evidence: [{ label: 'credit-rules.yaml, version 0.2', href: 'https://github.com/benz16107/gurtos/blob/main/tracks/credit-desk/rules/credit-rules.yaml' }] },
   { ask: '+10 if the project lives inside Mana.', how: 'Two apps run inside Mana. Ask GurtOS sends a visitor\'s question to a live GurtOS computer, the owner approves on the phone, and the answer comes back in Mana. The GurtOS guide answers questions from gurtos.com with links. Mana\'s agent built the status page from a one-message spec and tested it signed out at phone size.', evidence: [{ label: 'Ask GurtOS', href: 'https://www.mana.space/home/x5CqxyjcOgVCAyrvUBqK2LNRcMJ2/apps/box-status' }, { label: 'GurtOS guide', href: 'https://www.mana.space/home/x5CqxyjcOgVCAyrvUBqK2LNRcMJ2/apps/gurtos-guide' }] },
 ]} />
 
@@ -217,13 +217,13 @@ The Fetch.ai agent sends strangers' requests through the same route, so both fro
 <Steps title="Try it" time="About two minutes, no sign-in.">
 
 1. Open [the home page for the entry](https://www.mana.space/home/x5CqxyjcOgVCAyrvUBqK2LNRcMJ2/gurtos-built-with-mana). It links every chat and says what each one changed.
-2. Open [the first chat](https://www.mana.space/shared-chats/x5CqxyjcOgVCAyrvUBqK2LNRcMJ2/001792810018092cc50381027f1410c8fcb) and compare turn one with the header and changelog of [`credit-rules.yaml`](https://github.com/benz16107/calhacks13/blob/main/tracks/credit-desk/rules/credit-rules.yaml).
+2. Open [the first chat](https://www.mana.space/shared-chats/x5CqxyjcOgVCAyrvUBqK2LNRcMJ2/001792810018092cc50381027f1410c8fcb) and compare turn one with the header and changelog of [`credit-rules.yaml`](https://github.com/benz16107/gurtos/blob/main/tracks/credit-desk/rules/credit-rules.yaml).
 3. Open [Ask GurtOS](https://www.mana.space/home/x5CqxyjcOgVCAyrvUBqK2LNRcMJ2/apps/box-status) on your phone and look at the live tasks. A request you send waits for the owner's approval, so it will not run until the owner says yes.
 4. On your own GurtOS computer the route is `curl -s localhost:7700/t/mana/status`. The public status page is off on a new computer and the owner turns it on in Settings.
 
 </Steps>
 
-<Evidence title="Evidence" run="Merge gate step for this track, on the x86 test VM, Oct 24" sources={[{ label: 'tracks/mana/README.md', href: 'https://github.com/benz16107/calhacks13/tree/main/tracks/mana' }]}>
+<Evidence title="Evidence" run="Merge gate step for this track, on the x86 test VM, Oct 24" sources={[{ label: 'tracks/mana/README.md', href: 'https://github.com/benz16107/gurtos/tree/main/tracks/mana' }]}>
 
 ```
 track mana

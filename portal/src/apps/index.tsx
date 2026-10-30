@@ -19,7 +19,7 @@ wm.apps = {
   task: { title: (id) => taskTitle(id), icon: 'tasks', size: [1400, 660], render: (id) => <TaskApp id={id} key={id} /> },
   replay: { title: (id) => `Replay: ${taskTitle(id)}`, icon: 'tasks', size: [1480, 820], render: (id) => <ReplayApp id={id} key={id} /> },
   activity: { title: () => 'Activity', icon: 'activity', size: [1560, 900], render: () => <ActivityApp />, single: true },
-  'time-machine': { title: () => 'Time Machine', icon: 'time-machine', size: [1480, 680], render: () => <TimeMachineApp />, single: true },
+  'time-machine': { title: () => 'History', icon: 'time-machine', size: [1480, 680], render: () => <TimeMachineApp />, single: true },
   settings: { title: () => 'Settings', icon: 'settings', size: [1240, 920], render: (page) => <SettingsApp page={page} />, single: true },
   'app-center': { title: () => 'App Center', icon: 'app-center', size: [1240, 860], render: (id) => <AppCenterApp id={id} />, single: true },
   app: { title: (arg) => trackTitle(arg), icon: '', size: [1280, 820], render: (arg) => <TrackApp arg={arg} key={arg} /> },
@@ -47,7 +47,7 @@ export function launchable(): Launchable[] {
     ...(box.business.on ? [{ id: 'waiting', route: 'waiting', title: 'Waiting for me', icon: 'waiting' }] : []),
     { id: 'tasks', route: 'tasks', title: 'Tasks', icon: 'tasks' },
     { id: 'activity', route: 'activity', title: 'Activity', icon: 'activity' },
-    { id: 'time-machine', route: 'time-machine', title: 'Time Machine', icon: 'time-machine' },
+    { id: 'time-machine', route: 'time-machine', title: 'History', icon: 'time-machine' },
     ...(box.business.on ? [{ id: 'audit', route: 'audit', title: 'Audit', icon: 'audit' }] : []),
   ];
   const tracks = box.apps.map((a) => ({

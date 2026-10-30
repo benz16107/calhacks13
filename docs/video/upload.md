@@ -29,7 +29,7 @@ Sources for the numbers on screen: GitHub API (Oct 23, 2026), Censys (Jan 2026),
 
 Download the signed discs: https://gurtos.com/download/
 Docs, from the architecture to the security model and the APIs: https://gurtos.com/docs/
-Code (Apache-2.0): https://github.com/benz16107/calhacks13
+Code (Apache-2.0): https://github.com/benz16107/gurtos
 Every Cal Hacks track, with its evidence: https://calhacks.gurtos.com
 Home: https://gurtos.com
 
@@ -65,7 +65,7 @@ Narration: Ben's own voice, cloned with ElevenLabs. Music: generated with MusicG
 Sources: CISA alert, Sept 23, 2025 (cisa.gov/news-events/alerts/2025/09/23/widespread-supply-chain-compromise-impacting-npm-ecosystem); the attack scoreboard (tracks/armadin/SCOREBOARD.md).
 
 The Armadin page, with every attack and its evidence: https://calhacks.gurtos.com/tracks/armadin/
-Code (Apache-2.0): https://github.com/benz16107/calhacks13
+Code (Apache-2.0): https://github.com/benz16107/gurtos
 
 0:00 The problem
 0:15 A real npm worm, and our harmless copy

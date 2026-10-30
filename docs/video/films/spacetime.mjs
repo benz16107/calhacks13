@@ -69,6 +69,6 @@ export default {
             marks: [{ cue: 'off', kind: 'circle', x: 0.938, y: 0.586, w: 0.04, h: 0.07, color: 'amber', label: 'Off', side: 'left', labelW: 120 },
               { cue: 'counts', kind: 'underline', x: 0.027, y: 0.61, w: 0.577, h: 0.03, color: 'done' }] } }] },
     // 7. Open source; end card.
-    { hold: 3.0, v: { type: 'end', lines: ['gurtos.com', 'github.com/benz16107/calhacks13', 'Open source, Apache-2.0'] } },
+    { hold: 3.0, v: { type: 'end', lines: ['gurtos.com', 'github.com/benz16107/gurtos', 'Open source, Apache-2.0'] } },
   ],
 };

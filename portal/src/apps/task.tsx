@@ -85,7 +85,7 @@ export function TaskApp({ id }: { id: string }) {
         items={[
           { label: 'Copy task ID', icon: 'edit-copy', run: () => void navigator.clipboard?.writeText(id).then(() => win?.toast(`Copied ${id}`)) },
           { label: 'Show in Activity', icon: 'utilities-terminal', run: () => open('activity') },
-          { label: 'Show in Time Machine', icon: 'document-open-recent', run: () => open('time-machine') },
+          { label: 'Show in History', icon: 'document-open-recent', run: () => open('time-machine') },
           'sep',
           { label: 'All tasks', icon: 'view-list', run: () => open('tasks') },
         ]}

@@ -1,7 +1,7 @@
 blank_issues_enabled: false
 contact_links:
   - name: Report a security problem (private)
-    url: https://github.com/benz16107/calhacks13/security/advisories/new
+    url: https://github.com/benz16107/gurtos/security/advisories/new
     about: Do not open a public issue for a vulnerability. Report it privately here. See SECURITY.md.
   - name: Ask a question or read the docs
     url: https://gurtos.com/docs/

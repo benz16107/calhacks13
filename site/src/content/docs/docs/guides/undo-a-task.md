@@ -1,6 +1,6 @@
 ---
 title: Undo a task
-description: Remove one task's file changes from a workspace while every other task keeps its own, from the portal's Time Machine or with one API call.
+description: Remove one task's file changes from a workspace while every other task keeps its own, from the portal's History or with one API call.
 ---
 
 Every task works in its own copy of a workspace, and its changes become one layer on top of the workspace's files. In this guide you undo one task. Its layer comes out of the stack. Other tasks keep their changes, and the base files are never written.
@@ -12,11 +12,11 @@ Every task works in its own copy of a workspace, and its changes become one laye
 
 ## Undo from the portal
 
-1. Open **Time Machine** from the app grid and pick a workspace in the sidebar. It lists that workspace's layers, newest first. Each layer is a finished task.
+1. Open **History** from the app grid and pick a workspace in the sidebar. It lists that workspace's layers, newest first. Each layer is a finished task.
 
-   ![Time Machine: a workspace's task layers over its base files, with the selected layer's files that would come out, what stays as it is, and an Undo this task button.](../../../../assets/screens/time-machine.png)
+   ![History: a workspace's task layers over its base files, with the selected layer's files that would come out, what stays as it is, and an Undo this task button.](../../../../assets/screens/time-machine.png)
 
-   *Time Machine, from a test box running scripted tasks.*
+   *History, from a test box running scripted tasks.*
 
 2. Click the task's layer. The panel beside the list shows **Undo** and the task's title: the files that come out, and what
    stays as it is.

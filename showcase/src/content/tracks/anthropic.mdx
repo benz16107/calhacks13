@@ -33,7 +33,7 @@ links:
     href: https://gurtos.com/docs/security/threat-model/
     note: 'What the box defends against, and a plain list of what it does not.'
   - label: The code
-    href: https://github.com/benz16107/calhacks13
+    href: https://github.com/benz16107/gurtos
     note: 'The core is <code>core/</code>; the Droid worker that runs Claude is <code>core/workers/droid.ts</code>.'
 status:
   - part: Claude doing the tasks
@@ -55,9 +55,9 @@ Solo developers already leave Claude Code and OpenClaw running at home as themse
 </Lead>
 
 <Numbers items={[
-  { value: "1 GB", label: "RAM is the measured minimum, one task at a time (a QEMU VM, not a cloud box)", href: "https://github.com/benz16107/calhacks13/blob/main/tracks/anthropic/README.md", source: "measured runs" },
-  { value: "0 of 72", label: "attack runs where harm happened, mostly because Claude never tried. Limits below", href: "https://github.com/benz16107/calhacks13/tree/main/tracks/anthropic/attacks/results", source: "result files" },
-  { value: "3", label: "current Claude models chosen per task, priced from real token counts", href: "https://github.com/benz16107/calhacks13/blob/main/core/models.ts", source: "core/models.ts" },
+  { value: "1 GB", label: "RAM is the measured minimum, one task at a time (a QEMU VM, not a cloud box)", href: "https://github.com/benz16107/gurtos/blob/main/tracks/anthropic/README.md", source: "measured runs" },
+  { value: "0 of 72", label: "attack runs where harm happened, mostly because Claude never tried. Limits below", href: "https://github.com/benz16107/gurtos/tree/main/tracks/anthropic/attacks/results", source: "result files" },
+  { value: "3", label: "current Claude models chosen per task, priced from real token counts", href: "https://github.com/benz16107/gurtos/blob/main/core/models.ts", source: "core/models.ts" },
   { value: "$0.12", label: "for a real Claude fix with a plan, a coder and a reviewer", href: "#claude-doing-real-work", source: "below" }
 ]} />
 
@@ -211,7 +211,7 @@ The 12 cases include a hidden comment in a page asking for `.env`, invisible pag
 1. Install GurtOS Server on an Ubuntu 24.04 machine set aside for agents. The script checks the system, 900 MB of memory and 4 GB of disk, then installs the box service, Droid and SpacetimeDB:
 
    ```sh
-   curl -fsSL https://raw.githubusercontent.com/benz16107/calhacks13/main/tracks/anthropic/install.sh | sudo sh
+   curl -fsSL https://raw.githubusercontent.com/benz16107/gurtos/main/tracks/anthropic/install.sh | sudo sh
    ```
 
 2. Add one model key, an Anthropic API key or a Factory API key, in setup or Settings. It goes into the root-only vault.

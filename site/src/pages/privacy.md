@@ -27,8 +27,8 @@ export those logs for anything but keeping the sites running.
 
 ## Downloads
 
-The install images and apps come from GitHub Releases and a Vultr Object Storage mirror. Those services see the
-download request, with your IP address, and have their own privacy notices.
+The install images and apps come from GitHub Releases. GitHub sees the
+download request, with your IP address, and has its own privacy notice.
 
 ## app.gurtos.com
 
@@ -74,6 +74,6 @@ The [security model](/docs/security/model/) says what a box stores and where.
 
 ## Contact
 
-To ask about this page, open an issue in the project's [GitHub repository](https://github.com/benz16107/calhacks13/issues).
+To ask about this page, open an issue in the project's [GitHub repository](https://github.com/benz16107/gurtos/issues).
 
 Last updated Oct 29, 2026. See also the [Terms of use](/terms/).

@@ -5,7 +5,7 @@ import { readdirSync, readFileSync, writeFileSync, statSync } from 'node:fs';
 
 const here = new URL('./', import.meta.url).pathname;
 const root = new URL('../../../', import.meta.url).pathname;
-const REPO = 'https://github.com/benz16107/calhacks13/blob/main/';
+const REPO = 'https://github.com/benz16107/gurtos/blob/main/';
 
 const walk = (d: string): string[] => readdirSync(d).flatMap((f) => (statSync(d + f).isDirectory() ? walk(d + f + '/') : f.endsWith('.figma.ts') ? [d + f] : []));
 const lineOf = (file: string, name: string) => {

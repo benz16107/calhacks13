@@ -3,7 +3,6 @@ import Landing from '../layouts/Landing.astro';
 import { NAME, REPO } from '../product.ts';
 
 const RELEASE = `${REPO}/releases/download/v0.1.0-preview`;
-const MIRROR = 'https://sjc1.vultrobjects.com/gurtos/v0.1.0-preview';
 const SUMS: Record<string, string> = {
   'gurtos-server-x86_64.iso': 'a0e679ad64e81fc20d2c8b6f106096d56f1a247f4591c811f14f58865ccfe69a',
   'gurtos-server-arm64.iso': '02b91a1ebf75a57143bada5fd8de992cc1ede752438812f993789cafbcf39ef5',
@@ -103,20 +102,20 @@ const url = (e: string, a: string) => `${RELEASE}/${file(e, a)}`;
     <section aria-label="Details" class="details">
       <details id="verify-it">
         <summary>Verify the download</summary>
-        <p>Put the ISO, <a href={`${MIRROR}/SHA256SUMS`}>SHA256SUMS</a>, <a href={`${MIRROR}/SHA256SUMS.sig`}>SHA256SUMS.sig</a> and <a href={`${MIRROR}/allowed_signers`}>allowed_signers</a> in one folder, then run:</p>
+        <p>Put the ISO, <a href={`${RELEASE}/SHA256SUMS`}>SHA256SUMS</a>, <a href={`${RELEASE}/SHA256SUMS.sig`}>SHA256SUMS.sig</a> and <a href={`${RELEASE}/allowed_signers`}>allowed_signers</a> in one folder, then run:</p>
         <pre>{`ssh-keygen -Y verify -f allowed_signers -I gurtos -n gurtos-release -s SHA256SUMS.sig < SHA256SUMS
 sha256sum -c SHA256SUMS --ignore-missing          # Linux
 shasum -a 256 -c SHA256SUMS --ignore-missing      # macOS`}</pre>
-        <p>The first line must say <code>Good "gurtos-release" signature for gurtos with ED25519 key SHA256:FWKFb1eAvEBmMhVJwMwTnLnhrmZ5yQZ5947pDvFKcpY</code>. That fingerprint is also at <code>release/allowed_signers</code> in the repository. On Windows, compare <code>Get-FileHash &lt;file&gt;.iso</code> with the line in <code>SHA256SUMS</code>. Every file is also on the <a href={`${REPO}/releases/tag/v0.1.0-preview`}>release page</a> and on a mirror on Vultr, whose <a href={`${MIRROR}/SHA256SUMS`}>SHA256SUMS</a> lists every file.</p>
+        <p>The first line must say <code>Good "gurtos-release" signature for gurtos with ED25519 key SHA256:FWKFb1eAvEBmMhVJwMwTnLnhrmZ5yQZ5947pDvFKcpY</code>. That fingerprint is also at <code>release/allowed_signers</code> in the repository. On Windows, compare <code>Get-FileHash &lt;file&gt;.iso</code> with the line in <code>SHA256SUMS</code>. Every file is also on the <a href={`${REPO}/releases/tag/v0.1.0-preview`}>release page</a>.</p>
         <pre>{Object.entries(SUMS).map(([f, s]) => `${s}  ${f}`).join('\n')}</pre>
       </details>
 
       <details>
         <summary>What is inside, and the licences</summary>
-        <p>Each image comes with a software bill of materials in CycloneDX, listing every package in it. The source has one in CycloneDX and one in SPDX. They are on the <a href={`${REPO}/releases/tag/v0.1.0-preview`}>release page</a> and the mirror:</p>
+        <p>Each image comes with a software bill of materials in CycloneDX, listing every package in it. The source has one in CycloneDX and one in SPDX. They are on the <a href={`${REPO}/releases/tag/v0.1.0-preview`}>release page</a>:</p>
         <ul>
-          {['server-x86_64', 'server-arm64', 'personal-x86_64', 'personal-arm64'].map((n) => <li><a href={`${MIRROR}/gurtos-${n}.cdx.json.gz`}><code>gurtos-{n}.cdx.json.gz</code></a></li>)}
-          <li><a href={`${MIRROR}/gurtos-source.cdx.json.gz`}><code>gurtos-source.cdx.json.gz</code></a> and <a href={`${MIRROR}/gurtos-source.spdx.json.gz`}><code>gurtos-source.spdx.json.gz</code></a></li>
+          {['server-x86_64', 'server-arm64', 'personal-x86_64', 'personal-arm64'].map((n) => <li><a href={`${RELEASE}/gurtos-${n}.cdx.json.gz`}><code>gurtos-{n}.cdx.json.gz</code></a></li>)}
+          <li><a href={`${RELEASE}/gurtos-source.cdx.json.gz`}><code>gurtos-source.cdx.json.gz</code></a> and <a href={`${RELEASE}/gurtos-source.spdx.json.gz`}><code>gurtos-source.spdx.json.gz</code></a></li>
         </ul>
         <p>The <a href={`${REPO}/blob/main/release/licenses.md`}>licence report</a> lists the licence of every part and flags the ones to check.</p>
       </details>
@@ -169,7 +168,7 @@ image/build personal        # GurtOS Personal`}</pre>
 <script>
   // Pick the downloads for this computer. A Mac is assumed to be Apple silicon, because Intel Macs cannot run an
   // arm64 VM and the user agent does not say which Mac it is. Nothing is stored or sent.
-  const RELEASE = 'https://github.com/benz16107/calhacks13/releases/download/v0.1.0-preview';
+  const RELEASE = 'https://github.com/benz16107/gurtos/releases/download/v0.1.0-preview';
   const SIZES: Record<string, Record<string, string>> = {
     server: { x86_64: '1.37 GB', arm64: '1.37 GB' },
     personal: { x86_64: '2.01 GB', arm64: '1.99 GB' },

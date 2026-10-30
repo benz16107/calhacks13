@@ -1,10 +1,10 @@
 # What the native GurtOS app decides, with no GTK: which section a task belongs in, how an action log event reads, what
-# Activity's filters match, and what Time Machine takes out. selftest.py runs these against a real box.
+# Activity's filters match, and what History takes out. selftest.py runs these against a real box.
 from datetime import datetime, timedelta, timezone
 
 LIVE = ('queued', 'running', 'waiting')
 TWELVE = False  # GNOME's clock is set to AM/PM; box-ui.py reads org.gnome.desktop.interface clock-format at start
-DONE_SHOWN = 20  # the Agents page lists this many finished tasks; Activity and Time Machine have the rest
+DONE_SHOWN = 20  # the Agents page lists this many finished tasks; Activity and History have the rest
 
 
 def when(iso):
@@ -180,7 +180,7 @@ def matches(e, titles, query='', task=None, app=None):
 
 
 def can_take_out(t):
-    """How Time Machine undoes a finished task: `undo` throws its copy away, `unkeep` reverses a Keep. A task whose
+    """How History undoes a finished task: `undo` throws its copy away, `unkeep` reverses a Keep. A task whose
     Keep was already undone stays `done` with review `undone`: there is nothing left to take out."""
     if t.get('review') == 'kept':
         return 'unkeep'

@@ -262,7 +262,7 @@ so it goes through the same approvals, budgets and log as a phone, and it never 
 "Claude" from the box's screen, then:
 
 ```sh
-claude mcp add gurtos --env BOX_URL=https://<name>.box.gurtos.com --env BOX_TOKEN=<token> -- node /path/to/calhacks13/core/claude-mcp.ts
+claude mcp add gurtos --env BOX_URL=https://<name>.box.gurtos.com --env BOX_TOKEN=<token> -- node /path/to/gurtos/core/claude-mcp.ts
 ```
 
 On the box itself, `BOX_URL=http://127.0.0.1:7700` and no token. Keep needs a device paired as the owner.
@@ -497,12 +497,12 @@ A task can work on one of the owner's real folders:
   conflict in any one of them applies nothing anywhere, and ownership and modes are kept per file as above.
 - `POST /api/tasks/<id>/keep` applies the task's changes to the real folder, each file atomically. If the owner
   changed any of the same files since the task started, it applies nothing and returns `{conflicts: [paths]}`.
-  Otherwise it returns `{kept: changes}` and saves before-images under `BOX_HOME/timemachine/<id>` so the
-  desktop's Time Machine can undo the Keep later.
+  Otherwise it returns `{kept: changes}` and saves before-images under `BOX_HOME/timemachine/<id>` so
+  History can undo the Keep later.
 - `POST /api/tasks/<id>/undo` discards the task's changes; the real folder never received them. For a task that was
   kept, Undo first reverts the Keep (the owner only), or changes nothing and answers `409` if the owner edited a kept
   file since.
-- `POST /api/tasks/<id>/unkeep` undoes a Keep from the Time Machine before-images: kept files go back with
+- `POST /api/tasks/<id>/unkeep` undoes a Keep from the before-images: kept files go back with
   their old content, owner and mode, and files Keep added are removed. If the owner edited a kept file since,
   it changes nothing and returns `{conflicts}`.
 

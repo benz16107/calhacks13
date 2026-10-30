@@ -34,16 +34,16 @@ come up healthy.
 
 ## Download
 
-The current release is [v0.1.0-preview](https://github.com/benz16107/calhacks13/releases/tag/v0.1.0-preview), from
-Oct 25, 2026. Each file is on GitHub Releases and on a mirror, with the same checksums and signature.
+The current release is [v0.1.0-preview](https://github.com/benz16107/gurtos/releases/tag/v0.1.0-preview), from
+Oct 25, 2026. Each file is on GitHub Releases, with signed checksums.
 
-| Machine | File | GitHub | Mirror |
-|---|---|---|---|
-| Server on a PC, server or cloud VM (Intel or AMD) | `gurtos-server-x86_64.iso` (1.37 GB) | [download](https://github.com/benz16107/calhacks13/releases/download/v0.1.0-preview/gurtos-server-x86_64.iso) | [download](https://sjc1.vultrobjects.com/gurtos/v0.1.0-preview/gurtos-server-x86_64.iso) |
-| Server on an Apple silicon Mac (UTM or Parallels) or an arm64 server | `gurtos-server-arm64.iso` (1.37 GB) | [download](https://github.com/benz16107/calhacks13/releases/download/v0.1.0-preview/gurtos-server-arm64.iso) | [download](https://sjc1.vultrobjects.com/gurtos/v0.1.0-preview/gurtos-server-arm64.iso) |
-| Personal on a PC or laptop (Intel or AMD) | `gurtos-personal-x86_64.iso` (2.01 GB) | [download](https://github.com/benz16107/calhacks13/releases/download/v0.1.0-preview/gurtos-personal-x86_64.iso) | [download](https://sjc1.vultrobjects.com/gurtos/v0.1.0-preview/gurtos-personal-x86_64.iso) |
-| Personal on an Apple silicon Mac (UTM or Parallels) | `gurtos-personal-arm64.iso` (1.99 GB) | [download](https://github.com/benz16107/calhacks13/releases/download/v0.1.0-preview/gurtos-personal-arm64.iso) | [download](https://sjc1.vultrobjects.com/gurtos/v0.1.0-preview/gurtos-personal-arm64.iso) |
-| Checksums, signature, public key | `SHA256SUMS`, `SHA256SUMS.sig`, `allowed_signers` | [release page](https://github.com/benz16107/calhacks13/releases/tag/v0.1.0-preview) | [SHA256SUMS](https://sjc1.vultrobjects.com/gurtos/v0.1.0-preview/SHA256SUMS), [.sig](https://sjc1.vultrobjects.com/gurtos/v0.1.0-preview/SHA256SUMS.sig), [allowed_signers](https://sjc1.vultrobjects.com/gurtos/v0.1.0-preview/allowed_signers) |
+| Machine | File | Download |
+|---|---|---|
+| Server on a PC, server or cloud VM (Intel or AMD) | `gurtos-server-x86_64.iso` (1.37 GB) | [download](https://github.com/benz16107/gurtos/releases/download/v0.1.0-preview/gurtos-server-x86_64.iso) |
+| Server on an Apple silicon Mac (UTM or Parallels) or an arm64 server | `gurtos-server-arm64.iso` (1.37 GB) | [download](https://github.com/benz16107/gurtos/releases/download/v0.1.0-preview/gurtos-server-arm64.iso) |
+| Personal on a PC or laptop (Intel or AMD) | `gurtos-personal-x86_64.iso` (2.01 GB) | [download](https://github.com/benz16107/gurtos/releases/download/v0.1.0-preview/gurtos-personal-x86_64.iso) |
+| Personal on an Apple silicon Mac (UTM or Parallels) | `gurtos-personal-arm64.iso` (1.99 GB) | [download](https://github.com/benz16107/gurtos/releases/download/v0.1.0-preview/gurtos-personal-arm64.iso) |
+| Checksums, signature, public key | `SHA256SUMS`, `SHA256SUMS.sig`, `allowed_signers` | [release page](https://github.com/benz16107/gurtos/releases/tag/v0.1.0-preview) |
 
 **v0.1.0-preview is older than this page.** The steps below describe `main`, which the next release is cut from.
 On the v0.1.0-preview discs:
@@ -178,7 +178,7 @@ edition and architecture you build. The build installs tools, mounts loop device
 machine set aside for it.
 
 ```sh
-git clone https://github.com/benz16107/calhacks13.git gurtos
+git clone https://github.com/benz16107/gurtos.git gurtos
 cd gurtos
 image/build                     # GurtOS Server, x86_64
 image/build arm64               # GurtOS Server, arm64

@@ -133,7 +133,7 @@ GurtOS is open source (Apache-2.0), so the wallet is not tied to a box. One comm
 server for Claude Code, Factory Droid or any MCP client (needs Node 22.18+ and git):
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/benz16107/calhacks13/main/tracks/wallet/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/benz16107/gurtos/main/tracks/wallet/install.sh | sh
 ```
 
 It makes a Solana devnet key (mode 0600, in `~/.gurtos-wallet`), prints the address to fund with Circle's

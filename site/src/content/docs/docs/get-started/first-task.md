@@ -99,7 +99,7 @@ sudo cat /var/lib/box/views/home/notes.md       # the mistakes are back
 ```
 
 The task is now `undone`. GurtOS took its layer out of the workspace. If other tasks had changed other files in
-`home` in the meantime, their changes would still be there. In the portal, **Time Machine** shows the same thing
+`home` in the meantime, their changes would still be there. In the portal, **History** shows the same thing
 as a stack of layers. See [Workspaces and layers](/docs/concepts/workspaces-and-layers/).
 
 ## 6. See a connection blocked

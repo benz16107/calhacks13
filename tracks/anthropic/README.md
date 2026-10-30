@@ -143,7 +143,7 @@ Every case ran on Sonnet 5.5 and on Haiku 5.5, with the second look on and off. 
 On an existing Ubuntu 24.04 machine (x86_64 or arm64, with systemd):
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/benz16107/calhacks13/main/tracks/anthropic/install.sh | sudo sh
+curl -fsSL https://raw.githubusercontent.com/benz16107/gurtos/main/tracks/anthropic/install.sh | sudo sh
 ```
 
 `install.sh` in this folder is that script. It checks Ubuntu 24.04, the architecture, systemd, 900 MB of memory and

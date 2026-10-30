@@ -36,7 +36,7 @@ policy (linked in the About) are left out here: they showed as two more "GitHub 
 - https://gurtos.com (the product: editions, downloads and docs)
 - https://try.gurtos.com (try it live: your own throwaway GurtOS computer in the browser, with an "Attack it yourself" page)
 - https://calhacks.gurtos.com (the showcase: one page per sponsor track, with evidence)
-- https://github.com/benz16107/calhacks13 (the code, open source under the Apache License 2.0)
+- https://github.com/benz16107/gurtos (the code, open source under the Apache License 2.0)
 - https://www.figma.com/slides/SBrJtJiY20k88X3IGzKwZW (the pitch deck, Figma Slides)
 - https://plum-fabric-10136193.figma.site (the landing page, published on Figma Sites)
 
@@ -76,7 +76,7 @@ Opt in to every eligible category at the Devpost step that lists them. Anthropic
 
 - Try it live: https://try.gurtos.com (your own throwaway GurtOS computer in the browser; paste an attack and watch it stopped)
 - Every track in detail: https://calhacks.gurtos.com
-- Code (Apache-2.0): https://github.com/benz16107/calhacks13
+- Code (Apache-2.0): https://github.com/benz16107/gurtos
 - Video: https://youtu.be/rREjU2ddIyo
 
 ## Operating systems built for AI agents
@@ -87,7 +87,7 @@ Agents get real access to files, the web and money, and never hold your keys.
 
 AI agents now do real work on our computers: booking, buying, coding, filing. Today's operating systems were built for one person at a keyboard, so an agent runs as you, with all your files and passwords, and nothing records or undoes what it did. GurtOS is an operating system built for AI agents. Each agent gets its own space, never holds your passwords, asks your phone before it spends, and everything it does can be undone. It runs on a computer you own, and it is open source.
 
-[![GurtOS Server, Business and Personal](https://raw.githubusercontent.com/benz16107/calhacks13/main/showcase/public/devpost/thumb/4-editions.jpg)](https://raw.githubusercontent.com/benz16107/calhacks13/main/showcase/public/devpost/4-editions.png)
+[![GurtOS Server, Business and Personal](https://raw.githubusercontent.com/benz16107/gurtos/main/showcase/public/devpost/thumb/4-editions.jpg)](https://raw.githubusercontent.com/benz16107/gurtos/main/showcase/public/devpost/4-editions.png)
 
 ### How it works: think of a hotel
 
@@ -98,7 +98,7 @@ AI agents now do real work on our computers: booking, buying, coding, filing. To
 - **Cameras in the hallway.** One hash-chained log with an add-only copy the box cannot rewrite, replay of any task step by step, and signed receipts anyone can check.
 - **Pull the plug.** Tasks resume after a power cut. The kill switch froze 10 agents within 271 ms.
 
-[![A booby-trapped page, blocked and logged](https://raw.githubusercontent.com/benz16107/calhacks13/main/showcase/public/devpost/thumb/2-blocked.jpg)](https://raw.githubusercontent.com/benz16107/calhacks13/main/showcase/public/devpost/2-blocked.png)
+[![A booby-trapped page, blocked and logged](https://raw.githubusercontent.com/benz16107/gurtos/main/showcase/public/devpost/thumb/2-blocked.jpg)](https://raw.githubusercontent.com/benz16107/gurtos/main/showcase/public/devpost/2-blocked.png)
 
 ### Why it is better
 
@@ -125,24 +125,24 @@ AI agents now do real work on our computers: booking, buying, coding, filing. To
 - **Light:** GurtOS Server is 40 named Ubuntu packages on a 1.37 GB disc, and the box ran one task at a time in 1 GB of RAM (installed from source, QEMU VM). Personal idles about 150 MB below stock Ubuntu Desktop.
 - **Control:** the kill switch froze 10 agents within 271 ms (the call returned in 137 ms); a bad batch was undone in 48 ms.
 - **Real work:** a credit desk of agents caught 16 of 17 planted errors and got 6 of 6 decisions right in 12 minutes for $5.24.
-- **Download:** signed discs on the [release page](https://github.com/benz16107/calhacks13/releases/tag/v0.1.0-preview): Server 1.37 GB (x86_64 and arm64), Personal 2.01 GB (x86_64) and 1.99 GB (arm64), with SBOMs and a licence report. Our QA installed the final discs on Vultr and in QEMU; Replay, receipts, command setup, permissions and files-at-each-step are on main but not in these discs, and reach installed computers through the next signed update.
+- **Download:** signed discs on the [release page](https://github.com/benz16107/gurtos/releases/tag/v0.1.0-preview): Server 1.37 GB (x86_64 and arm64), Personal 2.01 GB (x86_64) and 1.99 GB (arm64), with SBOMs and a licence report. Our QA installed the final discs on Vultr and in QEMU; Replay, receipts, command setup, permissions and files-at-each-step are on main but not in these discs, and reach installed computers through the next signed update.
 - **Verifiable:** every finished task can get a signed receipt; https://gurtos.com/verify/ checks it in your browser.
 - **Everywhere:** three editions (Server, Personal, Business), phone, Watch and Mac apps, remote access, open source.
 
-[![Replay, receipts and permissions](https://raw.githubusercontent.com/benz16107/calhacks13/main/showcase/public/devpost/thumb/6-replay.jpg)](https://raw.githubusercontent.com/benz16107/calhacks13/main/showcase/public/devpost/6-replay.png)
+[![Replay, receipts and permissions](https://raw.githubusercontent.com/benz16107/gurtos/main/showcase/public/devpost/thumb/6-replay.jpg)](https://raw.githubusercontent.com/benz16107/gurtos/main/showcase/public/devpost/6-replay.png)
 
-[![The phone, Watch and Mac](https://raw.githubusercontent.com/benz16107/calhacks13/main/showcase/public/devpost/thumb/7-devices.jpg)](https://raw.githubusercontent.com/benz16107/calhacks13/main/showcase/public/devpost/7-devices.png)
+[![The phone, Watch and Mac](https://raw.githubusercontent.com/benz16107/gurtos/main/showcase/public/devpost/thumb/7-devices.jpg)](https://raw.githubusercontent.com/benz16107/gurtos/main/showcase/public/devpost/7-devices.png)
 
-[![Verify a receipt](https://raw.githubusercontent.com/benz16107/calhacks13/main/showcase/public/devpost/thumb/8-receipt.jpg)](https://raw.githubusercontent.com/benz16107/calhacks13/main/showcase/public/devpost/8-receipt.png)
+[![Verify a receipt](https://raw.githubusercontent.com/benz16107/gurtos/main/showcase/public/devpost/thumb/8-receipt.jpg)](https://raw.githubusercontent.com/benz16107/gurtos/main/showcase/public/devpost/8-receipt.png)
 
 ### Questions judges ask
 
 - **Why not Docker or a VM?** They isolate apps but know nothing about agents: no per-task budget, approval, undo or key handling.
 - **Can't the model refuse?** Sometimes. GurtOS assumes it can be fooled, and leaves a fooled agent nothing to steal and nowhere to send it.
 - **Who is it for?** Server (always on, at home or in the cloud), Personal (your laptop), Business (a team: roles, routed approvals, audit).
-- **What is next?** The [roadmap](https://github.com/benz16107/calhacks13/blob/main/ROADMAP.md), and the [security policy](https://github.com/benz16107/calhacks13/blob/main/SECURITY.md).
+- **What is next?** The [roadmap](https://github.com/benz16107/gurtos/blob/main/ROADMAP.md), and the [security policy](https://github.com/benz16107/gurtos/blob/main/SECURITY.md).
 
-[![Try it live](https://raw.githubusercontent.com/benz16107/calhacks13/main/showcase/public/devpost/thumb/5-try-live.jpg)](https://raw.githubusercontent.com/benz16107/calhacks13/main/showcase/public/devpost/5-try-live.png)
+[![Try it live](https://raw.githubusercontent.com/benz16107/gurtos/main/showcase/public/devpost/thumb/5-try-live.jpg)](https://raw.githubusercontent.com/benz16107/gurtos/main/showcase/public/devpost/5-try-live.png)
 
 ## Sponsor tracks
 
@@ -157,7 +157,7 @@ Every track has its own page with the criteria, evidence, screenshots and limits
 | Armadin | Real attacks against a real box: poisoned package, hijacked payment, hidden instructions | 15 of 16 OS-level attacks stopped on two machines; the one miss (exfiltration through an allowed host) is published [Video](https://youtu.be/3hDnLuUqmjM) | [page](https://calhacks.gurtos.com/tracks/armadin/) |
 | Microsoft | The credit desk as a path to production: shadow mode, roles, routed approvals, audit, kill switch | 16 of 17 planted errors caught and a $20,000 fake applicant held that a simple rule approves; 10 agents frozen within 271 ms; a bad batch undone in 48 ms [Video](https://youtu.be/gGdqKNtvopw) | [page](https://calhacks.gurtos.com/tracks/microsoft/) |
 | Visa | A shopping agent that buys by standing instruction after your tap, signed with Visa's Trusted Agent Protocol | Live: a $15.36 CAD price at Best Buy Canada, bought on a Stripe test card, refunded on Undo [Video](https://youtu.be/iYQ-_am3c2g) | [page](https://calhacks.gurtos.com/tracks/visa/) |
-| Coinbase | Agents pay and earn over x402; the wallet key never reaches the agent | A real agent paid $0.01 and $0.03 through CDP, confirmed on Solana devnet; [builder feedback](https://github.com/benz16107/calhacks13/blob/main/tracks/wallet/FEEDBACK.md) [Video](https://youtu.be/DnD78KAapMo) | [page](https://calhacks.gurtos.com/tracks/coinbase/) |
+| Coinbase | Agents pay and earn over x402; the wallet key never reaches the agent | A real agent paid $0.01 and $0.03 through CDP, confirmed on Solana devnet; [builder feedback](https://github.com/benz16107/gurtos/blob/main/tracks/wallet/FEEDBACK.md) [Video](https://youtu.be/DnD78KAapMo) | [page](https://calhacks.gurtos.com/tracks/coinbase/) |
 | Fetch.ai | Every GurtOS box is an agent on Agentverse, reachable from an ASI:One chat | Live: a Droid task fixed a failing test for $0.05; a $0.50 search paused for approval. [Agent on Agentverse](https://agentverse.ai/agents/details/agent1qvuk46tnt9lnscher0pawl7pr5y525mak66ptwsrvg4kff0pfy9m2sy0us6/profile), [ASI:One chat](https://asi1.ai/shared-chat/d47d985a-01d8-49f6-9011-15a8eae87399). Also submitted through the ASI:One Submission Agent (team calhacks-5c530fc3). [Video](https://youtu.be/tcNbHb6XZuc) | [page](https://calhacks.gurtos.com/tracks/fetch/) |
 | SpacetimeDB | One SpacetimeDB per computer as the live state: queue, approvals, status | 3 agents made 15 claims on 12 jobs: 12 distinct, none twice [Video](https://youtu.be/Jypa31_HdrM) | [page](https://calhacks.gurtos.com/tracks/spacetime/) |
 | Elastic | A copy of the log the box cannot rewrite, and an agent that answers "what did my agents do?" | The agent named a failed routine's root cause; a receipt matched 18 entries to Elastic's copy [Video](https://youtu.be/riaswviHD50) | [page](https://calhacks.gurtos.com/tracks/elastic/) |
@@ -242,7 +242,7 @@ alarms. A running Droid task held only a placeholder key in 240 of 240 process s
 **Every sponsor track has its own page, with the criteria, video, screenshots, live links and evidence:
 https://calhacks.gurtos.com**
 
-Built solo by Ben Zhou. Open source under the Apache License 2.0, with a [roadmap](https://github.com/benz16107/calhacks13/blob/main/ROADMAP.md) and a [security policy](https://github.com/benz16107/calhacks13/blob/main/SECURITY.md). All payments are test money: Stripe test mode with a Visa test card, or USDC on Solana devnet.
+Built solo by Ben Zhou. Open source under the Apache License 2.0, with a [roadmap](https://github.com/benz16107/gurtos/blob/main/ROADMAP.md) and a [security policy](https://github.com/benz16107/gurtos/blob/main/SECURITY.md). All payments are test money: Stripe test mode with a Visa test card, or USDC on Solana devnet.
 
 <!-- SUMMARY END -->
 

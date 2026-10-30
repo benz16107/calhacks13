@@ -800,7 +800,7 @@ function DoneStep({ w }: { w: Wiz }) {
   const owner = ownerDevice?.name ?? (w.draft.owner === 'screen' ? 'This screen' : 'Not paired yet');
   const tour: [ComponentChildren, string, string][] = [
     [<AppIcon id="tasks" size={40} />, 'Tasks', 'Every task is a row: who it runs as, what it does now, what it cost.'],
-    [<AppIcon id="time-machine" size={40} />, 'Time Machine', 'Undo any one task. Every other task keeps its changes.'],
+    [<AppIcon id="time-machine" size={40} />, 'History', 'Undo any one task. Every other task keeps its changes.'],
     [<AppIcon id="app-center" size={40} />, 'App Center', 'Add apps, and see what each can reach before you turn it on.'],
     [
       <span class="gos-setup-topbar-tile">

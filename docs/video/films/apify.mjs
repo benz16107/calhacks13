@@ -62,6 +62,6 @@ export default {
     { hold: 2.1, parts: [
         { v: { type: 'timeline', kicker: "Set-up and teardown tested live. Delivery tested with Apify's payload shape.", from: 'Schedule', to: 'Webhook', dots: [0, 1], count: 2, step: 0.7, color: 'accent', cue: 'an',
             label: 'Apify triggers on a Server box, while you are away' } },
-        { cue: 'gurt', v: { type: 'end', lines: ['gurtos.com', 'github.com/benz16107/calhacks13', 'Open source, Apache-2.0'] } }] },
+        { cue: 'gurt', v: { type: 'end', lines: ['gurtos.com', 'github.com/benz16107/gurtos', 'Open source, Apache-2.0'] } }] },
   ],
 };

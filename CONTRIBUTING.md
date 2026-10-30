@@ -11,7 +11,7 @@ and pull requests are welcome. Please read the [Code of Conduct](CODE_OF_CONDUCT
 You need git and Node 22.18 or newer (CI uses Node 24). On Linux, macOS or Windows with WSL:
 
 ```sh
-git clone https://github.com/benz16107/calhacks13.git gurtos
+git clone https://github.com/benz16107/gurtos.git gurtos
 cd gurtos
 npm ci                    # the box, the relay and the apps
 npm ci --prefix portal    # the portal's own packages; its tests import them

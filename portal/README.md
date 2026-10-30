@@ -143,7 +143,7 @@ Differences from the frames, on purpose:
 
 ## The four moments on screen
 
-1. **Undo one task.** Tasks, Time Machine and the task window each undo one task behind an alert: "Its files are
+1. **Undo one task.** Tasks, History and the task window each undo one task behind an alert: "Its files are
    removed. Every other task keeps its own." A Shopper task's alert says its test payment is refunded.
 2. **The booby-trapped page.** The task window opens with a red alert: what it tried to reach, the hosts it may
    reach, and that it never held a key. Each blocked step is red in the steps and in Activity.
@@ -208,7 +208,7 @@ approval), the second phone's "Already denied on Rosa's iPhone", and an outage n
 
 Files: `src/live.ts` (the box's state: HTTP, SpacetimeDB, the log stream, answers, outage detection),
 `src/wm.tsx` (windows), `src/shell.tsx` (top bar, desktop, dock, notifications, Control Center, lock, boot,
-phone home and tab bar), `src/setup.tsx`, `src/apps/` (Tasks, the task window, Activity, Time Machine, Settings,
+phone home and tab bar), `src/setup.tsx`, `src/apps/` (Tasks, the task window, Activity, History, Settings,
 App Center, track windows, pairing), `src/kit/` (tokens, components, icons, app icons, wallpaper).
 
 ## Accessibility

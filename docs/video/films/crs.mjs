@@ -71,6 +71,6 @@ export default {
         { cue: 'refused', v: { type: 'shot', frame: 'tilt', src: cap('crs-case-top.png'), enter: 'flip', tiltY: 12,
             marks: [{ at: 0.3, kind: 'box', x: 0.0458, y: 0.2203, w: 0.9446, h: 0.1275, color: 'blocked' }] } }] },
     // 7. The unexpected part: a whole operating system for this.
-    { hold: 0.7, v: { type: 'end', lines: ['We built a whole operating system for this', 'gurtos.com', 'github.com/benz16107/calhacks13', 'Open source, Apache-2.0'] } },
+    { hold: 0.7, v: { type: 'end', lines: ['We built a whole operating system for this', 'gurtos.com', 'github.com/benz16107/gurtos', 'Open source, Apache-2.0'] } },
   ],
 };

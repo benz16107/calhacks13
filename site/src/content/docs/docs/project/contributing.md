@@ -3,7 +3,7 @@ title: Contributing
 description: How the GurtOS source is organized, the rules for changes, and how changes are tested. GurtOS is open source under Apache-2.0.
 ---
 
-The GurtOS source is public at [github.com/benz16107/calhacks13](https://github.com/benz16107/calhacks13), under the
+The GurtOS source is public at [github.com/benz16107/gurtos](https://github.com/benz16107/gurtos), under the
 Apache License 2.0. Report bugs and suggest changes with GitHub issues and pull requests. This page shows how the
 source is organized and how changes are tested.
 

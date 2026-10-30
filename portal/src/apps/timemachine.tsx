@@ -55,7 +55,7 @@ export function TimeMachineApp() {
   return (
     <div class="g-split gos-w-tm">
       <nav class="g-sidebar" aria-label="Workspaces">
-        <HeaderBar title="Time Machine" controls={false} flat />
+        <HeaderBar title="History" controls={false} flat />
         <div class="g-sidebar-body">
           <p class="gos-w-label">Workspaces</p>
           {workspaces.map((w) => (
@@ -68,7 +68,7 @@ export function TimeMachineApp() {
         </div>
       </nav>
       <div class="g-split-main">
-        <HeaderBar title={ws ?? 'Time Machine'} sub={ws ? `${plural(layers.length, 'layer')}, one per finished task` : undefined} />
+        <HeaderBar title={ws ?? 'History'} sub={ws ? `${plural(layers.length, 'layer')}, one per finished task` : undefined} />
         {!stack.length ? (
           <div class="g-window-content">
             <StatusPage icon="document-open-recent" title={workspaces.length ? 'Nothing to take out here' : 'No finished tasks yet'}>

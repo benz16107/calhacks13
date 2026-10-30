@@ -9,7 +9,7 @@ These are plain terms. By using this site or the software you agree to them.
 ## The software
 
 GurtOS is licensed under the [Apache License 2.0](/docs/project/licence/), and its source is on
-[GitHub](https://github.com/benz16107/calhacks13). The licence, not these terms, governs what you may do with the code
+[GitHub](https://github.com/benz16107/gurtos). The licence, not these terms, governs what you may do with the code
 and the install images.
 
 GurtOS is a preview (v0.1.0-preview). It has not had a security audit. Verify the image signatures, run it on a
@@ -45,6 +45,6 @@ are not liable for any loss from using them.
 
 ## Contact
 
-To ask about these terms, open an issue in the project's [GitHub repository](https://github.com/benz16107/calhacks13/issues).
+To ask about these terms, open an issue in the project's [GitHub repository](https://github.com/benz16107/gurtos/issues).
 
 Last updated Oct 29, 2026. See also the [Privacy policy](/privacy/).

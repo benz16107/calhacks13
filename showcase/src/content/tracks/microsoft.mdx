@@ -44,21 +44,21 @@ shots:
     caption: 'One switch pauses every agent.'
 links:
   - label: 'Final live run bd5c61 (October, 16 of 17)'
-    href: https://github.com/benz16107/calhacks13/tree/main/tracks/credit-desk/runs/2026-10-24-live-bd5c61-rules-0.3
+    href: https://github.com/benz16107/gurtos/tree/main/tracks/credit-desk/runs/2026-10-24-live-bd5c61-rules-0.3
     note: 'Reports, score, books and the run''s action log.'
   - label: 'Responsible AI mapping, RESPONSIBLE.md'
-    href: https://github.com/benz16107/calhacks13/blob/main/tracks/credit-desk/RESPONSIBLE.md
+    href: https://github.com/benz16107/gurtos/blob/main/tracks/credit-desk/RESPONSIBLE.md
     note: 'Each control against the six principles, with where to check it, and what is not done.'
   - label: 'The customer, CUSTOMER.md'
-    href: https://github.com/benz16107/calhacks13/blob/main/tracks/credit-desk/CUSTOMER.md
+    href: https://github.com/benz16107/gurtos/blob/main/tracks/credit-desk/CUSTOMER.md
     note: 'Cited facts with their scope, and what we could not find.'
   - label: The credit desk's code and README
-    href: https://github.com/benz16107/calhacks13/tree/main/tracks/credit-desk
+    href: https://github.com/benz16107/gurtos/tree/main/tracks/credit-desk
   - label: Live run 73c47b (original case)
-    href: https://github.com/benz16107/calhacks13/tree/main/tracks/credit-desk/runs/2026-10-24-live-73c47b-rules-0.2
+    href: https://github.com/benz16107/gurtos/tree/main/tracks/credit-desk/runs/2026-10-24-live-73c47b-rules-0.2
     note: 'The analyst''s and clerk''s reports, the score and the run''s action log.'
   - label: The answer key
-    href: https://github.com/benz16107/calhacks13/blob/main/tracks/credit-desk/cases/fogline-2026-10/answer_key.json
+    href: https://github.com/benz16107/gurtos/blob/main/tracks/credit-desk/cases/fogline-2026-10/answer_key.json
   - label: 'Full credit desk write-up for Hyphenate'
     href: /tracks/hyphenate/
     note: 'The planted errors one by one, the log of the moment, and how to run your own case.'
@@ -111,10 +111,10 @@ The question here is whether a real company could switch this on. Our answer is 
 </Lead>
 
 <Numbers items={[
-  { value: "271 ms", label: "every agent frozen after the kill switch, 10 agents working", href: "https://github.com/benz16107/calhacks13/blob/main/docs/drill.md", source: "docs/drill.md" },
-  { value: "48 ms", label: "to undo a bad batch of three order releases, other tasks untouched", href: "https://github.com/benz16107/calhacks13/blob/main/docs/drill.md", source: "docs/drill.md" },
-  { value: "16 of 17", label: "planted errors found, full live run scored against the key", href: "https://github.com/benz16107/calhacks13/tree/main/tracks/credit-desk/runs/2026-10-24-live-bd5c61-rules-0.3", source: "run bd5c61" },
-  { value: "$20,000", label: "to a fake applicant a simple rule approves; the desk held it", href: "https://github.com/benz16107/calhacks13/tree/main/tracks/credit-desk/runs/2026-10-24-live-bd5c61-rules-0.3", source: "run bd5c61 log" }
+  { value: "271 ms", label: "every agent frozen after the kill switch, 10 agents working", href: "https://github.com/benz16107/gurtos/blob/main/docs/drill.md", source: "docs/drill.md" },
+  { value: "48 ms", label: "to undo a bad batch of three order releases, other tasks untouched", href: "https://github.com/benz16107/gurtos/blob/main/docs/drill.md", source: "docs/drill.md" },
+  { value: "16 of 17", label: "planted errors found, full live run scored against the key", href: "https://github.com/benz16107/gurtos/tree/main/tracks/credit-desk/runs/2026-10-24-live-bd5c61-rules-0.3", source: "run bd5c61" },
+  { value: "$20,000", label: "to a fake applicant a simple rule approves; the desk held it", href: "https://github.com/benz16107/gurtos/tree/main/tracks/credit-desk/runs/2026-10-24-live-bd5c61-rules-0.3", source: "run bd5c61 log" }
 ]} />
 
 Best shown in **GurtOS Business**. The scored credit desk runs were on GurtOS Server. The Business screens on this page come from a box seeded as the made-up Fogline Supply, with scripted seats and test data.
@@ -182,7 +182,7 @@ It runs on a computer the company owns, so the company decides what leaves it: o
   { value: "271 ms", label: "every agent confirmed frozen" },
   { value: "0", label: "agent events in the 10 s while paused" },
   { value: "48 ms", label: "to undo the bad batch" }
-]} sources={[{ label: "docs/drill.md", href: "https://github.com/benz16107/calhacks13/blob/main/docs/drill.md" }]}>
+]} sources={[{ label: "docs/drill.md", href: "https://github.com/benz16107/gurtos/blob/main/docs/drill.md" }]}>
 
 - Resume to the first agent step took 48.8 s, mostly a live seat finishing its model turn. After resuming, all three live seats carried on from where they were.
 - A tool call already running when the switch is pulled finishes, and requests waiting for an OK stay open and can still be answered.
@@ -199,7 +199,7 @@ It runs on a computer the company owns, so the company decides what leaves it: o
 ]} sources={[
   { label: "Atradius, Payment Practices Barometer, US 2026", href: "https://group.atradius.com/dam/jcr:b4148500-b5c5-4f9c-bb8a-072a75afffad/payment-practices-barometer-us-2026-en.pdf" },
   { label: "FBI IC3, 2025 Internet Crime Report", href: "https://www.ic3.gov/AnnualReport/Reports/2025_IC3Report.pdf" },
-  { label: "CUSTOMER.md", href: "https://github.com/benz16107/calhacks13/blob/main/tracks/credit-desk/CUSTOMER.md" }
+  { label: "CUSTOMER.md", href: "https://github.com/benz16107/gurtos/blob/main/tracks/credit-desk/CUSTOMER.md" }
 ]}>
 
 - The Atradius figures are a typical range from 240 US businesses, not a measured average.
@@ -228,10 +228,10 @@ Each control is mapped to Microsoft's Responsible AI Standard in `tracks/credit-
 
 <CriteriaMap sponsor="Microsoft" source="Microsoft's track description and judging criteria, as copied into the project's track plan (docs/tracks.md)." items={[
   { ask: "A production-minded AI agent for finance, productivity, healthcare or similar.", status: "met", how: "Finance: trade credit, collections and supplier payments at Fogline Supply Co., a made-up Oakland wholesaler, with three agent seats and a human controller.", evidence: [{ label: "Credit desk on the Hyphenate page", href: "/tracks/hyphenate/" }] },
-  { ask: "Customer understanding.", status: "met", how: "The customer is the controller of a small business. The case is built from everyday failures and the page cites sourced facts about them, each with its scope and what we could not find.", evidence: [{ label: "The customer", href: "#the-customer-a-small-business-s-controller" }, { label: "CUSTOMER.md", href: "https://github.com/benz16107/calhacks13/blob/main/tracks/credit-desk/CUSTOMER.md" }] },
-  { ask: "Measurable usefulness.", status: "met", how: "Scored from the log against the key: 16 of 17 planted errors, 1 false alarm, 6 of 6 credit decisions, beside the simple rule, which approves all six for $153,000. The Impact view also shows a person's minutes per application, credit stopped, supplier payments stopped and model cost per application. We state no minutes-by-hand figure, because no source we found times them, and the 3 minutes a person needs to answer one request is our assumption.", evidence: [{ label: "Run bd5c61", href: "https://github.com/benz16107/calhacks13/tree/main/tracks/credit-desk/runs/2026-10-24-live-bd5c61-rules-0.3" }] },
-  { ask: "Path to production.", status: "met", how: "People and roles, routed approvals, a read-only audit, one kill switch with a measured drill, shadow mode with a go-live bar and a one-setting way back, updates that roll back, and resume after a power cut. Sign-in with a work account is Entra-ready and tested with a standards test provider, not a real tenant.", evidence: [{ label: "The pilot plan", href: "https://github.com/benz16107/calhacks13/blob/main/docs/pilot.md" }, { label: "The drill", href: "https://github.com/benz16107/calhacks13/blob/main/docs/drill.md" }] },
-  { ask: "Responsible design.", status: "met", how: "Six principles mapped to code and tests, with what is not done. Seats cannot approve their own work or clear a fraud hold, and an applicant gets a plain letter. The letters are model letters, not a claim of legal compliance.", evidence: [{ label: "RESPONSIBLE.md", href: "https://github.com/benz16107/calhacks13/blob/main/tracks/credit-desk/RESPONSIBLE.md" }] },
+  { ask: "Customer understanding.", status: "met", how: "The customer is the controller of a small business. The case is built from everyday failures and the page cites sourced facts about them, each with its scope and what we could not find.", evidence: [{ label: "The customer", href: "#the-customer-a-small-business-s-controller" }, { label: "CUSTOMER.md", href: "https://github.com/benz16107/gurtos/blob/main/tracks/credit-desk/CUSTOMER.md" }] },
+  { ask: "Measurable usefulness.", status: "met", how: "Scored from the log against the key: 16 of 17 planted errors, 1 false alarm, 6 of 6 credit decisions, beside the simple rule, which approves all six for $153,000. The Impact view also shows a person's minutes per application, credit stopped, supplier payments stopped and model cost per application. We state no minutes-by-hand figure, because no source we found times them, and the 3 minutes a person needs to answer one request is our assumption.", evidence: [{ label: "Run bd5c61", href: "https://github.com/benz16107/gurtos/tree/main/tracks/credit-desk/runs/2026-10-24-live-bd5c61-rules-0.3" }] },
+  { ask: "Path to production.", status: "met", how: "People and roles, routed approvals, a read-only audit, one kill switch with a measured drill, shadow mode with a go-live bar and a one-setting way back, updates that roll back, and resume after a power cut. Sign-in with a work account is Entra-ready and tested with a standards test provider, not a real tenant.", evidence: [{ label: "The pilot plan", href: "https://github.com/benz16107/gurtos/blob/main/docs/pilot.md" }, { label: "The drill", href: "https://github.com/benz16107/gurtos/blob/main/docs/drill.md" }] },
+  { ask: "Responsible design.", status: "met", how: "Six principles mapped to code and tests, with what is not done. Seats cannot approve their own work or clear a fraud hold, and an applicant gets a plain letter. The letters are model letters, not a claim of legal compliance.", evidence: [{ label: "RESPONSIBLE.md", href: "https://github.com/benz16107/gurtos/blob/main/tracks/credit-desk/RESPONSIBLE.md" }] },
   { ask: "End-to-end function.", status: "met", how: "Application in, seven CRS checks, a decision by rule, the controller's answer on a phone, the decision in the log, the run scored. The merge gate runs this path on every merge, live against CRS and Nessie.", evidence: [{ label: "Hyphenate page", href: "/tracks/hyphenate/" }] },
   { ask: "Customer Impact Award.", status: "met", how: "The desk does the checking and the paperwork, stops the one application that would have cost $20,000 of credit, and brings only the decisions that need a person to their phone with the reason attached.", evidence: [] }
 ]} />

@@ -20,8 +20,7 @@ This release fixes several security bugs in v0.1.0-preview. If you run v0.1.0-pr
 
 ## Downloads
 
-Every file is on this GitHub release and on the mirror at `https://sjc1.vultrobjects.com/gurtos/<version>/`, with
-the same checksums and signature.
+Every file is on this GitHub release, listed in the signed `SHA256SUMS`.
 
 | File | For | Size | SHA-256 |
 |---|---|---|---|
@@ -48,8 +47,8 @@ SHA256:FWKFb1eAvEBmMhVJwMwTnLnhrmZ5yQZ5947pDvFKcpY`, the same key as v0.1.0-prev
 ## Upgrade from v0.1.0-preview
 
 - **GurtOS Personal:** open a terminal and run
-  `sudo box-update apply https://github.com/benz16107/calhacks13/releases/download/<version>/gurtos-personal-<arch>.sqfs`
-  with `x86_64` or `arm64` for `<arch>` (`uname -m` says `aarch64` on arm64), or the same file on the mirror. The v0.1.0-preview updater checks the
+  `sudo box-update apply https://github.com/benz16107/gurtos/releases/download/<version>/gurtos-personal-<arch>.sqfs`
+  with `x86_64` or `arm64` for `<arch>` (`uname -m` says `aarch64` on arm64). The v0.1.0-preview updater checks the
   signature, the checksum and the edition, but not the architecture, so pick the right file. It writes the new
   system to the spare slot and restarts. If the new system is not healthy within 5 minutes, the computer goes back
   to v0.1.0-preview by itself. Your accounts, files, settings, tasks, action log and keys are kept. Software you
@@ -181,9 +180,9 @@ SHA256:FWKFb1eAvEBmMhVJwMwTnLnhrmZ5yQZ5947pDvFKcpY`, the same key as v0.1.0-prev
 
 ## Build it yourself
 
-On any Ubuntu 24.04 machine or VM with root: `git clone https://github.com/benz16107/calhacks13.git gurtos && cd
+On any Ubuntu 24.04 machine or VM with root: `git clone https://github.com/benz16107/gurtos.git gurtos && cd
 gurtos && git checkout <version> && image/build`. Editions, architectures, times and options are in
-[`image/README.md`](https://github.com/benz16107/calhacks13/blob/main/image/README.md).
+[`image/README.md`](https://github.com/benz16107/gurtos/blob/main/image/README.md).
 
 GurtOS is licensed under the Apache License 2.0. The images contain third-party software under its own licences;
-see NOTICE and [`release/licenses.md`](https://github.com/benz16107/calhacks13/blob/main/release/licenses.md).
+see NOTICE and [`release/licenses.md`](https://github.com/benz16107/gurtos/blob/main/release/licenses.md).

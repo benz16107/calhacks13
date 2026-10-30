@@ -6,8 +6,8 @@ description: GurtOS is open source under the Apache License 2.0. This page links
 ## GurtOS
 
 GurtOS is open source under the **Apache License 2.0**. The source is at
-[github.com/benz16107/calhacks13](https://github.com/benz16107/calhacks13), and the full licence text is in its
-[LICENSE](https://github.com/benz16107/calhacks13/blob/main/LICENSE) file.
+[github.com/benz16107/gurtos](https://github.com/benz16107/gurtos), and the full licence text is in its
+[LICENSE](https://github.com/benz16107/gurtos/blob/main/LICENSE) file.
 
 In short, you may use, copy, change and share GurtOS, including in commercial products, as long as you keep the
 licence and copyright notices and state what you changed. The licence includes a patent grant from contributors.
@@ -31,7 +31,7 @@ GurtOS is built from other people's work, each under its own licence. The main p
 | Papirus icons, Bibata cursors | GurtOS Personal's icon theme | GPL-3.0 |
 | Astro, Starlight, Pagefind | These docs | MIT |
 
-The [licence report](https://github.com/benz16107/calhacks13/blob/main/release/licenses.md) lists the licence of
+The [licence report](https://github.com/benz16107/gurtos/blob/main/release/licenses.md) lists the licence of
 every package in each image, and each release has a software bill of materials per image.
 
 Model providers and apps that call outside services, such as Anthropic, Factory, Jira, Elastic, Stripe or Apify, are

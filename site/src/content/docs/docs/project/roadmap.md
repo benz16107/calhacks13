@@ -5,7 +5,7 @@ description: Everything in GurtOS that is planned or in preview, in one list, wi
 
 These are the known gaps and the work intended to close them. Nothing here has a date. Items move to the
 [changelog](/docs/project/changelog/) when they ship. What has to happen before a 1.0, such as stronger isolation
-and an outside audit, is in [ROADMAP.md](https://github.com/benz16107/calhacks13/blob/main/ROADMAP.md).
+and an outside audit, is in [ROADMAP.md](https://github.com/benz16107/gurtos/blob/main/ROADMAP.md).
 
 **Preview** means built and working, but incomplete or likely to change. **Planned** means not built yet, and
 intended. **Not built** means a known gap with no plan yet; it is listed so you can weigh the limit for yourself.

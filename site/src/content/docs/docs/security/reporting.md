@@ -8,7 +8,7 @@ GurtOS is a preview maintained by one person, and it has not had an outside audi
 ## How to report
 
 Use GitHub's private vulnerability reporting:
-[github.com/benz16107/calhacks13/security/advisories/new](https://github.com/benz16107/calhacks13/security/advisories/new).
+[github.com/benz16107/gurtos/security/advisories/new](https://github.com/benz16107/gurtos/security/advisories/new).
 A private report reaches the maintainer only, and lets us fix the problem before it is public.
 
 If reporting through GitHub is not possible for you, open a public issue that says only that you need a private way
@@ -69,7 +69,7 @@ Out of scope:
 The [threat model](/docs/security/threat-model/#what-gurtos-does-not-defend-against) and the [roadmap](/docs/project/roadmap/) list the limits we know about.
 The attack scoreboard, 41 attacks run against a real box on every merge with each one published as caught or not
 covered, is in
-[`tracks/armadin/SCOREBOARD.md`](https://github.com/benz16107/calhacks13/blob/main/tracks/armadin/SCOREBOARD.md).
+[`tracks/armadin/SCOREBOARD.md`](https://github.com/benz16107/gurtos/blob/main/tracks/armadin/SCOREBOARD.md).
 
 ## Related
 

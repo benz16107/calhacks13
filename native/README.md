@@ -10,7 +10,7 @@ The web app (app.gurtos.com) stays the option that needs no install.
 |---|---|---|
 | iPhone | Native SwiftUI app, iOS 26 | TestFlight, internal testing only (build 1, 0.1.0). There is no public download and no App Store listing. Build it yourself (below) |
 | Apple Watch | Native watchOS 26 app, inside the iPhone app | Installs with the iPhone app |
-| Mac | Menu bar app with a Share extension, macOS 26 | `gurtos-mac-0.1.0.dmg` on the [v0.1.0-preview release](https://github.com/benz16107/calhacks13/releases/tag/v0.1.0-preview), signed with a Developer ID and notarized |
+| Mac | Menu bar app with a Share extension, macOS 26 | `gurtos-mac-0.1.0.dmg` on the [v0.1.0-preview release](https://github.com/benz16107/gurtos/releases/tag/v0.1.0-preview), signed with a Developer ID and notarized |
 | Android | The web app as a Trusted Web Activity APK | `gurtos-android-0.1.0.apk` on the same release. It was tried in an Android 15 emulator, not yet on a phone |
 | Windows | No app. Install app.gurtos.com from Edge | The gurtos.com Download page |
 

@@ -21,7 +21,7 @@ the [Download](/download/) page.
 
 :::note[Early preview]
 GurtOS is in early development. It is open source under the Apache License 2.0, with the
-[source on GitHub](https://github.com/benz16107/calhacks13) and install images on the [Download](/download/) page.
+[source on GitHub](https://github.com/benz16107/gurtos) and install images on the [Download](/download/) page.
 Features that are not built are marked **Planned** on their pages. Features that work but may change are
 marked **Preview**. The [roadmap](/docs/project/roadmap/) lists both.
 :::

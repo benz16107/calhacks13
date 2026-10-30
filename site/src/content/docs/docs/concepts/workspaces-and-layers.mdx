@@ -38,13 +38,13 @@ Undo takes one task's layer out of the stack and rebuilds the view. Nothing else
 - Every other done task keeps its layer, so its changes stay.
 - If the task is still running or waiting, the core stops its processes first, and denies any approval it was waiting on.
 
-Undo is `POST /api/tasks/<id>/undo`. The portal's Undo button and Time Machine both call it. The task's state becomes `undone`, which is final, and the log records when. It does not record who asked for the undo.
+Undo is `POST /api/tasks/<id>/undo`. The portal's Undo button and History both call it. The task's state becomes `undone`, which is final, and the log records when. It does not record who asked for the undo.
 
 Once no running task still reads the undone layer, the core deletes it from disk. An undone task's diff is empty, because its changes are gone.
 
-![Time Machine: a workspace's task layers over its base files, with the selected layer's files that would come out, what stays as it is, and an Undo this task button.](../../../../assets/screens/time-machine.png)
+![History: a workspace's task layers over its base files, with the selected layer's files that would come out, what stays as it is, and an Undo this task button.](../../../../assets/screens/time-machine.png)
 
-*Time Machine, from a test box running scripted tasks.*
+*History, from a test box running scripted tasks.*
 
 ### What undo does not do
 

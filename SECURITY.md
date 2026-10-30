@@ -6,7 +6,7 @@ problems, and we treat every report seriously.
 ## Report a vulnerability
 
 Use GitHub's private vulnerability reporting:
-**<https://github.com/benz16107/calhacks13/security/advisories/new>**
+**<https://github.com/benz16107/gurtos/security/advisories/new>**
 
 Please do not open a public issue or pull request for a security problem. A private report reaches the maintainer
 only, and lets us fix it before it is public.

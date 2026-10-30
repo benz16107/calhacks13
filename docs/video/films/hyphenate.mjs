@@ -92,6 +92,6 @@ export default {
           source: '12 min, about $5.24 · scored against the answer key', sourceAt: { cue: 'sixteen' } } },
         { cue: 'bring', v: { type: 'shot', frame: 'paper', src: repo(`showcase/src/assets/${SHOW}/desk-bring-your-own.png`), enter: 'drop', rot: -1.2,
             box: { cx: 960, cy: 450, w: 1100, h: 760 } } },
-        { cue: 'gurt', v: { type: 'end', lines: ['gurtos.com', 'github.com/benz16107/calhacks13', 'Open source, Apache-2.0'] } }] },
+        { cue: 'gurt', v: { type: 'end', lines: ['gurtos.com', 'github.com/benz16107/gurtos', 'Open source, Apache-2.0'] } }] },
   ],
 };

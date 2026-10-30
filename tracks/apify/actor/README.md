@@ -58,6 +58,6 @@ run with no secrets and a limited network.
 
 ## Where it comes from
 
-Part of [GurtOS](https://github.com/benz16107/calhacks13), an open-source (Apache-2.0) OS where AI agents work in
+Part of [GurtOS](https://github.com/benz16107/gurtos), an open-source (Apache-2.0) OS where AI agents work in
 isolated spaces without keys. GurtOS agents read every page through this Actor. The detector is
 `tracks/apify/actor/src/detect.js` in that repository, with its tests.

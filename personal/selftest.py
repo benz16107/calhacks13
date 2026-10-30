@@ -252,13 +252,13 @@ r = tl.reach(detail)
 check(r['hosts'] == [] and r['user'].startswith('box-'), f"a task's page shows what it can reach: no internet, its own user {r['user']}")
 plan = tl.go_back_plan(api('GET', '/api/tasks'), tl.since(tl.SPANS[0][1]))
 check(any(t['id'] == t_app['id'] for t in plan) and [t['updatedAt'] for t in plan] == sorted((t['updatedAt'] for t in plan), reverse=True),
-      f"Time Machine's go back takes out what finished in the last 15 minutes, newest first ({len(plan)} tasks)")
+      f"History's go back takes out what finished in the last 15 minutes, newest first ({len(plan)} tasks)")
 
-# Undo after Keep leaves the task done with review "undone": Time Machine must not offer to undo it again.
+# Undo after Keep leaves the task done with review "undone": History must not offer to undo it again.
 kept_then_undone = api('GET', f"/api/tasks/{t3['id']}")['task']
 check(kept_then_undone.get('review') == 'undone' and tl.can_take_out(kept_then_undone) is None
       and all(t['id'] != t3['id'] for t in tl.go_back_plan(api('GET', '/api/tasks'), tl.since(None))),
-      'a task whose Keep was undone is not offered again by Time Machine, alone or in Undo every task since')
+      'a task whose Keep was undone is not offered again by History, alone or in Undo every task since')
 
 # Times read like GNOME's clock: 24-hour, or AM/PM when the owner chose it.
 noon = datetime(2026, 10, 29, 13, 44)

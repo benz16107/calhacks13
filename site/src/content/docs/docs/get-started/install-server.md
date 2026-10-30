@@ -52,14 +52,14 @@ removable disk, is erased only after you type `erase` on the screen. Check which
 
 GurtOS Server ships only what the box needs. The image is built from 40 named Ubuntu 24.04 packages, 440 with their
 dependencies, and has no desktop, snapd, cloud-init, sudo or apt. Its screen is one full-screen view of the box's
-own page ([image/README.md](https://github.com/benz16107/calhacks13/blob/main/image/README.md#what-is-different-from-stock-ubuntu)). The x86_64 install disc is
+own page ([image/README.md](https://github.com/benz16107/gurtos/blob/main/image/README.md#what-is-different-from-stock-ubuntu)). The x86_64 install disc is
 1.37 GB.
 
 The box itself is small. Installed from source on Ubuntu 24.04 in a virtual machine with 1 vCPU and 1 GB of memory, it
 used 474 MB at idle (the OS alone used 330 MB). The box service was running 8 seconds after the kernel started, 13.3
 seconds after power on. One real Claude task finished in 11 seconds with 261 MB still free. Two tasks at once left
 38 MB free, so 1 GB means one task at a time, and on 512 MB a task is killed
-([measured minimum](https://github.com/benz16107/calhacks13/blob/main/tracks/anthropic/README.md)). Those runs did not include the Server image's screen, so the
+([measured minimum](https://github.com/benz16107/gurtos/blob/main/tracks/anthropic/README.md)). Those runs did not include the Server image's screen, so the
 image itself has not been measured at 1 GB.
 
 ## Get the ISO
@@ -70,12 +70,12 @@ v0.1.0-preview release. Check its checksum before you use it; the Download page 
 
 ### Build it yourself
 
-You can also build the ISO from the [source](https://github.com/benz16107/calhacks13) on any Ubuntu 24.04 machine or
+You can also build the ISO from the [source](https://github.com/benz16107/gurtos) on any Ubuntu 24.04 machine or
 VM where you have root. The build installs tools, mounts loop devices and runs chroots as root, so use a machine set
 aside for it. To build on another machine, give `BUILD_SHELL` a shell there:
 
 ```sh
-git clone https://github.com/benz16107/calhacks13.git gurtos && cd gurtos
+git clone https://github.com/benz16107/gurtos.git gurtos && cd gurtos
 image/build                                        # GurtOS Server, x86_64, on this machine
 image/build arm64                                  # GurtOS Server, arm64, for Apple silicon and arm64 servers
 BUILD_SHELL='ssh my-build-vm' image/build         # the same build, run on my-build-vm

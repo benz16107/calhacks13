@@ -20,7 +20,7 @@ SpacetimeDB. (Droid is not in the image: each machine downloads it on first star
 VM or a machine set aside for it.
 
 ```
-git clone https://github.com/benz16107/calhacks13 gurtos && cd gurtos
+git clone https://github.com/benz16107/gurtos gurtos && cd gurtos
 image/build                      # GurtOS Server for x86_64
 image/build personal             # GurtOS Personal for x86_64
 image/build arm64                # GurtOS Server for arm64

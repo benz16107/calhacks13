@@ -94,6 +94,6 @@ export default {
             { src: repo('site/src/assets/home/server-screen.png'), frame: 'window', enter: 'wipe-down', label: 'GurtOS Server: Droid works while you are away', color: 'accent' },
             { src: REVIEW, frame: 'window', enter: 'wipe', cue: 'personal', label: 'GurtOS Personal: changes only on Keep', color: 'amber',
               marks: [{ cue: 'keep', kind: 'circle', x: 0.6984, y: 0.2537, w: 0.061, h: 0.0315, color: 'amber', weight: 6 }] }] } },
-        { cue: 'gurt', v: { type: 'end', lines: ['gurtos.com', 'github.com/benz16107/calhacks13', 'Open source, Apache-2.0'] } }] },
+        { cue: 'gurt', v: { type: 'end', lines: ['gurtos.com', 'github.com/benz16107/gurtos', 'Open source, Apache-2.0'] } }] },
   ],
 };

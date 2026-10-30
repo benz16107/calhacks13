@@ -275,7 +275,7 @@ const tasks = await (await fetch('/api/tasks')).json(); // a read the token allo
 await fetch('/api/vault'); // 403: an app's window may use only its own routes
 ```
 
-The window sends the desktop's light or dark style to the page by message, and `/kit/gurtos.js` applies it. [portal/KIT.md](https://github.com/benz16107/calhacks13/blob/main/portal/KIT.md) in the source tree lists the style classes an app page can use.
+The window sends the desktop's light or dark style to the page by message, and `/kit/gurtos.js` applies it. [portal/KIT.md](https://github.com/benz16107/gurtos/blob/main/portal/KIT.md) in the source tree lists the style classes an app page can use.
 
 ## Permissions
 

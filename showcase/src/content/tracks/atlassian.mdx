@@ -44,7 +44,7 @@ shots:
     caption: 'JQL on the indexed fields.'
 links:
   - label: The track's code and README
-    href: https://github.com/benz16107/calhacks13/tree/main/tracks/jira
+    href: https://github.com/benz16107/gurtos/tree/main/tracks/jira
     note: 'The box side in <code>tracks/jira/</code>, the Forge app in <code>tracks/jira/forge/</code>. The Jira demo site itself is not public, so the screenshots on this page are from its issues, the panel ones from BOX-29 and BOX-30.'
   - label: 'Docs: connect Jira'
     href: https://gurtos.com/docs/guides/connect-jira/
@@ -90,10 +90,10 @@ When an agent acts for your team overnight, the next morning you need to know ex
 </Lead>
 
 <Numbers items={[
-  { value: "3 configs", label: "changed by BOX-29 instead of one, all three put back by Roll back from Jira", href: "https://github.com/benz16107/calhacks13/tree/main/tracks/jira", source: "tracks/jira" },
-  { value: "1 search", label: "answers the morning-after question: project = BOX AND boxBlocked > 0", href: "https://github.com/benz16107/calhacks13/tree/main/tracks/jira/forge", source: "Forge app" },
-  { value: "3 actions", label: "in the GurtOS Rovo agent: ask what got blocked, roll back, pause all agents", href: "https://github.com/benz16107/calhacks13/tree/main/tracks/jira/forge", source: "Forge app" },
-  { value: "12 checks", label: "of the Jira flow pass in every merge-gate run, offline, and the same 12 against the real demo site", href: "https://github.com/benz16107/calhacks13/tree/main/tracks/jira", source: "tracks/jira/demo.ts" }
+  { value: "3 configs", label: "changed by BOX-29 instead of one, all three put back by Roll back from Jira", href: "https://github.com/benz16107/gurtos/tree/main/tracks/jira", source: "tracks/jira" },
+  { value: "1 search", label: "answers the morning-after question: project = BOX AND boxBlocked > 0", href: "https://github.com/benz16107/gurtos/tree/main/tracks/jira/forge", source: "Forge app" },
+  { value: "3 actions", label: "in the GurtOS Rovo agent: ask what got blocked, roll back, pause all agents", href: "https://github.com/benz16107/gurtos/tree/main/tracks/jira/forge", source: "Forge app" },
+  { value: "12 checks", label: "of the Jira flow pass in every merge-gate run, offline, and the same 12 against the real demo site", href: "https://github.com/benz16107/gurtos/tree/main/tracks/jira", source: "tracks/jira/demo.ts" }
 ]} />
 
 Best shown in **GurtOS Business**. Everything shown ran against a GurtOS Server box and the real demo Jira site, except the Jira-user-to-Business-person mapping, which the merge gate checks against offline Jira stand-ins.
@@ -144,7 +144,7 @@ It runs on a computer you own: one Node service, 4 GB of memory and 17 GB of dis
   { what: "Flight recorder: a finished task replays step by step in GurtOS, with every tool call, blocked attempt, request and who answered", why: "The same record as the Jira issue, played back in order", os: "Replay of the append-only log", track: "None: the replay does not link to the Jira issue", status: "Built" }
 ]} />
 
-<Evidence title="What the Jira app may use" run="GET /api/permissions on a dev box on main, Oct 25. The owner can turn any item off. Strangers is enforced at the app's public routes." numbers={[{ value: "4", label: "keys, used through GurtOS; the app never sees them" }, { value: "1", label: "public route permission: requests from outside" }]} sources={[{ label: "core/permissions.ts", href: "https://github.com/benz16107/calhacks13/blob/main/core/permissions.ts" }]}>
+<Evidence title="What the Jira app may use" run="GET /api/permissions on a dev box on main, Oct 25. The owner can turn any item off. Strangers is enforced at the app's public routes." numbers={[{ value: "4", label: "keys, used through GurtOS; the app never sees them" }, { value: "1", label: "public route permission: requests from outside" }]} sources={[{ label: "core/permissions.ts", href: "https://github.com/benz16107/gurtos/blob/main/core/permissions.ts" }]}>
 
 - Use the key ATLASSIAN_API_TOKEN (through GurtOS; the app never sees it)
 - Use the key ATLASSIAN_EMAIL
@@ -157,13 +157,13 @@ It runs on a computer you own: one Node service, 4 GB of memory and 17 GB of dis
 ## What Atlassian asked for, and where each answer is
 
 <CriteriaMap sponsor="Atlassian" source="Atlassian's Track 2 brief and the challenge rules, as copied into the project's track plan (docs/tracks.md)." items={[
-  { ask: "Audit and reversion: record every action with the inputs and reasoning behind it, so an admin can see exactly what happened the next morning and roll back only the changes that were wrong.", status: "met", how: "Each issue holds the prompt, the allowed tools and hosts, the agent's reasoning in its own words, approvals and who gave them, blocked attempts, the diff and the last 40 log entries. <strong>Roll back this task</strong> takes out that task's layer of file changes, and every other task keeps its own.", evidence: [{ label: "Issue description", href: "#evidence" }, { label: "tracks/jira", href: "https://github.com/benz16107/calhacks13/tree/main/tracks/jira" }] },
+  { ask: "Audit and reversion: record every action with the inputs and reasoning behind it, so an admin can see exactly what happened the next morning and roll back only the changes that were wrong.", status: "met", how: "Each issue holds the prompt, the allowed tools and hosts, the agent's reasoning in its own words, approvals and who gave them, blocked attempts, the diff and the last 40 log entries. <strong>Roll back this task</strong> takes out that task's layer of file changes, and every other task keeps its own.", evidence: [{ label: "Issue description", href: "#evidence" }, { label: "tracks/jira", href: "https://github.com/benz16107/gurtos/tree/main/tracks/jira" }] },
   { ask: "Track 1: agents that do the work.", status: "met", how: "Hand a Jira issue to the GurtOS agent by label, by assigning it or from an Automation rule. The issue's text becomes a task in its own safe space, and the result, the diff and any request for an OK come back on the issue. A task started from PLAT-33510 changed one file and reported back, and a second start did not run it twice.", evidence: [{ label: "Started from an issue", href: "#evidence" }] },
-  { ask: "A Forge app for Jira or Confluence.", status: "met", how: "A Jira issue panel (UI Kit, native render) with a resolver in Atlassian's cloud, a Rovo agent, a bulk action, a gadget and a jira:entityProperty index so state, cost, blocked attempts and pending approvals are searchable in JQL. Installed on the demo site in production.", evidence: [{ label: "tracks/jira/forge", href: "https://github.com/benz16107/calhacks13/tree/main/tracks/jira/forge" }] },
+  { ask: "A Forge app for Jira or Confluence.", status: "met", how: "A Jira issue panel (UI Kit, native render) with a resolver in Atlassian's cloud, a Rovo agent, a bulk action, a gadget and a jira:entityProperty index so state, cost, blocked attempts and pending approvals are searchable in JQL. Installed on the demo site in production.", evidence: [{ label: "tracks/jira/forge", href: "https://github.com/benz16107/gurtos/tree/main/tracks/jira/forge" }] },
   { ask: "Technical use of Forge.", status: "met", how: "The resolver reads the issue property <strong>as the signed-in user</strong>, checks EDIT_ISSUES before any action, and is the only place that holds the box's shared secret, a Forge encrypted variable. It calls one declared external host. Scopes are read-only: the app never writes to Jira, the box does.", evidence: [{ label: "Forge pieces used", href: "#evidence" }] },
   { ask: "Usefulness to Atlassian users.", status: "met", how: "The morning-after question is one JQL search: <code>project = BOX AND boxBlocked > 0</code>. Agent work moves across a normal board (To Do, In Progress, In Review, Done), so a team reviews agents the way it reviews people.", evidence: [{ label: "JQL search", href: "#evidence" }] },
   { ask: "Demo video, 3 minutes at most.", status: "partly", how: "The narrated video is produced after the build. The screenshots on this page are from the real demo site.", evidence: [] },
-  { ask: "Repo link.", status: "met", how: "tracks/jira/ is the box side and tracks/jira/forge/ is the Forge app.", evidence: [{ label: "tracks/jira", href: "https://github.com/benz16107/calhacks13/tree/main/tracks/jira" }] }
+  { ask: "Repo link.", status: "met", how: "tracks/jira/ is the box side and tracks/jira/forge/ is the Forge app.", evidence: [{ label: "tracks/jira", href: "https://github.com/benz16107/gurtos/tree/main/tracks/jira" }] }
 ]} />
 
 ## Evidence
@@ -222,7 +222,7 @@ A production request opened a JSM request with its approvers and, once approved 
   { value: "12", label: "Jira checks per run" },
   { value: "401", label: "from the panel routes without the shared secret" },
   { value: "175", label: "checks in the latest full merge gate, 0 failed" }
-]} sources={[{ label: "tracks/jira", href: "https://github.com/benz16107/calhacks13/tree/main/tracks/jira" }]}>
+]} sources={[{ label: "tracks/jira", href: "https://github.com/benz16107/gurtos/tree/main/tracks/jira" }]}>
 
 ```
 track jira
@@ -279,7 +279,7 @@ A Jira user acts as their GurtOS Business person: only someone with both the Jir
 4. From `tracks/jira/forge/`: `forge variables set --encrypt BOX_SECRET <secret>`, `forge deploy`, `forge install`.
 5. Start any task on the computer. Its issue appears in `BOX`. Open the panel and try Approve and Roll back.
 
-The full steps are in the [track README](https://github.com/benz16107/calhacks13/tree/main/tracks/jira) and the docs guide [Connect Jira](https://gurtos.com/docs/guides/connect-jira/). The demo Jira site is not public, so we run it live at our table on Sunday.
+The full steps are in the [track README](https://github.com/benz16107/gurtos/tree/main/tracks/jira) and the docs guide [Connect Jira](https://gurtos.com/docs/guides/connect-jira/). The demo Jira site is not public, so we run it live at our table on Sunday.
 
 </Steps>
 

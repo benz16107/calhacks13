@@ -6,10 +6,10 @@
   "homepage": "https://gurtos.com",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/benz16107/calhacks13.git"
+    "url": "git+https://github.com/benz16107/gurtos.git"
   },
   "bugs": {
-    "url": "https://github.com/benz16107/calhacks13/issues"
+    "url": "https://github.com/benz16107/gurtos/issues"
   },
   "private": true,
   "type": "module",

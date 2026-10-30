@@ -138,7 +138,7 @@ export function TasksApp({ view }: { view: string }) {
             onClose={() => setMore(null)}
             items={[
               { label: 'Activity', icon: 'view-list', run: () => open('activity') },
-              { label: 'Time Machine', icon: 'document-open-recent', run: () => open('time-machine') },
+              { label: 'History', icon: 'document-open-recent', run: () => open('time-machine') },
               'sep',
               { label: 'Permissions…', icon: 'security-high', run: () => open('settings/permissions') },
             ]}

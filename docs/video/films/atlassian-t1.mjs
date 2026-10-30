@@ -83,6 +83,6 @@ export default {
             { id: 'os', kind: 'card', label: 'THE OS', title: 'Isolation, budget, undo', lines: ['Open source'], x: 1640, y: 110, w: 440, rot: 2, cue: 'os' },
             { id: 'fg', kind: 'card', label: 'THE FORGE APP', title: 'Panel, Rovo, triggers', lines: ['Open source'], x: 1640, y: 430, w: 440, rot: -2, cue: 'forge' }],
           strings: [{ from: 'rv', to: 'cf', cue: 'daily', sag: 90 }] } },
-        { cue: 'both', v: { type: 'end', lines: ['gurtos.com', 'github.com/benz16107/calhacks13', 'Open source, Apache-2.0'] } }] },
+        { cue: 'both', v: { type: 'end', lines: ['gurtos.com', 'github.com/benz16107/gurtos', 'Open source, Apache-2.0'] } }] },
   ],
 };

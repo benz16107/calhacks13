@@ -86,6 +86,6 @@ export default {
         { cue: 'and', after: 'principles', v: { type: 'exhibit', enter: 'wipe', rot: -0.6, label: 'A DECLINE GETS A PLAIN LETTER', lines: [
             { text: 'We need to verify some information', at: 0.4 },
             { text: 'Not a claim of legal compliance', dim: true, at: 1.8 }] } },
-        { cue: 'open', v: { type: 'end', lines: ['gurtos.com', 'github.com/benz16107/calhacks13', 'Open source, Apache-2.0'] } }] },
+        { cue: 'open', v: { type: 'end', lines: ['gurtos.com', 'github.com/benz16107/gurtos', 'Open source, Apache-2.0'] } }] },
   ],
 };

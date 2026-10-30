@@ -27,9 +27,9 @@ shots:
     caption: 'The Find design from Figma. The search itself is built and runs on every box; this screen is the design, and its two photo thumbnails are AI-generated stand-ins.'
 links:
   - label: The track README, with the latency table
-    href: https://github.com/benz16107/calhacks13/tree/main/tracks/find
+    href: https://github.com/benz16107/gurtos/tree/main/tracks/find
   - label: The index and the describer, tracks/find/find.ts
-    href: https://github.com/benz16107/calhacks13/blob/main/tracks/find/find.ts
+    href: https://github.com/benz16107/gurtos/blob/main/tracks/find/find.ts
   - label: 'Docs: search your files with /find'
     href: https://gurtos.com/docs/guides/find/
     note: 'Moss''s cloud index has no public view, so the evidence here is the merge-gate output and the latency measurements.'
@@ -106,7 +106,7 @@ You can search by what is in a photo, not what it is called. A photo named `IMG_
 
 Ask your computer a question and get a short answer in about 0.3 seconds from Moss Inference, or on your own machine if you prefer. The search never leaves the computer; Moss only writes the answer from the four notes that match. The Find page's Ask button shows the answer, who wrote it, how long it took and what left the computer.
 
-<Evidence title="From the end of a spoken question to the answer" run="Measured Oct 24 with <code>DEMO_LIVE=moss ./demo vultr</code>: five questions about the four test photos and one preference, each asked three times with Moss's reply cache off, 15 calls per path, on 4 to 6 vCPU x86 cloud VMs with no GPU in San Jose, Moss's region. Speech to text: faster-whisper <code>base.en</code> on the CPU of a 4 vCPU VM." numbers={[{ value: '1.9 s', label: 'with Moss Inference (1.6 s speech to text + 0.33 s answer)' }, { value: '4.7 s', label: 'with a small local model on the CPU (1.6 s + 3.1 s)' }, { value: '5 of 5', label: 'answers right with Moss Inference' }]} sources={[{ label: 'tracks/find/README.md, the Answers section', href: 'https://github.com/benz16107/calhacks13/blob/main/tracks/find/README.md' }]} />
+<Evidence title="From the end of a spoken question to the answer" run="Measured Oct 24 with <code>DEMO_LIVE=moss ./demo vultr</code>: five questions about the four test photos and one preference, each asked three times with Moss's reply cache off, 15 calls per path, on 4 to 6 vCPU x86 cloud VMs with no GPU in San Jose, Moss's region. Speech to text: faster-whisper <code>base.en</code> on the CPU of a 4 vCPU VM." numbers={[{ value: '1.9 s', label: 'with Moss Inference (1.6 s speech to text + 0.33 s answer)' }, { value: '4.7 s', label: 'with a small local model on the CPU (1.6 s + 3.1 s)' }, { value: '5 of 5', label: 'answers right with Moss Inference' }]} sources={[{ label: 'tracks/find/README.md, the Answers section', href: 'https://github.com/benz16107/gurtos/blob/main/tracks/find/README.md' }]} />
 
 <Details summary="The answer paths, measured, and what each sends">
 
@@ -124,7 +124,7 @@ Speech to text was a median of 1.6 s (1,547 to 1,621 ms) on the CPU of a 4 vCPU 
 </Details>
 
 <CriteriaMap title="What the judges asked for" sponsor="Moss" source="From Moss's track description, as copied into the project's track plan. Moss published no detailed criteria." items={[
-  { ask: 'A personal agent that remembers you, works across your apps and handles everyday tasks on its own.', how: 'GurtOS Personal is a computer where agents do everyday work: shopping, paperwork, code. Through Moss the owner and every agent find what any of them did, filed or wrote, by meaning. Preferences are stated once and reach every app. Agents are handed the owner\'s preferences and the relevant lessons from past tasks before a task starts.', evidence: [{ label: 'The track README, with the latency table', href: 'https://github.com/benz16107/calhacks13/tree/main/tracks/find' }, { label: 'The index and the describer', href: 'https://github.com/benz16107/calhacks13/blob/main/tracks/find/find.ts' }] },
+  { ask: 'A personal agent that remembers you, works across your apps and handles everyday tasks on its own.', how: 'GurtOS Personal is a computer where agents do everyday work: shopping, paperwork, code. Through Moss the owner and every agent find what any of them did, filed or wrote, by meaning. Preferences are stated once and reach every app. Agents are handed the owner\'s preferences and the relevant lessons from past tasks before a task starts.', evidence: [{ label: 'The track README, with the latency table', href: 'https://github.com/benz16107/gurtos/tree/main/tracks/find' }, { label: 'The index and the describer', href: 'https://github.com/benz16107/gurtos/blob/main/tracks/find/find.ts' }] },
   { ask: 'A voice agent.', how: 'Built in GurtOS Personal: Super+Alt+Space, a spoken question, a spoken answer, and a spoken yes that can approve only a request that spends nothing. Speech to text took 1.1 s on a CPU in the self-test. Nobody has yet tried it through a real microphone, and the speech model (about 600 MB) is downloaded at first boot.' },
   { ask: 'A social post.', status: 'open', how: 'Not entered. We chose the second example and the voice agent.' },
 ]} />
@@ -147,7 +147,7 @@ Moss finds the relevant notes by meaning, in milliseconds. Everything that decid
   { what: 'Talk to your computer', why: 'A voice agent', os: 'GurtOS Personal\'s desktop, the approval path and the signed voice approval', track: 'The Find search behind the spoken question', status: 'Built in GurtOS Personal. Not yet tried through a real microphone' },
 ]} />
 
-<Evidence title="Evidence" run="Merge gate step for this track, x86 test VM, Oct 24 (offline path: recorded photo descriptions and a word index in Moss's place). Latency was measured with Moss live on Oct 23 and 24 on both test VMs." numbers={[{ value: '3.1 ms', label: 'median search through the computer, under 1 ms inside Moss' }, { value: '23', label: 'checks in this track\'s gate step, 0 failed' }, { value: '34 to 36 s', label: 'Claude describing four photos in one task' }]} sources={[{ label: 'tracks/find/README.md', href: 'https://github.com/benz16107/calhacks13/tree/main/tracks/find' }]}>
+<Evidence title="Evidence" run="Merge gate step for this track, x86 test VM, Oct 24 (offline path: recorded photo descriptions and a word index in Moss's place). Latency was measured with Moss live on Oct 23 and 24 on both test VMs." numbers={[{ value: '3.1 ms', label: 'median search through the computer, under 1 ms inside Moss' }, { value: '23', label: 'checks in this track\'s gate step, 0 failed' }, { value: '34 to 36 s', label: 'Claude describing four photos in one task' }]} sources={[{ label: 'tracks/find/README.md', href: 'https://github.com/benz16107/gurtos/tree/main/tracks/find' }]}>
 
 ```
 track find

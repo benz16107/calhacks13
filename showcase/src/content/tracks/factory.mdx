@@ -26,13 +26,13 @@ video: main
 clip: moment-1-undo
 links:
   - label: The Droid worker, core/workers/droid.ts
-    href: https://github.com/benz16107/calhacks13/blob/main/core/workers/droid.ts
+    href: https://github.com/benz16107/gurtos/blob/main/core/workers/droid.ts
     note: 'The whole SDK integration in one file.'
   - label: The MCP relay, core/workers/mcp.ts
-    href: https://github.com/benz16107/calhacks13/blob/main/core/workers/mcp.ts
+    href: https://github.com/benz16107/gurtos/blob/main/core/workers/mcp.ts
     note: 'How box tools and <code>box_ask</code> reach Droid without any key.'
   - label: The proxy that swaps the Factory key, core/net.ts
-    href: https://github.com/benz16107/calhacks13/blob/main/core/net.ts
+    href: https://github.com/benz16107/gurtos/blob/main/core/net.ts
   - label: 'Docs: triggers'
     href: https://gurtos.com/docs/concepts/triggers/
   - label: 'Docs: agent users'
@@ -55,8 +55,8 @@ Coding agents usually run as you, so they can read every file and key you can. O
 
 <Numbers items={[
   { value: "240/240", label: "process samples of a Droid task held only a placeholder Factory key", href: "/evidence/", source: "merge gate" },
-  { value: "4", label: "custom droids: coder, reviewer (read-only), credit analyst, shopper", href: "https://github.com/benz16107/calhacks13/tree/main/tracks/factory/droids", source: "tracks/factory/droids" },
-  { value: "3", label: "autonomy levels, enforced by the OS as well as by Droid", href: "https://github.com/benz16107/calhacks13/blob/main/tracks/factory/README.md", source: "README" },
+  { value: "4", label: "custom droids: coder, reviewer (read-only), credit analyst, shopper", href: "https://github.com/benz16107/gurtos/tree/main/tracks/factory/droids", source: "tracks/factory/droids" },
+  { value: "3", label: "autonomy levels, enforced by the OS as well as by Droid", href: "https://github.com/benz16107/gurtos/blob/main/tracks/factory/README.md", source: "README" },
   { value: "$0.12", label: "for the live run below, plan, coder and reviewer", href: "#the-live-path-start-to-diff", source: "below" }
 ]} />
 
@@ -142,7 +142,7 @@ The plan is a real Droid plan from the box, denied afterwards. The notification 
 
 <Details summary="Droid on a real GitHub repository">
 
-Put `FACTORY_GITHUB_REPO` and `GITHUB_TOKEN` in the vault. Every 2 minutes the box checks the repo for open issues labelled `droid`. For each new one the core clones the repo into a workspace and starts a Droid task: plan first, medium autonomy, no network, and one tool, `factory.openPullRequest`. You approve the plan from the phone, the coder fixes the issue and the reviewer checks it. Droid then calls the tool, and the core copies the task's files, commits them to `droid/issue-<n>-<task>` and pushes with the token in a one-time header. Droid has no token and no route to GitHub. The test repository is [benz16107/gurtos-droid-demo](https://github.com/benz16107/calhacks13), kept for this track; the pull request was opened by a live `DEMO_LIVE=droid,github` run on the Vultr test box. It is not set up on every box.
+Put `FACTORY_GITHUB_REPO` and `GITHUB_TOKEN` in the vault. Every 2 minutes the box checks the repo for open issues labelled `droid`. For each new one the core clones the repo into a workspace and starts a Droid task: plan first, medium autonomy, no network, and one tool, `factory.openPullRequest`. You approve the plan from the phone, the coder fixes the issue and the reviewer checks it. Droid then calls the tool, and the core copies the task's files, commits them to `droid/issue-<n>-<task>` and pushes with the token in a one-time header. Droid has no token and no route to GitHub. The test repository is [benz16107/gurtos-droid-demo](https://github.com/benz16107/gurtos), kept for this track; the pull request was opened by a live `DEMO_LIVE=droid,github` run on the Vultr test box. It is not set up on every box.
 
 </Details>
 
@@ -160,8 +160,8 @@ The hooks file sits in the task user's home, so a hijacked Droid could edit or d
   sponsor="Factory"
   source="From Factory's track description and its Friday workshop notes, as copied into the project's track plan."
   items={[
-    { ask: "Droid SDK (TypeScript or Python) does real work", status: "met", how: "Droid, through <code>@factory/droid-sdk</code> 0.10.0, is the default worker for every task: it fixes code and runs tests, works a credit desk with live CRS and bank data, reads receipts and proposes a reorder, describes photos, and edits a folder on GurtOS Personal.", evidence: [{ label: "The live path", href: "#the-live-path-start-to-diff" }, { label: "core/workers/droid.ts", href: "https://github.com/benz16107/calhacks13/blob/main/core/workers/droid.ts" }] },
-    { ask: "The README says where and how", status: "met", how: "The worker is about 70 lines in <code>core/workers/droid.ts</code>. The track README names each part, the criterion it serves and what comes from Factory.", evidence: [{ label: "tracks/factory/README.md", href: "https://github.com/benz16107/calhacks13/blob/main/tracks/factory/README.md" }] },
+    { ask: "Droid SDK (TypeScript or Python) does real work", status: "met", how: "Droid, through <code>@factory/droid-sdk</code> 0.10.0, is the default worker for every task: it fixes code and runs tests, works a credit desk with live CRS and bank data, reads receipts and proposes a reorder, describes photos, and edits a folder on GurtOS Personal.", evidence: [{ label: "The live path", href: "#the-live-path-start-to-diff" }, { label: "core/workers/droid.ts", href: "https://github.com/benz16107/gurtos/blob/main/core/workers/droid.ts" }] },
+    { ask: "The README says where and how", status: "met", how: "The worker is about 70 lines in <code>core/workers/droid.ts</code>. The track README names each part, the criterion it serves and what comes from Factory.", evidence: [{ label: "tracks/factory/README.md", href: "https://github.com/benz16107/gurtos/blob/main/tracks/factory/README.md" }] },
     { ask: "Triggers you designed", status: "met", how: "A GitHub issue labelled droid, the portal and Personal desktop, a schedule, a webhook, a new file, an ASI:One chat, <code>gurtos-exec</code>, and a Droid tool call that starts another task.", evidence: [{ label: "Docs: triggers", href: "https://gurtos.com/docs/concepts/triggers/" }] },
     { ask: "Careful limits on what Droid can touch", status: "met", how: "Its own Linux user, an overlay copy, a firewall rule that reaches only the box's proxy, only the tools its task lists, a budget, and autonomy levels the OS enforces.", evidence: [{ label: "Docs: agent users", href: "https://gurtos.com/docs/concepts/agent-users/" }] },
     { ask: "Visible plans, steps and diffs", status: "met", how: "The plan is an approval, every tool call is a log step, and the task window shows the steps and the diff. The same appear in Jira and the ASI:One chat.", evidence: [{ label: "The live path", href: "#the-live-path-start-to-diff" }] },

@@ -1,12 +1,12 @@
 #!/bin/sh
 # One-command install of the GurtOS wallet as an MCP server (Solana devnet, test money).
-#   curl -fsSL https://raw.githubusercontent.com/benz16107/calhacks13/main/tracks/wallet/install.sh | sh
+#   curl -fsSL https://raw.githubusercontent.com/benz16107/gurtos/main/tracks/wallet/install.sh | sh
 # Safe to run again: it updates the code, keeps your key, and re-registers the server.
 # Settings (environment): WALLET_HOME (default ~/.gurtos-wallet), WALLET_BUDGET_CENTS (10), WALLET_HOSTS (none),
 # GURTOS_WALLET_SRC (a local checkout to use instead of cloning, for testing).
 set -eu
 
-REPO=${GURTOS_REPO:-https://github.com/benz16107/calhacks13.git}
+REPO=${GURTOS_REPO:-https://github.com/benz16107/gurtos.git}
 HOME_DIR=${WALLET_HOME:-$HOME/.gurtos-wallet}
 BUDGET=${WALLET_BUDGET_CENTS:-10}
 HOSTS=${WALLET_HOSTS:-}

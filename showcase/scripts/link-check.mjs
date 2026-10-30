@@ -38,7 +38,7 @@ for (const f of pages) {
 
 if (external) {
   // Links into this repo are checked against origin/main with git, so they pass while the repo is private.
-  const REPO = /^https:\/\/github\.com\/benz16107\/calhacks13\/(?:blob|tree)\/main\/([^#?]+)/;
+  const REPO = /^https:\/\/github\.com\/benz16107\/gurtos\/(?:blob|tree)\/main\/([^#?]+)/;
   for (const [u, page] of outside) {
     const m = u.match(REPO);
     if (!m) continue;

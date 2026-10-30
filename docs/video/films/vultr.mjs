@@ -60,6 +60,6 @@ export default {
             stamp: { text: 'CLOSED', cue: 'stays', color: 'blocked', x: 0.72, y: 0.55, rot: -8, size: 120 } } },
         { cue: 'three', v: { type: 'scoreboard', bg: 'grid', kicker: 'THE LIVE TESTS · test network', size: 170, items: [
             { n: '3', label: 'live tests', cue: 'three', color: 'accent' }, { n: '< $0.20', label: 'in total, for all three', cue: 'cost', color: 'done' }] } },
-        { cue: 'gurt', v: { type: 'end', lines: ['gurt-cloud.box.gurtos.com', 'gurtos.com', 'github.com/benz16107/calhacks13', 'Open source, Apache-2.0'] } }] },
+        { cue: 'gurt', v: { type: 'end', lines: ['gurt-cloud.box.gurtos.com', 'gurtos.com', 'github.com/benz16107/gurtos', 'Open source, Apache-2.0'] } }] },
   ],
 };

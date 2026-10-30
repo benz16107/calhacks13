@@ -109,6 +109,6 @@ export default {
         { v: { type: 'terminal', title: 'Ubuntu 24.04, plus one model key. Measured in a QEMU VM.', enter: 'fade', size: 38, lines: [
             { text: 'curl -fsSL .../tracks/anthropic/install.sh | sudo sh', cmd: true, cue: 'one', off: -0.3 },
             { text: 'Measured: 1 GB of RAM, one task at a time', kind: 'ok', at: 1.9 }] } },
-        { cue: 'source', off: 0.45, v: { type: 'end', lines: ['gurtos.com', 'github.com/benz16107/calhacks13', 'Open source, Apache-2.0'] } }] },
+        { cue: 'source', off: 0.45, v: { type: 'end', lines: ['gurtos.com', 'github.com/benz16107/gurtos', 'Open source, Apache-2.0'] } }] },
   ],
 };

@@ -71,6 +71,6 @@ export default {
         { v: { type: 'pair', bg: 'night', items: [
             { src: repo(M + 'project-page.png'), label: 'Plan in Mana', color: 'accent', enter: 'whip-r' },
             { src: cap('a03.mp4'), from: 18, crop: { x: 270, y: 180, w: 960, h: 660 }, label: 'Act safely in GurtOS', color: 'amber', cue: 'act', off: -0.1 }] } },
-        { cue: 'open', v: { type: 'end', lines: ['Public Mana links are on the Devpost page', 'gurtos.com', 'github.com/benz16107/calhacks13', 'Open source, Apache-2.0'] } }] },
+        { cue: 'open', v: { type: 'end', lines: ['Public Mana links are on the Devpost page', 'gurtos.com', 'github.com/benz16107/gurtos', 'Open source, Apache-2.0'] } }] },
   ],
 };

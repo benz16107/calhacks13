@@ -1,6 +1,6 @@
 #!/bin/sh
 # Turn an Ubuntu 24.04 machine you already own into a GurtOS box. Nothing else on the machine is touched.
-#   curl -fsSL https://raw.githubusercontent.com/benz16107/calhacks13/main/tracks/anthropic/install.sh | sudo sh
+#   curl -fsSL https://raw.githubusercontent.com/benz16107/gurtos/main/tracks/anthropic/install.sh | sudo sh
 # It installs git, rsync and curl, clones this repository to /opt/gurtos, and runs core/install.sh from it: Node,
 # the Droid CLI, SpacetimeDB, the box service (systemd unit box.service) and the portal on 127.0.0.1:7700.
 # Environment: GURTOS_REPO and GURTOS_REF pick another clone or branch. ANTHROPIC_API_KEY or FACTORY_API_KEY, if
@@ -31,7 +31,7 @@ export DEBIAN_FRONTEND=noninteractive
 apt-get update -qq
 apt-get install -y -qq git rsync curl ca-certificates xz-utils acl >/dev/null
 
-repo=${GURTOS_REPO:-https://github.com/benz16107/calhacks13}
+repo=${GURTOS_REPO:-https://github.com/benz16107/gurtos}
 ref=${GURTOS_REF:-main}
 if [ -e /opt/gurtos ] && [ ! -d /opt/gurtos/.git ]; then
   die "/opt/gurtos exists and is not a GurtOS checkout. Move it away and run this again."

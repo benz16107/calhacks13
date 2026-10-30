@@ -4,7 +4,7 @@
 export const NAME = 'GurtOS';
 
 /** The public source repository, its licence, and where release ISOs are published. */
-export const REPO = 'https://github.com/benz16107/calhacks13';
+export const REPO = 'https://github.com/benz16107/gurtos';
 export const LICENSE_NAME = 'Apache License 2.0';
 export const LICENSE_URL = `${REPO}/blob/main/LICENSE`;
 

@@ -73,6 +73,6 @@ export default {
         { cue: 'os', v: { type: 'pair', note: 'Caught, not prevented: an entry edited seconds before Elastic has it is not caught', items: [
             { src: cap('el-log-blocked.png'), label: 'The OS: the log, and the power to act' },
             { src: cap('el-dash.png'), label: 'Elastic: the copy', cue: 'elastic', color: 'amber' }] } },
-        { cue: 'gurt', v: { type: 'end', lines: ['gurtos.com', 'github.com/benz16107/calhacks13', 'Open source, Apache-2.0'] } }] },
+        { cue: 'gurt', v: { type: 'end', lines: ['gurtos.com', 'github.com/benz16107/gurtos', 'Open source, Apache-2.0'] } }] },
   ],
 };
