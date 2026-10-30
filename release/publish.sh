@@ -31,12 +31,12 @@ for f in "${files[@]}"; do
 done
 notes=release/notes/$version.md
 if gh release view "$version" >/dev/null 2>&1; then
-  # Upload only what the release lacks or holds at another size (the draft run already sent the big files).
-  have=$(gh release view "$version" --json assets -q '.assets[] | "\(.name) \(.size)"')
+  # Upload only what the release lacks or holds with other content (the draft run already sent the big files).
+  have=$(gh release view "$version" --json assets -q '.assets[] | "\(.name) \(.digest)"')
   todo=()
-  for f in "${files[@]}"; do grep -qxF "$(basename "$f") $(stat -c %s "$f")" <<< "$have" || todo+=("$f"); done
+  for f in "${files[@]}"; do grep -qxF "$(basename "$f") sha256:$(sha256sum < "$f" | cut -d' ' -f1)" <<< "$have" || todo+=("$f"); done
   if (( ${#todo[@]} )); then gh release upload "$version" --clobber "${todo[@]}"; fi
-  gh release edit "$version" --notes-file "$notes"
+  gh release edit "$version" ${TARGET:+--target "$TARGET"} --notes-file "$notes"
 else
   gh release create "$version" --prerelease ${draft:+--draft} ${TARGET:+--target "$TARGET"} --title "GurtOS $version" --notes-file "$notes" "${files[@]}"
 fi
