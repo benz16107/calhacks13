@@ -22,5 +22,8 @@
     "starlight-llms-txt": "^0.12.0",
     "starlight-openapi": "^0.27.0"
   },
-  "private": true
+  "private": true,
+  "overrides": {
+    "form-data": "4.0.6"
+  }
 }
