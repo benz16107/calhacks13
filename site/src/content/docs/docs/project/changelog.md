@@ -7,8 +7,8 @@ Everything here is a preview and may change. Dates are in Eastern Time.
 
 ## v0.2.0-preview
 
-Released <date>, from commit `ef08913`. GurtOS Server and GurtOS Personal for x86_64 and arm64, on the
-[Download](/download/) page and the [release page](https://github.com/benz16107/calhacks13/releases/tag/v0.2.0-preview),
+Released <date>, from commit `e23bca3`. GurtOS Server and GurtOS Personal for x86_64 and arm64, on the
+[Download](/download/) page and the [release page](https://github.com/benz16107/gurtos/releases/tag/v0.2.0-preview),
 where the release notes say how to upgrade and what was tested. The v0.1.0-preview images do not have these changes.
 
 **Setup**
@@ -23,6 +23,7 @@ where the release notes say how to upgrade and what was tested. The v0.1.0-previ
   Remote access, Relay (or `PUT /api/remote/relay`).
 
 **Apps and permissions**
+- The window that undoes one task is now called History (it was Time Machine).
 - Apps ask for permissions like a phone app: turning one on shows what it may do, and Settings, Permissions changes it.
 - Replay plays back a finished task step by step, with its files at each step.
 - Receipts: a signed receipt for a finished task that anyone can check in a browser at [gurtos.com/verify](/verify/).
@@ -63,6 +64,8 @@ where the release notes say how to upgrade and what was tested. The v0.1.0-previ
   system is still on trial. A slot whose write did not finish is never started.
 
 **Project**
+- The repository moved to [github.com/benz16107/gurtos](https://github.com/benz16107/gurtos). GitHub redirects the old
+  address.
 - A security policy, code of conduct, roadmap, issue templates, a licence report and SBOMs for every image.
 - Continuous integration runs the tests, the type check, the public-repo check and a secret scan on every pull
   request.
