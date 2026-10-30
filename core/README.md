@@ -169,7 +169,8 @@ something off. Not covered yet: limiting hosts before an app first uses them, an
 `/tmp` and `/var/tmp` (`du -sb`, so a sparse file counts in full). Its `/dev/shm` is memory, inside its 2 GB. Undo
 deletes the home too. A task past its cap is stopped and undone, with a `security` note in words and an alert to the owner's
 phones. The cap is 5 GB, or an app's `diskBytes` permission (`PUT /api/permissions/<app>`), or `BOX_TASK_DISK_CAP`
-for a whole box. It is a watcher, not a filesystem quota: a writer can pass the cap until the next check. Measured
+for a whole box. It is a watcher, not a filesystem quota: a writer can pass the cap until the next check. A task is measured once
+more as it ends, so one that writes and stops between two checks is still stopped and undone. Measured
 from the write to the stop: 0 to 3.1 s in six runs on x86 and arm64, each the only gate run on its machine; not yet
 measured with many tasks at once.
 

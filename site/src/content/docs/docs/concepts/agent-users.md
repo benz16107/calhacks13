@@ -38,7 +38,7 @@ The worker does not run as a child of a login session. The core starts it with `
 
 The worker's working directory is its copy of the workspace. Its environment holds the path to its broker socket, the proxy's address and, for Droid, a placeholder key. It also holds a decoy AWS key pair, different for each task and never real. If the decoy shows up in a web request, a tool call or anything the task writes to the log, the core refuses it, undoes the task and writes a `security` note to the log. With remote access on, it also alerts the owner's phone. The environment holds no real secret.
 
-**Disk.** The core measures each running task's own layer every 2 seconds. A task past 5 GB is stopped and undone, with a note in the log. With remote access on, the owner's phone gets an alert too. An app can set another cap with its `diskBytes` permission, and `BOX_TASK_DISK_CAP` sets one for the whole box. This is a check, not a file system quota, so a task can write past the cap until the next check.
+**Disk.** The core measures each running task's own layer every 2 seconds. A task past 5 GB is stopped and undone, with a note in the log. With remote access on, the owner's phone gets an alert too. An app can set another cap with its `diskBytes` permission, and `BOX_TASK_DISK_CAP` sets one for the whole box. This is a check, not a file system quota, so a task can write past the cap until the next check. A task is measured once more as it ends, so one that writes and stops between two checks is still caught.
 
 **Limits inside the box.** A task also can't use up the box's own memory. It may hold at most 256 connections to the proxy at once, and it may write at most 64 KB per step, question or cost and 20 MB in all to the action log, which the box keeps in memory.
 

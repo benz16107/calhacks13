@@ -469,6 +469,11 @@ await moment('the disk cap: a task that fills its disk space is stopped and undo
     const secs = Math.round((Date.now() - t0) / 1000);
     const note = (await api<LogEvent[]>('GET', '/log')).find((e) => e.type === 'note' && e.task === T.id && (e as { data?: { diskCap?: number } }).data?.diskCap) as { text?: string } | undefined;
     check(t.state === 'undone' && /wrote more than its 20 MB/.test(note?.text ?? ''), `a task past its 20 MB cap was stopped and undone in about ${secs} s, and the log says why ("${note?.text?.slice(0, 70)}")`);
+    // Write and end at once, between two of the watcher's checks: it is measured again as it ends.
+    const Q = await api<Task>('POST', '/tasks', { title: 'Fill the disk and stop', workspace: 'disk', worker: 'fake', source: 'example', prompt: 'sh fill.txt dd if=/dev/zero of=big bs=1M count=60 2>&1 | tail -1' });
+    const q = await waitFor('the quick filler to end', async () => { const x = await task(Q.id); return ['undone', 'done', 'failed'].includes(x.state) ? x : undefined; }, 60_000);
+    const qNote = (await api<LogEvent[]>('GET', '/log')).find((e) => e.type === 'note' && e.task === Q.id && (e as { data?: { diskCap?: number } }).data?.diskCap) as { text?: string } | undefined;
+    check(q.state === 'undone' && !!qNote, `a task that wrote 60 MB and ended at once is still undone ("${qNote?.text?.slice(0, 90)}")`);
   } finally {
     await api('PUT', '/api/permissions/example', { diskBytes: null });
   }

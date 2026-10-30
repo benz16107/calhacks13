@@ -272,6 +272,7 @@ class Core {
    * The disk cap: every two seconds, each running task's disk is measured (its layer, home and /tmp), and a task past its cap (5 GB, or its
    * app's permission, or BOX_TASK_DISK_CAP) is stopped and undone, logged and told to the owner's phone. Not a hard quota:
    * a writer can pass the cap until the next check. Armadin measured 0 to 3.1 s from the write to the stop (six runs).
+   * A task that ends between two checks is measured once more as it ends (the worker's exit, in start).
    */
   watchDisk() {
     let busy = false;
@@ -282,18 +283,32 @@ class Core {
         for (const id of [...this.workers.keys()]) {
           const t = this.state.tasks.get(id);
           if (!t || (t.state !== 'running' && t.state !== 'waiting')) continue;
-          const cap = Number(process.env.BOX_TASK_DISK_CAP) || this.grants[t.source]?.diskBytes || 5 * 1024 ** 3;
-          const used = await sandbox.diskBytes(t);
-          if (used <= cap || !this.workers.has(id)) continue;
-          const title = t.title.slice(0, 80);
-          this.write({ type: 'note', track: 'security', task: id, data: { diskCap: cap, used }, text: `"${title}" wrote more than its ${Math.round(cap / 1024 ** 2)} MB of disk. GurtOS stopped it and undid its changes.` });
-          void this.undo(id).catch((e) => console.error(`disk cap: could not undo ${id}: ${(e as Error).message}`));
-          this.alertOwner({ type: 'tripwire', id: `disk.${id}`, task: id, source: t.source, costCents: 0, title: 'A task filled its disk space', body: `"${title}" wrote more than its ${Math.round(cap / 1024 ** 2)} MB. GurtOS stopped it and undid its changes.`.slice(0, 200) });
+          const over = await this.overDiskCap(t);
+          if (over && this.workers.has(id)) this.stopForDisk(t, over);
         }
       } finally {
         busy = false;
       }
     }, 2000).unref();
+  }
+
+  async overDiskCap(t: Task): Promise<{ cap: number; used: number } | undefined> {
+    const cap = Number(process.env.BOX_TASK_DISK_CAP) || this.grants[t.source]?.diskBytes || 5 * 1024 ** 3;
+    const used = await sandbox.diskBytes(t);
+    return used > cap ? { cap, used } : undefined;
+  }
+
+  stopForDisk(t: Task, over: { cap: number; used: number }) {
+    this.diskNote(t, over);
+    void this.undo(t.id).catch((e) => console.error(`disk cap: could not undo ${t.id}: ${(e as Error).message}`));
+  }
+
+  /** The disk cap's note in the log and alert to the owner. `ended`: the task had finished by the time it was measured. */
+  diskNote(t: Task, { cap, used }: { cap: number; used: number }, ended = false) {
+    const mb = Math.round(cap / 1024 ** 2);
+    const what = `"${t.title.slice(0, 80)}" wrote more than its ${mb} MB of disk${ended ? ' before it ended. GurtOS' : '. GurtOS stopped it and'} undid its changes.`;
+    this.write({ type: 'note', track: 'security', task: t.id, data: { diskCap: cap, used }, text: what });
+    this.alertOwner({ type: 'tripwire', id: `disk.${t.id}`, task: t.id, source: t.source, costCents: 0, title: 'A task filled its disk space', body: what.slice(0, 200) });
   }
 
   /** A task an app starts: refused where the owner said no; otherwise what it asks for is remembered for Settings. */
@@ -722,9 +737,26 @@ class Core {
       }
       const child = sandbox.spawnWorker(t, ids, env);
       this.workers.set(t.id, child);
-      child.on('exit', (code, signal) => {
+      child.on('exit', async (code, signal) => {
+        // A task that filled its disk and ended between two of watchDisk's checks is measured once more. Its worker stays
+        // in this.workers meanwhile, so an Undo or the watcher that gets there first ends the task, and only once.
+        const live = () => t.state === 'running' || t.state === 'waiting';
+        const over = live() ? await this.overDiskCap(t).catch(() => undefined) : undefined;
         this.workers.delete(t.id);
         this.endedAt.set(t.id, Date.now()); // for refusals that reach the kernel log a moment late
+        if (over && live()) {
+          try {
+            await this.undo(t.id); // its worker is gone, so Undo finishes it
+            try {
+              this.diskNote(t, over, true);
+            } catch (e) {
+              console.error(`disk cap: could not log why ${t.id} was undone: ${(e as Error).message}`); // a full disk
+            }
+            return;
+          } catch (e) {
+            console.error(`disk cap: could not undo ${t.id}: ${(e as Error).message}`); // it ends below as it would have
+          }
+        }
         try {
           if (t.state === 'running' || t.state === 'waiting') {
             const why = code === 0 ? undefined : sandbox.workerError(t);

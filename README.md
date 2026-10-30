@@ -141,7 +141,8 @@ What it does not protect against yet:
 - Every task shares one Linux kernel. A kernel bug could reach every task.
 - The proxy checks which hosts a task may reach, not what it sends them. A task allowed to reach a host can send
   that host your data.
-- The 5 GB limit is a check every 2 seconds, not a hard quota, so a fast writer can pass it briefly.
+- The 5 GB limit is a check every 2 seconds and once more when a task ends, not a hard quota, so a fast writer can
+  pass it briefly.
 - The disk is not encrypted, and root can read the vault and rewrite the log.
 
 The full model is at [gurtos.com/docs/security/threat-model](https://gurtos.com/docs/security/threat-model/), and
