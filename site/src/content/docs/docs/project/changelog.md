@@ -7,7 +7,7 @@ Everything here is a preview and may change. Dates are in Eastern Time.
 
 ## v0.2.0-preview
 
-Released <date>, from commit `e23bca3`. GurtOS Server and GurtOS Personal for x86_64 and arm64, on the
+Released 2026-10-30, from commit `e23bca3`. GurtOS Server and GurtOS Personal for x86_64 and arm64, on the
 [Download](/download/) page and the [release page](https://github.com/benz16107/gurtos/releases/tag/v0.2.0-preview),
 where the release notes say how to upgrade and what was tested. The v0.1.0-preview images do not have these changes.
 
