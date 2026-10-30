@@ -6,7 +6,7 @@ const root = process.argv[2];
 const walk = (d) => fs.readdirSync(d, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? walk(path.join(d, e.name)) : [path.join(d, e.name)]));
 const files = walk(root).filter((f) => /\.(html|txt|xml|json|svg|css|js|yaml)$/.test(f) && !f.includes('/pagefind/') && !/\/_astro\/.*\.js$/.test(f));
 // Published release checksums and the release signing key's public fingerprint (the Download page): public on purpose.
-const PUBLIC_SUMS = ['FWKFb1eAvEBmMhVJwMwTnLnhrmZ5yQZ5947pDvFKcpY', '1879b64bade0589e1b85764f4d1c27ca3348305ccb8ff6245ebd2848640d4eb6', 'ff259fc3a5f2fdd7feea11df25081dc9ae4de071baab32e2929200f298322635', '5d6f3c588df596ca70d8317eee8bc0a4b73b900a5971df0fb87639a2c9018b39', 'e1f34a7716a067bf986d43bf833b1788092222c4b41ac8be20337ad3bf0ce40f', 'cef69ba2f14d5d0833ee6cf7349d412b730b80a284da5c9034159258d0228b3a', 'ef8a7e72441b10dc3d6bacd1308d670cb551ffd8644403429b57e1d733ae994b'];
+const PUBLIC_SUMS = ['FWKFb1eAvEBmMhVJwMwTnLnhrmZ5yQZ5947pDvFKcpY', '981df531493d68199bc774db8e8e3f101a0ea4f25793f7638dff4fbedb610d77', '46e7cf6e2e35073bf98dd483a8dca0d13cfb249ec270d4b1fd38cb607b5afe50', 'c82a116056d16a8ee910993905fe9e128cc904f202a9e833ac92c23a66d8a20c', '172f4758adbd6708ffb5579c0f4c63a472b546f81e7e02248ba139b0feace352', 'cef69ba2f14d5d0833ee6cf7349d412b730b80a284da5c9034159258d0228b3a', 'ef8a7e72441b10dc3d6bacd1308d670cb551ffd8644403429b57e1d733ae994b'];
 const checks = [
   ['machine name', /linuxbox|macserver|benmac|vultrbox|gx10|dellserver|estella/gi],
   ['tailnet', /tailb51682|\.ts\.net\b/gi],
